@@ -2,90 +2,44 @@
 
 set -e
 
-echo "🚀 Начало деплоя Telegram Mini App Нарды..."
+echo "🚀 Начало деплоя..."
 
-SERVER_IP="91.229.9.80"
-SERVER_USER="root"
-SERVER_PASS="ksOVrfa4yeQEb3cR"
-DOMAIN="nardist.site"
+# Цвета для вывода
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
-echo "📦 Подготовка файлов для загрузки..."
-
-# Создаем временную директорию для исключений
-cat > .deployignore << EOF
-node_modules
-.git
-.env.local
-*.log
-logs
-dist
-build
-.DS_Store
-.vscode
-.idea
-*.swp
-EOF
-
-echo "📤 Загрузка файлов на сервер через SCP..."
-
-# Используем sshpass для автоматической передачи пароля
-if ! command -v sshpass &> /dev/null; then
-    echo "⚠️  sshpass не установлен. Установите его или используйте SSH ключи."
-    echo "Для Windows: choco install sshpass или используйте WSL"
+# Проверка что мы в правильной директории
+if [ ! -f "docker-compose.yml" ]; then
+    echo -e "${RED}Ошибка: docker-compose.yml не найден. Убедитесь что вы в корне проекта.${NC}"
     exit 1
 fi
 
-# Загружаем файлы
-sshpass -p "$SERVER_PASS" scp -r -o StrictHostKeyChecking=no \
-    --exclude-from=.deployignore \
-    . "$SERVER_USER@$SERVER_IP:/var/www/nardiphp"
+echo -e "${YELLOW}📦 Обновление кода из репозитория...${NC}"
+git pull origin main
 
-echo "✅ Файлы загружены"
+echo -e "${YELLOW}🔨 Остановка контейнеров...${NC}"
+docker-compose down
 
-echo "🔧 Подключение к серверу и настройка..."
-
-sshpass -p "$SERVER_PASS" ssh -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_IP" << 'ENDSSH'
-cd /var/www/nardiphp
-
-# Установка Docker если не установлен
-if ! command -v docker &> /dev/null; then
-    echo "📦 Установка Docker..."
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sh get-docker.sh
-    rm get-docker.sh
-fi
-
-# Установка Docker Compose если не установлен
-if ! command -v docker-compose &> /dev/null; then
-    echo "📦 Установка Docker Compose..."
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-fi
-
-# Остановка существующих контейнеров
-echo "🛑 Остановка существующих контейнеров..."
-docker-compose down || true
-
-# Сборка и запуск
-echo "🔨 Сборка образов..."
+echo -e "${YELLOW}🏗️  Сборка образов (без кэша для чистоты)...${NC}"
 docker-compose build --no-cache
 
-echo "▶️  Запуск сервисов..."
+echo -e "${YELLOW}🚀 Запуск контейнеров...${NC}"
 docker-compose up -d
 
-# Ожидание готовности БД
-echo "⏳ Ожидание готовности базы данных..."
-sleep 15
+echo -e "${YELLOW}⏳ Ожидание запуска сервисов (10 секунд)...${NC}"
+sleep 10
 
-echo "✅ Деплой завершен!"
-echo "📝 Проверьте логи: docker-compose logs -f"
-ENDSSH
+echo -e "${YELLOW}📊 Проверка статуса контейнеров...${NC}"
+docker-compose ps
 
-rm -f .deployignore
+echo -e "${YELLOW}📝 Последние логи backend...${NC}"
+docker-compose logs --tail=20 backend
 
-echo ""
-echo "✅ Деплой завершен!"
-echo "🌐 Проверьте работу:"
-echo "   - Backend: http://$DOMAIN:3000/health"
-echo "   - Frontend: http://$DOMAIN:5173"
+echo -e "${YELLOW}📝 Последние логи frontend...${NC}"
+docker-compose logs --tail=20 frontend
 
+echo -e "${GREEN}✅ Деплой завершен!${NC}"
+echo -e "${GREEN}Проверьте логи выше на наличие ошибок.${NC}"
+echo -e "${GREEN}Админ-панель доступна по адресу: https://nardist.site/admin${NC}"

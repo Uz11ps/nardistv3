@@ -1,63 +1,95 @@
-# Инструкция по деплою на ISPmanager 6
+# Инструкция по деплою на сервер
 
-## Подготовка сервера
+## Быстрый деплой (рекомендуется)
 
-1. Подключитесь к серверу по SSH:
 ```bash
-ssh root@91.229.9.80
+chmod +x deploy-quick.sh
+./deploy-quick.sh
 ```
 
-2. Установите Docker и Docker Compose (если не установлены):
+Этот скрипт:
+1. Обновит код из git
+2. Пересоберет и перезапустит контейнеры
+3. Покажет статус
+
+## Полный деплой (без кэша)
+
+Если нужно полностью пересобрать образы:
+
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
+chmod +x deploy.sh
+./deploy.sh
 ```
 
-3. Клонируйте репозиторий:
+## Ручной деплой
+
+Если скрипты не работают, выполните команды вручную:
+
 ```bash
-cd /var/www
-git clone <your-repo-url> nardiphp
-cd nardiphp
+# 1. Обновить код
+git pull origin main
+
+# 2. Остановить контейнеры
+docker-compose down
+
+# 3. Пересобрать образы
+docker-compose build --no-cache
+
+# 4. Запустить контейнеры
+docker-compose up -d
+
+# 5. Проверить статус
+docker-compose ps
+
+# 6. Посмотреть логи (если нужно)
+docker-compose logs -f backend
+docker-compose logs -f frontend
 ```
 
-4. Создайте файл `.env` на основе `.env.example`:
+## Проверка после деплоя
+
+1. **Проверьте админ-панель:**
+   - Откройте https://nardist.site/admin
+   - Логин: `123`, Пароль: `123123`
+
+2. **Проверьте API:**
+   ```bash
+   curl https://nardist.site/api/health
+   ```
+
+3. **Проверьте логи на ошибки:**
+   ```bash
+   docker-compose logs backend | grep -i error
+   docker-compose logs frontend | grep -i error
+   ```
+
+## Откат изменений
+
+Если что-то пошло не так:
+
 ```bash
-cp .env.example .env
-nano .env
+# Откатить к предыдущему коммиту
+git reset --hard HEAD~1
+
+# Пересобрать
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
 ```
 
-Заполните переменные:
-- `TELEGRAM_BOT_TOKEN` - токен бота от @BotFather
-- `TELEGRAM_SECRET_KEY` - секретный ключ из настроек бота
-- `DOMAIN` - ваш домен
-- `POSTGRES_PASSWORD` - надежный пароль для БД
-- `JWT_SECRET` - случайная строка минимум 32 символа
+## Полезные команды
 
-5. Запустите деплой:
 ```bash
-bash deploy/deploy.sh
+# Посмотреть логи всех сервисов
+docker-compose logs -f
+
+# Перезапустить конкретный сервис
+docker-compose restart backend
+docker-compose restart frontend
+
+# Войти в контейнер backend
+docker-compose exec backend sh
+
+# Очистить неиспользуемые образы
+docker system prune -a
 ```
-
-## Настройка ISPmanager 6
-
-1. Войдите в панель ISPmanager 6
-2. Создайте домен или используйте существующий
-3. Настройте SSL сертификат (Let's Encrypt)
-4. Настройте проксирование:
-   - Backend: `http://localhost:3000`
-   - Frontend: `http://localhost:5173`
-
-## Настройка Telegram бота
-
-1. Создайте бота через @BotFather
-2. Получите токен бота
-3. Настройте Web App:
-   - URL: `https://your-domain.com`
-   - Добавьте в `.env` токен и секретный ключ
-
-## Проверка работы
-
-После деплоя проверьте:
-- Backend API: `http://your-domain.com:3000/health`
-- Frontend: `http://your-domain.com:5173`
-
