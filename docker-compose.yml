@@ -75,8 +75,8 @@ services:
       dockerfile: Dockerfile
     container_name: nardi_frontend
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
-      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3000}
+      VITE_API_URL: ${VITE_API_URL:-https://nardist.site/api}
+      VITE_WS_URL: ${VITE_WS_URL:-wss://nardist.site}
       VITE_TELEGRAM_BOT_NAME: ${VITE_TELEGRAM_BOT_NAME:-}
     expose:
       - "5173"
