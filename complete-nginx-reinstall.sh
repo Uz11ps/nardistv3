@@ -17,9 +17,16 @@ echo ""
 
 # 1. Останавливаем nginx
 echo "1️⃣ Остановка nginx..."
-systemctl stop nginx 2>/dev/null
-pkill -9 nginx 2>/dev/null
-sleep 2
+systemctl stop nginx 2>/dev/null || true
+sleep 1
+# Мягко убиваем процессы, если они остались
+pkill nginx 2>/dev/null || true
+sleep 1
+# Только если процессы все еще есть - убиваем принудительно
+if pgrep nginx >/dev/null 2>&1; then
+    pkill -9 nginx 2>/dev/null || true
+    sleep 1
+fi
 echo "   ✅ Nginx остановлен"
 echo ""
 
