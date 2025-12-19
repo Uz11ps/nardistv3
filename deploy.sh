@@ -19,14 +19,21 @@ fi
 echo -e "${YELLOW}📦 Обновление кода из репозитория...${NC}"
 git pull origin main
 
-echo -e "${YELLOW}🔨 Остановка контейнеров...${NC}"
-docker-compose down
+echo -e "${YELLOW}🛑 Остановка и удаление старых контейнеров...${NC}"
+docker-compose down --remove-orphans
+
+# Принудительная остановка всех контейнеров проекта
+docker-compose ps -q | xargs -r docker stop || true
+docker-compose ps -q | xargs -r docker rm -f || true
+
+# Задержка для освобождения портов
+sleep 2
 
 echo -e "${YELLOW}🏗️  Сборка образов (без кэша для чистоты)...${NC}"
 docker-compose build --no-cache
 
 echo -e "${YELLOW}🚀 Запуск контейнеров...${NC}"
-docker-compose up -d
+docker-compose up -d --force-recreate
 
 echo -e "${YELLOW}⏳ Ожидание запуска сервисов (10 секунд)...${NC}"
 sleep 10

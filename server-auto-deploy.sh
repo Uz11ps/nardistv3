@@ -66,13 +66,20 @@ deploy() {
     git reset --hard origin/$BRANCH
     git clean -fd
     
-    # Остановка контейнеров
-    log "${YELLOW}🛑 Остановка контейнеров...${NC}"
-    docker-compose down || true
+    # Полная остановка и удаление контейнеров
+    log "${YELLOW}🛑 Остановка и удаление старых контейнеров...${NC}"
+    docker-compose down --remove-orphans || true
+    
+    # Принудительная остановка всех контейнеров проекта (на случай если down не сработал)
+    docker-compose ps -q | xargs -r docker stop || true
+    docker-compose ps -q | xargs -r docker rm -f || true
+    
+    # Небольшая задержка чтобы порты освободились
+    sleep 2
     
     # Пересборка и запуск
     log "${YELLOW}🔨 Пересборка и запуск контейнеров...${NC}"
-    docker-compose up -d --build
+    docker-compose up -d --build --force-recreate
     
     # Ожидание запуска
     log "${YELLOW}⏳ Ожидание запуска сервисов (15 секунд)...${NC}"

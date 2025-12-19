@@ -18,9 +18,18 @@ fi
 echo -e "${YELLOW}📦 Обновление кода...${NC}"
 git pull origin main
 
-echo -e "${YELLOW}🔨 Перезапуск контейнеров...${NC}"
-docker-compose down
-docker-compose up -d --build
+echo -e "${YELLOW}🛑 Остановка и удаление старых контейнеров...${NC}"
+docker-compose down --remove-orphans
+
+# Принудительная остановка (на случай если down не сработал)
+docker-compose ps -q | xargs -r docker stop || true
+docker-compose ps -q | xargs -r docker rm -f || true
+
+# Задержка для освобождения портов
+sleep 2
+
+echo -e "${YELLOW}🔨 Пересборка и запуск контейнеров...${NC}"
+docker-compose up -d --build --force-recreate
 
 echo -e "${YELLOW}⏳ Ожидание запуска (5 секунд)...${NC}"
 sleep 5
