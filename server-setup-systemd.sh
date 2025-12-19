@@ -5,16 +5,29 @@
 
 set -e
 
-PROJECT_PATH="${DEPLOY_PATH:-/var/www/nardistv3}"
-DEPLOY_SCRIPT="$PROJECT_PATH/server-auto-deploy.sh"
+# Определяем путь к проекту автоматически
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_PATH="${DEPLOY_PATH:-$SCRIPT_DIR}"
 
-echo "🔧 Настройка автоматического деплоя через systemd..."
-
-# Проверка что скрипт существует
-if [ ! -f "$DEPLOY_SCRIPT" ]; then
-    echo "❌ Скрипт $DEPLOY_SCRIPT не найден!"
+# Ищем скрипт деплоя в текущей директории или по указанному пути
+if [ -f "$SCRIPT_DIR/server-auto-deploy.sh" ]; then
+    DEPLOY_SCRIPT="$SCRIPT_DIR/server-auto-deploy.sh"
+elif [ -f "$PROJECT_PATH/server-auto-deploy.sh" ]; then
+    DEPLOY_SCRIPT="$PROJECT_PATH/server-auto-deploy.sh"
+else
+    echo "❌ Скрипт server-auto-deploy.sh не найден!"
+    echo "💡 Искал в:"
+    echo "   - $SCRIPT_DIR/server-auto-deploy.sh"
+    echo "   - $PROJECT_PATH/server-auto-deploy.sh"
+    echo ""
+    echo "📝 Убедитесь что вы запускаете скрипт из директории проекта"
+    echo "   или укажите путь через переменную DEPLOY_PATH"
     exit 1
 fi
+
+echo "🔧 Настройка автоматического деплоя через systemd..."
+echo "📁 Директория проекта: $PROJECT_PATH"
+echo "📄 Скрипт деплоя: $DEPLOY_SCRIPT"
 
 # Делаем скрипт исполняемым
 chmod +x "$DEPLOY_SCRIPT"
