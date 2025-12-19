@@ -1,133 +1,217 @@
 #!/bin/bash
 
-# Полный скрипт для исправления конфигурации Nginx для ISPmanager
+# Полный скрипт для исправления Nginx конфигурации
 
-SERVER="root@91.229.9.80"
 CONFIG_FILE="/etc/nginx/vhosts/www-root/nardist.site.conf"
-BACKUP_FILE="${CONFIG_FILE}.backup"
 
-echo "🔧 Полное исправление конфигурации Nginx для nardist.site..."
+echo "🔧 Полное исправление Nginx конфигурации..."
 
-ssh $SERVER << ENDSSH
-set -e
-
-echo "📝 Шаг 1: Создание бэкапа..."
-if [ ! -f "$BACKUP_FILE" ]; then
-    cp "$CONFIG_FILE" "$BACKUP_FILE"
-    echo "✅ Бэкап создан: $BACKUP_FILE"
-else
-    echo "✅ Бэкап уже существует, восстанавливаем из него..."
-    cp "$BACKUP_FILE" "$CONFIG_FILE"
+# Создаём бэкап если его нет
+if [ ! -f "$CONFIG_FILE.backup" ]; then
+    cp "$CONFIG_FILE" "$CONFIG_FILE.backup"
+    echo "✅ Бэкап создан"
 fi
 
+# Восстанавливаем из бэкапа
 echo ""
-echo "📝 Шаг 2: Изменение @fallback для проксирования на frontend..."
-sed -i 's|proxy_pass http://127.0.0.1:8080;|proxy_pass http://127.0.0.1:5173;|g' "$CONFIG_FILE"
-sed -i 's|proxy_redirect http://127.0.0.1:8080 /;|proxy_redirect http://127.0.0.1:5173 /;|g' "$CONFIG_FILE"
-echo "✅ @fallback изменен для проксирования на порт 5173"
+echo "Восстановление из бэкапа..."
+cp "$CONFIG_FILE.backup" "$CONFIG_FILE"
+echo "✅ Конфигурация восстановлена"
 
+# Проверяем что frontend контейнер работает
 echo ""
-echo "📝 Шаг 3: Поиск места для вставки location блоков..."
-# Находим строку с основным location / (не вложенным)
-MAIN_LOCATION_LINE=$(grep -n "^[[:space:]]*location / {" "$CONFIG_FILE" | head -1 | cut -d: -f1)
+echo "Проверка frontend контейнера:"
+if curl -s http://127.0.0.1:5173 > /dev/null 2>&1; then
+    echo "✅ Frontend контейнер отвечает на порту 5173"
+else
+    echo "⚠️ Frontend контейнер не отвечает на порту 5173"
+    echo "Проверьте: docker-compose ps frontend"
+fi
 
-if [ -z "$MAIN_LOCATION_LINE" ]; then
+# Находим location / (не /api, не /socket.io, не /health)
+LOC_LINE=$(grep -n "^[[:space:]]*location / {" "$CONFIG_FILE" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | head -1 | cut -d: -f1)
+
+if [ -z "$LOC_LINE" ]; then
     echo "❌ Не найдена строка с location /"
     exit 1
 fi
 
-echo "✅ Найдена строка $MAIN_LOCATION_LINE"
+echo ""
+echo "✅ location / найден на строке $LOC_LINE"
+
+# Находим закрывающую скобку location /
+LOCATION_CLOSE=""
+INDENT=$(sed -n "${LOC_LINE}p" "$CONFIG_FILE" | sed 's/location.*//' | wc -c)
+INDENT=$((INDENT - 1))
+
+for i in $(seq $((LOC_LINE + 1)) $(wc -l < "$CONFIG_FILE")); do
+    line=$(sed -n "${i}p" "$CONFIG_FILE")
+    line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+    line_indent=$((line_indent - 1))
+    
+    if [ "$line_indent" -le "$INDENT" ] && echo "$line" | grep -q "^[[:space:]]*}$"; then
+        LOCATION_CLOSE=$i
+        break
+    fi
+done
+
+if [ -z "$LOCATION_CLOSE" ]; then
+    echo "❌ Не найдена закрывающая скобка location /"
+    exit 1
+fi
+
+echo "✅ Закрывающая скобка location / на строке $LOCATION_CLOSE"
+
+# Проверяем какие location блоки уже есть ПЕРЕД location /
+BEFORE_LOC=$(head -n $((LOC_LINE - 1)) "$CONFIG_FILE")
+HAS_API_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /api {" || echo "0")
+HAS_SOCKET_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /socket.io {" || echo "0")
+HAS_HEALTH_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /health {" || echo "0")
 
 echo ""
-echo "📝 Шаг 4: Добавление location блоков для API перед основным location /..."
+echo "Найденные location блоки ПЕРЕД location /:"
+echo "  location /api: $HAS_API_BEFORE"
+echo "  location /socket.io: $HAS_SOCKET_BEFORE"
+echo "  location /health: $HAS_HEALTH_BEFORE"
 
-# Создаем временный файл
+echo ""
+echo "📝 Замена location / на проксирование на frontend..."
+
+# Создаём временный файл
 TMP_FILE=$(mktemp)
 
 # Копируем всё до location /
-head -n $((MAIN_LOCATION_LINE - 1)) "$CONFIG_FILE" > "$TMP_FILE"
+head -n $((LOC_LINE - 1)) "$CONFIG_FILE" > "$TMP_FILE"
 
-# Добавляем location блоки для API
-cat >> "$TMP_FILE" << 'LOCATION_BLOCKS'
-        location /api {
-            proxy_pass http://127.0.0.1:3000;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_cache_bypass $http_upgrade;
-            proxy_redirect off;
-            proxy_connect_timeout 60s;
-            proxy_send_timeout 60s;
-            proxy_read_timeout 60s;
-        }
+# Добавляем location блоки только если их ещё нет
+if [ "$HAS_API_BEFORE" -eq 0 ]; then
+    echo "Добавляем location /api..."
+    cat >> "$TMP_FILE" << 'EOF'
+    location /api {
+        rewrite ^/api(.*)$ $1 break;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_redirect off;
+    }
 
-        location /socket.io {
-            proxy_pass http://127.0.0.1:3000;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_connect_timeout 7d;
-            proxy_send_timeout 7d;
-            proxy_read_timeout 7d;
-        }
+EOF
+fi
 
-        location /health {
-            proxy_pass http://127.0.0.1:3000/health;
-            access_log off;
-        }
+if [ "$HAS_SOCKET_BEFORE" -eq 0 ]; then
+    echo "Добавляем location /socket.io..."
+    cat >> "$TMP_FILE" << 'EOF'
+    location /socket.io {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
 
-LOCATION_BLOCKS
+EOF
+fi
 
-# Добавляем остальную часть файла
-tail -n +$MAIN_LOCATION_LINE "$CONFIG_FILE" >> "$TMP_FILE"
+if [ "$HAS_HEALTH_BEFORE" -eq 0 ]; then
+    echo "Добавляем location /health..."
+    cat >> "$TMP_FILE" << 'EOF'
+    location /health {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 
-# Заменяем оригинальный файл
+EOF
+fi
+
+# Добавляем location / с проксированием на frontend
+cat >> "$TMP_FILE" << 'EOF'
+    location / {
+        proxy_pass http://127.0.0.1:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_redirect off;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+EOF
+
+# Добавляем остальную часть файла после закрывающей скобки location /
+tail -n +$((LOCATION_CLOSE + 1)) "$CONFIG_FILE" >> "$TMP_FILE"
+
+# Заменяем файл
 mv "$TMP_FILE" "$CONFIG_FILE"
 
-echo "✅ Location блоки добавлены"
+echo "✅ Конфигурация обновлена"
 
+# Проверяем на дубликаты
 echo ""
-echo "📝 Шаг 5: Проверка синтаксиса..."
-if nginx -t; then
-    echo "✅ Синтаксис корректен"
-else
-    echo "❌ Ошибка в синтаксисе!"
-    echo "Восстанавливаем из бэкапа..."
-    cp "$BACKUP_FILE" "$CONFIG_FILE"
+echo "Проверка дубликатов:"
+API_COUNT=$(grep -c "location /api {" "$CONFIG_FILE" || echo "0")
+SOCKET_COUNT=$(grep -c "location /socket.io {" "$CONFIG_FILE" || echo "0")
+HEALTH_COUNT=$(grep -c "location /health {" "$CONFIG_FILE" || echo "0")
+ROOT_COUNT=$(grep -c "^[[:space:]]*location / {" "$CONFIG_FILE" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" || echo "0")
+
+echo "  location /api: $API_COUNT"
+echo "  location /socket.io: $SOCKET_COUNT"
+echo "  location /health: $HEALTH_COUNT"
+echo "  location /: $ROOT_COUNT"
+
+if [ "$API_COUNT" -gt 1 ] || [ "$SOCKET_COUNT" -gt 1 ] || [ "$HEALTH_COUNT" -gt 1 ] || [ "$ROOT_COUNT" -gt 1 ]; then
+    echo ""
+    echo "❌ Найдены дубликаты! Показываю все location блоки:"
+    grep -n "location /" "$CONFIG_FILE" | grep -v "^#"
     exit 1
 fi
 
 echo ""
-echo "📝 Шаг 6: Перезагрузка Nginx..."
-systemctl reload nginx
-echo "✅ Nginx перезагружен"
-
-echo ""
-echo "⏳ Ожидание 3 секунды..."
-sleep 3
-
-echo ""
-echo "📝 Шаг 7: Проверка работы..."
-echo "Frontend:"
-curl -s http://nardist.site | head -5
-echo ""
-echo "Backend API:"
-curl -s http://nardist.site/api/health
-echo ""
-
-echo ""
-echo "✅ Готово! Конфигурация исправлена."
-echo "📝 Бэкап сохранен в: $BACKUP_FILE"
-ENDSSH
-
-echo ""
-echo "🎉 Скрипт выполнен!"
-
+echo "Проверка синтаксиса:"
+if nginx -t 2>&1; then
+    echo "✅ Синтаксис корректен!"
+    
+    echo ""
+    echo "Перезагрузка Nginx..."
+    systemctl reload nginx
+    
+    echo ""
+    echo "Ожидание 2 секунды..."
+    sleep 2
+    
+    echo ""
+    echo "Проверка работы frontend:"
+    curl -s http://nardist.site | head -20
+    echo ""
+    
+    echo ""
+    echo "Проверка работы API:"
+    curl -s http://nardist.site/api/health
+    echo ""
+    
+    echo ""
+    echo "✅ Всё готово!"
+else
+    echo "❌ Ошибка в синтаксисе!"
+    nginx -t 2>&1
+    exit 1
+fi
