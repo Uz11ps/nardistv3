@@ -219,18 +219,19 @@ echo "✅ Конфигурация обновлена"
 # Проверяем на дубликаты
 echo ""
 echo "Проверка дубликатов:"
-API_COUNT=$(grep -c "location /api {" "$CONFIG_FILE" 2>/dev/null || echo "0")
-SOCKET_COUNT=$(grep -c "location /socket.io {" "$CONFIG_FILE" 2>/dev/null || echo "0")
-HEALTH_COUNT=$(grep -c "location /health {" "$CONFIG_FILE" 2>/dev/null || echo "0")
+API_COUNT=$(grep -c "location /api {" "$CONFIG_FILE" 2>/dev/null)
+SOCKET_COUNT=$(grep -c "location /socket.io {" "$CONFIG_FILE" 2>/dev/null)
+HEALTH_COUNT=$(grep -c "location /health {" "$CONFIG_FILE" 2>/dev/null)
 ROOT_LINES=$(grep -n "^[[:space:]]*location / {" "$CONFIG_FILE" 2>/dev/null | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
-ROOT_COUNT=$(echo "$ROOT_LINES" | wc -l)
+ROOT_COUNT=$(echo "$ROOT_LINES" | grep -c . || echo "0")
 
-# Преобразуем в число
-API_COUNT=$(echo "$API_COUNT" | tr -d '\n\r' | grep -o '[0-9]*' | head -1)
-SOCKET_COUNT=$(echo "$SOCKET_COUNT" | tr -d '\n\r' | grep -o '[0-9]*' | head -1)
-HEALTH_COUNT=$(echo "$HEALTH_COUNT" | tr -d '\n\r' | grep -o '[0-9]*' | head -1)
-ROOT_COUNT=$(echo "$ROOT_COUNT" | tr -d '\n\r' | grep -o '[0-9]*' | head -1)
+# Преобразуем в число (убираем все кроме цифр)
+API_COUNT=$(echo "$API_COUNT" | grep -oE '[0-9]+' | head -1)
+SOCKET_COUNT=$(echo "$SOCKET_COUNT" | grep -oE '[0-9]+' | head -1)
+HEALTH_COUNT=$(echo "$HEALTH_COUNT" | grep -oE '[0-9]+' | head -1)
+ROOT_COUNT=$(echo "$ROOT_COUNT" | grep -oE '[0-9]+' | head -1)
 
+# Если пусто, устанавливаем 0
 [ -z "$API_COUNT" ] && API_COUNT=0
 [ -z "$SOCKET_COUNT" ] && SOCKET_COUNT=0
 [ -z "$HEALTH_COUNT" ] && HEALTH_COUNT=0
