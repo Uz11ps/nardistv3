@@ -123,7 +123,14 @@ echo "📝 Замена location / на проксирование на frontend
 # Создаём временный файл
 TMP_FILE=$(mktemp)
 
-# Копируем всё до location /
+# Копируем всё до location /, но проверяем что мы внутри server блока
+# Если location / находится после закрывающей скобки server, это ошибка
+if [ -n "$SERVER_CLOSE" ] && [ "$LOC_LINE" -gt "$SERVER_CLOSE" ]; then
+    echo "❌ location / находится ВНЕ server блока (server заканчивается на строке $SERVER_CLOSE, location / на строке $LOC_LINE)"
+    echo "Проверьте структуру конфигурации вручную"
+    exit 1
+fi
+
 head -n $((LOC_LINE - 1)) "$CONFIG_FILE" > "$TMP_FILE"
 
 # Добавляем location блоки только если их ещё нет
