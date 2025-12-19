@@ -202,7 +202,15 @@ EOF
 
 # Добавляем остальную часть файла после закрывающей скобки location /
 # Но сначала проверяем и удаляем дубликаты location / в остальной части
+# И проверяем что мы не выходим за пределы server блока
 AFTER_LOC=$(tail -n +$((LOCATION_CLOSE + 1)) "$CONFIG_FILE")
+
+# Если есть server блок, обрезаем до его закрывающей скобки
+if [ -n "$SERVER_CLOSE" ] && [ "$LOCATION_CLOSE" -lt "$SERVER_CLOSE" ]; then
+    # Берем только до закрывающей скобки server блока (включая её)
+    LINES_TO_TAKE=$((SERVER_CLOSE - LOCATION_CLOSE))
+    AFTER_LOC=$(echo "$AFTER_LOC" | head -n "$LINES_TO_TAKE")
+fi
 
 # Находим все location / блоки в остальной части (кроме /api, /socket.io, /health)
 ROOT_LINES_AFTER=$(echo "$AFTER_LOC" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
