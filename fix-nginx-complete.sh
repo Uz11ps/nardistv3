@@ -331,7 +331,47 @@ if [ -n "$SERVER_CLOSE" ]; then
     # Но сначала удаляем все дубликаты location / из неё
     AFTER_SERVER=$(tail -n +$((SERVER_CLOSE + 1)) "$CONFIG_FILE")
     
-    # Находим все location / блоки в части после server блока
+    # Удаляем все location блоки из AFTER_SERVER (они должны быть только внутри server блока)
+    # Находим все location блоки в части после server блока
+    ALL_LOCATION_LINES=$(echo "$AFTER_SERVER" | grep -n "^[[:space:]]*location " | cut -d: -f1)
+    
+    # Удаляем все location блоки из AFTER_SERVER
+    if [ -n "$ALL_LOCATION_LINES" ]; then
+        echo "⚠️ Найдены location блоки после server блока, удаляем их..."
+        # Используем цикл пока есть location блоки
+        while true; do
+            ALL_LOCATION_LINES=$(echo "$AFTER_SERVER" | grep -n "^[[:space:]]*location " | cut -d: -f1)
+            
+            if [ -z "$ALL_LOCATION_LINES" ]; then
+                break
+            fi
+            
+            line_num=$(echo "$ALL_LOCATION_LINES" | head -1)
+            INDENT_AFTER_SERVER=$(echo "$AFTER_SERVER" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
+            INDENT_AFTER_SERVER=$((INDENT_AFTER_SERVER - 1))
+            
+            TOTAL_LINES_AFTER_SERVER=$(echo "$AFTER_SERVER" | wc -l)
+            CLOSE_LINE_AFTER_SERVER=""
+            for i in $(seq $((line_num + 1)) $TOTAL_LINES_AFTER_SERVER); do
+                line_after_server=$(echo "$AFTER_SERVER" | sed -n "${i}p")
+                line_indent_after_server=$(echo "$line_after_server" | sed 's/[^ ].*//' | wc -c)
+                line_indent_after_server=$((line_indent_after_server - 1))
+                
+                if [ "$line_indent_after_server" -le "$INDENT_AFTER_SERVER" ] && echo "$line_after_server" | grep -q "^[[:space:]]*}$"; then
+                    CLOSE_LINE_AFTER_SERVER=$i
+                    break
+                fi
+            done
+            
+            if [ -n "$CLOSE_LINE_AFTER_SERVER" ]; then
+                AFTER_SERVER=$(echo "$AFTER_SERVER" | sed "${line_num},${CLOSE_LINE_AFTER_SERVER}d")
+            else
+                AFTER_SERVER=$(echo "$AFTER_SERVER" | sed "${line_num}d")
+            fi
+        done
+    fi
+    
+    # Теперь ищем только location / блоки (для сообщения)
     ROOT_LINES_AFTER_SERVER=$(echo "$AFTER_SERVER" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
     
     # Если есть дубликаты, удаляем их
