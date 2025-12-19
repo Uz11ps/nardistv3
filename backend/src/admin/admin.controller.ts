@@ -1,9 +1,13 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UnauthorizedException, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { CreateSkinDto } from './dto/create-skin.dto';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('admin')
 export class AdminController {
@@ -185,6 +189,76 @@ export class AdminController {
       throw new UnauthorizedException('Недостаточно прав');
     }
     return this.adminService.updateCityRewards(body);
+  }
+
+  // CRUD для скинов
+  @Get('skins')
+  @UseGuards(JwtAuthGuard)
+  async getSkins(@CurrentUser() user: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getAllSkins();
+  }
+
+  @Post('skins')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/skins',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `skin-${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Только изображения разрешены'), false);
+        }
+      },
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    }),
+  )
+  async createSkin(
+    @CurrentUser() user: any,
+    @Body() body: CreateSkinDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    const imageUrl = file ? `/uploads/skins/${file.filename}` : body.imageUrl;
+    return this.adminService.createSkin({ ...body, imageUrl });
+  }
+
+  @Put('skins/:id')
+  @UseGuards(JwtAuthGuard)
+  async updateSkin(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateSkin(id, body);
+  }
+
+  @Delete('skins/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteSkin(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteSkin(id);
+  }
+
+  @Post('skins/:id/upload-image')
+  @UseGuards(JwtAuthGuard)
+  async uploadSkinImage(@CurrentUser() user: any, @Param('id') id: string, @Body() body: { imageUrl: string }) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateSkinImage(id, body.imageUrl);
   }
 }
 

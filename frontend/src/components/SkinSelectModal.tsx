@@ -1,0 +1,172 @@
+import { useEffect, useState } from 'react'
+import { apiClient } from '../api/client'
+import Card from './Card'
+import Button from './Button'
+
+interface Skin {
+  id: string
+  name: string
+  description?: string
+  theme: string
+  imageUrl?: string
+  price?: number
+  rarity: string
+  weight: number
+  isPremium: boolean
+  isDefault: boolean
+}
+
+interface SkinSelectModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSelect: (skinId: string) => void
+  selectedSkinId?: string
+  ownedSkins?: string[]
+}
+
+export default function SkinSelectModal({
+  isOpen,
+  onClose,
+  onSelect,
+  selectedSkinId,
+  ownedSkins = [],
+}: SkinSelectModalProps) {
+  const [skins, setSkins] = useState<Skin[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (isOpen) {
+      loadSkins()
+    }
+  }, [isOpen])
+
+  const loadSkins = async () => {
+    try {
+      setLoading(true)
+      const response = await apiClient.get('/skins')
+      setSkins(response.data || [])
+    } catch (error) {
+      console.error('Failed to load skins:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSelect = (skinId: string) => {
+    onSelect(skinId)
+    onClose()
+  }
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary':
+        return '#FFD700'
+      case 'epic':
+        return '#9B59B6'
+      case 'rare':
+        return '#3498DB'
+      default:
+        return '#95A5A6'
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90%', maxHeight: '90vh', overflow: 'auto' }}>
+        <div className="modal-title">Выберите скин</div>
+        <div className="modal-description">Выберите дизайн доски для игры</div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>Загрузка...</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px', marginTop: '20px' }}>
+            {skins.map((skin) => {
+              const isOwned = ownedSkins.includes(skin.id) || skin.isDefault
+              const isSelected = selectedSkinId === skin.id
+              const canSelect = isOwned
+
+              return (
+                <Card
+                  key={skin.id}
+                  style={{
+                    padding: '12px',
+                    cursor: canSelect ? 'pointer' : 'not-allowed',
+                    border: isSelected ? '2px solid #ff3333' : '1px solid #3a3a3a',
+                    opacity: canSelect ? 1 : 0.6,
+                  }}
+                  onClick={() => canSelect && handleSelect(skin.id)}
+                >
+                  <div style={{ textAlign: 'center' }}>
+                    {skin.imageUrl ? (
+                      <img
+                        src={skin.imageUrl}
+                        alt={skin.name}
+                        style={{
+                          width: '100%',
+                          height: '100px',
+                          objectFit: 'cover',
+                          borderRadius: '8px',
+                          marginBottom: '8px',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100px',
+                          background: skin.boardConfig?.color || '#3a3a3a',
+                          borderRadius: '8px',
+                          marginBottom: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '32px',
+                        }}
+                      >
+                        🎲
+                      </div>
+                    )}
+                    <div className="card-title" style={{ fontSize: '14px', marginBottom: '4px' }}>
+                      {skin.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '10px',
+                        color: getRarityColor(skin.rarity),
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {skin.rarity === 'legendary' && 'Легендарный'}
+                      {skin.rarity === 'epic' && 'Эпический'}
+                      {skin.rarity === 'rare' && 'Редкий'}
+                      {skin.rarity === 'common' && 'Обычный'}
+                    </div>
+                    {!isOwned && skin.price && (
+                      <div className="gold" style={{ fontSize: '12px' }}>
+                        {skin.price} NAR
+                      </div>
+                    )}
+                    {isOwned && (
+                      <div style={{ fontSize: '10px', color: '#4CAF50' }}>
+                        {isSelected ? 'Выбрано' : 'Куплено'}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="modal-actions" style={{ marginTop: '24px' }}>
+          <Button fullWidth variant="secondary" onClick={onClose}>
+            Закрыть
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+

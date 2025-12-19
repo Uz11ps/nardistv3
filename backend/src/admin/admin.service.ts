@@ -11,6 +11,7 @@ import { Game, GameMode, GameType, GameStatus } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
 import { Tournament } from '../tournaments/tournament.entity';
 import { Article } from '../academy/article.entity';
+import { Skin } from '../skins/skin.entity';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -27,6 +28,8 @@ export class AdminService {
     private tournamentsRepository: Repository<Tournament>,
     @InjectRepository(Article)
     private articlesRepository: Repository<Article>,
+    @InjectRepository(Skin)
+    private skinsRepository: Repository<Skin>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
     private academyService: AcademyService,
@@ -278,6 +281,85 @@ export class AdminService {
     // Сохраняем настройки наград (можно в БД или конфиг)
     // Пока просто возвращаем обновленные данные
     return data;
+  }
+
+  // CRUD для скинов
+  async getAllSkins() {
+    return this.skinsRepository.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async createSkin(data: {
+    name: string;
+    description?: string;
+    theme: string;
+    boardConfig: any;
+    diceConfig: any;
+    isDefault?: boolean;
+    isPremium?: boolean;
+    weight?: number;
+    imageUrl?: string;
+    price?: number;
+    rarity?: string;
+  }) {
+    const skin = this.skinsRepository.create({
+      name: data.name,
+      description: data.description || null,
+      theme: data.theme,
+      boardConfig: data.boardConfig || {},
+      diceConfig: data.diceConfig || {},
+      isDefault: data.isDefault || false,
+      isPremium: data.isPremium || false,
+      weight: data.weight || 1,
+      imageUrl: data.imageUrl || null,
+      price: data.price || null,
+      rarity: data.rarity || 'common',
+    });
+
+    return this.skinsRepository.save(skin);
+  }
+
+  async updateSkin(id: string, data: Partial<{
+    name: string;
+    description: string;
+    theme: string;
+    boardConfig: any;
+    diceConfig: any;
+    isDefault: boolean;
+    isPremium: boolean;
+    weight: number;
+    imageUrl: string;
+    price: number;
+    rarity: string;
+  }>) {
+    const skin = await this.skinsRepository.findOne({ where: { id } });
+    if (!skin) {
+      throw new Error('Скин не найден');
+    }
+
+    Object.assign(skin, data);
+    return this.skinsRepository.save(skin);
+  }
+
+  async deleteSkin(id: string) {
+    const skin = await this.skinsRepository.findOne({ where: { id } });
+    if (!skin) {
+      throw new Error('Скин не найден');
+    }
+
+    await this.skinsRepository.remove(skin);
+    return { message: 'Скин удален' };
+  }
+
+  async updateSkinImage(id: string, imageUrl: string) {
+    const skin = await this.skinsRepository.findOne({ where: { id } });
+    if (!skin) {
+      throw new Error('Скин не найден');
+    }
+
+    skin.imageUrl = imageUrl;
+    return this.skinsRepository.save(skin);
   }
 }
 

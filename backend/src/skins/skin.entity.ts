@@ -35,6 +35,15 @@ export class Skin {
   @Column({ type: 'int', default: 1 })
   weight: number; // Вес скина для лимита силы
 
+  @Column({ nullable: true })
+  imageUrl: string; // URL изображения скина
+
+  @Column({ type: 'int', nullable: true })
+  price: number; // Цена в NAR-coin (если null - бесплатный)
+
+  @Column({ default: 'common' })
+  rarity: string; // Редкость: common, rare, epic, legendary
+
   @CreateDateColumn()
   createdAt: Date;
 

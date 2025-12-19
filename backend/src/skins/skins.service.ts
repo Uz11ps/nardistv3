@@ -18,51 +18,8 @@ export class SkinsService {
     private progressService: ProgressService,
   ) {}
 
-  async initializeDefaultSkins(): Promise<void> {
-    const defaultSkins = [
-      {
-        name: 'Классический',
-        theme: 'classic',
-        boardConfig: { color: '#D2691E' },
-        diceConfig: { color: '#FFFFFF' },
-        isDefault: true,
-        weight: 1,
-      },
-      {
-        name: 'Темный',
-        theme: 'dark',
-        boardConfig: { color: '#2C2C2C' },
-        diceConfig: { color: '#FFFFFF' },
-        isDefault: true,
-        weight: 1,
-      },
-      {
-        name: 'Морской',
-        theme: 'ocean',
-        boardConfig: { color: '#1E90FF' },
-        diceConfig: { color: '#FFFFFF' },
-        isDefault: true,
-        weight: 2,
-      },
-      {
-        name: 'Лесной',
-        theme: 'forest',
-        boardConfig: { color: '#228B22' },
-        diceConfig: { color: '#FFFFFF' },
-        isDefault: true,
-        weight: 2,
-      },
-    ];
-
-    for (const skinData of defaultSkins) {
-      const existing = await this.skinsRepository.findOne({
-        where: { theme: skinData.theme },
-      });
-      if (!existing) {
-        await this.skinsRepository.save(this.skinsRepository.create(skinData));
-      }
-    }
-  }
+  // Убрано: инициализация скинов теперь только через админку
+  // Если нужно создать дефолтные скины, используйте админ-панель
 
   async getAllSkins(): Promise<Skin[]> {
     return this.skinsRepository.find();

@@ -64,6 +64,7 @@ services:
         condition: service_healthy
     volumes:
       - /app/node_modules
+      - ./backend/uploads:/app/uploads
     networks:
       - nardi_network
     restart: unless-stopped

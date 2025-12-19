@@ -1,11 +1,32 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import SkinSelectModal from '../components/SkinSelectModal'
 import { apiClient } from '../api/client'
+import { useAuthStore } from '../store/authStore'
+
+interface Skin {
+  id: string
+  name: string
+  description?: string
+  theme: string
+  imageUrl?: string
+  price?: number
+  rarity: string
+  weight: number
+  isPremium: boolean
+  isDefault: boolean
+}
 
 export default function Shop() {
+  const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'cosmetics'>('coin')
+  const [skins, setSkins] = useState<Skin[]>([])
+  const [ownedSkins, setOwnedSkins] = useState<string[]>([])
+  const [selectedSkinId, setSelectedSkinId] = useState<string | null>(null)
+  const [showSkinModal, setShowSkinModal] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const narCoinPackages = [
     { amount: 1000, price: 1, currency: 'TON' },
@@ -20,11 +41,34 @@ export default function Shop() {
     { duration: '1 год', price: 22, currency: 'TON', label: 'Выгоднее' },
   ]
 
-  const cosmetics = [
-    { name: "Доска 'Классика'", rarity: 'Редкая', price: 1200, owned: false },
-    { name: "Доска 'Классика'", rarity: 'Редкая', price: 1200, owned: true },
-    { name: "Доска 'Классика'", rarity: 'Редкая', price: 1200, owned: false },
-  ]
+  useEffect(() => {
+    if (activeTab === 'cosmetics') {
+      loadSkins()
+    }
+  }, [activeTab])
+
+  const loadSkins = async () => {
+    try {
+      setLoading(true)
+      const [allSkinsResponse, mySkinsResponse, selectedSkinResponse] = await Promise.all([
+        apiClient.get('/skins'),
+        apiClient.get('/skins/my'),
+        apiClient.get('/skins/selected'),
+      ])
+
+      const allSkins = allSkinsResponse.data || []
+      const mySkins = mySkinsResponse.data || []
+      const selected = selectedSkinResponse.data
+
+      setSkins(allSkins)
+      setOwnedSkins([...mySkins.map((s: Skin) => s.id), ...allSkins.filter((s: Skin) => s.isDefault).map((s: Skin) => s.id)])
+      setSelectedSkinId(selected?.id || null)
+    } catch (error) {
+      console.error('Failed to load skins:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleBuyNarCoin = async (amount: number, price: number) => {
     try {
@@ -44,12 +88,43 @@ export default function Shop() {
     }
   }
 
-  const handleBuyCosmetic = async (item: typeof cosmetics[0]) => {
+  const handleBuySkin = async (skinId: string) => {
     try {
-      await apiClient.post('/shop/buy-cosmetic', { itemId: item.name })
-      // Обновить список
+      const skin = skins.find((s) => s.id === skinId)
+      if (!skin || !skin.price) return
+
+      // Здесь будет интеграция с платежной системой для покупки
+      // Пока просто показываем сообщение
+      alert(`Покупка скина "${skin.name}" за ${skin.price} NAR. Интеграция с платежной системой в разработке.`)
+      
+      // После покупки обновляем список
+      await loadSkins()
     } catch (error) {
       console.error('Purchase failed:', error)
+    }
+  }
+
+  const handleSelectSkin = async (skinId: string) => {
+    try {
+      await apiClient.post('/skins/select', { skinId })
+      setSelectedSkinId(skinId)
+      await loadSkins()
+    } catch (error: any) {
+      console.error('Failed to select skin:', error)
+      alert(error.response?.data?.message || 'Ошибка при выборе скина')
+    }
+  }
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary':
+        return '#FFD700'
+      case 'epic':
+        return '#9B59B6'
+      case 'rare':
+        return '#3498DB'
+      default:
+        return '#95A5A6'
     }
   }
 
@@ -158,39 +233,108 @@ export default function Shop() {
         {/* Косметика */}
         {activeTab === 'cosmetics' && (
           <div>
-            {cosmetics.map((item, index) => (
-              <Card key={index} style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      background: '#3a3a3a',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    🎲
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div className="card-title">{item.name}</div>
-                    <div className="card-subtitle">{item.rarity}</div>
-                    <div className="gold" style={{ marginTop: '4px' }}>
-                      {item.price} NAR
-                    </div>
-                  </div>
-                  {item.owned ? (
-                    <Button variant="secondary" disabled>Куплено</Button>
-                  ) : (
-                    <Button onClick={() => handleBuyCosmetic(item)}>Купить</Button>
-                  )}
-                </div>
-              </Card>
-            ))}
+            <div style={{ marginBottom: '16px' }}>
+              <Button fullWidth onClick={() => setShowSkinModal(true)}>
+                Выбрать скин
+              </Button>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>Загрузка...</div>
+            ) : (
+              <div>
+                {skins.map((skin) => {
+                  const isOwned = ownedSkins.includes(skin.id)
+                  const isSelected = selectedSkinId === skin.id
+
+                  return (
+                    <Card key={skin.id} style={{ marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {skin.imageUrl ? (
+                          <img
+                            src={skin.imageUrl}
+                            alt={skin.name}
+                            style={{
+                              width: '80px',
+                              height: '80px',
+                              objectFit: 'cover',
+                              borderRadius: '8px',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '80px',
+                              height: '80px',
+                              background: skin.boardConfig?.color || '#3a3a3a',
+                              borderRadius: '8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '32px',
+                            }}
+                          >
+                            🎲
+                          </div>
+                        )}
+                        <div style={{ flex: 1 }}>
+                          <div className="card-title">{skin.name}</div>
+                          {skin.description && (
+                            <div className="card-subtitle" style={{ fontSize: '12px' }}>
+                              {skin.description}
+                            </div>
+                          )}
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: getRarityColor(skin.rarity),
+                              marginTop: '4px',
+                            }}
+                          >
+                            {skin.rarity === 'legendary' && 'Легендарный'}
+                            {skin.rarity === 'epic' && 'Эпический'}
+                            {skin.rarity === 'rare' && 'Редкий'}
+                            {skin.rarity === 'common' && 'Обычный'}
+                          </div>
+                          {!isOwned && skin.price && (
+                            <div className="gold" style={{ marginTop: '4px' }}>
+                              {skin.price} NAR
+                            </div>
+                          )}
+                          {isSelected && (
+                            <div style={{ fontSize: '12px', color: '#4CAF50', marginTop: '4px' }}>
+                              Выбрано
+                            </div>
+                          )}
+                        </div>
+                        {isOwned ? (
+                          <Button
+                            variant={isSelected ? 'primary' : 'secondary'}
+                            onClick={() => handleSelectSkin(skin.id)}
+                          >
+                            {isSelected ? 'Выбрано' : 'Выбрать'}
+                          </Button>
+                        ) : (
+                          <Button onClick={() => handleBuySkin(skin.id)}>
+                            Купить
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
+
+        <SkinSelectModal
+          isOpen={showSkinModal}
+          onClose={() => setShowSkinModal(false)}
+          onSelect={handleSelectSkin}
+          selectedSkinId={selectedSkinId || undefined}
+          ownedSkins={ownedSkins}
+        />
       </div>
     </div>
   )

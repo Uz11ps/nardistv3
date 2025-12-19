@@ -2,9 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
@@ -17,6 +20,17 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Создаем папку для загрузок, если её нет
+  const uploadsDir = join(__dirname, '..', 'uploads', 'skins');
+  if (!existsSync(uploadsDir)) {
+    mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Настройка статической отдачи файлов (изображения скинов)
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   app.enableCors({
     origin: true,

@@ -14,10 +14,11 @@ import { Game } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
 import { Tournament } from '../tournaments/tournament.entity';
 import { Article } from '../academy/article.entity';
+import { Skin } from '../skins/skin.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

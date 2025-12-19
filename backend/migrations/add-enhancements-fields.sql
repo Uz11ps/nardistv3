@@ -23,3 +23,12 @@ UPDATE skins SET weight = 1 WHERE theme = 'dark';
 UPDATE skins SET weight = 2 WHERE theme = 'ocean';
 UPDATE skins SET weight = 2 WHERE theme = 'forest';
 
+-- Добавляем поля для изображений и цен скинов
+ALTER TABLE skins
+ADD COLUMN IF NOT EXISTS image_url VARCHAR(255),
+ADD COLUMN IF NOT EXISTS price INT,
+ADD COLUMN IF NOT EXISTS rarity VARCHAR(50) DEFAULT 'common';
+
+-- Устанавливаем редкость для существующих скинов
+UPDATE skins SET rarity = 'common' WHERE rarity IS NULL;
+
