@@ -406,6 +406,328 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {activeTab === 'create-game' && (
+          <div className="admin-create-game">
+            <div className="create-form">
+              <h3>Создать игру</h3>
+              <div className="form-group">
+                <label>ID игрока 1 (обязательно)</label>
+                <input
+                  type="text"
+                  value={newGame.player1Id}
+                  onChange={(e) => setNewGame({ ...newGame, player1Id: e.target.value })}
+                  placeholder="UUID игрока"
+                />
+              </div>
+              <div className="form-group">
+                <label>ID игрока 2 (опционально, если пусто - игра с ботом)</label>
+                <input
+                  type="text"
+                  value={newGame.player2Id}
+                  onChange={(e) => setNewGame({ ...newGame, player2Id: e.target.value })}
+                  placeholder="UUID игрока или оставить пустым"
+                />
+              </div>
+              <div className="form-group">
+                <label>Режим</label>
+                <select
+                  value={newGame.mode}
+                  onChange={(e) => setNewGame({ ...newGame, mode: e.target.value })}
+                >
+                  <option value="short">Короткие нарды</option>
+                  <option value="long">Длинные нарды</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Тип игры</label>
+                <select
+                  value={newGame.type}
+                  onChange={(e) => setNewGame({ ...newGame, type: e.target.value })}
+                >
+                  <option value="vs_player">Игрок vs Игрок</option>
+                  <option value="vs_bot">Игрок vs Бот</option>
+                  <option value="tournament">Турнир</option>
+                </select>
+              </div>
+              <button onClick={async () => {
+                try {
+                  const res = await apiClient.post('/admin/games/create', newGame)
+                  alert(`Игра создана! ID: ${res.data.id}`)
+                  setNewGame({ player1Id: '', player2Id: '', mode: 'short', type: 'vs_player' })
+                  loadStats()
+                } catch (error: any) {
+                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                }
+              }}>Создать игру</button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'tournaments' && (
+          <div className="admin-tournaments">
+            <div className="create-form">
+              <h3>Создать турнир</h3>
+              <div className="form-group">
+                <label>Название</label>
+                <input
+                  type="text"
+                  value={newTournament.name}
+                  onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
+                  placeholder="Название турнира"
+                />
+              </div>
+              <div className="form-group">
+                <label>Режим</label>
+                <select
+                  value={newTournament.mode}
+                  onChange={(e) => setNewTournament({ ...newTournament, mode: e.target.value })}
+                >
+                  <option value="short">Короткие нарды</option>
+                  <option value="long">Длинные нарды</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Формат</label>
+                <select
+                  value={newTournament.format}
+                  onChange={(e) => setNewTournament({ ...newTournament, format: e.target.value })}
+                >
+                  <option value="bracket">Олимпийская система</option>
+                  <option value="round_robin">Круговой</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Дата начала</label>
+                <input
+                  type="datetime-local"
+                  value={newTournament.startDate}
+                  onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Максимум участников</label>
+                <input
+                  type="number"
+                  value={newTournament.maxParticipants}
+                  onChange={(e) => setNewTournament({ ...newTournament, maxParticipants: parseInt(e.target.value) })}
+                  min="2"
+                />
+              </div>
+              <div className="form-group">
+                <label>Взнос (NAR)</label>
+                <input
+                  type="number"
+                  value={newTournament.entryFee}
+                  onChange={(e) => setNewTournament({ ...newTournament, entryFee: parseInt(e.target.value) })}
+                  min="0"
+                />
+              </div>
+              <button onClick={async () => {
+                try {
+                  await apiClient.post('/admin/tournaments/create', {
+                    ...newTournament,
+                    startDate: newTournament.startDate ? new Date(newTournament.startDate).toISOString() : new Date().toISOString(),
+                    status: 'registration',
+                  })
+                  alert('Турнир создан!')
+                  setNewTournament({ name: '', mode: 'short', format: 'bracket', startDate: '', maxParticipants: 16, entryFee: 0 })
+                  loadStats()
+                } catch (error: any) {
+                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                }
+              }}>Создать турнир</button>
+            </div>
+
+            <div className="tournaments-list">
+              <h3>Существующие турниры</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Название</th>
+                    <th>Режим</th>
+                    <th>Формат</th>
+                    <th>Статус</th>
+                    <th>Участников</th>
+                    <th>Дата начала</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tournaments.map((t) => (
+                    <tr key={t.id}>
+                      <td>{t.name}</td>
+                      <td>{t.mode === 'short' ? 'Короткие' : 'Длинные'}</td>
+                      <td>{t.format === 'bracket' ? 'Олимпийская' : 'Круговой'}</td>
+                      <td><span className="badge">{t.status}</span></td>
+                      <td>{t.currentParticipants || 0} / {t.maxParticipants}</td>
+                      <td>{new Date(t.startDate).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'academy' && (
+          <div className="admin-academy">
+            <div className="create-form">
+              <h3>Создать материал</h3>
+              <div className="form-group">
+                <label>Название</label>
+                <input
+                  type="text"
+                  value={newArticle.title}
+                  onChange={(e) => setNewArticle({ ...newArticle, title: e.target.value })}
+                  placeholder="Название статьи/урока"
+                />
+              </div>
+              <div className="form-group">
+                <label>Тип</label>
+                <select
+                  value={newArticle.type}
+                  onChange={(e) => setNewArticle({ ...newArticle, type: e.target.value })}
+                >
+                  <option value="article">Статья</option>
+                  <option value="course">Курс</option>
+                  <option value="video">Видео</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Содержание</label>
+                <textarea
+                  value={newArticle.content}
+                  onChange={(e) => setNewArticle({ ...newArticle, content: e.target.value })}
+                  rows={10}
+                  placeholder="Текст материала..."
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={newArticle.isPaid}
+                    onChange={(e) => setNewArticle({ ...newArticle, isPaid: e.target.checked })}
+                  />
+                  Платный материал
+                </label>
+              </div>
+              {newArticle.isPaid && (
+                <div className="form-group">
+                  <label>Цена (NAR)</label>
+                  <input
+                    type="number"
+                    value={newArticle.price}
+                    onChange={(e) => setNewArticle({ ...newArticle, price: parseInt(e.target.value) })}
+                    min="0"
+                  />
+                </div>
+              )}
+              <button onClick={async () => {
+                try {
+                  await apiClient.post('/admin/academy/create', {
+                    ...newArticle,
+                    authorId: 'admin',
+                  })
+                  alert('Материал создан!')
+                  setNewArticle({ title: '', content: '', type: 'article', isPaid: false, price: 0 })
+                  loadStats()
+                } catch (error: any) {
+                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                }
+              }}>Создать материал</button>
+            </div>
+
+            <div className="articles-list">
+              <h3>Существующие материалы</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Название</th>
+                    <th>Тип</th>
+                    <th>Платный</th>
+                    <th>Цена</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {articles.map((a) => (
+                    <tr key={a.id}>
+                      <td>{a.title}</td>
+                      <td>{a.type}</td>
+                      <td>{a.isPaid ? 'Да' : 'Нет'}</td>
+                      <td>{a.price || 0} NAR</td>
+                      <td>
+                        <button onClick={() => {
+                          if (confirm('Удалить материал?')) {
+                            apiClient.delete(`/admin/academy/${a.id}`).then(() => loadStats())
+                          }
+                        }}>Удалить</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'city' && cityRewards && (
+          <div className="admin-city">
+            <h3>Настройка наград города</h3>
+            <div className="city-rewards">
+              {cityRewards.districts?.map((district: any) => (
+                <div key={district.id} className="district-card">
+                  <h4>{district.name}</h4>
+                  <div className="form-group">
+                    <label>Доход в час (NAR)</label>
+                    <input
+                      type="number"
+                      value={district.incomePerHour}
+                      onChange={(e) => {
+                        const updated = {
+                          ...cityRewards,
+                          districts: cityRewards.districts.map((d: any) =>
+                            d.id === district.id
+                              ? { ...d, incomePerHour: parseInt(e.target.value) }
+                              : d
+                          ),
+                        }
+                        setCityRewards(updated)
+                      }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Максимальное накопление (NAR)</label>
+                    <input
+                      type="number"
+                      value={district.maxAccumulation}
+                      onChange={(e) => {
+                        const updated = {
+                          ...cityRewards,
+                          districts: cityRewards.districts.map((d: any) =>
+                            d.id === district.id
+                              ? { ...d, maxAccumulation: parseInt(e.target.value) }
+                              : d
+                          ),
+                        }
+                        setCityRewards(updated)
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <button onClick={async () => {
+                try {
+                  await apiClient.put('/admin/city/rewards', cityRewards)
+                  alert('Настройки сохранены!')
+                } catch (error: any) {
+                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                }
+              }}>Сохранить изменения</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
