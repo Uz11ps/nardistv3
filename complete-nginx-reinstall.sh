@@ -2,6 +2,9 @@
 
 # Полная переустановка конфигурации nginx с нуля для Docker
 
+# Отключаем немедленный выход при ошибке
+set +e
+
 DOMAIN="nardist.site"
 CONFIG_FILE="/etc/nginx/vhosts/www-root/${DOMAIN}.conf"
 BACKUP_DIR="/root/nginx-backups-$(date +%Y%m%d_%H%M%S)"
@@ -32,10 +35,10 @@ echo ""
 
 # 2. Освобождаем порты
 echo "2️⃣ Освобождение портов 80 и 443..."
-lsof -ti:80 | xargs kill -9 2>/dev/null
-lsof -ti:443 | xargs kill -9 2>/dev/null
-fuser -k 80/tcp 2>/dev/null
-fuser -k 443/tcp 2>/dev/null
+lsof -ti:80 2>/dev/null | xargs kill -9 2>/dev/null || true
+lsof -ti:443 2>/dev/null | xargs kill -9 2>/dev/null || true
+fuser -k 80/tcp 2>/dev/null || true
+fuser -k 443/tcp 2>/dev/null || true
 sleep 2
 echo "   ✅ Порты освобождены"
 echo ""
