@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Настройка nginx внутри Docker
+# Главный скрипт для настройки nginx в Docker
 
-echo "🐳 Настройка nginx внутри Docker..."
+echo "🐳 Настройка nginx в Docker для nardist.site"
+echo "=========================================="
 echo ""
 
 # 1. Останавливаем nginx на хосте
@@ -30,8 +31,18 @@ if [ -f "${CERT_PATH}/fullchain.pem" ] && [ -f "${CERT_PATH}/privkey.pem" ]; the
     echo "   ✅ SSL сертификаты найдены"
 else
     echo "   ❌ SSL сертификаты не найдены!"
-    echo "   Установите сертификаты: certbot certonly --standalone -d nardist.site"
-    exit 1
+    echo "   Устанавливаю сертификаты..."
+    if command -v certbot &> /dev/null; then
+        certbot certonly --standalone -d nardist.site -d www.nardist.site --non-interactive --agree-tos --email admin@nardist.site || {
+            echo "   ❌ Не удалось установить сертификаты автоматически"
+            echo "   Выполните вручную: certbot certonly --standalone -d nardist.site"
+            exit 1
+        }
+    else
+        echo "   ❌ certbot не установлен"
+        echo "   Установите: apt-get install -y certbot"
+        exit 1
+    fi
 fi
 
 echo ""
@@ -39,8 +50,8 @@ echo ""
 # 4. Проверяем структуру директорий
 echo "4️⃣ Проверка структуры директорий..."
 if [ ! -d "nginx" ]; then
-    echo "   Создаю директорию nginx..."
-    mkdir -p nginx
+    echo "   ❌ Директория nginx не найдена!"
+    exit 1
 fi
 
 if [ ! -f "nginx/Dockerfile" ]; then
@@ -56,24 +67,31 @@ fi
 echo "   ✅ Структура директорий правильная"
 echo ""
 
-# 5. Останавливаем старые контейнеры
-echo "5️⃣ Остановка старых контейнеров..."
+# 5. Переходим в директорию проекта
+echo "5️⃣ Переход в директорию проекта..."
 cd /var/www/nardiphp 2>/dev/null || cd /root/nardiphp 2>/dev/null || {
     echo "   ❌ Не удалось найти директорию проекта"
     exit 1
 }
+echo "   ✅ Директория: $(pwd)"
+echo ""
 
-docker-compose down nginx 2>/dev/null || true
+# 6. Останавливаем старые контейнеры nginx
+echo "6️⃣ Остановка старых контейнеров nginx..."
+docker-compose stop nginx 2>/dev/null || true
+docker-compose rm -f nginx 2>/dev/null || true
 echo "   ✅ Старые контейнеры остановлены"
 echo ""
 
-# 6. Собираем и запускаем nginx контейнер
-echo "6️⃣ Сборка и запуск nginx контейнера..."
+# 7. Собираем и запускаем nginx контейнер
+echo "7️⃣ Сборка и запуск nginx контейнера..."
 docker-compose build nginx
 if [ $? -eq 0 ]; then
     echo "   ✅ Nginx контейнер собран"
 else
     echo "   ❌ Ошибка при сборке nginx контейнера!"
+    echo "   Логи:"
+    docker-compose build nginx 2>&1 | tail -10 | sed 's/^/      /'
     exit 1
 fi
 
@@ -82,30 +100,32 @@ if [ $? -eq 0 ]; then
     echo "   ✅ Nginx контейнер запущен"
 else
     echo "   ❌ Ошибка при запуске nginx контейнера!"
+    echo "   Логи:"
+    docker-compose logs nginx 2>&1 | tail -20 | sed 's/^/      /'
     exit 1
 fi
 
 echo ""
 
-# 7. Проверяем статус
-echo "7️⃣ Проверка статуса контейнеров..."
+# 8. Проверяем статус
+echo "8️⃣ Проверка статуса контейнеров..."
 sleep 3
-docker-compose ps | grep -E "nginx|frontend|backend" | sed 's/^/   /'
+docker-compose ps | sed 's/^/   /'
 echo ""
 
-# 8. Проверяем порты
-echo "8️⃣ Проверка портов..."
+# 9. Проверяем порты
+echo "9️⃣ Проверка портов..."
 if docker ps | grep -q "nardi_nginx"; then
     echo "   ✅ Nginx контейнер запущен"
     
     # Проверяем, что порты проброшены
-    if docker port nardi_nginx | grep -q "443"; then
+    if docker port nardi_nginx 2>/dev/null | grep -q "443"; then
         echo "   ✅ Порт 443 проброшен"
     else
         echo "   ❌ Порт 443 не проброшен!"
     fi
     
-    if docker port nardi_nginx | grep -q "80"; then
+    if docker port nardi_nginx 2>/dev/null | grep -q "80"; then
         echo "   ✅ Порт 80 проброшен"
     else
         echo "   ❌ Порт 80 не проброшен!"
@@ -119,9 +139,9 @@ fi
 
 echo ""
 
-# 9. Тестирование
-echo "9️⃣ Тестирование..."
-sleep 2
+# 10. Тестирование
+echo "🔟 Тестирование..."
+sleep 3
 
 DOMAIN="nardist.site"
 
@@ -152,6 +172,14 @@ else
     echo "      Проверьте логи: docker-compose logs nginx"
 fi
 
+echo "   Тест HTTPS /health:"
+HTTPS_HEALTH=$(curl -k -s -o /dev/null -w "%{http_code}" https://${DOMAIN}/health 2>&1)
+if [ "$HTTPS_HEALTH" = "200" ]; then
+    echo "      ✅ /health работает"
+else
+    echo "      ⚠️ /health вернул код: $HTTPS_HEALTH"
+fi
+
 echo ""
 echo "=========================================="
 echo "✅ НАСТРОЙКА ЗАВЕРШЕНА!"
@@ -162,4 +190,5 @@ echo "Полезные команды:"
 echo "   docker-compose logs nginx -f    # Логи nginx"
 echo "   docker-compose restart nginx    # Перезапуск nginx"
 echo "   docker-compose ps               # Статус контейнеров"
+echo "   docker-compose restart          # Перезапуск всех контейнеров"
 
