@@ -64,9 +64,19 @@ echo "✅ Закрывающая скобка location / на строке $LOCA
 
 # Проверяем какие location блоки уже есть ПЕРЕД location /
 BEFORE_LOC=$(head -n $((LOC_LINE - 1)) "$CONFIG_FILE")
-HAS_API_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /api {" || echo "0")
-HAS_SOCKET_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /socket.io {" || echo "0")
-HAS_HEALTH_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /health {" || echo "0")
+HAS_API_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /api {" 2>/dev/null || echo "0")
+HAS_SOCKET_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /socket.io {" 2>/dev/null || echo "0")
+HAS_HEALTH_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /health {" 2>/dev/null || echo "0")
+
+# Убираем переносы строк и приводим к числу
+HAS_API_BEFORE=$(echo "$HAS_API_BEFORE" | tr -d '\n\r' | head -1)
+HAS_SOCKET_BEFORE=$(echo "$HAS_SOCKET_BEFORE" | tr -d '\n\r' | head -1)
+HAS_HEALTH_BEFORE=$(echo "$HAS_HEALTH_BEFORE" | tr -d '\n\r' | head -1)
+
+# Если пусто, устанавливаем 0
+[ -z "$HAS_API_BEFORE" ] && HAS_API_BEFORE=0
+[ -z "$HAS_SOCKET_BEFORE" ] && HAS_SOCKET_BEFORE=0
+[ -z "$HAS_HEALTH_BEFORE" ] && HAS_HEALTH_BEFORE=0
 
 echo ""
 echo "Найденные location блоки ПЕРЕД location /:"
@@ -158,7 +168,44 @@ cat >> "$TMP_FILE" << 'EOF'
 EOF
 
 # Добавляем остальную часть файла после закрывающей скобки location /
-tail -n +$((LOCATION_CLOSE + 1)) "$CONFIG_FILE" >> "$TMP_FILE"
+# Но сначала удаляем все остальные location / блоки
+AFTER_LOC=$(tail -n +$((LOCATION_CLOSE + 1)) "$CONFIG_FILE")
+
+# Удаляем все location / блоки из остальной части (кроме тех что мы уже добавили)
+# Находим все location / блоки в остальной части
+ROOT_LINES_AFTER=$(echo "$AFTER_LOC" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
+
+# Если есть дубликаты, удаляем их
+if [ -n "$ROOT_LINES_AFTER" ]; then
+    echo "⚠️ Найдены дубликаты location / в остальной части файла, удаляем..."
+    for line_num in $ROOT_LINES_AFTER; do
+        # Находим закрывающую скобку этого location /
+        INDENT_AFTER=$(echo "$AFTER_LOC" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
+        INDENT_AFTER=$((INDENT_AFTER - 1))
+        CLOSE_LINE_AFTER=""
+        
+        TOTAL_LINES_AFTER=$(echo "$AFTER_LOC" | wc -l)
+        for i in $(seq $((line_num + 1)) $TOTAL_LINES_AFTER); do
+            line_after=$(echo "$AFTER_LOC" | sed -n "${i}p")
+            line_indent_after=$(echo "$line_after" | sed 's/[^ ].*//' | wc -c)
+            line_indent_after=$((line_indent_after - 1))
+            
+            if [ "$line_indent_after" -le "$INDENT_AFTER" ] && echo "$line_after" | grep -q "^[[:space:]]*}$"; then
+                CLOSE_LINE_AFTER=$i
+                break
+            fi
+        done
+        
+        if [ -n "$CLOSE_LINE_AFTER" ]; then
+            # Удаляем этот блок
+            BEFORE_BLOCK=$(echo "$AFTER_LOC" | head -n $((line_num - 1)))
+            AFTER_BLOCK=$(echo "$AFTER_LOC" | tail -n +$((CLOSE_LINE_AFTER + 1)))
+            AFTER_LOC=$(printf "%s\n%s" "$BEFORE_BLOCK" "$AFTER_BLOCK")
+        fi
+    done
+fi
+
+echo "$AFTER_LOC" >> "$TMP_FILE"
 
 # Заменяем файл
 mv "$TMP_FILE" "$CONFIG_FILE"
@@ -168,10 +215,22 @@ echo "✅ Конфигурация обновлена"
 # Проверяем на дубликаты
 echo ""
 echo "Проверка дубликатов:"
-API_COUNT=$(grep -c "location /api {" "$CONFIG_FILE" || echo "0")
-SOCKET_COUNT=$(grep -c "location /socket.io {" "$CONFIG_FILE" || echo "0")
-HEALTH_COUNT=$(grep -c "location /health {" "$CONFIG_FILE" || echo "0")
-ROOT_COUNT=$(grep -c "^[[:space:]]*location / {" "$CONFIG_FILE" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" || echo "0")
+API_COUNT=$(grep -c "location /api {" "$CONFIG_FILE" 2>/dev/null || echo "0")
+SOCKET_COUNT=$(grep -c "location /socket.io {" "$CONFIG_FILE" 2>/dev/null || echo "0")
+HEALTH_COUNT=$(grep -c "location /health {" "$CONFIG_FILE" 2>/dev/null || echo "0")
+ROOT_COUNT=$(grep -c "^[[:space:]]*location / {" "$CONFIG_FILE" 2>/dev/null | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" || echo "0")
+
+# Убираем переносы строк и приводим к числу
+API_COUNT=$(echo "$API_COUNT" | tr -d '\n\r' | head -1)
+SOCKET_COUNT=$(echo "$SOCKET_COUNT" | tr -d '\n\r' | head -1)
+HEALTH_COUNT=$(echo "$HEALTH_COUNT" | tr -d '\n\r' | head -1)
+ROOT_COUNT=$(echo "$ROOT_COUNT" | tr -d '\n\r' | head -1)
+
+# Если пусто, устанавливаем 0
+[ -z "$API_COUNT" ] && API_COUNT=0
+[ -z "$SOCKET_COUNT" ] && SOCKET_COUNT=0
+[ -z "$HEALTH_COUNT" ] && HEALTH_COUNT=0
+[ -z "$ROOT_COUNT" ] && ROOT_COUNT=0
 
 echo "  location /api: $API_COUNT"
 echo "  location /socket.io: $SOCKET_COUNT"
