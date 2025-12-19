@@ -62,6 +62,35 @@ fi
 
 echo "✅ Закрывающая скобка location / на строке $LOCATION_CLOSE"
 
+# Находим server блок и проверяем что location / внутри него
+SERVER_LINE=$(grep -n "^[[:space:]]*server {" "$CONFIG_FILE" | head -1 | cut -d: -f1)
+SERVER_CLOSE=""
+if [ -n "$SERVER_LINE" ]; then
+    SERVER_INDENT=$(sed -n "${SERVER_LINE}p" "$CONFIG_FILE" | sed 's/server.*//' | wc -c)
+    SERVER_INDENT=$((SERVER_INDENT - 1))
+    
+    for i in $(seq $((SERVER_LINE + 1)) $(wc -l < "$CONFIG_FILE")); do
+        line=$(sed -n "${i}p" "$CONFIG_FILE")
+        line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+        line_indent=$((line_indent - 1))
+        
+        if [ "$line_indent" -le "$SERVER_INDENT" ] && echo "$line" | grep -q "^[[:space:]]*}$"; then
+            SERVER_CLOSE=$i
+            break
+        fi
+    done
+    
+    if [ -n "$SERVER_CLOSE" ]; then
+        echo "✅ server блок найден: строки $SERVER_LINE-$SERVER_CLOSE"
+        if [ "$LOC_LINE" -lt "$SERVER_CLOSE" ]; then
+            echo "✅ location / находится внутри server блока"
+        else
+            echo "❌ location / находится ВНЕ server блока!"
+            exit 1
+        fi
+    fi
+fi
+
 # Проверяем какие location блоки уже есть ПЕРЕД location /
 BEFORE_LOC=$(head -n $((LOC_LINE - 1)) "$CONFIG_FILE")
 if echo "$BEFORE_LOC" | grep -q "location /api {"; then
