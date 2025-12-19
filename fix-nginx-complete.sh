@@ -328,32 +328,42 @@ if [ -n "$SERVER_CLOSE" ]; then
     ROOT_LINES_AFTER_SERVER=$(echo "$AFTER_SERVER" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
     
     # Если есть дубликаты, удаляем их
-    if [ -n "$ROOT_LINES_AFTER_SERVER" ]; then
-        echo "⚠️ Найдены дубликаты location / после server блока, удаляем..."
-        ROOT_LINES_SORTED_SERVER=$(echo "$ROOT_LINES_AFTER_SERVER" | sort -rn)
+    # Используем цикл пока есть дубликаты
+    while true; do
+        ROOT_LINES_AFTER_SERVER=$(echo "$AFTER_SERVER" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
         
-        for line_num in $ROOT_LINES_SORTED_SERVER; do
-            INDENT_AFTER_SERVER=$(echo "$AFTER_SERVER" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
-            INDENT_AFTER_SERVER=$((INDENT_AFTER_SERVER - 1))
+        if [ -z "$ROOT_LINES_AFTER_SERVER" ]; then
+            break
+        fi
+        
+        echo "⚠️ Найден дубликат location / после server блока на строке $(echo "$ROOT_LINES_AFTER_SERVER" | head -1), удаляем..."
+        
+        # Берем первый найденный дубликат
+        line_num=$(echo "$ROOT_LINES_AFTER_SERVER" | head -1)
+        
+        INDENT_AFTER_SERVER=$(echo "$AFTER_SERVER" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
+        INDENT_AFTER_SERVER=$((INDENT_AFTER_SERVER - 1))
+        
+        TOTAL_LINES_AFTER_SERVER=$(echo "$AFTER_SERVER" | wc -l)
+        CLOSE_LINE_AFTER_SERVER=""
+        for i in $(seq $((line_num + 1)) $TOTAL_LINES_AFTER_SERVER); do
+            line_after_server=$(echo "$AFTER_SERVER" | sed -n "${i}p")
+            line_indent_after_server=$(echo "$line_after_server" | sed 's/[^ ].*//' | wc -c)
+            line_indent_after_server=$((line_indent_after_server - 1))
             
-            TOTAL_LINES_AFTER_SERVER=$(echo "$AFTER_SERVER" | wc -l)
-            CLOSE_LINE_AFTER_SERVER=""
-            for i in $(seq $((line_num + 1)) $TOTAL_LINES_AFTER_SERVER); do
-                line_after_server=$(echo "$AFTER_SERVER" | sed -n "${i}p")
-                line_indent_after_server=$(echo "$line_after_server" | sed 's/[^ ].*//' | wc -c)
-                line_indent_after_server=$((line_indent_after_server - 1))
-                
-                if [ "$line_indent_after_server" -le "$INDENT_AFTER_SERVER" ] && echo "$line_after_server" | grep -q "^[[:space:]]*}$"; then
-                    CLOSE_LINE_AFTER_SERVER=$i
-                    break
-                fi
-            done
-            
-            if [ -n "$CLOSE_LINE_AFTER_SERVER" ]; then
-                AFTER_SERVER=$(echo "$AFTER_SERVER" | sed "${line_num},${CLOSE_LINE_AFTER_SERVER}d")
+            if [ "$line_indent_after_server" -le "$INDENT_AFTER_SERVER" ] && echo "$line_after_server" | grep -q "^[[:space:]]*}$"; then
+                CLOSE_LINE_AFTER_SERVER=$i
+                break
             fi
         done
-    fi
+        
+        if [ -n "$CLOSE_LINE_AFTER_SERVER" ]; then
+            AFTER_SERVER=$(echo "$AFTER_SERVER" | sed "${line_num},${CLOSE_LINE_AFTER_SERVER}d")
+        else
+            # Если не нашли закрывающую скобку, удаляем только строку с location /
+            AFTER_SERVER=$(echo "$AFTER_SERVER" | sed "${line_num}d")
+        fi
+    done
     
     echo "$AFTER_SERVER" >> "$TMP_FILE"
 fi
