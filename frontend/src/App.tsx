@@ -16,6 +16,7 @@ import Shop from './pages/Shop'
 import Quests from './pages/Quests'
 import Clans from './pages/Clans'
 import GameSearch from './pages/GameSearch'
+import Admin from './pages/Admin'
 
 function App() {
   const [initialized, setInitialized] = useState(false)
@@ -114,9 +115,11 @@ function App() {
             <Route path="/inventory" element={<Profile />} />
             <Route path="/notifications" element={<Profile />} />
             <Route path="/settings" element={<Profile />} />
-            <Route path="/clans" element={<Clans />} />
-            <Route path="/clans/:clanId" element={<Clans />} />
-          </Routes>
+          <Route path="/clans" element={<Clans />} />
+          <Route path="/clans/:clanId" element={<Clans />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/*" element={<Admin />} />
+        </Routes>
         )}
       </BrowserRouter>
     </ErrorBoundary>

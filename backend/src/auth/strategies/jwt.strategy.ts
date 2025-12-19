@@ -18,6 +18,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    // Если это админ-токен (sub === 'admin')
+    if (payload.sub === 'admin' && payload.isAdmin) {
+      return {
+        id: 'admin',
+        login: payload.login,
+        isAdmin: true,
+      };
+    }
+    
+    // Обычная валидация пользователя
     const user = await this.authService.validateUser(payload);
     if (!user) {
       throw new UnauthorizedException();
