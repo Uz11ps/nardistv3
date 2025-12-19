@@ -238,36 +238,43 @@ fi
 # Находим все location / блоки в остальной части (кроме /api, /socket.io, /health)
 ROOT_LINES_AFTER=$(echo "$AFTER_LOC" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
 
-# Если есть дубликаты, удаляем их (в обратном порядке чтобы номера строк не менялись)
-if [ -n "$ROOT_LINES_AFTER" ]; then
-    echo "⚠️ Найдены дубликаты location / в остальной части файла, удаляем..."
-    # Сортируем номера строк в обратном порядке
-    ROOT_LINES_SORTED=$(echo "$ROOT_LINES_AFTER" | sort -rn)
+# Если есть дубликаты, удаляем их
+# Используем цикл пока есть дубликаты
+while true; do
+    ROOT_LINES_AFTER=$(echo "$AFTER_LOC" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
     
-    for line_num in $ROOT_LINES_SORTED; do
-        # Находим закрывающую скобку
-        INDENT_AFTER=$(echo "$AFTER_LOC" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
-        INDENT_AFTER=$((INDENT_AFTER - 1))
+    if [ -z "$ROOT_LINES_AFTER" ]; then
+        break
+    fi
+    
+    echo "⚠️ Найден дубликат location / в остальной части файла на строке $(echo "$ROOT_LINES_AFTER" | head -1), удаляем..."
+    
+    # Берем первый найденный дубликат
+    line_num=$(echo "$ROOT_LINES_AFTER" | head -1)
+    
+    INDENT_AFTER=$(echo "$AFTER_LOC" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
+    INDENT_AFTER=$((INDENT_AFTER - 1))
+    
+    TOTAL_LINES_AFTER=$(echo "$AFTER_LOC" | wc -l)
+    CLOSE_LINE_AFTER=""
+    for i in $(seq $((line_num + 1)) $TOTAL_LINES_AFTER); do
+        line_after=$(echo "$AFTER_LOC" | sed -n "${i}p")
+        line_indent_after=$(echo "$line_after" | sed 's/[^ ].*//' | wc -c)
+        line_indent_after=$((line_indent_after - 1))
         
-        TOTAL_LINES_AFTER=$(echo "$AFTER_LOC" | wc -l)
-        CLOSE_LINE_AFTER=""
-        for i in $(seq $((line_num + 1)) $TOTAL_LINES_AFTER); do
-            line_after=$(echo "$AFTER_LOC" | sed -n "${i}p")
-            line_indent_after=$(echo "$line_after" | sed 's/[^ ].*//' | wc -c)
-            line_indent_after=$((line_indent_after - 1))
-            
-            if [ "$line_indent_after" -le "$INDENT_AFTER" ] && echo "$line_after" | grep -q "^[[:space:]]*}$"; then
-                CLOSE_LINE_AFTER=$i
-                break
-            fi
-        done
-        
-        if [ -n "$CLOSE_LINE_AFTER" ]; then
-            # Удаляем блок через sed (в обратном порядке)
-            AFTER_LOC=$(echo "$AFTER_LOC" | sed "${line_num},${CLOSE_LINE_AFTER}d")
+        if [ "$line_indent_after" -le "$INDENT_AFTER" ] && echo "$line_after" | grep -q "^[[:space:]]*}$"; then
+            CLOSE_LINE_AFTER=$i
+            break
         fi
     done
-fi
+    
+    if [ -n "$CLOSE_LINE_AFTER" ]; then
+        AFTER_LOC=$(echo "$AFTER_LOC" | sed "${line_num},${CLOSE_LINE_AFTER}d")
+    else
+        # Если не нашли закрывающую скобку, удаляем только строку с location /
+        AFTER_LOC=$(echo "$AFTER_LOC" | sed "${line_num}d")
+    fi
+done
 
 # Добавляем остальную часть только если она не пустая
 # Но сначала удаляем все дубликаты location / из неё
