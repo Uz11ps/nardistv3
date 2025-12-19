@@ -11,8 +11,22 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# Путь к проекту
-PROJECT_PATH="${DEPLOY_PATH:-/var/www/nardistv3}"
+# Автоматическое определение пути к проекту
+# Если DEPLOY_PATH не указан, используем директорию где находится скрипт или текущую директорию
+if [ -z "$DEPLOY_PATH" ]; then
+    # Пытаемся определить директорию скрипта
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # Проверяем есть ли docker-compose.yml в директории скрипта
+    if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
+        PROJECT_PATH="$SCRIPT_DIR"
+    else
+        # Используем текущую директорию
+        PROJECT_PATH="$(pwd)"
+    fi
+else
+    PROJECT_PATH="$DEPLOY_PATH"
+fi
+
 BRANCH="${DEPLOY_BRANCH:-main}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-60}" # Интервал проверки в секундах (по умолчанию 60)
 
@@ -22,8 +36,12 @@ log() {
 
 deploy() {
     log "${YELLOW}🚀 Начало деплоя...${NC}"
+    log "${YELLOW}📁 Путь к проекту: $PROJECT_PATH${NC}"
     
-    cd "$PROJECT_PATH"
+    cd "$PROJECT_PATH" || {
+        log "${RED}❌ Не удалось перейти в директорию: $PROJECT_PATH${NC}"
+        return 1
+    }
     
     if [ ! -f "docker-compose.yml" ]; then
         log "${RED}❌ docker-compose.yml не найден!${NC}"
@@ -92,9 +110,11 @@ else
     echo "  watch - Запускать деплой каждые $CHECK_INTERVAL секунд"
     echo ""
     echo "Переменные окружения:"
-    echo "  DEPLOY_PATH   - путь к проекту (по умолчанию: /var/www/nardistv3)"
+    echo "  DEPLOY_PATH   - путь к проекту (по умолчанию: автоматически определяется)"
     echo "  DEPLOY_BRANCH - ветка для деплоя (по умолчанию: main)"
     echo "  CHECK_INTERVAL - интервал проверки в секундах (по умолчанию: 60)"
+    echo ""
+    echo "💡 Скрипт автоматически найдет директорию с docker-compose.yml"
     exit 1
 fi
 
