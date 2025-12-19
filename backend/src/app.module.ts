@@ -27,6 +27,7 @@ import { AdminModule } from './admin/admin.module';
 import { ClansModule } from './clans/clans.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { TrainingModule } from './training/training.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { TrainingModule } from './training/training.module';
     ClansModule,
     AnalysisModule,
     TrainingModule,
+    OnboardingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

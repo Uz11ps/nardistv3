@@ -9,7 +9,7 @@ import { apiClient } from '../api/client'
 
 export default function Profile() {
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1 })
   const [hasPremium, setHasPremium] = useState(false)
 
@@ -38,13 +38,10 @@ export default function Profile() {
     { icon: '📦', title: 'Инвентарь', path: '/inventory' },
     { icon: '🔔', title: 'Уведомления', path: '/notifications' },
     { icon: '⚙️', title: 'Настройки', path: '/settings' },
-    { icon: '🚪', title: 'Выйти из аккаунта', action: 'logout' },
   ]
 
   const handleMenuClick = (item: typeof menuItems[0]) => {
-    if (item.action === 'logout') {
-      logout()
-    } else if (item.path) {
+    if (item.path) {
       navigate(item.path)
     }
   }

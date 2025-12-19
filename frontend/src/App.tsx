@@ -17,6 +17,16 @@ import Quests from './pages/Quests'
 import Clans from './pages/Clans'
 import GameSearch from './pages/GameSearch'
 import Admin from './pages/Admin'
+import Inventory from './pages/Inventory'
+import Notifications from './pages/Notifications'
+import Settings from './pages/Settings'
+import Leaderboard from './pages/Leaderboard'
+import GameModes from './pages/GameModes'
+import Achievements from './pages/Achievements'
+import GameResult from './pages/GameResult'
+import Welcome from './pages/Welcome'
+import CreateProfile from './pages/CreateProfile'
+import StarterKit from './pages/StarterKit'
 
 function App() {
   const [initialized, setInitialized] = useState(false)
@@ -98,6 +108,11 @@ function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/*" element={<Admin />} />
           
+          {/* Роуты онбординга */}
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/onboarding/profile" element={<Onboarding />} />
+          <Route path="/onboarding/starter-kit" element={<Onboarding />} />
+          
           {/* Остальные маршруты требуют авторизации */}
           {!user ? (
             <Route path="*" element={<Onboarding />} />
@@ -108,6 +123,9 @@ function App() {
               <Route path="/game/new" element={<Game />} />
               <Route path="/game/search" element={<GameSearch />} />
               <Route path="/game/tables" element={<GameSearch />} />
+              <Route path="/game/modes" element={<GameModes />} />
+              <Route path="/game/result" element={<GameResult />} />
+              <Route path="/game/result/:gameId" element={<GameResult />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/city" element={<City />} />
               <Route path="/tournaments" element={<Tournaments />} />
@@ -118,9 +136,11 @@ function App() {
               <Route path="/history" element={<History />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/quests" element={<Quests />} />
-              <Route path="/inventory" element={<Profile />} />
-              <Route path="/notifications" element={<Profile />} />
-              <Route path="/settings" element={<Profile />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/achievements" element={<Achievements />} />
               <Route path="/clans" element={<Clans />} />
               <Route path="/clans/:clanId" element={<Clans />} />
             </>

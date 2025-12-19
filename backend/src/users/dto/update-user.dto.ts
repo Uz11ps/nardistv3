@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
 export class UpdateUserDto {
   @IsString()
@@ -13,7 +13,20 @@ export class UpdateUserDto {
   @IsOptional()
   avatarUrl?: string;
 
+  @IsNumber()
   @IsOptional()
-  narCoin?: bigint;
+  narCoin?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  onboardingCompleted?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  profileSetupCompleted?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  starterKitClaimed?: boolean;
 }
 

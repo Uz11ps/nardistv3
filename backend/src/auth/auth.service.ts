@@ -68,6 +68,7 @@ export class AuthService {
     const telegramUser = await this.verifyTelegramInitData(initData);
     
     let user = await this.usersService.findByTelegramId(telegramUser.id.toString());
+    const isNewUser = !user;
     
     if (!user) {
       const createUserDto: CreateUserDto = {
@@ -79,6 +80,11 @@ export class AuthService {
         avatarUrl: telegramUser.photo_url || '',
       };
       user = await this.usersService.create(createUserDto);
+      
+      // Новый пользователь - онбординг не пройден
+      user.onboardingCompleted = false;
+      user.profileSetupCompleted = false;
+      user.starterKitClaimed = false;
     } else {
       user = await this.usersService.updateTelegramData(user.id, {
         username: telegramUser.username || user.username,

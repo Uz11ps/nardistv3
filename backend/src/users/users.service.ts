@@ -47,6 +47,13 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
+    
+    // Конвертируем narCoin в bigint если он есть
+    if (updateUserDto.narCoin !== undefined) {
+      (user as any).narCoin = BigInt(updateUserDto.narCoin);
+      delete (updateUserDto as any).narCoin;
+    }
+    
     Object.assign(user, updateUserDto);
     return this.usersRepository.save(user);
   }

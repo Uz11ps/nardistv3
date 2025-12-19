@@ -87,6 +87,15 @@ export class User {
   @Column({ default: false })
   isTrainer: boolean;
 
+  @Column({ default: false })
+  onboardingCompleted: boolean; // Прошел ли онбординг
+
+  @Column({ default: false })
+  profileSetupCompleted: boolean; // Заполнил ли профиль (никнейм, страна, аватарка)
+
+  @Column({ default: false })
+  starterKitClaimed: boolean; // Забрал ли стартовый набор
+
   @CreateDateColumn()
   createdAt: Date;
 
