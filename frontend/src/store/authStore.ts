@@ -46,19 +46,32 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async () => {
     const initData = getInitData()
+    console.log('🔐 Попытка входа, initData:', initData ? `есть (${initData.length} символов)` : 'отсутствует')
+    
     if (!initData) {
+      console.error('❌ initData не доступен!')
+      console.error('Проверьте:')
+      console.error('1. Открыли ли вы приложение через Telegram бота')
+      console.error('2. Привязан ли домен nardist.site к боту через @BotFather')
+      console.error('3. Настроены ли TELEGRAM_BOT_TOKEN и TELEGRAM_SECRET_KEY на сервере')
       const error = new Error('Telegram initData не доступен. Убедитесь что вы открыли приложение через Telegram бота.')
       ;(error as any).code = 'NO_INIT_DATA'
       throw error
     }
 
     try {
+      console.log('📤 Отправка запроса на /auth/login...')
       const response = await apiClient.post('/auth/login', { initData })
+      console.log('✅ Авторизация успешна!')
       const { access_token, user } = response.data
 
       localStorage.setItem('token', access_token)
       set({ token: access_token, user })
     } catch (error: any) {
+      console.error('❌ Ошибка авторизации:', error)
+      console.error('Статус:', error.response?.status)
+      console.error('Данные:', error.response?.data)
+      
       if (error.response?.status === 401) {
         const telegramError = new Error('Ошибка авторизации Telegram. Проверьте настройки бота и домена.')
         ;(telegramError as any).code = 'TELEGRAM_AUTH_ERROR'
