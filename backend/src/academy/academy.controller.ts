@@ -8,13 +8,15 @@ export class AcademyController {
   constructor(private readonly academyService: AcademyService) {}
 
   @Get('courses')
-  async getCourses() {
-    return this.academyService.getCourses();
+  @UseGuards(JwtAuthGuard)
+  async getCourses(@CurrentUser() user: any) {
+    return this.academyService.getCourses(user?.id);
   }
 
   @Get('articles')
-  async getArticles() {
-    return this.academyService.getArticles();
+  @UseGuards(JwtAuthGuard)
+  async getArticles(@CurrentUser() user: any) {
+    return this.academyService.getArticles(user?.id);
   }
 
   @Get('my-materials')
@@ -30,8 +32,9 @@ export class AcademyController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.academyService.findOne(id);
+  @UseGuards(JwtAuthGuard)
+  async findOne(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.academyService.findOne(id, user?.id);
   }
 
   @Post()

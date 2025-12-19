@@ -4,7 +4,9 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import BottomNav from '../components/BottomNav'
+import BackgammonBoard from '../components/BackgammonBoard'
 import { apiClient } from '../api/client'
+import { useAuthStore } from '../store/authStore'
 import './History.css'
 
 interface GameHistory {
@@ -25,12 +27,15 @@ interface GameHistory {
 
 export default function History() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const [games, setGames] = useState<GameHistory[]>([])
   const [filter, setFilter] = useState<'all' | 'wins' | 'losses' | 'bot'>('all')
   const [modeFilter, setModeFilter] = useState<'all' | 'short' | 'long'>('all')
   const [selectedGame, setSelectedGame] = useState<GameHistory | null>(null)
+  const [replayData, setReplayData] = useState<any>(null)
   const [replayStep, setReplayStep] = useState(0)
   const [isReplaying, setIsReplaying] = useState(false)
+  const [loadingReplay, setLoadingReplay] = useState(false)
 
   useEffect(() => {
     loadHistory()
@@ -49,10 +54,68 @@ export default function History() {
     }
   }
 
-  const handleReplay = (game: GameHistory) => {
-    setSelectedGame(game)
-    setReplayStep(0)
-    setIsReplaying(true)
+  const handleReplay = async (game: GameHistory) => {
+    try {
+      setLoadingReplay(true)
+      setSelectedGame(game)
+      setReplayStep(0)
+      setIsReplaying(true)
+      
+      // Загружаем полные данные реплея
+      const response = await apiClient.get(`/history/replay/${game.id}`)
+      setReplayData(response.data)
+    } catch (error) {
+      console.error('Failed to load replay:', error)
+      alert('Не удалось загрузить реплей игры')
+      setIsReplaying(false)
+    } finally {
+      setLoadingReplay(false)
+    }
+  }
+  
+  // Получаем текущее состояние игры для отображения
+  const getCurrentGameState = () => {
+    if (!replayData || !replayData.game) return null
+    
+    const { game, moves } = replayData
+    if (replayStep === 0) {
+      // Начальное состояние
+      return game.initialGameState || game.gameState
+    }
+    
+    // Состояние после хода replayStep
+    if (moves && moves[replayStep - 1]) {
+      return moves[replayStep - 1].gameStateAfter
+    }
+    
+    return game.initialGameState || game.gameState
+  }
+  
+  // Определяем, кто ходит на текущем шаге
+  const getCurrentPlayer = () => {
+    if (!replayData || !replayData.game) return 0
+    if (replayStep === 0) return 0
+    
+    const { moves } = replayData
+    if (moves && moves[replayStep - 1]) {
+      const move = moves[replayStep - 1]
+      // После хода игрока, следующий ход противоположного игрока
+      return move.player.id === replayData.game.player1.id ? 1 : 0
+    }
+    
+    return 0
+  }
+  
+  // Получаем кубики для текущего хода
+  const getCurrentDice = () => {
+    if (!replayData || !replayData.moves || replayStep === 0) return null
+    
+    const move = replayData.moves[replayStep - 1]
+    if (move && move.dice && move.dice.length >= 2) {
+      return { die1: move.dice[0], die2: move.dice[1] }
+    }
+    
+    return null
   }
 
   const handleReplayStep = (step: number) => {
@@ -190,14 +253,36 @@ export default function History() {
               <button className="close-btn" onClick={() => setIsReplaying(false)}>×</button>
             </div>
             <div className="replay-info">
-              <div>Ход {replayStep} из {selectedGame.moves.length}</div>
+              <div>
+                Ход {replayStep} из {replayData?.moves?.length || selectedGame.moves.length}
+                {replayData?.moves && replayData.moves[replayStep - 1] && (
+                  <span style={{ marginLeft: '12px', color: '#ffffff' }}>
+                    {replayData.moves[replayStep - 1].player.username}
+                  </span>
+                )}
+              </div>
               <div>{selectedGame.mode === 'long' ? 'Длинные' : 'Короткие'} нарды</div>
             </div>
             <div className="replay-board">
-              {/* Здесь будет компонент доски с текущим состоянием */}
-              <div style={{ padding: '40px', textAlign: 'center', color: '#aaaaaa' }}>
-                Доска реплея (требует интеграции с BackgammonBoard)
-              </div>
+              {loadingReplay ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#aaaaaa' }}>
+                  Загрузка реплея...
+                </div>
+              ) : replayData && getCurrentGameState() ? (
+                <BackgammonBoard
+                  gameState={getCurrentGameState()}
+                  currentPlayer={getCurrentPlayer()}
+                  dice={getCurrentDice()}
+                  onMove={() => {}} // В реплее ходы не делаются
+                  onRollDice={() => {}} // В реплее кубики не бросаются
+                  canMove={false}
+                  isMyTurn={false}
+                />
+              ) : (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#aaaaaa' }}>
+                  Нет данных для отображения
+                </div>
+              )}
             </div>
             <div className="replay-controls">
               <button
@@ -217,14 +302,14 @@ export default function History() {
               <button
                 className="replay-btn"
                 onClick={() => handleReplayStep(1)}
-                disabled={replayStep >= selectedGame.moves.length}
+                disabled={replayStep >= (replayData?.moves?.length || selectedGame.moves.length)}
               >
                 ⏩
               </button>
               <button
                 className="replay-btn"
-                onClick={() => setReplayStep(selectedGame.moves.length)}
-                disabled={replayStep >= selectedGame.moves.length}
+                onClick={() => setReplayStep(replayData?.moves?.length || selectedGame.moves.length)}
+                disabled={replayStep >= (replayData?.moves?.length || selectedGame.moves.length)}
               >
                 ⏭
               </button>
