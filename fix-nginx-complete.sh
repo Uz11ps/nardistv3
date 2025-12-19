@@ -270,7 +270,42 @@ if [ -n "$ROOT_LINES_AFTER" ]; then
 fi
 
 # Добавляем остальную часть только если она не пустая
+# Но сначала удаляем все дубликаты location / из неё
 if [ -n "$AFTER_LOC" ]; then
+    # Находим все location / блоки в остальной части (кроме /api, /socket.io, /health)
+    ROOT_LINES_AFTER=$(echo "$AFTER_LOC" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
+    
+    # Если есть дубликаты, удаляем их (в обратном порядке чтобы номера строк не менялись)
+    if [ -n "$ROOT_LINES_AFTER" ]; then
+        echo "⚠️ Найдены дубликаты location / в остальной части файла, удаляем..."
+        # Сортируем номера строк в обратном порядке
+        ROOT_LINES_SORTED=$(echo "$ROOT_LINES_AFTER" | sort -rn)
+        
+        for line_num in $ROOT_LINES_SORTED; do
+            # Находим закрывающую скобку
+            INDENT_AFTER=$(echo "$AFTER_LOC" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
+            INDENT_AFTER=$((INDENT_AFTER - 1))
+            
+            TOTAL_LINES_AFTER=$(echo "$AFTER_LOC" | wc -l)
+            CLOSE_LINE_AFTER=""
+            for i in $(seq $((line_num + 1)) $TOTAL_LINES_AFTER); do
+                line_after=$(echo "$AFTER_LOC" | sed -n "${i}p")
+                line_indent_after=$(echo "$line_after" | sed 's/[^ ].*//' | wc -c)
+                line_indent_after=$((line_indent_after - 1))
+                
+                if [ "$line_indent_after" -le "$INDENT_AFTER" ] && echo "$line_after" | grep -q "^[[:space:]]*}$"; then
+                    CLOSE_LINE_AFTER=$i
+                    break
+                fi
+            done
+            
+            if [ -n "$CLOSE_LINE_AFTER" ]; then
+                # Удаляем блок через sed (в обратном порядке)
+                AFTER_LOC=$(echo "$AFTER_LOC" | sed "${line_num},${CLOSE_LINE_AFTER}d")
+            fi
+        done
+    fi
+    
     echo "$AFTER_LOC" >> "$TMP_FILE"
 fi
 
@@ -286,7 +321,41 @@ if [ -n "$SERVER_CLOSE" ]; then
     # Если location / заканчивается вместе с server блоком, закрывающая скобка уже добавлена в location /
     
     # Добавляем остальную часть файла после закрывающей скобки server блока
-    tail -n +$((SERVER_CLOSE + 1)) "$CONFIG_FILE" >> "$TMP_FILE"
+    # Но сначала удаляем все дубликаты location / из неё
+    AFTER_SERVER=$(tail -n +$((SERVER_CLOSE + 1)) "$CONFIG_FILE")
+    
+    # Находим все location / блоки в части после server блока
+    ROOT_LINES_AFTER_SERVER=$(echo "$AFTER_SERVER" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
+    
+    # Если есть дубликаты, удаляем их
+    if [ -n "$ROOT_LINES_AFTER_SERVER" ]; then
+        echo "⚠️ Найдены дубликаты location / после server блока, удаляем..."
+        ROOT_LINES_SORTED_SERVER=$(echo "$ROOT_LINES_AFTER_SERVER" | sort -rn)
+        
+        for line_num in $ROOT_LINES_SORTED_SERVER; do
+            INDENT_AFTER_SERVER=$(echo "$AFTER_SERVER" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
+            INDENT_AFTER_SERVER=$((INDENT_AFTER_SERVER - 1))
+            
+            TOTAL_LINES_AFTER_SERVER=$(echo "$AFTER_SERVER" | wc -l)
+            CLOSE_LINE_AFTER_SERVER=""
+            for i in $(seq $((line_num + 1)) $TOTAL_LINES_AFTER_SERVER); do
+                line_after_server=$(echo "$AFTER_SERVER" | sed -n "${i}p")
+                line_indent_after_server=$(echo "$line_after_server" | sed 's/[^ ].*//' | wc -c)
+                line_indent_after_server=$((line_indent_after_server - 1))
+                
+                if [ "$line_indent_after_server" -le "$INDENT_AFTER_SERVER" ] && echo "$line_after_server" | grep -q "^[[:space:]]*}$"; then
+                    CLOSE_LINE_AFTER_SERVER=$i
+                    break
+                fi
+            done
+            
+            if [ -n "$CLOSE_LINE_AFTER_SERVER" ]; then
+                AFTER_SERVER=$(echo "$AFTER_SERVER" | sed "${line_num},${CLOSE_LINE_AFTER_SERVER}d")
+            fi
+        done
+    fi
+    
+    echo "$AFTER_SERVER" >> "$TMP_FILE"
 fi
 
 # Заменяем файл
