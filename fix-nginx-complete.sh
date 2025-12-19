@@ -278,7 +278,14 @@ done
 
 # Добавляем остальную часть только если она не пустая
 # Но сначала удаляем все дубликаты location / из неё
+# И проверяем, не содержит ли она закрывающую скобку server блока
 if [ -n "$AFTER_LOC" ]; then
+    # Проверяем, не является ли первая строка AFTER_LOC закрывающей скобкой server блока
+    FIRST_LINE=$(echo "$AFTER_LOC" | head -1)
+    if echo "$FIRST_LINE" | grep -q "^[[:space:]]*}$"; then
+        # Это закрывающая скобка server блока - не добавляем её в AFTER_LOC, она будет добавлена позже
+        AFTER_LOC=$(echo "$AFTER_LOC" | tail -n +2)
+    fi
     # Находим все location / блоки в остальной части (кроме /api, /socket.io, /health)
     ROOT_LINES_AFTER=$(echo "$AFTER_LOC" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
     
@@ -321,9 +328,13 @@ if [ -n "$SERVER_CLOSE" ]; then
     # Проверяем что закрывающая скобка server блока есть в оригинальном файле
     SERVER_CLOSE_LINE=$(sed -n "${SERVER_CLOSE}p" "$CONFIG_FILE")
     
-    # Если location / заканчивается раньше server блока, добавляем закрывающую скобку server
+    # Если location / заканчивается раньше server блока, нужно добавить закрывающую скобку server
+    # Но сначала проверяем, не добавили ли мы её уже в location /
     if [ "$LOCATION_CLOSE" -lt "$SERVER_CLOSE" ]; then
-        echo "$SERVER_CLOSE_LINE" >> "$TMP_FILE"
+        # Проверяем что в AFTER_LOC нет закрывающей скобки server блока
+        if [ -z "$AFTER_LOC" ] || ! echo "$AFTER_LOC" | head -1 | grep -q "^[[:space:]]*}$"; then
+            echo "$SERVER_CLOSE_LINE" >> "$TMP_FILE"
+        fi
     fi
     # Если location / заканчивается вместе с server блоком, закрывающая скобка уже добавлена в location /
     
