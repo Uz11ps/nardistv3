@@ -1,8 +1,8 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Game, GameStatus } from '../games/game.entity';
-import { GameMove } from './game-move.entity';
+import { GameMove } from '../games/game-move.entity';
 import { SubscriptionService } from '../subscription/subscription.service';
 
 @Injectable()
@@ -49,59 +49,135 @@ export class HistoryService {
 
     const games = await queryBuilder.getMany();
 
-    const result = await Promise.all(
-      games.map(async (game) => {
-        const isPlayer1 = game.player1Id === userId;
-        const opponent = isPlayer1 ? game.player2 : game.player1;
-        const isWinner = game.winnerId === userId;
+    // Загружаем все ходы для всех игр одним запросом для оптимизации
+    const gameIds = games.map((g) => g.id);
+    const allMoves = gameIds.length > 0
+      ? await this.movesRepository.find({
+          where: { gameId: In(gameIds) },
+          order: { moveNumber: 'ASC' },
+          relations: ['player'],
+        })
+      : [];
 
-        const moveCount = await this.movesRepository.count({ where: { gameId: game.id } });
+    // Группируем ходы по играм
+    const movesByGame = allMoves.reduce((acc, move) => {
+      if (!acc[move.gameId]) {
+        acc[move.gameId] = [];
+      }
+      acc[move.gameId].push(move);
+      return acc;
+    }, {} as Record<string, GameMove[]>);
 
-        return {
-          id: game.id,
-          mode: game.mode,
-          type: game.type,
-          opponent: opponent
-            ? {
-                id: opponent.id,
-                username: opponent.username,
-                nickname: opponent.nickname,
-                avatarUrl: opponent.avatarUrl,
-              }
-            : { id: 'bot', username: 'Бот' },
-          result: isWinner ? 'win' : game.winnerId ? 'loss' : 'draw',
-          score: { player1: game.player1Score, player2: game.player2Score },
-          duration: game.updatedAt
-            ? Math.floor((game.updatedAt.getTime() - game.createdAt.getTime()) / 1000)
-            : 0,
-          createdAt: game.createdAt.toISOString(),
-          moves: [], // Загружается отдельно при просмотре реплея
-        };
-      }),
-    );
+    const result = games.map((game) => {
+      const isPlayer1 = game.player1Id === userId;
+      const opponent = isPlayer1 ? game.player2 : game.player1;
+      const isWinner = game.winnerId === userId;
+      const moves = movesByGame[game.id] || [];
+
+      return {
+        id: game.id,
+        mode: game.mode,
+        type: game.type,
+        opponent: opponent
+          ? {
+              id: opponent.id,
+              username: opponent.username,
+              nickname: opponent.nickname,
+              avatarUrl: opponent.avatarUrl,
+            }
+          : { id: 'bot', username: 'Бот' },
+        result: isWinner ? 'win' : game.winnerId ? 'loss' : 'draw',
+        score: { player1: game.player1Score, player2: game.player2Score },
+        duration: game.updatedAt
+          ? Math.floor((game.updatedAt.getTime() - game.createdAt.getTime()) / 1000)
+          : 0,
+        createdAt: game.createdAt.toISOString(),
+        finishedAt: game.updatedAt ? game.updatedAt.toISOString() : null,
+        moveCount: moves.length,
+        // Базовая информация о ходах для отображения в списке
+        moves: moves.map((move) => ({
+          moveNumber: move.moveNumber,
+          playerId: move.playerId,
+          playerUsername: move.player?.username || 'Unknown',
+          dice: move.dice,
+          movesCount: move.moves?.length || 0,
+          createdAt: move.createdAt.toISOString(),
+        })),
+        // Финальное состояние игры (если нужно)
+        finalGameState: game.gameState || null,
+        winnerId: game.winnerId,
+      };
+    });
 
     return result;
   }
 
   async getGameReplay(gameId: string): Promise<any> {
+    // Загружаем игру со всеми связями
     const game = await this.gamesRepository.findOne({
       where: { id: gameId },
-      relations: ['player1', 'player2'],
+      relations: ['player1', 'player2', 'moves', 'moves.player'],
     });
 
     if (!game) {
       throw new Error('Игра не найдена');
     }
 
-    const moves = await this.movesRepository.find({
-      where: { gameId },
-      order: { moveNumber: 'ASC' },
-      relations: ['player'],
-    });
+    // Если ходы не загрузились через relations, загружаем отдельно
+    let moves = game.moves || [];
+    if (moves.length === 0) {
+      moves = await this.movesRepository.find({
+        where: { gameId },
+        order: { moveNumber: 'ASC' },
+        relations: ['player'],
+      });
+    } else {
+      // Сортируем ходы по номеру, если они уже загружены
+      moves.sort((a, b) => a.moveNumber - b.moveNumber);
+    }
 
     return {
-      game,
-      moves,
+      game: {
+        id: game.id,
+        mode: game.mode,
+        type: game.type,
+        status: game.status,
+        player1: {
+          id: game.player1.id,
+          username: game.player1.username,
+          nickname: game.player1.nickname,
+          avatarUrl: game.player1.avatarUrl,
+        },
+        player2: game.player2 ? {
+          id: game.player2.id,
+          username: game.player2.username,
+          nickname: game.player2.nickname,
+          avatarUrl: game.player2.avatarUrl,
+        } : null,
+        player1Score: game.player1Score,
+        player2Score: game.player2Score,
+        winnerId: game.winnerId,
+        createdAt: game.createdAt.toISOString(),
+        updatedAt: game.updatedAt ? game.updatedAt.toISOString() : null,
+        initialGameState: game.gameState,
+        rngSeed: game.rngSeed,
+        rngHash: game.rngHash,
+      },
+      moves: moves.map((move) => ({
+        id: move.id,
+        moveNumber: move.moveNumber,
+        player: {
+          id: move.player.id,
+          username: move.player.username,
+          nickname: move.player.nickname,
+        },
+        dice: move.dice,
+        moves: move.moves,
+        gameStateBefore: move.gameStateBefore,
+        gameStateAfter: move.gameStateAfter,
+        moveTimeMs: move.moveTimeMs,
+        createdAt: move.createdAt.toISOString(),
+      })),
     };
   }
 
