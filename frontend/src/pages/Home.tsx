@@ -5,7 +5,6 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import BottomNav from '../components/BottomNav'
-import { apiClient } from '../api/client'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -14,13 +13,24 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
-      setStats({
-        narCoin: Number(user.narCoin) || 0,
-        xp: Number(user.xp) || 0,
-        level: user.level || 1,
-      })
+      try {
+        const narCoin = typeof user.narCoin === 'bigint' ? Number(user.narCoin) : (user.narCoin || 0)
+        const xp = typeof user.xp === 'bigint' ? Number(user.xp) : (user.xp || 0)
+        setStats({
+          narCoin: Number(narCoin) || 0,
+          xp: Number(xp) || 0,
+          level: user.level || 1,
+        })
+      } catch (error) {
+        console.error('Ошибка при загрузке статистики:', error)
+        setStats({ narCoin: 0, xp: 0, level: 1 })
+      }
     }
   }, [user])
+
+  if (!user) {
+    return null
+  }
 
   const menuItems = [
     { icon: '🎲', title: 'Онлайн игра', subtitle: 'Сразись с игроками по всему миру', path: '/game/search' },

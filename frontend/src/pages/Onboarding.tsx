@@ -43,17 +43,24 @@ export default function Onboarding() {
       try {
         await init()
         if (!user) {
-          await login()
+          try {
+            await login()
+          } catch (loginError: any) {
+            console.error('Ошибка входа:', loginError)
+            // Продолжаем работу даже если вход не удался
+          }
         }
-        // Загружаем прогресс онбординга
-        loadOnboardingProgress()
+        // Загружаем прогресс онбординга только если пользователь есть
+        if (user) {
+          loadOnboardingProgress()
+        }
       } catch (error: any) {
         console.error('Ошибка инициализации:', error)
         // Ошибка будет обработана в компоненте
       }
     }
     initialize()
-  }, [])
+  }, [init, login, user])
 
   const loadOnboardingProgress = async () => {
     try {
