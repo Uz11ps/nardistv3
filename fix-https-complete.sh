@@ -71,8 +71,9 @@ head -n $((SERVER_START - 1)) "$CONFIG_FILE" > "$TMP_FILE"
 # Добавляем правильный HTTPS server блок
 cat >> "$TMP_FILE" << EOF
 ${SERVER_INDENT}server {
-${SERVER_INDENT}    listen 443 ssl http2;
-${SERVER_INDENT}    listen [::]:443 ssl http2;
+${SERVER_INDENT}    listen 443 ssl;
+${SERVER_INDENT}    listen [::]:443 ssl;
+${SERVER_INDENT}    http2 on;
 ${SERVER_INDENT}    server_name ${DOMAIN} www.${DOMAIN};
 
 ${SERVER_INDENT}    # SSL сертификат
