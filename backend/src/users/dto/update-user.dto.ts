@@ -12,5 +12,8 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   avatarUrl?: string;
+
+  @IsOptional()
+  narCoin?: bigint;
 }
 
