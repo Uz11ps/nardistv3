@@ -22,6 +22,12 @@ interface BackgammonBoardProps {
   isMyTurn: boolean
 }
 
+// Нумерация точек в нардах (от 1 до 24, где 1 - верхний правый угол для белых)
+const POINT_NUMBERS = [
+  24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, // Верхний ряд (справа налево)
+  12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, // Нижний ряд (слева направо)
+]
+
 export default function BackgammonBoard({
   gameState,
   currentPlayer,
@@ -35,6 +41,8 @@ export default function BackgammonBoard({
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
   const [hoverPoint, setHoverPoint] = useState<number | null>(null)
   const [animating, setAnimating] = useState(false)
+  const [diceRolling, setDiceRolling] = useState(false)
+  const animationFrameRef = useRef<number>()
 
   const points: Point[] = gameState?.points || []
   const bar = gameState?.bar || { white: 0, black: 0 }
@@ -49,90 +57,162 @@ export default function BackgammonBoard({
 
     const width = canvas.width
     const height = canvas.height
-    const pointWidth = width / 12
-    const boardHeight = height * 0.8
-    const barWidth = width * 0.15
+    const boardPadding = 20
+    const boardWidth = width - boardPadding * 2
+    const boardHeight = height - boardPadding * 2
+    const pointWidth = boardWidth / 12
+    const pointHeight = boardHeight / 2
+    const barWidth = boardWidth * 0.12
+    const barHeight = boardHeight * 0.3
 
     // Очистка
     ctx.clearRect(0, 0, width, height)
 
-    // Фон доски
-    ctx.fillStyle = '#8B4513'
+    // Фон доски (темное дерево)
+    const boardGradient = ctx.createLinearGradient(0, 0, width, height)
+    boardGradient.addColorStop(0, '#8B4513')
+    boardGradient.addColorStop(0.5, '#A0522D')
+    boardGradient.addColorStop(1, '#8B4513')
+    ctx.fillStyle = boardGradient
     ctx.fillRect(0, 0, width, height)
 
-    // Рисуем точки
+    // Рамка доски
+    ctx.strokeStyle = '#654321'
+    ctx.lineWidth = 4
+    ctx.strokeRect(boardPadding, boardPadding, boardWidth, boardHeight)
+
+    // Центральная линия (бар)
+    const barX = boardPadding + (boardWidth - barWidth) / 2
+    const barY = boardPadding + (boardHeight - barHeight) / 2
+    
+    // Фон бара
+    ctx.fillStyle = '#654321'
+    ctx.fillRect(barX, barY, barWidth, barHeight)
+    ctx.strokeStyle = '#8B4513'
+    ctx.lineWidth = 2
+    ctx.strokeRect(barX, barY, barWidth, barHeight)
+
+    // Рисуем точки (треугольники)
     for (let i = 0; i < 24; i++) {
       const point = points[i] || { index: i, checkers: [], color: null }
+      const pointNum = POINT_NUMBERS[i]
       const isTop = i < 12
-      const x = i < 12 ? (11 - i) * pointWidth : (i - 12) * pointWidth
-      const y = isTop ? 0 : boardHeight
-
-      // Треугольник точки
-      ctx.beginPath()
-      ctx.moveTo(x, y)
-      ctx.lineTo(x + pointWidth / 2, y + (isTop ? boardHeight / 2 : -boardHeight / 2))
-      ctx.lineTo(x + pointWidth, y)
-      ctx.closePath()
-
-      // Цвет точки
-      if ((i + Math.floor(i / 6)) % 2 === 0) {
-        ctx.fillStyle = '#D2691E'
+      
+      // Позиция точки
+      let x: number
+      if (i < 12) {
+        // Верхний ряд (справа налево)
+        x = boardPadding + (11 - i) * pointWidth
       } else {
-        ctx.fillStyle = '#CD853F'
+        // Нижний ряд (слева направо)
+        x = boardPadding + (i - 12) * pointWidth
       }
+
+      const y = isTop ? boardPadding : boardPadding + boardHeight / 2
+
+      // Цвет точки (чередование)
+      const isLight = (Math.floor(i / 6) + i) % 2 === 0
+      ctx.fillStyle = isLight ? '#DEB887' : '#CD853F'
+      
+      // Рисуем треугольник точки
+      ctx.beginPath()
+      if (isTop) {
+        ctx.moveTo(x, y)
+        ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+        ctx.lineTo(x + pointWidth, y)
+      } else {
+        ctx.moveTo(x, y)
+        ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+        ctx.lineTo(x + pointWidth, y)
+      }
+      ctx.closePath()
       ctx.fill()
+      
+      // Обводка треугольника
       ctx.strokeStyle = '#654321'
       ctx.lineWidth = 2
       ctx.stroke()
 
+      // Номер точки (для отладки, можно убрать)
+      ctx.fillStyle = '#654321'
+      ctx.font = 'bold 10px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText(pointNum.toString(), x + pointWidth / 2, isTop ? y + 15 : y - 5)
+
       // Фишки на точке
       if (point.checkers && point.checkers.length > 0) {
-        const checkerColor = point.color === 'white' ? '#FFFFFF' : '#000000'
+        const checkerColor = point.color === 'white' ? '#FFFFFF' : '#1a1a1a'
         const checkerCount = point.checkers.length
-        const maxVisible = 5
+        const checkerRadius = 14
+        const maxStack = 5
+        const stackSpacing = 4
 
-        for (let j = 0; j < Math.min(checkerCount, maxVisible); j++) {
-          const checkerY = isTop
-            ? y + boardHeight / 2 - (j + 1) * 20
-            : y - boardHeight / 2 + (j + 1) * 20
+        // Рисуем фишки
+        for (let j = 0; j < Math.min(checkerCount, maxStack); j++) {
+          let checkerY: number
+          if (isTop) {
+            checkerY = y + pointHeight - checkerRadius - (j * stackSpacing)
+          } else {
+            checkerY = y - pointHeight + checkerRadius + (j * stackSpacing)
+          }
+
+          const checkerX = x + pointWidth / 2
 
           // Анимация выбранной фишки
           const isSelected = selectedPoint === i && j === checkerCount - 1
-          const scale = isSelected ? 1.3 : 1.0
-          const offsetX = isSelected ? (Math.sin(Date.now() / 150) * 4) : 0
-          const offsetY = isSelected ? (Math.cos(Date.now() / 150) * 2) : 0
+          const scale = isSelected ? 1.2 : 1.0
+          const offsetX = isSelected ? Math.sin(Date.now() / 100) * 3 : 0
+          const offsetY = isSelected ? Math.cos(Date.now() / 100) * 2 : 0
 
           ctx.save()
-          ctx.translate(x + pointWidth / 2 + offsetX, checkerY + offsetY)
+          ctx.translate(checkerX + offsetX, checkerY + offsetY)
           ctx.scale(scale, scale)
 
-          // Тень
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-          ctx.shadowBlur = 5
+          // Тень фишки
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
+          ctx.shadowBlur = 8
           ctx.shadowOffsetX = 2
           ctx.shadowOffsetY = 2
 
+          // Градиент для фишки
+          const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
+          if (checkerColor === '#FFFFFF') {
+            checkerGradient.addColorStop(0, '#FFFFFF')
+            checkerGradient.addColorStop(1, '#E0E0E0')
+          } else {
+            checkerGradient.addColorStop(0, '#2a2a2a')
+            checkerGradient.addColorStop(1, '#1a1a1a')
+          }
+
           // Фишка
           ctx.beginPath()
-          ctx.arc(0, 0, 12, 0, Math.PI * 2)
-          ctx.fillStyle = checkerColor
+          ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+          ctx.fillStyle = checkerGradient
           ctx.fill()
-          ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#000000' : '#FFFFFF'
+          
+          // Обводка фишки
+          ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
           ctx.lineWidth = 2
           ctx.stroke()
+
+          // Блик на фишке
+          ctx.beginPath()
+          ctx.arc(-4, -4, 4, 0, Math.PI * 2)
+          ctx.fillStyle = checkerColor === '#FFFFFF' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'
+          ctx.fill()
 
           ctx.restore()
         }
 
-        // Показываем количество если больше 5
-        if (checkerCount > maxVisible) {
+        // Показываем количество если больше maxStack
+        if (checkerCount > maxStack) {
           ctx.fillStyle = '#FFFFFF'
-          ctx.font = 'bold 14px Arial'
+          ctx.font = 'bold 12px Arial'
           ctx.textAlign = 'center'
           ctx.fillText(
             checkerCount.toString(),
             x + pointWidth / 2,
-            isTop ? y + boardHeight / 2 - 120 : y - boardHeight / 2 + 120
+            isTop ? y + pointHeight - checkerRadius - maxStack * stackSpacing - 10 : y - pointHeight + checkerRadius + maxStack * stackSpacing + 20
           )
         }
       }
@@ -140,115 +220,202 @@ export default function BackgammonBoard({
       // Подсветка при наведении
       if (hoverPoint === i && isMyTurn && canMove) {
         ctx.beginPath()
-        ctx.moveTo(x, y)
-        ctx.lineTo(x + pointWidth / 2, y + (isTop ? boardHeight / 2 : -boardHeight / 2))
-        ctx.lineTo(x + pointWidth, y)
+        if (isTop) {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        } else {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        }
         ctx.closePath()
         
-        // Градиентная подсветка
-        const gradient = ctx.createLinearGradient(x, y, x + pointWidth, y)
-        gradient.addColorStop(0, 'rgba(255, 255, 0, 0.4)')
-        gradient.addColorStop(1, 'rgba(255, 51, 51, 0.4)')
-        ctx.fillStyle = gradient
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'
         ctx.fill()
         
-        // Свечение
-        ctx.shadowColor = 'rgba(255, 255, 0, 0.8)'
-        ctx.shadowBlur = 15
-        ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)'
+        ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)'
         ctx.lineWidth = 3
         ctx.stroke()
-        ctx.shadowBlur = 0
       }
     }
 
-    // Бар (для сбитых фишек)
-    const barX = width / 2 - barWidth / 2
-    const barY = boardHeight / 2 - 30
+    // Фишки на баре (сбитые)
+    const barCenterX = barX + barWidth / 2
+    const barCenterY = barY + barHeight / 2
 
-    if (bar.white > 0 || bar.black > 0) {
-      ctx.fillStyle = '#654321'
-      ctx.fillRect(barX, barY, barWidth, 60)
-
-      // Белые фишки на баре
-      for (let i = 0; i < bar.white; i++) {
+    if (bar.white > 0) {
+      ctx.fillStyle = '#FFFFFF'
+      ctx.font = 'bold 14px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText('Бар', barCenterX, barCenterY - 15)
+      
+      for (let i = 0; i < Math.min(bar.white, 5); i++) {
+        const checkerX = barCenterX - 20 + (i % 3) * 15
+        const checkerY = barCenterY - 5 + Math.floor(i / 3) * 15
+        
+        ctx.save()
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
+        ctx.shadowBlur = 8
+        ctx.shadowOffsetX = 2
+        ctx.shadowOffsetY = 2
+        
         ctx.beginPath()
-        ctx.arc(barX + barWidth / 2 - 15 + i * 10, barY + 15, 10, 0, Math.PI * 2)
+        ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
         ctx.fillStyle = '#FFFFFF'
         ctx.fill()
-        ctx.strokeStyle = '#000000'
+        ctx.strokeStyle = '#1a1a1a'
         ctx.lineWidth = 2
         ctx.stroke()
+        ctx.restore()
       }
+      
+      if (bar.white > 5) {
+        ctx.fillStyle = '#1a1a1a'
+        ctx.font = 'bold 12px Arial'
+        ctx.fillText(bar.white.toString(), barCenterX + 25, barCenterY)
+      }
+    }
 
-      // Черные фишки на баре
-      for (let i = 0; i < bar.black; i++) {
+    if (bar.black > 0) {
+      for (let i = 0; i < Math.min(bar.black, 5); i++) {
+        const checkerX = barCenterX - 20 + (i % 3) * 15
+        const checkerY = barCenterY + 10 + Math.floor(i / 3) * 15
+        
+        ctx.save()
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
+        ctx.shadowBlur = 8
+        ctx.shadowOffsetX = 2
+        ctx.shadowOffsetY = 2
+        
         ctx.beginPath()
-        ctx.arc(barX + barWidth / 2 - 15 + i * 10, barY + 45, 10, 0, Math.PI * 2)
-        ctx.fillStyle = '#000000'
+        ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
+        ctx.fillStyle = '#1a1a1a'
         ctx.fill()
         ctx.strokeStyle = '#FFFFFF'
         ctx.lineWidth = 2
         ctx.stroke()
+        ctx.restore()
+      }
+      
+      if (bar.black > 5) {
+        ctx.fillStyle = '#FFFFFF'
+        ctx.font = 'bold 12px Arial'
+        ctx.fillText(bar.black.toString(), barCenterX + 25, barCenterY + 20)
       }
     }
 
     // Вынос (bear off)
-    const bearOffX = width - 40
-    const bearOffY = height / 2
+    const bearOffX = width - 30
+    const bearOffYTop = boardPadding + 20
+    const bearOffYBottom = boardPadding + boardHeight - 20
 
     if (bearOff.white > 0) {
       ctx.fillStyle = '#FFFFFF'
-      ctx.font = 'bold 16px Arial'
-      ctx.fillText(`Белые: ${bearOff.white}`, bearOffX, bearOffY - 20)
+      ctx.font = 'bold 14px Arial'
+      ctx.textAlign = 'right'
+      ctx.fillText(`Вынос: ${bearOff.white}`, bearOffX, bearOffYTop)
     }
 
     if (bearOff.black > 0) {
-      ctx.fillStyle = '#000000'
-      ctx.font = 'bold 16px Arial'
-      ctx.fillText(`Черные: ${bearOff.black}`, bearOffX, bearOffY + 20)
+      ctx.fillStyle = '#1a1a1a'
+      ctx.font = 'bold 14px Arial'
+      ctx.textAlign = 'right'
+      ctx.fillText(`Вынос: ${bearOff.black}`, bearOffX, bearOffYBottom)
     }
 
-    // Кубики
-    if (dice) {
-      const diceX = width / 2 - 60
-      const diceY = height - 80
+    // Кубики с улучшенной анимацией
+    if (dice || diceRolling) {
+      const diceAreaX = boardPadding + 20
+      const diceAreaY = height - 100
+      const diceSize = 40
+      const diceSpacing = 50
 
-      // Анимация броска кубиков
-      const rollAnimation = animating ? Math.random() * 360 : 0
-
-      drawDice(ctx, diceX, diceY, dice.die1, rollAnimation)
-      drawDice(ctx, diceX + 50, diceY, dice.die2, rollAnimation)
+      if (diceRolling) {
+        // Анимация броска кубиков
+        const roll1 = Math.floor(Math.random() * 6) + 1
+        const roll2 = Math.floor(Math.random() * 6) + 1
+        drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true)
+        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true)
+      } else if (dice) {
+        drawDice(ctx, diceAreaX, diceAreaY, dice.die1, diceSize, false)
+        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, dice.die2, diceSize, false)
+      }
     }
-  }, [points, bar, bearOff, selectedPoint, hoverPoint, dice, animating, isMyTurn, canMove])
+  }, [points, bar, bearOff, selectedPoint, hoverPoint, dice, diceRolling, isMyTurn, canMove])
 
-  const drawDice = (ctx: CanvasRenderingContext2D, x: number, y: number, value: number, rotation: number) => {
+  const drawDice = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    value: number,
+    size: number,
+    rolling: boolean
+  ) => {
     ctx.save()
-    ctx.translate(x + 15, y + 15)
-    ctx.rotate((rotation * Math.PI) / 180)
+    
+    // Анимация вращения при броске
+    if (rolling) {
+      const rotation = (Date.now() / 50) % 360
+      ctx.translate(x + size / 2, y + size / 2)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.translate(-size / 2, -size / 2)
+    }
 
+    // Тень кубика
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+    ctx.shadowBlur = 8
+    ctx.shadowOffsetX = 3
+    ctx.shadowOffsetY = 3
+
+    // Градиент кубика
+    const diceGradient = ctx.createLinearGradient(x, y, x + size, y + size)
+    diceGradient.addColorStop(0, '#FFFFFF')
+    diceGradient.addColorStop(1, '#E0E0E0')
+    
     // Кубик
-    ctx.fillStyle = '#FFFFFF'
-    ctx.fillRect(-15, -15, 30, 30)
-    ctx.strokeStyle = '#000000'
+    ctx.fillStyle = diceGradient
+    ctx.fillRect(x, y, size, size)
+    
+    // Обводка кубика
+    ctx.strokeStyle = '#1a1a1a'
     ctx.lineWidth = 2
-    ctx.strokeRect(-15, -15, 30, 30)
+    ctx.strokeRect(x, y, size, size)
 
     // Точки на кубике
-    ctx.fillStyle = '#000000'
+    ctx.fillStyle = '#1a1a1a'
+    const dotSize = size / 8
     const dotPositions: Record<number, number[][]> = {
-      1: [[0, 0]],
-      2: [[-8, -8], [8, 8]],
-      3: [[-8, -8], [0, 0], [8, 8]],
-      4: [[-8, -8], [8, -8], [-8, 8], [8, 8]],
-      5: [[-8, -8], [8, -8], [0, 0], [-8, 8], [8, 8]],
-      6: [[-8, -8], [8, -8], [-8, 0], [8, 0], [-8, 8], [8, 8]],
+      1: [[size / 2, size / 2]],
+      2: [[size / 3, size / 3], [size * 2 / 3, size * 2 / 3]],
+      3: [[size / 3, size / 3], [size / 2, size / 2], [size * 2 / 3, size * 2 / 3]],
+      4: [
+        [size / 3, size / 3],
+        [size * 2 / 3, size / 3],
+        [size / 3, size * 2 / 3],
+        [size * 2 / 3, size * 2 / 3],
+      ],
+      5: [
+        [size / 3, size / 3],
+        [size * 2 / 3, size / 3],
+        [size / 2, size / 2],
+        [size / 3, size * 2 / 3],
+        [size * 2 / 3, size * 2 / 3],
+      ],
+      6: [
+        [size / 3, size / 3],
+        [size * 2 / 3, size / 3],
+        [size / 3, size / 2],
+        [size * 2 / 3, size / 2],
+        [size / 3, size * 2 / 3],
+        [size * 2 / 3, size * 2 / 3],
+      ],
     }
 
     const positions = dotPositions[value] || []
     positions.forEach(([dx, dy]) => {
       ctx.beginPath()
-      ctx.arc(dx, dy, 3, 0, Math.PI * 2)
+      ctx.arc(x + dx, y + dy, dotSize, 0, Math.PI * 2)
       ctx.fill()
     })
 
@@ -274,8 +441,58 @@ export default function BackgammonBoard({
   }, [drawBoard])
 
   useEffect(() => {
-    drawBoard()
+    const animate = () => {
+      drawBoard()
+      animationFrameRef.current = requestAnimationFrame(animate)
+    }
+    animate()
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
   }, [drawBoard])
+
+  const getPointFromCoords = (x: number, y: number): number | null => {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+
+    const width = canvas.width
+    const height = canvas.height
+    const boardPadding = 20
+    const boardWidth = width - boardPadding * 2
+    const pointWidth = boardWidth / 12
+    const pointHeight = (height - boardPadding * 2) / 2
+
+    for (let i = 0; i < 24; i++) {
+      const isTop = i < 12
+      let pointX: number
+      
+      if (i < 12) {
+        pointX = boardPadding + (11 - i) * pointWidth
+      } else {
+        pointX = boardPadding + (i - 12) * pointWidth
+      }
+
+      const pointY = isTop ? boardPadding : boardPadding + (height - boardPadding * 2) / 2
+
+      // Проверяем клик в пределах треугольника
+      const relativeX = x - pointX
+      const relativeY = isTop ? y - pointY : pointY - y
+      
+      if (
+        relativeX >= 0 &&
+        relativeX <= pointWidth &&
+        relativeY >= 0 &&
+        relativeY <= pointHeight &&
+        relativeX <= pointWidth - (relativeY / pointHeight) * pointWidth &&
+        relativeX >= (relativeY / pointHeight) * pointWidth
+      ) {
+        return i
+      }
+    }
+    return null
+  }
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isMyTurn || !canMove) return
@@ -287,50 +504,50 @@ export default function BackgammonBoard({
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
-    const pointWidth = canvas.width / 12
-    const boardHeight = canvas.height * 0.8
+    const clickedPoint = getPointFromCoords(x, y)
+    if (clickedPoint === null) return
 
-    // Определяем на какую точку кликнули
-    for (let i = 0; i < 24; i++) {
-      const isTop = i < 12
-      const pointX = i < 12 ? (11 - i) * pointWidth : (i - 12) * pointWidth
-      const pointY = isTop ? 0 : boardHeight
-
-      if (
-        x >= pointX &&
-        x <= pointX + pointWidth &&
-        y >= (isTop ? pointY : pointY - boardHeight / 2) &&
-        y <= (isTop ? pointY + boardHeight / 2 : pointY)
-      ) {
-        if (selectedPoint === null) {
-          // Выбираем точку
-          const point = points[i]
-          if (point && point.checkers && point.checkers.length > 0) {
-            const isMyChecker = currentPlayer === 0 ? point.color === 'white' : point.color === 'black'
-            if (isMyChecker) {
-              setSelectedPoint(i)
-            }
-          }
-        } else {
-          // Делаем ход
-          if (dice && (selectedPoint !== i)) {
-            const die = dice.die1 || dice.die2
-            onMove(selectedPoint, i, die)
-            setSelectedPoint(null)
-          }
+    if (selectedPoint === null) {
+      // Выбираем точку
+      const point = points[clickedPoint]
+      if (point && point.checkers && point.checkers.length > 0) {
+        const isMyChecker = currentPlayer === 0 ? point.color === 'white' : point.color === 'black'
+        if (isMyChecker) {
+          setSelectedPoint(clickedPoint)
         }
-        break
+      }
+    } else {
+      // Делаем ход
+      if (dice && selectedPoint !== clickedPoint) {
+        const die = dice.die1 || dice.die2
+        onMove(selectedPoint, clickedPoint, die)
+        setSelectedPoint(null)
+      } else {
+        setSelectedPoint(null)
       }
     }
   }
 
   const handleRollDice = () => {
     if (!isMyTurn || dice) return
+    
+    setDiceRolling(true)
     setAnimating(true)
-    setTimeout(() => {
-      setAnimating(false)
-      onRollDice()
-    }, 500)
+    
+    // Анимация броска кубиков
+    const rollDuration = 1000
+    const startTime = Date.now()
+    
+    const rollInterval = setInterval(() => {
+      if (Date.now() - startTime >= rollDuration) {
+        clearInterval(rollInterval)
+        setDiceRolling(false)
+        setAnimating(false)
+        onRollDice()
+      } else {
+        drawBoard()
+      }
+    }, 50)
   }
 
   return (
@@ -346,36 +563,21 @@ export default function BackgammonBoard({
           const x = e.clientX - rect.left
           const y = e.clientY - rect.top
 
-          const pointWidth = canvas.width / 12
-          const boardHeight = canvas.height * 0.8
-
-          let found = false
-          for (let i = 0; i < 24; i++) {
-            const isTop = i < 12
-            const pointX = i < 12 ? (11 - i) * pointWidth : (i - 12) * pointWidth
-            const pointY = isTop ? 0 : boardHeight
-
-            if (
-              x >= pointX &&
-              x <= pointX + pointWidth &&
-              y >= (isTop ? pointY : pointY - boardHeight / 2) &&
-              y <= (isTop ? pointY + boardHeight / 2 : pointY)
-            ) {
-              setHoverPoint(i)
-              found = true
-              break
-            }
-          }
-          if (!found) setHoverPoint(null)
+          const hoveredPoint = getPointFromCoords(x, y)
+          setHoverPoint(hoveredPoint)
         }}
         className="backgammon-board"
       />
       {!dice && isMyTurn && (
-        <button className="roll-dice-button" onClick={handleRollDice}>
-          Бросить кубики
+        <button className="roll-dice-button" onClick={handleRollDice} disabled={animating}>
+          {animating ? 'Бросаю...' : 'Бросить кубики'}
         </button>
+      )}
+      {selectedPoint !== null && (
+        <div className="selected-point-indicator">
+          Выбрана точка {POINT_NUMBERS[selectedPoint]}
+        </div>
       )}
     </div>
   )
 }
-

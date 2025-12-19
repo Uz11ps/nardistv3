@@ -31,7 +31,15 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city'>('stats')
+  const [tournaments, setTournaments] = useState<any[]>([])
+  const [articles, setArticles] = useState<any[]>([])
+  const [cityRewards, setCityRewards] = useState<any>(null)
+  
+  // Формы создания
+  const [newGame, setNewGame] = useState({ player1Id: '', player2Id: '', mode: 'short', type: 'vs_player' })
+  const [newTournament, setNewTournament] = useState({ name: '', mode: 'short', format: 'bracket', startDate: '', maxParticipants: 16, entryFee: 0 })
+  const [newArticle, setNewArticle] = useState({ title: '', content: '', type: 'article', isPaid: false, price: 0 })
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -71,14 +79,20 @@ export default function Admin() {
 
   const loadStats = async () => {
     try {
-      const [statsRes, usersRes, gamesRes] = await Promise.all([
+      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes] = await Promise.all([
         apiClient.get('/admin/stats'),
         apiClient.get('/admin/users'),
         apiClient.get('/admin/games'),
+        apiClient.get('/admin/tournaments').catch(() => ({ data: [] })),
+        apiClient.get('/admin/academy').catch(() => ({ data: [] })),
+        apiClient.get('/admin/city/rewards').catch(() => ({ data: null })),
       ])
       setStats(statsRes.data)
       setUsers(usersRes.data)
       setGames(gamesRes.data)
+      setTournaments(tournamentsRes.data || [])
+      setArticles(articlesRes.data || [])
+      setCityRewards(cityRes.data)
     } catch (error) {
       console.error('Ошибка загрузки данных:', error)
     }
@@ -164,6 +178,30 @@ export default function Admin() {
           onClick={() => setActiveTab('notifications')}
         >
           Уведомления
+        </button>
+        <button
+          className={activeTab === 'create-game' ? 'active' : ''}
+          onClick={() => setActiveTab('create-game')}
+        >
+          Создать игру
+        </button>
+        <button
+          className={activeTab === 'tournaments' ? 'active' : ''}
+          onClick={() => setActiveTab('tournaments')}
+        >
+          Турниры
+        </button>
+        <button
+          className={activeTab === 'academy' ? 'active' : ''}
+          onClick={() => setActiveTab('academy')}
+        >
+          Обучение
+        </button>
+        <button
+          className={activeTab === 'city' ? 'active' : ''}
+          onClick={() => setActiveTab('city')}
+        >
+          Город
         </button>
       </div>
 

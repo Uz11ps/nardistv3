@@ -7,8 +7,10 @@ import { AcademyService } from '../academy/academy.service';
 import { SkinsService } from '../skins/skins.service';
 import { GamesService } from '../games/games.service';
 import { User } from '../users/user.entity';
-import { Game } from '../games/game.entity';
+import { Game, GameMode, GameType } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
+import { Tournament } from '../tournaments/tournament.entity';
+import { Article } from '../academy/article.entity';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -21,6 +23,10 @@ export class AdminService {
     private gamesRepository: Repository<Game>,
     @InjectRepository(GameMove)
     private movesRepository: Repository<GameMove>,
+    @InjectRepository(Tournament)
+    private tournamentsRepository: Repository<Tournament>,
+    @InjectRepository(Article)
+    private articlesRepository: Repository<Article>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
     private academyService: AcademyService,
@@ -214,6 +220,64 @@ export class AdminService {
     }
 
     throw new Error('Укажите userId или установите all=true');
+  }
+
+  async createGame(data: { player1Id: string; player2Id?: string; mode: string; type: string }) {
+    return this.gamesService.create(
+      data.player1Id,
+      data.player2Id || null,
+      data.mode as GameMode,
+      data.type as GameType,
+    );
+  }
+
+  async createTournament(data: any) {
+    return this.tournamentsService.create(data);
+  }
+
+  async getAllTournaments() {
+    return this.tournamentsRepository.find({
+      order: { createdAt: 'DESC' },
+      relations: ['matches'],
+    });
+  }
+
+  async createArticle(data: any) {
+    return this.academyService.create(data);
+  }
+
+  async getAllArticles() {
+    return this.academyService.findAll();
+  }
+
+  async updateArticle(id: string, data: any) {
+    return this.academyService.update(id, data);
+  }
+
+  async deleteArticle(id: string) {
+    return this.academyService.delete(id);
+  }
+
+  async getCityRewards() {
+    // Получаем настройки наград города (можно хранить в БД или конфиге)
+    // Пока возвращаем дефолтные значения
+    return {
+      districts: [
+        { id: 1, name: 'Клуб', incomePerHour: 10, maxAccumulation: 240 },
+        { id: 2, name: 'Мастерская', incomePerHour: 15, maxAccumulation: 360 },
+        { id: 3, name: 'Фабрика', incomePerHour: 20, maxAccumulation: 480 },
+        { id: 4, name: 'Школа', incomePerHour: 25, maxAccumulation: 600 },
+        { id: 5, name: 'Университет', incomePerHour: 30, maxAccumulation: 720 },
+        { id: 6, name: 'Банк', incomePerHour: 40, maxAccumulation: 960 },
+        { id: 7, name: 'Дворец', incomePerHour: 50, maxAccumulation: 1200 },
+      ],
+    };
+  }
+
+  async updateCityRewards(data: any) {
+    // Сохраняем настройки наград (можно в БД или конфиг)
+    // Пока просто возвращаем обновленные данные
+    return data;
   }
 }
 
