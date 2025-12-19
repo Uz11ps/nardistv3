@@ -22,8 +22,10 @@ else
     echo "Проверьте: docker-compose ps frontend"
 fi
 
-# Находим server блок для nardist.site
-SERVER_LINE=$(grep -n "server_name.*nardist.site" "$CONFIG_FILE" | head -1 | cut -d: -f1)
+# Находим ВСЕ server блоки для nardist.site и обрабатываем каждый
+SERVER_LINES=$(grep -n "server_name.*nardist.site" "$CONFIG_FILE" | cut -d: -f1)
+
+for SERVER_LINE in $SERVER_LINES; do
 
 if [ -z "$SERVER_LINE" ]; then
     echo "❌ Не найден server блок для nardist.site"
