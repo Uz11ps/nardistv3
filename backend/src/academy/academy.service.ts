@@ -155,7 +155,7 @@ export class AcademyService {
 
     // Списываем средства
     const userBalance = Number(user.narCoin);
-    const newBalance = BigInt(userBalance - price);
+    const newBalance = userBalance - price;
     await this.usersService.update(userId, { narCoin: newBalance });
 
     // Сохраняем покупку

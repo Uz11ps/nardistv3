@@ -68,7 +68,7 @@ export class GamesService {
       }
       // Блокируем ставку (вычитаем сразу, вернем проигравшему позже при завершении)
       const player1Balance = Number(player1.narCoin);
-      const newPlayer1Balance = BigInt(player1Balance - stake);
+      const newPlayer1Balance = player1Balance - stake;
       await this.usersService.update(player1Id, { narCoin: newPlayer1Balance });
 
       if (player2Id) {
@@ -76,10 +76,10 @@ export class GamesService {
         const player2Balance = Number(player2.narCoin);
         if (player2Balance < stake) {
           // Возвращаем деньги player1
-          await this.usersService.update(player1Id, { narCoin: BigInt(player1Balance) });
+          await this.usersService.update(player1Id, { narCoin: player1Balance });
           throw new BadRequestException('У противника недостаточно NAR-coin для ставки');
         }
-        const newPlayer2Balance = BigInt(player2Balance - stake);
+        const newPlayer2Balance = player2Balance - stake;
         await this.usersService.update(player2Id, { narCoin: newPlayer2Balance });
       }
     }
@@ -228,7 +228,7 @@ export class GamesService {
       const winnerReward = totalPot - finalCommission;
 
       const winnerBalance = Number(winner.narCoin);
-      const newWinnerBalance = BigInt(winnerBalance + winnerReward);
+      const newWinnerBalance = winnerBalance + winnerReward;
       await this.usersService.update(game.winnerId, { narCoin: newWinnerBalance });
     }
 
