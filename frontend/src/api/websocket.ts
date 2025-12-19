@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client'
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3000'
+// Для production используем wss://, для dev - ws://
+const WS_URL = import.meta.env.VITE_WS_URL || (import.meta.env.PROD ? `wss://${window.location.host}` : 'ws://localhost:3000')
 
 let socket: Socket | null = null
 
