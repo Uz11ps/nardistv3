@@ -52,7 +52,7 @@ export class AcademyService {
       id: article.id,
       title: article.title,
       author: article.author,
-      price: Number(article.price || article.priceNarCoin || 0),
+      price: Number(article.price || 0),
       purchased: false, // Проверяется через getUserMaterials
     }));
   }
@@ -66,7 +66,7 @@ export class AcademyService {
       id: article.id,
       title: article.title,
       author: article.author,
-      price: Number(article.price || article.priceNarCoin || 0),
+      price: Number(article.price || 0),
       purchased: false,
     }));
   }
@@ -82,7 +82,7 @@ export class AcademyService {
     const course = await this.findOne(courseId);
     const user = await this.usersService.findOne(userId);
 
-    const price = Number(course.price || course.priceNarCoin || 0);
+    const price = Number(course.price || 0);
     if (Number(user.narCoin) < price) {
       throw new Error('Недостаточно NAR-coin');
     }

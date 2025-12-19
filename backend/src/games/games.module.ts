@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GamesService } from './games.service';
 import { GamesController } from './games.controller';
 import { GamesGateway } from './games.gateway';
@@ -15,7 +15,7 @@ import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
     TypeOrmModule.forFeature([Game, GameMove]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService) => ({
+      useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
           expiresIn: '7d',
