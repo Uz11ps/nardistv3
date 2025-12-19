@@ -2,19 +2,7 @@ import { useEffect, useState } from 'react'
 import { apiClient } from '../api/client'
 import Card from './Card'
 import Button from './Button'
-
-interface Skin {
-  id: string
-  name: string
-  description?: string
-  theme: string
-  imageUrl?: string
-  price?: number
-  rarity: string
-  weight: number
-  isPremium: boolean
-  isDefault: boolean
-}
+import { Skin } from '../types/skin'
 
 interface SkinSelectModalProps {
   isOpen: boolean

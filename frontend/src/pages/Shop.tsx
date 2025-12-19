@@ -5,19 +5,7 @@ import Button from '../components/Button'
 import SkinSelectModal from '../components/SkinSelectModal'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
-
-interface Skin {
-  id: string
-  name: string
-  description?: string
-  theme: string
-  imageUrl?: string
-  price?: number
-  rarity: string
-  weight: number
-  isPremium: boolean
-  isDefault: boolean
-}
+import { Skin } from '../types/skin'
 
 export default function Shop() {
   const { user } = useAuthStore()
