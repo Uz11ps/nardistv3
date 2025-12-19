@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: nardi_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nardi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password_change}
+      POSTGRES_DB: ${POSTGRES_DB:-nardi_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nardi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nardi_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: nardi_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nardi_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nardi_backend
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-nardi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password_change}
+      POSTGRES_DB: ${POSTGRES_DB:-nardi_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-change_this_secret_key}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_SECRET_KEY: ${TELEGRAM_SECRET_KEY}
+      BACKEND_PORT: ${BACKEND_PORT:-3000}
+      DOMAIN: ${DOMAIN:-localhost}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - /app/node_modules
+    networks:
+      - nardi_network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nardi_frontend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3000}
+      VITE_TELEGRAM_BOT_NAME: ${VITE_TELEGRAM_BOT_NAME:-}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - backend
+    volumes:
+      - /app/node_modules
+    networks:
+      - nardi_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  nardi_network:
+    driver: bridge
+

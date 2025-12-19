@@ -1,0 +1,74 @@
+.clan-card {
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.clan-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 51, 51, 0.2);
+}
+
+.clan-icon {
+  font-size: 32px;
+}
+
+.clan-icon-large {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.search-bar {
+  margin-bottom: 16px;
+}
+
+.clan-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  background: #3a3a3a;
+  color: #aaaaaa;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  background: #4a4a4a;
+  color: #ffffff;
+}
+
+.filter-btn.active {
+  background: #ff3333;
+  color: #ffffff;
+}
+
+.clans-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.create-clan-card {
+  animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

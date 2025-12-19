@@ -1,0 +1,104 @@
+.toggle-group {
+  display: flex;
+  gap: 8px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 12px;
+  background: #3a3a3a;
+  color: #aaaaaa;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+  background: #4a4a4a;
+  color: #ffffff;
+}
+
+.toggle-btn.active {
+  background: #ff3333;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(255, 51, 51, 0.3);
+}
+
+.stake-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.stake-btn {
+  padding: 12px;
+  background: #3a3a3a;
+  color: #aaaaaa;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stake-btn:hover {
+  background: #4a4a4a;
+  color: #ffffff;
+}
+
+.stake-btn.active {
+  background: #ffd700;
+  color: #000000;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.searching-container {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.searching-animation {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.search-dot {
+  width: 12px;
+  height: 12px;
+  background: #ff3333;
+  border-radius: 50%;
+  animation: searchPulse 1.4s infinite;
+}
+
+@keyframes searchPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+.searching-text {
+  font-size: 16px;
+  color: #aaaaaa;
+  margin-bottom: 24px;
+  animation: fadeInOut 2s infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+

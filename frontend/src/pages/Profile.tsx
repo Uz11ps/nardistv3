@@ -1,0 +1,101 @@
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
+import PageHeader from '../components/PageHeader'
+import Card from '../components/Card'
+import Button from '../components/Button'
+import BottomNav from '../components/BottomNav'
+import { apiClient } from '../api/client'
+
+export default function Profile() {
+  const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
+  const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1 })
+
+  useEffect(() => {
+    if (user) {
+      setStats({
+        narCoin: Number(user.narCoin) || 0,
+        xp: Number(user.xp) || 0,
+        level: user.level || 1,
+      })
+    }
+  }, [user])
+
+  const menuItems = [
+    { icon: '🛒', title: 'Магазин', path: '/shop' },
+    { icon: '📦', title: 'Инвентарь', path: '/inventory' },
+    { icon: '🔔', title: 'Уведомления', path: '/notifications' },
+    { icon: '⚙️', title: 'Настройки', path: '/settings' },
+    { icon: '🚪', title: 'Выйти из аккаунта', action: 'logout' },
+  ]
+
+  const handleMenuClick = (item: typeof menuItems[0]) => {
+    if (item.action === 'logout') {
+      logout()
+    } else if (item.path) {
+      navigate(item.path)
+    }
+  }
+
+  return (
+    <div className="app-container">
+      <PageHeader title="Профиль" />
+      
+      <div style={{ padding: '20px' }}>
+        {/* Профиль */}
+        <Card style={{ marginBottom: '20px', textAlign: 'center' }}>
+          <div className="avatar avatar-large" style={{ margin: '0 auto 16px' }}>
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.username} />
+            ) : (
+              <div style={{ fontSize: '48px' }}>👤</div>
+            )}
+          </div>
+          <div className="card-title">{user?.nickname || user?.username || 'Игрок'}</div>
+          <div className="card-subtitle">Уровень {stats.level}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '12px' }}>
+            <span className="gold">💰 {stats.narCoin.toLocaleString()}</span>
+            <span style={{ color: '#ff3333' }}>🔥 {stats.xp}/100</span>
+          </div>
+        </Card>
+
+        {/* Валюта */}
+        <Card style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="gold-icon" style={{ fontSize: '24px' }}>🪙</span>
+              <span className="gold" style={{ fontSize: '18px', fontWeight: 600 }}>
+                {stats.narCoin.toLocaleString()} NAR
+              </span>
+            </div>
+            <Button variant="primary" onClick={() => navigate('/shop')}>
+              Пополнить
+            </Button>
+          </div>
+        </Card>
+
+        {/* Меню */}
+        <div>
+          {menuItems.map((item) => (
+            <Card
+              key={item.path || item.action}
+              onClick={() => handleMenuClick(item)}
+              style={{ marginBottom: '12px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ fontSize: '24px' }}>{item.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <div className="card-title">{item.title}</div>
+                </div>
+                <div style={{ fontSize: '20px', color: '#666666' }}>→</div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <BottomNav />
+    </div>
+  )
+}
