@@ -269,7 +269,25 @@ if [ -n "$ROOT_LINES_AFTER" ]; then
     done
 fi
 
-echo "$AFTER_LOC" >> "$TMP_FILE"
+# Добавляем остальную часть только если она не пустая
+if [ -n "$AFTER_LOC" ]; then
+    echo "$AFTER_LOC" >> "$TMP_FILE"
+fi
+
+# Если есть server блок, добавляем его закрывающую скобку
+if [ -n "$SERVER_CLOSE" ]; then
+    # Проверяем что закрывающая скобка server блока есть в оригинальном файле
+    SERVER_CLOSE_LINE=$(sed -n "${SERVER_CLOSE}p" "$CONFIG_FILE")
+    
+    # Если location / заканчивается раньше server блока, добавляем закрывающую скобку server
+    if [ "$LOCATION_CLOSE" -lt "$SERVER_CLOSE" ]; then
+        echo "$SERVER_CLOSE_LINE" >> "$TMP_FILE"
+    fi
+    # Если location / заканчивается вместе с server блоком, закрывающая скобка уже добавлена в location /
+    
+    # Добавляем остальную часть файла после закрывающей скобки server блока
+    tail -n +$((SERVER_CLOSE + 1)) "$CONFIG_FILE" >> "$TMP_FILE"
+fi
 
 # Заменяем файл
 mv "$TMP_FILE" "$CONFIG_FILE"
