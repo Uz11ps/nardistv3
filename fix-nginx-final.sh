@@ -77,13 +77,45 @@ AFTER_SERVER=$(tail -n +$((SERVER_CLOSE + 1)) "$CONFIG_FILE")
 # Получаем отступ для server блока
 SERVER_INDENT=$(sed -n "${SERVER_LINE}p" "$CONFIG_FILE" | sed 's/server.*//')
 
-# Получаем базовые настройки из существующего server блока (listen, server_name, ssl и т.д.)
+# Получаем ВСЕ настройки из существующего server блока, кроме location блоков
 SERVER_BLOCK=$(sed -n "${SERVER_LINE},${SERVER_CLOSE}p" "$CONFIG_FILE")
-LISTEN_LINES=$(echo "$SERVER_BLOCK" | grep "^[[:space:]]*listen" || echo "")
-SERVER_NAME_LINE=$(echo "$SERVER_BLOCK" | grep "^[[:space:]]*server_name" | head -1 || echo "")
-SSL_LINES=$(echo "$SERVER_BLOCK" | grep -E "^[[:space:]]*(ssl_|ssl_certificate)" || echo "")
-ROOT_LINE=$(echo "$SERVER_BLOCK" | grep "^[[:space:]]*root" | head -1 || echo "")
-INDEX_LINE=$(echo "$SERVER_BLOCK" | grep "^[[:space:]]*index" | head -1 || echo "")
+
+# Сохраняем все строки кроме location блоков
+ALL_SETTINGS=""
+IN_LOCATION=0
+LOCATION_INDENT=0
+
+while IFS= read -r line; do
+    # Пропускаем открывающую и закрывающую скобки server блока
+    if echo "$line" | grep -q "^[[:space:]]*server {" || echo "$line" | grep -q "^[[:space:]]*}$"; then
+        continue
+    fi
+    
+    # Проверяем начало location блока
+    if echo "$line" | grep -q "^[[:space:]]*location "; then
+        IN_LOCATION=1
+        LOCATION_INDENT=$(echo "$line" | sed 's/location.*//' | wc -c)
+        LOCATION_INDENT=$((LOCATION_INDENT - 1))
+        continue
+    fi
+    
+    # Если мы внутри location блока, проверяем закрывающую скобку
+    if [ "$IN_LOCATION" -eq 1 ]; then
+        line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+        line_indent=$((line_indent - 1))
+        
+        if [ "$line_indent" -le "$LOCATION_INDENT" ] && echo "$line" | grep -q "^[[:space:]]*}$"; then
+            IN_LOCATION=0
+        fi
+        continue
+    fi
+    
+    # Сохраняем строку если мы не внутри location блока
+    ALL_SETTINGS="${ALL_SETTINGS}${line}\n"
+done <<< "$SERVER_BLOCK"
+
+# Убираем последний перенос строки
+ALL_SETTINGS=$(echo -e "$ALL_SETTINGS" | sed '$d')
 
 # Создаём временный файл
 TMP_FILE=$(mktemp)
@@ -95,25 +127,9 @@ echo "$BEFORE_SERVER" > "$TMP_FILE"
 echo -n "$SERVER_INDENT" >> "$TMP_FILE"
 echo "server {" >> "$TMP_FILE"
 
-# Добавляем базовые настройки
-if [ -n "$LISTEN_LINES" ]; then
-    echo "$LISTEN_LINES" >> "$TMP_FILE"
-fi
-
-if [ -n "$SERVER_NAME_LINE" ]; then
-    echo "$SERVER_NAME_LINE" >> "$TMP_FILE"
-fi
-
-if [ -n "$SSL_LINES" ]; then
-    echo "$SSL_LINES" >> "$TMP_FILE"
-fi
-
-if [ -n "$ROOT_LINE" ]; then
-    echo "$ROOT_LINE" >> "$TMP_FILE"
-fi
-
-if [ -n "$INDEX_LINE" ]; then
-    echo "$INDEX_LINE" >> "$TMP_FILE"
+# Добавляем все сохранённые настройки
+if [ -n "$ALL_SETTINGS" ]; then
+    echo -e "$ALL_SETTINGS" >> "$TMP_FILE"
 fi
 
 # Добавляем location блоки для API
