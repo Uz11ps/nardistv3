@@ -42,16 +42,19 @@ export default function Onboarding() {
     const initialize = async () => {
       try {
         await init()
-        if (!user) {
+        const currentUser = useAuthStore.getState().user
+        if (!currentUser) {
           try {
             await login()
+            const updatedUser = useAuthStore.getState().user
+            if (updatedUser) {
+              loadOnboardingProgress()
+            }
           } catch (loginError: any) {
             console.error('Ошибка входа:', loginError)
             // Продолжаем работу даже если вход не удался
           }
-        }
-        // Загружаем прогресс онбординга только если пользователь есть
-        if (user) {
+        } else {
           loadOnboardingProgress()
         }
       } catch (error: any) {
@@ -60,7 +63,8 @@ export default function Onboarding() {
       }
     }
     initialize()
-  }, [init, login, user])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Запускаем только один раз при монтировании
 
   const loadOnboardingProgress = async () => {
     try {

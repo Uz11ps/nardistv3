@@ -89,35 +89,35 @@ function App() {
     )
   }
 
-  if (!user) {
-    return <Onboarding />
-  }
-
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/game/:gameId" element={<Game />} />
-          <Route path="/game/new" element={<Game />} />
-          <Route path="/game/search" element={<GameSearch />} />
-          <Route path="/game/tables" element={<GameSearch />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/city" element={<City />} />
-          <Route path="/tournaments" element={<Tournaments />} />
-          <Route path="/tournaments/:tournamentId" element={<Tournaments />} />
-          <Route path="/academy" element={<Academy />} />
-          <Route path="/academy/:materialId" element={<Academy />} />
-          <Route path="/academy/publish" element={<Academy />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/quests" element={<Quests />} />
-          <Route path="/inventory" element={<Profile />} />
-          <Route path="/notifications" element={<Profile />} />
-          <Route path="/settings" element={<Profile />} />
-          <Route path="/clans" element={<Clans />} />
-          <Route path="/clans/:clanId" element={<Clans />} />
-        </Routes>
+        {!user ? (
+          <Onboarding />
+        ) : (
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/game/:gameId" element={<Game />} />
+            <Route path="/game/new" element={<Game />} />
+            <Route path="/game/search" element={<GameSearch />} />
+            <Route path="/game/tables" element={<GameSearch />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/city" element={<City />} />
+            <Route path="/tournaments" element={<Tournaments />} />
+            <Route path="/tournaments/:tournamentId" element={<Tournaments />} />
+            <Route path="/academy" element={<Academy />} />
+            <Route path="/academy/:materialId" element={<Academy />} />
+            <Route path="/academy/publish" element={<Academy />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/quests" element={<Quests />} />
+            <Route path="/inventory" element={<Profile />} />
+            <Route path="/notifications" element={<Profile />} />
+            <Route path="/settings" element={<Profile />} />
+            <Route path="/clans" element={<Clans />} />
+            <Route path="/clans/:clanId" element={<Clans />} />
+          </Routes>
+        )}
       </BrowserRouter>
     </ErrorBoundary>
   )
