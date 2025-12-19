@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Enhancement, EnhancementType } from './enhancement.entity';
@@ -12,6 +12,7 @@ export class ProgressService {
   constructor(
     @InjectRepository(Enhancement)
     private enhancementsRepository: Repository<Enhancement>,
+    @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
   ) {}
 
