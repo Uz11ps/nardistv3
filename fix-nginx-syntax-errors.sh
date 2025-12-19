@@ -16,8 +16,37 @@ echo ""
 
 # 1. Исправляем устаревший синтаксис http2
 echo "1️⃣ Исправление синтаксиса http2..."
-sed -i 's/listen \(.*\) ssl http2;/listen \1 ssl;\n    http2 on;/g' "$CONFIG_FILE"
-sed -i 's/listen \[::\]:\(.*\) ssl http2;/listen [::]:\1 ssl;\n    http2 on;/g' "$CONFIG_FILE"
+
+# Сначала удаляем все существующие директивы http2 on (чтобы избежать дубликатов)
+sed -i '/^[[:space:]]*http2 on;/d' "$CONFIG_FILE"
+
+# Заменяем устаревший синтаксис listen ... ssl http2 на listen ... ssl
+sed -i 's/listen \(.*\) ssl http2;/listen \1 ssl;/g' "$CONFIG_FILE"
+sed -i 's/listen \[::\]:\(.*\) ssl http2;/listen [::]:\1 ssl;/g' "$CONFIG_FILE"
+
+# Добавляем http2 on после первого listen 443 ssl в каждом server блоке
+# Используем awk для правильной обработки блоков
+awk '
+/^[[:space:]]*server[[:space:]]*{/ { 
+    in_server=1
+    http2_added=0
+    print
+    next
+}
+/^[[:space:]]*}/ && in_server { 
+    in_server=0
+    http2_added=0
+    print
+    next
+}
+/listen.*443.*ssl/ && in_server && !http2_added {
+    print
+    print "    http2 on;"
+    http2_added=1
+    next
+}
+{ print }
+' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 
 echo "   ✅ Синтаксис http2 исправлен"
 echo ""
@@ -40,8 +69,9 @@ if [ -n "$DUPLICATE_LINE" ]; then
     # Если это IP адрес с портом, удаляем эту строку
     if echo "$LINE_CONTENT" | grep -q "listen.*192\.168\."; then
         echo "   Удаляю строку с IP адресом..."
-        sed -i "${DUPLICATE_LINE}d" "$CONFIG_FILE"
-        echo "   ✅ Дубликат удален"
+        # Удаляем все строки с listen и IP адресом в этом блоке
+        sed -i '/listen.*192\.168\./d' "$CONFIG_FILE"
+        echo "   ✅ Дубликаты с IP адресом удалены"
     else
         # Иначе это может быть отдельный server блок - нужно проверить
         echo "   Проверяю, это отдельный server блок..."
