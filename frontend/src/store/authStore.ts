@@ -8,6 +8,7 @@ interface User {
   firstName?: string
   lastName?: string
   nickname?: string
+  country?: string
   avatarUrl?: string
   level: number
   xp: number | bigint

@@ -98,7 +98,7 @@ export default function Profile() {
         <div>
           {menuItems.map((item) => (
             <Card
-              key={item.path || item.action}
+              key={item.path}
               onClick={() => handleMenuClick(item)}
               style={{ marginBottom: '12px' }}
             >
