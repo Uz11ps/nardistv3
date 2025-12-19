@@ -225,7 +225,7 @@ export class AdminController {
   async createSkin(
     @CurrentUser() user: any,
     @Body() body: CreateSkinDto,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() file?: { filename: string; originalname: string; mimetype: string; size: number },
   ) {
     if (!user.isAdmin) {
       throw new UnauthorizedException('Недостаточно прав');
