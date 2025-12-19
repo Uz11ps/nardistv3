@@ -1,118 +1,216 @@
 #!/bin/bash
 
-# Финальное исправление конфигурации Nginx для ISPmanager
+# Финальный скрипт для полной замены server блока правильной конфигурацией
 
-SERVER="root@91.229.9.80"
+CONFIG_FILE="/etc/nginx/vhosts/www-root/nardist.site.conf"
 
-echo "🔧 Финальное исправление конфигурации Nginx..."
+echo "🔧 Полная замена server блока правильной конфигурацией..."
 
-ssh $SERVER << ENDSSH
-echo "🔍 Проверка статуса Apache:"
-systemctl status apache2 --no-pager | head -3
+# Создаём бэкап
+if [ ! -f "$CONFIG_FILE.backup" ]; then
+    cp "$CONFIG_FILE" "$CONFIG_FILE.backup"
+    echo "✅ Бэкап создан"
+fi
 
+# Проверяем что frontend контейнер работает
 echo ""
-echo "🛑 Остановка Apache (если запущен):"
-systemctl stop apache2 2>/dev/null || echo "Apache уже остановлен"
-systemctl disable apache2 2>/dev/null || echo "Apache уже отключен"
+echo "Проверка frontend контейнера:"
+if curl -s http://127.0.0.1:5173 > /dev/null 2>&1; then
+    echo "✅ Frontend контейнер отвечает на порту 5173"
+else
+    echo "⚠️ Frontend контейнер не отвечает на порту 5173"
+    echo "Проверьте: docker-compose ps frontend"
+fi
 
-echo ""
-echo "🔧 Исправление кастомной конфигурации (убираем root):"
+# Находим server блок для nardist.site
+SERVER_LINE=$(grep -n "server_name.*nardist.site" "$CONFIG_FILE" | head -1 | cut -d: -f1)
 
-# Удаляем старую конфигурацию если есть
-rm -f /etc/nginx/vhosts-resources/nardist.site/proxy.conf
+if [ -z "$SERVER_LINE" ]; then
+    echo "❌ Не найден server блок для nardist.site"
+    exit 1
+fi
 
-# Создаем правильную конфигурацию БЕЗ root директивы
-cat > /etc/nginx/vhosts-resources/nardist.site/proxy.conf << 'EOF'
-# Кастомная конфигурация для проксирования на Docker контейнеры
-# БЕЗ root директивы, так как она уже есть в основной конфигурации ISPmanager
+# Находим начало server блока (может быть на предыдущих строках)
+while [ "$SERVER_LINE" -gt 0 ]; do
+    if grep -q "^[[:space:]]*server {" <(sed -n "${SERVER_LINE}p" "$CONFIG_FILE"); then
+        break
+    fi
+    SERVER_LINE=$((SERVER_LINE - 1))
+done
 
-location / {
-    proxy_pass http://127.0.0.1:5173;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_cache_bypass $http_upgrade;
-    proxy_redirect off;
-    proxy_connect_timeout 60s;
-    proxy_send_timeout 60s;
-    proxy_read_timeout 60s;
-}
+if [ "$SERVER_LINE" -eq 0 ]; then
+    echo "❌ Не найдено начало server блока"
+    exit 1
+fi
 
-location /api {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_cache_bypass $http_upgrade;
-    proxy_redirect off;
-    proxy_connect_timeout 60s;
-    proxy_send_timeout 60s;
-    proxy_read_timeout 60s;
-}
+echo "✅ server блок найден на строке $SERVER_LINE"
 
-location /socket.io {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_connect_timeout 7d;
-    proxy_send_timeout 7d;
-    proxy_read_timeout 7d;
-}
+# Находим закрывающую скобку server блока
+SERVER_CLOSE=""
+INDENT=$(sed -n "${SERVER_LINE}p" "$CONFIG_FILE" | sed 's/server.*//' | wc -c)
+INDENT=$((INDENT - 1))
 
-location /health {
-    proxy_pass http://127.0.0.1:3000/health;
-    access_log off;
-}
+for i in $(seq $((SERVER_LINE + 1)) $(wc -l < "$CONFIG_FILE")); do
+    line=$(sed -n "${i}p" "$CONFIG_FILE")
+    line_indent=$(echo "$line" | sed 's/[^ ].*//' | wc -c)
+    line_indent=$((line_indent - 1))
+    
+    if [ "$line_indent" -le "$INDENT" ] && echo "$line" | grep -q "^[[:space:]]*}$"; then
+        SERVER_CLOSE=$i
+        break
+    fi
+done
+
+if [ -z "$SERVER_CLOSE" ]; then
+    echo "❌ Не найдена закрывающая скобка server блока"
+    exit 1
+fi
+
+echo "✅ server блок заканчивается на строке $SERVER_CLOSE"
+
+# Сохраняем начало файла до server блока
+BEFORE_SERVER=$(head -n $((SERVER_LINE - 1)) "$CONFIG_FILE")
+
+# Сохраняем конец файла после server блока
+AFTER_SERVER=$(tail -n +$((SERVER_CLOSE + 1)) "$CONFIG_FILE")
+
+# Получаем отступ для server блока
+SERVER_INDENT=$(sed -n "${SERVER_LINE}p" "$CONFIG_FILE" | sed 's/server.*//')
+
+# Получаем базовые настройки из существующего server блока (listen, server_name, ssl и т.д.)
+SERVER_BLOCK=$(sed -n "${SERVER_LINE},${SERVER_CLOSE}p" "$CONFIG_FILE")
+LISTEN_LINES=$(echo "$SERVER_BLOCK" | grep "^[[:space:]]*listen" || echo "")
+SERVER_NAME_LINE=$(echo "$SERVER_BLOCK" | grep "^[[:space:]]*server_name" | head -1 || echo "")
+SSL_LINES=$(echo "$SERVER_BLOCK" | grep -E "^[[:space:]]*(ssl_|ssl_certificate)" || echo "")
+ROOT_LINE=$(echo "$SERVER_BLOCK" | grep "^[[:space:]]*root" | head -1 || echo "")
+INDEX_LINE=$(echo "$SERVER_BLOCK" | grep "^[[:space:]]*index" | head -1 || echo "")
+
+# Создаём временный файл
+TMP_FILE=$(mktemp)
+
+# Добавляем начало файла
+echo "$BEFORE_SERVER" > "$TMP_FILE"
+
+# Добавляем начало server блока с отступом
+echo -n "$SERVER_INDENT" >> "$TMP_FILE"
+echo "server {" >> "$TMP_FILE"
+
+# Добавляем базовые настройки
+if [ -n "$LISTEN_LINES" ]; then
+    echo "$LISTEN_LINES" >> "$TMP_FILE"
+fi
+
+if [ -n "$SERVER_NAME_LINE" ]; then
+    echo "$SERVER_NAME_LINE" >> "$TMP_FILE"
+fi
+
+if [ -n "$SSL_LINES" ]; then
+    echo "$SSL_LINES" >> "$TMP_FILE"
+fi
+
+if [ -n "$ROOT_LINE" ]; then
+    echo "$ROOT_LINE" >> "$TMP_FILE"
+fi
+
+if [ -n "$INDEX_LINE" ]; then
+    echo "$INDEX_LINE" >> "$TMP_FILE"
+fi
+
+# Добавляем location блоки для API
+cat >> "$TMP_FILE" << 'EOF'
+    location /api {
+        rewrite ^/api(.*)$ $1 break;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_redirect off;
+    }
+
+    location /socket.io {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /health {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_redirect off;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
 EOF
 
-echo "✅ Конфигурация обновлена (без root директивы)"
+# Добавляем закрывающую скобку server блока
+echo -n "$SERVER_INDENT" >> "$TMP_FILE"
+echo "}" >> "$TMP_FILE"
+
+# Добавляем остальную часть файла
+echo "$AFTER_SERVER" >> "$TMP_FILE"
+
+# Заменяем файл
+mv "$TMP_FILE" "$CONFIG_FILE"
+
+echo "✅ Конфигурация обновлена"
 
 # Проверяем синтаксис
-echo "🔍 Проверка синтаксиса..."
-nginx -t
-
-if [ $? -eq 0 ]; then
-    echo "✅ Синтаксис корректен"
+echo ""
+echo "Проверка синтаксиса:"
+if nginx -t 2>&1; then
+    echo "✅ Синтаксис корректен!"
     
-    # Перезагружаем Nginx
-    echo "🔄 Перезагрузка Nginx..."
+    echo ""
+    echo "Перезагрузка Nginx..."
     systemctl reload nginx
     
     echo ""
-    echo "⏳ Ожидание 3 секунды..."
-    sleep 3
+    echo "Ожидание 2 секунды..."
+    sleep 2
     
     echo ""
-    echo "✅ Проверка после исправления:"
-    echo "Frontend через домен:"
-    curl -s http://nardist.site | head -15
+    echo "Проверка работы frontend:"
+    curl -s http://nardist.site | head -20
+    echo ""
     
     echo ""
-    echo "Backend API через домен:"
+    echo "Проверка работы API:"
     curl -s http://nardist.site/api/health
+    echo ""
     
     echo ""
-    echo "Проверка заголовков:"
-    curl -s -I http://nardist.site | head -5
+    echo "✅ Всё готово!"
 else
-    echo "❌ Ошибка в конфигурации!"
-    nginx -t
-    echo ""
-    echo "Проверьте конфигурацию вручную:"
-    echo "cat /etc/nginx/vhosts-resources/nardist.site/proxy.conf"
+    echo "❌ Ошибка в синтаксисе!"
+    nginx -t 2>&1
+    exit 1
 fi
-ENDSSH
-
