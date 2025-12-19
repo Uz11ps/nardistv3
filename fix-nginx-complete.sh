@@ -64,9 +64,23 @@ echo "✅ Закрывающая скобка location / на строке $LOCA
 
 # Проверяем какие location блоки уже есть ПЕРЕД location /
 BEFORE_LOC=$(head -n $((LOC_LINE - 1)) "$CONFIG_FILE")
-HAS_API_BEFORE=$(echo "$BEFORE_LOC" | grep -q "location /api {" && echo "1" || echo "0")
-HAS_SOCKET_BEFORE=$(echo "$BEFORE_LOC" | grep -q "location /socket.io {" && echo "1" || echo "0")
-HAS_HEALTH_BEFORE=$(echo "$BEFORE_LOC" | grep -q "location /health {" && echo "1" || echo "0")
+if echo "$BEFORE_LOC" | grep -q "location /api {"; then
+    HAS_API_BEFORE=1
+else
+    HAS_API_BEFORE=0
+fi
+
+if echo "$BEFORE_LOC" | grep -q "location /socket.io {"; then
+    HAS_SOCKET_BEFORE=1
+else
+    HAS_SOCKET_BEFORE=0
+fi
+
+if echo "$BEFORE_LOC" | grep -q "location /health {"; then
+    HAS_HEALTH_BEFORE=1
+else
+    HAS_HEALTH_BEFORE=0
+fi
 
 echo ""
 echo "Найденные location блоки ПЕРЕД location /:"
