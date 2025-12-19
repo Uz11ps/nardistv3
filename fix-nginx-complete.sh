@@ -64,19 +64,9 @@ echo "✅ Закрывающая скобка location / на строке $LOCA
 
 # Проверяем какие location блоки уже есть ПЕРЕД location /
 BEFORE_LOC=$(head -n $((LOC_LINE - 1)) "$CONFIG_FILE")
-HAS_API_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /api {" 2>/dev/null || echo "0")
-HAS_SOCKET_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /socket.io {" 2>/dev/null || echo "0")
-HAS_HEALTH_BEFORE=$(echo "$BEFORE_LOC" | grep -c "location /health {" 2>/dev/null || echo "0")
-
-# Убираем переносы строк и приводим к числу
-HAS_API_BEFORE=$(echo "$HAS_API_BEFORE" | tr -d '\n\r' | head -1)
-HAS_SOCKET_BEFORE=$(echo "$HAS_SOCKET_BEFORE" | tr -d '\n\r' | head -1)
-HAS_HEALTH_BEFORE=$(echo "$HAS_HEALTH_BEFORE" | tr -d '\n\r' | head -1)
-
-# Если пусто, устанавливаем 0
-[ -z "$HAS_API_BEFORE" ] && HAS_API_BEFORE=0
-[ -z "$HAS_SOCKET_BEFORE" ] && HAS_SOCKET_BEFORE=0
-[ -z "$HAS_HEALTH_BEFORE" ] && HAS_HEALTH_BEFORE=0
+HAS_API_BEFORE=$(echo "$BEFORE_LOC" | grep -q "location /api {" && echo "1" || echo "0")
+HAS_SOCKET_BEFORE=$(echo "$BEFORE_LOC" | grep -q "location /socket.io {" && echo "1" || echo "0")
+HAS_HEALTH_BEFORE=$(echo "$BEFORE_LOC" | grep -q "location /health {" && echo "1" || echo "0")
 
 echo ""
 echo "Найденные location блоки ПЕРЕД location /:"
@@ -174,12 +164,13 @@ AFTER_LOC=$(tail -n +$((LOCATION_CLOSE + 1)) "$CONFIG_FILE")
 # Находим все location / блоки в остальной части (кроме /api, /socket.io, /health)
 ROOT_LINES_AFTER=$(echo "$AFTER_LOC" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
 
-# Если есть дубликаты, удаляем их построчно
+# Если есть дубликаты, удаляем их (в обратном порядке чтобы номера строк не менялись)
 if [ -n "$ROOT_LINES_AFTER" ]; then
     echo "⚠️ Найдены дубликаты location / в остальной части файла, удаляем..."
-    # Просто удаляем строки с location / и следующие строки до закрывающей скобки
-    # Используем sed для удаления блоков
-    for line_num in $ROOT_LINES_AFTER; do
+    # Сортируем номера строк в обратном порядке
+    ROOT_LINES_SORTED=$(echo "$ROOT_LINES_AFTER" | sort -rn)
+    
+    for line_num in $ROOT_LINES_SORTED; do
         # Находим закрывающую скобку
         INDENT_AFTER=$(echo "$AFTER_LOC" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
         INDENT_AFTER=$((INDENT_AFTER - 1))
@@ -198,7 +189,7 @@ if [ -n "$ROOT_LINES_AFTER" ]; then
         done
         
         if [ -n "$CLOSE_LINE_AFTER" ]; then
-            # Удаляем блок через sed
+            # Удаляем блок через sed (в обратном порядке)
             AFTER_LOC=$(echo "$AFTER_LOC" | sed "${line_num},${CLOSE_LINE_AFTER}d")
         fi
     done
@@ -217,15 +208,15 @@ echo "Проверка дубликатов:"
 API_COUNT=$(grep -c "location /api {" "$CONFIG_FILE" 2>/dev/null || echo "0")
 SOCKET_COUNT=$(grep -c "location /socket.io {" "$CONFIG_FILE" 2>/dev/null || echo "0")
 HEALTH_COUNT=$(grep -c "location /health {" "$CONFIG_FILE" 2>/dev/null || echo "0")
-ROOT_COUNT=$(grep -c "^[[:space:]]*location / {" "$CONFIG_FILE" 2>/dev/null | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" || echo "0")
+ROOT_LINES=$(grep -n "^[[:space:]]*location / {" "$CONFIG_FILE" 2>/dev/null | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
+ROOT_COUNT=$(echo "$ROOT_LINES" | wc -l)
 
-# Убираем переносы строк и приводим к числу
-API_COUNT=$(echo "$API_COUNT" | tr -d '\n\r' | head -1)
-SOCKET_COUNT=$(echo "$SOCKET_COUNT" | tr -d '\n\r' | head -1)
-HEALTH_COUNT=$(echo "$HEALTH_COUNT" | tr -d '\n\r' | head -1)
-ROOT_COUNT=$(echo "$ROOT_COUNT" | tr -d '\n\r' | head -1)
+# Преобразуем в число
+API_COUNT=$(echo "$API_COUNT" | tr -d '\n\r' | grep -o '[0-9]*' | head -1)
+SOCKET_COUNT=$(echo "$SOCKET_COUNT" | tr -d '\n\r' | grep -o '[0-9]*' | head -1)
+HEALTH_COUNT=$(echo "$HEALTH_COUNT" | tr -d '\n\r' | grep -o '[0-9]*' | head -1)
+ROOT_COUNT=$(echo "$ROOT_COUNT" | tr -d '\n\r' | grep -o '[0-9]*' | head -1)
 
-# Если пусто, устанавливаем 0
 [ -z "$API_COUNT" ] && API_COUNT=0
 [ -z "$SOCKET_COUNT" ] && SOCKET_COUNT=0
 [ -z "$HEALTH_COUNT" ] && HEALTH_COUNT=0
