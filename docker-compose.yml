@@ -49,7 +49,6 @@ services:
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-change_this_secret_key}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      TELEGRAM_SECRET_KEY: ${TELEGRAM_SECRET_KEY}
       BACKEND_PORT: ${BACKEND_PORT:-3000}
       DOMAIN: ${DOMAIN:-localhost}
       SMTP_HOST: ${SMTP_HOST:-}

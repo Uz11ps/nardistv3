@@ -6,20 +6,20 @@ echo ""
 # Проверить переменные окружения в .env
 if [ -f .env ]; then
     echo "📋 Переменные из .env:"
-    grep -E "TELEGRAM_BOT_TOKEN|TELEGRAM_SECRET_KEY" .env | sed 's/=.*/=***/' || echo "❌ Переменные не найдены в .env"
+    grep -E "TELEGRAM_BOT_TOKEN" .env | sed 's/=.*/=***/' || echo "❌ TELEGRAM_BOT_TOKEN не найден в .env"
     echo ""
 fi
 
 # Проверить переменные в контейнере backend
 echo "📋 Переменные в контейнере backend:"
-if docker-compose exec -T backend printenv | grep -E "TELEGRAM_BOT_TOKEN|TELEGRAM_SECRET_KEY" > /dev/null 2>&1; then
-    echo "✅ Переменные найдены в контейнере"
-    docker-compose exec -T backend printenv | grep -E "TELEGRAM_BOT_TOKEN|TELEGRAM_SECRET_KEY" | sed 's/=.*/=***/'
+if docker-compose exec -T backend printenv | grep -E "TELEGRAM_BOT_TOKEN" > /dev/null 2>&1; then
+    echo "✅ TELEGRAM_BOT_TOKEN найден в контейнере"
+    docker-compose exec -T backend printenv | grep -E "TELEGRAM_BOT_TOKEN" | sed 's/=.*/=***/'
 else
-    echo "❌ Переменные НЕ найдены в контейнере!"
+    echo "❌ TELEGRAM_BOT_TOKEN НЕ найден в контейнере!"
     echo ""
     echo "💡 Решение:"
-    echo "1. Убедитесь что .env файл существует и содержит TELEGRAM_BOT_TOKEN и TELEGRAM_SECRET_KEY"
+    echo "1. Убедитесь что .env файл существует и содержит TELEGRAM_BOT_TOKEN"
     echo "2. Перезапустите контейнеры: docker-compose down && docker-compose up -d"
 fi
 echo ""
@@ -42,11 +42,12 @@ echo ""
 echo "💡 Если переменные не настроены:"
 echo "1. Откройте @BotFather в Telegram"
 echo "2. Создайте бота или выберите существующего: /mybots"
-echo "3. Получите токен бота"
+echo "3. Получите токен бота (например: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz)"
 echo "4. Привяжите домен: Bot Settings → Domain → nardist.site"
-echo "5. Скопируйте Secret Key"
-echo "6. Отредактируйте .env файл и добавьте:"
+echo "5. Отредактируйте .env файл и добавьте:"
 echo "   TELEGRAM_BOT_TOKEN=ваш_токен_бота"
-echo "   TELEGRAM_SECRET_KEY=ваш_секретный_ключ"
-echo "7. Перезапустите: docker-compose restart backend"
+echo "6. Перезапустите: docker-compose restart backend"
+echo ""
+echo "ℹ️  Примечание: TELEGRAM_SECRET_KEY больше не требуется!"
+echo "   Авторизация работает только через TELEGRAM_BOT_TOKEN"
 

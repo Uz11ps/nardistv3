@@ -23,7 +23,6 @@ JWT_SECRET=change_this_secret_key_min_32_chars_long
 
 # Telegram Bot
 TELEGRAM_BOT_TOKEN=your_bot_token_here
-TELEGRAM_SECRET_KEY=your_secret_key_here
 
 # Domain
 DOMAIN=nardist.site
@@ -55,21 +54,6 @@ if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ "$TELEGRAM_BOT_TOKEN" = "your_bot_token_her
     echo "3. Скопируйте токен бота"
     echo "4. Отредактируйте .env файл: nano .env"
     echo "5. Вставьте токен в TELEGRAM_BOT_TOKEN=..."
-    exit 1
-fi
-
-if [ -z "$TELEGRAM_SECRET_KEY" ] || [ "$TELEGRAM_SECRET_KEY" = "your_secret_key_here" ]; then
-    echo "❌ TELEGRAM_SECRET_KEY не настроен!"
-    echo ""
-    echo "📋 Инструкция:"
-    echo "1. Откройте @BotFather в Telegram"
-    echo "2. Отправьте /mybots"
-    echo "3. Выберите вашего бота"
-    echo "4. Выберите 'Bot Settings' → 'Domain'"
-    echo "5. Введите домен: nardist.site"
-    echo "6. Скопируйте секретный ключ (Secret Key)"
-    echo "7. Отредактируйте .env файл: nano .env"
-    echo "8. Вставьте ключ в TELEGRAM_SECRET_KEY=..."
     exit 1
 fi
 

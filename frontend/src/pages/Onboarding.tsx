@@ -122,7 +122,7 @@ export default function Onboarding() {
           <ul style={{ fontSize: '14px', paddingLeft: '20px', color: '#aaaaaa' }}>
             <li>Вы открыли приложение через Telegram бота</li>
             <li>Домен nardist.site привязан к боту через @BotFather</li>
-            <li>На сервере настроены TELEGRAM_BOT_TOKEN и TELEGRAM_SECRET_KEY</li>
+            <li>На сервере настроен TELEGRAM_BOT_TOKEN</li>
           </ul>
           <p style={{ fontSize: '12px', marginTop: '16px', color: '#666666' }}>
             Если проблема сохраняется, обратитесь к администратору.

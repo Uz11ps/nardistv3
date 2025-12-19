@@ -53,7 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.error('Проверьте:')
       console.error('1. Открыли ли вы приложение через Telegram бота')
       console.error('2. Привязан ли домен nardist.site к боту через @BotFather')
-      console.error('3. Настроены ли TELEGRAM_BOT_TOKEN и TELEGRAM_SECRET_KEY на сервере')
+      console.error('3. Настроен ли TELEGRAM_BOT_TOKEN на сервере')
       const error = new Error('Telegram initData не доступен. Убедитесь что вы открыли приложение через Telegram бота.')
       ;(error as any).code = 'NO_INIT_DATA'
       throw error
