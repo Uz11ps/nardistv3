@@ -36,10 +36,36 @@ export default function History() {
   const [replayStep, setReplayStep] = useState(0)
   const [isReplaying, setIsReplaying] = useState(false)
   const [loadingReplay, setLoadingReplay] = useState(false)
+  const [analysisData, setAnalysisData] = useState<any>(null)
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false)
+  const [hasPremium, setHasPremium] = useState(false)
 
   useEffect(() => {
     loadHistory()
+    checkPremium()
   }, [filter, modeFilter])
+
+  const checkPremium = async () => {
+    try {
+      const response = await apiClient.get('/subscription/status')
+      setHasPremium(response.data?.hasActive || false)
+    } catch (error) {
+      console.error('Failed to check subscription:', error)
+    }
+  }
+  
+  const handleAnalyze = async (gameId: string) => {
+    try {
+      setLoadingAnalysis(true)
+      const response = await apiClient.get(`/analysis/game/${gameId}`)
+      setAnalysisData(response.data)
+    } catch (error: any) {
+      console.error('Failed to analyze game:', error)
+      alert(error.response?.data?.message || 'Ошибка анализа. Доступно только для премиум пользователей.')
+    } finally {
+      setLoadingAnalysis(false)
+    }
+  }
 
   const loadHistory = async () => {
     try {
@@ -73,22 +99,58 @@ export default function History() {
     }
   }
   
+  // Преобразуем gameState из формата БД (points как числа) в формат для BackgammonBoard (points как объекты)
+  const convertGameStateForBoard = (gameState: any) => {
+    if (!gameState) return null
+    
+    const points = gameState.points || []
+    const convertedPoints = points.map((pointValue: number, index: number) => {
+      const checkers: number[] = []
+      const absValue = Math.abs(pointValue)
+      
+      // Создаем массив checkers на основе значения точки
+      for (let i = 0; i < absValue; i++) {
+        checkers.push(pointValue > 0 ? 0 : 1) // 0 = белые, 1 = черные
+      }
+      
+      return {
+        index,
+        checkers,
+        color: pointValue > 0 ? 'white' : pointValue < 0 ? 'black' : null,
+      }
+    })
+    
+    return {
+      ...gameState,
+      points: convertedPoints,
+      bar: Array.isArray(gameState.bar) 
+        ? { white: gameState.bar[0] || 0, black: gameState.bar[1] || 0 }
+        : gameState.bar || { white: 0, black: 0 },
+      bearOff: Array.isArray(gameState.borneOff)
+        ? { white: gameState.borneOff[0] || 0, black: gameState.borneOff[1] || 0 }
+        : gameState.bearOff || { white: 0, black: 0 },
+    }
+  }
+  
   // Получаем текущее состояние игры для отображения
   const getCurrentGameState = () => {
     if (!replayData || !replayData.game) return null
     
     const { game, moves } = replayData
+    let currentState: any = null
+    
     if (replayStep === 0) {
       // Начальное состояние
-      return game.initialGameState || game.gameState
+      currentState = game.initialGameState || game.gameState
+    } else if (moves && moves[replayStep - 1]) {
+      // Состояние после хода replayStep
+      currentState = moves[replayStep - 1].gameStateAfter
+    } else {
+      currentState = game.initialGameState || game.gameState
     }
     
-    // Состояние после хода replayStep
-    if (moves && moves[replayStep - 1]) {
-      return moves[replayStep - 1].gameStateAfter
-    }
-    
-    return game.initialGameState || game.gameState
+    // Преобразуем в формат для BackgammonBoard
+    return convertGameStateForBoard(currentState)
   }
   
   // Определяем, кто ходит на текущем шаге
@@ -234,15 +296,91 @@ export default function History() {
                       Счет: {game.score.player1}:{game.score.player2}
                     </div>
                   </div>
-                  <Button variant="secondary" onClick={() => handleReplay(game)}>
-                    Реплей
-                  </Button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button variant="secondary" onClick={() => handleReplay(game)}>
+                      Реплей
+                    </Button>
+                    {hasPremium && (
+                      <Button 
+                        variant="primary" 
+                        onClick={() => handleAnalyze(game.id)}
+                        disabled={loadingAnalysis}
+                      >
+                        Анализ
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
             ))
           )}
         </div>
       </div>
+
+      {/* Модальное окно анализа */}
+      {analysisData && (
+        <div className="modal-overlay" onClick={() => setAnalysisData(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90%', maxHeight: '90vh', overflow: 'auto' }}>
+            <div className="modal-title">Анализ игры</div>
+            <div className="modal-description">
+              Найдено ошибок: {analysisData.errors.length} 
+              ({analysisData.blunders} грубых, {analysisData.mistakes} ошибок, {analysisData.inaccuracies} неточностей)
+            </div>
+            
+            {analysisData.errors.length > 0 && (
+              <div style={{ marginTop: '20px' }}>
+                <div className="card-title" style={{ marginBottom: '12px' }}>Ошибки:</div>
+                {analysisData.errors.slice(0, 10).map((error: any, idx: number) => (
+                  <Card key={idx} style={{ marginBottom: '8px', padding: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div className="card-title" style={{ fontSize: '14px' }}>
+                          Ход {error.moveNumber}
+                        </div>
+                        <div className="card-subtitle" style={{ fontSize: '12px' }}>
+                          {error.errorDescription}
+                        </div>
+                        {error.scoreChange && (
+                          <div style={{ fontSize: '11px', color: '#ff3333', marginTop: '4px' }}>
+                            Упущено: {error.scoreChange} очков
+                          </div>
+                        )}
+                      </div>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        background: error.errorType === 'blunder' ? '#ff3333' : 
+                                   error.errorType === 'mistake' ? '#ff8833' : '#ffaa33',
+                        color: '#fff'
+                      }}>
+                        {error.errorType === 'blunder' ? 'Грубая' : error.errorType === 'mistake' ? 'Ошибка' : 'Неточность'}
+                      </span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            {analysisData.recommendations && analysisData.recommendations.length > 0 && (
+              <div style={{ marginTop: '20px' }}>
+                <div className="card-title" style={{ marginBottom: '12px' }}>Рекомендации:</div>
+                {analysisData.recommendations.map((rec: string, idx: number) => (
+                  <Card key={idx} style={{ marginBottom: '8px', padding: '12px' }}>
+                    <div className="card-subtitle">• {rec}</div>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            <div className="modal-actions" style={{ marginTop: '24px' }}>
+              <Button fullWidth variant="secondary" onClick={() => setAnalysisData(null)}>
+                Закрыть
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Модальное окно реплея */}
       {selectedGame && isReplaying && (

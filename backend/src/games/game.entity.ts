@@ -98,6 +98,9 @@ export class Game {
   @Column({ type: 'jsonb', nullable: true })
   skinData: any;
 
+  @Column({ type: 'bigint', default: 0 })
+  stake: number; // Ставка в NAR-coin (0 = игра без ставок)
+
   @OneToMany(() => GameMove, (move) => move.game)
   moves: GameMove[];
 

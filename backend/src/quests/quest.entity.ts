@@ -55,6 +55,9 @@ export class Quest {
   @Column({ type: 'jsonb', nullable: true })
   rewardSkin: any;
 
+  @Column({ default: false })
+  isPremium: boolean; // Только для премиум пользователей
+
   @Column({ type: 'timestamp' })
   startDate: Date;
 

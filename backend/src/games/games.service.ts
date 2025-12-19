@@ -29,6 +29,7 @@ export class GamesService {
     player2Id: string | null,
     mode: GameMode,
     type: GameType,
+    stake: number = 0,
   ): Promise<Game> {
     // Проверка жизней для player1 (только для игр с игроками)
     if (type === GameType.VS_PLAYER) {
@@ -56,6 +57,29 @@ export class GamesService {
       await this.progressService.consumeEnergyForGame(player2Id, type);
     }
 
+    // Если игра на ставки, проверяем баланс и блокируем средства
+    if (stake > 0 && type === GameType.VS_PLAYER) {
+      const player1 = await this.usersService.findOne(player1Id);
+      if (Number(player1.narCoin) < stake) {
+        throw new BadRequestException('Недостаточно NAR-coin для ставки');
+      }
+      // Блокируем ставку (вычитаем сразу, вернем проигравшему позже при завершении)
+      player1.narCoin = BigInt(Number(player1.narCoin) - stake);
+      await this.usersService['usersRepository'].save(player1);
+
+      if (player2Id) {
+        const player2 = await this.usersService.findOne(player2Id);
+        if (Number(player2.narCoin) < stake) {
+          // Возвращаем деньги player1
+          player1.narCoin = BigInt(Number(player1.narCoin) + stake);
+          await this.usersService['usersRepository'].save(player1);
+          throw new BadRequestException('У противника недостаточно NAR-coin для ставки');
+        }
+        player2.narCoin = BigInt(Number(player2.narCoin) - stake);
+        await this.usersService['usersRepository'].save(player2);
+      }
+    }
+
     const rngSeed = crypto.randomBytes(32).toString('hex');
     const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
 
@@ -67,6 +91,7 @@ export class GamesService {
       player2Id,
       mode,
       type,
+      stake,
       status: player2Id ? GameStatus.IN_PROGRESS : GameStatus.WAITING,
       gameState: initialState,
       rngSeed,
