@@ -1,0 +1,66 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Позволяет запускать вручную
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.SERVER_PATH || '/var/www/nardistv3' }}
+            
+            # Обновить код из git
+            echo "📦 Обновление кода из GitHub..."
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+            
+            # Остановить контейнеры
+            echo "🛑 Остановка контейнеров..."
+            docker-compose down || true
+            
+            # Пересобрать и запустить
+            echo "🔨 Пересборка и запуск контейнеров..."
+            docker-compose up -d --build
+            
+            # Ожидание запуска
+            echo "⏳ Ожидание запуска сервисов..."
+            sleep 10
+            
+            # Проверка статуса
+            echo "📊 Статус контейнеров:"
+            docker-compose ps
+            
+            # Проверка здоровья
+            echo "🏥 Проверка здоровья сервисов..."
+            docker-compose logs --tail=20 backend
+            docker-compose logs --tail=20 frontend
+            
+            echo "✅ Деплой завершен!"
+      
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Деплой успешно завершен!"
+          else
+            echo "❌ Деплой завершился с ошибкой!"
+            exit 1
+          fi
+
