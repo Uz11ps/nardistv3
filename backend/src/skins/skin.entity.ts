@@ -32,6 +32,9 @@ export class Skin {
   @Column({ default: false })
   isPremium: boolean;
 
+  @Column({ type: 'int', default: 1 })
+  weight: number; // Вес скина для лимита силы
+
   @CreateDateColumn()
   createdAt: Date;
 

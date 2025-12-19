@@ -1,11 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Inject } from '@nestjs/common';
 import { Game, GameMode, GameStatus, GameType } from './game.entity';
 import { GameMove } from './game-move.entity';
 import { BackgammonEngine } from './game-engine/backgammon-engine';
 import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
+import { ProgressService } from '../progress/progress.service';
+import { RatingsService } from '../ratings/ratings.service';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -17,6 +18,10 @@ export class GamesService {
     private movesRepository: Repository<GameMove>,
     private backgammonEngine: BackgammonEngine,
     private longBackgammonEngine: LongBackgammonEngine,
+    @Inject(forwardRef(() => ProgressService))
+    private progressService: ProgressService,
+    @Inject(forwardRef(() => RatingsService))
+    private ratingsService: RatingsService,
   ) {}
 
   async create(
@@ -25,6 +30,32 @@ export class GamesService {
     mode: GameMode,
     type: GameType,
   ): Promise<Game> {
+    // Проверка жизней для player1 (только для игр с игроками)
+    if (type === GameType.VS_PLAYER) {
+      const hasLives = await this.progressService.checkLives(player1Id);
+      if (!hasLives) {
+        throw new BadRequestException('Недостаточно жизней для начала игры. Восстановите жизни или купите их.');
+      }
+    }
+
+    // Проверка жизней для player2
+    if (player2Id && type === GameType.VS_PLAYER) {
+      const hasLives = await this.progressService.checkLives(player2Id);
+      if (!hasLives) {
+        throw new BadRequestException('У противника недостаточно жизней');
+      }
+    }
+
+    // Проверка энергии для player1 (бот-игры не тратят энергию)
+    if (type !== GameType.VS_BOT) {
+      await this.progressService.consumeEnergyForGame(player1Id, type);
+    }
+
+    // Проверка энергии для player2, если он есть
+    if (player2Id && type !== GameType.VS_BOT) {
+      await this.progressService.consumeEnergyForGame(player2Id, type);
+    }
+
     const rngSeed = crypto.randomBytes(32).toString('hex');
     const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
 
@@ -133,9 +164,39 @@ export class GamesService {
       } else {
         game.player2Score = 1;
       }
+
+      // Применяем логику после завершения игры
+      await this.onGameFinished(game);
     }
 
     return this.gamesRepository.save(game);
+  }
+
+  /**
+   * Обработка завершения игры: жизни, рейтинги, награды
+   */
+  private async onGameFinished(game: Game): Promise<void> {
+    const loserId = game.winnerId === game.player1Id ? game.player2Id : game.player1Id;
+    
+    // Только для игр с реальными игроками применяем жизни
+    if (game.type === GameType.VS_PLAYER && loserId) {
+      await this.progressService.loseLifeOnDefeat(loserId);
+    }
+
+    // Обновление рейтингов (если RatingsService подключен)
+    if (game.type === GameType.VS_PLAYER && game.mode && game.winnerId && loserId) {
+      try {
+        await this.ratingsService.updateRatings(
+          game.winnerId,
+          loserId,
+          game.mode,
+          false,
+        );
+      } catch (error) {
+        // Игнорируем ошибки рейтинга, чтобы не сломать завершение игры
+        console.error('Error updating ratings:', error);
+      }
+    }
   }
 
   async createBotGame(playerId: string): Promise<Game> {

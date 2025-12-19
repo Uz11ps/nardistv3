@@ -34,6 +34,12 @@ export class SubscriptionService {
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + months);
 
+    // Деактивируем предыдущие активные подписки
+    await this.subscriptionsRepository.update(
+      { userId, isActive: true },
+      { isActive: false },
+    );
+
     const subscription = this.subscriptionsRepository.create({
       userId,
       plan,
@@ -43,6 +49,13 @@ export class SubscriptionService {
     });
 
     return this.subscriptionsRepository.save(subscription);
+  }
+
+  async getSubscription(userId: string): Promise<Subscription | null> {
+    return this.subscriptionsRepository.findOne({
+      where: { userId, isActive: true },
+      order: { createdAt: 'DESC' },
+    });
   }
 }
 

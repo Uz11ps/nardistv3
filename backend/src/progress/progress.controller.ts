@@ -20,5 +20,43 @@ export class ProgressController {
     await this.progressService.chooseEnhancement(user.id, type);
     return { message: 'Усиление выбрано' };
   }
+
+  @Get('energy')
+  @UseGuards(JwtAuthGuard)
+  async getEnergy(@CurrentUser() user: any) {
+    await this.progressService.restoreEnergy(user.id);
+    const userEntity = await this.progressService['usersService'].findOne(user.id);
+    return {
+      energy: userEntity.energy,
+      maxEnergy: userEntity.maxEnergy,
+      lastRestore: userEntity.lastEnergyRestore,
+    };
+  }
+
+  @Get('lives')
+  @UseGuards(JwtAuthGuard)
+  async getLives(@CurrentUser() user: any) {
+    await this.progressService.restoreLives(user.id);
+    const userEntity = await this.progressService['usersService'].findOne(user.id);
+    return {
+      lives: userEntity.lives,
+      maxLives: userEntity.maxLives,
+      lastRestore: userEntity.lastLifeRestore,
+    };
+  }
+
+  @Post('lives/buy')
+  @UseGuards(JwtAuthGuard)
+  async buyLife(@CurrentUser() user: any) {
+    await this.progressService.buyLife(user.id);
+    return { message: 'Жизнь куплена' };
+  }
+
+  @Get('skin-weight-limit')
+  @UseGuards(JwtAuthGuard)
+  async getSkinWeightLimit(@CurrentUser() user: any) {
+    const limit = await this.progressService.getSkinWeightLimit(user.id);
+    return { limit };
+  }
 }
 

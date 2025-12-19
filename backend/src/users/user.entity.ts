@@ -55,6 +55,26 @@ export class User {
   @Column({ default: 'economy' })
   enhancement: string;
 
+  // Энергия
+  @Column({ type: 'int', default: 100 })
+  energy: number;
+
+  @Column({ type: 'int', default: 100 })
+  maxEnergy: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastEnergyRestore: Date;
+
+  // Жизни
+  @Column({ type: 'int', default: 5 })
+  lives: number;
+
+  @Column({ type: 'int', default: 5 })
+  maxLives: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastLifeRestore: Date;
+
   @Column({ default: false })
   isBanned: boolean;
 

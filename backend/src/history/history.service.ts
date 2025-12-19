@@ -1,16 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game, GameStatus } from '../games/game.entity';
-import { GameMove } from '../games/game-move.entity';
+import { GameMove } from './game-move.entity';
+import { SubscriptionService } from '../subscription/subscription.service';
 
 @Injectable()
 export class HistoryService {
+  private readonly FREE_USER_HISTORY_LIMIT = 10; // Лимит истории для бесплатных пользователей
+
   constructor(
     @InjectRepository(Game)
     private gamesRepository: Repository<Game>,
     @InjectRepository(GameMove)
     private movesRepository: Repository<GameMove>,
+    @Inject(forwardRef(() => SubscriptionService))
+    private subscriptionService: SubscriptionService,
   ) {}
 
   async getUserGames(userId: string, filters?: any): Promise<any[]> {
@@ -33,7 +38,16 @@ export class HistoryService {
       query.andWhere('game.type = :type', { type: 'vs_bot' });
     }
 
-    const games = await query.orderBy('game.createdAt', 'DESC').getMany();
+    // Проверяем подписку для лимита истории
+    const hasPremium = await this.subscriptionService.hasActiveSubscription(userId);
+    const queryBuilder = query.orderBy('game.createdAt', 'DESC');
+    
+    // Ограничиваем для бесплатных пользователей
+    if (!hasPremium) {
+      queryBuilder.limit(this.FREE_USER_HISTORY_LIMIT);
+    }
+
+    const games = await queryBuilder.getMany();
 
     const result = await Promise.all(
       games.map(async (game) => {
@@ -108,4 +122,3 @@ export class HistoryService {
     return lines.join('\n');
   }
 }
-

@@ -1,7 +1,8 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { GamesService } from '../games/games.service';
 import { GameMode, GameType } from '../games/game.entity';
 import { RatingsService } from '../ratings/ratings.service';
+import { SubscriptionService } from '../subscription/subscription.service';
 import Redis from 'ioredis';
 
 interface QueueEntry {
@@ -9,6 +10,7 @@ interface QueueEntry {
   mode: GameMode;
   rating: number;
   timestamp: number;
+  isPremium?: boolean; // Приоритет для премиум
 }
 
 @Injectable()
@@ -17,18 +19,27 @@ export class MatchmakingService {
     private gamesService: GamesService,
     private ratingsService: RatingsService,
     @Inject('REDIS_CLIENT') private redis: Redis,
+    @Inject(forwardRef(() => SubscriptionService))
+    private subscriptionService: SubscriptionService,
   ) {}
 
   async joinQueue(userId: string, mode: GameMode): Promise<void> {
     const rating = await this.ratingsService.getRating(userId, mode);
+    const isPremium = await this.subscriptionService.hasActiveSubscription(userId);
+    
+    // Премиум пользователи получают приоритет через более высокий score
+    // Добавляем 100000 к рейтингу для сортировки (но используем реальный рейтинг для подбора)
+    const queueScore = isPremium ? (rating || 1000) + 100000 : (rating || 1000);
+    
     const entry: QueueEntry = {
       userId,
       mode,
       rating: rating || 1000,
       timestamp: Date.now(),
+      isPremium,
     };
 
-    await this.redis.zadd(`queue:${mode}`, rating || 1000, JSON.stringify(entry));
+    await this.redis.zadd(`queue:${mode}`, queueScore, JSON.stringify(entry));
     await this.redis.set(`queue:user:${userId}`, JSON.stringify(entry), 'EX', 300);
   }
 
@@ -61,7 +72,15 @@ export class MatchmakingService {
       10,
     );
 
-    for (const candidateStr of candidates) {
+    // Премиум пользователи имеют приоритет - проверяем их первыми
+    const premiumCandidates = candidates.filter(c => {
+      const entry: QueueEntry = JSON.parse(c);
+      return entry.isPremium === true;
+    });
+
+    const candidatesToCheck = premiumCandidates.length > 0 ? premiumCandidates : candidates;
+
+    for (const candidateStr of candidatesToCheck) {
       const candidate: QueueEntry = JSON.parse(candidateStr);
       if (candidate.userId !== userId) {
         await this.leaveQueue(userId);

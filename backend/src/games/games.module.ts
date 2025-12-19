@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -9,6 +9,8 @@ import { Game } from './game.entity';
 import { GameMove } from './game-move.entity';
 import { BackgammonEngine } from './game-engine/backgammon-engine';
 import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
+import { ProgressModule } from '../progress/progress.module';
+import { RatingsModule } from '../ratings/ratings.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
       }),
       inject: [ConfigService],
     }),
+    forwardRef(() => ProgressModule),
+    forwardRef(() => RatingsModule),
   ],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway, BackgammonEngine, LongBackgammonEngine],

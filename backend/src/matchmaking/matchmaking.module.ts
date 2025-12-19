@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MatchmakingService } from './matchmaking.service';
@@ -6,12 +6,14 @@ import { MatchmakingGateway } from './matchmaking.gateway';
 import { GamesModule } from '../games/games.module';
 import { RedisModule } from '../config/redis.module';
 import { RatingsModule } from '../ratings/ratings.module';
+import { SubscriptionModule } from '../subscription/subscription.module';
 
 @Module({
   imports: [
     GamesModule,
     RedisModule,
     RatingsModule,
+    forwardRef(() => SubscriptionModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
