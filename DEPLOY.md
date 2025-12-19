@@ -2,7 +2,51 @@
 
 ## Автоматический деплой через GitHub
 
-### Вариант 1: GitHub Actions (Рекомендуется)
+### Вариант 1: Автоматический pull на сервере (БЕЗ доступа к Settings GitHub)
+
+Если у вас нет доступа к Settings репозитория GitHub, используйте этот метод.
+
+**На сервере:**
+
+1. **Скопируйте скрипт на сервер:**
+   ```bash
+   # Загрузите server-auto-deploy.sh на сервер в директорию проекта
+   ```
+
+2. **Настройте через cron (простой способ):**
+   ```bash
+   chmod +x server-setup-cron.sh
+   sudo ./server-setup-cron.sh
+   ```
+   
+   Это запустит проверку обновлений каждые 5 минут.
+
+3. **Или через systemd timer (более надежно):**
+   ```bash
+   chmod +x server-setup-systemd.sh
+   sudo ./server-setup-systemd.sh
+   ```
+
+4. **Ручной запуск для проверки:**
+   ```bash
+   chmod +x server-auto-deploy.sh
+   ./server-auto-deploy.sh once  # Запуск один раз
+   ./server-auto-deploy.sh watch # Непрерывный режим
+   ```
+
+**Как это работает:**
+- Скрипт периодически проверяет GitHub на наличие новых коммитов
+- При обнаружении изменений автоматически делает `git pull` и перезапускает контейнеры
+- Не требует доступа к настройкам GitHub
+
+**Логи:**
+```bash
+tail -f /var/log/nardist-auto-deploy.log
+```
+
+### Вариант 2: GitHub Actions (требует доступ к Settings)
+
+Если у вас есть доступ к Settings репозитория:
 
 Автоматический деплой через GitHub Actions при каждом push в ветку `main`.
 

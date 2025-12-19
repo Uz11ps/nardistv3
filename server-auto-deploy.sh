@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# Автоматический деплой на сервере БЕЗ GitHub Actions
+# Этот скрипт запускается на сервере и периодически проверяет обновления в GitHub
+
+set -e
+
+# Цвета
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+# Путь к проекту
+PROJECT_PATH="${DEPLOY_PATH:-/var/www/nardistv3}"
+BRANCH="${DEPLOY_BRANCH:-main}"
+CHECK_INTERVAL="${CHECK_INTERVAL:-60}" # Интервал проверки в секундах (по умолчанию 60)
+
+log() {
+    echo -e "$(date '+%Y-%m-%d %H:%M:%S') - $1"
+}
+
+deploy() {
+    log "${YELLOW}🚀 Начало деплоя...${NC}"
+    
+    cd "$PROJECT_PATH"
+    
+    if [ ! -f "docker-compose.yml" ]; then
+        log "${RED}❌ docker-compose.yml не найден!${NC}"
+        return 1
+    fi
+    
+    # Обновление кода
+    log "${YELLOW}📦 Обновление кода из GitHub...${NC}"
+    git fetch origin
+    
+    LOCAL=$(git rev-parse HEAD)
+    REMOTE=$(git rev-parse origin/$BRANCH)
+    
+    if [ "$LOCAL" = "$REMOTE" ]; then
+        log "${GREEN}✅ Код уже актуален${NC}"
+        return 0
+    fi
+    
+    log "${YELLOW}📥 Обнаружены изменения, начинаю деплой...${NC}"
+    
+    # Переключение на последнюю версию
+    git reset --hard origin/$BRANCH
+    git clean -fd
+    
+    # Остановка контейнеров
+    log "${YELLOW}🛑 Остановка контейнеров...${NC}"
+    docker-compose down || true
+    
+    # Пересборка и запуск
+    log "${YELLOW}🔨 Пересборка и запуск контейнеров...${NC}"
+    docker-compose up -d --build
+    
+    # Ожидание запуска
+    log "${YELLOW}⏳ Ожидание запуска сервисов (15 секунд)...${NC}"
+    sleep 15
+    
+    # Проверка статуса
+    log "${YELLOW}📊 Статус контейнеров:${NC}"
+    docker-compose ps
+    
+    # Очистка старых образов
+    log "${YELLOW}🧹 Очистка неиспользуемых образов...${NC}"
+    docker image prune -f > /dev/null 2>&1 || true
+    
+    log "${GREEN}✅ Деплой завершен!${NC}"
+    return 0
+}
+
+# Режим работы: один раз или непрерывно
+if [ "$1" = "once" ]; then
+    # Запуск один раз
+    deploy
+elif [ "$1" = "watch" ]; then
+    # Непрерывный режим
+    log "${GREEN}👀 Запуск в режиме отслеживания (проверка каждые $CHECK_INTERVAL секунд)${NC}"
+    log "${YELLOW}💡 Нажмите Ctrl+C для остановки${NC}"
+    
+    while true; do
+        deploy
+        sleep "$CHECK_INTERVAL"
+    done
+else
+    echo "Использование: $0 [once|watch]"
+    echo ""
+    echo "  once  - Запустить деплой один раз"
+    echo "  watch - Запускать деплой каждые $CHECK_INTERVAL секунд"
+    echo ""
+    echo "Переменные окружения:"
+    echo "  DEPLOY_PATH   - путь к проекту (по умолчанию: /var/www/nardistv3)"
+    echo "  DEPLOY_BRANCH - ветка для деплоя (по умолчанию: main)"
+    echo "  CHECK_INTERVAL - интервал проверки в секундах (по умолчанию: 60)"
+    exit 1
+fi
+
