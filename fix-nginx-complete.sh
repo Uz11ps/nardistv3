@@ -168,23 +168,24 @@ cat >> "$TMP_FILE" << 'EOF'
 EOF
 
 # Добавляем остальную часть файла после закрывающей скобки location /
-# Но сначала удаляем все остальные location / блоки
+# Но сначала проверяем и удаляем дубликаты location / в остальной части
 AFTER_LOC=$(tail -n +$((LOCATION_CLOSE + 1)) "$CONFIG_FILE")
 
-# Удаляем все location / блоки из остальной части (кроме тех что мы уже добавили)
-# Находим все location / блоки в остальной части
+# Находим все location / блоки в остальной части (кроме /api, /socket.io, /health)
 ROOT_LINES_AFTER=$(echo "$AFTER_LOC" | grep -n "^[[:space:]]*location / {" | grep -v "location /api" | grep -v "location /socket" | grep -v "location /health" | cut -d: -f1)
 
-# Если есть дубликаты, удаляем их
+# Если есть дубликаты, удаляем их построчно
 if [ -n "$ROOT_LINES_AFTER" ]; then
     echo "⚠️ Найдены дубликаты location / в остальной части файла, удаляем..."
+    # Просто удаляем строки с location / и следующие строки до закрывающей скобки
+    # Используем sed для удаления блоков
     for line_num in $ROOT_LINES_AFTER; do
-        # Находим закрывающую скобку этого location /
+        # Находим закрывающую скобку
         INDENT_AFTER=$(echo "$AFTER_LOC" | sed -n "${line_num}p" | sed 's/location.*//' | wc -c)
         INDENT_AFTER=$((INDENT_AFTER - 1))
-        CLOSE_LINE_AFTER=""
         
         TOTAL_LINES_AFTER=$(echo "$AFTER_LOC" | wc -l)
+        CLOSE_LINE_AFTER=""
         for i in $(seq $((line_num + 1)) $TOTAL_LINES_AFTER); do
             line_after=$(echo "$AFTER_LOC" | sed -n "${i}p")
             line_indent_after=$(echo "$line_after" | sed 's/[^ ].*//' | wc -c)
@@ -197,10 +198,8 @@ if [ -n "$ROOT_LINES_AFTER" ]; then
         done
         
         if [ -n "$CLOSE_LINE_AFTER" ]; then
-            # Удаляем этот блок
-            BEFORE_BLOCK=$(echo "$AFTER_LOC" | head -n $((line_num - 1)))
-            AFTER_BLOCK=$(echo "$AFTER_LOC" | tail -n +$((CLOSE_LINE_AFTER + 1)))
-            AFTER_LOC=$(printf "%s\n%s" "$BEFORE_BLOCK" "$AFTER_BLOCK")
+            # Удаляем блок через sed
+            AFTER_LOC=$(echo "$AFTER_LOC" | sed "${line_num},${CLOSE_LINE_AFTER}d")
         fi
     done
 fi
