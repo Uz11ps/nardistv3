@@ -17,8 +17,33 @@ export class AdminController {
   ) {}
 
   @Post('login')
-  async adminLogin(@Body() loginDto: AdminLoginDto) {
-    if (loginDto.login === '123' && loginDto.password === '123123') {
+  async adminLogin(@Body() loginDto: any) {
+    // Отладочное логирование (принимаем any, чтобы увидеть все что приходит)
+    console.log('Admin login attempt - raw body:', JSON.stringify(loginDto));
+    console.log('Admin login attempt - typeof:', {
+      loginDtoType: typeof loginDto,
+      isObject: loginDto instanceof Object,
+      keys: loginDto ? Object.keys(loginDto) : 'null/undefined',
+      login: loginDto?.login,
+      password: loginDto?.password ? '***' : undefined,
+    });
+
+    const expectedLogin = '123';
+    const expectedPassword = '123123';
+
+    // Более гибкая проверка - может прийти в разных форматах
+    const receivedLogin = loginDto?.login?.toString().trim() || loginDto?.username?.toString().trim() || '';
+    const receivedPassword = loginDto?.password?.toString().trim() || '';
+
+    console.log('Admin login - comparison:', {
+      receivedLogin,
+      receivedPassword: receivedPassword ? '***' : 'empty',
+      expectedLogin,
+      loginMatch: receivedLogin === expectedLogin,
+      passwordMatch: receivedPassword === expectedPassword,
+    });
+
+    if (receivedLogin === expectedLogin && receivedPassword === expectedPassword) {
       // Создаем JWT токен для админа
       const payload = {
         sub: 'admin',
@@ -26,6 +51,7 @@ export class AdminController {
         isAdmin: true,
       };
       const token = this.jwtService.sign(payload);
+      console.log('✅ Admin login successful');
       return {
         access_token: token,
         user: {
@@ -35,6 +61,8 @@ export class AdminController {
         },
       };
     }
+    
+    console.log('❌ Admin login failed');
     throw new UnauthorizedException('Неверный логин или пароль');
   }
 
