@@ -78,12 +78,31 @@ services:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
       VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3000}
       VITE_TELEGRAM_BOT_NAME: ${VITE_TELEGRAM_BOT_NAME:-}
-    ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+    expose:
+      - "5173"
     depends_on:
       - backend
     volumes:
       - /app/node_modules
+    networks:
+      - nardi_network
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nardi_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Монтируем SSL сертификаты с хоста
+      - /etc/letsencrypt/live/nardist.site/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - /etc/letsencrypt/live/nardist.site/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+    depends_on:
+      - frontend
+      - backend
     networks:
       - nardi_network
     restart: unless-stopped
