@@ -18,11 +18,22 @@ import GameSearch from './pages/GameSearch'
 
 function App() {
   const [initialized, setInitialized] = useState(false)
+  const [initError, setInitError] = useState<string | null>(null)
   const { user, init, token } = useAuthStore()
 
   useEffect(() => {
-    initTelegram()
-    init().then(() => setInitialized(true))
+    const initialize = async () => {
+      try {
+        initTelegram()
+        await init()
+        setInitialized(true)
+      } catch (error: any) {
+        console.error('Ошибка инициализации:', error)
+        setInitError(error.message || 'Ошибка инициализации приложения')
+        setInitialized(true) // Устанавливаем true чтобы показать ошибку
+      }
+    }
+    initialize()
   }, [init])
 
   useEffect(() => {
@@ -42,6 +53,33 @@ function App() {
         color: '#ffffff'
       }}>
         Загрузка...
+      </div>
+    )
+  }
+
+  if (initError && !user) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh',
+        background: '#1a1a1a',
+        color: '#ffffff',
+        padding: '20px'
+      }}>
+        <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+          <h1 style={{ color: '#ff3333', marginBottom: '20px' }}>Ошибка инициализации</h1>
+          <p style={{ marginBottom: '20px', color: '#aaaaaa' }}>{initError}</p>
+          <div style={{ padding: '16px', background: '#2a2a2a', borderRadius: '12px', textAlign: 'left', fontSize: '14px' }}>
+            <p style={{ marginBottom: '12px' }}>Убедитесь что:</p>
+            <ul style={{ paddingLeft: '20px', color: '#aaaaaa' }}>
+              <li>Вы открыли приложение через Telegram бота</li>
+              <li>Домен nardist.site привязан к боту через @BotFather</li>
+              <li>На сервере настроены переменные окружения</li>
+            </ul>
+          </div>
+        </div>
       </div>
     )
   }

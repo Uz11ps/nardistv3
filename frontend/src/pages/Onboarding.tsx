@@ -40,12 +40,17 @@ export default function Onboarding() {
 
   useEffect(() => {
     const initialize = async () => {
-      await init()
-      if (!user) {
-        await login()
+      try {
+        await init()
+        if (!user) {
+          await login()
+        }
+        // Загружаем прогресс онбординга
+        loadOnboardingProgress()
+      } catch (error: any) {
+        console.error('Ошибка инициализации:', error)
+        // Ошибка будет обработана в компоненте
       }
-      // Загружаем прогресс онбординга
-      loadOnboardingProgress()
     }
     initialize()
   }, [])
@@ -96,7 +101,22 @@ export default function Onboarding() {
     return (
       <div className="app-container" style={{ padding: '20px', textAlign: 'center' }}>
         <h1>Добро пожаловать в Нарды!</h1>
-        <p>Загрузка...</p>
+        <p style={{ marginTop: '20px', color: '#ff3333' }}>
+          ⚠️ Ошибка авторизации через Telegram
+        </p>
+        <div style={{ marginTop: '20px', padding: '16px', background: '#2a2a2a', borderRadius: '12px', textAlign: 'left' }}>
+          <p style={{ fontSize: '14px', marginBottom: '12px' }}>
+            Убедитесь что:
+          </p>
+          <ul style={{ fontSize: '14px', paddingLeft: '20px', color: '#aaaaaa' }}>
+            <li>Вы открыли приложение через Telegram бота</li>
+            <li>Домен nardist.site привязан к боту через @BotFather</li>
+            <li>На сервере настроены TELEGRAM_BOT_TOKEN и TELEGRAM_SECRET_KEY</li>
+          </ul>
+          <p style={{ fontSize: '12px', marginTop: '16px', color: '#666666' }}>
+            Если проблема сохраняется, обратитесь к администратору.
+          </p>
+        </div>
       </div>
     )
   }

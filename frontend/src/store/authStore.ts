@@ -47,14 +47,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async () => {
     const initData = getInitData()
     if (!initData) {
-      throw new Error('Telegram initData не доступен')
+      const error = new Error('Telegram initData не доступен. Убедитесь что вы открыли приложение через Telegram бота.')
+      ;(error as any).code = 'NO_INIT_DATA'
+      throw error
     }
 
-    const response = await apiClient.post('/auth/login', { initData })
-    const { access_token, user } = response.data
+    try {
+      const response = await apiClient.post('/auth/login', { initData })
+      const { access_token, user } = response.data
 
-    localStorage.setItem('token', access_token)
-    set({ token: access_token, user })
+      localStorage.setItem('token', access_token)
+      set({ token: access_token, user })
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        const telegramError = new Error('Ошибка авторизации Telegram. Проверьте настройки бота и домена.')
+        ;(telegramError as any).code = 'TELEGRAM_AUTH_ERROR'
+        throw telegramError
+      }
+      throw error
+    }
   },
 
   logout: () => {
