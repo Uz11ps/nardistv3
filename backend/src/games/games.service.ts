@@ -7,6 +7,7 @@ import { BackgammonEngine } from './game-engine/backgammon-engine';
 import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
 import { ProgressService } from '../progress/progress.service';
 import { RatingsService } from '../ratings/ratings.service';
+import { UsersService } from '../users/users.service';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -22,6 +23,8 @@ export class GamesService {
     private progressService: ProgressService,
     @Inject(forwardRef(() => RatingsService))
     private ratingsService: RatingsService,
+    @Inject(forwardRef(() => UsersService))
+    private usersService: UsersService,
   ) {}
 
   async create(
@@ -64,19 +67,20 @@ export class GamesService {
         throw new BadRequestException('Недостаточно NAR-coin для ставки');
       }
       // Блокируем ставку (вычитаем сразу, вернем проигравшему позже при завершении)
-      player1.narCoin = BigInt(Number(player1.narCoin) - stake);
-      await this.usersService['usersRepository'].save(player1);
+      const player1Balance = Number(player1.narCoin);
+      const newPlayer1Balance = BigInt(player1Balance - stake);
+      await this.usersService.update(player1Id, { narCoin: newPlayer1Balance });
 
       if (player2Id) {
         const player2 = await this.usersService.findOne(player2Id);
-        if (Number(player2.narCoin) < stake) {
+        const player2Balance = Number(player2.narCoin);
+        if (player2Balance < stake) {
           // Возвращаем деньги player1
-          player1.narCoin = BigInt(Number(player1.narCoin) + stake);
-          await this.usersService['usersRepository'].save(player1);
+          await this.usersService.update(player1Id, { narCoin: BigInt(player1Balance) });
           throw new BadRequestException('У противника недостаточно NAR-coin для ставки');
         }
-        player2.narCoin = BigInt(Number(player2.narCoin) - stake);
-        await this.usersService['usersRepository'].save(player2);
+        const newPlayer2Balance = BigInt(player2Balance - stake);
+        await this.usersService.update(player2Id, { narCoin: newPlayer2Balance });
       }
     }
 
@@ -206,6 +210,26 @@ export class GamesService {
     // Только для игр с реальными игроками применяем жизни
     if (game.type === GameType.VS_PLAYER && loserId) {
       await this.progressService.loseLifeOnDefeat(loserId);
+    }
+
+    // Обработка ставок
+    if (game.stake > 0 && game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
+      const stake = Number(game.stake);
+      
+      // Победитель получает обе ставки (с учетом комиссии)
+      const winner = await this.usersService.findOne(game.winnerId);
+      const totalPot = stake * 2;
+      const baseCommission = Math.floor(totalPot * 0.05); // 5% комиссия
+      
+      // Применяем снижение комиссии через экономику
+      const winnerUser = await this.usersService.findOne(game.winnerId);
+      const economyLevel = winnerUser.enhancement === 'economy' ? 1 : 0; // TODO: получить уровень экономики
+      const finalCommission = this.progressService.calculateFeeWithEconomy(baseCommission, economyLevel);
+      const winnerReward = totalPot - finalCommission;
+
+      const winnerBalance = Number(winner.narCoin);
+      const newWinnerBalance = BigInt(winnerBalance + winnerReward);
+      await this.usersService.update(game.winnerId, { narCoin: newWinnerBalance });
     }
 
     // Обновление рейтингов (если RatingsService подключен)

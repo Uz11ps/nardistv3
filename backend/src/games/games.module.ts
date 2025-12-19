@@ -11,6 +11,7 @@ import { BackgammonEngine } from './game-engine/backgammon-engine';
 import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
 import { ProgressModule } from '../progress/progress.module';
 import { RatingsModule } from '../ratings/ratings.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { RatingsModule } from '../ratings/ratings.module';
     }),
     forwardRef(() => ProgressModule),
     forwardRef(() => RatingsModule),
+    forwardRef(() => UsersModule),
   ],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway, BackgammonEngine, LongBackgammonEngine],

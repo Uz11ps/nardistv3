@@ -154,14 +154,15 @@ export class AcademyService {
     }
 
     // Списываем средства
-    user.narCoin = BigInt(Number(user.narCoin) - price);
-    await this.usersService['usersRepository'].save(user);
+    const userBalance = Number(user.narCoin);
+    const newBalance = BigInt(userBalance - price);
+    await this.usersService.update(userId, { narCoin: newBalance });
 
     // Сохраняем покупку
     const userMaterial = this.userMaterialsRepository.create({
       userId,
       articleId: courseId,
-      pricePaid: BigInt(price),
+      pricePaid: price,
     });
     await this.userMaterialsRepository.save(userMaterial);
   }

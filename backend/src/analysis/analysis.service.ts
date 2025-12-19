@@ -17,7 +17,7 @@ interface MoveAnalysis {
   scoreChange?: number; // Изменение оценочной позиции
 }
 
-interface GameAnalysis {
+export interface GameAnalysis {
   gameId: string;
   totalMoves: number;
   errors: MoveAnalysis[];

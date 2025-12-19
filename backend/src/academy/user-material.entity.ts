@@ -30,7 +30,7 @@ export class UserMaterial {
   @Index()
   articleId: string;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'int' })
   pricePaid: number; // Цена, которую заплатил пользователь
 
   @CreateDateColumn()
