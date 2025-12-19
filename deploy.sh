@@ -19,6 +19,11 @@ fi
 echo -e "${YELLOW}📦 Обновление кода из репозитория...${NC}"
 git pull origin main
 
+echo -e "${YELLOW}🛑 Остановка системных веб-серверов (nginx, apache2)...${NC}"
+sudo systemctl stop nginx 2>/dev/null || sudo service nginx stop 2>/dev/null || true
+sudo systemctl stop apache2 2>/dev/null || sudo service apache2 stop 2>/dev/null || true
+sudo systemctl stop httpd 2>/dev/null || sudo service httpd stop 2>/dev/null || true
+
 echo -e "${YELLOW}🛑 Остановка и удаление старых контейнеров...${NC}"
 docker-compose down --remove-orphans
 

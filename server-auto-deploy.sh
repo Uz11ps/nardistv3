@@ -66,6 +66,12 @@ deploy() {
     git reset --hard origin/$BRANCH
     git clean -fd
     
+    # Остановка системных сервисов (nginx, apache2) для освобождения портов
+    log "${YELLOW}🛑 Остановка системных веб-серверов (nginx, apache2)...${NC}"
+    sudo systemctl stop nginx 2>/dev/null || sudo service nginx stop 2>/dev/null || true
+    sudo systemctl stop apache2 2>/dev/null || sudo service apache2 stop 2>/dev/null || true
+    sudo systemctl stop httpd 2>/dev/null || sudo service httpd stop 2>/dev/null || true
+    
     # Полная остановка и удаление контейнеров
     log "${YELLOW}🛑 Остановка и удаление старых контейнеров...${NC}"
     docker-compose down --remove-orphans || true
