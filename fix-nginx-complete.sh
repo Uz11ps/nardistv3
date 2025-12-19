@@ -215,16 +215,22 @@ AFTER_LOC=$(tail -n +$((LOCATION_CLOSE + 1)) "$CONFIG_FILE")
 # Если есть server блок, обрезаем до его закрывающей скобки
 # Но сначала проверяем что location / не находится после закрывающей скобки server
 if [ -n "$SERVER_CLOSE" ]; then
-    if [ "$LOCATION_CLOSE" -ge "$SERVER_CLOSE" ]; then
+    if [ "$LOCATION_CLOSE" -gt "$SERVER_CLOSE" ]; then
         echo "❌ location / находится ВНЕ server блока!"
         echo "server блок заканчивается на строке $SERVER_CLOSE, location / заканчивается на строке $LOCATION_CLOSE"
         exit 1
     fi
+    # Если location / заканчивается на той же строке что и server блок, это нормально
     # Берем только до закрывающей скобки server блока (не включая её, она будет добавлена позже)
-    LINES_TO_TAKE=$((SERVER_CLOSE - LOCATION_CLOSE - 1))
-    if [ "$LINES_TO_TAKE" -gt 0 ]; then
-        AFTER_LOC=$(echo "$AFTER_LOC" | head -n "$LINES_TO_TAKE")
+    if [ "$LOCATION_CLOSE" -lt "$SERVER_CLOSE" ]; then
+        LINES_TO_TAKE=$((SERVER_CLOSE - LOCATION_CLOSE - 1))
+        if [ "$LINES_TO_TAKE" -gt 0 ]; then
+            AFTER_LOC=$(echo "$AFTER_LOC" | head -n "$LINES_TO_TAKE")
+        else
+            AFTER_LOC=""
+        fi
     else
+        # location / заканчивается вместе с server блоком - нет остатка
         AFTER_LOC=""
     fi
 fi
