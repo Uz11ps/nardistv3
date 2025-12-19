@@ -11,6 +11,7 @@ export default function Profile() {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1 })
+  const [hasPremium, setHasPremium] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -19,8 +20,18 @@ export default function Profile() {
         xp: Number(user.xp) || 0,
         level: user.level || 1,
       })
+      checkPremium()
     }
   }, [user])
+
+  const checkPremium = async () => {
+    try {
+      const response = await apiClient.get('/subscription/status')
+      setHasPremium(response.data?.hasActive || false)
+    } catch (error) {
+      console.error('Failed to check subscription:', error)
+    }
+  }
 
   const menuItems = [
     { icon: '🛒', title: 'Магазин', path: '/shop' },
@@ -52,7 +63,18 @@ export default function Profile() {
               <div style={{ fontSize: '48px' }}>👤</div>
             )}
           </div>
-          <div className="card-title">{user?.nickname || user?.username || 'Игрок'}</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <div className="card-title">{user?.nickname || user?.username || 'Игрок'}</div>
+            {hasPremium && (
+              <span style={{ 
+                fontSize: '16px',
+                background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: 'bold'
+              }}>⭐</span>
+            )}
+          </div>
           <div className="card-subtitle">Уровень {stats.level}</div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '12px' }}>
             <span className="gold">💰 {stats.narCoin.toLocaleString()}</span>

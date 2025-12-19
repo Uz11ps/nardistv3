@@ -6,10 +6,13 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import BottomNav from '../components/BottomNav'
 
+import { apiClient } from '../api/client'
+
 export default function Home() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1 })
+  const [hasPremium, setHasPremium] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -21,12 +24,22 @@ export default function Home() {
           xp: Number(xp) || 0,
           level: user.level || 1,
         })
+        checkPremium()
       } catch (error) {
         console.error('Ошибка при загрузке статистики:', error)
         setStats({ narCoin: 0, xp: 0, level: 1 })
       }
     }
   }, [user])
+
+  const checkPremium = async () => {
+    try {
+      const response = await apiClient.get('/subscription/status')
+      setHasPremium(response.data?.hasActive || false)
+    } catch (error) {
+      console.error('Failed to check subscription:', error)
+    }
+  }
 
   if (!user) {
     return null
@@ -62,7 +75,18 @@ export default function Home() {
               )}
             </div>
             <div style={{ flex: 1 }}>
-              <div className="card-title">{user?.nickname || user?.username || 'Игрок'}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="card-title">{user?.nickname || user?.username || 'Игрок'}</div>
+                {hasPremium && (
+                  <span style={{ 
+                    fontSize: '16px',
+                    background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    fontWeight: 'bold'
+                  }}>⭐</span>
+                )}
+              </div>
               <div className="card-subtitle">Уровень {stats.level}</div>
               <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
                 <span className="gold">💰 {stats.narCoin.toLocaleString()} NAR</span>
