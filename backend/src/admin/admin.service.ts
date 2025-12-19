@@ -7,7 +7,7 @@ import { AcademyService } from '../academy/academy.service';
 import { SkinsService } from '../skins/skins.service';
 import { GamesService } from '../games/games.service';
 import { User } from '../users/user.entity';
-import { Game, GameMode, GameType } from '../games/game.entity';
+import { Game, GameMode, GameType, GameStatus } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
 import { Tournament } from '../tournaments/tournament.entity';
 import { Article } from '../academy/article.entity';
@@ -43,8 +43,8 @@ export class AdminService {
       .getCount();
     
     const totalGames = await this.gamesRepository.count();
-    const finishedGames = await this.gamesRepository.count({ where: { status: 'finished' } });
-    const inProgressGames = await this.gamesRepository.count({ where: { status: 'in_progress' } });
+    const finishedGames = await this.gamesRepository.count({ where: { status: GameStatus.FINISHED } });
+    const inProgressGames = await this.gamesRepository.count({ where: { status: GameStatus.IN_PROGRESS } });
     
     const totalMoves = await this.movesRepository.count();
     
