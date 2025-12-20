@@ -55,6 +55,7 @@ export default function BackgammonBoard({
   const [diceRolling, setDiceRolling] = useState(false)
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
+  const [dragging, setDragging] = useState<{ point: number; offsetX: number; offsetY: number } | null>(null)
   const animationFrameRef = useRef<number>()
 
   // gameState.points - это массив чисел, где положительное число = белые шашки, отрицательное = черные
@@ -93,10 +94,13 @@ export default function BackgammonBoard({
   // Загружаем возможные ходы когда доступны кубики
   useEffect(() => {
     if (gameId && diceArray.length > 0 && isMyTurn && canMove) {
+      console.log('🔄 Загружаем возможные ходы для игры', gameId)
       apiClient
         .get(`/games/${gameId}/possible-moves`)
         .then((response: any) => {
           const allMoves = response.data || []
+          console.log('✅ Получены возможные ходы:', allMoves)
+          
           // Извлекаем все возможные ходы из всех комбинаций
           const movesSet = new Set<string>()
           allMoves.forEach((moveSeq: any[]) => {
@@ -110,9 +114,11 @@ export default function BackgammonBoard({
             return { from, to, die }
           })
           
+          console.log('📋 Уникальные ходы:', uniqueMoves)
           setPossibleMoves(uniqueMoves)
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('❌ Ошибка загрузки возможных ходов:', error)
           setPossibleMoves([])
         })
     } else {
@@ -126,18 +132,20 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (selectedPoint !== null && possibleMoves.length > 0) {
       const highlights = new Set<number>()
-      possibleMoves
-        .filter((move) => {
-          if (selectedPoint === -1) {
-            return move.from === -1
-          }
-          return move.from === selectedPoint
-        })
-        .forEach((move) => {
-          if (move.to >= 0 && move.to < 24) {
-            highlights.add(move.to)
-          }
-        })
+      const filteredMoves = possibleMoves.filter((move) => {
+        if (selectedPoint === -1) {
+          return move.from === -1
+        }
+        return move.from === selectedPoint
+      })
+      
+      console.log(`✨ Подсвечиваем ходы для точки ${selectedPoint === -1 ? 'бар' : POINT_NUMBERS[selectedPoint]}:`, filteredMoves)
+      
+      filteredMoves.forEach((move) => {
+        if (move.to >= 0 && move.to < 24) {
+          highlights.add(move.to)
+        }
+      })
       setHighlightedPoints(highlights)
     } else {
       setHighlightedPoints(new Set())
