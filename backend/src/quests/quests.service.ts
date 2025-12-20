@@ -21,9 +21,10 @@ export class QuestsService {
       .createQueryBuilder('quest')
       .where('quest.startDate <= :now', { now })
       .andWhere('quest.endDate >= :now', { now })
-      .andWhere('(quest.type = :daily OR quest.type = :weekly)', {
+      .andWhere('(quest.type = :daily OR quest.type = :weekly OR quest.type = :special)', {
         daily: QuestType.DAILY,
         weekly: QuestType.WEEKLY,
+        special: QuestType.SPECIAL,
       })
       .getMany();
 
@@ -55,7 +56,14 @@ export class QuestsService {
 
   async getQuestsByType(userId: string, type: string): Promise<any> {
     const now = new Date();
-    const questType = type === 'daily' ? QuestType.DAILY : type === 'weekly' ? QuestType.WEEKLY : null;
+    let questType: QuestType | null = null;
+    if (type === 'daily') {
+      questType = QuestType.DAILY;
+    } else if (type === 'weekly') {
+      questType = QuestType.WEEKLY;
+    } else if (type === 'special') {
+      questType = QuestType.SPECIAL;
+    }
     
     if (!questType) {
       return { quests: [], resetTime: '' };
@@ -117,6 +125,9 @@ export class QuestsService {
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       resetTime = days > 0 ? `${days}д ${hours}ч` : `${hours}ч`;
+    } else if (type === 'special') {
+      // Особые квесты не имеют фиксированного времени сброса
+      resetTime = '';
     }
     return { quests: result, resetTime };
   }
@@ -142,9 +153,10 @@ export class QuestsService {
       .where('quest.target = :target', { target })
       .andWhere('quest.startDate <= :now', { now })
       .andWhere('quest.endDate >= :now', { now })
-      .andWhere('(quest.type = :daily OR quest.type = :weekly)', {
+      .andWhere('(quest.type = :daily OR quest.type = :weekly OR quest.type = :special)', {
         daily: QuestType.DAILY,
         weekly: QuestType.WEEKLY,
+        special: QuestType.SPECIAL,
       })
       .getMany();
 

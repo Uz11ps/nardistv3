@@ -4,15 +4,24 @@ interface PageHeaderProps {
   title: string
   showBack?: boolean
   rightAction?: React.ReactNode
+  onBack?: () => void
 }
 
-export default function PageHeader({ title, showBack = true, rightAction }: PageHeaderProps) {
+export default function PageHeader({ title, showBack = true, rightAction, onBack }: PageHeaderProps) {
   const navigate = useNavigate()
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack()
+    } else {
+      navigate(-1)
+    }
+  }
 
   return (
     <div className="page-header">
       {showBack && (
-        <button className="back-button page-header-back-btn" onClick={() => navigate(-1)}>
+        <button className="back-button page-header-back-btn" onClick={handleBack}>
           ←
         </button>
       )}

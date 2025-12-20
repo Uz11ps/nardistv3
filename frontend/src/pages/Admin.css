@@ -118,6 +118,50 @@
   font-size: var(--font-size-lg);
 }
 
+/* Фильтры */
+.admin-filters {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-filter-input,
+.admin-filter-select {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  transition: all var(--transition-base);
+  min-width: 150px;
+}
+
+.admin-filter-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.admin-filter-select {
+  min-width: 150px;
+}
+
+.admin-filter-input:hover,
+.admin-filter-select:hover {
+  border-color: var(--color-primary);
+}
+
+.admin-filter-input:focus,
+.admin-filter-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 51, 51, 0.1);
+  background: var(--color-background);
+}
+
 /* Таблицы */
 .admin-table-container {
   overflow-x: auto;
@@ -146,6 +190,7 @@ table thead th {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--color-text-primary);
+  white-space: nowrap;
 }
 
 table tbody tr {
@@ -161,6 +206,7 @@ table tbody td {
   padding: var(--spacing-4);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
+  vertical-align: middle;
 }
 
 table tbody td:last-child {
@@ -272,10 +318,25 @@ button {
   padding: var(--spacing-5);
   margin-top: var(--spacing-5);
   border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
 }
 
 .admin-form .form-group {
   margin-bottom: var(--spacing-5);
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-form .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.admin-form-nested {
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-4);
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .admin-form label {
@@ -284,6 +345,14 @@ button {
   color: var(--color-text-primary);
   font-weight: var(--font-weight-medium);
   font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.admin-form .field-hint {
+  font-weight: var(--font-weight-normal);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-style: italic;
 }
 
 .admin-form input[type="text"],
@@ -299,9 +368,16 @@ button {
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   font-family: var(--font-family);
-  transition: var(--transition-base);
+  transition: all var(--transition-base);
   background: var(--color-background-secondary);
   color: var(--color-text-primary);
+  box-sizing: border-box;
+}
+
+.admin-form input:hover,
+.admin-form textarea:hover,
+.admin-form select:hover {
+  border-color: var(--color-primary);
 }
 
 .admin-form input:focus,
@@ -310,6 +386,7 @@ button {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(255, 51, 51, 0.1);
+  background: var(--color-background);
 }
 
 .admin-form textarea {
@@ -317,11 +394,47 @@ button {
   min-height: 100px;
 }
 
+/* Чекбоксы */
 .admin-form input[type="checkbox"] {
-  width: auto;
+  width: 18px;
+  height: 18px;
   margin-right: var(--spacing-2);
   cursor: pointer;
-  accent-color: var(--color-primary);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-background-secondary);
+  position: relative;
+  transition: all var(--transition-base);
+}
+
+.admin-form input[type="checkbox"]:hover {
+  border-color: var(--color-primary);
+}
+
+.admin-form input[type="checkbox"]:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.admin-form input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.admin-form label input[type="checkbox"] {
+  display: inline;
+  width: 18px;
+  height: 18px;
+  margin-right: var(--spacing-2);
 }
 
 .admin-form label input[type="checkbox"] {
@@ -527,6 +640,7 @@ button {
   display: flex;
   align-items: center;
   gap: var(--spacing-4);
+  flex-wrap: wrap;
 }
 
 .edit-form .form-group label {

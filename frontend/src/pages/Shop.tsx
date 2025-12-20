@@ -18,7 +18,7 @@ interface NarCoinPackage {
 export default function Shop() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'board' | 'dice'>('coin')
+  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'board' | 'dice' | 'checkers'>('coin')
   const [narCoinPackages, setNarCoinPackages] = useState<NarCoinPackage[]>([])
   const [skins, setSkins] = useState<Skin[]>([])
   const [ownedSkins, setOwnedSkins] = useState<string[]>([])
@@ -28,7 +28,7 @@ export default function Shop() {
   useEffect(() => {
     if (activeTab === 'coin') {
       loadNarCoinPackages()
-    } else if (['board', 'dice'].includes(activeTab)) {
+    } else if (['board', 'dice', 'checkers'].includes(activeTab)) {
       loadSkins()
     }
   }, [activeTab])
@@ -71,6 +71,7 @@ export default function Shop() {
       const typeMap: { [key: string]: string } = {
         board: 'board',
         dice: 'dice',
+        checkers: 'checkers',
       }
       const filteredSkins = allSkins.filter((s: Skin) => s.type === typeMap[activeTab])
 
@@ -176,6 +177,12 @@ export default function Shop() {
             >
               Кубы
             </button>
+            <button
+              className={`shop-tab ${activeTab === 'checkers' ? 'active' : ''}`}
+              onClick={() => setActiveTab('checkers')}
+            >
+              Шашки
+            </button>
           </div>
         </div>
 
@@ -234,8 +241,8 @@ export default function Shop() {
           </div>
         )}
 
-        {/* Скины (Доски, Кубы) */}
-        {['board', 'dice'].includes(activeTab) && (
+        {/* Скины (Доски, Кубы, Шашки) */}
+        {['board', 'dice', 'checkers'].includes(activeTab) && (
           <div className="shop-list">
             {loading ? (
               <Card>
@@ -269,7 +276,7 @@ export default function Shop() {
                         ) : (
                           <div className="shop-skin-placeholder">
                             <Icon 
-                              name={skin.type === 'board' ? 'board' : 'dice'} 
+                              name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} 
                               size={48} 
                             />
                           </div>

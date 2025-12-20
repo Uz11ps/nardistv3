@@ -35,15 +35,18 @@ export default function Game() {
 
   const mode = searchParams.get('mode')
   const isBotGame = mode === 'bot'
+  const createdBotGameRef = useRef(false)
 
   useEffect(() => {
     if (gameId) {
       loadGame()
       connectToGame()
-    } else if (isBotGame) {
+      createdBotGameRef.current = false
+    } else if (isBotGame && !createdBotGameRef.current) {
+      createdBotGameRef.current = true
       createBotGame()
-    } else {
-      navigate('/game/search')
+    } else if (!isBotGame && !gameId) {
+      navigate('/game/modes')
     }
 
     return () => {
@@ -223,10 +226,19 @@ export default function Game() {
   const gameMode = gameInfo.mode || 'LONG'
   const stake = Number(gameInfo.stake || 0)
 
+  const handleBack = () => {
+    if (isBotGame && gameInfo?.type === 'vs_bot') {
+      navigate('/game/modes')
+    } else {
+      navigate(-1)
+    }
+  }
+
   return (
     <div className="app-container game-container page-transition">
       <PageHeader 
         title={`Стол ${tableNumber} • ${getGameModeName(gameMode)}${stake > 0 ? ` - ${stake} NAR` : ''}`}
+        onBack={handleBack}
       />
       
       <div className="game-players-section">

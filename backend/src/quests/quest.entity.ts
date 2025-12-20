@@ -10,6 +10,7 @@ import {
 export enum QuestType {
   DAILY = 'daily',
   WEEKLY = 'weekly',
+  SPECIAL = 'special',
 }
 
 export enum QuestTarget {

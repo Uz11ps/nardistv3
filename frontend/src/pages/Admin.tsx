@@ -43,6 +43,13 @@ export default function Admin() {
   const [clans, setClans] = useState<any[]>([])
   const [selectedUser, setSelectedUser] = useState<any>(null)
   
+  // Фильтры
+  const [userFilters, setUserFilters] = useState({ search: '', status: '', level: '' })
+  const [gameFilters, setGameFilters] = useState({ search: '', status: '', mode: '' })
+  const [tournamentFilters, setTournamentFilters] = useState({ search: '', status: '' })
+  const [questFilters, setQuestFilters] = useState({ search: '', type: '' })
+  const [clanFilters, setClanFilters] = useState({ search: '', level: '' })
+  
   // Формы создания
   const [newGame, setNewGame] = useState({ player1Id: '', player2Id: '', mode: 'short', type: 'vs_player' })
   const [newTournament, setNewTournament] = useState({ name: '', mode: 'short', format: 'bracket', startDate: '', maxParticipants: 16, entryFee: 0 })
@@ -306,7 +313,32 @@ export default function Admin() {
 
         {activeTab === 'users' && (
           <div className="admin-users">
-            <div className="users-table">
+            <div className="admin-filters">
+              <input
+                type="text"
+                placeholder="Поиск по ID/Нику..."
+                className="admin-filter-input"
+                value={userFilters.search}
+                onChange={(e) => setUserFilters({ ...userFilters, search: e.target.value })}
+              />
+              <select
+                className="admin-filter-select"
+                value={userFilters.status}
+                onChange={(e) => setUserFilters({ ...userFilters, status: e.target.value })}
+              >
+                <option value="">Все статусы</option>
+                <option value="active">Активен</option>
+                <option value="banned">Забанен</option>
+              </select>
+              <input
+                type="number"
+                placeholder="Уровень"
+                className="admin-filter-input"
+                value={userFilters.level}
+                onChange={(e) => setUserFilters({ ...userFilters, level: e.target.value })}
+              />
+            </div>
+            <div className="admin-table-container">
               <table>
                 <thead>
                   <tr>
@@ -320,7 +352,13 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {users.filter((user) => {
+                    if (userFilters.search && !user.id.toLowerCase().includes(userFilters.search.toLowerCase()) && !(user.nickname || user.username || '').toLowerCase().includes(userFilters.search.toLowerCase())) return false
+                    if (userFilters.status === 'active' && user.isBanned) return false
+                    if (userFilters.status === 'banned' && !user.isBanned) return false
+                    if (userFilters.level && user.level !== parseInt(userFilters.level)) return false
+                    return true
+                  }).map((user) => (
                     <tr key={user.id}>
                       <td>{user.id.substring(0, 8)}...</td>
                       <td>{user.nickname || user.username}</td>
@@ -503,7 +541,35 @@ export default function Admin() {
 
         {activeTab === 'games' && (
           <div className="admin-games">
-            <div className="games-table">
+            <div className="admin-filters">
+              <input
+                type="text"
+                placeholder="Поиск по ID/Игроку..."
+                className="admin-filter-input"
+                value={gameFilters.search}
+                onChange={(e) => setGameFilters({ ...gameFilters, search: e.target.value })}
+              />
+              <select
+                className="admin-filter-select"
+                value={gameFilters.status}
+                onChange={(e) => setGameFilters({ ...gameFilters, status: e.target.value })}
+              >
+                <option value="">Все статусы</option>
+                <option value="waiting">Ожидание</option>
+                <option value="in_progress">В процессе</option>
+                <option value="finished">Завершена</option>
+              </select>
+              <select
+                className="admin-filter-select"
+                value={gameFilters.mode}
+                onChange={(e) => setGameFilters({ ...gameFilters, mode: e.target.value })}
+              >
+                <option value="">Все режимы</option>
+                <option value="short">Короткие</option>
+                <option value="long">Длинные</option>
+              </select>
+            </div>
+            <div className="admin-table-container">
               <table>
                 <thead>
                   <tr>
@@ -517,7 +583,12 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {games.map((game) => (
+                  {games.filter((game) => {
+                    if (gameFilters.search && !game.id.toLowerCase().includes(gameFilters.search.toLowerCase()) && !(game.player1?.nickname || game.player1?.username || '').toLowerCase().includes(gameFilters.search.toLowerCase()) && !(game.player2?.nickname || game.player2?.username || '').toLowerCase().includes(gameFilters.search.toLowerCase())) return false
+                    if (gameFilters.status && game.status !== gameFilters.status) return false
+                    if (gameFilters.mode && game.mode !== gameFilters.mode) return false
+                    return true
+                  }).map((game) => (
                     <tr key={game.id}>
                       <td>{game.id.substring(0, 8)}...</td>
                       <td>{game.mode === 'short' ? 'Короткие' : 'Длинные'}</td>
@@ -722,19 +793,44 @@ export default function Admin() {
 
             <div className="tournaments-list">
               <h3>Существующие турниры</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Название</th>
-                    <th>Режим</th>
-                    <th>Формат</th>
-                    <th>Статус</th>
-                    <th>Участников</th>
-                    <th>Дата начала</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tournaments.map((t) => (
+              <div className="admin-filters">
+                <input
+                  type="text"
+                  placeholder="Поиск по названию..."
+                  className="admin-filter-input"
+                  value={tournamentFilters.search}
+                  onChange={(e) => setTournamentFilters({ ...tournamentFilters, search: e.target.value })}
+                />
+                <select
+                  className="admin-filter-select"
+                  value={tournamentFilters.status}
+                  onChange={(e) => setTournamentFilters({ ...tournamentFilters, status: e.target.value })}
+                >
+                  <option value="">Все статусы</option>
+                  <option value="UPCOMING">Предстоящий</option>
+                  <option value="REGISTRATION">Регистрация</option>
+                  <option value="IN_PROGRESS">В процессе</option>
+                  <option value="FINISHED">Завершен</option>
+                </select>
+              </div>
+              <div className="admin-table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Название</th>
+                      <th>Режим</th>
+                      <th>Формат</th>
+                      <th>Статус</th>
+                      <th>Участников</th>
+                      <th>Дата начала</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tournaments.filter((t) => {
+                      if (tournamentFilters.search && !t.name.toLowerCase().includes(tournamentFilters.search.toLowerCase())) return false
+                      if (tournamentFilters.status && t.status !== tournamentFilters.status) return false
+                      return true
+                    }).map((t) => (
                     <tr key={t.id}>
                       <td>{t.name}</td>
                       <td>{t.mode === 'short' ? 'Короткие' : 'Длинные'}</td>
@@ -934,7 +1030,9 @@ export default function Admin() {
                 <input type="number" placeholder="0 для бесплатного" id="skin-price" min="0" />
               </div>
               <div className="form-group">
-                <label>Вес:</label>
+                <label>
+                  Вес <span className="field-hint">(вероятность выпадения в случайной выборке, чем больше число - тем чаще выпадает)</span>:
+                </label>
                 <input type="number" placeholder="1" id="skin-weight" min="1" defaultValue="1" />
               </div>
               <div className="form-group">
@@ -1022,7 +1120,26 @@ export default function Admin() {
         {activeTab === 'quests' && (
           <div className="admin-quests">
             <h3>Управление квестами</h3>
-            <div className="quests-list">
+            <div className="admin-filters">
+              <input
+                type="text"
+                placeholder="Поиск по названию..."
+                className="admin-filter-input"
+                value={questFilters.search}
+                onChange={(e) => setQuestFilters({ ...questFilters, search: e.target.value })}
+              />
+              <select
+                className="admin-filter-select"
+                value={questFilters.type}
+                onChange={(e) => setQuestFilters({ ...questFilters, type: e.target.value })}
+              >
+                <option value="">Все типы</option>
+                <option value="daily">Ежедневный</option>
+                <option value="weekly">Еженедельный</option>
+                <option value="special">Особый</option>
+              </select>
+            </div>
+            <div className="admin-table-container">
               <table>
                 <thead>
                   <tr>
@@ -1038,10 +1155,18 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {quests.map((quest) => (
+                  {quests.filter((quest) => {
+                    if (questFilters.search && !quest.name.toLowerCase().includes(questFilters.search.toLowerCase())) return false
+                    if (questFilters.type && quest.type !== questFilters.type) return false
+                    return true
+                  }).map((quest) => (
                     <tr key={quest.id}>
                       <td>{quest.name}</td>
-                      <td>{quest.type === 'daily' ? 'Ежедневный' : 'Еженедельный'}</td>
+                      <td>
+                        {quest.type === 'daily' ? 'Ежедневный' : 
+                         quest.type === 'weekly' ? 'Еженедельный' : 
+                         quest.type === 'special' ? 'Особый' : quest.type}
+                      </td>
                       <td>{quest.target}</td>
                       <td>{quest.targetValue}</td>
                       <td>{Number(quest.rewardNarCoin || 0).toLocaleString()}</td>
@@ -1074,30 +1199,54 @@ export default function Admin() {
             </div>
             <div className="admin-form">
               <h4>Создать новый квест</h4>
-              <div className="admin-form">
-                <input type="text" placeholder="Название" id="quest-name" />
-                <textarea placeholder="Описание" id="quest-description" rows={3}></textarea>
-                <select id="quest-type">
-                  <option value="daily">Ежедневный</option>
-                  <option value="weekly">Еженедельный</option>
-                </select>
-                <select id="quest-target">
-                  <option value="play_matches">Играть матчи</option>
-                  <option value="win_streak">Серия побед</option>
-                  <option value="collect_income">Собрать доход</option>
-                  <option value="tournament">Турнир</option>
-                </select>
-                <input type="number" placeholder="Целевое значение" id="quest-target-value" />
-                <input type="number" placeholder="Награда NAR-coin" id="quest-reward-nar" />
-                <input type="number" placeholder="Награда XP" id="quest-reward-xp" />
-                <label>
-                  <input type="checkbox" id="quest-premium" /> Премиум квест
-                </label>
-                <div>
+              <div className="admin-form admin-form-nested">
+                <div className="form-group">
+                  <label>Название:</label>
+                  <input type="text" placeholder="Название" id="quest-name" />
+                </div>
+                <div className="form-group">
+                  <label>Описание:</label>
+                  <textarea placeholder="Описание" id="quest-description" rows={3}></textarea>
+                </div>
+                <div className="form-group">
+                  <label>Тип:</label>
+                  <select id="quest-type">
+                    <option value="daily">Ежедневный</option>
+                    <option value="weekly">Еженедельный</option>
+                    <option value="special">Особый</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Цель:</label>
+                  <select id="quest-target">
+                    <option value="play_matches">Играть матчи</option>
+                    <option value="win_streak">Серия побед</option>
+                    <option value="collect_income">Собрать доход</option>
+                    <option value="tournament">Турнир</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Целевое значение:</label>
+                  <input type="number" placeholder="Целевое значение" id="quest-target-value" />
+                </div>
+                <div className="form-group">
+                  <label>Награда NAR-coin:</label>
+                  <input type="number" placeholder="Награда NAR-coin" id="quest-reward-nar" />
+                </div>
+                <div className="form-group">
+                  <label>Награда XP:</label>
+                  <input type="number" placeholder="Награда XP" id="quest-reward-xp" />
+                </div>
+                <div className="form-group checkbox-group">
+                  <label className="checkbox-label">
+                    <input type="checkbox" id="quest-premium" /> Премиум квест
+                  </label>
+                </div>
+                <div className="form-group">
                   <label>Дата начала:</label>
                   <input type="datetime-local" id="quest-start-date" />
                 </div>
-                <div>
+                <div className="form-group">
                   <label>Дата окончания:</label>
                   <input type="datetime-local" id="quest-end-date" />
                 </div>
@@ -1129,7 +1278,23 @@ export default function Admin() {
         {activeTab === 'clans' && (
           <div className="admin-clans">
             <h3>Управление кланами</h3>
-            <div className="clans-list">
+            <div className="admin-filters">
+              <input
+                type="text"
+                placeholder="Поиск по названию..."
+                className="admin-filter-input"
+                value={clanFilters.search}
+                onChange={(e) => setClanFilters({ ...clanFilters, search: e.target.value })}
+              />
+              <input
+                type="number"
+                placeholder="Уровень"
+                className="admin-filter-input"
+                value={clanFilters.level}
+                onChange={(e) => setClanFilters({ ...clanFilters, level: e.target.value })}
+              />
+            </div>
+            <div className="admin-table-container">
               <table>
                 <thead>
                   <tr>
@@ -1143,7 +1308,11 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {clans.map((clan) => (
+                  {clans.filter((clan) => {
+                    if (clanFilters.search && !clan.name.toLowerCase().includes(clanFilters.search.toLowerCase())) return false
+                    if (clanFilters.level && clan.level !== parseInt(clanFilters.level)) return false
+                    return true
+                  }).map((clan) => (
                     <tr key={clan.id}>
                       <td>{clan.name}</td>
                       <td>{clan.leaderId?.substring(0, 8) || 'N/A'}...</td>
