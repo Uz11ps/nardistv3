@@ -289,14 +289,15 @@ export default function Game() {
           }
         }
         
-        console.log('✅ WebSocket подключен, отправляем roll_dice')
+        console.log('✅ WebSocket подключен, отправляем roll_dice для gameId:', gameId)
         // Бросаем кубики через WebSocket
         socket.emit('roll_dice', { gameId })
         
         // Обновляем состояние через небольшую задержку
         setTimeout(() => {
+          console.log('🔄 Обновляем состояние игры после броска кубиков')
           loadGame()
-        }, 1500)
+        }, 2000)
       } catch (error) {
         console.error('❌ Failed to start game:', error)
         alert('Ошибка начала игры: ' + (error as Error).message)
