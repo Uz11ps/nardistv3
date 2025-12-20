@@ -155,8 +155,15 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
             const updatedGame = await this.gamesService.findOne(gameId);
             if (updatedGame.status === 'finished') return;
             
+            if (!updatedGame.id) {
+              this.logger.error(`❌ Bot move: updatedGame.id is missing! gameId=${gameId}`);
+              return;
+            }
+            
+            this.logger.log(`🤖 Making bot move for gameId=${gameId}, updatedGame.id=${updatedGame.id}`);
             const botMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
             if (botMoves.length > 0) {
+              this.logger.log(`🤖 Bot moves: ${botMoves.length} moves, calling makeMove with gameId=${gameId}`);
               const botMoveResult = await this.gamesService.makeMove(gameId, game.player1Id, botMoves);
               const gameStateAfterMove = await this.gamesService.getGameState(gameId);
               
