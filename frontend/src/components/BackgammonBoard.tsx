@@ -182,7 +182,6 @@ export default function BackgammonBoard({
 
     // Рисуем точки (треугольники)
     for (let i = 0; i < 24; i++) {
-      const pointValue = points[i] || 0
       const pointNum = POINT_NUMBERS[i]
       const isTop = i < 12
       
