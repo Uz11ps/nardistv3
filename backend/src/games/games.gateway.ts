@@ -93,12 +93,24 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { gameId: string; moves: Array<{ from: number; to: number; die: number }> },
   ) {
     const userId = client.data.userId;
+    this.logger.log(`🎮 make_move received: gameId=${data.gameId}, userId=${userId}, moves count=${data.moves?.length || 0}`);
+    
+    if (!data.gameId) {
+      this.logger.error(`❌ make_move: gameId is missing! data:`, JSON.stringify(data));
+      client.emit('error', { message: 'ID игры не указан' });
+      return;
+    }
+    
     try {
+      this.logger.log(`✅ Calling gamesService.makeMove with gameId=${data.gameId}, userId=${userId}`);
       const game = await this.gamesService.makeMove(data.gameId, userId, data.moves);
+      this.logger.log(`✅ Move completed successfully, getting game state for gameId=${data.gameId}`);
       const gameState = await this.gamesService.getGameState(data.gameId);
+      this.logger.log(`✅ Emitting move_made event for gameId=${data.gameId}`);
       this.server.to(`game:${data.gameId}`).emit('move_made', gameState);
       
       if (game.status === 'finished') {
+        this.logger.log(`🏁 Game finished, emitting game_finished for gameId=${data.gameId}`);
         this.server.to(`game:${data.gameId}`).emit('game_finished', {
           winnerId: game.winnerId,
           player1Score: game.player1Score,
@@ -107,9 +119,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       } else {
         // Check if next player is bot and trigger bot move
+        this.logger.log(`🤖 Checking if bot turn needed for gameId=${data.gameId}`);
         await this.handleBotTurnIfNeeded(data.gameId);
       }
     } catch (error) {
+      this.logger.error(`❌ Error in make_move:`, error);
+      this.logger.error(`❌ Error details: message=${error.message}, stack=${error.stack}`);
       client.emit('error', { message: error.message });
     }
   }
