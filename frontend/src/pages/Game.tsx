@@ -245,6 +245,7 @@ export default function Game() {
     
     if (!gameId) {
       console.error('❌ Нет gameId')
+      alert('Ошибка: нет ID игры')
       return
     }
 
@@ -252,22 +253,36 @@ export default function Game() {
     if (gameStatus === 'waiting') {
       console.log('🎲 Начинаем игру - бросаем кубики')
       try {
-        const socket = getSocket()
-        if (!socket) {
-          console.error('❌ WebSocket не подключен')
-          return
+        let socket = getSocket()
+        
+        // Если WebSocket не подключен, пытаемся переподключиться
+        if (!socket || !socket.connected) {
+          console.warn('⚠️ WebSocket не подключен, пытаемся переподключиться...')
+          const { token } = useAuthStore.getState()
+          if (token) {
+            connectWebSocket(token)
+            await new Promise(resolve => setTimeout(resolve, 500))
+            socket = getSocket()
+          }
+          
+          if (!socket || !socket.connected) {
+            console.error('❌ WebSocket не удалось подключить')
+            alert('Ошибка подключения. Попробуйте обновить страницу.')
+            return
+          }
         }
         
+        console.log('✅ WebSocket подключен, отправляем roll_dice')
         // Бросаем кубики через WebSocket
         socket.emit('roll_dice', { gameId })
         
         // Обновляем состояние через небольшую задержку
         setTimeout(() => {
           loadGame()
-        }, 1000)
+        }, 1500)
       } catch (error) {
         console.error('❌ Failed to start game:', error)
-        alert('Ошибка начала игры. Попробуйте обновить страницу.')
+        alert('Ошибка начала игры: ' + (error as Error).message)
       }
       return
     }
