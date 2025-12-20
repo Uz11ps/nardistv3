@@ -203,8 +203,8 @@ export default function BackgammonBoard({
         x = boardPadding + (i - 12) * pointWidth
       }
 
-      // Для нижних точек прижимаем к низу доски
-      const y = isTop ? boardPadding : boardPadding + boardHeight - pointHeight
+      // Позиция точки: для верхних - сверху, для нижних - снизу (прижаты к краю)
+      const y = isTop ? boardPadding : boardPadding + boardHeight
 
       // Цвет точки (чередование)
       const isLight = (Math.floor(i / 6) + i) % 2 === 0
@@ -213,10 +213,12 @@ export default function BackgammonBoard({
       // Рисуем треугольник точки
       ctx.beginPath()
       if (isTop) {
+        // Верхние треугольники - рисуются вниз
         ctx.moveTo(x, y)
         ctx.lineTo(x + pointWidth / 2, y + pointHeight)
         ctx.lineTo(x + pointWidth, y)
       } else {
+        // Нижние треугольники - рисуются вверх (прижаты к низу доски)
         ctx.moveTo(x, y)
         ctx.lineTo(x + pointWidth / 2, y - pointHeight)
         ctx.lineTo(x + pointWidth, y)

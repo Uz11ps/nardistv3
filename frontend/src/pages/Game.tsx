@@ -206,31 +206,47 @@ export default function Game() {
   }
 
   const handleConfirm = async () => {
-    if (!gameId) return
+    console.log('🔘 handleConfirm вызван', { gameId, gameStatus, isMyTurn, hasDice: !!gameState?.dice })
+    
+    if (!gameId) {
+      console.error('❌ Нет gameId')
+      return
+    }
 
     // Если игра в статусе waiting - начинаем игру (бросаем кубики)
     if (gameStatus === 'waiting') {
+      console.log('🎲 Начинаем игру - бросаем кубики')
       try {
-        await handleRollDice()
-        // После броска кубиков игра должна начаться автоматически
+        const socket = getSocket()
+        if (!socket) {
+          console.error('❌ WebSocket не подключен')
+          return
+        }
+        
+        // Бросаем кубики через WebSocket
+        socket.emit('roll_dice', { gameId })
+        
+        // Обновляем состояние через небольшую задержку
         setTimeout(() => {
           loadGame()
-        }, 500)
+        }, 1000)
       } catch (error) {
-        console.error('Failed to start game:', error)
+        console.error('❌ Failed to start game:', error)
+        alert('Ошибка начала игры. Попробуйте обновить страницу.')
       }
       return
     }
 
     // Если игра в процессе и есть кубики - подтверждаем ход
     if (gameStatus === 'in_progress' && gameState?.dice && isMyTurn) {
-      // Если все кубики использованы, передаем ход (делаем пустой ход)
-      // Или просто обновляем состояние игры
+      console.log('✅ Подтверждаем ход')
       try {
         await loadGame()
       } catch (error) {
-        console.error('Failed to confirm move:', error)
+        console.error('❌ Failed to confirm move:', error)
       }
+    } else {
+      console.log('⚠️ Условия не выполнены:', { gameStatus, hasDice: !!gameState?.dice, isMyTurn })
     }
   }
 
