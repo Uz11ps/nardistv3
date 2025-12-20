@@ -1255,7 +1255,8 @@ export default function Admin() {
                   alert('Ошибка: ' + (error.response?.data?.message || error.message))
                 }
               }}>Создать скин</button>
-            </div>
+              </div>
+            )}
           </div>
         )}
 
