@@ -69,12 +69,17 @@ export default function Game() {
       const response = await apiClient.get(`/games/${gameId}`)
       const game = response.data
       setGameInfo(game)
+      const diceData = game.gameState?.dice
+      const formattedDice = Array.isArray(diceData) && diceData.length >= 2
+        ? { die1: diceData[0], die2: diceData[1] }
+        : diceData || null
+      
       setGameState({
         points: game.gameState?.points || [],
         bar: game.gameState?.bar || { white: 0, black: 0 },
         bearOff: game.gameState?.bearOff || { white: 0, black: 0 },
         currentPlayer: game.currentPlayer || 0,
-        dice: game.gameState?.dice || null,
+        dice: formattedDice,
         canMove: game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1,
       })
       setOpponent(game.player1Id === user?.id ? game.player2 : game.player1)
