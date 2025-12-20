@@ -115,6 +115,12 @@ export default function BackgammonBoard({
           })
           
           console.log('📋 Уникальные ходы:', uniqueMoves)
+          // Логируем ходы с номерами точек для отладки
+          uniqueMoves.forEach(move => {
+            const fromPoint = move.from === -1 ? 'бар' : POINT_NUMBERS[move.from]
+            const toPoint = move.to === -1 ? 'вынос' : (move.to >= 0 && move.to < 24 ? POINT_NUMBERS[move.to] : `индекс ${move.to}`)
+            console.log(`  📍 Ход: с точки ${fromPoint} (индекс ${move.from}) на точку ${toPoint} (индекс ${move.to}) кубиком ${move.die}`)
+          })
           setPossibleMoves(uniqueMoves)
         })
         .catch((error) => {

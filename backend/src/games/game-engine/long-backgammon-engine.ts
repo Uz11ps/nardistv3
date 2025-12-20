@@ -369,7 +369,9 @@ export class LongBackgammonEngine {
             }
           }
 
-          if (this.validateMove(currentState, from, to, die)) {
+          // Логируем попытку хода для отладки
+          const isValid = this.validateMove(currentState, from, to, die);
+          if (isValid) {
             foundAnyMove = true;
             const newState = this.applyMove(currentState, from, to, die);
             const newDice = [...remainingDice];
