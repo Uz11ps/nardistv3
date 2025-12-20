@@ -106,7 +106,7 @@ export class LongBackgammonEngine {
 
   private validateMovePlayer2(state: LongBoardState, from: number, to: number, die: number): boolean {
     // Черные начинают на точке 1 (индекс 23) и двигаются к точке 13 (индекс 11), затем циклически
-    // Движение: от большего индекса к меньшему (23 -> 11), затем циклически
+    // Движение: от большего индекса к меньшему (23 -> 11), затем циклически через точку 1
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
       // Вход с бара: черные входят на точку die (индекс die - 1)
@@ -122,18 +122,34 @@ export class LongBackgammonEngine {
     if (state.points[from] >= 0) return false;
 
     // Черные двигаются циклически: от большего индекса к меньшему, затем циклически
-    // Если from + die >= 24, то это циклический переход через точку 1
-    let calculatedTo = from + die;
-    if (calculatedTo >= this.BOARD_SIZE) {
-      // Вынос возможен только если все фишки в доме (точки 1-6, индексы 0-5)
-      if (this.canBearOff(state, 1)) {
-        // Проверяем что to соответствует выносу
-        return to === -1 || to >= this.BOARD_SIZE;
+    // Сначала от индекса 23 к индексу 11 (от точки 1 к точке 13)
+    // Затем циклически: от индекса 11 к индексу 23 (через точку 1)
+    let calculatedTo: number;
+    
+    if (from >= 12) {
+      // От точки 1 (индекс 23) к точке 13 (индекс 11) - движение от большего к меньшему
+      calculatedTo = from - die;
+      if (calculatedTo < 12) {
+        // Переход через точку 13 (индекс 11) - циклический переход
+        // От индекса 11 переходим к индексу 23 (точка 1), затем продолжаем
+        const overflow = 12 - calculatedTo; // Сколько шагов осталось после точки 13
+        calculatedTo = 23 - (overflow - 1); // Переходим к точке 1 и продолжаем
       }
-      // Циклический переход: (from + die) % 24
-      calculatedTo = calculatedTo % this.BOARD_SIZE;
+    } else {
+      // От точки 13 (индекс 11) к точке 1 (индекс 23) - циклический переход
+      calculatedTo = from - die;
+      if (calculatedTo < 0) {
+        // Переход через точку 1 (индекс 23)
+        const overflow = Math.abs(calculatedTo);
+        calculatedTo = 23 - (overflow - 1);
+      }
     }
-
+    
+    // Если calculatedTo указывает на дом (точки 1-6, индексы 0-5), проверяем вынос
+    if (calculatedTo < 6 && this.canBearOff(state, 1)) {
+      return to === -1 || to >= this.BOARD_SIZE;
+    }
+    
     // Проверяем что переданный to соответствует вычисленному
     if (to !== calculatedTo) {
       return false;
