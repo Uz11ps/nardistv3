@@ -35,10 +35,16 @@ export class GptBotService {
   }
 
   /**
-   * Получает ход от GPT для длинных нард
+   * Evaluates pre-calculated valid moves and selects the best one using GPT
+   * @param gameState Current game state
+   * @param validMoves Array of valid move sequences (each sequence is an array of moves)
+   * @param dice Current dice values
+   * @param mode Game mode ('short' or 'long')
+   * @returns Selected move sequence, or empty array if GPT fails
    */
-  async getMoveFromGPT(
+  async evaluateMoves(
     gameState: any,
+    validMoves: Array<Array<{ from: number; to: number; die: number }>>,
     dice: number[],
     mode: 'short' | 'long',
   ): Promise<Array<{ from: number; to: number; die: number }>> {
@@ -47,16 +53,26 @@ export class GptBotService {
       return [];
     }
 
+    if (!validMoves || validMoves.length === 0) {
+      return [];
+    }
+
+    // If only one option, return it immediately
+    if (validMoves.length === 1) {
+      return validMoves[0];
+    }
+
     try {
       const boardDescription = this.describeBoard(gameState, mode);
-      const prompt = this.buildPrompt(boardDescription, dice, mode);
+      const movesDescription = this.describeMoves(validMoves);
+      const prompt = this.buildEvaluationPrompt(boardDescription, movesDescription, dice, mode);
 
       const response = await this.axiosInstance.post('/chat/completions', {
-        model: 'gpt-4o-mini', // Используем более дешевую модель
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: 'Ты эксперт по нардам. Отвечай только валидными JSON ходами в формате: {"moves": [{"from": число, "to": число, "die": число}]}. Не добавляй объяснений.',
+            content: 'Ты эксперт по нардам. Твоя задача - выбрать лучший ход из предложенных вариантов. Отвечай только номером варианта (начиная с 0) в формате JSON: {"option": число}. Не добавляй объяснений.',
           },
           {
             role: 'user',
@@ -64,18 +80,37 @@ export class GptBotService {
           },
         ],
         temperature: 0.3,
-        max_tokens: 200,
+        max_tokens: 50,
       });
 
       const content = response.data.choices[0]?.message?.content || '';
-      const moves = this.parseGPTResponse(content);
+      const selectedIndex = this.parseGPTSelection(content, validMoves.length);
       
-      this.logger.log(`GPT returned ${moves.length} moves`);
-      return moves;
+      if (selectedIndex >= 0 && selectedIndex < validMoves.length) {
+        this.logger.log(`GPT selected option ${selectedIndex} from ${validMoves.length} options`);
+        return validMoves[selectedIndex];
+      } else {
+        this.logger.warn(`GPT returned invalid index ${selectedIndex}, using first option`);
+        return validMoves[0];
+      }
     } catch (error: any) {
       this.logger.error(`GPT API error: ${error.message}`, error.stack);
-      return []; // Возвращаем пустой массив, чтобы использовать простого бота
+      return []; // Return empty to use fallback bot
     }
+  }
+
+  /**
+   * Legacy method for backward compatibility - now calculates moves first, then evaluates
+   */
+  async getMoveFromGPT(
+    gameState: any,
+    dice: number[],
+    mode: 'short' | 'long',
+  ): Promise<Array<{ from: number; to: number; die: number }>> {
+    // This method is deprecated - should use evaluateMoves with pre-calculated moves
+    // But we keep it for backward compatibility
+    this.logger.warn('getMoveFromGPT is deprecated, use evaluateMoves instead');
+    return [];
   }
 
   private describeBoard(gameState: any, mode: 'short' | 'long'): string {
@@ -84,55 +119,101 @@ export class GptBotService {
     const borneOff = gameState.borneOff || [0, 0];
     const currentPlayer = gameState.currentPlayer || 0;
 
-    let description = `Режим: ${mode === 'long' ? 'длинные' : 'короткие'} нарды. `;
-    description += `Текущий игрок: ${currentPlayer === 0 ? 'белые' : 'черные'}. `;
-    description += `На баре: белые=${bar[0] || bar.white || 0}, черные=${bar[1] || bar.black || 0}. `;
-    description += `Вынесено: белые=${borneOff[0] || borneOff.white || 0}, черные=${borneOff[1] || borneOff.black || 0}. `;
-    description += 'Точки (1-24, где 1-6 дом белых, 19-24 дом черных): ';
+    let description = `Режим: ${mode === 'long' ? 'длинные' : 'короткие'} нарды.\n`;
+    description += `Текущий игрок: ${currentPlayer === 0 ? 'белые' : 'черные'}.\n`;
+    description += `На баре: белые=${bar[0] || bar.white || 0}, черные=${bar[1] || bar.black || 0}.\n`;
+    description += `Вынесено: белые=${borneOff[0] || borneOff.white || 0}, черные=${borneOff[1] || borneOff.black || 0}.\n\n`;
+    description += 'Позиция на доске (точки 1-24):\n';
+
+    // Map indices to point numbers for display
+    const POINT_NUMBERS = [
+      24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, // Top row (indices 0-11)
+      12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, // Bottom row (indices 12-23)
+    ];
 
     for (let i = 0; i < 24; i++) {
       const value = points[i] || 0;
       if (value !== 0) {
         const color = value > 0 ? 'белые' : 'черные';
         const count = Math.abs(value);
-        description += `точка ${i + 1}: ${count} ${color}, `;
+        const pointNum = POINT_NUMBERS[i];
+        description += `Точка ${pointNum} (индекс ${i}): ${count} ${color}\n`;
       }
     }
 
     return description;
   }
 
-  private buildPrompt(boardDescription: string, dice: number[], mode: 'short' | 'long'): string {
-    return `${boardDescription}
-Кубики: ${dice.join(', ')}.
-Выбери лучший ход. Ответь только JSON: {"moves": [{"from": число от -1 до 23, "to": число от -1 до 24, "die": число из кубиков}]}.
-Если фишки на баре (bar > 0), from должен быть -1.
-Если вынос (bear off), to должен быть -1 для белых или 24 для черных.
-Используй все доступные кубики.`;
+  private describeMoves(validMoves: Array<Array<{ from: number; to: number; die: number }>>): string {
+    const POINT_NUMBERS = [
+      24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13,
+      12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+    ];
+
+    let description = 'Доступные варианты ходов:\n\n';
+    
+    validMoves.forEach((moveSeq, index) => {
+      description += `Вариант ${index}:\n`;
+      if (moveSeq.length === 0) {
+        description += '  Пропуск хода\n';
+      } else {
+        moveSeq.forEach((move, moveIndex) => {
+          const fromStr = move.from === -1 ? 'бар' : `точка ${POINT_NUMBERS[move.from]}`;
+          const toStr = move.to === -1 ? 'вынос' : (move.to >= 0 && move.to < 24 ? `точка ${POINT_NUMBERS[move.to]}` : `точка ${move.to}`);
+          description += `  Ход ${moveIndex + 1}: с ${fromStr} на ${toStr} кубиком ${move.die}\n`;
+        });
+      }
+      description += '\n';
+    });
+
+    return description;
   }
 
-  private parseGPTResponse(content: string): Array<{ from: number; to: number; die: number }> {
+  private buildEvaluationPrompt(
+    boardDescription: string,
+    movesDescription: string,
+    dice: number[],
+    mode: 'short' | 'long',
+  ): string {
+    return `${boardDescription}
+
+Кубики: ${dice.join(', ')}.
+
+${movesDescription}
+
+Проанализируй каждый вариант и выбери лучший ход с точки зрения стратегии:
+- Блокирование противника
+- Безопасность своих фишек
+- Прогресс к дому
+- Использование всех кубиков
+
+Ответь только JSON: {"option": число} где число - это номер варианта (начиная с 0).`;
+  }
+
+  private parseGPTSelection(content: string, maxIndex: number): number {
     try {
-      // Пытаемся найти JSON в ответе
+      // Try to find JSON in response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        return [];
+        this.logger.warn('No JSON found in GPT response');
+        return 0; // Default to first option
       }
 
       const parsed = JSON.parse(jsonMatch[0]);
-      if (!parsed.moves || !Array.isArray(parsed.moves)) {
-        return [];
+      const option = parsed.option;
+      
+      if (typeof option === 'number') {
+        const index = Math.floor(option);
+        if (index >= 0 && index < maxIndex) {
+          return index;
+        }
       }
-
-      return parsed.moves.map((move: any) => ({
-        from: parseInt(move.from, 10),
-        to: parseInt(move.to, 10),
-        die: parseInt(move.die, 10),
-      }));
+      
+      this.logger.warn(`Invalid option value: ${option}, maxIndex: ${maxIndex}`);
+      return 0; // Default to first option
     } catch (error) {
-      this.logger.error(`Failed to parse GPT response: ${content}`, error);
-      return [];
+      this.logger.error(`Failed to parse GPT selection: ${content}`, error);
+      return 0; // Default to first option
     }
   }
 }
-

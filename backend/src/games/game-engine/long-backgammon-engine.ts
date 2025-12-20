@@ -7,22 +7,31 @@ export interface LongBoardState {
   borneOff: [number, number];
   currentPlayer: number;
   dice: number[];
+  // Track moves from head in current turn for Head Rule
+  movesFromHead: number;
 }
 
 @Injectable()
 export class LongBackgammonEngine {
   private readonly BOARD_SIZE = 24;
-  // Начальная позиция для длинных нард:
-  // Массив points индексируется от 0 до 23, где:
-  // - Индекс 0 = точка 24 (верхний ряд, справа)
-  // - Индекс 11 = точка 13 (верхний ряд, слева)
-  // - Индекс 12 = точка 12 (нижний ряд, слева)
-  // - Индекс 23 = точка 1 (нижний ряд, справа)
-  // Белые (положительные): 15 фишек на точке 13 (индекс 11)
-  // Черные (отрицательные): 15 фишек на точке 1 (индекс 23)
+  // Coordinate system:
+  // Index 0 = Point 24 (Top Right)
+  // Index 11 = Point 13 (Top Left)
+  // Index 12 = Point 12 (Bottom Left)
+  // Index 23 = Point 1 (Bottom Right)
+  // White (positive): 15 checkers on Point 13 (index 11)
+  // Black (negative): 15 checkers on Point 1 (index 23)
   private readonly INITIAL_BOARD = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -15,
   ];
+  
+  // Head positions (starting points)
+  private readonly WHITE_HEAD = 11; // Point 13
+  private readonly BLACK_HEAD = 23; // Point 1
+  
+  // Home quadrants
+  private readonly WHITE_HOME_START = 18; // Point 19-24 (indices 18-23)
+  private readonly BLACK_HOME_START = 0; // Point 1-6 (indices 0-5)
 
   createInitialState(): LongBoardState {
     return {
@@ -31,6 +40,7 @@ export class LongBackgammonEngine {
       borneOff: [0, 0],
       currentPlayer: 0,
       dice: [],
+      movesFromHead: 0,
     };
   }
 
@@ -56,6 +66,133 @@ export class LongBackgammonEngine {
     };
   }
 
+  /**
+   * Calculate target point for a move
+   * White moves: decreasing indices (11 -> 0, then 23 -> 12)
+   * Black moves: decreasing indices (23 -> 12, then 11 -> 0)
+   */
+  private calculateTargetPoint(player: number, from: number, die: number): number {
+    if (player === 0) {
+      // White: moves from index 11 towards 0, then wraps to 23 and continues to 12
+      let to = from - die;
+      
+      // If we go below 0, we wrap around
+      if (to < 0) {
+        // We've wrapped: continue from index 23
+        to = 23 + to + 1; // to is negative, so this gives us the correct wrap
+      }
+      
+      // If we're in the first half (0-11) and go below 12, we need to wrap
+      if (from >= 12 && to < 12) {
+        // We've crossed from second half to first half
+        const overflow = 12 - to;
+        to = 23 - (overflow - 1);
+      }
+      
+      return to;
+    } else {
+      // Black: moves from index 23 towards 12, then wraps to 11 and continues to 0
+      let to = from - die;
+      
+      // If we go below 0, wrap around
+      if (to < 0) {
+        to = 23 + to + 1;
+      }
+      
+      // If we're in the second half (12-23) and go below 12, wrap
+      if (from >= 12 && to < 12) {
+        const overflow = 12 - to;
+        to = 11 - (overflow - 1);
+        if (to < 0) {
+          to = 23 + to + 1;
+        }
+      }
+      
+      return to;
+    }
+  }
+
+  /**
+   * Check if a point is in the player's home quadrant
+   */
+  private isInHome(player: number, pointIndex: number): boolean {
+    if (player === 0) {
+      return pointIndex >= this.WHITE_HOME_START && pointIndex < this.BOARD_SIZE;
+    } else {
+      return pointIndex >= this.BLACK_HOME_START && pointIndex < 6;
+    }
+  }
+
+  /**
+   * Check Head Rule: Only 1 checker can be moved from head per turn
+   * Exception: Doubles on first move allow multiple checkers
+   */
+  private checkHeadRule(state: LongBoardState, from: number, dice: number[]): boolean {
+    const player = state.currentPlayer;
+    const headIndex = player === 0 ? this.WHITE_HEAD : this.BLACK_HEAD;
+    
+    // If not moving from head, rule doesn't apply
+    if (from !== headIndex) {
+      return true;
+    }
+    
+    // Check if this is the first move of the game (all checkers still on head)
+    const headCheckers = Math.abs(state.points[headIndex] || 0);
+    const isFirstMove = headCheckers === 15;
+    
+    // If first move and doubles, allow multiple checkers
+    if (isFirstMove && dice.length === 2 && dice[0] === dice[1]) {
+      return true; // Doubles allow multiple checkers on first move
+    }
+    
+    // Otherwise, only 1 checker per turn from head
+    return state.movesFromHead === 0;
+  }
+
+  /**
+   * Check Block Rule: Cannot create a block of 6 consecutive points if no opponent checker is ahead
+   */
+  private checkBlockRule(state: LongBoardState, to: number): boolean {
+    const player = state.currentPlayer;
+    const opponentSign = player === 0 ? -1 : 1;
+    
+    // Check if placing a checker here would create a 6-point block
+    // We need to check if there are 6 consecutive points with only our checkers
+    for (let start = 0; start <= this.BOARD_SIZE - 6; start++) {
+      let blockCount = 0;
+      let hasOpponentAhead = false;
+      
+      // Check 6 consecutive points
+      for (let i = 0; i < 6; i++) {
+        const pointIdx = (start + i) % this.BOARD_SIZE;
+        const pointValue = state.points[pointIdx] || 0;
+        
+        // Check if this point would be part of our block
+        const wouldBeOurs = (pointIdx === to && player === 0) || 
+                           (pointIdx === to && player === 1) ||
+                           (player === 0 && pointValue > 0) ||
+                           (player === 1 && pointValue < 0);
+        
+        if (wouldBeOurs) {
+          blockCount++;
+        }
+        
+        // Check if opponent has checkers ahead of this block
+        if (pointValue * opponentSign > 0) {
+          hasOpponentAhead = true;
+        }
+      }
+      
+      // If we have a 6-point block and no opponent ahead, this is illegal
+      if (blockCount === 6 && !hasOpponentAhead && 
+          to >= start && to < (start + 6) % this.BOARD_SIZE) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
   validateMove(state: LongBoardState, from: number, to: number, die: number): boolean {
     if (state.currentPlayer === 0) {
       return this.validateMovePlayer1(state, from, to, die);
@@ -65,110 +202,115 @@ export class LongBackgammonEngine {
   }
 
   private validateMovePlayer1(state: LongBoardState, from: number, to: number, die: number): boolean {
-    // Белые начинают на точке 13 (индекс 11) и двигаются к точке 24 (индекс 0)
-    // Движение: от большего индекса к меньшему (11 -> 0)
+    // Handle bar entry
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      // Вход с бара: белые входят на точку (24 - die), что соответствует индексу (die - 1)
+      // White enters from bar: can enter on point (24 - die), which is index (die - 1)
       const enterPoint = die - 1;
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
-      // В длинных нардах нельзя входить на точку с фишками противника
+      // Cannot enter on opponent's point
       if (state.points[enterPoint] < 0) return false;
-      // Проверяем что to соответствует enterPoint
       return to === enterPoint || to === -1;
     }
 
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] <= 0) return false;
 
-    // Белые двигаются от большего индекса к меньшему: from - die
-    const calculatedTo = from - die;
+    // Calculate target point
+    const calculatedTo = this.calculateTargetPoint(0, from, die);
     
-    // Если вынос (calculatedTo < 0)
-    if (calculatedTo < 0) {
-      // Вынос возможен только если все фишки в доме (точки 19-24, индексы 18-23)
+    // Handle bearing off
+    if (calculatedTo < 0 || (calculatedTo >= this.WHITE_HOME_START && this.canBearOff(state, 0))) {
       if (!this.canBearOff(state, 0)) {
         return false;
       }
-      // Проверяем что to соответствует выносу
+      // Can bear off if all checkers are in home
       return to === -1 || to < 0;
     }
 
-    // Проверяем что переданный to соответствует вычисленному
     if (to !== calculatedTo) {
       return false;
     }
 
-    // Нельзя ходить на точку с фишками противника
+    // Cannot move to opponent's point
     if (state.points[to] < 0) return false;
+    
+    // Check Head Rule
+    if (!this.checkHeadRule(state, from, state.dice)) {
+      return false;
+    }
+    
+    // Check Block Rule
+    if (!this.checkBlockRule(state, to)) {
+      return false;
+    }
+    
     return true;
   }
 
   private validateMovePlayer2(state: LongBoardState, from: number, to: number, die: number): boolean {
-    // Черные начинают на точке 1 (индекс 23) и двигаются к точке 13 (индекс 11), затем циклически
-    // Движение: от большего индекса к меньшему (23 -> 11), затем циклически через точку 1
+    // Handle bar entry
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      // Вход с бара: черные входят на точку die (индекс die - 1)
+      // Black enters from bar: can enter on point die, which is index (die - 1)
       const enterPoint = die - 1;
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
-      // В длинных нардах нельзя входить на точку с фишками противника
+      // Cannot enter on opponent's point
       if (state.points[enterPoint] > 0) return false;
-      // Проверяем что to соответствует enterPoint
       return to === enterPoint || to === -1;
     }
 
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] >= 0) return false;
 
-    // Черные двигаются циклически: от большего индекса к меньшему, затем циклически
-    // Сначала от индекса 23 к индексу 11 (от точки 1 к точке 13)
-    // Затем циклически: от индекса 11 к индексу 23 (через точку 1)
-    let calculatedTo: number;
+    // Calculate target point
+    const calculatedTo = this.calculateTargetPoint(1, from, die);
     
-    if (from >= 12) {
-      // От точки 1 (индекс 23) к точке 13 (индекс 11) - движение от большего к меньшему
-      calculatedTo = from - die;
-      if (calculatedTo < 12) {
-        // Переход через точку 13 (индекс 11) - циклический переход
-        // От индекса 11 переходим к индексу 23 (точка 1), затем продолжаем
-        const overflow = 12 - calculatedTo; // Сколько шагов осталось после точки 13
-        calculatedTo = 23 - (overflow - 1); // Переходим к точке 1 и продолжаем
+    // Handle bearing off
+    if (calculatedTo < 0 || (calculatedTo < 6 && this.canBearOff(state, 1))) {
+      if (!this.canBearOff(state, 1)) {
+        return false;
       }
-    } else {
-      // От точки 13 (индекс 11) к точке 1 (индекс 23) - циклический переход
-      calculatedTo = from - die;
-      if (calculatedTo < 0) {
-        // Переход через точку 1 (индекс 23)
-        const overflow = Math.abs(calculatedTo);
-        calculatedTo = 23 - (overflow - 1);
-      }
-    }
-    
-    // Если calculatedTo указывает на дом (точки 1-6, индексы 0-5), проверяем вынос
-    if (calculatedTo < 6 && this.canBearOff(state, 1)) {
       return to === -1 || to >= this.BOARD_SIZE;
     }
-    
-    // Проверяем что переданный to соответствует вычисленному
+
     if (to !== calculatedTo) {
       return false;
     }
 
-    // Нельзя ходить на точку с фишками противника
+    // Cannot move to opponent's point
     if (state.points[to] > 0) return false;
+    
+    // Check Head Rule
+    if (!this.checkHeadRule(state, from, state.dice)) {
+      return false;
+    }
+    
+    // Check Block Rule
+    if (!this.checkBlockRule(state, to)) {
+      return false;
+    }
+    
     return true;
   }
 
   canBearOff(state: LongBoardState, player: number): boolean {
     if (player === 0) {
-      const homeBoard = state.points.slice(18, 24);
+      // White: all checkers must be in home (indices 18-23) and none on bar
+      const homeBoard = state.points.slice(this.WHITE_HOME_START, this.BOARD_SIZE);
       const allInHome = homeBoard.every((p) => p >= 0);
-      return allInHome && state.bar[0] === 0;
+      const noBarCheckers = state.bar[0] === 0;
+      // Also check that no checkers are outside home
+      const outsideHome = state.points.slice(0, this.WHITE_HOME_START).some((p) => p > 0);
+      return allInHome && noBarCheckers && !outsideHome;
     } else {
+      // Black: all checkers must be in home (indices 0-5) and none on bar
       const homeBoard = state.points.slice(0, 6);
       const allInHome = homeBoard.every((p) => p <= 0);
-      return allInHome && state.bar[1] === 0;
+      const noBarCheckers = state.bar[1] === 0;
+      // Also check that no checkers are outside home
+      const outsideHome = state.points.slice(6).some((p) => p < 0);
+      return allInHome && noBarCheckers && !outsideHome;
     }
   }
 
@@ -185,87 +327,95 @@ export class LongBackgammonEngine {
   }
 
   private applyMovePlayer1(state: LongBoardState, from: number, to: number, die: number): void {
-    // Белые двигаются от точки 1 (индекс 23) к точке 24 (индекс 0)
+    // Handle bar entry
     if (state.bar[0] > 0 && from === -1) {
       state.bar[0]--;
-      // Вход с бара: белые входят на точку (24 - die), что соответствует индексу (die - 1)
       const enterPoint = die - 1;
-      // В длинных нардах нельзя входить на точку с фишками противника
-      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE || state.points[enterPoint] < 0) {
-        // Возвращаем фишку на бар если нельзя войти
+      if (enterPoint >= 0 && enterPoint < this.BOARD_SIZE && state.points[enterPoint] >= 0) {
+        state.points[enterPoint]++;
+      } else {
+        // Invalid entry, return checker to bar
         state.bar[0]++;
-        return;
       }
-      state.points[enterPoint]++;
       return;
     }
 
+    // Handle bearing off
     if (to < 0 || to >= this.BOARD_SIZE) {
-      // Вынос для белых
-      if (state.points[from] > 0) {
+      if (state.points[from] > 0 && this.canBearOff(state, 0)) {
         state.points[from]--;
         state.borneOff[0]++;
       }
       return;
     }
 
-    // Обычный ход - в длинных нардах нельзя сбивать фишки противника
+    // Regular move
     if (state.points[from] > 0) {
       state.points[from]--;
-    }
-    
-    // В длинных нардах можно ставить фишку только на пустую точку или на свою
-    if (state.points[to] < 0) {
-      // Нельзя ставить на точку противника
-      if (state.points[from] >= 0) {
-        state.points[from]++; // Возвращаем фишку
+      
+      // Track moves from head for Head Rule
+      if (from === this.WHITE_HEAD) {
+        state.movesFromHead = (state.movesFromHead || 0) + 1;
       }
-      return;
+      
+      // Cannot place on opponent's point (already validated, but double-check)
+      if (state.points[to] < 0) {
+        // Return checker
+        state.points[from]++;
+        if (from === this.WHITE_HEAD) {
+          state.movesFromHead = Math.max(0, (state.movesFromHead || 0) - 1);
+        }
+        return;
+      }
+      
+      state.points[to]++;
     }
-    
-    state.points[to]++;
   }
 
   private applyMovePlayer2(state: LongBoardState, from: number, to: number, die: number): void {
-    // Черные двигаются циклически: от точки 13 (индекс 11) к точке 1 (индекс 23), затем к точке 12 (индекс 12)
+    // Handle bar entry
     if (state.bar[1] > 0 && from === -1) {
       state.bar[1]--;
-      // Вход с бара: черные входят на точку die (индекс die - 1)
       const enterPoint = die - 1;
-      // В длинных нардах нельзя входить на точку с фишками противника
-      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE || state.points[enterPoint] > 0) {
-        // Возвращаем фишку на бар если нельзя войти
-        state.bar[1]++;
-        return;
+      if (enterPoint >= 0 && enterPoint < this.BOARD_SIZE && state.points[enterPoint] <= 0) {
+        state.points[enterPoint]--;
+      } else {
+        // Invalid entry, return checker to bar
+        state.bar[1]--;
       }
-      state.points[enterPoint]--;
       return;
     }
 
-    if (to >= this.BOARD_SIZE || to === -1) {
-      // Вынос для черных
-      if (state.points[from] < 0) {
+    // Handle bearing off
+    if (to < 0 || to >= this.BOARD_SIZE) {
+      if (state.points[from] < 0 && this.canBearOff(state, 1)) {
         state.points[from]++;
         state.borneOff[1]++;
       }
       return;
     }
 
-    // Обычный ход - в длинных нардах нельзя сбивать фишки противника
+    // Regular move
     if (state.points[from] < 0) {
       state.points[from]++;
-    }
-    
-    // В длинных нардах можно ставить фишку только на пустую точку или на свою
-    if (state.points[to] > 0) {
-      // Нельзя ставить на точку противника
-      if (state.points[from] <= 0) {
-        state.points[from]--; // Возвращаем фишку
+      
+      // Track moves from head for Head Rule
+      if (from === this.BLACK_HEAD) {
+        state.movesFromHead = (state.movesFromHead || 0) + 1;
       }
-      return;
+      
+      // Cannot place on opponent's point (already validated, but double-check)
+      if (state.points[to] > 0) {
+        // Return checker
+        state.points[from]--;
+        if (from === this.BLACK_HEAD) {
+          state.movesFromHead = Math.max(0, (state.movesFromHead || 0) - 1);
+        }
+        return;
+      }
+      
+      state.points[to]--;
     }
-    
-    state.points[to]--;
   }
 
   isGameFinished(state: LongBoardState): boolean {
@@ -279,14 +429,16 @@ export class LongBackgammonEngine {
   }
 
   /**
-   * Получить все возможные комбинации ходов для текущего игрока
+   * Get all valid move combinations for current player
    */
   getAllValidMoves(state: LongBoardState, dice: number[]): Array<Array<{ from: number; to: number; die: number }>> {
     if (dice.length === 0) return [];
 
     const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
+    
+    // Reset movesFromHead for new turn
+    const stateWithReset = { ...state, movesFromHead: 0 };
 
-    // Генерируем все возможные комбинации ходов
     const generateMoves = (
       currentState: LongBoardState,
       remainingDice: number[],
@@ -302,11 +454,11 @@ export class LongBackgammonEngine {
       const player = currentState.currentPlayer;
       const hasBarCheckers = player === 0 ? currentState.bar[0] > 0 : currentState.bar[1] > 0;
 
-      // Если есть фишки на баре, сначала нужно их ввести
+      // If checkers on bar, must enter them first
       if (hasBarCheckers) {
         for (let i = 0; i < remainingDice.length; i++) {
           const die = remainingDice[i];
-          const enterPoint = player === 0 ? die - 1 : die - 1;
+          const enterPoint = die - 1;
           
           if (this.validateMove(currentState, -1, enterPoint, die)) {
             const newState = this.applyMove(currentState, -1, enterPoint, die);
@@ -318,7 +470,7 @@ export class LongBackgammonEngine {
         return;
       }
 
-      // Ищем все возможные ходы с доски
+      // Find all possible moves from board
       let foundAnyMove = false;
       for (let from = 0; from < this.BOARD_SIZE; from++) {
         const pointValue = currentState.points[from];
@@ -329,56 +481,25 @@ export class LongBackgammonEngine {
         for (let i = 0; i < remainingDice.length; i++) {
           const die = remainingDice[i];
           
-          // Вычисляем целевую точку
+          // Calculate target point
           let to: number;
-          if (player === 0) {
-            // Белые двигаются от большего индекса к меньшему
-            // Точка 13 (индекс 11) -> точка 24 (индекс 0)
-            to = from - die;
-            if (to < 0) {
-              // Вынос возможен только если все фишки в доме
-              if (this.canBearOff(currentState, 0)) {
-                to = -1; // Вынос
-              } else {
-                // Ход невозможен - пропускаем этот кубик
-                continue;
-              }
+          const calculatedTo = this.calculateTargetPoint(player, from, die);
+          
+          // Check if bearing off
+          if (calculatedTo < 0 || 
+              (player === 0 && calculatedTo >= this.WHITE_HOME_START && this.canBearOff(currentState, 0)) ||
+              (player === 1 && calculatedTo < 6 && this.canBearOff(currentState, 1))) {
+            if (this.canBearOff(currentState, player)) {
+              to = -1; // Bear off
+            } else {
+              continue; // Cannot bear off yet
             }
           } else {
-            // Черные двигаются циклически: от большего индекса к меньшему, затем циклически
-            // Черные начинают на точке 1 (индекс 23) и двигаются к точке 13 (индекс 11)
-            // Затем циклически: от индекса 11 к индексу 23 (через точку 1)
-            let calculatedTo: number;
-            
-            if (from >= 12) {
-              // От точки 1 (индекс 23) к точке 13 (индекс 11) - движение от большего к меньшему
-              calculatedTo = from - die;
-              if (calculatedTo < 12) {
-                // Переход через точку 13 (индекс 11) - циклический переход
-                const overflow = 12 - calculatedTo;
-                calculatedTo = 23 - (overflow - 1);
-              }
-            } else {
-              // От точки 13 (индекс 11) к точке 1 (индекс 23) - циклический переход
-              calculatedTo = from - die;
-              if (calculatedTo < 0) {
-                // Переход через точку 1 (индекс 23)
-                const overflow = Math.abs(calculatedTo);
-                calculatedTo = 23 - (overflow - 1);
-              }
-            }
-            
-            // Если calculatedTo указывает на дом (точки 1-6, индексы 0-5), проверяем вынос
-            if (calculatedTo < 6 && this.canBearOff(currentState, 1)) {
-              to = -1; // Вынос
-            } else {
-              to = calculatedTo;
-            }
+            to = calculatedTo;
           }
 
-          // Логируем попытку хода для отладки
-          const isValid = this.validateMove(currentState, from, to, die);
-          if (isValid) {
+          // Validate move
+          if (this.validateMove(currentState, from, to, die)) {
             foundAnyMove = true;
             const newState = this.applyMove(currentState, from, to, die);
             const newDice = [...remainingDice];
@@ -388,22 +509,21 @@ export class LongBackgammonEngine {
         }
       }
 
-      // Если не найдено ни одного хода, сохраняем текущую последовательность
+      // If no moves found but we have partial moves, save them
       if (!foundAnyMove && currentMoves.length > 0) {
         moves.push([...currentMoves]);
       }
     };
 
-    generateMoves(state, dice, []);
+    generateMoves(stateWithReset, dice, []);
     
-    // Если нет ходов, возвращаем пустой массив с одним пустым массивом (пропуск хода)
+    // If no moves, return empty array (pass turn)
     if (moves.length === 0) {
       return [[]];
     }
 
-    // Возвращаем максимальные последовательности ходов
+    // Return maximum length move sequences
     const maxLength = Math.max(...moves.map((m) => m.length));
     return moves.filter((m) => m.length === maxLength);
   }
 }
-

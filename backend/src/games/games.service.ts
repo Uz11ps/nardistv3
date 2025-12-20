@@ -9,6 +9,7 @@ import { ProgressService } from '../progress/progress.service';
 import { RatingsService } from '../ratings/ratings.service';
 import { UsersService } from '../users/users.service';
 import { BotService } from '../bot/bot.service';
+import { GamesGateway } from './games.gateway';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -30,6 +31,8 @@ export class GamesService {
     private usersService: UsersService,
     @Inject(forwardRef(() => BotService))
     private botService: BotService,
+    @Inject(forwardRef(() => GamesGateway))
+    private gamesGateway: GamesGateway,
   ) {}
 
   async create(
@@ -131,7 +134,9 @@ export class GamesService {
     }
 
     const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
-    if (currentPlayerId !== playerId) {
+    // For bot games, player2Id is null, so we skip the check if it's a bot turn
+    const isBotTurn = game.type === GameType.VS_BOT && game.player2Id === null && game.currentPlayer === 1;
+    if (!isBotTurn && currentPlayerId !== playerId) {
       throw new BadRequestException('Не ваш ход');
     }
 
@@ -158,7 +163,9 @@ export class GamesService {
     }
 
     const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
-    if (currentPlayerId !== playerId) {
+    // For bot games, player2Id is null, so we skip the check if it's a bot turn
+    const isBotTurn = game.type === GameType.VS_BOT && game.player2Id === null && game.currentPlayer === 1;
+    if (!isBotTurn && currentPlayerId !== playerId) {
       throw new BadRequestException('Не ваш ход');
     }
 
@@ -264,6 +271,8 @@ export class GamesService {
 
     currentState.dice = [];
     currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
+    // Reset movesFromHead for the new player's turn
+    currentState.movesFromHead = 0;
     game.gameState = currentState;
     game.currentPlayer = currentState.currentPlayer;
     game.lastMoveAt = new Date();
@@ -300,8 +309,18 @@ export class GamesService {
             const botGame = await this.findOne(savedGame.id);
             if (botGame.status === GameStatus.FINISHED) return;
             
-            // Бросаем кубики для бота (используем player1Id так как player2Id === null)
+            // Бросаем кубики для бота (используем player1Id для bypass, but isBotTurn check will allow it)
             const botDice = await this.rollDice(savedGame.id, botGame.player1Id);
+            
+            // Emit dice rolled event for bot
+            const gameStateAfterDice = await this.getGameState(savedGame.id);
+            if (this.gamesGateway?.server) {
+              this.gamesGateway.server.to(`game:${savedGame.id}`).emit('dice_rolled', { 
+                dice: botDice, 
+                playerId: null // Bot has no player ID
+              });
+              this.gamesGateway.server.to(`game:${savedGame.id}`).emit('game_state', gameStateAfterDice);
+            }
             
             // Ждем немного и делаем ход бота
             setTimeout(async () => {
@@ -311,7 +330,25 @@ export class GamesService {
                 
                 const botMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
                 if (botMoves.length > 0) {
+                  // Use player1Id for bot moves (isBotTurn check will allow it)
                   await this.makeMove(savedGame.id, botGame.player1Id, botMoves);
+                  
+                  // Emit move_made event for bot
+                  const gameStateAfterMove = await this.getGameState(savedGame.id);
+                  if (this.gamesGateway?.server) {
+                    this.gamesGateway.server.to(`game:${savedGame.id}`).emit('move_made', gameStateAfterMove);
+                    
+                    // Check if game finished
+                    const finalGame = await this.findOne(savedGame.id);
+                    if (finalGame.status === GameStatus.FINISHED) {
+                      this.gamesGateway.server.to(`game:${savedGame.id}`).emit('game_finished', {
+                        winnerId: finalGame.winnerId,
+                        player1Score: finalGame.player1Score,
+                        player2Score: finalGame.player2Score,
+                        gameState: gameStateAfterMove,
+                      });
+                    }
+                  }
                 }
               } catch (error) {
                 this.logger.error(`Bot move error: ${error.message}`, error.stack);
