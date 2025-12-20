@@ -8,7 +8,6 @@ import { AdminLoginDto } from './dto/admin-login.dto';
 import { CreateSkinDto } from './dto/create-skin.dto';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { extname } from 'path';
 
 @Controller('admin')
 export class AdminController {

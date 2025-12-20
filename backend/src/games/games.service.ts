@@ -183,7 +183,11 @@ export class GamesService {
     }
 
     // Проверяем обязательность использования всех кубиков, если это возможно
-    const allValidMoves = engine.getAllValidMoves(game.gameState, dice);
+    // getAllValidMoves доступен только для BackgammonEngine
+    let allValidMoves: Array<Array<{ from: number; to: number; die: number }>> = [];
+    if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
+      allValidMoves = engine.getAllValidMoves(game.gameState, dice);
+    }
     if (allValidMoves.length > 0) {
       // Проверяем, есть ли ходы, которые используют все кубики
       const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
@@ -269,7 +273,14 @@ export class GamesService {
     }
 
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
-    return engine.getAllValidMoves(game.gameState, game.gameState.dice);
+    
+    // getAllValidMoves доступен только для BackgammonEngine
+    if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
+      return engine.getAllValidMoves(game.gameState, game.gameState.dice);
+    }
+    
+    // Для LongBackgammonEngine возвращаем пустой массив (можно будет реализовать позже)
+    return [];
   }
 
   /**
