@@ -243,5 +243,104 @@ export class LongBackgammonEngine {
     if (state.borneOff[1] === 15) return 1;
     return null;
   }
+
+  /**
+   * Получить все возможные комбинации ходов для текущего игрока
+   */
+  getAllValidMoves(state: LongBoardState, dice: number[]): Array<Array<{ from: number; to: number; die: number }>> {
+    if (dice.length === 0) return [];
+
+    const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
+
+    // Генерируем все возможные комбинации ходов
+    const generateMoves = (
+      currentState: LongBoardState,
+      remainingDice: number[],
+      currentMoves: Array<{ from: number; to: number; die: number }>,
+    ): void => {
+      if (remainingDice.length === 0) {
+        if (currentMoves.length > 0) {
+          moves.push([...currentMoves]);
+        }
+        return;
+      }
+
+      const player = currentState.currentPlayer;
+      const hasBarCheckers = player === 0 ? currentState.bar[0] > 0 : currentState.bar[1] > 0;
+
+      // Если есть фишки на баре, сначала нужно их ввести
+      if (hasBarCheckers) {
+        for (let i = 0; i < remainingDice.length; i++) {
+          const die = remainingDice[i];
+          const enterPoint = player === 0 ? die - 1 : die - 1;
+          
+          if (this.validateMove(currentState, -1, enterPoint, die)) {
+            const newState = this.applyMove(currentState, -1, enterPoint, die);
+            const newDice = [...remainingDice];
+            newDice.splice(i, 1);
+            generateMoves(newState, newDice, [...currentMoves, { from: -1, to: enterPoint, die }]);
+          }
+        }
+        return;
+      }
+
+      // Ищем все возможные ходы с доски
+      let foundAnyMove = false;
+      for (let from = 0; from < this.BOARD_SIZE; from++) {
+        const pointValue = currentState.points[from];
+        const hasMyCheckers = player === 0 ? pointValue > 0 : pointValue < 0;
+        
+        if (!hasMyCheckers) continue;
+
+        for (let i = 0; i < remainingDice.length; i++) {
+          const die = remainingDice[i];
+          
+          // Вычисляем целевую точку
+          let to: number;
+          if (player === 0) {
+            // Белые двигаются от большего индекса к меньшему
+            to = from - die;
+            if (to < 0 && this.canBearOff(currentState, 0)) {
+              to = -1; // Вынос
+            }
+          } else {
+            // Черные двигаются циклически
+            to = from + die;
+            if (to >= this.BOARD_SIZE) {
+              if (this.canBearOff(currentState, 1)) {
+                to = -1; // Вынос
+              } else {
+                to = to % this.BOARD_SIZE; // Циклический переход
+              }
+            }
+          }
+
+          if (this.validateMove(currentState, from, to, die)) {
+            foundAnyMove = true;
+            const newState = this.applyMove(currentState, from, to, die);
+            const newDice = [...remainingDice];
+            newDice.splice(i, 1);
+            generateMoves(newState, newDice, [...currentMoves, { from, to, die }]);
+          }
+        }
+      }
+
+      // Если не найдено ни одного хода, сохраняем текущую последовательность
+      if (!foundAnyMove && currentMoves.length > 0) {
+        moves.push([...currentMoves]);
+      }
+    };
+
+    generateMoves(state, dice, []);
+    
+    // Если нет ходов, возвращаем пустой массив с одним пустым массивом (пропуск хода)
+    if (moves.length === 0) {
+      return [[]];
+    }
+
+    // Возвращаем максимальные последовательности ходов
+    const maxLength = Math.max(...moves.map((m) => m.length));
+    return moves.filter((m) => m.length === maxLength);
+  }
 }
 
