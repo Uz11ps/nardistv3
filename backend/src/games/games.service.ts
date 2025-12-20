@@ -276,18 +276,22 @@ export class GamesService {
     
     this.logger.log(`Saving move: gameId=${finalGameId}, playerId=${playerId}, moveNumber=${moveNumber}, moves count=${moves.length}`);
     
-    // Используем insert() вместо save() чтобы избежать проблем с relations
-    // insert() не пытается обновлять relations, только вставляет данные напрямую
+    // Используем QueryBuilder для прямого INSERT чтобы избежать проблем с relations
     try {
-      const insertResult = await this.movesRepository.insert({
-        gameId: finalGameId,
-        playerId: playerId,
-        moveNumber: moveNumber,
-        dice: dice,
-        moves: moves,
-        gameStateBefore: game.gameState,
-        gameStateAfter: currentState,
-      });
+      const insertResult = await this.movesRepository
+        .createQueryBuilder()
+        .insert()
+        .into(GameMove)
+        .values({
+          gameId: finalGameId,
+          playerId: playerId,
+          moveNumber: moveNumber,
+          dice: dice,
+          moves: moves as any, // TypeORM требует any для JSONB полей
+          gameStateBefore: game.gameState as any,
+          gameStateAfter: currentState as any,
+        })
+        .execute();
       
       const moveId = insertResult.identifiers[0].id;
       this.logger.log(`Move saved successfully: moveId=${moveId}, gameId=${finalGameId}`);
