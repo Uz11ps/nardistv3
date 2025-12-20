@@ -65,64 +65,82 @@ export class LongBackgammonEngine {
   }
 
   private validateMovePlayer1(state: LongBoardState, from: number, to: number, die: number): boolean {
-    // Белые начинают на точке 1 (индекс 23) и двигаются к точке 24 (индекс 0)
-    // Движение: от большего индекса к меньшему (23 -> 0)
+    // Белые начинают на точке 13 (индекс 11) и двигаются к точке 24 (индекс 0)
+    // Движение: от большего индекса к меньшему (11 -> 0)
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
       // Вход с бара: белые входят на точку (24 - die), что соответствует индексу (die - 1)
       const enterPoint = die - 1;
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
+      // В длинных нардах нельзя входить на точку с фишками противника
       if (state.points[enterPoint] < 0) return false;
-      return true;
+      // Проверяем что to соответствует enterPoint
+      return to === enterPoint || to === -1;
     }
 
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] <= 0) return false;
 
     // Белые двигаются от большего индекса к меньшему: from - die
-    const toPoint = from - die;
-    if (toPoint < 0) {
+    const calculatedTo = from - die;
+    
+    // Если вынос (calculatedTo < 0)
+    if (calculatedTo < 0) {
       // Вынос возможен только если все фишки в доме (точки 19-24, индексы 18-23)
-      if (this.canBearOff(state, 0)) {
-        return true;
+      if (!this.canBearOff(state, 0)) {
+        return false;
       }
+      // Проверяем что to соответствует выносу
+      return to === -1 || to < 0;
+    }
+
+    // Проверяем что переданный to соответствует вычисленному
+    if (to !== calculatedTo) {
       return false;
     }
 
     // Нельзя ходить на точку с фишками противника
-    if (state.points[toPoint] < 0) return false;
+    if (state.points[to] < 0) return false;
     return true;
   }
 
   private validateMovePlayer2(state: LongBoardState, from: number, to: number, die: number): boolean {
-    // Черные начинают на точке 13 (индекс 11) и двигаются к точке 1 (индекс 23), затем к точке 12 (индекс 12)
-    // Движение: от меньшего индекса к большему (11 -> 23), затем циклически к меньшему (23 -> 12)
+    // Черные начинают на точке 1 (индекс 23) и двигаются к точке 13 (индекс 11), затем циклически
+    // Движение: от большего индекса к меньшему (23 -> 11), затем циклически
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
       // Вход с бара: черные входят на точку die (индекс die - 1)
       const enterPoint = die - 1;
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
+      // В длинных нардах нельзя входить на точку с фишками противника
       if (state.points[enterPoint] > 0) return false;
-      return true;
+      // Проверяем что to соответствует enterPoint
+      return to === enterPoint || to === -1;
     }
 
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] >= 0) return false;
 
-    // Черные двигаются циклически: от меньшего к большему, затем циклически
+    // Черные двигаются циклически: от большего индекса к меньшему, затем циклически
     // Если from + die >= 24, то это циклический переход через точку 1
-    let toPoint = from + die;
-    if (toPoint >= this.BOARD_SIZE) {
+    let calculatedTo = from + die;
+    if (calculatedTo >= this.BOARD_SIZE) {
       // Вынос возможен только если все фишки в доме (точки 1-6, индексы 0-5)
       if (this.canBearOff(state, 1)) {
-        return true;
+        // Проверяем что to соответствует выносу
+        return to === -1 || to >= this.BOARD_SIZE;
       }
       // Циклический переход: (from + die) % 24
-      toPoint = toPoint % this.BOARD_SIZE;
+      calculatedTo = calculatedTo % this.BOARD_SIZE;
+    }
+
+    // Проверяем что переданный to соответствует вычисленному
+    if (to !== calculatedTo) {
+      return false;
     }
 
     // Нельзя ходить на точку с фишками противника
-    if (state.points[toPoint] > 0) return false;
+    if (state.points[to] > 0) return false;
     return true;
   }
 
