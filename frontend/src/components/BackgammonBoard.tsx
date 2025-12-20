@@ -15,11 +15,12 @@ interface Dice {
 interface BackgammonBoardProps {
   gameState: any
   currentPlayer: number
-  dice: Dice | null
+  dice: Dice | number[] | null
   onMove: (from: number, to: number, die: number) => void
   onRollDice: () => void
   canMove: boolean
   isMyTurn: boolean
+  gameId?: string
 }
 
 // Нумерация точек в нардах (от 1 до 24, где 1 - верхний правый угол для белых)
@@ -36,17 +37,81 @@ export default function BackgammonBoard({
   onRollDice,
   canMove,
   isMyTurn,
+  gameId,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
   const [hoverPoint, setHoverPoint] = useState<number | null>(null)
   const [animating, setAnimating] = useState(false)
   const [diceRolling, setDiceRolling] = useState(false)
+  const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
+  const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const animationFrameRef = useRef<number>()
 
   const points: Point[] = gameState?.points || []
   const bar = gameState?.bar || { white: 0, black: 0 }
   const bearOff = gameState?.bearOff || { white: 0, black: 0 }
+
+  // Нормализуем формат кубиков
+  const diceArray: number[] = dice
+    ? Array.isArray(dice)
+      ? dice
+      : [dice.die1, dice.die2]
+    : []
+
+  // Загружаем возможные ходы когда доступны кубики
+  useEffect(() => {
+    if (gameId && diceArray.length > 0 && isMyTurn && canMove) {
+      apiClient
+        .get(`/games/${gameId}/possible-moves`)
+        .then((response) => {
+          const allMoves = response.data || []
+          // Извлекаем все возможные ходы из всех комбинаций
+          const movesSet = new Set<string>()
+          allMoves.forEach((moveSeq: any[]) => {
+            moveSeq.forEach((move: any) => {
+              movesSet.add(`${move.from}-${move.to}-${move.die}`)
+            })
+          })
+          
+          const uniqueMoves = Array.from(movesSet).map((key) => {
+            const [from, to, die] = key.split('-').map(Number)
+            return { from, to, die }
+          })
+          
+          setPossibleMoves(uniqueMoves)
+        })
+        .catch(() => {
+          setPossibleMoves([])
+        })
+    } else {
+      setPossibleMoves([])
+      setHighlightedPoints(new Set())
+      setSelectedPoint(null)
+    }
+  }, [gameId, diceArray.join(','), isMyTurn, canMove, gameState?.currentPlayer])
+
+  // При выборе точки подсвечиваем возможные ходы
+  useEffect(() => {
+    if (selectedPoint !== null && possibleMoves.length > 0) {
+      const highlights = new Set<number>()
+      possibleMoves
+        .filter((move) => {
+          if (selectedPoint === -1) {
+            return move.from === -1
+          }
+          return move.from === selectedPoint
+        })
+        .forEach((move) => {
+          if (move.to >= 0 && move.to < 24) {
+            highlights.add(move.to)
+          }
+        })
+      setHighlightedPoints(highlights)
+    } else {
+      setHighlightedPoints(new Set())
+    }
+  }, [selectedPoint, possibleMoves])
 
   const drawBoard = useCallback(() => {
     const canvas = canvasRef.current
@@ -337,9 +402,11 @@ export default function BackgammonBoard({
         const roll2 = Math.floor(Math.random() * 6) + 1
         drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true)
         drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true)
-      } else if (dice) {
-        drawDice(ctx, diceAreaX, diceAreaY, dice.die1, diceSize, false)
-        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, dice.die2, diceSize, false)
+      } else if (diceArray.length > 0) {
+        // Отрисовка кубиков из массива
+        diceArray.forEach((die, index) => {
+          drawDice(ctx, diceAreaX + index * diceSpacing, diceAreaY, die, diceSize, false)
+        })
       }
     }
   }, [points, bar, bearOff, selectedPoint, hoverPoint, dice, diceRolling, isMyTurn, canMove])
@@ -495,7 +562,7 @@ export default function BackgammonBoard({
   }
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isMyTurn || !canMove) return
+    if (!isMyTurn || !canMove || diceArray.length === 0) return
 
     const canvas = canvasRef.current
     if (!canvas) return
@@ -505,24 +572,56 @@ export default function BackgammonBoard({
     const y = e.clientY - rect.top
 
     const clickedPoint = getPointFromCoords(x, y)
-    if (clickedPoint === null) return
+    if (clickedPoint === null) {
+      setSelectedPoint(null)
+      return
+    }
 
     if (selectedPoint === null) {
-      // Выбираем точку
-      const point = points[clickedPoint]
-      if (point && point.checkers && point.checkers.length > 0) {
-        const isMyChecker = currentPlayer === 0 ? point.color === 'white' : point.color === 'black'
-        if (isMyChecker) {
-          setSelectedPoint(clickedPoint)
+      // Выбираем точку или бар
+      const hasBarCheckers = (currentPlayer === 0 && bar.white > 0) || (currentPlayer === 1 && bar.black > 0)
+      
+      // Проверяем клик по бару (обрабатывается отдельно, но для простоты считаем что бар = -1)
+      // Сначала пробуем выбрать точку с шашкой
+      if (clickedPoint >= 0 && clickedPoint < 24) {
+        const point = points[clickedPoint]
+        if (point !== undefined) {
+          const checkerCount = currentPlayer === 0 ? (point > 0 ? point : 0) : (point < 0 ? Math.abs(point) : 0)
+          const isMyChecker = currentPlayer === 0 ? point > 0 : point < 0
+          if (isMyChecker && checkerCount > 0) {
+            // Проверяем, есть ли возможные ходы с этой точки
+            const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
+            if (hasPossibleMoves) {
+              setSelectedPoint(clickedPoint)
+              return
+            }
+          }
+        }
+      }
+      
+      // Если есть шашки на баре и есть возможные ходы с бара, можно выбрать бар
+      if (hasBarCheckers) {
+        const hasPossibleMovesFromBar = possibleMoves.some(move => move.from === -1)
+        if (hasPossibleMovesFromBar) {
+          setSelectedPoint(-1)
+          return
         }
       }
     } else {
       // Делаем ход
-      if (dice && selectedPoint !== clickedPoint) {
-        const die = dice.die1 || dice.die2
-        onMove(selectedPoint, clickedPoint, die)
-        setSelectedPoint(null)
+      if (selectedPoint !== clickedPoint && highlightedPoints.has(clickedPoint)) {
+        // Находим подходящий кубик для хода
+        const validMove = possibleMoves.find(
+          move => move.from === selectedPoint && move.to === clickedPoint
+        )
+        
+        if (validMove) {
+          onMove(selectedPoint, clickedPoint, validMove.die)
+          setSelectedPoint(null)
+          setHighlightedPoints(new Set())
+        }
       } else {
+        // Отмена выбора или выбор другой точки
         setSelectedPoint(null)
       }
     }

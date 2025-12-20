@@ -18,5 +18,11 @@ export class GamesController {
   async createBotGame(@CurrentUser() user: any) {
     return this.gamesService.createBotGame(user.id);
   }
+
+  @Get(':id/possible-moves')
+  @UseGuards(JwtAuthGuard)
+  async getPossibleMoves(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.gamesService.getPossibleMoves(id, user.id);
+  }
 }
 

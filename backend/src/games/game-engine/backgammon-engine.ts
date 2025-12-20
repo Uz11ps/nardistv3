@@ -198,31 +198,74 @@ export class BackgammonEngine {
     return null;
   }
 
-  getAllValidMoves(state: BoardState, dice: number[]): any[] {
-    const moves: any[] = [];
-    const usedDice: boolean[] = new Array(dice.length).fill(false);
+  /**
+   * Получить все возможные комбинации ходов для данной позиции и кубиков
+   * Учитывает обязательность использования всех кубиков, если это возможно
+   */
+  getAllValidMoves(state: BoardState, dice: number[]): Array<Array<{ from: number; to: number; die: number }>> {
+    if (dice.length === 0) {
+      return [];
+    }
 
-    const findMoves = (currentState: BoardState, remainingDice: number[], path: any[]): void => {
+    const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
+
+    const findMoves = (
+      currentState: BoardState,
+      remainingDice: number[],
+      path: Array<{ from: number; to: number; die: number }>,
+    ): void => {
+      // Если нет оставшихся кубиков, это валидный набор ходов
       if (remainingDice.length === 0) {
         moves.push([...path]);
         return;
       }
 
+      // Пробуем использовать каждый доступный кубик
+      const triedDice = new Set<number>();
+      
       for (let i = 0; i < remainingDice.length; i++) {
         const die = remainingDice[i];
+        
+        // Пропускаем дубликаты в рамках одной итерации (но используем каждый кубик отдельно)
+        if (triedDice.has(die)) {
+          continue;
+        }
+        triedDice.add(die);
+        
         const possibleMoves = this.getPossibleMovesForDie(currentState, die);
-
-        for (const move of possibleMoves) {
-          const newState = this.applyMove(currentState, move.from, move.to, die);
-          const newDice = remainingDice.filter((_, idx) => idx !== i);
-          findMoves(newState, newDice, [...path, move]);
+        
+        if (possibleMoves.length > 0) {
+          // Удаляем этот кубик из оставшихся
+          const newRemainingDice = remainingDice.filter((_, idx) => idx !== i);
+          
+          // Пробуем каждый возможный ход с этим кубиком
+          for (const move of possibleMoves) {
+            const newState = this.applyMove(currentState, move.from, move.to, die);
+            findMoves(newState, newRemainingDice, [...path, { ...move, die }]);
+          }
         }
       }
     };
 
     findMoves(state, dice, []);
-    return moves.length > 0 ? moves : [];
+
+    // Если есть ходы, которые используют все кубики - возвращаем только их
+    // Иначе возвращаем все возможные (когда невозможно использовать все)
+    const movesUsingAllDice = moves.filter((moveSeq) => moveSeq.length === dice.length);
+    
+    if (movesUsingAllDice.length > 0) {
+      return movesUsingAllDice;
+    }
+
+    // Если невозможно использовать все кубики, возвращаем максимальные последовательности
+    if (moves.length === 0) {
+      return [];
+    }
+    
+    const maxLength = Math.max(...moves.map((m) => m.length));
+    return moves.filter((m) => m.length === maxLength);
   }
+
 
   private getPossibleMovesForDie(state: BoardState, die: number): any[] {
     const moves: any[] = [];

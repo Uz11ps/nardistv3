@@ -261,11 +261,12 @@ export default function Game() {
         <BackgammonBoard
           gameState={gameState}
           currentPlayer={gameState.currentPlayer}
-          dice={gameState.dice}
+          dice={gameState.dice ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2]) : null}
           onMove={handleMove}
           onRollDice={handleRollDice}
           canMove={gameState.canMove}
           isMyTurn={isMyTurn}
+          gameId={gameId}
         />
       </div>
 

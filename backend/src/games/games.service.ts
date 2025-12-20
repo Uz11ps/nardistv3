@@ -156,14 +156,62 @@ export class GamesService {
       throw new BadRequestException('Не ваш ход');
     }
 
+    if (!game.gameState.dice || game.gameState.dice.length === 0) {
+      throw new BadRequestException('Сначала бросьте кубики');
+    }
+
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
-    let currentState = game.gameState;
+    const dice = game.gameState.dice;
+
+    // Проверяем валидность всех ходов
+    let currentState = JSON.parse(JSON.stringify(game.gameState));
+    const diceCopy = [...dice];
 
     for (const move of moves) {
       if (!engine.validateMove(currentState, move.from, move.to, move.die)) {
-        throw new BadRequestException('Недопустимый ход');
+        throw new BadRequestException(`Недопустимый ход: с ${move.from} на ${move.to} кубиком ${move.die}`);
       }
+      
+      // Удаляем использованный кубик
+      const dieIndex = diceCopy.indexOf(move.die);
+      if (dieIndex === -1) {
+        throw new BadRequestException(`Кубик ${move.die} уже использован или недоступен`);
+      }
+      diceCopy.splice(dieIndex, 1);
+      
       currentState = engine.applyMove(currentState, move.from, move.to, move.die);
+    }
+
+    // Проверяем обязательность использования всех кубиков, если это возможно
+    const allValidMoves = engine.getAllValidMoves(game.gameState, dice);
+    if (allValidMoves.length > 0) {
+      // Проверяем, есть ли ходы, которые используют все кубики
+      const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
+      
+      if (fullMoves.length > 0 && moves.length < dice.length) {
+        throw new BadRequestException(
+          `Необходимо использовать все кубики. Доступно ${dice.length} кубиков (${dice.join(', ')}), использовано ${moves.length}. Доступны ходы, использующие все кубики.`
+        );
+      }
+      
+      // Проверяем, что использованы правильные кубики (правильное количество каждого)
+      const diceCount = new Map<number, number>();
+      for (const die of dice) {
+        diceCount.set(die, (diceCount.get(die) || 0) + 1);
+      }
+
+      const usedCount = new Map<number, number>();
+      for (const move of moves) {
+        usedCount.set(move.die, (usedCount.get(move.die) || 0) + 1);
+      }
+
+      // Проверяем, не превышено ли использование кубиков
+      for (const [die, used] of usedCount.entries()) {
+        const available = diceCount.get(die) || 0;
+        if (used > available) {
+          throw new BadRequestException(`Кубик ${die} использован ${used} раз(а), но доступно только ${available}`);
+        }
+      }
     }
 
     const moveNumber = game.moves.length + 1;
@@ -171,7 +219,7 @@ export class GamesService {
       gameId: game.id,
       playerId,
       moveNumber,
-      dice: game.gameState.dice,
+      dice: dice,
       moves,
       gameStateBefore: game.gameState,
       gameStateAfter: currentState,
@@ -199,6 +247,29 @@ export class GamesService {
     }
 
     return this.gamesRepository.save(game);
+  }
+
+  /**
+   * Получить все возможные ходы для текущей позиции
+   */
+  async getPossibleMoves(gameId: string, playerId: string): Promise<Array<Array<{ from: number; to: number; die: number }>>> {
+    const game = await this.findOne(gameId);
+
+    if (game.status !== GameStatus.IN_PROGRESS) {
+      throw new BadRequestException('Игра не активна');
+    }
+
+    const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
+    if (currentPlayerId !== playerId) {
+      throw new BadRequestException('Не ваш ход');
+    }
+
+    if (!game.gameState.dice || game.gameState.dice.length === 0) {
+      return [];
+    }
+
+    const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
+    return engine.getAllValidMoves(game.gameState, game.gameState.dice);
   }
 
   /**
