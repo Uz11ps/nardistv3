@@ -843,6 +843,7 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
+            </div>
           </div>
         )}
 

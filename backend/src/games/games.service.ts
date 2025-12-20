@@ -147,7 +147,8 @@ export class GamesService {
   ): Promise<Game> {
     const game = await this.findOne(gameId);
 
-    if (game.status !== GameStatus.IN_PROGRESS) {
+    // Разрешаем ход если игра в ожидании или в процессе
+    if (game.status !== GameStatus.IN_PROGRESS && game.status !== GameStatus.WAITING) {
       throw new BadRequestException('Игра не активна');
     }
 
@@ -235,6 +236,11 @@ export class GamesService {
     game.gameState = currentState;
     game.currentPlayer = currentState.currentPlayer;
     game.lastMoveAt = new Date();
+
+    // Если это первый ход (игра в статусе WAITING), переводим в IN_PROGRESS
+    if (game.status === GameStatus.WAITING) {
+      game.status = GameStatus.IN_PROGRESS;
+    }
 
     if (engine.isGameFinished(currentState)) {
       const winner = engine.getWinner(currentState);
