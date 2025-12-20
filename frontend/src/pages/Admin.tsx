@@ -177,67 +177,67 @@ export default function Admin() {
 
       <div className="admin-tabs">
         <button
-          className={activeTab === 'stats' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'stats' ? 'active' : ''}`}
           onClick={() => setActiveTab('stats')}
         >
           Статистика
         </button>
         <button
-          className={activeTab === 'users' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'users' ? 'active' : ''}`}
           onClick={() => setActiveTab('users')}
         >
           Пользователи
         </button>
         <button
-          className={activeTab === 'games' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'games' ? 'active' : ''}`}
           onClick={() => setActiveTab('games')}
         >
           Игры
         </button>
         <button
-          className={activeTab === 'notifications' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'notifications' ? 'active' : ''}`}
           onClick={() => setActiveTab('notifications')}
         >
           Уведомления
         </button>
         <button
-          className={activeTab === 'create-game' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'create-game' ? 'active' : ''}`}
           onClick={() => setActiveTab('create-game')}
         >
           Создать игру
         </button>
         <button
-          className={activeTab === 'tournaments' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'tournaments' ? 'active' : ''}`}
           onClick={() => setActiveTab('tournaments')}
         >
           Турниры
         </button>
         <button
-          className={activeTab === 'academy' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'academy' ? 'active' : ''}`}
           onClick={() => setActiveTab('academy')}
         >
           Обучение
         </button>
         <button
-          className={activeTab === 'city' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'city' ? 'active' : ''}`}
           onClick={() => setActiveTab('city')}
         >
           Город
         </button>
         <button
-          className={activeTab === 'skins' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'skins' ? 'active' : ''}`}
           onClick={() => setActiveTab('skins')}
         >
           Скины
         </button>
         <button
-          className={activeTab === 'quests' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'quests' ? 'active' : ''}`}
           onClick={() => setActiveTab('quests')}
         >
           Квесты
         </button>
         <button
-          className={activeTab === 'clans' ? 'active' : ''}
+          className={`admin-tab-btn ${activeTab === 'clans' ? 'active' : ''}`}
           onClick={() => setActiveTab('clans')}
         >
           Кланы
@@ -954,7 +954,7 @@ export default function Admin() {
         {activeTab === 'skins' && (
           <div className="admin-skins">
             <h3>Управление скинами</h3>
-            <div className="skins-list">
+            <div className="admin-table-container">
               <table>
                 <thead>
                   <tr>

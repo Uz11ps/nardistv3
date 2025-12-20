@@ -336,6 +336,47 @@ export class GamesService {
     }
   }
 
+  /**
+   * Сдача игры игроком
+   */
+  async resignGame(gameId: string, playerId: string): Promise<Game> {
+    const game = await this.findOne(gameId);
+    
+    if (game.status === GameStatus.FINISHED) {
+      throw new BadRequestException('Игра уже завершена');
+    }
+
+    if (game.player1Id !== playerId && game.player2Id !== playerId) {
+      throw new BadRequestException('Вы не участник этой игры');
+    }
+
+    // Определяем победителя (противник сдавшегося игрока)
+    const winnerId = game.player1Id === playerId ? game.player2Id : game.player1Id;
+    
+    if (!winnerId) {
+      throw new BadRequestException('Невозможно сдать игру без противника');
+    }
+
+    // Завершаем игру
+    game.status = GameStatus.FINISHED;
+    game.winnerId = winnerId;
+    
+    if (winnerId === game.player1Id) {
+      game.player1Score = 1;
+      game.player2Score = 0;
+    } else {
+      game.player1Score = 0;
+      game.player2Score = 1;
+    }
+
+    const savedGame = await this.gamesRepository.save(game);
+
+    // Применяем логику после завершения игры
+    await this.onGameFinished(savedGame);
+
+    return savedGame;
+  }
+
   async createBotGame(playerId: string): Promise<Game> {
     return this.create(playerId, null, GameMode.LONG, GameType.VS_BOT);
   }

@@ -55,10 +55,10 @@ export default function Game() {
       }
       const socket = getSocket()
       if (socket) {
-        socket.off('game:update')
-        socket.off('game:move')
-        socket.off('game:dice')
-        socket.off('game:finished')
+        socket.off('game_state')
+        socket.off('move_made')
+        socket.off('dice_rolled')
+        socket.off('game_finished')
       }
     }
   }, [gameId, isBotGame])
@@ -124,7 +124,7 @@ export default function Game() {
     socket.on('game:finished', (data: any) => {
       setGameStatus('finished')
       setTimeout(() => {
-        navigate('/game/result/' + gameId)
+        navigate('/')
       }, 3000)
     })
   }
@@ -154,7 +154,7 @@ export default function Game() {
     if (!socket) return
 
     try {
-      socket.emit('game:roll-dice', { gameId })
+      socket.emit('roll_dice', { gameId })
     } catch (error) {
       console.error('Failed to roll dice:', error)
     }
@@ -226,12 +226,24 @@ export default function Game() {
   const gameMode = gameInfo.mode || 'LONG'
   const stake = Number(gameInfo.stake || 0)
 
-  const handleBack = () => {
+  const handleBack = async () => {
+    // Для бот-игр просто выходим без сдачи
     if (isBotGame && gameInfo?.type === 'vs_bot') {
       navigate('/game/modes')
-    } else {
-      navigate(-1)
+      return
     }
+
+    // Если игра не завершена и не бот-игра, сдаем игру
+    if (gameStatus !== 'finished' && gameId && gameInfo?.type !== 'vs_bot') {
+      try {
+        await apiClient.post(`/games/${gameId}/resign`)
+      } catch (error) {
+        console.error('Failed to resign game:', error)
+      }
+    }
+    
+    // Редирект на главную после сдачи или если игра уже завершена
+    navigate('/')
   }
 
   return (

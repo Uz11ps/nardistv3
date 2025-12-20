@@ -189,22 +189,25 @@ export default function Shop() {
           <div className="shop-skin-image">
             {skin.imageUrl ? (
               <img
-                src={getImageUrl(skin.imageUrl)}
+                src={getImageUrl(skin.imageUrl) || ''}
                 alt={skin.name}
                 className="shop-skin-img"
                 onError={(e) => {
-                  // Если изображение не загрузилось, скрываем его
+                  console.error('Failed to load skin image:', skin.imageUrl, 'Resolved URL:', getImageUrl(skin.imageUrl))
                   e.currentTarget.style.display = 'none'
+                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement
+                  if (placeholder && placeholder.classList.contains('shop-skin-placeholder')) {
+                    placeholder.style.display = 'flex'
+                  }
                 }}
               />
-            ) : (
-              <div className="shop-skin-placeholder">
-                <Icon 
-                  name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} 
-                  size={48} 
-                />
-              </div>
-            )}
+            ) : null}
+            <div className="shop-skin-placeholder" style={{ display: skin.imageUrl ? 'none' : 'flex' }}>
+              <Icon 
+                name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} 
+                size={48} 
+              />
+            </div>
             {!isOwned && skin.price && (
               <div className="shop-skin-price-overlay">
                 {skin.price.toLocaleString('ru-RU')} NAR

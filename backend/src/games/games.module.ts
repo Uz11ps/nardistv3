@@ -32,7 +32,7 @@ import { UsersModule } from '../users/users.module';
   ],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway, BackgammonEngine, LongBackgammonEngine],
-  exports: [GamesService, BackgammonEngine, LongBackgammonEngine],
+  exports: [GamesService, GamesGateway, BackgammonEngine, LongBackgammonEngine],
 })
 export class GamesModule {}
 
