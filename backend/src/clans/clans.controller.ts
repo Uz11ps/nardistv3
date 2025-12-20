@@ -75,5 +75,17 @@ export class ClansController {
   ) {
     return this.clansService.upgradeClan(user.id, id, body.upgradeType);
   }
+
+  @Get(':id/treasury/transactions')
+  @UseGuards(JwtAuthGuard)
+  async getTreasuryTransactions(@Param('id') id: string, @Query('limit') limit?: string) {
+    return this.clansService.getTreasuryTransactions(id, limit ? parseInt(limit) : 10);
+  }
+
+  @Get(':id/upgrades')
+  @UseGuards(JwtAuthGuard)
+  async getUpgrades(@Param('id') id: string) {
+    return this.clansService.getClanUpgrades(id);
+  }
 }
 

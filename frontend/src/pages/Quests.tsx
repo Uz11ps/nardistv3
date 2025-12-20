@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import BottomNav from '../components/BottomNav'
 import { apiClient } from '../api/client'
+import { useAuthStore } from '../store/authStore'
+import './Quests.css'
 
 interface Quest {
   id: string
@@ -17,9 +20,11 @@ interface Quest {
 }
 
 export default function Quests() {
+  const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'special'>('daily')
   const [quests, setQuests] = useState<Quest[]>([])
   const [resetTime, setResetTime] = useState<string>('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadQuests()
@@ -27,44 +32,74 @@ export default function Quests() {
 
   const loadQuests = async () => {
     try {
-      const response = await apiClient.get(`/quests/${activeTab}`)
-      setQuests(response.data.quests || [])
+      setLoading(true)
+      const type = activeTab === 'special' ? 'daily' : activeTab // Для особых используем daily, но фильтруем по isPremium
+      const response = await apiClient.get(`/quests/${type}`)
+      let questsData = response.data.quests || []
+      
+      // Если особые, фильтруем премиум квесты
+      if (activeTab === 'special') {
+        // TODO: добавить фильтрацию по isPremium, когда это будет доступно в API
+        questsData = questsData.filter((q: any) => q.isPremium)
+      }
+      
+      setQuests(questsData)
       setResetTime(response.data.resetTime || '')
     } catch (error) {
       console.error('Failed to load quests:', error)
+      setQuests([])
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleClaim = async (questId: string) => {
     try {
       await apiClient.post(`/quests/${questId}/claim`)
-      loadQuests()
-    } catch (error) {
+      await loadQuests()
+      // Обновляем данные пользователя
+      if (user) {
+        const userResponse = await apiClient.get('/users/me')
+        useAuthStore.setState({ user: userResponse.data })
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при получении награды')
       console.error('Failed to claim quest:', error)
     }
+  }
+
+  const formatResetTime = (timeStr: string) => {
+    // Форматируем время до сброса (например, "6д 11ч" или "24ч")
+    return timeStr || ''
+  }
+
+  const getProgressPercentage = (progress: number, target: number) => {
+    if (target === 0) return 0
+    const percentage = (progress / target) * 100
+    return Math.min(percentage, 100)
   }
 
   return (
     <div className="app-container">
       <PageHeader title="Задания" />
       
-      <div style={{ padding: '20px' }}>
+      <div className="quests-content">
         {/* Вкладки */}
-        <div className="tabs">
+        <div className="quests-tabs">
           <button
-            className={`tab ${activeTab === 'daily' ? 'active' : ''}`}
+            className={`quests-tab ${activeTab === 'daily' ? 'active' : ''}`}
             onClick={() => setActiveTab('daily')}
           >
             Ежедневные
           </button>
           <button
-            className={`tab ${activeTab === 'weekly' ? 'active' : ''}`}
+            className={`quests-tab ${activeTab === 'weekly' ? 'active' : ''}`}
             onClick={() => setActiveTab('weekly')}
           >
             Недельные
           </button>
           <button
-            className={`tab ${activeTab === 'special' ? 'active' : ''}`}
+            className={`quests-tab ${activeTab === 'special' ? 'active' : ''}`}
             onClick={() => setActiveTab('special')}
           >
             Особые
@@ -72,53 +107,68 @@ export default function Quests() {
         </div>
 
         {/* Таймер сброса */}
-        {(activeTab === 'weekly' || activeTab === 'special') && resetTime && (
-          <div style={{ textAlign: 'center', marginBottom: '16px', color: '#aaaaaa', fontSize: '14px' }}>
-            До сброса {resetTime}
+        {(activeTab === 'weekly' || activeTab === 'daily') && resetTime && (
+          <div className="quests-reset-time">
+            До сброса {formatResetTime(resetTime)}
           </div>
         )}
 
         {/* Список заданий */}
-        <div>
-          {quests.map((quest) => (
-            <Card key={quest.id} style={{ marginBottom: '12px' }}>
-              <div className="card-title">{quest.name}</div>
-              <div className="card-subtitle" style={{ marginTop: '4px' }}>
-                Награда: {quest.rewardNarCoin} NAR + {quest.rewardXP} XP
-              </div>
-              <div style={{ marginTop: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '14px', color: '#aaaaaa' }}>Прогресс</span>
-                  <span style={{ fontSize: '14px', color: '#aaaaaa' }}>
-                    {quest.progress}/{quest.target}
-                  </span>
-                </div>
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${(quest.progress / quest.target) * 100}%` }}
-                  />
-                </div>
-              </div>
-              {quest.completed && !quest.claimed && (
-                <Button
-                  fullWidth
-                  onClick={() => handleClaim(quest.id)}
-                  style={{ marginTop: '12px' }}
-                >
-                  Забрать
-                </Button>
-              )}
-              {quest.claimed && (
-                <Button variant="secondary" fullWidth style={{ marginTop: '12px' }} disabled>
-                  Выполнено
-                </Button>
-              )}
-            </Card>
-          ))}
-        </div>
+        {loading ? (
+          <Card>
+            <div className="quests-empty">Загрузка...</div>
+          </Card>
+        ) : quests.length === 0 ? (
+          <Card>
+            <div className="quests-empty">Нет доступных заданий</div>
+          </Card>
+        ) : (
+          <div className="quests-list">
+            {quests.map((quest) => {
+              const progressPercentage = getProgressPercentage(quest.progress, quest.target)
+              const canClaim = quest.completed && !quest.claimed
+
+              return (
+                <Card key={quest.id} className="quest-card">
+                  <div className="quest-content">
+                    <div className="quest-info">
+                      <div className="quest-name">{quest.name}</div>
+                      <div className="quest-reward">
+                        Награда: {quest.rewardNarCoin.toLocaleString()} NAR - {quest.rewardXP} XP
+                      </div>
+                      <div className="quest-progress-section">
+                        <div className="quest-progress-header">
+                          <span className="quest-progress-label">Прогресс</span>
+                          <span className="quest-progress-value">
+                            {quest.progress}/{quest.target}
+                          </span>
+                        </div>
+                        <div className="quest-progress-bar">
+                          <div
+                            className="quest-progress-fill"
+                            style={{ width: `${progressPercentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {canClaim && (
+                      <Button
+                        variant="primary"
+                        className="quest-claim-btn"
+                        onClick={() => handleClaim(quest.id)}
+                      >
+                        Забрать
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
       </div>
+
+      <BottomNav />
     </div>
   )
 }
-

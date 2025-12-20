@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Clan } from './clan.entity';
 import { ClanMember, ClanRole } from './clan-member.entity';
+import { ClanTreasuryTransaction, TreasuryTransactionType } from './clan-treasury-transaction.entity';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class ClansService {
     private clansRepository: Repository<Clan>,
     @InjectRepository(ClanMember)
     private membersRepository: Repository<ClanMember>,
+    @InjectRepository(ClanTreasuryTransaction)
+    private transactionsRepository: Repository<ClanTreasuryTransaction>,
     private usersService: UsersService,
   ) {}
 
@@ -183,6 +186,16 @@ export class ClansService {
     const clan = member.clan;
     clan.treasury = (BigInt(clan.treasury || 0) + BigInt(amount)).toString();
     await this.clansRepository.save(clan);
+
+    // Создаем запись транзакции
+    const transaction = this.transactionsRepository.create({
+      clanId: clan.id,
+      userId: userId,
+      type: TreasuryTransactionType.CONTRIBUTION,
+      amount: amount.toString(),
+      description: 'Внес вклад',
+    });
+    await this.transactionsRepository.save(transaction);
   }
 
   async upgradeClan(userId: string, clanId: string, upgradeType: string): Promise<Clan> {
@@ -214,6 +227,14 @@ export class ClansService {
 
     clan.treasury = (BigInt(clan.treasury || 0) - BigInt(cost)).toString();
 
+    const upgradeNames: Record<string, string> = {
+      level: 'Уровень клана',
+      districtStrength: 'Сила районов',
+      economy: 'Экономика',
+      fort: 'Форт клана',
+    };
+    const upgradeName = upgradeNames[upgradeType] || 'Улучшение';
+
     switch (upgradeType) {
       case 'level':
         clan.clanLevel++;
@@ -234,7 +255,63 @@ export class ClansService {
         break;
     }
 
-    return this.clansRepository.save(clan);
+    const savedClan = await this.clansRepository.save(clan);
+
+    // Создаем запись транзакции
+    const transaction = this.transactionsRepository.create({
+      clanId: clan.id,
+      userId: userId,
+      type: TreasuryTransactionType.UPGRADE,
+      amount: (-cost).toString(), // Отрицательное значение
+      description: `Улучшение: ${upgradeName}`,
+    });
+    await this.transactionsRepository.save(transaction);
+
+    return savedClan;
+  }
+
+  async getTreasuryTransactions(clanId: string, limit: number = 10): Promise<ClanTreasuryTransaction[]> {
+    return this.transactionsRepository.find({
+      where: { clanId },
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  async getClanUpgrades(clanId: string): Promise<{
+    level: { current: number; max: number; cost: number };
+    districtStrength: { current: number; max: number; cost: number };
+    economy: { current: number; max: number; cost: number };
+    fort: { current: number; max: number; cost: number };
+  }> {
+    const clan = await this.clansRepository.findOne({ where: { id: clanId } });
+    if (!clan) {
+      throw new NotFoundException('Клан не найден');
+    }
+
+    return {
+      level: {
+        current: clan.clanLevel,
+        max: 10,
+        cost: (clan.clanLevel + 1) * 1000,
+      },
+      districtStrength: {
+        current: clan.districtStrength,
+        max: 10,
+        cost: (clan.districtStrength + 1) * 500,
+      },
+      economy: {
+        current: clan.economy,
+        max: 10,
+        cost: (clan.economy + 1) * 800,
+      },
+      fort: {
+        current: clan.fortLevel,
+        max: 10,
+        cost: clan.fortLevel >= 10 ? 0 : (clan.fortLevel + 1) * 1200,
+      },
+    };
   }
 }
 

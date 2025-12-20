@@ -31,6 +31,9 @@ import ClanSearch from './pages/ClanSearch'
 import ClanDetail from './pages/ClanDetail'
 import ClanCreate from './pages/ClanCreate'
 import ClanManage from './pages/ClanManage'
+import ClanTreasury from './pages/ClanTreasury'
+import ClanUpgrades from './pages/ClanUpgrades'
+import ClanMembers from './pages/ClanMembers'
 
 function App() {
   const [initialized, setInitialized] = useState(false)
@@ -149,6 +152,9 @@ function App() {
               <Route path="/clans/search" element={<ClanSearch />} />
               <Route path="/clans/create" element={<ClanCreate />} />
               <Route path="/clans/:clanId/manage" element={<ClanManage />} />
+              <Route path="/clans/:clanId/treasury" element={<ClanTreasury />} />
+              <Route path="/clans/:clanId/upgrades" element={<ClanUpgrades />} />
+              <Route path="/clans/:clanId/members" element={<ClanMembers />} />
               <Route path="/clans/:clanId" element={<ClanDetail />} />
             </>
           )}

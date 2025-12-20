@@ -160,7 +160,7 @@ export default function ClanManage() {
             <Button
               variant="secondary"
               className="clan-manage-action-btn"
-              onClick={() => handleNavigate('/upgrade')}
+              onClick={() => handleNavigate('/upgrades')}
             >
               Улучшить клан
             </Button>
@@ -168,7 +168,7 @@ export default function ClanManage() {
           <Button
             variant="secondary"
             className="clan-manage-action-btn"
-            onClick={() => handleNavigate('/members')}
+            onClick={() => navigate(`/clans/${clanId}/members`)}
           >
             Участники
           </Button>

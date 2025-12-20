@@ -17,7 +17,7 @@ interface NarCoinPackage {
 
 export default function Shop() {
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'board' | 'dice' | 'checkers'>('coin')
+  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'board' | 'dice'>('coin')
   const [narCoinPackages, setNarCoinPackages] = useState<NarCoinPackage[]>([])
   const [skins, setSkins] = useState<Skin[]>([])
   const [ownedSkins, setOwnedSkins] = useState<string[]>([])
@@ -27,7 +27,7 @@ export default function Shop() {
   useEffect(() => {
     if (activeTab === 'coin') {
       loadNarCoinPackages()
-    } else if (['board', 'dice', 'checkers'].includes(activeTab)) {
+    } else if (['board', 'dice'].includes(activeTab)) {
       loadSkins()
     }
   }, [activeTab])
@@ -70,7 +70,6 @@ export default function Shop() {
       const typeMap: { [key: string]: string } = {
         board: 'board',
         dice: 'dice',
-        checkers: 'checkers',
       }
       const filteredSkins = allSkins.filter((s: Skin) => s.type === typeMap[activeTab])
 
@@ -80,7 +79,6 @@ export default function Shop() {
       const selectedIds = new Set<string>()
       if (selected.board) selectedIds.add(selected.board.id)
       if (selected.dice) selectedIds.add(selected.dice.id)
-      if (selected.checkers) selectedIds.add(selected.checkers.id)
       setSelectedSkinIds(selectedIds)
     } catch (error) {
       console.error('Failed to load skins:', error)
@@ -175,13 +173,7 @@ export default function Shop() {
               className={`shop-tab ${activeTab === 'dice' ? 'active' : ''}`}
               onClick={() => setActiveTab('dice')}
             >
-              Куб
-            </button>
-            <button
-              className={`shop-tab ${activeTab === 'checkers' ? 'active' : ''}`}
-              onClick={() => setActiveTab('checkers')}
-            >
-              Шашки
+              Кубы
             </button>
           </div>
         </div>
@@ -200,17 +192,17 @@ export default function Shop() {
                     <div className="shop-nar-coin-info">
                       <div className="shop-nar-coin-amount">{pkg.amount.toLocaleString()} NAR</div>
                       <div className="shop-nar-coin-price">Цена: {pkg.price} {pkg.currency}</div>
+                      <Button 
+                        variant="primary" 
+                        className="shop-buy-btn"
+                        onClick={() => handleBuyNarCoin(pkg.amount, pkg.price)}
+                      >
+                        Купить
+                      </Button>
                     </div>
                     <div className="shop-nar-coin-icon">
-                      <Icon name="coin" size={64} style={{ color: '#ffd700' }} />
+                      <Icon name="coin" size={64} style={{ filter: 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.6))' }} />
                     </div>
-                    <Button 
-                      variant="primary" 
-                      className="shop-buy-btn"
-                      onClick={() => handleBuyNarCoin(pkg.amount, pkg.price)}
-                    >
-                      Купить
-                    </Button>
                   </div>
                 </Card>
               ))
@@ -221,48 +213,37 @@ export default function Shop() {
         {/* Подписка */}
         {activeTab === 'subscription' && (
           <div className="shop-list">
-            <Card>
-              <div className="shop-subscription-info">
-                <div className="shop-subscription-title">Подписка</div>
-                <div className="shop-subscription-subtitle">Для тех, кто хочет играть на уровне мастеров</div>
-              </div>
-            </Card>
-            {/* TODO: загрузить планы подписки с сервера */}
-            <Card>
-              <div className="shop-subscription-feature">
-                <div className="shop-subscription-feature-title">История игр</div>
-                <div className="shop-subscription-feature-subtitle">Полный список твоих матчей</div>
-              </div>
-            </Card>
-            <Card>
-              <div className="shop-subscription-feature">
-                <div className="shop-subscription-feature-title">Анализ</div>
-                <div className="shop-subscription-feature-subtitle">Разбор ошибок и лучших ходов</div>
-              </div>
-            </Card>
-            <Card>
-              <div className="shop-subscription-feature">
-                <div className="shop-subscription-feature-title">Тренажёр</div>
-                <div className="shop-subscription-feature-subtitle">Разбирай позиции и стратегии</div>
-              </div>
-            </Card>
-            <Card>
-              <div className="shop-subscription-feature">
-                <div className="shop-subscription-feature-title">Приоритет</div>
-                <div className="shop-subscription-feature-subtitle">Попадай к соперникам быстрее</div>
-              </div>
-            </Card>
-            <Card>
-              <div className="shop-subscription-feature">
-                <div className="shop-subscription-feature-title">Премиум-значок</div>
-                <div className="shop-subscription-feature-subtitle">Отметь свой статус в таблице</div>
+            <Card className="shop-subscription-card">
+              <div className="shop-subscription-content">
+                <div className="shop-subscription-info">
+                  <div className="shop-subscription-title">Премиум доступ</div>
+                </div>
+                <div className="shop-subscription-icon">
+                  <Icon name="crown" size={80} style={{ color: '#ffd700' }} />
+                </div>
+                <Button
+                  variant="primary"
+                  className="shop-buy-btn"
+                  onClick={async () => {
+                    try {
+                      await apiClient.post('/subscription/purchase', { plan: 'premium' })
+                      alert('Премиум подписка активирована!')
+                      const userResponse = await apiClient.get('/users/me')
+                      useAuthStore.setState({ user: userResponse.data })
+                    } catch (error: any) {
+                      alert(error.response?.data?.message || 'Ошибка при покупке подписки')
+                    }
+                  }}
+                >
+                  Купить
+                </Button>
               </div>
             </Card>
           </div>
         )}
 
-        {/* Скины (Доски, Кости, Шашки) */}
-        {['board', 'dice', 'checkers'].includes(activeTab) && (
+        {/* Скины (Доски, Кубы) */}
+        {['board', 'dice'].includes(activeTab) && (
           <div className="shop-list">
             {loading ? (
               <Card>
@@ -288,41 +269,30 @@ export default function Shop() {
                             className="shop-skin-img"
                           />
                         ) : (
-                          <Icon 
-                            name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} 
-                            size={64} 
-                          />
-                        )}
-                        {isSelected && (
-                          <div className="shop-skin-selected">
-                            <Icon name="check" size={16} />
+                          <div className="shop-skin-placeholder">
+                            <Icon 
+                              name={skin.type === 'board' ? 'board' : 'dice'} 
+                              size={48} 
+                            />
                           </div>
                         )}
                       </div>
                       <div className="shop-skin-info">
-                        <div className="shop-skin-header">
-                          <div className="shop-skin-name">{skin.name}</div>
-                          <span className={getRarityBadgeClass(skin.rarity)}>
-                            {getRarityName(skin.rarity)}
-                          </span>
+                        <div className="shop-skin-name">{skin.name}</div>
+                        <div className={getRarityBadgeClass(skin.rarity)}>
+                          {getRarityName(skin.rarity)}
                         </div>
-                        {skin.description && (
-                          <div className="shop-skin-description">{skin.description}</div>
-                        )}
                         {!isOwned && skin.price && (
-                          <div className="shop-skin-price gold">{skin.price} NAR</div>
-                        )}
-                        {isSelected && (
-                          <div className="shop-skin-selected-label">Выбрано</div>
+                          <div className="shop-skin-price">{skin.price.toLocaleString()} NAR</div>
                         )}
                       </div>
                       {isOwned ? (
                         <Button
-                          variant={isSelected ? 'primary' : 'secondary'}
-                          className="shop-buy-btn"
-                          onClick={() => handleSelectSkin(skin.id)}
+                          variant="secondary"
+                          className="shop-buy-btn shop-buy-btn-purchased"
+                          disabled
                         >
-                          {isSelected ? 'Выбрано' : 'Выбрать'}
+                          Куплено
                         </Button>
                       ) : (
                         <Button
