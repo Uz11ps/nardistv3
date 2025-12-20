@@ -8,6 +8,7 @@ import { AdminLoginDto } from './dto/admin-login.dto';
 import { CreateSkinDto } from './dto/create-skin.dto';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { extname } from 'path';
 
 @Controller('admin')
 export class AdminController {
@@ -261,14 +262,31 @@ export class AdminController {
   )
   async createSkin(
     @CurrentUser() user: any,
-    @Body() body: CreateSkinDto,
+    @Body() body: any,
     @UploadedFile() file?: { filename: string; originalname: string; mimetype: string; size: number },
   ) {
     if (!user.isAdmin) {
       throw new UnauthorizedException('Недостаточно прав');
     }
+    
+    // При multipart/form-data все значения приходят как строки, нужно их распарсить
     const imageUrl = file ? `/uploads/skins/${file.filename}` : body.imageUrl;
-    return this.adminService.createSkin({ ...body, imageUrl });
+    
+    const skinData = {
+      name: body.name,
+      description: body.description || null,
+      theme: body.theme,
+      boardConfig: body.boardConfig ? (typeof body.boardConfig === 'string' ? JSON.parse(body.boardConfig) : body.boardConfig) : {},
+      diceConfig: body.diceConfig ? (typeof body.diceConfig === 'string' ? JSON.parse(body.diceConfig) : body.diceConfig) : {},
+      isDefault: body.isDefault === 'true' || body.isDefault === true,
+      isPremium: body.isPremium === 'true' || body.isPremium === true,
+      weight: body.weight ? parseFloat(body.weight) : 1,
+      price: body.price ? parseFloat(body.price) : null,
+      rarity: body.rarity || 'common',
+      imageUrl,
+    };
+    
+    return this.adminService.createSkin(skinData);
   }
 
   @Put('skins/:id')

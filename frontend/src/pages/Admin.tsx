@@ -335,7 +335,7 @@ export default function Admin() {
                         )}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="btn-group">
                           {user.isBanned ? (
                             <button
                               onClick={() => {
@@ -374,8 +374,8 @@ export default function Admin() {
                                 Удалить
                               </button>
                               <button
-                                style={{ background: '#17a2b8', color: 'white' }}
-                                onClick={() => {
+                          className="btn btn-info btn-sm"
+                          onClick={() => {
                                   setSelectedUser(user)
                                 }}
                               >
@@ -391,49 +391,46 @@ export default function Admin() {
               </table>
             </div>
             {selectedUser && (
-              <div style={{ marginTop: '20px', padding: '20px', background: '#2a2a2a', borderRadius: '8px' }}>
+              <div className="edit-form">
                 <h3>Редактирование пользователя: {selectedUser.nickname || selectedUser.username}</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div>
+                <div className="admin-form">
+                  <div className="form-group">
                     <label>NAR-coin:</label>
                     <input
                       type="number"
                       id="edit-narcoin"
                       defaultValue={Number(selectedUser.narCoin)}
-                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
                     />
                   </div>
-                  <div>
+                  <div className="form-group">
                     <label>XP:</label>
                     <input
                       type="number"
                       id="edit-xp"
                       defaultValue={Number(selectedUser.xp)}
-                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
                     />
                   </div>
-                  <div>
+                  <div className="form-group">
                     <label>Уровень:</label>
                     <input
                       type="number"
                       id="edit-level"
                       defaultValue={selectedUser.level}
-                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
                     />
                   </div>
-                  <div>
-                    <label>
+                  <div className="form-group">
+                    <label className="checkbox-label">
                       <input type="checkbox" id="edit-admin" defaultChecked={selectedUser.isAdmin} />
                       Администратор
                     </label>
                   </div>
-                  <div>
-                    <label>
+                  <div className="form-group">
+                    <label className="checkbox-label">
                       <input type="checkbox" id="edit-trainer" defaultChecked={selectedUser.isTrainer} />
                       Тренер
                     </label>
                   </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  <div className="edit-form-actions">
                     <button
                       onClick={async () => {
                         try {
@@ -482,7 +479,7 @@ export default function Admin() {
                       Сохранить роли
                     </button>
                     <button
-                      style={{ background: '#ffc107', color: 'black' }}
+                      className="btn btn-warning"
                       onClick={async () => {
                         if (confirm('Сбросить весь прогресс пользователя? (XP, уровень, валюта)')) {
                           try {
@@ -535,7 +532,7 @@ export default function Admin() {
                       <td>{game.player2?.nickname || game.player2?.username || 'Бот'}</td>
                       <td>{new Date(game.createdAt).toLocaleString()}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="btn-group">
                           <button onClick={async () => {
                             try {
                               const gameDetails = await apiClient.get(`/admin/games/${game.id}`)
@@ -902,9 +899,9 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
-            <div className="create-skin-form" style={{ marginTop: '20px', padding: '20px', background: '#2a2a2a', borderRadius: '8px' }}>
+            <div className="admin-form">
               <h4>Создать новый скин</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="admin-form">
                 <input type="text" placeholder="Название" id="skin-name" />
                 <input type="text" placeholder="Тема" id="skin-theme" />
                 <input type="number" placeholder="Цена (NAR)" id="skin-price" />
@@ -991,7 +988,7 @@ export default function Admin() {
                       </td>
                       <td>
                         <button
-                          style={{ background: '#dc3545', color: 'white' }}
+                          className="btn btn-danger btn-sm"
                           onClick={() => {
                             if (confirm('Удалить квест?')) {
                               apiClient.delete(`/admin/quests/${quest.id}`).then(() => {
@@ -1011,9 +1008,9 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
-            <div className="create-quest-form" style={{ marginTop: '20px', padding: '20px', background: '#2a2a2a', borderRadius: '8px' }}>
+            <div className="admin-form">
               <h4>Создать новый квест</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="admin-form">
                 <input type="text" placeholder="Название" id="quest-name" />
                 <textarea placeholder="Описание" id="quest-description" rows={3}></textarea>
                 <select id="quest-type">
@@ -1091,7 +1088,7 @@ export default function Admin() {
                       <td>{Number(clan.treasury || 0).toLocaleString()}</td>
                       <td>{Number(clan.weeklyIncome || 0).toLocaleString()}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                        <div className="btn-group">
                           <button
                             onClick={() => {
                               setSelectedUser({ type: 'clan', ...clan })
@@ -1122,9 +1119,9 @@ export default function Admin() {
               </table>
             </div>
             {selectedUser && selectedUser.type === 'clan' && (
-              <div style={{ marginTop: '20px', padding: '20px', background: '#2a2a2a', borderRadius: '8px' }}>
+              <div className="edit-form">
                 <h3>Редактирование клана: {selectedUser.name}</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="admin-form">
                   <div>
                     <label>Уровень:</label>
                     <input
@@ -1167,10 +1164,9 @@ export default function Admin() {
                       id="edit-clan-description"
                       defaultValue={selectedUser.description || ''}
                       rows={3}
-                      style={{ marginLeft: '10px', padding: '5px', width: '100%' }}
                     ></textarea>
                   </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  <div className="edit-form-actions">
                     <button
                       onClick={async () => {
                         try {
@@ -1194,7 +1190,7 @@ export default function Admin() {
                     <button onClick={() => setSelectedUser(null)}>Отмена</button>
                   </div>
                   {selectedUser.members && selectedUser.members.length > 0 && (
-                    <div style={{ marginTop: '20px' }}>
+                    <div className="mt-3">
                       <h4>Участники клана:</h4>
                       <table>
                         <thead>
