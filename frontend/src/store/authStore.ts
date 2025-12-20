@@ -13,6 +13,8 @@ interface User {
   level: number
   xp: number | bigint
   narCoin: number | bigint
+  energy?: number
+  maxEnergy?: number
   isTrainer?: boolean
   isAdmin?: boolean
 }

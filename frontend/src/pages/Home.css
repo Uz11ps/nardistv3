@@ -1,0 +1,122 @@
+/* Home Page Styles */
+
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-4) var(--spacing-5);
+  background: var(--color-background);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.home-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  flex: 1;
+}
+
+.avatar-container {
+  position: relative;
+}
+
+.avatar-notification-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  background: var(--color-primary);
+  border: 2px solid var(--color-background-secondary);
+  border-radius: 50%;
+}
+
+.home-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.home-username {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-tight);
+}
+
+.home-level {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.home-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--spacing-2);
+}
+
+.home-currency,
+.home-energy {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.home-content {
+  padding: var(--spacing-5);
+}
+
+.home-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.home-menu-item {
+  padding: var(--spacing-4);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: var(--transition-base);
+}
+
+.home-menu-item:hover {
+  border-color: var(--color-primary);
+  background: var(--color-background-secondary);
+}
+
+.home-menu-item-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.home-menu-item-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.home-menu-item-disabled {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+  margin-left: auto;
+}
+
+@media (max-width: 480px) {
+  .home-header {
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+
+  .home-username {
+    font-size: var(--font-size-lg);
+  }
+
+  .home-menu-item {
+    padding: var(--spacing-3);
+  }
+}

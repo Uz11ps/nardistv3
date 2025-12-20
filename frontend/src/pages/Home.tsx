@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
-
 import { apiClient } from '../api/client'
+import './Home.css'
 
 export default function Home() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1 })
+  const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
   const [hasPremium, setHasPremium] = useState(false)
+  const [hasNotifications, setHasNotifications] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -24,14 +24,31 @@ export default function Home() {
           narCoin: Number(narCoin) || 0,
           xp: Number(xp) || 0,
           level: user.level || 1,
+          energy: user.energy || 100,
+          maxEnergy: user.maxEnergy || 100,
         })
         checkPremium()
+        checkNotifications()
+        loadEnergy()
       } catch (error) {
         console.error('Ошибка при загрузке статистики:', error)
-        setStats({ narCoin: 0, xp: 0, level: 1 })
+        setStats({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
       }
     }
   }, [user])
+
+  const loadEnergy = async () => {
+    try {
+      const response = await apiClient.get('/progress/energy')
+      setStats(prev => ({
+        ...prev,
+        energy: response.data.energy || prev.energy,
+        maxEnergy: response.data.maxEnergy || prev.maxEnergy,
+      }))
+    } catch (error) {
+      // Игнорируем ошибки
+    }
+  }
 
   const checkPremium = async () => {
     try {
@@ -42,151 +59,94 @@ export default function Home() {
     }
   }
 
+  const checkNotifications = async () => {
+    try {
+      // Пока нет endpoint для уведомлений, просто заглушка
+      // const response = await apiClient.get('/notifications/unread-count')
+      // setHasNotifications((response.data?.count || 0) > 0)
+      setHasNotifications(false)
+    } catch (error) {
+      // Игнорируем ошибки
+    }
+  }
+
   if (!user) {
     return null
   }
 
   const menuItems = [
-    { icon: 'dice', title: 'Онлайн игра', subtitle: 'Сразись с игроками по всему миру', path: '/game/search' },
-    { icon: 'table', title: 'Свободные столы', subtitle: 'Выбирай стол и присоединяйся к игре', path: '/game/tables' },
-    { icon: 'bot', title: 'Игра с AI', subtitle: 'Тренируйся без ограничений', path: '/game/new?mode=bot' },
-  ]
-
-  const profileItems = [
-    { icon: 'city', title: 'Город', path: '/city' },
-    { icon: 'trophy', title: 'Турниры', path: '/tournaments' },
-    { icon: 'user', title: 'Профиль', path: '/profile' },
-    { icon: 'shield', title: 'Кланы', path: '/clans', disabled: (user?.level || 0) < 20 },
-    { icon: 'academy', title: 'Курсы', path: '/academy' },
+    { icon: 'dice', iconColor: '#ff3333', title: 'Играть', path: '/game/modes' },
+    { icon: 'trophy', iconColor: '#ffd700', title: 'Турниры', path: '/tournaments' },
+    { icon: 'user', iconColor: '#aaaaaa', title: 'Профиль', path: '/profile' },
+    { icon: 'academy', iconColor: '#aaaaaa', title: 'Курсы', path: '/academy' },
+    { icon: 'city', iconColor: '#ffd700', title: 'Город', path: '/city' },
+    { icon: 'shield', iconColor: '#ffd700', title: 'Кланы', path: '/clans', disabled: (user?.level || 0) < 20 },
   ]
 
   return (
     <div className="app-container">
-      <PageHeader title="НАРДИСТ" showBack={false} />
-      
-      <div style={{ padding: '20px' }}>
-        {/* Профиль пользователя */}
-        <Card style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div className="avatar avatar-large">
+      {/* Хедер с профилем */}
+      <div className="home-header">
+        <div className="home-header-left">
+          <div className="avatar-container">
+            <div className="avatar avatar-large" onClick={() => navigate('/profile')}>
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.username} />
               ) : (
-                <Icon name="user" size={32} />
+                <Icon name="user" size={48} />
               )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div className="card-title">{user?.nickname || user?.username || 'Игрок'}</div>
-                {hasPremium && (
-                  <span style={{ 
-                    fontSize: '16px',
-                    background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    fontWeight: 'bold'
-                  }}>
-                    <Icon name="star" size={16} />
-                  </span>
-                )}
-              </div>
-              <div className="card-subtitle">Уровень {stats.level}</div>
-              <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                <span className="gold">
-                  <Icon name="coin" size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
-                  {stats.narCoin.toLocaleString()} NAR
-                </span>
-                <span style={{ color: '#ff3333' }}>🔥 {stats.xp}/100</span>
-              </div>
+              {hasNotifications && <div className="avatar-notification-badge" />}
             </div>
           </div>
-        </Card>
-
-        {/* Валюта */}
-        <Card style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="gold-icon" style={{ fontSize: '24px' }}>🪙</span>
-              <span className="gold" style={{ fontSize: '18px', fontWeight: 600 }}>
-                {stats.narCoin.toLocaleString()} NAR
-              </span>
-            </div>
-            <Button variant="primary" onClick={() => navigate('/shop')}>
-              Пополнить
-            </Button>
+          <div className="home-user-info">
+            <div className="home-username">{user?.nickname || user?.username || 'Игрок'}</div>
+            <div className="home-level">Уровень {stats.level}</div>
           </div>
-        </Card>
-
-        {/* Режимы игры */}
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px' }}>
-            Режимы игры
-          </div>
-          {menuItems.map((item) => (
-            <Card
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              style={{ marginBottom: '12px' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Icon name={item.icon} size={32} />
-                <div style={{ flex: 1 }}>
-                  <div className="card-title">{item.title}</div>
-                  <div className="card-subtitle">{item.subtitle}</div>
-                </div>
-                <div style={{ fontSize: '20px', color: '#666666' }}>→</div>
-              </div>
-            </Card>
-          ))}
         </div>
-
-        {/* Меню */}
-        <div>
-          <div style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px' }}>
-            Меню
+        <div className="home-header-right">
+          <div className="home-currency">
+            <Icon name="coin" size={20} style={{ color: '#ffd700' }} />
+            <span className="gold">{stats.narCoin.toLocaleString()}</span>
           </div>
-          {profileItems.map((item) => {
+          <div className="home-energy">
+            <span style={{ color: '#ff3333', fontSize: '20px', marginRight: '4px' }}>⚡</span>
+            <span style={{ color: '#ff3333' }}>#{stats.energy}/{stats.maxEnergy}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="home-content">
+        {/* Меню */}
+        <div className="home-menu">
+          {menuItems.map((item) => {
             const isDisabled = item.disabled
             return (
               <Card
                 key={item.path}
                 onClick={() => !isDisabled && navigate(item.path)}
+                className="home-menu-item"
                 style={{
-                  marginBottom: '12px',
                   opacity: isDisabled ? 0.5 : 1,
                   cursor: isDisabled ? 'not-allowed' : 'pointer',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Icon name={item.icon} size={24} />
-                  <div style={{ flex: 1 }}>
-                    <div className="card-title">
-                      {item.title}
-                      {isDisabled && (
-                        <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
-                          (с 20 уровня)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {!isDisabled && <div style={{ fontSize: '20px', color: '#666666' }}>→</div>}
+                <div className="home-menu-item-content">
+                  <Icon 
+                    name={item.icon} 
+                    size={24} 
+                    style={{ 
+                      color: isDisabled ? '#666666' : item.iconColor,
+                      flexShrink: 0 
+                    }} 
+                  />
+                  <span className="home-menu-item-title">{item.title}</span>
+                  {isDisabled && (
+                    <span className="home-menu-item-disabled">(с 20 уровня)</span>
+                  )}
                 </div>
               </Card>
             )
           })}
-        </div>
-
-        {/* Футер */}
-        <div
-          style={{
-            padding: '16px',
-            textAlign: 'center',
-            color: '#aaaaaa',
-            fontSize: '14px',
-            marginTop: '32px',
-          }}
-        >
-          Игры дают опыт, NAR-coin и рейтинг
         </div>
       </div>
 

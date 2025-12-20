@@ -7,6 +7,7 @@ import Button from '../components/Button'
 import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
+import './Profile.css'
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -35,7 +36,7 @@ export default function Profile() {
   }
 
   const menuItems = [
-    { icon: 'shop', title: 'Магазин', path: '/shop' },
+    { icon: 'crown', title: 'Магазин', path: '/shop' },
     { icon: 'box', title: 'Инвентарь', path: '/inventory' },
     { icon: 'bell', title: 'Уведомления', path: '/notifications' },
     { icon: 'settings', title: 'Настройки', path: '/settings' },
@@ -51,46 +52,32 @@ export default function Profile() {
     <div className="app-container">
       <PageHeader title="Профиль" />
       
-      <div style={{ padding: '20px' }}>
-        {/* Профиль */}
-        <Card style={{ marginBottom: '20px', textAlign: 'center' }}>
-          <div className="avatar avatar-large" style={{ margin: '0 auto 16px' }}>
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.username} />
-            ) : (
-              <Icon name="user" size={48} />
-            )}
+      <div className="profile-content">
+        {/* Профиль пользователя */}
+        <div className="profile-header">
+          <div className="profile-avatar-container">
+            <div className="avatar avatar-large">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.username} />
+              ) : (
+                <Icon name="user" size={64} />
+              )}
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <div className="card-title">{user?.nickname || user?.username || 'Игрок'}</div>
-            {hasPremium && (
-              <span style={{ 
-                fontSize: '16px',
-                background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontWeight: 'bold'
-              }}>
-                <Icon name="star" size={16} />
-              </span>
-            )}
+          <div className="profile-name">
+            {user?.nickname || user?.username || 'Игрок'}
           </div>
-          <div className="card-subtitle">Уровень {stats.level}</div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '12px' }}>
-            <span className="gold">
-              <Icon name="coin" size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
-              {stats.narCoin.toLocaleString()}
-            </span>
-            <span style={{ color: '#ff3333' }}>🔥 {stats.xp}/100</span>
+          <div className="profile-level">
+            Уровень {stats.level}
           </div>
-        </Card>
+        </div>
 
         {/* Валюта */}
-        <Card style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Icon name="coin" size={24} />
-              <span className="gold" style={{ fontSize: '18px', fontWeight: 600 }}>
+        <Card className="profile-currency-card">
+          <div className="profile-currency-content">
+            <div className="profile-currency-left">
+              <Icon name="coin" size={24} style={{ color: '#ffd700' }} />
+              <span className="gold profile-currency-amount">
                 {stats.narCoin.toLocaleString()} NAR
               </span>
             </div>
@@ -101,19 +88,17 @@ export default function Profile() {
         </Card>
 
         {/* Меню */}
-        <div>
+        <div className="profile-menu">
           {menuItems.map((item) => (
             <Card
               key={item.path}
               onClick={() => handleMenuClick(item)}
-              style={{ marginBottom: '12px' }}
+              className="profile-menu-item"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Icon name={item.icon} size={24} />
-                <div style={{ flex: 1 }}>
-                  <div className="card-title">{item.title}</div>
-                </div>
-                <div style={{ fontSize: '20px', color: '#666666' }}>→</div>
+              <div className="profile-menu-item-content">
+                <Icon name={item.icon} size={24} style={{ color: '#ffd700' }} />
+                <span className="profile-menu-item-title">{item.title}</span>
+                <span style={{ fontSize: '20px', color: '#666666', marginLeft: 'auto' }}>→</span>
               </div>
             </Card>
           ))}
