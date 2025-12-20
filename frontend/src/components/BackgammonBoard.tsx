@@ -627,8 +627,78 @@ export default function BackgammonBoard({
     return null
   }
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isMyTurn || !canMove || diceArray.length === 0) return
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    const clickedPoint = getPointFromCoords(x, y)
+    if (clickedPoint === null) return
+
+    const pointValue = points[clickedPoint] || 0
+    const isMyChecker = currentPlayer === 0 ? pointValue > 0 : pointValue < 0
+    
+    if (isMyChecker && possibleMoves.some(move => move.from === clickedPoint)) {
+      setDragging({ point: clickedPoint, offsetX: x, offsetY: y })
+      setSelectedPoint(clickedPoint)
+    }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    const hoveredPoint = getPointFromCoords(x, y)
+    setHoverPoint(hoveredPoint)
+  }
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (dragging) {
+      const canvas = canvasRef.current
+      if (!canvas) {
+        setDragging(null)
+        setSelectedPoint(null)
+        return
+      }
+
+      const rect = canvas.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+
+      const targetPoint = getPointFromCoords(x, y)
+      
+      if (targetPoint !== null && targetPoint !== dragging.point) {
+        // Проверяем валидность хода
+        const validMove = possibleMoves.find(
+          move => move.from === dragging.point && move.to === targetPoint
+        )
+        
+        if (validMove) {
+          onMove(dragging.point, targetPoint, validMove.die)
+          setSelectedPoint(null)
+          setHighlightedPoints(new Set())
+        }
+      }
+
+      setDragging(null)
+      return
+    }
+
+    // Обычный клик если не было drag
+    handleCanvasClick(e)
+  }
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isMyTurn || !canMove || diceArray.length === 0 || dragging) return
 
     const canvas = canvasRef.current
     if (!canvas) return
@@ -657,9 +727,12 @@ export default function BackgammonBoard({
           if (isMyChecker && checkerCount > 0) {
             // Проверяем, есть ли возможные ходы с этой точки
             const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
+            console.log(`🎯 Клик по точке ${POINT_NUMBERS[clickedPoint]} (индекс ${clickedPoint}), есть ходы:`, hasPossibleMoves, 'Возможные ходы:', possibleMoves.filter(m => m.from === clickedPoint))
             if (hasPossibleMoves) {
               setSelectedPoint(clickedPoint)
               return
+            } else {
+              console.log('⚠️ Нет возможных ходов с этой точки')
             }
           }
         }
@@ -681,10 +754,14 @@ export default function BackgammonBoard({
           move => move.from === selectedPoint && move.to === clickedPoint
         )
         
+        console.log('🎲 Делаем ход:', { from: selectedPoint, to: clickedPoint, validMove })
+        
         if (validMove) {
           onMove(selectedPoint, clickedPoint, validMove.die)
           setSelectedPoint(null)
           setHighlightedPoints(new Set())
+        } else {
+          console.log('❌ Ход невалиден')
         }
       } else {
         // Отмена выбора или выбор другой точки
@@ -720,18 +797,17 @@ export default function BackgammonBoard({
       <canvas
         ref={canvasRef}
         onClick={handleCanvasClick}
-        onMouseMove={(e) => {
-          const canvas = canvasRef.current
-          if (!canvas) return
-
-          const rect = canvas.getBoundingClientRect()
-          const x = e.clientX - rect.left
-          const y = e.clientY - rect.top
-
-          const hoveredPoint = getPointFromCoords(x, y)
-          setHoverPoint(hoveredPoint)
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={() => {
+          if (dragging) {
+            setDragging(null)
+            setSelectedPoint(null)
+          }
         }}
         className="backgammon-board"
+        style={{ cursor: dragging ? 'grabbing' : 'pointer' }}
       />
       {!dice && isMyTurn && (
         <button className="roll-dice-button" onClick={handleRollDice} disabled={animating}>
