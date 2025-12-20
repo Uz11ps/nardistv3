@@ -262,7 +262,8 @@ export default function BackgammonBoard({
           if (isTop) {
             checkerY = y + pointHeight - checkerRadius - (j * stackSpacing)
           } else {
-            checkerY = y - pointHeight + checkerRadius + (j * stackSpacing)
+            // Для нижних точек фишки должны быть прижаты к низу треугольника
+            checkerY = y - checkerRadius - (j * stackSpacing)
           }
 
           const checkerX = x + pointWidth / 2
@@ -321,7 +322,7 @@ export default function BackgammonBoard({
           ctx.fillText(
             checkerCount.toString(),
             x + pointWidth / 2,
-            isTop ? y + pointHeight - checkerRadius - maxStack * stackSpacing - 10 : y - pointHeight + checkerRadius + maxStack * stackSpacing + 20
+            isTop ? y + pointHeight - checkerRadius - maxStack * stackSpacing - 10 : y - checkerRadius - maxStack * stackSpacing - 10
           )
         }
       }
@@ -585,7 +586,8 @@ export default function BackgammonBoard({
         pointX = boardPadding + (i - 12) * pointWidth
       }
 
-      const pointY = isTop ? boardPadding : boardPadding + (height - boardPadding * 2) / 2
+      // Для нижних точек прижимаем к низу доски
+      const pointY = isTop ? boardPadding : boardPadding + (height - boardPadding * 2) - pointHeight
 
       // Проверяем клик в пределах треугольника
       const relativeX = x - pointX

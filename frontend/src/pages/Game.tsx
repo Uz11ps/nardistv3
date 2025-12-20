@@ -181,11 +181,11 @@ export default function Game() {
     if (!socket) return
 
     try {
-      socket.emit('game:move', {
+      // Собираем все ходы в массив (пока один ход)
+      const moves = [{ from, to, die }]
+      socket.emit('make_move', {
         gameId,
-        from,
-        to,
-        die,
+        moves,
       })
     } catch (error) {
       console.error('Failed to make move:', error)
