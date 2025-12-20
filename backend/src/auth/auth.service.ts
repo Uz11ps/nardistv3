@@ -161,26 +161,24 @@ export class AuthService {
     
     const user = await this.usersService.create(createUserDto);
     
-    // Помечаем как гостя
-    user.isGuest = true;
-    user.onboardingCompleted = true; // Гостям не нужен онбординг
-    user.profileSetupCompleted = true;
-    user.starterKitClaimed = true;
-    await this.usersService.update(user.id, { isGuest: true, onboardingCompleted: true, profileSetupCompleted: true, starterKitClaimed: true });
+    // Помечаем как гостя и пропускаем онбординг
+    const updatedUser = await this.usersService.update(user.id, { 
+      isGuest: true, 
+      onboardingCompleted: true, 
+      profileSetupCompleted: true, 
+      starterKitClaimed: true 
+    });
 
     const payload = {
-      sub: user.id,
-      telegramId: user.telegramId,
-      username: user.username,
+      sub: updatedUser.id,
+      telegramId: updatedUser.telegramId,
+      username: updatedUser.username,
       isGuest: true,
     };
 
     return {
       access_token: this.jwtService.sign(payload),
-      user: {
-        ...user,
-        isGuest: true,
-      },
+      user: updatedUser,
     };
   }
 
