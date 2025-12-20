@@ -316,30 +316,33 @@ export class GamesService {
     currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
     // Reset movesFromHead for the new player's turn
     currentState.movesFromHead = 0;
-    game.gameState = currentState;
-    game.currentPlayer = currentState.currentPlayer;
-    game.lastMoveAt = new Date();
+    
+    // Перезагружаем игру чтобы TypeORM знал о новом ходе и не пытался синхронизировать relations
+    const updatedGame = await this.findOne(gameId);
+    updatedGame.gameState = currentState;
+    updatedGame.currentPlayer = currentState.currentPlayer;
+    updatedGame.lastMoveAt = new Date();
 
     // Если это первый ход (игра в статусе WAITING), переводим в IN_PROGRESS
-    if (game.status === GameStatus.WAITING) {
-      game.status = GameStatus.IN_PROGRESS;
+    if (updatedGame.status === GameStatus.WAITING) {
+      updatedGame.status = GameStatus.IN_PROGRESS;
     }
 
     if (engine.isGameFinished(currentState)) {
       const winner = engine.getWinner(currentState);
-      game.status = GameStatus.FINISHED;
-      game.winnerId = winner === 0 ? game.player1Id : game.player2Id;
+      updatedGame.status = GameStatus.FINISHED;
+      updatedGame.winnerId = winner === 0 ? updatedGame.player1Id : updatedGame.player2Id;
       if (winner === 0) {
-        game.player1Score = 1;
+        updatedGame.player1Score = 1;
       } else {
-        game.player2Score = 1;
+        updatedGame.player2Score = 1;
       }
 
       // Применяем логику после завершения игры
-      await this.onGameFinished(game);
+      await this.onGameFinished(updatedGame);
     }
 
-    const savedGame = await this.gamesRepository.save(game);
+    const savedGame = await this.gamesRepository.save(updatedGame);
 
     // Bot moves are now handled by GamesGateway.handleBotTurnIfNeeded()
     // This avoids circular dependency issues
