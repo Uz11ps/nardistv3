@@ -255,6 +255,13 @@ export class GamesService {
     }
 
     const moveNumber = game.moves.length + 1;
+    
+    // Проверяем что game.id существует
+    if (!game.id) {
+      this.logger.error(`Game ID is missing! Game object:`, JSON.stringify(game, null, 2));
+      throw new BadRequestException('Ошибка: ID игры не найден');
+    }
+    
     const moveRecord = this.movesRepository.create({
       gameId: game.id,
       playerId,
