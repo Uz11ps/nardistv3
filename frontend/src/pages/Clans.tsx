@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
-import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './Clans.css'
@@ -29,7 +28,6 @@ export default function Clans() {
           </div>
           <Button onClick={() => navigate('/')}>Играть</Button>
         </div>
-        <BottomNav />
       </div>
     )
   }
@@ -90,8 +88,6 @@ export default function Clans() {
           </Button>
         </div>
       </div>
-
-      <BottomNav />
     </div>
   )
 }

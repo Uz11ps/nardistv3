@@ -1,8 +1,7 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
-import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './ClanCreate.css'
@@ -92,9 +91,6 @@ export default function ClanCreate() {
         <div className="clan-create-footer">
           После создания клана ты сможешь приглашать участников и улучшать район
         </div>
-      </div>
-
-      <BottomNav />
-    </div>
+      </div>    </div>
   )
 }

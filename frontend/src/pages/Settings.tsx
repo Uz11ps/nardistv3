@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
-import BottomNav from '../components/BottomNav'
 import { apiClient } from '../api/client'
 import './Settings.css'
 
@@ -165,8 +164,6 @@ export default function Settings() {
           </div>
         </Card>
       </div>
-
-      <BottomNav />
     </div>
   )
 }

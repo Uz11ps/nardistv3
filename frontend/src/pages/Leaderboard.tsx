@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
-import BottomNav from '../components/BottomNav'
 import { apiClient } from '../api/client'
 
 interface LeaderboardEntry {
@@ -241,10 +240,7 @@ export default function Leaderboard() {
             ))}
           </div>
         )}
-      </div>
-
-      <BottomNav />
-    </div>
+      </div>    </div>
   )
 }
 

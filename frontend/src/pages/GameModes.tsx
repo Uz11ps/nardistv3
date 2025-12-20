@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
-import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import './GameModes.css'
 
@@ -70,7 +69,6 @@ export default function GameModes() {
         </div>
       </div>
 
-      <BottomNav />
     </div>
   )
 }

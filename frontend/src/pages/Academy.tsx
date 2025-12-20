@@ -4,7 +4,6 @@ import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import BottomNav from '../components/BottomNav'
 import { apiClient } from '../api/client'
 
 interface Course {
@@ -85,7 +84,6 @@ export default function Academy() {
           </div>
           <Button onClick={() => navigate('/')}>Играть</Button>
         </div>
-        <BottomNav />
       </div>
     )
   }
@@ -248,8 +246,6 @@ export default function Academy() {
           </div>
         </div>
       )}
-
-      <BottomNav />
     </div>
   )
 }

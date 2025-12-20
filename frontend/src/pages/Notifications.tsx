@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
-import BottomNav from '../components/BottomNav'
 
 interface Notification {
   id: string
@@ -102,8 +101,6 @@ export default function Notifications() {
           </div>
         )}
       </div>
-
-      <BottomNav />
     </div>
   )
 }

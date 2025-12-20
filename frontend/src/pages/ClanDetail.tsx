@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
-import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './ClanDetail.css'
@@ -86,9 +85,7 @@ export default function ClanDetail() {
     return (
       <div className="app-container">
         <PageHeader title="Клан" />
-        <div className="clan-detail-loading">Загрузка...</div>
-        <BottomNav />
-      </div>
+        <div className="clan-detail-loading">Загрузка...</div>      </div>
     )
   }
 
@@ -152,9 +149,6 @@ export default function ClanDetail() {
             </Button>
           </div>
         )}
-      </div>
-
-      <BottomNav />
-    </div>
+      </div>    </div>
   )
 }

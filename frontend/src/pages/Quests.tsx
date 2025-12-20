@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import BottomNav from '../components/BottomNav'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import './Quests.css'
@@ -180,8 +179,6 @@ export default function Quests() {
           </div>
         )}
       </div>
-
-      <BottomNav />
     </div>
   )
 }

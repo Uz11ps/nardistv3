@@ -1,9 +1,8 @@
-import { useEffect } from 'react'
+﻿import { useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import BottomNav from '../components/BottomNav'
 
 export default function GameResult() {
   const navigate = useNavigate()
@@ -93,10 +92,7 @@ export default function GameResult() {
             На главную
           </Button>
         </div>
-      </div>
-
-      <BottomNav />
-    </div>
+      </div>    </div>
   )
 }
 

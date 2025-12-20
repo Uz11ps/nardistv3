@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
-import BottomNav from '../components/BottomNav'
 import { apiClient } from '../api/client'
 
 interface Achievement {
@@ -252,10 +251,7 @@ export default function Achievements() {
             ))}
           </div>
         )}
-      </div>
-
-      <BottomNav />
-    </div>
+      </div>    </div>
   )
 }
 

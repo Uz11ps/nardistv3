@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
-import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './ClanSearch.css'
@@ -158,9 +157,6 @@ export default function ClanSearch() {
             ))}
           </div>
         )}
-      </div>
-
-      <BottomNav />
-    </div>
+      </div>    </div>
   )
 }

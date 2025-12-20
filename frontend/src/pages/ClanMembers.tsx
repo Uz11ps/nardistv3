@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
-import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './ClanMembers.css'
@@ -110,9 +109,7 @@ export default function ClanMembers() {
     return (
       <div className="app-container">
         <PageHeader title="Участники" />
-        <div className="clan-members-loading">Загрузка...</div>
-        <BottomNav />
-      </div>
+        <div className="clan-members-loading">Загрузка...</div>      </div>
     )
   }
 
@@ -187,9 +184,6 @@ export default function ClanMembers() {
             })}
           </div>
         )}
-      </div>
-
-      <BottomNav />
-    </div>
+      </div>    </div>
   )
 }

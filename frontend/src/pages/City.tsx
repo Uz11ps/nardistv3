@@ -4,7 +4,6 @@ import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './City.css'
@@ -88,7 +87,6 @@ export default function City() {
             Играть
           </Button>
         </div>
-        <BottomNav />
       </div>
     )
   }
@@ -104,7 +102,6 @@ export default function City() {
             </div>
           </Card>
         </div>
-        <BottomNav />
       </div>
     )
   }
@@ -124,7 +121,6 @@ export default function City() {
             Найти клан
           </Button>
         </div>
-        <BottomNav />
       </div>
     )
   }
@@ -189,8 +185,6 @@ export default function City() {
           </Card>
         ))}
       </div>
-
-      <BottomNav />
     </div>
   )
 }

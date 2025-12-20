@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './Profile.css'
@@ -38,6 +36,7 @@ export default function Profile() {
   const menuItems = [
     { icon: 'crown', title: 'Магазин', path: '/shop' },
     { icon: 'box', title: 'Инвентарь', path: '/inventory' },
+    { icon: 'target', title: 'Квесты', path: '/quests' },
     { icon: 'bell', title: 'Уведомления', path: '/notifications' },
     { icon: 'settings', title: 'Настройки', path: '/settings' },
   ]
@@ -50,17 +49,21 @@ export default function Profile() {
 
   return (
     <div className="app-container">
-      <PageHeader title="Профиль" />
+      <div className="profile-page-header">
+        <button className="back-button" onClick={() => navigate(-1)}>
+          ←
+        </button>
+      </div>
       
       <div className="profile-content">
         {/* Профиль пользователя */}
         <div className="profile-header">
           <div className="profile-avatar-container">
-            <div className="avatar avatar-large">
+            <div className="profile-avatar">
               {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.username} />
+                <img src={user.avatarUrl} alt={user.username} className="profile-avatar-img" />
               ) : (
-                <Icon name="user" size={64} />
+                <Icon name="user" size={80} className="profile-avatar-icon" />
               )}
             </div>
           </div>
@@ -76,12 +79,12 @@ export default function Profile() {
         <Card className="profile-currency-card">
           <div className="profile-currency-content">
             <div className="profile-currency-left">
-              <Icon name="coin" size={24} style={{ color: '#ffd700' }} />
-              <span className="gold profile-currency-amount">
-                {stats.narCoin.toLocaleString()} NAR
+              <Icon name="coin" size={24} className="profile-currency-icon" />
+              <span className="profile-currency-amount">
+                {stats.narCoin.toLocaleString('ru-RU')} NAR
               </span>
             </div>
-            <Button variant="primary" onClick={() => navigate('/shop')}>
+            <Button variant="primary" className="profile-topup-btn" onClick={() => navigate('/shop')}>
               Пополнить
             </Button>
           </div>
@@ -96,16 +99,15 @@ export default function Profile() {
               className="profile-menu-item"
             >
               <div className="profile-menu-item-content">
-                <Icon name={item.icon} size={24} style={{ color: '#ffd700' }} />
+                <Icon name={item.icon} size={24} className="profile-menu-item-icon" />
                 <span className="profile-menu-item-title">{item.title}</span>
-                <span style={{ fontSize: '20px', color: '#666666', marginLeft: 'auto' }}>→</span>
+                <span className="profile-menu-item-arrow">→</span>
               </div>
             </Card>
           ))}
         </div>
       </div>
 
-      <BottomNav />
     </div>
   )
 }

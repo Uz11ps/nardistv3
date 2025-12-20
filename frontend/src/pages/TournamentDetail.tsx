@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import BottomNav from '../components/BottomNav'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './TournamentDetail.css'
@@ -114,9 +113,7 @@ export default function TournamentDetail() {
         <PageHeader title="Турнир" />
         <div style={{ padding: '40px', textAlign: 'center', color: '#aaaaaa' }}>
           Загрузка...
-        </div>
-        <BottomNav />
-      </div>
+        </div>      </div>
     )
   }
 
@@ -126,9 +123,7 @@ export default function TournamentDetail() {
         <PageHeader title="Турнир" />
         <div style={{ padding: '40px', textAlign: 'center', color: '#aaaaaa' }}>
           Турнир не найден
-        </div>
-        <BottomNav />
-      </div>
+        </div>      </div>
     )
   }
 
@@ -329,10 +324,7 @@ export default function TournamentDetail() {
             )}
           </div>
         )}
-      </div>
-
-      <BottomNav />
-    </div>
+      </div>    </div>
   )
 }
 
