@@ -25,6 +25,8 @@ export default function Shop() {
   const [ownedSkins, setOwnedSkins] = useState<string[]>([])
   const [selectedSkinIds, setSelectedSkinIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [processingSkinId, setProcessingSkinId] = useState<string | null>(null)
+  const [buyingNarCoinAmount, setBuyingNarCoinAmount] = useState<number | null>(null)
 
   useEffect(() => {
     if (activeTab === 'coin') {
@@ -101,7 +103,10 @@ export default function Shop() {
   }
 
   const handleBuyNarCoin = async (amount: number, price: number) => {
+    if (buyingNarCoinAmount !== null) return // Защита от повторных запросов
+    
     try {
+      setBuyingNarCoinAmount(amount)
       // TODO: интеграция с платежной системой TON
       const response = await apiClient.post('/shop/purchase-nar-coin', { amount, price, currency: 'TON' }).catch(() => {
         throw new Error('Интеграция с платежной системой в разработке')
@@ -115,11 +120,16 @@ export default function Shop() {
     } catch (error: any) {
       alert(error.response?.data?.message || error.message || 'Ошибка при покупке')
       console.error('Purchase failed:', error)
+    } finally {
+      setBuyingNarCoinAmount(null)
     }
   }
 
   const handleBuySkin = async (skinId: string) => {
+    if (processingSkinId !== null) return // Защита от повторных запросов
+    
     try {
+      setProcessingSkinId(skinId)
       const skin = allSkins.find((s) => s.id === skinId)
       if (!skin || !skin.price) return
 
@@ -129,16 +139,23 @@ export default function Shop() {
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при покупке скина')
       console.error('Purchase failed:', error)
+    } finally {
+      setProcessingSkinId(null)
     }
   }
 
   const handleSelectSkin = async (skinId: string) => {
+    if (processingSkinId !== null) return // Защита от повторных запросов
+    
     try {
+      setProcessingSkinId(skinId)
       await apiClient.post('/skins/select', { skinId })
       await loadSkins()
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при выборе скина')
       console.error('Failed to select skin:', error)
+    } finally {
+      setProcessingSkinId(null)
     }
   }
 
@@ -210,8 +227,9 @@ export default function Shop() {
                 className="shop-buy-btn"
                 fullWidth
                 onClick={() => handleBuySkin(skin.id)}
+                disabled={processingSkinId !== null}
               >
-                Купить
+                {processingSkinId === skin.id ? 'Покупка...' : 'Купить'}
               </Button>
             )}
           </div>
@@ -267,8 +285,9 @@ export default function Shop() {
                         variant="primary" 
                         className="shop-buy-btn"
                         onClick={() => handleBuyNarCoin(pkg.amount, pkg.price)}
+                        disabled={buyingNarCoinAmount !== null}
                       >
-                        Купить
+                        {buyingNarCoinAmount === pkg.amount ? 'Покупка...' : 'Купить'}
                       </Button>
                     </div>
                     <div className="shop-nar-coin-icon">

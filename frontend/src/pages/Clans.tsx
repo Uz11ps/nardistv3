@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
@@ -10,7 +10,32 @@ import './Clans.css'
 export default function Clans() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    checkUserClan()
+  }, [user])
+
+  const checkUserClan = async () => {
+    if (!user) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      const response = await apiClient.get('/clans/my')
+      if (response.data?.clan) {
+        // У пользователя есть клан - перенаправляем на панель управления
+        navigate(`/clans/${response.data.clan.id}/manage`)
+        return
+      }
+    } catch (error) {
+      // Пользователь не в клане - показываем обычный интерфейс
+      console.log('User has no clan')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (!user) {
     return null
@@ -28,6 +53,15 @@ export default function Clans() {
           </div>
           <Button onClick={() => navigate('/')}>Играть</Button>
         </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="app-container">
+        <PageHeader title="Кланы" />
+        <div className="clans-locked">Загрузка...</div>
       </div>
     )
   }

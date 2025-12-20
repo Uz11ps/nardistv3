@@ -28,6 +28,7 @@ export default function Inventory() {
   const [skins, setSkins] = useState<Skin[]>([])
   const [selectedSkinIds, setSelectedSkinIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [selectingSkinId, setSelectingSkinId] = useState<string | null>(null)
 
   useEffect(() => {
     loadInventory()
@@ -63,12 +64,17 @@ export default function Inventory() {
   }
 
   const handleSelectSkin = async (skinId: string) => {
+    if (selectingSkinId !== null) return // Защита от повторных запросов
+    
     try {
+      setSelectingSkinId(skinId)
       await apiClient.post('/skins/select', { skinId })
       await loadSelectedSkins()
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка выбора скина')
       console.error('Failed to select skin:', error)
+    } finally {
+      setSelectingSkinId(null)
     }
   }
 
@@ -172,8 +178,9 @@ export default function Inventory() {
                         <button
                           className="btn btn-primary btn-sm"
                           onClick={() => handleSelectSkin(skin.id)}
+                          disabled={selectingSkinId === skin.id || selectingSkinId !== null}
                         >
-                          Выбрать
+                          {selectingSkinId === skin.id ? 'Выбор...' : 'Выбрать'}
                         </button>
                       )}
                     </div>
@@ -227,8 +234,9 @@ export default function Inventory() {
                         <button
                           className="btn btn-primary btn-sm"
                           onClick={() => handleSelectSkin(skin.id)}
+                          disabled={selectingSkinId === skin.id || selectingSkinId !== null}
                         >
-                          Выбрать
+                          {selectingSkinId === skin.id ? 'Выбор...' : 'Выбрать'}
                         </button>
                       )}
                     </div>
@@ -282,8 +290,9 @@ export default function Inventory() {
                         <button
                           className="btn btn-primary btn-sm"
                           onClick={() => handleSelectSkin(skin.id)}
+                          disabled={selectingSkinId === skin.id || selectingSkinId !== null}
                         >
-                          Выбрать
+                          {selectingSkinId === skin.id ? 'Выбор...' : 'Выбрать'}
                         </button>
                       )}
                     </div>

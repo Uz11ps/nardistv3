@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import apiClient from '../api/client'
+import apiClient, { getImageUrl } from '../api/client'
 import './Admin.css'
 
 interface Stats {
@@ -42,6 +42,7 @@ export default function Admin() {
   const [quests, setQuests] = useState<any[]>([])
   const [clans, setClans] = useState<any[]>([])
   const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [selectedSkin, setSelectedSkin] = useState<any>(null)
   
   // Фильтры
   const [userFilters, setUserFilters] = useState({ search: '', status: '', level: '' })
@@ -991,24 +992,164 @@ export default function Admin() {
                       <td>{skin.isPremium ? 'Да' : 'Нет'}</td>
                       <td>{skin.isDefault ? 'Да' : 'Нет'}</td>
                       <td>
-                        <button className="btn btn-danger btn-sm" onClick={() => {
-                          if (confirm('Удалить скин?')) {
-                            apiClient.delete(`/admin/skins/${skin.id}`).then(() => {
-                              alert('Скин удален')
-                              loadStats()
-                            }).catch((err) => {
-                              alert('Ошибка: ' + (err.response?.data?.message || err.message))
-                            })
-                          }
-                        }}>Удалить</button>
+                        <div className="btn-group">
+                          <button className="btn btn-secondary btn-sm" onClick={() => setSelectedSkin(skin)}>Редактировать</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => {
+                            if (confirm('Удалить скин?')) {
+                              apiClient.delete(`/admin/skins/${skin.id}`).then(() => {
+                                alert('Скин удален')
+                                loadStats()
+                              }).catch((err) => {
+                                alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                              })
+                            }
+                          }}>Удалить</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="admin-form">
-              <h4>Создать новый скин</h4>
+            {selectedSkin ? (
+              <div className="admin-form">
+                <h4>Редактировать скин: {selectedSkin.name}</h4>
+                <div className="form-group">
+                  <label>Тип скина:</label>
+                  <select 
+                    id="edit-skin-type" 
+                    defaultValue={selectedSkin.type}
+                    disabled
+                  >
+                    <option value="board">Доска (Board)</option>
+                    <option value="dice">Кубики (Dice)</option>
+                    <option value="checkers">Шашки (Checkers)</option>
+                  </select>
+                  <span className="field-hint">Тип скина нельзя изменить</span>
+                </div>
+                <div className="form-group">
+                  <label>Название:</label>
+                  <input 
+                    type="text" 
+                    placeholder="Название скина" 
+                    id="edit-skin-name" 
+                    defaultValue={selectedSkin.name}
+                    required 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Тема (описание):</label>
+                  <input 
+                    type="text" 
+                    placeholder="Тема или описание" 
+                    id="edit-skin-theme" 
+                    defaultValue={selectedSkin.theme}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Цена (NAR):</label>
+                  <input 
+                    type="number" 
+                    placeholder="0 для бесплатного" 
+                    id="edit-skin-price" 
+                    min="0" 
+                    defaultValue={selectedSkin.price || 0}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>
+                    Вес <span className="field-hint">(вероятность выпадения в случайной выборке, чем больше число - тем чаще выпадает)</span>:
+                  </label>
+                  <input 
+                    type="number" 
+                    placeholder="1" 
+                    id="edit-skin-weight" 
+                    min="1" 
+                    defaultValue={selectedSkin.weight || 1}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Редкость:</label>
+                  <select id="edit-skin-rarity" defaultValue={selectedSkin.rarity || 'common'}>
+                    <option value="common">Обычный</option>
+                    <option value="rare">Редкий</option>
+                    <option value="epic">Эпический</option>
+                    <option value="legendary">Легендарный</option>
+                  </select>
+                </div>
+                <div className="form-group checkbox-group">
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      id="edit-skin-premium" 
+                      defaultChecked={selectedSkin.isPremium}
+                    /> Премиум
+                  </label>
+                </div>
+                <div className="form-group checkbox-group">
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      id="edit-skin-default" 
+                      defaultChecked={selectedSkin.isDefault}
+                    /> По умолчанию
+                  </label>
+                </div>
+                <div className="form-group">
+                  <label>Изображение:</label>
+                  {selectedSkin.imageUrl && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <img 
+                        src={getImageUrl(selectedSkin.imageUrl)} 
+                        alt={selectedSkin.name}
+                        style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" id="edit-skin-image" />
+                  <span className="field-hint">Оставьте пустым, чтобы не изменять изображение</span>
+                </div>
+                <div className="btn-group">
+                  <button className="btn btn-primary" onClick={async () => {
+                    try {
+                      const updateData: any = {
+                        name: (document.getElementById('edit-skin-name') as HTMLInputElement).value,
+                        theme: (document.getElementById('edit-skin-theme') as HTMLInputElement).value || selectedSkin.type,
+                        price: parseInt((document.getElementById('edit-skin-price') as HTMLInputElement).value) || 0,
+                        weight: parseInt((document.getElementById('edit-skin-weight') as HTMLInputElement).value) || 1,
+                        rarity: (document.getElementById('edit-skin-rarity') as HTMLSelectElement).value,
+                        isPremium: (document.getElementById('edit-skin-premium') as HTMLInputElement).checked,
+                        isDefault: (document.getElementById('edit-skin-default') as HTMLInputElement).checked,
+                      }
+                      
+                      await apiClient.put(`/admin/skins/${selectedSkin.id}`, updateData)
+                      
+                      // Если есть новое изображение, загружаем его
+                      const fileInput = document.getElementById('edit-skin-image') as HTMLInputElement
+                      if (fileInput.files && fileInput.files[0]) {
+                        const imageFormData = new FormData()
+                        imageFormData.append('image', fileInput.files[0])
+                        await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-image`, imageFormData, {
+                          headers: { 'Content-Type': 'multipart/form-data' }
+                        })
+                      }
+                      
+                      alert('Скин обновлен!')
+                      setSelectedSkin(null)
+                      loadStats()
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}>Сохранить изменения</button>
+                  <button className="btn btn-secondary" onClick={() => setSelectedSkin(null)}>Отмена</button>
+                </div>
+              </div>
+            ) : (
+              <div className="admin-form">
+                <h4>Создать новый скин</h4>
               <div className="form-group">
                 <label>Тип скина:</label>
                 <select id="skin-type" required>

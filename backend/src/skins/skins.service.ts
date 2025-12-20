@@ -26,11 +26,28 @@ export class SkinsService {
   }
 
   async getUserSkins(userId: string): Promise<Skin[]> {
+    // Получаем скины пользователя из user_skins
     const userSkins = await this.userSkinsRepository.find({
       where: { userId },
       relations: ['skin'],
     });
-    return userSkins.map((us) => us.skin);
+    const userSkinIds = userSkins.map((us) => us.skin.id);
+    
+    // Получаем все default скины
+    const defaultSkins = await this.skinsRepository.find({
+      where: { isDefault: true },
+    });
+    
+    // Объединяем: скины пользователя + default скины (если их еще нет у пользователя)
+    const allSkins = [...userSkins.map((us) => us.skin)];
+    
+    for (const defaultSkin of defaultSkins) {
+      if (!userSkinIds.includes(defaultSkin.id)) {
+        allSkins.push(defaultSkin);
+      }
+    }
+    
+    return allSkins;
   }
 
   /**
@@ -63,6 +80,16 @@ export class SkinsService {
       throw new BadRequestException('Скин не найден');
     }
 
+    // Проверяем доступность скина: должен быть либо у пользователя, либо default
+    if (!skin.isDefault) {
+      const userHasSkin = await this.userSkinsRepository.findOne({
+        where: { userId, skinId },
+      });
+      if (!userHasSkin) {
+        throw new BadRequestException('Скин недоступен. Сначала приобретите его.');
+      }
+    }
+
     // Получаем все выбранные скины пользователя
     const selectedSkins = await this.userSkinsRepository.find({
       where: { userId, isSelected: true },
@@ -90,6 +117,7 @@ export class SkinsService {
       }
     }
 
+    // Проверяем или создаем запись user_skin (даже для default скинов)
     let userSkin = await this.userSkinsRepository.findOne({
       where: { userId, skinId },
     });
@@ -125,6 +153,24 @@ export class SkinsService {
           result.checkers = userSkin.skin;
         }
       }
+    }
+
+    // Если не выбран скин какого-то типа, используем default скин этого типа
+    const allSkins = await this.skinsRepository.find({
+      where: { isDefault: true },
+    });
+    
+    if (!result.board) {
+      const defaultBoard = allSkins.find(s => s.type === 'board');
+      if (defaultBoard) result.board = defaultBoard;
+    }
+    if (!result.dice) {
+      const defaultDice = allSkins.find(s => s.type === 'dice');
+      if (defaultDice) result.dice = defaultDice;
+    }
+    if (!result.checkers) {
+      const defaultCheckers = allSkins.find(s => s.type === 'checkers');
+      if (defaultCheckers) result.checkers = defaultCheckers;
     }
 
     return result;

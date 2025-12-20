@@ -325,11 +325,38 @@ export class AdminController {
 
   @Post('skins/:id/upload-image')
   @UseGuards(JwtAuthGuard)
-  async uploadSkinImage(@CurrentUser() user: any, @Param('id') id: string, @Body() body: { imageUrl: string }) {
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/skins',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `skin-${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Только изображения разрешены'), false);
+        }
+      },
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    }),
+  )
+  async uploadSkinImage(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @UploadedFile() file?: { filename: string; originalname: string; mimetype: string; size: number },
+  ) {
     if (!user.isAdmin) {
       throw new UnauthorizedException('Недостаточно прав');
     }
-    return this.adminService.updateSkinImage(id, body.imageUrl);
+    const imageUrl = file ? `/uploads/skins/${file.filename}` : null;
+    if (!imageUrl) {
+      throw new BadRequestException('Изображение не загружено');
+    }
+    return this.adminService.updateSkinImage(id, imageUrl);
   }
 
   // CRUD для квестов

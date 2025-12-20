@@ -67,7 +67,10 @@ export default function Quests() {
   }
 
   const handleClaim = async (questId: string) => {
+    if (claimingQuestId !== null) return // Защита от повторных запросов
+    
     try {
+      setClaimingQuestId(questId)
       await apiClient.post(`/quests/${questId}/claim`)
       await loadQuests()
       // Обновляем данные пользователя
@@ -78,6 +81,8 @@ export default function Quests() {
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при получении награды')
       console.error('Failed to claim quest:', error)
+    } finally {
+      setClaimingQuestId(null)
     }
   }
 
@@ -168,8 +173,9 @@ export default function Quests() {
                         variant="primary"
                         className="quest-claim-btn"
                         onClick={() => handleClaim(quest.id)}
+                        disabled={claimingQuestId !== null}
                       >
-                        Забрать
+                        {claimingQuestId === quest.id ? 'Получение...' : 'Забрать'}
                       </Button>
                     )}
                   </div>

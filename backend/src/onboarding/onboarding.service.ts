@@ -70,6 +70,7 @@ export class OnboardingService {
     starterKit: {
       board: { id: string; name: string };
       dice: { id: string; name: string };
+      checkers: { id: string; name: string };
     };
   }> {
     const user = await this.usersService.findOne(userId);
@@ -84,14 +85,17 @@ export class OnboardingService {
     const newBalance = currentBalance + starterCoinAmount;
     await this.usersService.update(userId, { narCoin: newBalance });
 
-    // Выдаем базовые скины (доска и кости) - ищем скины с isDefault = true
+    // Выдаем базовые скины (доска, кости и шашки) - ищем скины с isDefault = true
     const allSkins = await this.skinsService.getAllSkins();
     const defaultBoard = allSkins.find(s => s.type === 'board' && s.isDefault);
     const defaultDice = allSkins.find(s => s.type === 'dice' && s.isDefault);
+    const defaultCheckers = allSkins.find(s => s.type === 'checkers' && s.isDefault);
 
     if (defaultBoard) {
       try {
         await this.skinsService.addSkinToUser(userId, defaultBoard.id);
+        // Автоматически выбираем default скины при выдаче стартового набора
+        await this.skinsService.selectSkin(userId, defaultBoard.id);
       } catch (error) {
         // Игнорируем ошибку, если скин уже есть
         console.log('Default board skin already exists or error:', error);
@@ -100,9 +104,17 @@ export class OnboardingService {
     if (defaultDice) {
       try {
         await this.skinsService.addSkinToUser(userId, defaultDice.id);
+        await this.skinsService.selectSkin(userId, defaultDice.id);
       } catch (error) {
-        // Игнорируем ошибку, если скин уже есть
         console.log('Default dice skin already exists or error:', error);
+      }
+    }
+    if (defaultCheckers) {
+      try {
+        await this.skinsService.addSkinToUser(userId, defaultCheckers.id);
+        await this.skinsService.selectSkin(userId, defaultCheckers.id);
+      } catch (error) {
+        console.log('Default checkers skin already exists or error:', error);
       }
     }
 
@@ -119,6 +131,7 @@ export class OnboardingService {
       starterKit: {
         board: defaultBoard ? { id: defaultBoard.id, name: defaultBoard.name } : { id: '', name: 'Базовая доска' },
         dice: defaultDice ? { id: defaultDice.id, name: defaultDice.name } : { id: '', name: 'Базовые кости' },
+        checkers: defaultCheckers ? { id: defaultCheckers.id, name: defaultCheckers.name } : { id: '', name: 'Базовые шашки' },
       },
     };
   }

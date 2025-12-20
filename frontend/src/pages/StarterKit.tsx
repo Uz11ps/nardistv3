@@ -30,6 +30,8 @@ export default function StarterKit() {
   }
 
   const handleClaim = async () => {
+    if (loading || claimed) return // Защита от повторных запросов
+    
     try {
       setLoading(true)
       const response = await apiClient.post('/onboarding/claim-starter-kit')
@@ -46,8 +48,7 @@ export default function StarterKit() {
     } catch (error: any) {
       console.error('Failed to claim starter kit:', error)
       alert(error.response?.data?.message || 'Ошибка получения набора')
-    } finally {
-      setLoading(false)
+      setLoading(false) // Сбрасываем loading только при ошибке, при успехе claimed=true
     }
   }
 
