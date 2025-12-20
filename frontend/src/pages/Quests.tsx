@@ -25,6 +25,7 @@ export default function Quests() {
   const [quests, setQuests] = useState<Quest[]>([])
   const [resetTime, setResetTime] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [claimingQuestId, setClaimingQuestId] = useState<string | null>(null)
 
   useEffect(() => {
     loadQuests()
