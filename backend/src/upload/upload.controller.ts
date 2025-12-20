@@ -44,7 +44,7 @@ export class UploadController {
       },
     }),
   )
-  async uploadImage(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
+  async uploadImage(@UploadedFile() file: any, @CurrentUser() user: any) {
     if (!file) {
       throw new BadRequestException('Файл не загружен');
     }

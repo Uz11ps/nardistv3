@@ -184,7 +184,7 @@ export class CityService {
     }
 
     const captureCost = 1000; // Стоимость захвата
-    if (clan.treasury < captureCost) {
+    if (Number(clan.treasury || 0) < captureCost) {
       throw new Error('Недостаточно средств в казне клана');
     }
 
@@ -223,7 +223,7 @@ export class CityService {
     }
 
     // Списываем стоимость захвата
-    clan.treasury -= captureCost;
+    clan.treasury = (BigInt(clan.treasury || 0) - BigInt(captureCost)).toString();
     
     await this.clansService['clansRepository'].save(clan);
   }
