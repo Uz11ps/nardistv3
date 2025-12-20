@@ -1,10 +1,8 @@
-// Пробуем импортировать SDK, но не падаем если его нет
-let WebApp: any = null
-try {
-  WebApp = require('@twa-dev/sdk').default || require('@twa-dev/sdk')
-} catch (e) {
-  console.warn('@twa-dev/sdk не найден, используем window.Telegram.WebApp')
-}
+// Импортируем SDK
+import WebAppSDK from '@twa-dev/sdk'
+
+// Используем SDK если доступен, иначе будем использовать window.Telegram.WebApp
+let WebApp: any = WebAppSDK || null
 
 // Проверяем что мы в Telegram WebView
 const isTelegramWebView = typeof window !== 'undefined' && 
