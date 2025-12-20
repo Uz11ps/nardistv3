@@ -54,7 +54,26 @@ export default function Welcome() {
               navigate('/onboarding/profile')
             } catch (error: any) {
               console.error('Ошибка авторизации:', error)
-              alert('Ошибка авторизации. Убедитесь что вы открыли приложение через Telegram бота.')
+              console.error('Детали ошибки:', {
+                message: error.message,
+                code: error.code,
+                response: error.response?.data,
+              })
+              
+              let errorMessage = 'Ошибка авторизации. '
+              if (error.code === 'NO_INIT_DATA') {
+                errorMessage += 'Убедитесь что вы открыли приложение через Telegram бота.\n\n' +
+                  'Проверьте:\n' +
+                  '1. Открыли приложение через кнопку бота в Telegram\n' +
+                  '2. Домен nardist.site привязан к боту через @BotFather\n' +
+                  '3. Используете HTTPS (не HTTP)'
+              } else if (error.response?.status === 401) {
+                errorMessage += error.response?.data?.message || 'Неверные данные авторизации'
+              } else {
+                errorMessage += error.message || 'Неизвестная ошибка'
+              }
+              
+              alert(errorMessage)
             }
           }
         }}
