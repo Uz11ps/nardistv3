@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param } from '@nestjs/common';
 import { SkinsService } from './skins.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -16,6 +16,12 @@ export class SkinsController {
   @UseGuards(JwtAuthGuard)
   async getMySkins(@CurrentUser() user: any) {
     return this.skinsService.getUserSkins(user.id);
+  }
+
+  @Get('user/:userId')
+  @UseGuards(JwtAuthGuard)
+  async getUserSkins(@Param('userId') userId: string) {
+    return this.skinsService.getUserSkins(userId);
   }
 
   @Get('selected')

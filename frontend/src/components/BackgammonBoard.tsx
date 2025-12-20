@@ -230,11 +230,19 @@ export default function BackgammonBoard({
       ctx.textAlign = 'center'
       ctx.fillText(pointNum.toString(), x + pointWidth / 2, isTop ? y + 15 : y - 5)
 
-      // Фишки на точке
+      // Фишки на точке - используем скин если есть
       const pointValue = points[i] || 0
       const checkerCount = Math.abs(pointValue)
       if (checkerCount > 0) {
-        const checkerColor = pointValue > 0 ? '#FFFFFF' : '#1a1a1a'
+        const isPlayer1Checker = pointValue > 0
+        const checkerSkin = isPlayer1Checker 
+          ? (playerSkins?.checkers || opponentSkins?.checkers)
+          : (opponentSkins?.checkers || playerSkins?.checkers)
+        
+        let checkerColor = pointValue > 0 ? '#FFFFFF' : '#1a1a1a'
+        if (checkerSkin?.checkersConfig?.color) {
+          checkerColor = checkerSkin.checkersConfig.color
+        }
         const checkerRadius = 14
         const maxStack = 5
         const stackSpacing = 4

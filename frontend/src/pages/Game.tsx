@@ -80,8 +80,52 @@ export default function Game() {
       setOpponent(game.player1Id === user?.id ? game.player2 : game.player1)
       setScore({ player1: game.player1Score || 0, player2: game.player2Score || 0 })
       setGameStatus(game.status)
+      
+      // Загружаем скины игроков
+      await loadPlayerSkins(game.player1Id, game.player2Id)
     } catch (error) {
       console.error('Failed to load game:', error)
+    }
+  }
+
+  const loadPlayerSkins = async (player1Id: string, player2Id: string) => {
+    try {
+      const [player1SkinsRes, player2SkinsRes] = await Promise.all([
+        apiClient.get(`/skins/user/${player1Id}`).catch(() => ({ data: [] })),
+        player2Id ? apiClient.get(`/skins/user/${player2Id}`).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+      ])
+      
+      // Выбираем скины с наибольшим весом/рарностью для каждого типа
+      const getBestSkin = (skins: any[], type: string) => {
+        const typeSkins = skins.filter(s => s.type === type)
+        if (typeSkins.length === 0) return null
+        
+        // Сортируем по рарности (legendary > epic > rare > common) и весу
+        const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, common: 1 }
+        return typeSkins.sort((a, b) => {
+          const rarityDiff = (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0)
+          if (rarityDiff !== 0) return rarityDiff
+          return (b.weight || 0) - (a.weight || 0)
+        })[0]
+      }
+      
+      const player1Skins = player1SkinsRes.data || []
+      const player2Skins = player2SkinsRes.data || []
+      
+      setPlayerSkins({
+        player1: {
+          board: getBestSkin(player1Skins, 'board'),
+          dice: getBestSkin(player1Skins, 'dice'),
+          checkers: getBestSkin(player1Skins, 'checkers'),
+        },
+        player2: {
+          board: getBestSkin(player2Skins, 'board'),
+          dice: getBestSkin(player2Skins, 'dice'),
+          checkers: getBestSkin(player2Skins, 'checkers'),
+        },
+      })
+    } catch (error) {
+      console.error('Failed to load player skins:', error)
     }
   }
 
