@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
@@ -14,6 +14,7 @@ import { GameMove } from '../games/game-move.entity';
 import { Tournament } from '../tournaments/tournament.entity';
 import { Article } from '../academy/article.entity';
 import { Skin } from '../skins/skin.entity';
+import { UserSkin } from '../skins/user-skin.entity';
 import { Quest, QuestType, QuestTarget } from '../quests/quest.entity';
 import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
@@ -35,6 +36,8 @@ export class AdminService {
     private articlesRepository: Repository<Article>,
     @InjectRepository(Skin)
     private skinsRepository: Repository<Skin>,
+    @InjectRepository(UserSkin)
+    private userSkinsRepository: Repository<UserSkin>,
     @InjectRepository(Quest)
     private questsRepository: Repository<Quest>,
     @InjectRepository(Clan)
@@ -411,11 +414,20 @@ export class AdminService {
   async deleteSkin(id: string) {
     const skin = await this.skinsRepository.findOne({ where: { id } });
     if (!skin) {
-      throw new Error('Скин не найден');
+      throw new NotFoundException('Скин не найден');
     }
 
-    await this.skinsRepository.remove(skin);
-    return { message: 'Скин удален' };
+    try {
+      // Удаляем связанные записи user_skins сначала
+      await this.userSkinsRepository.delete({ skinId: id });
+      
+      // Теперь удаляем сам скин
+      await this.skinsRepository.remove(skin);
+      return { message: 'Скин удален' };
+    } catch (error: any) {
+      console.error('Ошибка при удалении скина:', error);
+      throw new BadRequestException('Не удалось удалить скин: ' + (error.message || 'неизвестная ошибка'));
+    }
   }
 
   async updateSkinImage(id: string, imageUrl: string) {

@@ -809,18 +809,20 @@
 .tournaments-list,
 .articles-list,
 .skins-list {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  margin-bottom: 24px;
 }
 
 .tournaments-list h3,
 .articles-list h3,
 .skins-list h3 {
-  margin: 0;
+  margin: 0 0 16px 0;
   font-size: 18px;
   font-weight: 600;
   color: #ffffff;
+}
+
+.admin-form {
+  margin-top: 24px;
 }
 
 .notification-form {
@@ -866,14 +868,21 @@
   background: #2a2a2a;
   border: 1px solid #3a3a3a;
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .district-card h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
+  margin: 0;
+  font-size: 18px;
   font-weight: 600;
   color: #ffffff;
+}
+
+.district-card .form-group {
+  margin: 0;
 }
 
 /* ============================================
