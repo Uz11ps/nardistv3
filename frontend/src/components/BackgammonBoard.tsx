@@ -323,10 +323,14 @@ export default function BackgammonBoard({
           ctx.fillStyle = '#FFFFFF'
           ctx.font = 'bold 12px Arial'
           ctx.textAlign = 'center'
+          // Позиция текста количества фишек: для верхних - внизу стопки, для нижних - вверху стопки
+          const countTextY = isTop 
+            ? y + pointHeight - checkerRadius - maxStack * stackSpacing - 10 
+            : y - checkerRadius - maxStack * stackSpacing - 15
           ctx.fillText(
             checkerCount.toString(),
             x + pointWidth / 2,
-            isTop ? y + pointHeight - checkerRadius - maxStack * stackSpacing - 10 : y - checkerRadius - maxStack * stackSpacing - 10
+            countTextY
           )
         }
       }
