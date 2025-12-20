@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import BottomNav from '../components/BottomNav'
+import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 
 export default function Profile() {
@@ -34,10 +35,10 @@ export default function Profile() {
   }
 
   const menuItems = [
-    { icon: '🛒', title: 'Магазин', path: '/shop' },
-    { icon: '📦', title: 'Инвентарь', path: '/inventory' },
-    { icon: '🔔', title: 'Уведомления', path: '/notifications' },
-    { icon: '⚙️', title: 'Настройки', path: '/settings' },
+    { icon: 'shop', title: 'Магазин', path: '/shop' },
+    { icon: 'box', title: 'Инвентарь', path: '/inventory' },
+    { icon: 'bell', title: 'Уведомления', path: '/notifications' },
+    { icon: 'settings', title: 'Настройки', path: '/settings' },
   ]
 
   const handleMenuClick = (item: typeof menuItems[0]) => {
@@ -57,7 +58,7 @@ export default function Profile() {
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt={user.username} />
             ) : (
-              <div style={{ fontSize: '48px' }}>👤</div>
+              <Icon name="user" size={48} />
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -69,12 +70,17 @@ export default function Profile() {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 fontWeight: 'bold'
-              }}>⭐</span>
+              }}>
+                <Icon name="star" size={16} />
+              </span>
             )}
           </div>
           <div className="card-subtitle">Уровень {stats.level}</div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '12px' }}>
-            <span className="gold">💰 {stats.narCoin.toLocaleString()}</span>
+            <span className="gold">
+              <Icon name="coin" size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+              {stats.narCoin.toLocaleString()}
+            </span>
             <span style={{ color: '#ff3333' }}>🔥 {stats.xp}/100</span>
           </div>
         </Card>
@@ -83,7 +89,7 @@ export default function Profile() {
         <Card style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="gold-icon" style={{ fontSize: '24px' }}>🪙</span>
+              <Icon name="coin" size={24} />
               <span className="gold" style={{ fontSize: '18px', fontWeight: 600 }}>
                 {stats.narCoin.toLocaleString()} NAR
               </span>
@@ -103,7 +109,7 @@ export default function Profile() {
               style={{ marginBottom: '12px' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ fontSize: '24px' }}>{item.icon}</div>
+                <Icon name={item.icon} size={24} />
                 <div style={{ flex: 1 }}>
                   <div className="card-title">{item.title}</div>
                 </div>

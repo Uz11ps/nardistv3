@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 
 export default function CreateProfile() {
@@ -102,7 +103,7 @@ export default function CreateProfile() {
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
-              <div style={{ fontSize: '64px' }}>👤</div>
+              <Icon name="user" size={64} />
             )}
           </div>
           <button

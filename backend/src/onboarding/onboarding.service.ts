@@ -90,10 +90,20 @@ export class OnboardingService {
     const defaultDice = allSkins.find(s => s.type === 'dice' && s.isDefault);
 
     if (defaultBoard) {
-      await this.skinsService.addSkinToUser(userId, defaultBoard.id);
+      try {
+        await this.skinsService.addSkinToUser(userId, defaultBoard.id);
+      } catch (error) {
+        // Игнорируем ошибку, если скин уже есть
+        console.log('Default board skin already exists or error:', error);
+      }
     }
     if (defaultDice) {
-      await this.skinsService.addSkinToUser(userId, defaultDice.id);
+      try {
+        await this.skinsService.addSkinToUser(userId, defaultDice.id);
+      } catch (error) {
+        // Игнорируем ошибку, если скин уже есть
+        console.log('Default dice skin already exists or error:', error);
+      }
     }
 
     // Отмечаем что набор получен

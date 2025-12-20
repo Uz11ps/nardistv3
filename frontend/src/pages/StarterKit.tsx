@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 
 export default function StarterKit() {
@@ -91,7 +92,7 @@ export default function StarterKit() {
                 }}
               >
                 {/* Упрощенное изображение доски */}
-                <div style={{ fontSize: '64px' }}>🎲</div>
+                <Icon name="board" size={64} />
               </div>
               <div className="card-title">Базовая доска</div>
               <div className="card-subtitle">Классический дизайн</div>
@@ -154,14 +155,7 @@ export default function StarterKit() {
 
             {/* 1000 койнов */}
             <div>
-              <div
-                style={{
-                  fontSize: '48px',
-                  marginBottom: '12px',
-                }}
-              >
-                💰
-              </div>
+              <Icon name="coin" size={48} style={{ marginBottom: '12px' }} />
               <div className="card-title" style={{ fontSize: '32px', marginBottom: '8px' }}>
                 1 000 NAR
               </div>
@@ -172,7 +166,7 @@ export default function StarterKit() {
 
         {claimed ? (
           <div style={{ padding: '20px' }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
+            <Icon name="party" size={64} style={{ marginBottom: '16px' }} />
             <div className="card-title" style={{ marginBottom: '8px' }}>
               Набор получен!
             </div>

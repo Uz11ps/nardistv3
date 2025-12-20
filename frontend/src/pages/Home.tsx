@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import BottomNav from '../components/BottomNav'
+import Icon from '../components/Icon'
 
 import { apiClient } from '../api/client'
 
@@ -46,17 +47,17 @@ export default function Home() {
   }
 
   const menuItems = [
-    { icon: '🎲', title: 'Онлайн игра', subtitle: 'Сразись с игроками по всему миру', path: '/game/search' },
-    { icon: '🪑', title: 'Свободные столы', subtitle: 'Выбирай стол и присоединяйся к игре', path: '/game/tables' },
-    { icon: '🤖', title: 'Игра с AI', subtitle: 'Тренируйся без ограничений', path: '/game/new?mode=bot' },
+    { icon: 'dice', title: 'Онлайн игра', subtitle: 'Сразись с игроками по всему миру', path: '/game/search' },
+    { icon: 'table', title: 'Свободные столы', subtitle: 'Выбирай стол и присоединяйся к игре', path: '/game/tables' },
+    { icon: 'bot', title: 'Игра с AI', subtitle: 'Тренируйся без ограничений', path: '/game/new?mode=bot' },
   ]
 
   const profileItems = [
-    { icon: '🏙️', title: 'Город', path: '/city' },
-    { icon: '🏆', title: 'Турниры', path: '/tournaments' },
-    { icon: '👤', title: 'Профиль', path: '/profile' },
-    { icon: '🛡️', title: 'Кланы', path: '/clans', disabled: (user?.level || 0) < 20 },
-    { icon: '🎓', title: 'Курсы', path: '/academy' },
+    { icon: 'city', title: 'Город', path: '/city' },
+    { icon: 'trophy', title: 'Турниры', path: '/tournaments' },
+    { icon: 'user', title: 'Профиль', path: '/profile' },
+    { icon: 'shield', title: 'Кланы', path: '/clans', disabled: (user?.level || 0) < 20 },
+    { icon: 'academy', title: 'Курсы', path: '/academy' },
   ]
 
   return (
@@ -71,7 +72,7 @@ export default function Home() {
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.username} />
               ) : (
-                <div style={{ fontSize: '32px' }}>👤</div>
+                <Icon name="user" size={32} />
               )}
             </div>
             <div style={{ flex: 1 }}>
@@ -84,12 +85,17 @@ export default function Home() {
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     fontWeight: 'bold'
-                  }}>⭐</span>
+                  }}>
+                    <Icon name="star" size={16} />
+                  </span>
                 )}
               </div>
               <div className="card-subtitle">Уровень {stats.level}</div>
               <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                <span className="gold">💰 {stats.narCoin.toLocaleString()} NAR</span>
+                <span className="gold">
+                  <Icon name="coin" size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                  {stats.narCoin.toLocaleString()} NAR
+                </span>
                 <span style={{ color: '#ff3333' }}>🔥 {stats.xp}/100</span>
               </div>
             </div>
@@ -123,7 +129,7 @@ export default function Home() {
               style={{ marginBottom: '12px' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ fontSize: '32px' }}>{item.icon}</div>
+                <Icon name={item.icon} size={32} />
                 <div style={{ flex: 1 }}>
                   <div className="card-title">{item.title}</div>
                   <div className="card-subtitle">{item.subtitle}</div>
@@ -152,7 +158,7 @@ export default function Home() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ fontSize: '24px' }}>{item.icon}</div>
+                  <Icon name={item.icon} size={24} />
                   <div style={{ flex: 1 }}>
                     <div className="card-title">
                       {item.title}

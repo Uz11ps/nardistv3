@@ -33,6 +33,30 @@ export class SkinsService {
     return userSkins.map((us) => us.skin);
   }
 
+  /**
+   * Добавить скин пользователю (без автоматического выбора)
+   */
+  async addSkinToUser(userId: string, skinId: string): Promise<void> {
+    const skin = await this.skinsRepository.findOne({ where: { id: skinId } });
+    if (!skin) {
+      throw new BadRequestException('Скин не найден');
+    }
+
+    // Проверяем, есть ли уже этот скин у пользователя
+    const existingUserSkin = await this.userSkinsRepository.findOne({
+      where: { userId, skinId },
+    });
+
+    if (!existingUserSkin) {
+      const userSkin = this.userSkinsRepository.create({
+        userId,
+        skinId,
+        isSelected: false,
+      });
+      await this.userSkinsRepository.save(userSkin);
+    }
+  }
+
   async selectSkin(userId: string, skinId: string): Promise<void> {
     const skin = await this.skinsRepository.findOne({ where: { id: skinId } });
     if (!skin) {
