@@ -276,25 +276,30 @@ export class GamesService {
     
     this.logger.log(`Saving move: gameId=${finalGameId}, playerId=${playerId}, moveNumber=${moveNumber}, moves count=${moves.length}`);
     
-    // Используем QueryBuilder для прямого INSERT чтобы избежать проблем с relations
+    // Используем raw SQL через queryRunner чтобы полностью избежать проблем с relations
     try {
-      const insertResult = await this.movesRepository
-        .createQueryBuilder()
-        .insert()
-        .into(GameMove)
-        .values({
-          gameId: finalGameId,
-          playerId: playerId,
-          moveNumber: moveNumber,
-          dice: dice,
-          moves: moves as any, // TypeORM требует any для JSONB полей
-          gameStateBefore: game.gameState as any,
-          gameStateAfter: currentState as any,
-        })
-        .execute();
+      const queryRunner = this.movesRepository.manager.connection.createQueryRunner();
+      await queryRunner.connect();
       
-      const moveId = insertResult.identifiers[0].id;
-      this.logger.log(`Move saved successfully: moveId=${moveId}, gameId=${finalGameId}`);
+      const moveId = await queryRunner.manager.query(
+        `INSERT INTO game_moves ("gameId", "playerId", "moveNumber", dice, moves, "gameStateBefore", "gameStateAfter")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
+        [
+          finalGameId,
+          playerId,
+          moveNumber,
+          JSON.stringify(dice),
+          JSON.stringify(moves),
+          JSON.stringify(game.gameState),
+          JSON.stringify(currentState),
+        ]
+      );
+      
+      await queryRunner.release();
+      
+      const savedMoveId = moveId[0].id;
+      this.logger.log(`Move saved successfully: moveId=${savedMoveId}, gameId=${finalGameId}`);
     } catch (error) {
       this.logger.error(`Failed to save move:`, error);
       this.logger.error(`Move record data before insert:`, {
