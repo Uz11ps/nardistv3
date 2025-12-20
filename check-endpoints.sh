@@ -8,9 +8,24 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Конфигурация
-API_URL="${API_URL:-http://localhost:3000/api}"
+API_URL="${API_URL:-https://nardist.site/api}"
 ADMIN_LOGIN="${ADMIN_LOGIN:-123}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-123123}"
+
+# Проверка доступности API
+echo -e "${BLUE}Проверка доступности API...${NC}"
+CURL_FLAGS="-s -f"
+if [[ "$API_URL" == https://* ]]; then
+  CURL_FLAGS="$CURL_FLAGS -k"
+fi
+if ! curl $CURL_FLAGS "$API_URL/health" > /dev/null 2>&1; then
+  echo -e "${RED}✗ API недоступен по адресу $API_URL${NC}"
+  echo -e "${YELLOW}Попробуйте установить переменную API_URL${NC}"
+  echo -e "${YELLOW}Пример: API_URL=http://localhost:3000/api ./check-endpoints.sh${NC}"
+  exit 1
+fi
+echo -e "${GREEN}✓ API доступен${NC}"
+echo ""
 
 # Статистика
 TOTAL=0
@@ -82,6 +97,7 @@ echo ""
 echo -e "${YELLOW}=== Базовые эндпоинты ===${NC}"
 check_endpoint "GET" "/health" "Health check" "" "" "200"
 check_endpoint "GET" "/" "Root endpoint" "" "" "200"
+check_endpoint "GET" "/skins" "Список всех скинов" "" "" "200"
 
 # 2. Админ-авторизация
 echo ""
@@ -114,7 +130,6 @@ fi
 # 4. Публичные эндпоинты (без авторизации)
 echo ""
 echo -e "${YELLOW}=== Публичные эндпоинты ===${NC}"
-check_endpoint "GET" "/skins" "Список всех скинов" ""
 skip_endpoint "POST /auth/login (требует Telegram initData)"
 
 # 5. Эндпоинты требующие авторизации (пропускаем без токена)
