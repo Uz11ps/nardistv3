@@ -204,8 +204,9 @@ export default function BackgammonBoard({
       }
 
       // Позиция точки: для верхних - сверху, для нижних - снизу (прижаты к краю доски)
-      // Для верхних точек: y = boardPadding (верхний край доски)
-      // Для нижних точек: y = boardPadding + boardHeight (нижний край доски, треугольник рисуется вверх)
+      // Для верхних точек: y = boardPadding (верхний край доски), треугольник рисуется вниз
+      // Для нижних точек: y = boardPadding + boardHeight (нижний край доски), треугольник рисуется вверх от этой точки
+      // Это означает что нижний край треугольника (основание) будет на y = boardPadding + boardHeight
       const y = isTop ? boardPadding : boardPadding + boardHeight
 
       // Цвет точки (чередование)

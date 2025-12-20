@@ -181,11 +181,13 @@ export default function Game() {
         dice: formattedDice,
         canMove: data.currentPlayer === (data.player1Id === user?.id ? 0 : 1),
       })
-      setGameStatus(data.status || 'waiting')
+      const newStatus = data.status || 'waiting'
+      setGameStatus(newStatus)
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
       
       // Если статус изменился на in_progress, обновляем игру
-      if (data.status === 'in_progress') {
+      if (newStatus === 'in_progress') {
+        console.log('✅ Статус игры изменился на in_progress, обновляем игру')
         loadGame()
       }
     })
