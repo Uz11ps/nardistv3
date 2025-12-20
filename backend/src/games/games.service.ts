@@ -138,7 +138,17 @@ export class GamesService {
     }
 
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
-    const dice = engine.rollDice(game.rngSeed + game.moves.length);
+    const diceRoll = engine.rollDice(game.rngSeed + game.moves.length);
+    
+    // In Long Backgammon, doubles give 4 moves of that value
+    // In Short Backgammon, doubles give 4 moves as well
+    let dice: number[];
+    if (game.mode === GameMode.LONG && diceRoll.length === 2 && diceRoll[0] === diceRoll[1]) {
+      // Doubles: expand to 4 moves
+      dice = [diceRoll[0], diceRoll[0], diceRoll[0], diceRoll[0]];
+    } else {
+      dice = diceRoll;
+    }
     
     game.gameState.dice = dice;
     game.lastMoveAt = new Date();

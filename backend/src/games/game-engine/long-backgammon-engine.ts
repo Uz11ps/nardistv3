@@ -125,7 +125,12 @@ export class LongBackgammonEngine {
 
   /**
    * Check Head Rule: Only 1 checker can be moved from head per turn
-   * Exception: Doubles on first move allow multiple checkers
+   * Exception: Doubles on first move allow multiple checkers (up to 2)
+   * 
+   * According to Long Backgammon rules:
+   * - On first move from head, normally only 1 checker can be moved
+   * - Exception: If doubles are rolled on the FIRST move, player can move 2 checkers from head
+   * - On subsequent moves, only 1 checker per turn can be moved from head
    */
   private checkHeadRule(state: LongBoardState, from: number, dice: number[]): boolean {
     const player = state.currentPlayer;
@@ -136,17 +141,26 @@ export class LongBackgammonEngine {
       return true;
     }
     
-    // Check if this is the first move of the game (all checkers still on head)
-    const headCheckers = Math.abs(state.points[headIndex] || 0);
-    const isFirstMove = headCheckers === 15;
+    // Check if this is the first move of the game for this player
+    // We check: current checkers on head + checkers moved from head this turn = 15
+    // This tells us how many were on head at the start of this turn
+    const currentHeadCheckers = Math.abs(state.points[headIndex] || 0);
+    const movedThisTurn = state.movesFromHead || 0;
+    const wasFirstTurn = (currentHeadCheckers + movedThisTurn) === 15;
     
-    // If first move and doubles, allow multiple checkers
-    if (isFirstMove && dice.length === 2 && dice[0] === dice[1]) {
-      return true; // Doubles allow multiple checkers on first move
+    // Check if doubles are rolled
+    // Doubles can be: [x, x] (2 dice) or [x, x, x, x] (4 dice after expansion)
+    const isDoubles = (dice.length === 2 && dice[0] === dice[1]) || 
+                      (dice.length === 4 && dice[0] === dice[1] && dice[1] === dice[2] && dice[2] === dice[3]);
+    
+    // If first move and doubles, allow up to 2 checkers from head
+    if (wasFirstTurn && isDoubles) {
+      // Allow up to 2 checkers from head on first move with doubles
+      return movedThisTurn < 2;
     }
     
     // Otherwise, only 1 checker per turn from head
-    return state.movesFromHead === 0;
+    return movedThisTurn === 0;
   }
 
   /**
