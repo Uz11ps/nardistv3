@@ -1288,7 +1288,6 @@ export default function Admin() {
                       </table>
                     </div>
                   )}
-                </div>
               </div>
             )}
           </div>
