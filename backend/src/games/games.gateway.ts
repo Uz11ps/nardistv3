@@ -121,7 +121,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       } else {
         // Check if next player is bot and trigger bot move
         this.logger.log(`🤖 Checking if bot turn needed for gameId=${data.gameId}`);
-        await this.handleBotTurnIfNeeded(data.gameId);
+        // Add delay before checking bot turn to ensure game state is updated
+        setTimeout(async () => {
+          await this.handleBotTurnIfNeeded(data.gameId);
+        }, 500);
       }
     } catch (error) {
       this.logger.error(`❌ Error in make_move:`, error);
@@ -180,8 +183,20 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
                   gameState: gameStateAfterMove,
                 });
               } else {
-                // Recursively check if bot needs to move again (if it's still bot's turn)
-                await this.handleBotTurnIfNeeded(gameId);
+                // After bot move, check if it's still bot's turn or player's turn
+                const finalGame = await this.gamesService.findOne(gameId);
+                if (finalGame.status === 'finished') return;
+                
+                // If it's now player's turn (currentPlayer === 0), we don't auto-roll dice
+                // Player should roll dice themselves. But we emit game_state to notify frontend
+                if (finalGame.currentPlayer === 0) {
+                  this.logger.log(`👤 Player's turn after bot move, emitting game_state for gameId=${gameId}`);
+                  const playerGameState = await this.gamesService.getGameState(gameId);
+                  this.server.to(`game:${gameId}`).emit('game_state', playerGameState);
+                } else {
+                  // Recursively check if bot needs to move again (if it's still bot's turn)
+                  await this.handleBotTurnIfNeeded(gameId);
+                }
               }
             }
           } catch (error) {
