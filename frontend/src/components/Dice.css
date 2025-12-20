@@ -1,0 +1,53 @@
+.dice {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 4px;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dice-small {
+  width: 32px;
+  height: 32px;
+  padding: 3px;
+}
+
+.dice-medium {
+  width: 48px;
+  height: 48px;
+  padding: 4px;
+}
+
+.dice-large {
+  width: 64px;
+  height: 64px;
+  padding: 6px;
+}
+
+.dice-dot {
+  width: 8px;
+  height: 8px;
+  background: #000000;
+  border-radius: 50%;
+  margin: auto;
+}
+
+.dice-small .dice-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.dice-medium .dice-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.dice-large .dice-dot {
+  width: 10px;
+  height: 10px;
+}
+

@@ -16,6 +16,7 @@ interface NarCoinPackage {
 }
 
 export default function Shop() {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'board' | 'dice'>('coin')
   const [narCoinPackages, setNarCoinPackages] = useState<NarCoinPackage[]>([])
@@ -224,16 +225,7 @@ export default function Shop() {
                 <Button
                   variant="primary"
                   className="shop-buy-btn"
-                  onClick={async () => {
-                    try {
-                      await apiClient.post('/subscription/purchase', { plan: 'premium' })
-                      alert('Премиум подписка активирована!')
-                      const userResponse = await apiClient.get('/users/me')
-                      useAuthStore.setState({ user: userResponse.data })
-                    } catch (error: any) {
-                      alert(error.response?.data?.message || 'Ошибка при покупке подписки')
-                    }
-                  }}
+                  onClick={() => navigate('/subscription')}
                 >
                   Купить
                 </Button>

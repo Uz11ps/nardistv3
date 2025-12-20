@@ -15,10 +15,19 @@ export class SubscriptionController {
     return { hasActive };
   }
 
+  @Get('plans')
+  async getPlans() {
+    return [
+      { id: 'month_1', name: '1 месяц', price: 3, currency: 'TON', badge: 'Попробовать' },
+      { id: 'month_3', name: '3 месяца', price: 7, currency: 'TON', badge: 'Оптимально', popular: true },
+      { id: 'month_12', name: '1 год', price: 22, currency: 'TON', badge: 'Выгоднее' },
+    ];
+  }
+
   @Post('purchase')
   @UseGuards(JwtAuthGuard)
-  async purchase(@CurrentUser() user: any, @Body('plan') plan: SubscriptionPlan) {
-    return this.subscriptionService.createSubscription(user.id, plan);
+  async purchase(@CurrentUser() user: any, @Body() body: { plan: SubscriptionPlan }) {
+    return this.subscriptionService.createSubscription(user.id, body.plan);
   }
 }
 

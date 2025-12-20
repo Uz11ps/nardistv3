@@ -10,12 +10,16 @@ import Game from './pages/Game'
 import Profile from './pages/Profile'
 import City from './pages/City'
 import Tournaments from './pages/Tournaments'
+import TournamentDetail from './pages/TournamentDetail'
 import Academy from './pages/Academy'
 import History from './pages/History'
 import Shop from './pages/Shop'
+import Subscription from './pages/Subscription'
 import Quests from './pages/Quests'
 import Clans from './pages/Clans'
 import GameSearch from './pages/GameSearch'
+import GameTables from './pages/GameTables'
+import CreateTable from './pages/CreateTable'
 import Admin from './pages/Admin'
 import Inventory from './pages/Inventory'
 import Notifications from './pages/Notifications'
@@ -129,19 +133,21 @@ function App() {
               <Route path="/game/:gameId" element={<Game />} />
               <Route path="/game/new" element={<Game />} />
               <Route path="/game/search" element={<GameSearch />} />
-              <Route path="/game/tables" element={<GameSearch />} />
+              <Route path="/game/tables" element={<GameTables />} />
+              <Route path="/game/tables/create" element={<CreateTable />} />
               <Route path="/game/modes" element={<GameModes />} />
               <Route path="/game/result" element={<GameResult />} />
               <Route path="/game/result/:gameId" element={<GameResult />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/city" element={<City />} />
               <Route path="/tournaments" element={<Tournaments />} />
-              <Route path="/tournaments/:tournamentId" element={<Tournaments />} />
+              <Route path="/tournaments/:tournamentId" element={<TournamentDetail />} />
               <Route path="/academy" element={<Academy />} />
               <Route path="/academy/:materialId" element={<Academy />} />
               <Route path="/academy/publish" element={<Academy />} />
               <Route path="/history" element={<History />} />
               <Route path="/shop" element={<Shop />} />
+              <Route path="/subscription" element={<Subscription />} />
               <Route path="/quests" element={<Quests />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/notifications" element={<Notifications />} />

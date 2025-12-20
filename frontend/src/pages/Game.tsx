@@ -3,6 +3,9 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
 import BackgammonBoard from '../components/BackgammonBoard'
+import Dice from '../components/Dice'
+import Icon from '../components/Icon'
+import Button from '../components/Button'
 import { apiClient } from '../api/client'
 import { getSocket } from '../api/websocket'
 import './Game.css'
@@ -22,10 +25,12 @@ export default function Game() {
   const [searchParams] = useSearchParams()
   const { user } = useAuthStore()
   const [gameState, setGameState] = useState<GameState | null>(null)
+  const [gameInfo, setGameInfo] = useState<any>(null)
   const [opponent, setOpponent] = useState<any>(null)
   const [score, setScore] = useState({ player1: 0, player2: 0 })
   const [gameStatus, setGameStatus] = useState<string>('waiting')
-  const [timer, setTimer] = useState<number>(0)
+  const [player1Timer, setPlayer1Timer] = useState<number>(0)
+  const [player2Timer, setPlayer2Timer] = useState<number>(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const mode = searchParams.get('mode')
@@ -59,6 +64,7 @@ export default function Game() {
     try {
       const response = await apiClient.get(`/games/${gameId}`)
       const game = response.data
+      setGameInfo(game)
       setGameState({
         points: game.gameState?.points || [],
         bar: game.gameState?.bar || { white: 0, black: 0 },
@@ -98,11 +104,10 @@ export default function Game() {
         canMove: data.currentPlayer === (data.player1Id === user?.id ? 0 : 1),
       }))
       setGameStatus(data.status)
+      loadGame()
     })
 
     socket.on('game:move', (data: any) => {
-      // Анимация хода
-      animateMove(data.from, data.to)
       loadGame()
     })
 
@@ -116,13 +121,9 @@ export default function Game() {
     socket.on('game:finished', (data: any) => {
       setGameStatus('finished')
       setTimeout(() => {
-        navigate('/')
+        navigate('/game/result/' + gameId)
       }, 3000)
     })
-  }
-
-  const animateMove = (from: number, to: number) => {
-    // Анимация будет обработана в компоненте доски
   }
 
   const handleMove = async (from: number, to: number, die: number) => {
@@ -156,32 +157,42 @@ export default function Game() {
     }
   }
 
-  const startTimer = () => {
+  const handleConfirm = () => {
+    // Подтверждение хода - если все кубики использованы, автоматически передать ход
+    // Или подтвердить готовность к игре
+    if (gameStatus === 'waiting') {
+      // TODO: Подтвердить готовность
+    }
+  }
+
+  const startTimers = () => {
     if (timerRef.current) clearInterval(timerRef.current)
 
     timerRef.current = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 0) {
-          if (timerRef.current) clearInterval(timerRef.current)
-          return 0
-        }
-        return prev - 1
-      })
+      if (gameState?.currentPlayer === 0) {
+        setPlayer1Timer((prev) => prev + 1)
+      } else {
+        setPlayer2Timer((prev) => prev + 1)
+      }
     }, 1000)
   }
 
   useEffect(() => {
-    if (gameState?.canMove && gameStatus === 'in_progress') {
-      setTimer(60) // 60 секунд на ход
-      startTimer()
+    if (gameStatus === 'in_progress' && gameState) {
+      startTimers()
     } else {
       if (timerRef.current) {
         clearInterval(timerRef.current)
       }
     }
-  }, [gameState?.canMove, gameStatus])
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+    }
+  }, [gameState?.currentPlayer, gameStatus])
 
-  if (!gameState) {
+  if (!gameState || !gameInfo) {
     return (
       <div className="app-container">
         <PageHeader title="Игра" />
@@ -194,69 +205,91 @@ export default function Game() {
   }
 
   const isMyTurn = gameState.canMove
-  const myScore = gameState.currentPlayer === 0 ? score.player1 : score.player2
-  const opponentScore = gameState.currentPlayer === 0 ? score.player2 : score.player1
+  const isPlayer1 = gameInfo.player1Id === user?.id
+  const myPlayer = isPlayer1 ? gameInfo.player1 : gameInfo.player2
+  const opponentPlayer = isPlayer1 ? gameInfo.player2 : gameInfo.player1
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const getGameModeName = (mode: string) => {
+    return mode === 'LONG' ? 'Длинные' : 'Короткие'
+  }
+
+  const tableNumber = gameId?.slice(-2) || '0'
+  const gameMode = gameInfo.mode || 'LONG'
+  const stake = Number(gameInfo.stake || 0)
 
   return (
-    <div className="app-container game-container">
-      <PageHeader title={`Стол ${gameId?.slice(0, 8)}`} />
+    <div className="app-container game-container page-transition">
+      <PageHeader 
+        title={`Стол ${tableNumber} • ${getGameModeName(gameMode)}${stake > 0 ? ` - ${stake} NAR` : ''}`}
+      />
       
-      <div className="game-header">
-        <div className="player-info">
-          <div className="player-avatar">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.username} />
+      <div className="game-players-section">
+        {/* Левый игрок */}
+        <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
+          <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
+          <div className={`game-player-avatar ${isMyTurn && isPlayer1 ? 'game-player-active' : ''}`}>
+            {myPlayer?.avatarUrl ? (
+              <img src={myPlayer.avatarUrl} alt={myPlayer.username} />
             ) : (
-              <div>👤</div>
+              <Icon name="user" size={48} />
             )}
           </div>
-          <div>
-            <div className="player-name">{user?.nickname || user?.username}</div>
-            <div className="player-score">Счет: {myScore}</div>
+          <div className={`game-player-timer ${isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
+            {formatTime(player1Timer)}
           </div>
-          {isMyTurn && (
-            <div className="turn-indicator">
-              <div className="pulse-dot" />
-              Ваш ход
-            </div>
+          {myPlayer?.country && (
+            <Icon name={`flag-${myPlayer.country.toLowerCase()}`} size={16} />
           )}
         </div>
 
-        <div className="game-info">
-          {gameState.dice && (
-            <div className="dice-display">
-              <div className="dice">{gameState.dice.die1}</div>
-              <div className="dice">{gameState.dice.die2}</div>
-            </div>
-          )}
-          {timer > 0 && (
-            <div className={`timer ${timer < 10 ? 'timer-warning' : ''}`}>
-              {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
-            </div>
-          )}
+        {/* Счет */}
+        <div className="game-score-section">
+          <div className="game-score-label">до 3</div>
+          <div className="game-score">
+            {score.player1}:{score.player2}
+          </div>
         </div>
 
-        <div className="player-info">
-          <div className="player-avatar">
-            {opponent?.avatarUrl ? (
-              <img src={opponent.avatarUrl} alt={opponent.username} />
+        {/* Правый игрок */}
+        <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
+          <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
+          <div className={`game-player-avatar ${!isPlayer1 && isMyTurn ? 'game-player-active' : ''}`}>
+            {opponentPlayer?.avatarUrl ? (
+              <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} />
             ) : (
-              <div>{isBotGame ? '🤖' : '👤'}</div>
+              <Icon name="user" size={48} />
             )}
           </div>
-          <div>
-            <div className="player-name">{opponent?.nickname || opponent?.username || 'Бот'}</div>
-            <div className="player-score">Счет: {opponentScore}</div>
+          <div className={`game-player-timer ${!isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
+            {formatTime(player2Timer)}
           </div>
-          {!isMyTurn && gameStatus === 'in_progress' && (
-            <div className="turn-indicator">
-              <div className="pulse-dot" />
-              Ход соперника
-            </div>
+          {opponentPlayer?.country && (
+            <Icon name={`flag-${opponentPlayer.country.toLowerCase()}`} size={16} />
           )}
         </div>
       </div>
 
+      {/* Кнопка подтверждения */}
+      {(gameStatus === 'waiting' || (gameStatus === 'in_progress' && isMyTurn && gameState.dice)) && (
+        <div className="game-confirm-section">
+          <Button 
+            variant="primary" 
+            fullWidth 
+            onClick={handleConfirm}
+            className="game-confirm-btn"
+          >
+            Подтвердить
+          </Button>
+        </div>
+      )}
+
+      {/* Доска */}
       <div className="board-wrapper">
         <BackgammonBoard
           gameState={gameState}
@@ -274,8 +307,8 @@ export default function Game() {
         <div className="game-overlay">
           <div className="game-result">
             <h2>Игра завершена!</h2>
-            <p>Победитель: {myScore > opponentScore ? 'Вы' : opponent?.username || 'Соперник'}</p>
-            <button onClick={() => navigate('/')}>Вернуться</button>
+            <p>Победитель: {score.player1 > score.player2 ? (isPlayer1 ? 'Вы' : myPlayer?.username) : (isPlayer1 ? opponentPlayer?.username : 'Вы')}</p>
+            <button onClick={() => navigate('/game/result/' + gameId)}>Посмотреть результат</button>
           </div>
         </div>
       )}

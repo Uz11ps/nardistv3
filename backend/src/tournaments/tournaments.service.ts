@@ -50,7 +50,7 @@ export class TournamentsService {
   async findOne(id: string): Promise<Tournament> {
     const tournament = await this.tournamentsRepository.findOne({
       where: { id },
-      relations: ['matches'],
+      relations: ['matches', 'matches.player1', 'matches.player2'],
     });
     if (!tournament) {
       throw new NotFoundException('Турнир не найден');

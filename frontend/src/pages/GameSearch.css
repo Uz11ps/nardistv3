@@ -1,3 +1,35 @@
+.game-search-content {
+  padding: 16px;
+}
+
+.game-search-subtitle {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.game-search-card {
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.game-search-field {
+  margin-bottom: 24px;
+}
+
+.game-search-field:last-of-type {
+  margin-bottom: 0;
+}
+
+.game-search-label {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
 .toggle-group {
   display: flex;
   gap: 8px;
@@ -6,24 +38,26 @@
 .toggle-btn {
   flex: 1;
   padding: 12px;
-  background: #3a3a3a;
-  color: #aaaaaa;
-  border: none;
-  border-radius: 8px;
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
+  font-weight: 500;
 }
 
 .toggle-btn:hover {
-  background: #4a4a4a;
-  color: #ffffff;
+  background: var(--color-secondary-hover);
+  color: var(--color-text-primary);
 }
 
 .toggle-btn.active {
-  background: #ff3333;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(255, 51, 51, 0.3);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-primary);
 }
 
 .stake-buttons {
@@ -34,25 +68,43 @@
 
 .stake-btn {
   padding: 12px;
-  background: #3a3a3a;
-  color: #aaaaaa;
-  border: none;
-  border-radius: 8px;
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
+  font-weight: 500;
 }
 
 .stake-btn:hover {
-  background: #4a4a4a;
-  color: #ffffff;
+  background: var(--color-secondary-hover);
+  color: var(--color-text-primary);
 }
 
 .stake-btn.active {
-  background: #ffd700;
+  background: var(--color-gold);
   color: #000000;
   font-weight: 600;
+  border-color: var(--color-gold);
   box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.game-search-start-btn {
+  margin-top: 24px;
+}
+
+.game-search-searching {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.searching-text {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 16px;
+  animation: fadeInOut 2s infinite;
 }
 
 .searching-container {

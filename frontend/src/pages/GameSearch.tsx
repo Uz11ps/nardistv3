@@ -53,110 +53,103 @@ export default function GameSearch() {
   }
 
   return (
-    <div className="app-container">
+    <div className="app-container page-transition">
       <PageHeader title="Поиск" />
       
-      <div style={{ padding: '20px' }}>
-        <div className="card-subtitle" style={{ marginBottom: '24px', textAlign: 'center' }}>
-          Подбор по рейтингу и режиму
-        </div>
+      <div className="game-search-content">
+        <div className="game-search-subtitle">Подбор по рейтингу и режиму</div>
 
-        {/* Режим */}
-        <Card style={{ marginBottom: '16px' }}>
-          <div className="form-label" style={{ marginBottom: '12px' }}>Режим:</div>
-          <div className="toggle-group">
-            <button
-              className={`toggle-btn ${mode === 'long' ? 'active' : ''}`}
-              onClick={() => setMode('long')}
-            >
-              Длинные
-            </button>
-            <button
-              className={`toggle-btn ${mode === 'short' ? 'active' : ''}`}
-              onClick={() => setMode('short')}
-            >
-              Короткие
-            </button>
-          </div>
-        </Card>
-
-        {/* Формат */}
-        <Card style={{ marginBottom: '16px' }}>
-          <div className="form-label" style={{ marginBottom: '12px' }}>Формат:</div>
-          <div className="toggle-group">
-            <button
-              className={`toggle-btn ${format === 'rating' ? 'active' : ''}`}
-              onClick={() => setFormat('rating')}
-            >
-              Рейтинг
-            </button>
-            <button
-              className={`toggle-btn ${format === 'normal' ? 'active' : ''}`}
-              onClick={() => setFormat('normal')}
-            >
-              Обычный
-            </button>
-          </div>
-        </Card>
-
-        {/* Время на ход */}
-        <Card style={{ marginBottom: '16px' }}>
-          <div className="form-label" style={{ marginBottom: '12px' }}>Время на ход:</div>
-          <div className="toggle-group">
-            <button
-              className={`toggle-btn ${timeLimit === 30 ? 'active' : ''}`}
-              onClick={() => setTimeLimit(30)}
-            >
-              30 сек
-            </button>
-            <button
-              className={`toggle-btn ${timeLimit === 60 ? 'active' : ''}`}
-              onClick={() => setTimeLimit(60)}
-            >
-              60 сек
-            </button>
-          </div>
-        </Card>
-
-        {/* Ставка */}
-        <Card style={{ marginBottom: '24px' }}>
-          <div className="form-label" style={{ marginBottom: '12px' }}>Ставка:</div>
-          <div className="stake-buttons">
-            {[0, 100, 500, 1000].map((value) => (
+        <Card className="game-search-card">
+          {/* Режим */}
+          <div className="game-search-field">
+            <div className="game-search-label">Режим:</div>
+            <div className="toggle-group">
               <button
-                key={value}
-                className={`stake-btn ${stake === value ? 'active' : ''}`}
-                onClick={() => setStake(value as typeof stake)}
+                className={`toggle-btn ${mode === 'long' ? 'active' : ''}`}
+                onClick={() => setMode('long')}
               >
-                {value === 0 ? '0' : `${value} NAR`}
+                Длинные
               </button>
-            ))}
+              <button
+                className={`toggle-btn ${mode === 'short' ? 'active' : ''}`}
+                onClick={() => setMode('short')}
+              >
+                Короткие
+              </button>
+            </div>
           </div>
+
+          {/* Формат */}
+          <div className="game-search-field">
+            <div className="game-search-label">Формат:</div>
+            <div className="toggle-group">
+              <button
+                className={`toggle-btn ${format === 'rating' ? 'active' : ''}`}
+                onClick={() => setFormat('rating')}
+              >
+                Рейтинг
+              </button>
+              <button
+                className={`toggle-btn ${format === 'normal' ? 'active' : ''}`}
+                onClick={() => setFormat('normal')}
+              >
+                Обычный
+              </button>
+            </div>
+          </div>
+
+          {/* Время на ход */}
+          <div className="game-search-field">
+            <div className="game-search-label">Время на ход:</div>
+            <div className="toggle-group">
+              <button
+                className={`toggle-btn ${timeLimit === 30 ? 'active' : ''}`}
+                onClick={() => setTimeLimit(30)}
+              >
+                30 сек
+              </button>
+              <button
+                className={`toggle-btn ${timeLimit === 60 ? 'active' : ''}`}
+                onClick={() => setTimeLimit(60)}
+              >
+                60 сек
+              </button>
+            </div>
+          </div>
+
+          {/* Ставка */}
+          <div className="game-search-field">
+            <div className="game-search-label">Ставка:</div>
+            <div className="stake-buttons">
+              {[0, 100, 500, 1000].map((value) => (
+                <button
+                  key={value}
+                  className={`stake-btn ${stake === value ? 'active' : ''}`}
+                  onClick={() => setStake(value as typeof stake)}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Кнопка поиска */}
+          {!searching && (
+            <Button fullWidth onClick={handleStartSearch} className="game-search-start-btn">
+              Начать поиск
+            </Button>
+          )}
         </Card>
 
-        {searching ? (
-          <div className="searching-container">
-            <div className="searching-animation">
-              <div className="search-dot" style={{ animationDelay: '0s' }} />
-              <div className="search-dot" style={{ animationDelay: '0.2s' }} />
-              <div className="search-dot" style={{ animationDelay: '0.4s' }} />
-            </div>
-            <p className="searching-text">Подбираем противника по рейтингу и ставке...</p>
+        {searching && (
+          <div className="game-search-searching">
+            <div className="searching-text">Подбираем противника по рейтингу и ставке...</div>
             <Button variant="secondary" fullWidth onClick={handleCancelSearch}>
               Отменить поиск
             </Button>
           </div>
-        ) : (
-          <Button fullWidth onClick={handleStartSearch}>
-            Начать поиск
-          </Button>
         )}
-
-        <div style={{ marginTop: '24px', fontSize: '14px', color: '#aaaaaa', textAlign: 'center' }}>
-          Игры дают опыт, NAR-coin и рейтинг
-        </div>
       </div>
     </div>
   )
 }
-
