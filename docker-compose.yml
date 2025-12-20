@@ -84,6 +84,8 @@ services:
       - backend
     volumes:
       - /app/node_modules
+      # Монтируем volume для статических файлов, чтобы nginx мог их читать
+      - frontend_static:/usr/share/nginx/html
     networks:
       - nardi_network
     restart: unless-stopped
@@ -100,6 +102,8 @@ services:
       # Монтируем SSL сертификаты с хоста
       - /etc/letsencrypt/live/nardist.site/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
       - /etc/letsencrypt/live/nardist.site/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+      # Монтируем статические файлы frontend из контейнера
+      - frontend_static:/usr/share/nginx/html:ro
     depends_on:
       backend:
         condition: service_started
@@ -112,6 +116,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  frontend_static:
 
 networks:
   nardi_network:
