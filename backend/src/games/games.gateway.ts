@@ -11,6 +11,8 @@ import { Server, Socket } from 'socket.io';
 import { GamesService } from './games.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { BotService } from '../bot/bot.service';
+import { Inject, forwardRef } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {

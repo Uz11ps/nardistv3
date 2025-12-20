@@ -133,17 +133,39 @@ export class LongBackgammonEngine {
     if (state.bar[0] > 0 && from === -1) {
       state.bar[0]--;
       const enterPoint = 24 - die;
+      // В длинных нардах нельзя входить на точку с фишками противника
+      if (state.points[enterPoint] < 0) {
+        // Возвращаем фишку на бар если нельзя войти
+        state.bar[0]++;
+        return;
+      }
       state.points[enterPoint]++;
       return;
     }
 
-    if (to < 0) {
-      state.points[from]--;
-      state.borneOff[0]++;
+    if (to < 0 || to >= this.BOARD_SIZE) {
+      // Вынос для белых
+      if (state.points[from] > 0) {
+        state.points[from]--;
+        state.borneOff[0]++;
+      }
       return;
     }
 
-    state.points[from]--;
+    // Обычный ход - в длинных нардах нельзя сбивать фишки противника
+    if (state.points[from] > 0) {
+      state.points[from]--;
+    }
+    
+    // В длинных нардах можно ставить фишку только на пустую точку или на свою
+    if (state.points[to] < 0) {
+      // Нельзя ставить на точку противника
+      if (state.points[from] >= 0) {
+        state.points[from]++; // Возвращаем фишку
+      }
+      return;
+    }
+    
     state.points[to]++;
   }
 
@@ -151,16 +173,18 @@ export class LongBackgammonEngine {
     if (state.bar[1] > 0 && from === -1) {
       state.bar[1]--;
       const enterPoint = die - 1;
+      // В длинных нардах нельзя входить на точку с фишками противника
       if (state.points[enterPoint] > 0) {
-        // Если на точке есть фишки белых, их сбиваем на бар
-        state.bar[0] += state.points[enterPoint];
+        // Возвращаем фишку на бар если нельзя войти
+        state.bar[1]++;
+        return;
       }
-      state.points[enterPoint] = -1; // Ставим черную фишку
+      state.points[enterPoint]--;
       return;
     }
 
     if (to >= this.BOARD_SIZE || to === -1) {
-      // Вынос для черных (to >= 24 или to === -1 для белых)
+      // Вынос для черных
       if (state.points[from] < 0) {
         state.points[from]++;
         state.borneOff[1]++;
@@ -168,18 +192,21 @@ export class LongBackgammonEngine {
       return;
     }
 
-    // Обычный ход
+    // Обычный ход - в длинных нардах нельзя сбивать фишки противника
     if (state.points[from] < 0) {
       state.points[from]++;
     }
     
+    // В длинных нардах можно ставить фишку только на пустую точку или на свою
     if (state.points[to] > 0) {
-      // Если на точке есть фишки белых, их сбиваем на бар
-      state.bar[0] += state.points[to];
-      state.points[to] = -1;
-    } else {
-      state.points[to]--;
+      // Нельзя ставить на точку противника
+      if (state.points[from] <= 0) {
+        state.points[from]--; // Возвращаем фишку
+      }
+      return;
     }
+    
+    state.points[to]--;
   }
 
   isGameFinished(state: LongBoardState): boolean {

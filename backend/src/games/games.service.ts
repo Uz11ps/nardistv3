@@ -283,25 +283,35 @@ export class GamesService {
     const savedGame = await this.gamesRepository.save(game);
 
     // Если следующий игрок - бот, делаем автоматический ход
-    if (game.type === GameType.VS_BOT && savedGame.status === GameStatus.IN_PROGRESS) {
-      const nextPlayerId = savedGame.currentPlayer === 0 ? savedGame.player1Id : savedGame.player2Id;
-      const botPlayerId = savedGame.player2Id === null ? savedGame.player1Id : savedGame.player2Id;
-      
-      // Если следующий ход бота
-      if (nextPlayerId === botPlayerId || savedGame.player2Id === null) {
-        // Бросаем кубики для бота
+    // В играх с ботом player2Id === null означает что бот это player2
+    if (game.type === GameType.VS_BOT && savedGame.status === GameStatus.IN_PROGRESS && savedGame.player2Id === null) {
+      // Если следующий ход бота (currentPlayer === 1 означает что бот ходит)
+      if (savedGame.currentPlayer === 1) {
+        // Бросаем кубики для бота и делаем ход
         setTimeout(async () => {
           try {
-            const botDice = await this.rollDice(savedGame.id, botPlayerId);
             const botGame = await this.findOne(savedGame.id);
+            if (botGame.status === GameStatus.FINISHED) return;
             
-            // Делаем ход бота
-            const botMoves = await this.botService.makeBotMove(botGame.gameState, botGame.mode);
-            if (botMoves.length > 0) {
-              await this.makeMove(savedGame.id, botPlayerId, botMoves);
-            }
+            // Бросаем кубики для бота (используем player1Id так как player2Id === null)
+            const botDice = await this.rollDice(savedGame.id, botGame.player1Id);
+            
+            // Ждем немного и делаем ход бота
+            setTimeout(async () => {
+              try {
+                const updatedGame = await this.findOne(savedGame.id);
+                if (updatedGame.status === GameStatus.FINISHED) return;
+                
+                const botMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
+                if (botMoves.length > 0) {
+                  await this.makeMove(savedGame.id, botGame.player1Id, botMoves);
+                }
+              } catch (error) {
+                this.logger.error(`Bot move error: ${error.message}`, error.stack);
+              }
+            }, 1500);
           } catch (error) {
-            this.logger.error(`Bot move error: ${error.message}`, error.stack);
+            this.logger.error(`Bot dice roll error: ${error.message}`, error.stack);
           }
         }, 1000); // Задержка 1 секунда для визуализации
       }
