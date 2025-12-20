@@ -344,17 +344,30 @@ export default function Game() {
       return
     }
 
-    // Если игра в процессе и есть кубики - подтверждаем ход
+    // Если игра в процессе и есть кубики и это мой ход - ничего не делаем
+    // Ход уже сделан через клик по доске, подтверждение не требуется
     if (gameStatus === 'in_progress' && gameState?.dice && isMyTurn) {
-      console.log('✅ Подтверждаем ход')
-      try {
-        await loadGame()
-      } catch (error) {
-        console.error('❌ Failed to confirm move:', error)
-      }
-    } else {
-      console.log('⚠️ Условия не выполнены:', { gameStatus, hasDice: !!gameState?.dice, isMyTurn })
+      console.log('ℹ️ Ход уже сделан, подтверждение не требуется')
+      return
     }
+    
+    // Если игра в процессе и нет кубиков и это мой ход - бросаем кубики
+    if (gameStatus === 'in_progress' && !gameState?.dice && isMyTurn) {
+      console.log('🎲 Бросаем кубики для нового хода')
+      try {
+        const socket = getSocket()
+        if (socket && socket.connected) {
+          socket.emit('roll_dice', { gameId })
+        } else {
+          console.error('❌ WebSocket не подключен')
+        }
+      } catch (error) {
+        console.error('❌ Failed to roll dice:', error)
+      }
+      return
+    }
+    
+    console.log('⚠️ Условия не выполнены:', { gameStatus, hasDice: !!gameState?.dice, isMyTurn })
   }
 
   const startTimers = () => {
