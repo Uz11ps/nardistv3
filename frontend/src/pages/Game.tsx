@@ -515,11 +515,8 @@ export default function Game() {
         </div>
       </div>
 
-      {/* Кнопка подтверждения */}
-      {(gameStatus === 'waiting' || (gameStatus === 'in_progress' && isMyTurn && gameState.dice && (
-        (Array.isArray(gameState.dice) && gameState.dice.length >= 2) ||
-        (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
-      ))) && (
+      {/* Кнопка подтверждения / броска кубиков */}
+      {(gameStatus === 'waiting' || (gameStatus === 'in_progress' && isMyTurn)) && (
         <div className="game-confirm-section">
           <Button 
             variant="primary" 
@@ -527,7 +524,14 @@ export default function Game() {
             onClick={handleConfirm}
             className="game-confirm-btn"
           >
-            Подтвердить
+            {gameStatus === 'waiting' 
+              ? 'Начать игру' 
+              : (gameState.dice && (
+                  (Array.isArray(gameState.dice) && gameState.dice.length >= 2) ||
+                  (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
+                ))
+              ? 'Подтвердить ход'
+              : 'Бросить кубики'}
           </Button>
         </div>
       )}
