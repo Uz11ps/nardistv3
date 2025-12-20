@@ -206,33 +206,47 @@ export class GamesService {
     if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
       allValidMoves = engine.getAllValidMoves(game.gameState, dice);
     }
-    if (allValidMoves.length > 0) {
+    
+    // Проверяем, что использованы правильные кубики (правильное количество каждого)
+    const diceCount = new Map<number, number>();
+    for (const die of dice) {
+      diceCount.set(die, (diceCount.get(die) || 0) + 1);
+    }
+
+    const usedCount = new Map<number, number>();
+    for (const move of moves) {
+      usedCount.set(move.die, (usedCount.get(move.die) || 0) + 1);
+    }
+
+    // Проверяем, не превышено ли использование кубиков
+    for (const [die, used] of usedCount.entries()) {
+      const available = diceCount.get(die) || 0;
+      if (used > available) {
+        throw new BadRequestException(`Кубик ${die} использован ${used} раз(а), но доступно только ${available}`);
+      }
+    }
+    
+    // Проверяем обязательность использования всех кубиков только если это длинные нарды
+    // В длинных нардах можно делать ходы по одному, если это валидно
+    if (game.mode === GameMode.LONG && allValidMoves.length > 0) {
       // Проверяем, есть ли ходы, которые используют все кубики
+      const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
+      
+      // В длинных нардах разрешаем делать один ход за раз, если он валиден
+      // Но если есть возможность использовать все кубики и пользователь использует только один - предупреждаем
+      if (fullMoves.length > 0 && moves.length < dice.length) {
+        console.log(`⚠️ Пользователь использует только ${moves.length} из ${dice.length} кубиков, но есть возможность использовать все`);
+        // Разрешаем, но не требуем использовать все кубики в длинных нардах
+        // Пользователь может сделать второй ход позже
+      }
+    } else if (allValidMoves.length > 0) {
+      // Для коротких нард требуем использовать все кубики, если это возможно
       const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
       
       if (fullMoves.length > 0 && moves.length < dice.length) {
         throw new BadRequestException(
           `Необходимо использовать все кубики. Доступно ${dice.length} кубиков (${dice.join(', ')}), использовано ${moves.length}. Доступны ходы, использующие все кубики.`
         );
-      }
-      
-      // Проверяем, что использованы правильные кубики (правильное количество каждого)
-      const diceCount = new Map<number, number>();
-      for (const die of dice) {
-        diceCount.set(die, (diceCount.get(die) || 0) + 1);
-      }
-
-      const usedCount = new Map<number, number>();
-      for (const move of moves) {
-        usedCount.set(move.die, (usedCount.get(move.die) || 0) + 1);
-      }
-
-      // Проверяем, не превышено ли использование кубиков
-      for (const [die, used] of usedCount.entries()) {
-        const available = diceCount.get(die) || 0;
-        if (used > available) {
-          throw new BadRequestException(`Кубик ${die} использован ${used} раз(а), но доступно только ${available}`);
-        }
       }
     }
 
