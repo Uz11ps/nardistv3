@@ -203,7 +203,8 @@ export default function BackgammonBoard({
         x = boardPadding + (i - 12) * pointWidth
       }
 
-      const y = isTop ? boardPadding : boardPadding + boardHeight / 2
+      // Для нижних точек прижимаем к низу доски
+      const y = isTop ? boardPadding : boardPadding + boardHeight - pointHeight
 
       // Цвет точки (чередование)
       const isLight = (Math.floor(i / 6) + i) % 2 === 0

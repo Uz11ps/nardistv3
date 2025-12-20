@@ -205,11 +205,32 @@ export default function Game() {
     }
   }
 
-  const handleConfirm = () => {
-    // Подтверждение хода - если все кубики использованы, автоматически передать ход
-    // Или подтвердить готовность к игре
+  const handleConfirm = async () => {
+    if (!gameId) return
+
+    // Если игра в статусе waiting - начинаем игру (бросаем кубики)
     if (gameStatus === 'waiting') {
-      // TODO: Подтвердить готовность
+      try {
+        await handleRollDice()
+        // После броска кубиков игра должна начаться автоматически
+        setTimeout(() => {
+          loadGame()
+        }, 500)
+      } catch (error) {
+        console.error('Failed to start game:', error)
+      }
+      return
+    }
+
+    // Если игра в процессе и есть кубики - подтверждаем ход
+    if (gameStatus === 'in_progress' && gameState?.dice && isMyTurn) {
+      // Если все кубики использованы, передаем ход (делаем пустой ход)
+      // Или просто обновляем состояние игры
+      try {
+        await loadGame()
+      } catch (error) {
+        console.error('Failed to confirm move:', error)
+      }
     }
   }
 
