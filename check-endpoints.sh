@@ -102,7 +102,11 @@ check_endpoint "GET" "/skins" "Список всех скинов" "" "" "200"
 # 2. Админ-авторизация
 echo ""
 echo -e "${YELLOW}=== Админ-авторизация ===${NC}"
-ADMIN_RESPONSE=$(curl -s -X POST "$API_URL/admin/login" \
+CURL_ADMIN_FLAGS="-s"
+if [[ "$API_URL" == https://* ]]; then
+  CURL_ADMIN_FLAGS="$CURL_ADMIN_FLAGS -k"
+fi
+ADMIN_RESPONSE=$(curl $CURL_ADMIN_FLAGS -X POST "$API_URL/admin/login" \
   -H "Content-Type: application/json" \
   -d "{\"login\":\"$ADMIN_LOGIN\",\"password\":\"$ADMIN_PASSWORD\"}")
 
