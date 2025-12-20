@@ -589,7 +589,7 @@ export default function BackgammonBoard({
       }
 
       // Для нижних точек прижимаем к низу доски
-      const pointY = isTop ? boardPadding : boardPadding + (height - boardPadding * 2) - pointHeight
+      const pointY = isTop ? boardPadding : boardPadding + (height - boardPadding * 2)
 
       // Проверяем клик в пределах треугольника
       const relativeX = x - pointX

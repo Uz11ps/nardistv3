@@ -10,9 +10,22 @@ export function connectWebSocket(token: string): Socket {
     return socket
   }
 
-  socket = io(WS_URL, {
+  // Подключаемся к namespace /games для игровых событий
+  socket = io(`${WS_URL}/games`, {
     auth: { token },
     transports: ['websocket'],
+  })
+
+  socket.on('connect', () => {
+    console.log('✅ WebSocket подключен к /games')
+  })
+
+  socket.on('disconnect', () => {
+    console.log('❌ WebSocket отключен')
+  })
+
+  socket.on('connect_error', (error) => {
+    console.error('❌ WebSocket ошибка подключения:', error)
   })
 
   return socket

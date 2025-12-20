@@ -140,37 +140,58 @@ export default function Game() {
 
   const connectToGame = () => {
     const socket = getSocket()
-    if (!socket) return
+    if (!socket || !gameId) return
 
-    socket.emit('game:join', { gameId })
+    console.log('🔌 Подключаемся к игре через WebSocket:', gameId)
 
-    socket.on('game:update', (data: any) => {
-      setGameState((prev) => ({
-        ...prev!,
-        ...data.gameState,
-        currentPlayer: data.currentPlayer,
+    // Подключаемся к игре через WebSocket (правильное имя события)
+    socket.emit('join_game', { gameId })
+
+    socket.on('game_state', (data: any) => {
+      console.log('📊 Получено game_state:', data)
+      setGameState({
+        points: data.gameState?.points || [],
+        bar: data.gameState?.bar || { white: 0, black: 0 },
+        bearOff: data.gameState?.bearOff || data.gameState?.borneOff || { white: 0, black: 0 },
+        currentPlayer: data.currentPlayer || 0,
+        dice: data.gameState?.dice || null,
         canMove: data.currentPlayer === (data.player1Id === user?.id ? 0 : 1),
-      }))
-      setGameStatus(data.status)
+      })
+      setGameStatus(data.status || 'waiting')
+      setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+    })
+
+    socket.on('move_made', (data: any) => {
+      console.log('🎯 Получено move_made:', data)
+      setGameState({
+        points: data.gameState?.points || [],
+        bar: data.gameState?.bar || { white: 0, black: 0 },
+        bearOff: data.gameState?.bearOff || data.gameState?.borneOff || { white: 0, black: 0 },
+        currentPlayer: data.currentPlayer || 0,
+        dice: data.gameState?.dice || null,
+        canMove: data.currentPlayer === (data.player1Id === user?.id ? 0 : 1),
+      })
+      setGameStatus(data.status || 'in_progress')
       loadGame()
     })
 
-    socket.on('game:move', (data: any) => {
-      loadGame()
-    })
-
-    socket.on('game:dice', (data: any) => {
+    socket.on('dice_rolled', (data: any) => {
+      console.log('🎲 Получено dice_rolled:', data)
       setGameState((prev) => ({
         ...prev!,
-        dice: { die1: data.die1, die2: data.die2 },
+        dice: Array.isArray(data.dice) ? { die1: data.dice[0], die2: data.dice[1] } : data.dice,
       }))
+      loadGame()
     })
 
-    socket.on('game:finished', (data: any) => {
+    socket.on('game_finished', (data: any) => {
+      console.log('🏁 Игра завершена:', data)
       setGameStatus('finished')
-      setTimeout(() => {
-        navigate('/')
-      }, 3000)
+      setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+    })
+
+    socket.on('error', (error: any) => {
+      console.error('❌ WebSocket error:', error)
     })
   }
 
