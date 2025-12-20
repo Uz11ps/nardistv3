@@ -30,5 +30,12 @@ export class SkinsController {
     await this.skinsService.selectSkin(user.id, skinId);
     return { message: 'Скин выбран' };
   }
+
+  @Post('purchase')
+  @UseGuards(JwtAuthGuard)
+  async purchaseSkin(@CurrentUser() user: any, @Body('skinId') skinId: string) {
+    await this.skinsService.purchaseSkin(user.id, skinId);
+    return { message: 'Скин куплен' };
+  }
 }
 

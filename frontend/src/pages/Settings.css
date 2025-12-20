@@ -1,0 +1,91 @@
+/* Settings Page Styles */
+
+.settings-content {
+  padding: var(--spacing-5);
+}
+
+.settings-card {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0;
+  overflow: hidden;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-4);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.settings-item-clickable:hover {
+  background: var(--color-background-secondary);
+}
+
+.settings-label {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.settings-toggle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--color-text-primary);
+  background: transparent;
+  position: relative;
+  transition: var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-toggle.active {
+  background: var(--color-text-primary);
+}
+
+.settings-toggle-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-background);
+  transition: var(--transition-base);
+}
+
+.settings-item-value {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.settings-value-text {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+}
+
+.settings-arrow {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+  margin-left: var(--spacing-2);
+}
+
+.settings-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0 var(--spacing-4);
+}
+
+@media (max-width: 480px) {
+  .settings-content {
+    padding: var(--spacing-4);
+  }
+
+  .settings-item {
+    padding: var(--spacing-3);
+  }
+}

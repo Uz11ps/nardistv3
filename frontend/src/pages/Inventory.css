@@ -1,0 +1,158 @@
+/* Inventory Page Styles */
+
+.inventory-content {
+  padding: var(--spacing-5);
+}
+
+.inventory-empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: var(--spacing-6);
+}
+
+.inventory-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+}
+
+.inventory-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.inventory-section-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-2);
+}
+
+.inventory-item {
+  padding: var(--spacing-4);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.inventory-item-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.inventory-item-image {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-md);
+  background: var(--color-background-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.inventory-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.inventory-item-selected {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-primary);
+}
+
+.inventory-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: 0;
+}
+
+.inventory-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.inventory-item-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.inventory-rarity-badge {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.inventory-rarity-common {
+  background: var(--color-text-disabled);
+  color: var(--color-text-primary);
+}
+
+.inventory-rarity-rare {
+  background: var(--color-info);
+  color: var(--color-text-primary);
+}
+
+.inventory-rarity-epic {
+  background: #6f42c1;
+  color: var(--color-text-primary);
+}
+
+.inventory-rarity-legendary {
+  background: linear-gradient(135deg, var(--color-gold) 0%, #ff8800 100%);
+  color: #000;
+}
+
+.inventory-item-meta {
+  display: flex;
+  gap: var(--spacing-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.inventory-item-type,
+.inventory-item-weight {
+  color: var(--color-text-secondary);
+}
+
+.inventory-item-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-1);
+}
+
+@media (max-width: 480px) {
+  .inventory-content {
+    padding: var(--spacing-4);
+  }
+
+  .inventory-item {
+    padding: var(--spacing-3);
+  }
+
+  .inventory-item-image {
+    width: 64px;
+    height: 64px;
+  }
+}

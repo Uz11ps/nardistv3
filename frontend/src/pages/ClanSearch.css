@@ -1,0 +1,142 @@
+/* Clan Search Page Styles */
+
+.clan-search-content {
+  padding: var(--spacing-5);
+}
+
+.clan-search-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-4);
+  text-align: center;
+}
+
+.clan-search-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-4);
+  overflow-x: auto;
+}
+
+.clan-search-tab {
+  flex: 1;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+  white-space: nowrap;
+}
+
+.clan-search-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.clan-search-tab.active {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.clan-search-input-container {
+  margin-bottom: var(--spacing-4);
+}
+
+.clan-search-input {
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+}
+
+.clan-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 51, 51, 0.1);
+}
+
+.clan-search-input::placeholder {
+  color: var(--color-text-disabled);
+}
+
+.clan-search-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.clan-search-item {
+  padding: var(--spacing-4);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.clan-search-item:hover {
+  border-color: var(--color-primary);
+  background: var(--color-background-secondary);
+}
+
+.clan-search-item-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.clan-search-item-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clan-search-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.clan-search-item-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-1);
+}
+
+.clan-search-item-details {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-1);
+}
+
+.clan-search-item-treasury {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.clan-search-empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: var(--spacing-6);
+}
+
+@media (max-width: 480px) {
+  .clan-search-content {
+    padding: var(--spacing-4);
+  }
+
+  .clan-search-item {
+    padding: var(--spacing-3);
+  }
+}

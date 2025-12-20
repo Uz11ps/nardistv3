@@ -147,6 +147,18 @@ export class ClansService {
     });
   }
 
+  async getUserClan(userId: string): Promise<{ clan: Clan | null; member: ClanMember | null }> {
+    const member = await this.membersRepository.findOne({
+      where: { userId },
+      relations: ['clan'],
+    });
+
+    return {
+      clan: member?.clan || null,
+      member: member || null,
+    };
+  }
+
   async contribute(userId: string, clanId: string, amount: number): Promise<void> {
     const member = await this.membersRepository.findOne({
       where: { userId, clanId },

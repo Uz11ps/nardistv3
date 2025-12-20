@@ -18,6 +18,12 @@ export class ClansController {
     return this.clansService.findAll(filters);
   }
 
+  @Get('my')
+  @UseGuards(JwtAuthGuard)
+  async getMyClan(@CurrentUser() user: any) {
+    return this.clansService.getUserClan(user.id);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.clansService.findOne(id);

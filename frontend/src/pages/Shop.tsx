@@ -2,38 +2,56 @@ import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import SkinSelectModal from '../components/SkinSelectModal'
+import BottomNav from '../components/BottomNav'
+import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
+import './Shop.css'
+
+interface NarCoinPackage {
+  amount: number
+  price: number
+  currency: string
+}
 
 export default function Shop() {
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'cosmetics'>('coin')
+  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'board' | 'dice' | 'checkers'>('coin')
+  const [narCoinPackages, setNarCoinPackages] = useState<NarCoinPackage[]>([])
   const [skins, setSkins] = useState<Skin[]>([])
   const [ownedSkins, setOwnedSkins] = useState<string[]>([])
-  const [selectedSkinId, setSelectedSkinId] = useState<string | null>(null)
-  const [showSkinModal, setShowSkinModal] = useState(false)
+  const [selectedSkinIds, setSelectedSkinIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
-  const narCoinPackages = [
-    { amount: 1000, price: 1, currency: 'TON' },
-    { amount: 5000, price: 4, currency: 'TON' },
-    { amount: 15000, price: 10, currency: 'TON' },
-    { amount: 50000, price: 30, currency: 'TON' },
-  ]
-
-  const subscriptionPlans = [
-    { duration: '1 месяц', price: 3, currency: 'TON', label: 'Попробовать' },
-    { duration: '3 месяца', price: 7, currency: 'TON', label: 'Оптимально', highlighted: true },
-    { duration: '1 год', price: 22, currency: 'TON', label: 'Выгоднее' },
-  ]
-
   useEffect(() => {
-    if (activeTab === 'cosmetics') {
+    if (activeTab === 'coin') {
+      loadNarCoinPackages()
+    } else if (['board', 'dice', 'checkers'].includes(activeTab)) {
       loadSkins()
     }
   }, [activeTab])
+
+  const loadNarCoinPackages = async () => {
+    try {
+      setLoading(true)
+      // Загружаем пакеты NAR-coin с сервера
+      const response = await apiClient.get('/shop/nar-coin-packages').catch(() => {
+        // Если endpoint не существует, используем дефолтные значения
+        return { data: [
+          { amount: 1000, price: 1, currency: 'TON' },
+          { amount: 5000, price: 4, currency: 'TON' },
+          { amount: 15000, price: 10, currency: 'TON' },
+          { amount: 50000, price: 30, currency: 'TON' },
+        ]}
+      })
+      setNarCoinPackages(response.data || [])
+    } catch (error) {
+      console.error('Failed to load NAR-coin packages:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const loadSkins = async () => {
     try {
@@ -46,11 +64,24 @@ export default function Shop() {
 
       const allSkins = allSkinsResponse.data || []
       const mySkins = mySkinsResponse.data || []
-      const selected = selectedSkinResponse.data
+      const selected = selectedSkinResponse.data || {}
 
-      setSkins(allSkins)
+      // Фильтруем скины по типу активной вкладки
+      const typeMap: { [key: string]: string } = {
+        board: 'board',
+        dice: 'dice',
+        checkers: 'checkers',
+      }
+      const filteredSkins = allSkins.filter((s: Skin) => s.type === typeMap[activeTab])
+
+      setSkins(filteredSkins)
       setOwnedSkins([...mySkins.map((s: Skin) => s.id), ...allSkins.filter((s: Skin) => s.isDefault).map((s: Skin) => s.id)])
-      setSelectedSkinId(selected?.id || null)
+      
+      const selectedIds = new Set<string>()
+      if (selected.board) selectedIds.add(selected.board.id)
+      if (selected.dice) selectedIds.add(selected.dice.id)
+      if (selected.checkers) selectedIds.add(selected.checkers.id)
+      setSelectedSkinIds(selectedIds)
     } catch (error) {
       console.error('Failed to load skins:', error)
     } finally {
@@ -60,19 +91,19 @@ export default function Shop() {
 
   const handleBuyNarCoin = async (amount: number, price: number) => {
     try {
-      // Здесь будет интеграция с платежной системой
-      console.log(`Buying ${amount} NAR for ${price} TON`)
-    } catch (error) {
+      // TODO: интеграция с платежной системой TON
+      const response = await apiClient.post('/shop/purchase-nar-coin', { amount, price, currency: 'TON' }).catch(() => {
+        throw new Error('Интеграция с платежной системой в разработке')
+      })
+      alert(`Покупка ${amount} NAR за ${price} TON успешна!`)
+      // Обновляем баланс пользователя
+      if (user) {
+        const userResponse = await apiClient.get('/users/me')
+        useAuthStore.setState({ user: userResponse.data })
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || error.message || 'Ошибка при покупке')
       console.error('Purchase failed:', error)
-    }
-  }
-
-  const handleSubscribe = async (plan: string) => {
-    try {
-      // Здесь будет интеграция с платежной системой
-      console.log(`Subscribing to ${plan}`)
-    } catch (error) {
-      console.error('Subscription failed:', error)
     }
   }
 
@@ -81,13 +112,11 @@ export default function Shop() {
       const skin = skins.find((s) => s.id === skinId)
       if (!skin || !skin.price) return
 
-      // Здесь будет интеграция с платежной системой для покупки
-      // Пока просто показываем сообщение
-      alert(`Покупка скина "${skin.name}" за ${skin.price} NAR. Интеграция с платежной системой в разработке.`)
-      
-      // После покупки обновляем список
+      await apiClient.post('/skins/purchase', { skinId })
+      alert(`Скин "${skin.name}" успешно куплен!`)
       await loadSkins()
-    } catch (error) {
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при покупке скина')
       console.error('Purchase failed:', error)
     }
   }
@@ -95,236 +124,225 @@ export default function Shop() {
   const handleSelectSkin = async (skinId: string) => {
     try {
       await apiClient.post('/skins/select', { skinId })
-      setSelectedSkinId(skinId)
       await loadSkins()
     } catch (error: any) {
-      console.error('Failed to select skin:', error)
       alert(error.response?.data?.message || 'Ошибка при выборе скина')
+      console.error('Failed to select skin:', error)
     }
   }
 
-  const getRarityColor = (rarity: string) => {
-    switch (rarity) {
-      case 'legendary':
-        return '#FFD700'
-      case 'epic':
-        return '#9B59B6'
-      case 'rare':
-        return '#3498DB'
-      default:
-        return '#95A5A6'
+  const getRarityName = (rarity: string) => {
+    const rarityNames: { [key: string]: string } = {
+      common: 'Обычный',
+      rare: 'Редкий',
+      epic: 'Эпический',
+      legendary: 'Легендарный',
     }
+    return rarityNames[rarity] || rarity
+  }
+
+  const getRarityBadgeClass = (rarity: string) => {
+    return `shop-rarity-badge shop-rarity-${rarity}`
   }
 
   return (
     <div className="app-container">
       <PageHeader title="Магазин" />
       
-      <div style={{ padding: '20px' }}>
-        {/* Вкладки */}
-        <div className="tabs">
-          <button
-            className={`tab ${activeTab === 'coin' ? 'active' : ''}`}
-            onClick={() => setActiveTab('coin')}
-          >
-            NAR-coin
-          </button>
-          <button
-            className={`tab ${activeTab === 'subscription' ? 'active' : ''}`}
-            onClick={() => setActiveTab('subscription')}
-          >
-            Подписка
-          </button>
-          <button
-            className={`tab ${activeTab === 'cosmetics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('cosmetics')}
-          >
-            Косметика
-          </button>
+      <div className="shop-content">
+        {/* Листабельные вкладки */}
+        <div className="shop-tabs-container">
+          <div className="shop-tabs">
+            <button
+              className={`shop-tab ${activeTab === 'coin' ? 'active' : ''}`}
+              onClick={() => setActiveTab('coin')}
+            >
+              NAR-coin
+            </button>
+            <button
+              className={`shop-tab ${activeTab === 'subscription' ? 'active' : ''}`}
+              onClick={() => setActiveTab('subscription')}
+            >
+              Подписка
+            </button>
+            <button
+              className={`shop-tab ${activeTab === 'board' ? 'active' : ''}`}
+              onClick={() => setActiveTab('board')}
+            >
+              Доски
+            </button>
+            <button
+              className={`shop-tab ${activeTab === 'dice' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dice')}
+            >
+              Куб
+            </button>
+            <button
+              className={`shop-tab ${activeTab === 'checkers' ? 'active' : ''}`}
+              onClick={() => setActiveTab('checkers')}
+            >
+              Шашки
+            </button>
+          </div>
         </div>
 
         {/* NAR-coin */}
         {activeTab === 'coin' && (
-          <div>
-            {narCoinPackages.map((pkg) => (
-              <Card key={pkg.amount} style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <div className="card-title">{pkg.amount.toLocaleString()} NAR</div>
-                    <div className="card-subtitle">Цена: {pkg.price} {pkg.currency}</div>
-                  </div>
-                  <div style={{ fontSize: '48px' }}>🪙</div>
-                  <Button onClick={() => handleBuyNarCoin(pkg.amount, pkg.price)}>
-                    Купить
-                  </Button>
-                </div>
+          <div className="shop-list">
+            {loading ? (
+              <Card>
+                <div className="shop-empty">Загрузка...</div>
               </Card>
-            ))}
+            ) : (
+              narCoinPackages.map((pkg) => (
+                <Card key={pkg.amount} className="shop-nar-coin-card">
+                  <div className="shop-nar-coin-content">
+                    <div className="shop-nar-coin-info">
+                      <div className="shop-nar-coin-amount">{pkg.amount.toLocaleString()} NAR</div>
+                      <div className="shop-nar-coin-price">Цена: {pkg.price} {pkg.currency}</div>
+                    </div>
+                    <div className="shop-nar-coin-icon">
+                      <Icon name="coin" size={64} style={{ color: '#ffd700' }} />
+                    </div>
+                    <Button 
+                      variant="primary" 
+                      className="shop-buy-btn"
+                      onClick={() => handleBuyNarCoin(pkg.amount, pkg.price)}
+                    >
+                      Купить
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         )}
 
         {/* Подписка */}
         {activeTab === 'subscription' && (
-          <div>
-            <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-              <div className="card-title">Подписка</div>
-              <div className="card-subtitle">Для тех, кто хочет играть на уровне мастеров</div>
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <Card>
-                <div className="card-title">История игр</div>
-                <div className="card-subtitle">Полный список твоих матчей</div>
-              </Card>
-              <Card>
-                <div className="card-title">Анализ</div>
-                <div className="card-subtitle">Разбор ошибок и лучших ходов</div>
-              </Card>
-              <Card>
-                <div className="card-title">Тренажёр</div>
-                <div className="card-subtitle">Разбирай позиции и стратегии</div>
-              </Card>
-              <Card>
-                <div className="card-title">Приоритет</div>
-                <div className="card-subtitle">Попадай к соперникам быстрее</div>
-              </Card>
-              <Card>
-                <div className="card-title">Премиум-значок</div>
-                <div className="card-subtitle">Отметь свой статус в таблице</div>
-              </Card>
-            </div>
-
-            {subscriptionPlans.map((plan) => (
-              <Card
-                key={plan.duration}
-                style={{
-                  marginBottom: '12px',
-                  border: plan.highlighted ? '2px solid #ffd700' : 'none',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <div className="card-title">{plan.duration}</div>
-                    <div className="card-subtitle">
-                      {plan.price} {plan.currency} • {plan.label}
-                    </div>
-                  </div>
-                  <Button onClick={() => handleSubscribe(plan.duration)}>
-                    Купить
-                  </Button>
-                </div>
-              </Card>
-            ))}
+          <div className="shop-list">
+            <Card>
+              <div className="shop-subscription-info">
+                <div className="shop-subscription-title">Подписка</div>
+                <div className="shop-subscription-subtitle">Для тех, кто хочет играть на уровне мастеров</div>
+              </div>
+            </Card>
+            {/* TODO: загрузить планы подписки с сервера */}
+            <Card>
+              <div className="shop-subscription-feature">
+                <div className="shop-subscription-feature-title">История игр</div>
+                <div className="shop-subscription-feature-subtitle">Полный список твоих матчей</div>
+              </div>
+            </Card>
+            <Card>
+              <div className="shop-subscription-feature">
+                <div className="shop-subscription-feature-title">Анализ</div>
+                <div className="shop-subscription-feature-subtitle">Разбор ошибок и лучших ходов</div>
+              </div>
+            </Card>
+            <Card>
+              <div className="shop-subscription-feature">
+                <div className="shop-subscription-feature-title">Тренажёр</div>
+                <div className="shop-subscription-feature-subtitle">Разбирай позиции и стратегии</div>
+              </div>
+            </Card>
+            <Card>
+              <div className="shop-subscription-feature">
+                <div className="shop-subscription-feature-title">Приоритет</div>
+                <div className="shop-subscription-feature-subtitle">Попадай к соперникам быстрее</div>
+              </div>
+            </Card>
+            <Card>
+              <div className="shop-subscription-feature">
+                <div className="shop-subscription-feature-title">Премиум-значок</div>
+                <div className="shop-subscription-feature-subtitle">Отметь свой статус в таблице</div>
+              </div>
+            </Card>
           </div>
         )}
 
-        {/* Косметика */}
-        {activeTab === 'cosmetics' && (
-          <div>
-            <div style={{ marginBottom: '16px' }}>
-              <Button fullWidth onClick={() => setShowSkinModal(true)}>
-                Выбрать скин
-              </Button>
-            </div>
-
+        {/* Скины (Доски, Кости, Шашки) */}
+        {['board', 'dice', 'checkers'].includes(activeTab) && (
+          <div className="shop-list">
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>Загрузка...</div>
+              <Card>
+                <div className="shop-empty">Загрузка...</div>
+              </Card>
+            ) : skins.length === 0 ? (
+              <Card>
+                <div className="shop-empty">Нет доступных скинов</div>
+              </Card>
             ) : (
-              <div>
-                {skins.map((skin) => {
-                  const isOwned = ownedSkins.includes(skin.id)
-                  const isSelected = selectedSkinId === skin.id
+              skins.map((skin) => {
+                const isOwned = ownedSkins.includes(skin.id)
+                const isSelected = selectedSkinIds.has(skin.id)
 
-                  return (
-                    <Card key={skin.id} style={{ marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                return (
+                  <Card key={skin.id} className="shop-skin-card">
+                    <div className="shop-skin-content">
+                      <div className="shop-skin-image">
                         {skin.imageUrl ? (
                           <img
                             src={skin.imageUrl}
                             alt={skin.name}
-                            style={{
-                              width: '80px',
-                              height: '80px',
-                              objectFit: 'cover',
-                              borderRadius: '8px',
-                            }}
+                            className="shop-skin-img"
                           />
                         ) : (
-                          <div
-                            style={{
-                              width: '80px',
-                              height: '80px',
-                              background: skin.boardConfig?.color || '#3a3a3a',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '32px',
-                            }}
-                          >
-                            🎲
-                          </div>
+                          <Icon 
+                            name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} 
+                            size={64} 
+                          />
                         )}
-                        <div style={{ flex: 1 }}>
-                          <div className="card-title">{skin.name}</div>
-                          {skin.description && (
-                            <div className="card-subtitle" style={{ fontSize: '12px' }}>
-                              {skin.description}
-                            </div>
-                          )}
-                          <div
-                            style={{
-                              fontSize: '12px',
-                              color: getRarityColor(skin.rarity),
-                              marginTop: '4px',
-                            }}
-                          >
-                            {skin.rarity === 'legendary' && 'Легендарный'}
-                            {skin.rarity === 'epic' && 'Эпический'}
-                            {skin.rarity === 'rare' && 'Редкий'}
-                            {skin.rarity === 'common' && 'Обычный'}
+                        {isSelected && (
+                          <div className="shop-skin-selected">
+                            <Icon name="check" size={16} />
                           </div>
-                          {!isOwned && skin.price && (
-                            <div className="gold" style={{ marginTop: '4px' }}>
-                              {skin.price} NAR
-                            </div>
-                          )}
-                          {isSelected && (
-                            <div style={{ fontSize: '12px', color: '#4CAF50', marginTop: '4px' }}>
-                              Выбрано
-                            </div>
-                          )}
-                        </div>
-                        {isOwned ? (
-                          <Button
-                            variant={isSelected ? 'primary' : 'secondary'}
-                            onClick={() => handleSelectSkin(skin.id)}
-                          >
-                            {isSelected ? 'Выбрано' : 'Выбрать'}
-                          </Button>
-                        ) : (
-                          <Button onClick={() => handleBuySkin(skin.id)}>
-                            Купить
-                          </Button>
                         )}
                       </div>
-                    </Card>
-                  )
-                })}
-              </div>
+                      <div className="shop-skin-info">
+                        <div className="shop-skin-header">
+                          <div className="shop-skin-name">{skin.name}</div>
+                          <span className={getRarityBadgeClass(skin.rarity)}>
+                            {getRarityName(skin.rarity)}
+                          </span>
+                        </div>
+                        {skin.description && (
+                          <div className="shop-skin-description">{skin.description}</div>
+                        )}
+                        {!isOwned && skin.price && (
+                          <div className="shop-skin-price gold">{skin.price} NAR</div>
+                        )}
+                        {isSelected && (
+                          <div className="shop-skin-selected-label">Выбрано</div>
+                        )}
+                      </div>
+                      {isOwned ? (
+                        <Button
+                          variant={isSelected ? 'primary' : 'secondary'}
+                          className="shop-buy-btn"
+                          onClick={() => handleSelectSkin(skin.id)}
+                        >
+                          {isSelected ? 'Выбрано' : 'Выбрать'}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          className="shop-buy-btn"
+                          onClick={() => handleBuySkin(skin.id)}
+                        >
+                          Купить
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                )
+              })
             )}
           </div>
         )}
-
-        <SkinSelectModal
-          isOpen={showSkinModal}
-          onClose={() => setShowSkinModal(false)}
-          onSelect={handleSelectSkin}
-          selectedSkinId={selectedSkinId || undefined}
-          ownedSkins={ownedSkins}
-        />
       </div>
+
+      <BottomNav />
     </div>
   )
 }
-

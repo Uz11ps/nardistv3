@@ -1,137 +1,167 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
-import Button from '../components/Button'
 import BottomNav from '../components/BottomNav'
+import { apiClient } from '../api/client'
+import './Settings.css'
+
+interface SettingsState {
+  vibration: boolean
+  sound: boolean
+  animations: boolean
+  matchNotifications: boolean
+  economicEvents: boolean
+  clanEvents: boolean
+  language: string
+}
 
 export default function Settings() {
-  const [settings, setSettings] = useState({
-    soundEnabled: true,
-    notificationsEnabled: true,
-    theme: 'dark',
-    language: 'ru',
+  const navigate = useNavigate()
+  const [settings, setSettings] = useState<SettingsState>({
+    vibration: true,
+    sound: false,
+    animations: false,
+    matchNotifications: false,
+    economicEvents: false,
+    clanEvents: false,
+    language: 'Русский',
   })
 
-  const handleSettingChange = (key: string, value: any) => {
-    setSettings({ ...settings, [key]: value })
-    // Здесь можно сохранить настройки на сервере
-    console.log('Settings updated:', { ...settings, [key]: value })
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      // Загрузить настройки пользователя с сервера
+      const response = await apiClient.get('/users/me')
+      // TODO: когда будет endpoint для настроек, загрузить их
+      // const settingsResponse = await apiClient.get('/settings')
+      // setSettings(settingsResponse.data)
+    } catch (error) {
+      console.error('Failed to load settings:', error)
+    }
+  }
+
+  const updateSetting = async (key: keyof SettingsState, value: boolean | string) => {
+    try {
+      const newSettings = { ...settings, [key]: value }
+      setSettings(newSettings)
+      // TODO: сохранить настройки на сервере
+      // await apiClient.put('/settings', { [key]: value })
+    } catch (error) {
+      console.error('Failed to update setting:', error)
+      // Откатить изменения при ошибке
+      setSettings(settings)
+    }
+  }
+
+  const handleToggle = (key: keyof SettingsState) => {
+    const currentValue = settings[key]
+    if (typeof currentValue === 'boolean') {
+      updateSetting(key, !currentValue)
+    }
+  }
+
+  const handleLanguageClick = () => {
+    // TODO: открыть модальное окно выбора языка
+    // Пока просто показываем alert
+    alert('Выбор языка будет доступен в следующей версии')
+  }
+
+  const handlePrivacyPolicy = () => {
+    // TODO: открыть страницу политики конфиденциальности
+    window.open('https://nardist.site/privacy', '_blank')
+  }
+
+  const handleAgreementPolicy = () => {
+    // TODO: открыть страницу политики соглашения
+    window.open('https://nardist.site/agreement', '_blank')
   }
 
   return (
     <div className="app-container">
       <PageHeader title="Настройки" />
       
-      <div style={{ padding: '20px' }}>
-        <Card style={{ marginBottom: '20px' }}>
-          <div className="card-title" style={{ marginBottom: '16px' }}>Звук</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="card-subtitle">Включить звуки игры</div>
-            <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px' }}>
-              <input
-                type="checkbox"
-                checked={settings.soundEnabled}
-                onChange={(e) => handleSettingChange('soundEnabled', e.target.checked)}
-                style={{ opacity: 0, width: 0, height: 0 }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: settings.soundEnabled ? '#ff3333' : '#3a3a3a',
-                  borderRadius: '26px',
-                  transition: '0.3s',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '""',
-                    height: '20px',
-                    width: '20px',
-                    left: settings.soundEnabled ? '26px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: '#fff',
-                    borderRadius: '50%',
-                    transition: '0.3s',
-                  }}
-                />
-              </span>
-            </label>
+      <div className="settings-content">
+        <Card className="settings-card">
+          {/* Toggle настройки */}
+          <div className="settings-item" onClick={() => handleToggle('vibration')}>
+            <span className="settings-label">Вибрация</span>
+            <div className={`settings-toggle ${settings.vibration ? 'active' : ''}`}>
+              {settings.vibration && <div className="settings-toggle-dot" />}
+            </div>
           </div>
-        </Card>
 
-        <Card style={{ marginBottom: '20px' }}>
-          <div className="card-title" style={{ marginBottom: '16px' }}>Уведомления</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="card-subtitle">Включить уведомления</div>
-            <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px' }}>
-              <input
-                type="checkbox"
-                checked={settings.notificationsEnabled}
-                onChange={(e) => handleSettingChange('notificationsEnabled', e.target.checked)}
-                style={{ opacity: 0, width: 0, height: 0 }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: settings.notificationsEnabled ? '#ff3333' : '#3a3a3a',
-                  borderRadius: '26px',
-                  transition: '0.3s',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '""',
-                    height: '20px',
-                    width: '20px',
-                    left: settings.notificationsEnabled ? '26px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: '#fff',
-                    borderRadius: '50%',
-                    transition: '0.3s',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-        </Card>
+          <div className="settings-divider" />
 
-        <Card style={{ marginBottom: '20px' }}>
-          <div className="card-title" style={{ marginBottom: '16px' }}>Язык</div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <Button
-              variant={settings.language === 'ru' ? 'primary' : 'secondary'}
-              onClick={() => handleSettingChange('language', 'ru')}
-            >
-              Русский
-            </Button>
-            <Button
-              variant={settings.language === 'en' ? 'primary' : 'secondary'}
-              onClick={() => handleSettingChange('language', 'en')}
-            >
-              English
-            </Button>
+          <div className="settings-item" onClick={() => handleToggle('sound')}>
+            <span className="settings-label">Звук</span>
+            <div className={`settings-toggle ${settings.sound ? 'active' : ''}`}>
+              {settings.sound && <div className="settings-toggle-dot" />}
+            </div>
           </div>
-        </Card>
 
-        <Card>
-          <div className="card-title" style={{ marginBottom: '16px' }}>О приложении</div>
-          <div className="card-subtitle" style={{ marginBottom: '8px' }}>
-            Версия: 1.0.0
+          <div className="settings-divider" />
+
+          <div className="settings-item" onClick={() => handleToggle('animations')}>
+            <span className="settings-label">Анимации</span>
+            <div className={`settings-toggle ${settings.animations ? 'active' : ''}`}>
+              {settings.animations && <div className="settings-toggle-dot" />}
+            </div>
           </div>
-          <div className="card-subtitle">
-            НАРДИСТ - современная игра в нарды с рейтингами, турнирами и социальными функциями
+
+          <div className="settings-divider" />
+
+          <div className="settings-item" onClick={() => handleToggle('matchNotifications')}>
+            <span className="settings-label">Уведомления о матчах</span>
+            <div className={`settings-toggle ${settings.matchNotifications ? 'active' : ''}`}>
+              {settings.matchNotifications && <div className="settings-toggle-dot" />}
+            </div>
+          </div>
+
+          <div className="settings-divider" />
+
+          <div className="settings-item" onClick={() => handleToggle('economicEvents')}>
+            <span className="settings-label">Экономические события</span>
+            <div className={`settings-toggle ${settings.economicEvents ? 'active' : ''}`}>
+              {settings.economicEvents && <div className="settings-toggle-dot" />}
+            </div>
+          </div>
+
+          <div className="settings-divider" />
+
+          <div className="settings-item" onClick={() => handleToggle('clanEvents')}>
+            <span className="settings-label">Клановые события</span>
+            <div className={`settings-toggle ${settings.clanEvents ? 'active' : ''}`}>
+              {settings.clanEvents && <div className="settings-toggle-dot" />}
+            </div>
+          </div>
+
+          <div className="settings-divider" />
+
+          {/* Настройки с навигацией */}
+          <div className="settings-item settings-item-clickable" onClick={handleLanguageClick}>
+            <span className="settings-label">Язык</span>
+            <div className="settings-item-value">
+              <span className="settings-value-text">{settings.language}</span>
+              <span className="settings-arrow">→</span>
+            </div>
+          </div>
+
+          <div className="settings-divider" />
+
+          <div className="settings-item settings-item-clickable" onClick={handlePrivacyPolicy}>
+            <span className="settings-label">Политика конфиденциальности</span>
+            <span className="settings-arrow">→</span>
+          </div>
+
+          <div className="settings-divider" />
+
+          <div className="settings-item settings-item-clickable" onClick={handleAgreementPolicy}>
+            <span className="settings-label">Политика соглашения</span>
+            <span className="settings-arrow">→</span>
           </div>
         </Card>
       </div>
@@ -140,4 +170,3 @@ export default function Settings() {
     </div>
   )
 }
-

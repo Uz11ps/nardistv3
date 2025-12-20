@@ -27,6 +27,10 @@ import GameResult from './pages/GameResult'
 import Welcome from './pages/Welcome'
 import CreateProfile from './pages/CreateProfile'
 import StarterKit from './pages/StarterKit'
+import ClanSearch from './pages/ClanSearch'
+import ClanDetail from './pages/ClanDetail'
+import ClanCreate from './pages/ClanCreate'
+import ClanManage from './pages/ClanManage'
 
 function App() {
   const [initialized, setInitialized] = useState(false)
@@ -142,7 +146,10 @@ function App() {
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/achievements" element={<Achievements />} />
               <Route path="/clans" element={<Clans />} />
-              <Route path="/clans/:clanId" element={<Clans />} />
+              <Route path="/clans/search" element={<ClanSearch />} />
+              <Route path="/clans/create" element={<ClanCreate />} />
+              <Route path="/clans/:clanId/manage" element={<ClanManage />} />
+              <Route path="/clans/:clanId" element={<ClanDetail />} />
             </>
           )}
         </Routes>

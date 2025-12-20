@@ -1,0 +1,89 @@
+/* Clan Manage Page Styles */
+
+.clan-manage-content {
+  padding: var(--spacing-6) var(--spacing-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.clan-manage-loading {
+  padding: var(--spacing-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.clan-manage-emblem {
+  margin-bottom: var(--spacing-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clan-manage-name {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-2);
+}
+
+.clan-manage-info {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-6);
+}
+
+.clan-manage-actions {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-6);
+}
+
+.clan-manage-action-btn {
+  width: 100%;
+  padding: var(--spacing-4);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.clan-manage-action-btn:hover {
+  background: var(--color-background-secondary);
+  border-color: var(--color-primary);
+}
+
+.clan-manage-leave {
+  width: 100%;
+  max-width: 320px;
+}
+
+.clan-manage-leave-btn {
+  width: 100%;
+  padding: var(--spacing-4);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-text-primary);
+}
+
+.clan-manage-leave-btn:hover {
+  background: var(--color-primary-hover);
+}
+
+@media (max-width: 480px) {
+  .clan-manage-content {
+    padding: var(--spacing-5) var(--spacing-4);
+  }
+
+  .clan-manage-name {
+    font-size: var(--font-size-xl);
+  }
+}
