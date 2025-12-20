@@ -1,0 +1,6 @@
+.page-transition {
+  animation: fadeIn 0.25s ease-out;
+  width: 100%;
+  min-height: 100%;
+}
+

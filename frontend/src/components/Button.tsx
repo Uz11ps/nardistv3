@@ -27,7 +27,7 @@ export default function Button({
   return (
     <button
       type={type}
-      className={`${baseClass} ${className}`}
+      className={`${baseClass} ${className} btn-hover`}
       onClick={onClick}
       disabled={variant === 'disabled' || disabled}
       style={{ ...widthStyle, ...style }}

@@ -12,7 +12,7 @@ export default function PageHeader({ title, showBack = true, rightAction }: Page
   return (
     <div className="page-header">
       {showBack && (
-        <button className="back-button" onClick={() => navigate(-1)}>
+        <button className="back-button page-header-back-btn" onClick={() => navigate(-1)}>
           ←
         </button>
       )}

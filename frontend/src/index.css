@@ -1,4 +1,7 @@
 @import './styles/figma-tokens.css';
+@import './styles/animations.css';
+@import './styles/page-transitions.css';
+@import './styles/components.css';
 
 * {
   margin: 0;
@@ -38,6 +41,8 @@ input, textarea, select {
   background: linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 100%);
   min-height: 100vh;
   padding-bottom: 80px;
+  animation: fadeIn 0.25s ease-out;
+  position: relative;
 }
 
 /* Кнопки */
@@ -299,6 +304,16 @@ input, textarea, select {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  transform: translateX(-3px);
+  color: #ff3333;
+}
+
+.back-button:active {
+  transform: translateX(-1px);
 }
 
 /* Нижняя навигация */
@@ -313,6 +328,7 @@ input, textarea, select {
   justify-content: space-around;
   padding: 8px 0;
   z-index: 100;
+  animation: slideInUp 0.3s ease-out;
 }
 
 .nav-item {
@@ -326,11 +342,18 @@ input, textarea, select {
   font-size: 12px;
   cursor: pointer;
   padding: 8px 16px;
-  transition: color 0.2s;
+  transition: all 0.2s ease;
+  transform: scale(1);
+}
+
+.nav-item:hover {
+  transform: scale(1.05);
+  color: #ffffff;
 }
 
 .nav-item.active {
   color: #ff3333;
+  transform: scale(1.1);
 }
 
 .nav-item-icon {

@@ -5,49 +5,52 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import BottomNav from '../components/BottomNav'
+import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
+import './City.css'
 
 interface District {
   id: string
   name: string
   owner: string | null
-  status: 'free' | 'stable' | 'contested'
+  status: 'free' | 'stable' | 'vulnerable'
   incomePerDay: number
   level: number
+  vulnerabilityPercent?: number
 }
 
-interface Building {
-  id: string
-  type: string
-  level: number
-  incomePerHour: number
-  accumulatedIncome: number
-  lastCollectedAt: string | null
+interface UserClan {
+  clan: {
+    id: string
+    name: string
+  } | null
+  member: any | null
 }
 
 export default function City() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const [districts, setDistricts] = useState<District[]>([])
-  const [buildings, setBuildings] = useState<Building[]>([])
+  const [userClan, setUserClan] = useState<UserClan | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if ((user?.level || 0) < 20) {
-      // Город недоступен до 20 уровня
-      return
+    if ((user?.level || 0) >= 20) {
+      loadCityData()
+    } else {
+      setLoading(false)
     }
-    loadCityData()
   }, [user])
 
   const loadCityData = async () => {
     try {
-      const [districtsRes, buildingsRes] = await Promise.all([
-        apiClient.get('/city/districts'),
-        apiClient.get('/city/buildings'),
+      setLoading(true)
+      const [districtsRes, clanRes] = await Promise.all([
+        apiClient.get('/city/districts').catch(() => ({ data: [] })),
+        apiClient.get('/clans/my').catch(() => ({ data: { clan: null, member: null } })),
       ])
       setDistricts(districtsRes.data || [])
-      setBuildings(buildingsRes.data || [])
+      setUserClan(clanRes.data || { clan: null, member: null })
     } catch (error) {
       console.error('Failed to load city data:', error)
     } finally {
@@ -55,38 +58,35 @@ export default function City() {
     }
   }
 
-  const handleCollectIncome = async (buildingId: string) => {
-    try {
-      await apiClient.post(`/city/buildings/${buildingId}/collect`)
-      loadCityData()
-    } catch (error) {
-      console.error('Failed to collect income:', error)
-    }
-  }
-
   const handleCaptureDistrict = async (districtId: string) => {
     try {
       await apiClient.post(`/city/districts/${districtId}/capture`)
       loadCityData()
-    } catch (error) {
-      console.error('Failed to capture district:', error)
+      alert('Район успешно захвачен!')
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при захвате района')
     }
   }
 
+  const handleDistrictDetails = (districtId: string) => {
+    // TODO: Navigate to district details page
+    console.log('District details:', districtId)
+  }
+
+  // Если уровень меньше 20
   if ((user?.level || 0) < 20) {
     return (
-      <div className="app-container">
-        <PageHeader title="Город" />
-        <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '64px', marginBottom: '24px' }}>🏙️</div>
-          <div className="card-title" style={{ marginBottom: '12px' }}>
-            Город недоступен
+      <div className="app-container page-transition">
+        <PageHeader title="Город недоступен" />
+        <div className="city-unavailable">
+          <Icon name="city" className="city-unavailable-icon" />
+          <div className="city-unavailable-title">Город недоступен</div>
+          <div className="city-unavailable-text">
+            Город и районы открываются с 20 уровня. Здесь ты можешь строить предприятия и управлять территорией клана
           </div>
-          <div className="card-subtitle" style={{ marginBottom: '32px' }}>
-            Город и районы открываются с 20 уровня. Здесь ты можешь строить предприятия и
-            управлять территорией клана
-          </div>
-          <Button onClick={() => navigate('/')}>Играть</Button>
+          <Button onClick={() => navigate('/')} fullWidth>
+            Играть
+          </Button>
         </div>
         <BottomNav />
       </div>
@@ -95,86 +95,99 @@ export default function City() {
 
   if (loading) {
     return (
-      <div className="app-container">
-        <PageHeader title="Город" />
-        <div style={{ padding: '20px', textAlign: 'center' }}>Загрузка...</div>
+      <div className="app-container page-transition">
+        <PageHeader title="Районы города" />
+        <div className="city-districts-list">
+          <Card>
+            <div style={{ textAlign: 'center', padding: '20px', color: '#aaaaaa' }}>
+              Загрузка...
+            </div>
+          </Card>
+        </div>
         <BottomNav />
       </div>
     )
   }
 
+  // Если пользователь не в клане
+  if (!userClan?.clan) {
+    return (
+      <div className="app-container page-transition">
+        <PageHeader title="Город недоступен" />
+        <div className="city-unavailable">
+          <Icon name="city" className="city-unavailable-icon" />
+          <div className="city-unavailable-title">Город недоступен</div>
+          <div className="city-unavailable-text">
+            Вступи в клан, чтобы открыть доступ к районам
+          </div>
+          <Button onClick={() => navigate('/clans/search')} fullWidth>
+            Найти клан
+          </Button>
+        </div>
+        <BottomNav />
+      </div>
+    )
+  }
+
+  // Список районов
   return (
-    <div className="app-container">
+    <div className="app-container page-transition">
       <PageHeader title="Районы города" />
       
-      <div style={{ padding: '20px' }}>
-        {/* Районы */}
-        <div style={{ marginBottom: '24px' }}>
-          {districts.map((district) => (
-            <Card key={district.id} style={{ marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ fontSize: '32px' }}>🛡️</div>
-                <div style={{ flex: 1 }}>
-                  <div className="card-title">{district.name}</div>
-                  <div className="card-subtitle">
-                    {district.owner
-                      ? `Владелец: ${district.owner}`
-                      : 'Свободен'}
-                    {district.status === 'stable' && ' • стабильно'}
-                    {district.incomePerDay > 0 && ` • ${district.incomePerDay} NAR/день`}
-                  </div>
-                </div>
-                {district.status === 'free' ? (
-                  <Button onClick={() => handleCaptureDistrict(district.id)}>
-                    Захватить
-                  </Button>
-                ) : (
-                  <Button variant="secondary" onClick={() => {}}>
-                    Подробнее
-                  </Button>
-                )}
+      <div className="city-districts-list">
+        {districts.map((district) => (
+          <Card key={district.id} className="district-card">
+            <div className="district-icon">
+              <Icon name="shield" size={32} />
+            </div>
+            <div className="district-info">
+              <div className="district-name">{district.name}</div>
+              <div className="district-details">
+                Владелец: {district.owner || '-'}
               </div>
-            </Card>
-          ))}
-        </div>
-
-        {/* Предприятия */}
-        <div>
-          <div style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px' }}>
-            Мои предприятия
-          </div>
-          {buildings.length === 0 ? (
-            <Card>
-              <div style={{ textAlign: 'center', color: '#aaaaaa' }}>
-                У вас пока нет предприятий
+              <div className="district-status">
+                <span
+                  className={`district-status-dot ${
+                    district.status === 'stable'
+                      ? 'stable'
+                      : district.status === 'vulnerable'
+                      ? 'vulnerable'
+                      : 'free'
+                  }`}
+                />
+                <span className="district-status-text">
+                  {district.status === 'stable'
+                    ? 'стабильно'
+                    : district.status === 'vulnerable'
+                    ? `${district.vulnerabilityPercent || 0}% уязвим`
+                    : 'свободен'}
+                </span>
               </div>
-            </Card>
-          ) : (
-            buildings.map((building) => (
-              <Card key={building.id} style={{ marginBottom: '12px' }}>
-                <div className="card-title">{building.type}</div>
-                <div className="card-subtitle">Уровень {building.level}</div>
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span className="gold">
-                      Накоплено: {building.accumulatedIncome} NAR
-                    </span>
-                    <span style={{ color: '#aaaaaa' }}>
-                      {building.incomePerHour} NAR/час
-                    </span>
-                  </div>
-                  <Button
-                    fullWidth
-                    onClick={() => handleCollectIncome(building.id)}
-                    disabled={Number(building.accumulatedIncome) === 0}
-                  >
-                    Забрать доход
-                  </Button>
+              {district.incomePerDay > 0 && (
+                <div className="district-income gold">
+                  {district.incomePerDay.toLocaleString()} NAR/день
                 </div>
-              </Card>
-            ))
-          )}
-        </div>
+              )}
+            </div>
+            <div className="district-actions">
+              {district.status === 'free' ? (
+                <button
+                  className="district-action-btn capture"
+                  onClick={() => handleCaptureDistrict(district.id)}
+                >
+                  Захватить
+                </button>
+              ) : (
+                <button
+                  className="district-action-btn details"
+                  onClick={() => handleDistrictDetails(district.id)}
+                >
+                  Подробнее
+                </button>
+              )}
+            </div>
+          </Card>
+        ))}
       </div>
 
       <BottomNav />

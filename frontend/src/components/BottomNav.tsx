@@ -19,6 +19,7 @@ export default function BottomNav() {
           key={item.path}
           className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
           onClick={() => navigate(item.path)}
+          style={{ transition: 'all 0.2s ease' }}
         >
           <span className="nav-item-icon">
             <Icon name={item.icon} size={24} />

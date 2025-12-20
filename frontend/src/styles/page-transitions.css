@@ -1,0 +1,72 @@
+/* Page Transition Styles */
+
+/* Main App Container with Transition */
+.app-container {
+  animation: fadeIn 0.25s ease-out;
+  position: relative;
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+/* Page Content Wrapper */
+.page-content {
+  animation: slideInUp 0.3s ease-out;
+  will-change: transform, opacity;
+}
+
+/* Route Transition Wrapper */
+.route-transition {
+  position: relative;
+  width: 100%;
+}
+
+/* Slide transitions for route changes */
+.route-slide-enter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.route-slide-enter-active {
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.route-slide-exit {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.route-slide-exit-active {
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+/* Fade transitions */
+.route-fade-enter {
+  opacity: 0;
+}
+
+.route-fade-enter-active {
+  opacity: 1;
+  transition: opacity 0.25s ease-out;
+}
+
+.route-fade-exit {
+  opacity: 1;
+}
+
+.route-fade-exit-active {
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+}
+

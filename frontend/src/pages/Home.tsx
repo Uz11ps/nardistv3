@@ -84,7 +84,7 @@ export default function Home() {
   ]
 
   return (
-    <div className="app-container">
+    <div className="app-container page-transition">
       {/* Хедер с профилем */}
       <div className="home-header">
         <div className="home-header-left">

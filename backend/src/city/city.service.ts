@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Building, District, BuildingType } from './building.entity';
 import { UsersService } from '../users/users.service';
+import { ClansService } from '../clans/clans.service';
 
 @Injectable()
 export class CityService {
@@ -12,6 +13,8 @@ export class CityService {
     @InjectRepository(Building)
     private buildingsRepository: Repository<Building>,
     private usersService: UsersService,
+    @Inject(forwardRef(() => ClansService))
+    private clansService: ClansService,
   ) {}
 
   async getCity(userId: string): Promise<Building[]> {
@@ -73,16 +76,48 @@ export class CityService {
   }
 
   async getDistricts(): Promise<any[]> {
-    // Возвращаем список всех 7 районов
     const districts = Object.values(District);
-    return districts.map((district, index) => ({
-      id: district,
-      name: this.getDistrictName(district),
-      owner: null, // Здесь должна быть логика определения владельца
-      status: 'free' as const,
-      incomePerDay: (index + 1) * 200,
-      level: 1,
-    }));
+    
+    // Получаем все кланы с их районами
+    const clans = await this.clansService.findAll({});
+    
+    const districtsData = await Promise.all(
+      districts.map(async (district, index) => {
+        // Находим клан, который владеет этим районом
+        const ownerClan = clans.find((clan) => 
+          clan.ownedDistricts && clan.ownedDistricts.includes(district)
+        );
+        
+        // Определяем статус и владельца
+        let owner: string | null = null;
+        let status: 'free' | 'stable' | 'vulnerable' = 'free';
+        let vulnerabilityPercent = 0;
+        
+        if (ownerClan) {
+          owner = ownerClan.name;
+          // Если форт клана высокий, район стабилен
+          if (ownerClan.fortLevel >= 5) {
+            status = 'stable';
+          } else {
+            // Иначе район уязвим (процент уязвимости зависит от уровня форта)
+            status = 'vulnerable';
+            vulnerabilityPercent = Math.max(0, 10 - ownerClan.fortLevel);
+          }
+        }
+        
+        return {
+          id: district,
+          name: this.getDistrictName(district),
+          owner,
+          status,
+          incomePerDay: (index + 1) * 200,
+          level: 1,
+          vulnerabilityPercent,
+        };
+      })
+    );
+    
+    return districtsData;
   }
 
   async getUserBuildings(userId: string): Promise<Building[]> {

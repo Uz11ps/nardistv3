@@ -8,9 +8,10 @@ interface CardProps {
 }
 
 export default function Card({ children, onClick, className = '', style }: CardProps) {
+  const cardClasses = `card ${className} ${onClick ? 'card-clickable' : ''}`.trim()
   return (
     <div 
-      className={`card ${className}`} 
+      className={cardClasses}
       onClick={onClick} 
       style={{ cursor: onClick ? 'pointer' : 'default', ...style }}
     >
