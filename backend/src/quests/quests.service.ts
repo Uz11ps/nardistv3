@@ -93,6 +93,7 @@ export class QuestsService {
         target: quest.targetValue,
         completed: progress.completed,
         claimed: progress.claimed || false,
+        isPremium: quest.isPremium || false,
       });
     }
 

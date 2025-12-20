@@ -1,0 +1,202 @@
+/* Global Animations */
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide In From Right */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Slide In From Left */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Slide In From Bottom */
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Scale In */
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Shake Animation */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+/* Page Transition Classes */
+.page-enter {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.page-exit {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+/* Smooth Page Transitions */
+.page-transition {
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* Card Animations */
+.card-enter {
+  animation: slideInUp 0.3s ease-out;
+}
+
+.card-enter-delay-1 {
+  animation: slideInUp 0.3s ease-out 0.05s both;
+}
+
+.card-enter-delay-2 {
+  animation: slideInUp 0.3s ease-out 0.1s both;
+}
+
+.card-enter-delay-3 {
+  animation: slideInUp 0.3s ease-out 0.15s both;
+}
+
+/* Button Hover Effects */
+.btn-hover {
+  transition: all var(--transition-base);
+}
+
+.btn-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-hover:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Smooth Scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Loading Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Fade In Up for Lists */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.list-item {
+  animation: fadeInUp 0.3s ease-out both;
+}
+
+.list-item:nth-child(1) { animation-delay: 0.05s; }
+.list-item:nth-child(2) { animation-delay: 0.1s; }
+.list-item:nth-child(3) { animation-delay: 0.15s; }
+.list-item:nth-child(4) { animation-delay: 0.2s; }
+.list-item:nth-child(5) { animation-delay: 0.25s; }
+.list-item:nth-child(6) { animation-delay: 0.3s; }
+.list-item:nth-child(7) { animation-delay: 0.35s; }
+.list-item:nth-child(8) { animation-delay: 0.4s; }
+
+/* Modal Animations */
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.modal-backdrop {
+  animation: modalBackdropFadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  animation: modalSlideIn 0.3s ease-out;
+}
+

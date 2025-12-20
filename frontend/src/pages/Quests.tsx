@@ -17,6 +17,7 @@ interface Quest {
   target: number
   completed: boolean
   claimed: boolean
+  isPremium?: boolean
 }
 
 export default function Quests() {
@@ -33,18 +34,31 @@ export default function Quests() {
   const loadQuests = async () => {
     try {
       setLoading(true)
-      const type = activeTab === 'special' ? 'daily' : activeTab // Для особых используем daily, но фильтруем по isPremium
-      const response = await apiClient.get(`/quests/${type}`)
-      let questsData = response.data.quests || []
-      
-      // Если особые, фильтруем премиум квесты
       if (activeTab === 'special') {
-        // TODO: добавить фильтрацию по isPremium, когда это будет доступно в API
-        questsData = questsData.filter((q: any) => q.isPremium)
+        // Для особых квестов загружаем все и фильтруем по isPremium
+        try {
+          const [dailyResponse, weeklyResponse] = await Promise.all([
+            apiClient.get('/quests/daily'),
+            apiClient.get('/quests/weekly'),
+          ])
+          const allQuests = [
+            ...(dailyResponse.data.quests || []),
+            ...(weeklyResponse.data.quests || []),
+          ]
+          // Фильтруем особые квесты (isPremium)
+          const specialQuests = allQuests.filter((q: any) => q.isPremium === true)
+          setQuests(specialQuests)
+          setResetTime('6д 11ч') // Время до сброса для особых квестов
+        } catch (error) {
+          console.error('Failed to load special quests:', error)
+          setQuests([])
+          setResetTime('')
+        }
+      } else {
+        const response = await apiClient.get(`/quests/${activeTab}`)
+        setQuests(response.data.quests || [])
+        setResetTime(response.data.resetTime || '')
       }
-      
-      setQuests(questsData)
-      setResetTime(response.data.resetTime || '')
     } catch (error) {
       console.error('Failed to load quests:', error)
       setQuests([])
@@ -107,7 +121,7 @@ export default function Quests() {
         </div>
 
         {/* Таймер сброса */}
-        {(activeTab === 'weekly' || activeTab === 'daily') && resetTime && (
+        {resetTime && (
           <div className="quests-reset-time">
             До сброса {formatResetTime(resetTime)}
           </div>
