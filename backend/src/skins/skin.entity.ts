@@ -18,13 +18,19 @@ export class Skin {
   description: string;
 
   @Column()
+  type: string; // Тип скина: 'board' (доска), 'dice' (кубики), 'checkers' (шашки)
+
+  @Column()
   theme: string;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: 'jsonb', nullable: true })
   boardConfig: any;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: 'jsonb', nullable: true })
   diceConfig: any;
+
+  @Column({ type: 'jsonb', nullable: true })
+  checkersConfig: any; // Конфигурация шашек
 
   @Column({ default: false })
   isDefault: boolean;

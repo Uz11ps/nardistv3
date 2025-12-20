@@ -161,7 +161,7 @@ export default function Admin() {
     <div className="admin-container">
       <div className="admin-header">
         <h1>Админ-панель Нарды</h1>
-        <button onClick={() => {
+        <button className="admin-logout-btn" onClick={() => {
           localStorage.removeItem('admin_token')
           setIsAuthenticated(false)
         }}>Выйти</button>
@@ -359,7 +359,7 @@ export default function Admin() {
                           {!user.isAdmin && (
                             <>
                               <button
-                                style={{ background: '#dc3545', color: 'white' }}
+                                className="btn btn-danger btn-sm"
                                 onClick={() => {
                                   if (confirm(`Вы уверены, что хотите удалить пользователя ${user.nickname || user.username}? Это действие необратимо!`)) {
                                     apiClient.delete(`/admin/users/${user.id}`).then(() => {
@@ -393,45 +393,44 @@ export default function Admin() {
             {selectedUser && (
               <div className="edit-form">
                 <h3>Редактирование пользователя: {selectedUser.nickname || selectedUser.username}</h3>
-                <div className="admin-form">
-                  <div className="form-group">
-                    <label>NAR-coin:</label>
-                    <input
-                      type="number"
-                      id="edit-narcoin"
-                      defaultValue={Number(selectedUser.narCoin)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>XP:</label>
-                    <input
-                      type="number"
-                      id="edit-xp"
-                      defaultValue={Number(selectedUser.xp)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Уровень:</label>
-                    <input
-                      type="number"
-                      id="edit-level"
-                      defaultValue={selectedUser.level}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="checkbox-label">
-                      <input type="checkbox" id="edit-admin" defaultChecked={selectedUser.isAdmin} />
-                      Администратор
-                    </label>
-                  </div>
-                  <div className="form-group">
-                    <label className="checkbox-label">
-                      <input type="checkbox" id="edit-trainer" defaultChecked={selectedUser.isTrainer} />
-                      Тренер
-                    </label>
-                  </div>
-                  <div className="edit-form-actions">
-                    <button
+                <div className="form-group">
+                  <label>NAR-coin:</label>
+                  <input
+                    type="number"
+                    id="edit-narcoin"
+                    defaultValue={Number(selectedUser.narCoin)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>XP:</label>
+                  <input
+                    type="number"
+                    id="edit-xp"
+                    defaultValue={Number(selectedUser.xp)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Уровень:</label>
+                  <input
+                    type="number"
+                    id="edit-level"
+                    defaultValue={selectedUser.level}
+                  />
+                </div>
+                <div className="form-group checkbox-group">
+                  <label className="checkbox-label">
+                    <input type="checkbox" id="edit-admin" defaultChecked={selectedUser.isAdmin} />
+                    Администратор
+                  </label>
+                </div>
+                <div className="form-group checkbox-group">
+                  <label className="checkbox-label">
+                    <input type="checkbox" id="edit-trainer" defaultChecked={selectedUser.isTrainer} />
+                    Тренер
+                  </label>
+                </div>
+                <div className="edit-form-actions">
+                    <button className="btn btn-primary"
                       onClick={async () => {
                         try {
                           const narCoin = parseInt((document.getElementById('edit-narcoin') as HTMLInputElement).value)
@@ -447,7 +446,7 @@ export default function Admin() {
                     >
                       Сохранить баланс
                     </button>
-                    <button
+                    <button className="btn btn-primary"
                       onClick={async () => {
                         try {
                           const level = parseInt((document.getElementById('edit-level') as HTMLInputElement).value)
@@ -462,7 +461,7 @@ export default function Admin() {
                     >
                       Сохранить уровень
                     </button>
-                    <button
+                    <button className="btn btn-primary"
                       onClick={async () => {
                         try {
                           const isAdmin = (document.getElementById('edit-admin') as HTMLInputElement).checked
@@ -495,9 +494,8 @@ export default function Admin() {
                     >
                       Сбросить прогресс
                     </button>
-                    <button onClick={() => setSelectedUser(null)}>Отмена</button>
+                    <button className="btn btn-secondary" onClick={() => setSelectedUser(null)}>Отмена</button>
                   </div>
-                </div>
               </div>
             )}
           </div>
@@ -863,6 +861,7 @@ export default function Admin() {
                 <thead>
                   <tr>
                     <th>Название</th>
+                    <th>Тип</th>
                     <th>Тема</th>
                     <th>Редкость</th>
                     <th>Цена</th>
@@ -876,14 +875,26 @@ export default function Admin() {
                   {skins.map((skin) => (
                     <tr key={skin.id}>
                       <td>{skin.name}</td>
+                      <td>
+                        <span className={`badge ${skin.type === 'board' ? 'primary' : skin.type === 'dice' ? 'info' : 'warning'}`}>
+                          {skin.type === 'board' ? 'Доска' : skin.type === 'dice' ? 'Кубики' : skin.type === 'checkers' ? 'Шашки' : skin.type || 'Неизвестно'}
+                        </span>
+                      </td>
                       <td>{skin.theme}</td>
-                      <td>{skin.rarity || 'common'}</td>
-                      <td>{skin.price || 0} NAR</td>
+                      <td>
+                        <span className={`badge ${skin.rarity || 'common'}`}>
+                          {skin.rarity === 'common' ? 'Обычный' : 
+                           skin.rarity === 'rare' ? 'Редкий' : 
+                           skin.rarity === 'epic' ? 'Эпический' : 
+                           skin.rarity === 'legendary' ? 'Легендарный' : skin.rarity || 'Обычный'}
+                        </span>
+                      </td>
+                      <td>{skin.price ? `${skin.price} NAR` : 'Бесплатно'}</td>
                       <td>{skin.weight || 1}</td>
                       <td>{skin.isPremium ? 'Да' : 'Нет'}</td>
                       <td>{skin.isDefault ? 'Да' : 'Нет'}</td>
                       <td>
-                        <button onClick={() => {
+                        <button className="btn btn-danger btn-sm" onClick={() => {
                           if (confirm('Удалить скин?')) {
                             apiClient.delete(`/admin/skins/${skin.id}`).then(() => {
                               alert('Скин удален')
@@ -901,56 +912,109 @@ export default function Admin() {
             </div>
             <div className="admin-form">
               <h4>Создать новый скин</h4>
-              <div className="admin-form">
-                <input type="text" placeholder="Название" id="skin-name" />
-                <input type="text" placeholder="Тема" id="skin-theme" />
-                <input type="number" placeholder="Цена (NAR)" id="skin-price" />
-                <input type="number" placeholder="Вес" id="skin-weight" />
+              <div className="form-group">
+                <label>Тип скина:</label>
+                <select id="skin-type" required>
+                  <option value="">-- Выберите тип --</option>
+                  <option value="board">Доска (Board)</option>
+                  <option value="dice">Кубики (Dice)</option>
+                  <option value="checkers">Шашки (Checkers)</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Название:</label>
+                <input type="text" placeholder="Название скина" id="skin-name" required />
+              </div>
+              <div className="form-group">
+                <label>Тема (описание):</label>
+                <input type="text" placeholder="Тема или описание" id="skin-theme" />
+              </div>
+              <div className="form-group">
+                <label>Цена (NAR):</label>
+                <input type="number" placeholder="0 для бесплатного" id="skin-price" min="0" />
+              </div>
+              <div className="form-group">
+                <label>Вес:</label>
+                <input type="number" placeholder="1" id="skin-weight" min="1" defaultValue="1" />
+              </div>
+              <div className="form-group">
+                <label>Редкость:</label>
                 <select id="skin-rarity">
                   <option value="common">Обычный</option>
                   <option value="rare">Редкий</option>
                   <option value="epic">Эпический</option>
                   <option value="legendary">Легендарный</option>
                 </select>
-                <label>
+              </div>
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
                   <input type="checkbox" id="skin-premium" /> Премиум
                 </label>
-                <label>
+              </div>
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
                   <input type="checkbox" id="skin-default" /> По умолчанию
                 </label>
-                <input type="file" accept="image/*" id="skin-image" />
-                <button onClick={async () => {
-                  const formData = new FormData()
-                  formData.append('name', (document.getElementById('skin-name') as HTMLInputElement).value)
-                  formData.append('theme', (document.getElementById('skin-theme') as HTMLInputElement).value)
-                  formData.append('price', (document.getElementById('skin-price') as HTMLInputElement).value)
-                  formData.append('weight', (document.getElementById('skin-weight') as HTMLInputElement).value)
-                  formData.append('rarity', (document.getElementById('skin-rarity') as HTMLSelectElement).value)
-                  formData.append('isPremium', (document.getElementById('skin-premium') as HTMLInputElement).checked.toString())
-                  formData.append('isDefault', (document.getElementById('skin-default') as HTMLInputElement).checked.toString())
-                  
-                  const fileInput = document.getElementById('skin-image') as HTMLInputElement
-                  if (fileInput.files && fileInput.files[0]) {
-                    formData.append('image', fileInput.files[0])
-                  }
-
-                  try {
-                    await apiClient.post('/admin/skins', formData, {
-                      headers: { 'Content-Type': 'multipart/form-data' }
-                    })
-                    alert('Скин создан!')
-                    loadStats()
-                    // Очистить форму
-                    ;(document.getElementById('skin-name') as HTMLInputElement).value = ''
-                    ;(document.getElementById('skin-theme') as HTMLInputElement).value = ''
-                    ;(document.getElementById('skin-price') as HTMLInputElement).value = ''
-                    ;(document.getElementById('skin-weight') as HTMLInputElement).value = ''
-                    fileInput.value = ''
-                  } catch (error: any) {
-                    alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                  }
-                }}>Создать скин</button>
               </div>
+              <div className="form-group">
+                <label>Изображение:</label>
+                <input type="file" accept="image/*" id="skin-image" />
+              </div>
+              <button className="btn btn-primary" onClick={async () => {
+                const skinType = (document.getElementById('skin-type') as HTMLSelectElement).value
+                if (!skinType) {
+                  alert('Выберите тип скина!')
+                  return
+                }
+
+                const formData = new FormData()
+                formData.append('type', skinType)
+                formData.append('name', (document.getElementById('skin-name') as HTMLInputElement).value)
+                formData.append('theme', (document.getElementById('skin-theme') as HTMLInputElement).value || skinType)
+                
+                const priceValue = (document.getElementById('skin-price') as HTMLInputElement).value
+                if (priceValue) {
+                  formData.append('price', priceValue)
+                }
+                
+                formData.append('weight', (document.getElementById('skin-weight') as HTMLInputElement).value || '1')
+                formData.append('rarity', (document.getElementById('skin-rarity') as HTMLSelectElement).value)
+                formData.append('isPremium', (document.getElementById('skin-premium') as HTMLInputElement).checked.toString())
+                formData.append('isDefault', (document.getElementById('skin-default') as HTMLInputElement).checked.toString())
+                
+                // Добавляем пустые конфиги в зависимости от типа
+                if (skinType === 'board') {
+                  formData.append('boardConfig', JSON.stringify({}))
+                } else if (skinType === 'dice') {
+                  formData.append('diceConfig', JSON.stringify({}))
+                } else if (skinType === 'checkers') {
+                  formData.append('checkersConfig', JSON.stringify({}))
+                }
+                
+                const fileInput = document.getElementById('skin-image') as HTMLInputElement
+                if (fileInput.files && fileInput.files[0]) {
+                  formData.append('image', fileInput.files[0])
+                }
+
+                try {
+                  await apiClient.post('/admin/skins', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                  })
+                  alert('Скин создан!')
+                  loadStats()
+                  // Очистить форму
+                  ;(document.getElementById('skin-type') as HTMLSelectElement).value = ''
+                  ;(document.getElementById('skin-name') as HTMLInputElement).value = ''
+                  ;(document.getElementById('skin-theme') as HTMLInputElement).value = ''
+                  ;(document.getElementById('skin-price') as HTMLInputElement).value = ''
+                  ;(document.getElementById('skin-weight') as HTMLInputElement).value = '1'
+                  ;(document.getElementById('skin-premium') as HTMLInputElement).checked = false
+                  ;(document.getElementById('skin-default') as HTMLInputElement).checked = false
+                  fileInput.value = ''
+                } catch (error: any) {
+                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                }
+              }}>Создать скин</button>
             </div>
           </div>
         )}
@@ -1097,7 +1161,7 @@ export default function Admin() {
                             Редактировать
                           </button>
                           <button
-                            style={{ background: '#dc3545', color: 'white' }}
+                            className="btn btn-danger btn-sm"
                             onClick={() => {
                               if (confirm(`Удалить клан "${clan.name}"? Это удалит клан и всех его участников!`)) {
                                 apiClient.delete(`/admin/clans/${clan.id}`).then(() => {
@@ -1121,53 +1185,48 @@ export default function Admin() {
             {selectedUser && selectedUser.type === 'clan' && (
               <div className="edit-form">
                 <h3>Редактирование клана: {selectedUser.name}</h3>
-                <div className="admin-form">
-                  <div>
-                    <label>Уровень:</label>
-                    <input
-                      type="number"
-                      id="edit-clan-level"
-                      defaultValue={selectedUser.level || 1}
-                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
-                    />
-                  </div>
-                  <div>
-                    <label>Макс участников:</label>
-                    <input
-                      type="number"
-                      id="edit-clan-max-members"
-                      defaultValue={selectedUser.maxMembers || 10}
-                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
-                    />
-                  </div>
-                  <div>
-                    <label>Казна:</label>
-                    <input
-                      type="number"
-                      id="edit-clan-treasury"
-                      defaultValue={Number(selectedUser.treasury || 0)}
-                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
-                    />
-                  </div>
-                  <div>
-                    <label>Доход/неделю:</label>
-                    <input
-                      type="number"
-                      id="edit-clan-income"
-                      defaultValue={Number(selectedUser.weeklyIncome || 0)}
-                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
-                    />
-                  </div>
-                  <div>
-                    <label>Описание:</label>
-                    <textarea
-                      id="edit-clan-description"
-                      defaultValue={selectedUser.description || ''}
-                      rows={3}
-                    ></textarea>
-                  </div>
-                  <div className="edit-form-actions">
-                    <button
+                <div className="form-group">
+                  <label>Уровень:</label>
+                  <input
+                    type="number"
+                    id="edit-clan-level"
+                    defaultValue={selectedUser.level || 1}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Макс участников:</label>
+                  <input
+                    type="number"
+                    id="edit-clan-max-members"
+                    defaultValue={selectedUser.maxMembers || 10}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Казна:</label>
+                  <input
+                    type="number"
+                    id="edit-clan-treasury"
+                    defaultValue={Number(selectedUser.treasury || 0)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Доход/неделю:</label>
+                  <input
+                    type="number"
+                    id="edit-clan-income"
+                    defaultValue={Number(selectedUser.weeklyIncome || 0)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Описание:</label>
+                  <textarea
+                    id="edit-clan-description"
+                    defaultValue={selectedUser.description || ''}
+                    rows={3}
+                  ></textarea>
+                </div>
+                <div className="edit-form-actions">
+                    <button className="btn btn-primary"
                       onClick={async () => {
                         try {
                           await apiClient.put(`/admin/clans/${selectedUser.id}`, {
@@ -1187,7 +1246,7 @@ export default function Admin() {
                     >
                       Сохранить
                     </button>
-                    <button onClick={() => setSelectedUser(null)}>Отмена</button>
+                    <button className="btn btn-secondary" onClick={() => setSelectedUser(null)}>Отмена</button>
                   </div>
                   {selectedUser.members && selectedUser.members.length > 0 && (
                     <div className="mt-3">
@@ -1207,7 +1266,7 @@ export default function Admin() {
                               <td>{member.role}</td>
                               <td>
                                 <button
-                                  style={{ background: '#dc3545', color: 'white' }}
+                                  className="btn btn-danger btn-sm"
                                   onClick={() => {
                                     if (confirm('Удалить участника из клана?')) {
                                       apiClient.delete(`/admin/clans/${selectedUser.id}/members/${member.userId}`).then(() => {

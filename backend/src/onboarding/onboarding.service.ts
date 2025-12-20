@@ -68,8 +68,8 @@ export class OnboardingService {
   async claimStarterKit(userId: string): Promise<{
     narCoin: number;
     starterKit: {
-      board: string;
-      dice: string;
+      board: { id: string; name: string };
+      dice: { id: string; name: string };
     };
   }> {
     const user = await this.usersService.findOne(userId);
@@ -84,8 +84,17 @@ export class OnboardingService {
     const newBalance = currentBalance + starterCoinAmount;
     await this.usersService.update(userId, { narCoin: newBalance });
 
-    // Базовые скины уже должны быть у пользователя по умолчанию
-    // (они создаются при регистрации или доступны всем)
+    // Выдаем базовые скины (доска и кости) - ищем скины с isDefault = true
+    const allSkins = await this.skinsService.getAllSkins();
+    const defaultBoard = allSkins.find(s => s.type === 'board' && s.isDefault);
+    const defaultDice = allSkins.find(s => s.type === 'dice' && s.isDefault);
+
+    if (defaultBoard) {
+      await this.skinsService.addSkinToUser(userId, defaultBoard.id);
+    }
+    if (defaultDice) {
+      await this.skinsService.addSkinToUser(userId, defaultDice.id);
+    }
 
     // Отмечаем что набор получен
     await this.usersService.update(userId, { starterKitClaimed: true });
@@ -98,8 +107,8 @@ export class OnboardingService {
     return {
       narCoin: starterCoinAmount,
       starterKit: {
-        board: 'Базовая доска',
-        dice: 'Базовые кости',
+        board: defaultBoard ? { id: defaultBoard.id, name: defaultBoard.name } : { id: '', name: 'Базовая доска' },
+        dice: defaultDice ? { id: defaultDice.id, name: defaultDice.name } : { id: '', name: 'Базовые кости' },
       },
     };
   }

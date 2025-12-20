@@ -271,12 +271,29 @@ export class AdminController {
     // При multipart/form-data все значения приходят как строки, нужно их распарсить
     const imageUrl = file ? `/uploads/skins/${file.filename}` : body.imageUrl;
     
+    const skinType = body.type || 'board';
+    
+    // В зависимости от типа скина заполняем соответствующие конфиги
+    let boardConfig = null;
+    let diceConfig = null;
+    let checkersConfig = null;
+    
+    if (skinType === 'board') {
+      boardConfig = body.boardConfig ? (typeof body.boardConfig === 'string' ? JSON.parse(body.boardConfig) : body.boardConfig) : {};
+    } else if (skinType === 'dice') {
+      diceConfig = body.diceConfig ? (typeof body.diceConfig === 'string' ? JSON.parse(body.diceConfig) : body.diceConfig) : {};
+    } else if (skinType === 'checkers') {
+      checkersConfig = body.checkersConfig ? (typeof body.checkersConfig === 'string' ? JSON.parse(body.checkersConfig) : body.checkersConfig) : {};
+    }
+    
     const skinData = {
       name: body.name,
       description: body.description || null,
-      theme: body.theme,
-      boardConfig: body.boardConfig ? (typeof body.boardConfig === 'string' ? JSON.parse(body.boardConfig) : body.boardConfig) : {},
-      diceConfig: body.diceConfig ? (typeof body.diceConfig === 'string' ? JSON.parse(body.diceConfig) : body.diceConfig) : {},
+      type: skinType,
+      theme: body.theme || skinType,
+      boardConfig,
+      diceConfig,
+      checkersConfig,
       isDefault: body.isDefault === 'true' || body.isDefault === true,
       isPremium: body.isPremium === 'true' || body.isPremium === true,
       weight: body.weight ? parseFloat(body.weight) : 1,

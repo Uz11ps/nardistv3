@@ -393,6 +393,33 @@ button {
   color: #212529;
 }
 
+.badge.primary {
+  background: #667eea;
+  color: white;
+}
+
+.badge.info {
+  background: #17a2b8;
+  color: white;
+}
+
+.badge.warning {
+  background: #ffc107;
+  color: #212529;
+}
+
+.admin-form .checkbox-group {
+  margin-bottom: 16px;
+}
+
+.admin-form .checkbox-group .checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: normal;
+  margin-bottom: 0;
+}
+
 /* Game Replay */
 .game-replay-container {
   background: #f8f9fa;
@@ -641,26 +668,58 @@ button {
   border: 1px solid #e9ecef;
 }
 
-.edit-form-row {
-  display: flex;
-  gap: 16px;
+.edit-form .form-group {
   margin-bottom: 20px;
+  display: flex;
   align-items: center;
+  gap: 16px;
 }
 
-.edit-form-row label {
-  min-width: 120px;
+.edit-form .form-group label {
+  min-width: 140px;
   font-weight: 500;
   color: #495057;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
-.edit-form-row input,
-.edit-form-row textarea {
+.edit-form .form-group input[type="text"],
+.edit-form .form-group input[type="number"],
+.edit-form .form-group textarea {
   flex: 1;
   padding: 10px 14px;
   border: 2px solid #e9ecef;
   border-radius: 6px;
   font-size: 14px;
+  max-width: 200px;
+  background: white;
+  color: #495057;
+  transition: all 0.3s ease;
+}
+
+.edit-form .form-group input[type="number"] {
+  max-width: 150px;
+}
+
+.edit-form .form-group input:focus,
+.edit-form .form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.edit-form .form-group textarea {
+  max-width: 100%;
+  min-height: 80px;
+}
+
+.edit-form .form-group.checkbox-group {
+  align-items: flex-start;
+}
+
+.edit-form .form-group.checkbox-group label {
+  min-width: auto;
+  cursor: pointer;
 }
 
 .edit-form-actions {

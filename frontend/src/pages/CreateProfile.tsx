@@ -58,11 +58,12 @@ export default function CreateProfile() {
         country: formData.country,
         avatarUrl: formData.avatarUrl,
       })
-      navigate('/onboarding/starter-kit')
+      // Обновляем статус через API и позволяем Onboarding определить следующий шаг
+      // Или просто переходим на starter-kit через navigate
+      window.location.href = '/onboarding/starter-kit'
     } catch (error: any) {
       console.error('Failed to save profile:', error)
       alert(error.response?.data?.message || 'Ошибка сохранения профиля')
-    } finally {
       setLoading(false)
     }
   }

@@ -353,9 +353,11 @@ export class AdminService {
   async createSkin(data: {
     name: string;
     description?: string;
+    type: string;
     theme: string;
-    boardConfig: any;
-    diceConfig: any;
+    boardConfig?: any;
+    diceConfig?: any;
+    checkersConfig?: any;
     isDefault?: boolean;
     isPremium?: boolean;
     weight?: number;
@@ -366,9 +368,11 @@ export class AdminService {
     const skin = this.skinsRepository.create({
       name: data.name,
       description: data.description || null,
+      type: data.type || 'board',
       theme: data.theme,
-      boardConfig: data.boardConfig || {},
-      diceConfig: data.diceConfig || {},
+      boardConfig: data.boardConfig || null,
+      diceConfig: data.diceConfig || null,
+      checkersConfig: data.checkersConfig || null,
       isDefault: data.isDefault || false,
       isPremium: data.isPremium || false,
       weight: data.weight || 1,
@@ -383,9 +387,11 @@ export class AdminService {
   async updateSkin(id: string, data: Partial<{
     name: string;
     description: string;
+    type: string;
     theme: string;
     boardConfig: any;
     diceConfig: any;
+    checkersConfig: any;
     isDefault: boolean;
     isPremium: boolean;
     weight: number;
