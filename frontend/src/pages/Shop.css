@@ -59,25 +59,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: var(--spacing-2);
-  margin-right: calc(-1 * var(--spacing-2));
-}
-
-.shop-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.shop-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.shop-list::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: var(--radius-full);
-}
-
-.shop-list::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
+  /* Скроллбар скрыт глобально, убираем компенсацию */
 }
 
 .shop-empty {
