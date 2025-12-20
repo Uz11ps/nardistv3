@@ -10,7 +10,18 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-API_URL="${API_URL:-https://nardist.site/api}"
+# Автоматически определяем API URL
+if [ -z "$API_URL" ]; then
+  # Сначала пробуем локальный API
+  if curl -s -f http://localhost:3000/api/health > /dev/null 2>&1; then
+    API_URL="http://localhost:3000/api"
+  elif curl -s -f -k https://nardist.site/api/health > /dev/null 2>&1; then
+    API_URL="https://nardist.site/api"
+  else
+    API_URL="https://nardist.site/api"
+  fi
+fi
+
 ADMIN_LOGIN="${ADMIN_LOGIN:-123}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-123123}"
 

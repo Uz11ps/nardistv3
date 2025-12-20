@@ -8,7 +8,22 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Конфигурация
-API_URL="${API_URL:-https://nardist.site/api}"
+# Автоматически определяем API URL
+if [ -z "$API_URL" ]; then
+  # Сначала пробуем локальный API
+  if curl -s -f http://localhost:3000/api/health > /dev/null 2>&1; then
+    API_URL="http://localhost:3000/api"
+    echo -e "${YELLOW}Используется локальный API: $API_URL${NC}"
+  elif curl -s -f -k https://nardist.site/api/health > /dev/null 2>&1; then
+    API_URL="https://nardist.site/api"
+    echo -e "${YELLOW}Используется внешний API: $API_URL${NC}"
+  else
+    API_URL="https://nardist.site/api"
+    echo -e "${YELLOW}Используется API по умолчанию: $API_URL${NC}"
+    echo -e "${YELLOW}Если API недоступен, установите переменную: API_URL=http://localhost:3000/api${NC}"
+  fi
+fi
+
 ADMIN_LOGIN="${ADMIN_LOGIN:-123}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-123123}"
 
