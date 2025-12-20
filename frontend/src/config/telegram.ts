@@ -1,28 +1,54 @@
-import WebApp from '@twa-dev/sdk'
+// Пробуем импортировать SDK, но не падаем если его нет
+let WebApp: any = null
+try {
+  WebApp = require('@twa-dev/sdk').default || require('@twa-dev/sdk')
+} catch (e) {
+  console.warn('@twa-dev/sdk не найден, используем window.Telegram.WebApp')
+}
 
 // Проверяем что мы в Telegram WebView
 const isTelegramWebView = typeof window !== 'undefined' && 
-  (window as any).Telegram?.WebApp !== undefined
+  ((window as any).Telegram?.WebApp !== undefined || WebApp !== null)
 
 export function initTelegram() {
-  if (!isTelegramWebView) {
-    console.warn('Приложение запущено не в Telegram WebView')
+  // Пробуем получить WebApp объект разными способами
+  let telegramWebApp: any = null
+  
+  if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+    telegramWebApp = (window as any).Telegram.WebApp
+    console.log('✅ Telegram.WebApp найден через window.Telegram.WebApp')
+  } else if (WebApp) {
+    telegramWebApp = WebApp
+    console.log('✅ Telegram.WebApp найден через @twa-dev/sdk')
+  }
+  
+  if (!telegramWebApp) {
+    console.warn('⚠️ Приложение запущено не в Telegram WebView')
+    console.warn('window.Telegram:', typeof window !== 'undefined' ? (window as any).Telegram : 'undefined')
     // Устанавливаем темную тему по умолчанию
     document.documentElement.setAttribute('data-theme', 'dark')
     return null
   }
   
   try {
-    WebApp.ready()
-    WebApp.expand()
+    if (telegramWebApp.ready) {
+      telegramWebApp.ready()
+    }
+    if (telegramWebApp.expand) {
+      telegramWebApp.expand()
+    }
     
-    if (WebApp.colorScheme === 'dark') {
+    if (telegramWebApp.colorScheme === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark')
     }
     
-    return WebApp
+    console.log('✅ Telegram WebApp инициализирован')
+    console.log('WebApp версия:', telegramWebApp.version)
+    console.log('WebApp платформа:', telegramWebApp.platform)
+    
+    return telegramWebApp
   } catch (error) {
-    console.error('Ошибка инициализации Telegram WebApp:', error)
+    console.error('❌ Ошибка инициализации Telegram WebApp:', error)
     document.documentElement.setAttribute('data-theme', 'dark')
     return null
   }
@@ -32,30 +58,30 @@ export function getInitData(): string {
   // Проверяем разные способы получения initData
   let initData = ''
   
-  // Способ 1: через @twa-dev/sdk
-  if (isTelegramWebView) {
-    try {
-      initData = WebApp.initData || ''
-      if (initData) {
-        console.log('✅ initData получен через WebApp.initData, длина:', initData.length)
-        return initData
-      }
-    } catch (error) {
-      console.warn('Ошибка получения через WebApp.initData:', error)
-    }
-  }
-  
-  // Способ 2: через window.Telegram.WebApp напрямую
+  // Способ 1: через window.Telegram.WebApp напрямую (приоритет)
   if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
     try {
       const telegramWebApp = (window as any).Telegram.WebApp
       initData = telegramWebApp.initData || telegramWebApp.initDataUnsafe || ''
       if (initData) {
-        console.log('✅ initData получен через window.Telegram.WebApp, длина:', initData.length)
+        console.log('✅ initData получен через window.Telegram.WebApp.initData, длина:', initData.length)
         return initData
       }
     } catch (error) {
       console.warn('Ошибка получения через window.Telegram.WebApp:', error)
+    }
+  }
+  
+  // Способ 2: через @twa-dev/sdk
+  if (WebApp && isTelegramWebView) {
+    try {
+      initData = WebApp.initData || ''
+      if (initData) {
+        console.log('✅ initData получен через WebApp.initData (SDK), длина:', initData.length)
+        return initData
+      }
+    } catch (error) {
+      console.warn('Ошибка получения через WebApp.initData (SDK):', error)
     }
   }
   
