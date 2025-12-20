@@ -101,8 +101,10 @@ services:
       - /etc/letsencrypt/live/nardist.site/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
       - /etc/letsencrypt/live/nardist.site/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
     depends_on:
-      - frontend
-      - backend
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
     networks:
       - nardi_network
     restart: unless-stopped
