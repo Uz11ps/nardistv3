@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { apiClient } from '../api/client'
 import './BackgammonBoard.css'
 
 interface Point {
@@ -48,9 +49,31 @@ export default function BackgammonBoard({
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const animationFrameRef = useRef<number>()
 
-  const points: Point[] = gameState?.points || []
-  const bar = gameState?.bar || { white: 0, black: 0 }
-  const bearOff = gameState?.bearOff || { white: 0, black: 0 }
+  // gameState.points - это массив чисел, где положительное число = белые шашки, отрицательное = черные
+  const pointsRaw = gameState?.points || []
+  const points: number[] = Array.isArray(pointsRaw)
+    ? pointsRaw.map((p: any) => {
+        // Если это число, возвращаем как есть
+        if (typeof p === 'number') {
+          return p
+        }
+        // Если это объект Point, преобразуем в число
+        if (p && typeof p === 'object') {
+          if ('checkers' in p && Array.isArray(p.checkers)) {
+            const count = p.checkers.length
+            return p.color === 'white' ? count : -count
+          }
+          // Если есть числовое значение напрямую
+          if ('value' in p && typeof p.value === 'number') {
+            return p.value
+          }
+        }
+        return 0
+      })
+    : []
+  
+  const bar = gameState?.bar || (Array.isArray(gameState?.bar) ? { white: gameState.bar[0] || 0, black: gameState.bar[1] || 0 } : { white: 0, black: 0 })
+  const bearOff = gameState?.borneOff || gameState?.bearOff || (Array.isArray(gameState?.borneOff) ? { white: gameState.borneOff[0] || 0, black: gameState.borneOff[1] || 0 } : { white: 0, black: 0 })
 
   // Нормализуем формат кубиков
   const diceArray: number[] = dice
@@ -64,7 +87,7 @@ export default function BackgammonBoard({
     if (gameId && diceArray.length > 0 && isMyTurn && canMove) {
       apiClient
         .get(`/games/${gameId}/possible-moves`)
-        .then((response) => {
+        .then((response: any) => {
           const allMoves = response.data || []
           // Извлекаем все возможные ходы из всех комбинаций
           const movesSet = new Set<string>()
@@ -159,7 +182,7 @@ export default function BackgammonBoard({
 
     // Рисуем точки (треугольники)
     for (let i = 0; i < 24; i++) {
-      const point = points[i] || { index: i, checkers: [], color: null }
+      const pointValue = points[i] || 0
       const pointNum = POINT_NUMBERS[i]
       const isTop = i < 12
       
@@ -205,9 +228,10 @@ export default function BackgammonBoard({
       ctx.fillText(pointNum.toString(), x + pointWidth / 2, isTop ? y + 15 : y - 5)
 
       // Фишки на точке
-      if (point.checkers && point.checkers.length > 0) {
-        const checkerColor = point.color === 'white' ? '#FFFFFF' : '#1a1a1a'
-        const checkerCount = point.checkers.length
+      const pointValue = points[i] || 0
+      const checkerCount = Math.abs(pointValue)
+      if (checkerCount > 0) {
+        const checkerColor = pointValue > 0 ? '#FFFFFF' : '#1a1a1a'
         const checkerRadius = 14
         const maxStack = 5
         const stackSpacing = 4
@@ -584,10 +608,10 @@ export default function BackgammonBoard({
       // Проверяем клик по бару (обрабатывается отдельно, но для простоты считаем что бар = -1)
       // Сначала пробуем выбрать точку с шашкой
       if (clickedPoint >= 0 && clickedPoint < 24) {
-        const point = points[clickedPoint]
-        if (point !== undefined) {
-          const checkerCount = currentPlayer === 0 ? (point > 0 ? point : 0) : (point < 0 ? Math.abs(point) : 0)
-          const isMyChecker = currentPlayer === 0 ? point > 0 : point < 0
+        const pointValue = points[clickedPoint] || 0
+        if (pointValue !== 0) {
+          const checkerCount = currentPlayer === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
+          const isMyChecker = currentPlayer === 0 ? pointValue > 0 : pointValue < 0
           if (isMyChecker && checkerCount > 0) {
             // Проверяем, есть ли возможные ходы с этой точки
             const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
