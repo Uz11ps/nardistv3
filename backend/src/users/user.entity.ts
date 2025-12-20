@@ -49,7 +49,7 @@ export class User {
   @Column({ type: 'bigint', default: 0 })
   xp: bigint;
 
-  @Column({ type: 'bigint', default: 1000 })
+  @Column({ type: 'bigint', default: 0 })
   narCoin: bigint;
 
   @Column({ default: 'economy' })
