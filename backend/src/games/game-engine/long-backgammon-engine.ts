@@ -215,6 +215,16 @@ export class LongBackgammonEngine {
     }
   }
 
+  /**
+   * Validate move using sum of two dice (for combined moves)
+   * This is used when player wants to combine two dice into one move
+   */
+  private validateMoveWithSum(state: LongBoardState, from: number, to: number, die1: number, die2: number): boolean {
+    const sumDie = die1 + die2;
+    // Use regular validation with the sum
+    return this.validateMove(state, from, to, sumDie);
+  }
+
   private validateMovePlayer1(state: LongBoardState, from: number, to: number, die: number): boolean {
     // Handle bar entry
     if (state.bar[0] > 0) {
@@ -486,6 +496,8 @@ export class LongBackgammonEngine {
 
       // Find all possible moves from board
       let foundAnyMove = false;
+      
+      // First, try using dice separately (one die per move)
       for (let from = 0; from < this.BOARD_SIZE; from++) {
         const pointValue = currentState.points[from];
         const hasMyCheckers = player === 0 ? pointValue > 0 : pointValue < 0;
@@ -519,6 +531,53 @@ export class LongBackgammonEngine {
             const newDice = [...remainingDice];
             newDice.splice(i, 1);
             generateMoves(newState, newDice, [...currentMoves, { from, to, die }]);
+          }
+        }
+      }
+      
+      // Second, try using sum of two dice (only if NOT doubles and we have 2+ dice)
+      // In Long Backgammon, you can combine two dice into one move, but NOT with doubles
+      if (remainingDice.length >= 2) {
+        // Check if this is NOT doubles (all dice are the same)
+        const isDoubles = remainingDice.every(d => d === remainingDice[0]);
+        
+        if (!isDoubles) {
+          // Try combining first two dice
+          const die1 = remainingDice[0];
+          const die2 = remainingDice[1];
+          const sumDie = die1 + die2;
+          
+          for (let from = 0; from < this.BOARD_SIZE; from++) {
+            const pointValue = currentState.points[from];
+            const hasMyCheckers = player === 0 ? pointValue > 0 : pointValue < 0;
+            
+            if (!hasMyCheckers) continue;
+            
+            // Calculate target point using sum
+            let to: number;
+            const calculatedTo = this.calculateTargetPoint(player, from, sumDie);
+            
+            // Check if bearing off
+            if (calculatedTo < 0 || 
+                (player === 0 && calculatedTo >= this.WHITE_HOME_START && this.canBearOff(currentState, 0)) ||
+                (player === 1 && calculatedTo < 6 && this.canBearOff(currentState, 1))) {
+              if (this.canBearOff(currentState, player)) {
+                to = -1; // Bear off
+              } else {
+                continue; // Cannot bear off yet
+              }
+            } else {
+              to = calculatedTo;
+            }
+            
+            // Validate move using sum of two dice
+            if (this.validateMoveWithSum(currentState, from, to, die1, die2)) {
+              foundAnyMove = true;
+              const newState = this.applyMove(currentState, from, to, sumDie);
+              const newDice = remainingDice.slice(2); // Remove both dice
+              // Store sum as the die value for tracking
+              generateMoves(newState, newDice, [...currentMoves, { from, to, die: sumDie }]);
+            }
           }
         }
       }
