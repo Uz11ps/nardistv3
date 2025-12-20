@@ -7,7 +7,7 @@ import Dice from '../components/Dice'
 import Icon from '../components/Icon'
 import Button from '../components/Button'
 import { apiClient } from '../api/client'
-import { getSocket } from '../api/websocket'
+import { getSocket, connectWebSocket } from '../api/websocket'
 import './Game.css'
 
 interface GameState {
