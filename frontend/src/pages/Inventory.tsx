@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Icon from '../components/Icon'
-import { apiClient } from '../api/client'
+import { apiClient, getImageUrl } from '../api/client'
 import './Inventory.css'
 
 interface Skin {
@@ -137,9 +137,12 @@ export default function Inventory() {
                       <div className="inventory-item-image">
                         {skin.imageUrl ? (
                           <img
-                            src={skin.imageUrl}
+                            src={getImageUrl(skin.imageUrl)}
                             alt={skin.name}
                             className="inventory-image"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
                           />
                         ) : (
                           <Icon name="board" size={48} />
@@ -189,9 +192,12 @@ export default function Inventory() {
                       <div className="inventory-item-image">
                         {skin.imageUrl ? (
                           <img
-                            src={skin.imageUrl}
+                            src={getImageUrl(skin.imageUrl)}
                             alt={skin.name}
                             className="inventory-image"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
                           />
                         ) : (
                           <Icon name="dice" size={48} />
@@ -241,9 +247,12 @@ export default function Inventory() {
                       <div className="inventory-item-image">
                         {skin.imageUrl ? (
                           <img
-                            src={skin.imageUrl}
+                            src={getImageUrl(skin.imageUrl)}
                             alt={skin.name}
                             className="inventory-image"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
                           />
                         ) : (
                           <Icon name="target" size={48} />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiClient } from '../api/client'
+import { apiClient, getImageUrl } from '../api/client'
 import Card from './Card'
 import Button from './Button'
 import { Skin } from '../types/skin'
@@ -89,7 +89,7 @@ export default function SkinSelectModal({
                   <div style={{ textAlign: 'center' }}>
                     {skin.imageUrl ? (
                       <img
-                        src={skin.imageUrl}
+                        src={getImageUrl(skin.imageUrl)}
                         alt={skin.name}
                         style={{
                           width: '100%',
@@ -97,6 +97,9 @@ export default function SkinSelectModal({
                           objectFit: 'cover',
                           borderRadius: '8px',
                           marginBottom: '8px',
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
                         }}
                       />
                     ) : (
