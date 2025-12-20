@@ -800,10 +800,31 @@ export default function BackgammonBoard({
           console.log('❌ Ход невалиден - не найден в списке возможных ходов')
           console.log('Доступные ходы с точки', POINT_NUMBERS[selectedPoint], ':', possibleMoves.filter(m => m.from === selectedPoint))
         }
-      } else {
-        // Отмена выбора или выбор другой точки
-        console.log('🔄 Отмена выбора или выбор другой точки', { selectedPoint, clickedPoint, isHighlighted: highlightedPoints.has(clickedPoint) })
+      } else if (selectedPoint === clickedPoint) {
+        // Клик по уже выбранной точке - отменяем выбор
+        console.log('🔄 Отмена выбора точки', { selectedPoint, clickedPoint })
         setSelectedPoint(null)
+        setHighlightedPoints(new Set())
+      } else {
+        // Клик по другой точке, которая не подсвечена - выбираем новую точку если возможно
+        const pointValue = points[clickedPoint] || 0
+        const isMyChecker = currentPlayer === 0 ? pointValue > 0 : pointValue < 0
+        if (isMyChecker) {
+          const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
+          if (hasPossibleMoves) {
+            console.log(`🔄 Выбираем новую точку ${POINT_NUMBERS[clickedPoint]} (индекс ${clickedPoint})`)
+            setSelectedPoint(clickedPoint)
+          } else {
+            console.log('⚠️ Нет возможных ходов с этой точки, отменяем выбор')
+            setSelectedPoint(null)
+            setHighlightedPoints(new Set())
+          }
+        } else {
+          // Клик по пустой точке или точке противника - отменяем выбор
+          console.log('🔄 Клик по пустой точке или точке противника, отменяем выбор')
+          setSelectedPoint(null)
+          setHighlightedPoints(new Set())
+        }
       }
     }
   }
