@@ -22,6 +22,8 @@ interface BackgammonBoardProps {
   canMove: boolean
   isMyTurn: boolean
   gameId?: string
+  playerSkins?: { board?: any; dice?: any; checkers?: any }
+  opponentSkins?: { board?: any; dice?: any; checkers?: any }
 }
 
 // Нумерация точек в нардах (от 1 до 24, где 1 - верхний правый угол для белых)
@@ -39,6 +41,8 @@ export default function BackgammonBoard({
   canMove,
   isMyTurn,
   gameId,
+  playerSkins,
+  opponentSkins,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)

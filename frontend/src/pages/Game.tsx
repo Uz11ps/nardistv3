@@ -31,6 +31,7 @@ export default function Game() {
   const [gameStatus, setGameStatus] = useState<string>('waiting')
   const [player1Timer, setPlayer1Timer] = useState<number>(0)
   const [player2Timer, setPlayer2Timer] = useState<number>(0)
+  const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any }>({ player1: null, player2: null })
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const mode = searchParams.get('mode')
@@ -316,6 +317,8 @@ export default function Game() {
       {/* Доска */}
       <div className="board-wrapper">
         <BackgammonBoard
+          playerSkins={isPlayer1 ? playerSkins.player1 : playerSkins.player2}
+          opponentSkins={isPlayer1 ? playerSkins.player2 : playerSkins.player1}
           gameState={gameState}
           currentPlayer={gameState.currentPlayer}
           dice={gameState.dice ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2]) : null}
