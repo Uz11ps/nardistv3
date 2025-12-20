@@ -18,9 +18,10 @@ interface NarCoinPackage {
 export default function Shop() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'board' | 'dice' | 'checkers'>('coin')
+  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'skins'>('coin')
+  const [skinFilter, setSkinFilter] = useState<'all' | 'board' | 'dice' | 'checkers'>('all')
   const [narCoinPackages, setNarCoinPackages] = useState<NarCoinPackage[]>([])
-  const [skins, setSkins] = useState<Skin[]>([])
+  const [allSkins, setAllSkins] = useState<Skin[]>([])
   const [ownedSkins, setOwnedSkins] = useState<string[]>([])
   const [selectedSkinIds, setSelectedSkinIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -28,10 +29,16 @@ export default function Shop() {
   useEffect(() => {
     if (activeTab === 'coin') {
       loadNarCoinPackages()
-    } else if (['board', 'dice', 'checkers'].includes(activeTab)) {
+    } else if (activeTab === 'skins') {
       loadSkins()
     }
   }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab === 'skins') {
+      // Фильтр применяется на клиенте из уже загруженных скинов
+    }
+  }, [skinFilter, activeTab])
 
   const loadNarCoinPackages = async () => {
     try {
@@ -63,30 +70,34 @@ export default function Shop() {
         apiClient.get('/skins/selected'),
       ])
 
-      const allSkins = allSkinsResponse.data || []
+      const skinsData = allSkinsResponse.data || []
       const mySkins = mySkinsResponse.data || []
       const selected = selectedSkinResponse.data || {}
 
-      // Фильтруем скины по типу активной вкладки
-      const typeMap: { [key: string]: string } = {
-        board: 'board',
-        dice: 'dice',
-        checkers: 'checkers',
-      }
-      const filteredSkins = allSkins.filter((s: Skin) => s.type === typeMap[activeTab])
-
-      setSkins(filteredSkins)
-      setOwnedSkins([...mySkins.map((s: Skin) => s.id), ...allSkins.filter((s: Skin) => s.isDefault).map((s: Skin) => s.id)])
+      setAllSkins(skinsData)
+      setOwnedSkins([...mySkins.map((s: Skin) => s.id), ...skinsData.filter((s: Skin) => s.isDefault).map((s: Skin) => s.id)])
       
       const selectedIds = new Set<string>()
       if (selected.board) selectedIds.add(selected.board.id)
       if (selected.dice) selectedIds.add(selected.dice.id)
+      if (selected.checkers) selectedIds.add(selected.checkers.id)
       setSelectedSkinIds(selectedIds)
     } catch (error) {
       console.error('Failed to load skins:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const getFilteredSkins = () => {
+    if (skinFilter === 'all') {
+      return allSkins
+    }
+    return allSkins.filter((s: Skin) => s.type === skinFilter)
+  }
+
+  const getSkinsByType = (type: string) => {
+    return allSkins.filter((s: Skin) => s.type === type)
   }
 
   const handleBuyNarCoin = async (amount: number, price: number) => {
@@ -109,7 +120,7 @@ export default function Shop() {
 
   const handleBuySkin = async (skinId: string) => {
     try {
-      const skin = skins.find((s) => s.id === skinId)
+      const skin = allSkins.find((s) => s.id === skinId)
       if (!skin || !skin.price) return
 
       await apiClient.post('/skins/purchase', { skinId })
@@ -145,6 +156,66 @@ export default function Shop() {
     return `shop-rarity-badge shop-rarity-${rarity}`
   }
 
+  const renderSkinCard = (skin: Skin) => {
+    const isOwned = ownedSkins.includes(skin.id)
+    const isSelected = selectedSkinIds.has(skin.id)
+
+    return (
+      <Card key={skin.id} className="shop-skin-card">
+        <div className="shop-skin-content">
+          <div className="shop-skin-header">
+            <div className="shop-skin-name">{skin.name}</div>
+            <div className={`shop-skin-rarity ${getRarityBadgeClass(skin.rarity)}`}>
+              {getRarityName(skin.rarity)}
+            </div>
+          </div>
+          <div className="shop-skin-image">
+            {skin.imageUrl ? (
+              <img
+                src={skin.imageUrl}
+                alt={skin.name}
+                className="shop-skin-img"
+              />
+            ) : (
+              <div className="shop-skin-placeholder">
+                <Icon 
+                  name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} 
+                  size={48} 
+                />
+              </div>
+            )}
+            {!isOwned && skin.price && (
+              <div className="shop-skin-price-overlay">
+                {skin.price.toLocaleString('ru-RU')} NAR
+              </div>
+            )}
+          </div>
+          <div className="shop-skin-actions">
+            {isOwned ? (
+              <Button
+                variant="secondary"
+                className="shop-buy-btn shop-buy-btn-purchased"
+                fullWidth
+                disabled
+              >
+                Куплено
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                className="shop-buy-btn"
+                fullWidth
+                onClick={() => handleBuySkin(skin.id)}
+              >
+                Купить
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
   return (
     <div className="app-container">
       <PageHeader title="Магазин" />
@@ -166,22 +237,10 @@ export default function Shop() {
               Подписка
             </button>
             <button
-              className={`shop-tab ${activeTab === 'board' ? 'active' : ''}`}
-              onClick={() => setActiveTab('board')}
+              className={`shop-tab ${activeTab === 'skins' ? 'active' : ''}`}
+              onClick={() => setActiveTab('skins')}
             >
-              Доски
-            </button>
-            <button
-              className={`shop-tab ${activeTab === 'dice' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dice')}
-            >
-              Кубы
-            </button>
-            <button
-              className={`shop-tab ${activeTab === 'checkers' ? 'active' : ''}`}
-              onClick={() => setActiveTab('checkers')}
-            >
-              Шашки
+              Скины
             </button>
           </div>
         </div>
@@ -241,78 +300,78 @@ export default function Shop() {
           </div>
         )}
 
-        {/* Скины (Доски, Кубы, Шашки) */}
-        {['board', 'dice', 'checkers'].includes(activeTab) && (
-          <div className="shop-list">
-            {loading ? (
-              <Card>
-                <div className="shop-empty">Загрузка...</div>
-              </Card>
-            ) : skins.length === 0 ? (
-              <Card>
-                <div className="shop-empty">Нет доступных скинов</div>
-              </Card>
-            ) : (
-              skins.map((skin) => {
-                const isOwned = ownedSkins.includes(skin.id)
-                const isSelected = selectedSkinIds.has(skin.id)
+        {/* Скины */}
+        {activeTab === 'skins' && (
+          <div className="shop-skins-content">
+            {/* Фильтры по типам скинов */}
+            <div className="shop-skin-filters">
+              <button
+                className={`shop-skin-filter ${skinFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setSkinFilter('all')}
+              >
+                Все
+              </button>
+              <button
+                className={`shop-skin-filter ${skinFilter === 'board' ? 'active' : ''}`}
+                onClick={() => setSkinFilter('board')}
+              >
+                Доски
+              </button>
+              <button
+                className={`shop-skin-filter ${skinFilter === 'dice' ? 'active' : ''}`}
+                onClick={() => setSkinFilter('dice')}
+              >
+                Кубы
+              </button>
+              <button
+                className={`shop-skin-filter ${skinFilter === 'checkers' ? 'active' : ''}`}
+                onClick={() => setSkinFilter('checkers')}
+              >
+                Шашки
+              </button>
+            </div>
 
-                return (
-                  <Card key={skin.id} className="shop-skin-card">
-                    <div className="shop-skin-content">
-                      <div className="shop-skin-header">
-                        <div className="shop-skin-name">{skin.name}</div>
-                        <div className={`shop-skin-rarity ${getRarityBadgeClass(skin.rarity)}`}>
-                          {getRarityName(skin.rarity)}
-                        </div>
-                      </div>
-                      <div className="shop-skin-image">
-                        {skin.imageUrl ? (
-                          <img
-                            src={skin.imageUrl}
-                            alt={skin.name}
-                            className="shop-skin-img"
-                          />
-                        ) : (
-                          <div className="shop-skin-placeholder">
-                            <Icon 
-                              name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} 
-                              size={48} 
-                            />
-                          </div>
-                        )}
-                        {!isOwned && skin.price && (
-                          <div className="shop-skin-price-overlay">
-                            {skin.price.toLocaleString('ru-RU')} NAR
-                          </div>
-                        )}
-                      </div>
-                      <div className="shop-skin-actions">
-                        {isOwned ? (
-                          <Button
-                            variant="secondary"
-                            className="shop-buy-btn shop-buy-btn-purchased"
-                            fullWidth
-                            disabled
-                          >
-                            Куплено
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="primary"
-                            className="shop-buy-btn"
-                            fullWidth
-                            onClick={() => handleBuySkin(skin.id)}
-                          >
-                            Купить
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                )
-              })
-            )}
+            {/* Отображение скинов */}
+            <div className="shop-list">
+              {loading ? (
+                <Card>
+                  <div className="shop-empty">Загрузка...</div>
+                </Card>
+              ) : skinFilter === 'all' ? (
+                // Группировка по типам если выбран "Все"
+                <>
+                  {getSkinsByType('board').length > 0 && (
+                    <>
+                      <div className="shop-skin-group-title">Доски</div>
+                      {getSkinsByType('board').map((skin) => renderSkinCard(skin))}
+                    </>
+                  )}
+                  {getSkinsByType('dice').length > 0 && (
+                    <>
+                      <div className="shop-skin-group-title">Кубы</div>
+                      {getSkinsByType('dice').map((skin) => renderSkinCard(skin))}
+                    </>
+                  )}
+                  {getSkinsByType('checkers').length > 0 && (
+                    <>
+                      <div className="shop-skin-group-title">Шашки</div>
+                      {getSkinsByType('checkers').map((skin) => renderSkinCard(skin))}
+                    </>
+                  )}
+                  {allSkins.length === 0 && (
+                    <Card>
+                      <div className="shop-empty">Нет доступных скинов</div>
+                    </Card>
+                  )}
+                </>
+              ) : getFilteredSkins().length === 0 ? (
+                <Card>
+                  <div className="shop-empty">Нет доступных скинов</div>
+                </Card>
+              ) : (
+                getFilteredSkins().map((skin) => renderSkinCard(skin))
+              )}
+            </div>
           </div>
         )}
       </div>
