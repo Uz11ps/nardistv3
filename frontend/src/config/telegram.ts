@@ -54,14 +54,14 @@ export function initTelegram() {
 
 export function getInitData(): string {
   // Проверяем разные способы получения initData
-  let initData = ''
+  let initData: string | undefined | null = ''
   
   // Способ 1: через window.Telegram.WebApp напрямую (приоритет)
   if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
     try {
       const telegramWebApp = (window as any).Telegram.WebApp
       initData = telegramWebApp.initData || telegramWebApp.initDataUnsafe || ''
-      if (initData) {
+      if (initData && typeof initData === 'string' && initData.length > 0) {
         console.log('✅ initData получен через window.Telegram.WebApp.initData, длина:', initData.length)
         return initData
       }
@@ -74,7 +74,7 @@ export function getInitData(): string {
   if (WebApp && isTelegramWebView) {
     try {
       initData = WebApp.initData || ''
-      if (initData) {
+      if (initData && typeof initData === 'string' && initData.length > 0) {
         console.log('✅ initData получен через WebApp.initData (SDK), длина:', initData.length)
         return initData
       }
@@ -87,7 +87,7 @@ export function getInitData(): string {
   if (typeof window !== 'undefined' && window.location.search) {
     const urlParams = new URLSearchParams(window.location.search)
     initData = urlParams.get('tgWebAppData') || urlParams.get('initData') || ''
-    if (initData) {
+    if (initData && typeof initData === 'string' && initData.length > 0) {
       console.log('✅ initData получен из URL параметров, длина:', initData.length)
       return initData
     }
