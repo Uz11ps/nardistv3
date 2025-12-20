@@ -307,7 +307,7 @@ export class GamesService {
   async getPossibleMoves(gameId: string, playerId: string): Promise<Array<Array<{ from: number; to: number; die: number }>>> {
     const game = await this.findOne(gameId);
 
-    if (game.status !== GameStatus.IN_PROGRESS) {
+    if (game.status !== GameStatus.IN_PROGRESS && game.status !== GameStatus.WAITING) {
       throw new BadRequestException('Игра не активна');
     }
 
