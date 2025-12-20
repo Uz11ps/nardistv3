@@ -145,6 +145,45 @@ export class AuthService {
     };
   }
 
+  async guestLogin() {
+    // Генерируем уникальный ID для гостя
+    const guestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Создаем гостевого пользователя
+    const createUserDto: CreateUserDto = {
+      telegramId: guestId,
+      username: `Гость_${Math.random().toString(36).substr(2, 6)}`,
+      firstName: 'Гость',
+      lastName: '',
+      languageCode: 'ru',
+      avatarUrl: '',
+    };
+    
+    const user = await this.usersService.create(createUserDto);
+    
+    // Помечаем как гостя
+    user.isGuest = true;
+    user.onboardingCompleted = true; // Гостям не нужен онбординг
+    user.profileSetupCompleted = true;
+    user.starterKitClaimed = true;
+    await this.usersService.update(user.id, { isGuest: true, onboardingCompleted: true, profileSetupCompleted: true, starterKitClaimed: true });
+
+    const payload = {
+      sub: user.id,
+      telegramId: user.telegramId,
+      username: user.username,
+      isGuest: true,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        ...user,
+        isGuest: true,
+      },
+    };
+  }
+
   async validateUser(payload: any) {
     return await this.usersService.findOne(payload.sub);
   }

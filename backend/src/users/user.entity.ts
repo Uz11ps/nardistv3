@@ -88,6 +88,9 @@ export class User {
   isTrainer: boolean;
 
   @Column({ default: false })
+  isGuest: boolean; // Гостевой пользователь (вошел через браузер без Telegram)
+
+  @Column({ default: false })
   onboardingCompleted: boolean; // Прошел ли онбординг
 
   @Column({ default: false })

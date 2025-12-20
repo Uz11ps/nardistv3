@@ -49,9 +49,35 @@ function App() {
       try {
         initTelegram()
         await init()
+        
+        // Если нет пользователя и нет Telegram initData, автоматически входим как гость
+        const { user, loginAsGuest } = useAuthStore.getState()
+        const initData = (window as any).Telegram?.WebApp?.initData
+        
+        if (!user && !initData) {
+          console.log('🌐 Telegram не обнаружен, выполняем гостевой вход...')
+          try {
+            await loginAsGuest()
+          } catch (error) {
+            console.error('Ошибка гостевого входа:', error)
+            // Продолжаем работу даже если гостевой вход не удался
+          }
+        }
+        
         setInitialized(true)
       } catch (error: any) {
         console.error('Ошибка инициализации:', error)
+        // Если ошибка связана с отсутствием Telegram, пробуем гостевой вход
+        if (error.code === 'NO_INIT_DATA' || error.message?.includes('initData')) {
+          try {
+            const { loginAsGuest } = useAuthStore.getState()
+            await loginAsGuest()
+            setInitialized(true)
+            return
+          } catch (guestError) {
+            console.error('Ошибка гостевого входа:', guestError)
+          }
+        }
         setInitError(error.message || 'Ошибка инициализации приложения')
         setInitialized(true) // Устанавливаем true чтобы показать ошибку
       }

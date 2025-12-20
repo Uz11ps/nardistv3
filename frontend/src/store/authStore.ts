@@ -17,6 +17,7 @@ interface User {
   maxEnergy?: number
   isTrainer?: boolean
   isAdmin?: boolean
+  isGuest?: boolean
 }
 
 interface AuthState {
@@ -24,6 +25,7 @@ interface AuthState {
   token: string | null
   init: () => Promise<void>
   login: () => Promise<void>
+  loginAsGuest: () => Promise<void>
   logout: () => void
 }
 
@@ -94,6 +96,21 @@ export const useAuthStore = create<AuthState>((set) => ({
         ;(telegramError as any).code = 'TELEGRAM_AUTH_ERROR'
         throw telegramError
       }
+      throw error
+    }
+  },
+
+  loginAsGuest: async () => {
+    try {
+      console.log('👤 Вход как гость...')
+      const response = await apiClient.post('/auth/guest')
+      console.log('✅ Гостевой вход успешен!')
+      const { access_token, user } = response.data
+
+      localStorage.setItem('token', access_token)
+      set({ token: access_token, user })
+    } catch (error: any) {
+      console.error('❌ Ошибка гостевого входа:', error)
       throw error
     }
   },

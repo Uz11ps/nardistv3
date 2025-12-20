@@ -62,6 +62,11 @@ export class AuthController {
     }
   }
 
+  @Post('guest')
+  async guestLogin() {
+    return await this.authService.guestLogin();
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async getMe(@CurrentUser() user: any) {
