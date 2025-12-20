@@ -237,7 +237,8 @@ export default function BackgammonBoard({
       ctx.textAlign = 'center'
       ctx.strokeStyle = '#654321'
       ctx.lineWidth = 2
-      const numY = isTop ? y + 18 : y - 8
+      // Для верхних точек номер внизу треугольника, для нижних - вверху
+      const numY = isTop ? y + pointHeight - 5 : y - pointHeight + 15
       ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
       ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)
 
