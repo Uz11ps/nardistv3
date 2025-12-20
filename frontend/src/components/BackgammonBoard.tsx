@@ -362,8 +362,8 @@ export default function BackgammonBoard({
         }
       }
 
-      // Подсветка возможных ходов (когда точка выбрана)
-      if (highlightedPoints.has(i) && isMyTurn && canMove) {
+      // Подсветка возможных ходов (когда точка выбрана) - рисуем поверх всего
+      if (highlightedPoints.has(i) && isMyTurn && canMove && selectedPoint !== null) {
         ctx.beginPath()
         if (isTop) {
           ctx.moveTo(x, y)
@@ -376,11 +376,12 @@ export default function BackgammonBoard({
         }
         ctx.closePath()
         
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
+        // Более яркая подсветка для лучшей видимости
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'
         ctx.fill()
         
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.9)'
-        ctx.lineWidth = 3
+        ctx.strokeStyle = 'rgba(0, 255, 0, 1.0)'
+        ctx.lineWidth = 4
         ctx.stroke()
       }
 
