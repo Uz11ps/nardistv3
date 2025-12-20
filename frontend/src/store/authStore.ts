@@ -75,7 +75,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       console.log('📤 Отправка запроса на /auth/login...')
-      console.log('initData первые 50 символов:', initData.substring(0, 50))
+      if (typeof initData === 'string' && initData.length > 0) {
+        console.log('initData первые 50 символов:', initData.substring(0, 50))
+      } else {
+        console.log('initData тип:', typeof initData, 'значение:', initData)
+      }
       const response = await apiClient.post('/auth/login', { initData })
       console.log('✅ Авторизация успешна!')
       const { access_token, user } = response.data
