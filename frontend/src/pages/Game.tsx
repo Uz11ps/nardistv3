@@ -168,6 +168,13 @@ export default function Game() {
 
     socket.on('game_state', (data: any) => {
       console.log('📊 Получено game_state:', data)
+      console.log('📊 Детали game_state:', {
+        currentPlayer: data.currentPlayer,
+        player1Id: data.player1Id,
+        myId: user?.id,
+        dice: data.gameState?.dice,
+        status: data.status
+      })
       const diceData = data.gameState?.dice
       // Если dice пустой массив или null/undefined, formattedDice должен быть null
       const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
@@ -176,13 +183,16 @@ export default function Game() {
         ? null
         : diceData
       
+      const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
+      console.log('📊 Вычислено canMove:', canMove, 'currentPlayer:', data.currentPlayer, 'player1Id === myId:', data.player1Id === user?.id)
+      
       setGameState({
         points: data.gameState?.points || [],
         bar: data.gameState?.bar || { white: 0, black: 0 },
         bearOff: data.gameState?.bearOff || data.gameState?.borneOff || { white: 0, black: 0 },
         currentPlayer: data.currentPlayer || 0,
         dice: formattedDice,
-        canMove: data.currentPlayer === (data.player1Id === user?.id ? 0 : 1),
+        canMove: canMove,
       })
       const newStatus = data.status || 'waiting'
       setGameStatus(newStatus)
@@ -197,6 +207,13 @@ export default function Game() {
 
     socket.on('move_made', (data: any) => {
       console.log('🎯 Получено move_made:', data)
+      console.log('🎯 Детали move_made:', {
+        currentPlayer: data.currentPlayer,
+        player1Id: data.player1Id,
+        myId: user?.id,
+        dice: data.gameState?.dice,
+        status: data.status
+      })
       const diceData = data.gameState?.dice
       // Если dice пустой массив или null/undefined, formattedDice должен быть null
       const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
@@ -205,17 +222,21 @@ export default function Game() {
         ? null
         : diceData
       
+      const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
+      console.log('🎯 Вычислено canMove:', canMove, 'currentPlayer:', data.currentPlayer, 'player1Id === myId:', data.player1Id === user?.id)
+      
       setGameState({
         points: data.gameState?.points || [],
         bar: data.gameState?.bar || { white: 0, black: 0 },
         bearOff: data.gameState?.bearOff || data.gameState?.borneOff || { white: 0, black: 0 },
         currentPlayer: data.currentPlayer || 0,
         dice: formattedDice,
-        canMove: data.currentPlayer === (data.player1Id === user?.id ? 0 : 1),
+        canMove: canMove,
       })
       setGameStatus(data.status || 'in_progress')
       console.log('🔄 Обновляем состояние игры после хода')
-      loadGame()
+      // Не вызываем loadGame() здесь, так как это может перезаписать состояние
+      // Вместо этого полагаемся на game_state событие
     })
 
     socket.on('dice_rolled', (data: any) => {
