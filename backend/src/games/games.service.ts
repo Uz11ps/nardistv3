@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game, GameMode, GameStatus, GameType } from './game.entity';
@@ -31,8 +31,9 @@ export class GamesService {
     private usersService: UsersService,
     @Inject(forwardRef(() => BotService))
     private botService: BotService,
+    @Optional()
     @Inject(forwardRef(() => GamesGateway))
-    private gamesGateway: GamesGateway,
+    private gamesGateway?: GamesGateway,
   ) {}
 
   async create(
