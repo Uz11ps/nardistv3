@@ -333,9 +333,16 @@ export class LongBackgammonEngine {
           let to: number;
           if (player === 0) {
             // Белые двигаются от большего индекса к меньшему
+            // Точка 13 (индекс 11) -> точка 24 (индекс 0)
             to = from - die;
-            if (to < 0 && this.canBearOff(currentState, 0)) {
-              to = -1; // Вынос
+            if (to < 0) {
+              // Вынос возможен только если все фишки в доме
+              if (this.canBearOff(currentState, 0)) {
+                to = -1; // Вынос
+              } else {
+                // Ход невозможен - пропускаем этот кубик
+                continue;
+              }
             }
           } else {
             // Черные двигаются циклически: от большего индекса к меньшему, затем циклически
