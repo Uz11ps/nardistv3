@@ -193,11 +193,13 @@ export class LongBackgammonEngine {
   }
 
   private applyMovePlayer2(state: LongBoardState, from: number, to: number, die: number): void {
+    // Черные двигаются циклически: от точки 13 (индекс 11) к точке 1 (индекс 23), затем к точке 12 (индекс 12)
     if (state.bar[1] > 0 && from === -1) {
       state.bar[1]--;
+      // Вход с бара: черные входят на точку die (индекс die - 1)
       const enterPoint = die - 1;
       // В длинных нардах нельзя входить на точку с фишками противника
-      if (state.points[enterPoint] > 0) {
+      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE || state.points[enterPoint] > 0) {
         // Возвращаем фишку на бар если нельзя войти
         state.bar[1]++;
         return;
