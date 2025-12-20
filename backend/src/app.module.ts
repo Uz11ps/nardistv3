@@ -28,6 +28,8 @@ import { ClansModule } from './clans/clans.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { TrainingModule } from './training/training.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { UploadModule } from './upload/upload.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -86,6 +88,8 @@ import { OnboardingModule } from './onboarding/onboarding.module';
     AnalysisModule,
     TrainingModule,
     OnboardingModule,
+    UploadModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

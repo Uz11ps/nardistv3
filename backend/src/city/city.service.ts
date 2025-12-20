@@ -32,23 +32,51 @@ export class CityService {
 
     const now = new Date();
     const lastCollected = building.lastCollectedAt || building.createdAt;
-    const hoursPassed = (now.getTime() - lastCollected.getTime()) / (1000 * 60 * 60);
-    const incomePerHour = Number(building.incomePerHour || 0);
+    const hoursPassed = Math.max(0, (now.getTime() - lastCollected.getTime()) / (1000 * 60 * 60));
+    
+    // Получаем настройки района из админки (или используем дефолтные)
+    const districtConfig = await this.getDistrictConfig(building.district);
+    const incomePerHour = Number(building.incomePerHour || districtConfig.incomePerHour);
+    const maxAccumulation = districtConfig.maxAccumulation || this.INCOME_CAP;
+    
     const accumulated = Number(building.accumulatedIncome || 0);
-    const income = Math.min(
-      Math.floor(incomePerHour * hoursPassed),
-      this.INCOME_CAP - accumulated,
-    );
+    
+    // Вычисляем доход за прошедшее время
+    const calculatedIncome = Math.floor(incomePerHour * hoursPassed);
+    
+    // Доход не может превысить максимальное накопление
+    const income = Math.min(calculatedIncome, maxAccumulation - accumulated);
+    
+    if (income <= 0) {
+      return 0;
+    }
 
+    // Обновляем накопленный доход
     building.accumulatedIncome = (BigInt(building.accumulatedIncome || 0) + BigInt(income)).toString();
     building.lastCollectedAt = now;
     await this.buildingsRepository.save(building);
 
+    // Начисляем пользователю
     const user = await this.usersService.findOne(userId);
     user.narCoin = BigInt(user.narCoin || 0) + BigInt(income);
     await this.usersService['usersRepository'].save(user);
 
     return income;
+  }
+
+  private async getDistrictConfig(district: District): Promise<{ incomePerHour: number; maxAccumulation: number }> {
+    // Дефолтные значения для каждого района
+    const configs: Record<District, { incomePerHour: number; maxAccumulation: number }> = {
+      [District.DISTRICT_1]: { incomePerHour: 10, maxAccumulation: 240 },
+      [District.DISTRICT_2]: { incomePerHour: 15, maxAccumulation: 360 },
+      [District.DISTRICT_3]: { incomePerHour: 20, maxAccumulation: 480 },
+      [District.DISTRICT_4]: { incomePerHour: 25, maxAccumulation: 600 },
+      [District.DISTRICT_5]: { incomePerHour: 30, maxAccumulation: 720 },
+      [District.DISTRICT_6]: { incomePerHour: 40, maxAccumulation: 960 },
+      [District.DISTRICT_7]: { incomePerHour: 50, maxAccumulation: 1200 },
+    };
+    
+    return configs[district] || { incomePerHour: 10, maxAccumulation: 240 };
   }
 
   async upgradeBuilding(userId: string, buildingId: string): Promise<Building> {
@@ -125,8 +153,79 @@ export class CityService {
   }
 
   async captureDistrict(userId: string, districtId: string): Promise<void> {
-    // Логика захвата района (требует реализации кланов)
-    // Пока заглушка
+    const user = await this.usersService.findOne(userId);
+    if (user.level < 20) {
+      throw new Error('Кланы доступны с 20 уровня');
+    }
+
+    // Проверяем что пользователь состоит в клане
+    const userClan = await this.clansService.getUserClan(userId);
+    if (!userClan || !userClan.clan) {
+      throw new Error('Вы должны состоять в клане для захвата районов');
+    }
+
+    const clan = await this.clansService.findOne(userClan.clan.id);
+    
+    // Проверяем права (только лидер или офицер)
+    const member = userClan.member;
+    if (!member || (member.role !== 'leader' && member.role !== 'officer')) {
+      throw new Error('Только лидер и офицеры могут захватывать районы');
+    }
+
+    // Проверяем что район существует
+    const district = districtId as District;
+    if (!Object.values(District).includes(district)) {
+      throw new Error('Неверный район');
+    }
+
+    // Проверяем что клан может захватить район (уровень клана, казна и т.д.)
+    if (clan.level < 1) {
+      throw new Error('Клан должен быть хотя бы 1 уровня');
+    }
+
+    const captureCost = 1000; // Стоимость захвата
+    if (clan.treasury < captureCost) {
+      throw new Error('Недостаточно средств в казне клана');
+    }
+
+    // Проверяем не занят ли район другим кланом
+    const allClans = await this.clansService.findAll({});
+    const ownerClan = allClans.find((c) => 
+      c.ownedDistricts && c.ownedDistricts.includes(district)
+    );
+
+    if (ownerClan && ownerClan.id === clan.id) {
+      throw new Error('Ваш клан уже владеет этим районом');
+    }
+
+    // Если район занят другим кланом, проверяем уязвимость
+    if (ownerClan) {
+      // Район можно захватить только если форт клана-владельца < 5
+      if (ownerClan.fortLevel >= 5) {
+        throw new Error('Район защищен сильным фортом и не может быть захвачен');
+      }
+    }
+
+    // Захватываем район
+    if (!clan.ownedDistricts) {
+      clan.ownedDistricts = [];
+    }
+    
+    // Убираем район у предыдущего владельца
+    if (ownerClan) {
+      ownerClan.ownedDistricts = ownerClan.ownedDistricts.filter(d => d !== district);
+      await this.clansService['clansRepository'].save(ownerClan);
+    }
+
+    // Добавляем район новому владельцу
+    if (!clan.ownedDistricts.includes(district)) {
+      clan.ownedDistricts.push(district);
+    }
+
+    // Списываем стоимость захвата
+    clan.treasury -= captureCost;
+    
+    await this.clansService['clansRepository'].save(clan);
   }
 
   private getDistrictName(district: District): string {

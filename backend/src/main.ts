@@ -21,15 +21,20 @@ async function bootstrap() {
     }),
   );
 
-  // Создаем папку для загрузок, если её нет
-  const uploadsDir = join(__dirname, '..', 'uploads', 'skins');
-  if (!existsSync(uploadsDir)) {
-    mkdirSync(uploadsDir, { recursive: true });
-  }
+  // Создаем папки для загрузок, если их нет
+  const uploadsDir = join(__dirname, '..', 'uploads');
+  const imagesDir = join(uploadsDir, 'images');
+  const skinsDir = join(uploadsDir, 'skins');
+  
+  [uploadsDir, imagesDir, skinsDir].forEach(dir => {
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+  });
 
-  // Настройка статической отдачи файлов (изображения скинов)
+  // Настройка статической отдачи файлов
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
+    prefix: '/api/uploads/',
   });
 
   app.enableCors({

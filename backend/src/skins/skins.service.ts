@@ -26,24 +26,27 @@ export class SkinsService {
   }
 
   async getUserSkins(userId: string): Promise<Skin[]> {
-    // Получаем скины пользователя из user_skins
+    // Получаем все скины пользователя из user_skins
     const userSkins = await this.userSkinsRepository.find({
       where: { userId },
       relations: ['skin'],
     });
-    const userSkinIds = userSkins.map((us) => us.skin.id);
+    const userSkinIds = userSkins.map((us) => us.skin?.id).filter(Boolean);
     
-    // Получаем все default скины
+    // Получаем все default скины - они всегда доступны
     const defaultSkins = await this.skinsRepository.find({
       where: { isDefault: true },
     });
     
-    // Объединяем: скины пользователя + default скины (если их еще нет у пользователя)
-    const allSkins = [...userSkins.map((us) => us.skin)];
+    // Объединяем: default скины + скины пользователя (исключая дубликаты)
+    const allSkins: Skin[] = [...defaultSkins];
     
-    for (const defaultSkin of defaultSkins) {
-      if (!userSkinIds.includes(defaultSkin.id)) {
-        allSkins.push(defaultSkin);
+    for (const userSkin of userSkins) {
+      if (userSkin.skin && !userSkinIds.includes(userSkin.skin.id)) {
+        // Проверяем что это не default скин (чтобы не дублировать)
+        if (!userSkin.skin.isDefault) {
+          allSkins.push(userSkin.skin);
+        }
       }
     }
     
