@@ -126,26 +126,7 @@ export class GamesService {
   async rollDice(gameId: string, playerId: string): Promise<number[]> {
     const game = await this.findOne(gameId);
     
-    // Если это бот и игра с ботом, автоматически делаем ход после броска кубиков
-    if (game.type === GameType.VS_BOT && (game.player2Id === null || playerId === game.player2Id)) {
-      // Это бот, делаем автоматический ход
-      setTimeout(async () => {
-        try {
-          const botGame = await this.findOne(gameId);
-          if (botGame.status === GameStatus.FINISHED) return;
-          
-          const botMoves = await this.botService.makeBotMove(botGame.gameState, botGame.mode);
-          if (botMoves.length > 0) {
-            await this.makeMove(gameId, playerId, botMoves);
-          }
-        } catch (error) {
-          this.logger.error(`Bot auto-move error: ${error.message}`, error.stack);
-        }
-      }, 1500); // Задержка 1.5 секунды для визуализации
-    }
-    const game = await this.findOne(gameId);
-    
-    if (game.status !== GameStatus.IN_PROGRESS) {
+    if (game.status !== GameStatus.IN_PROGRESS && game.status !== GameStatus.WAITING) {
       throw new BadRequestException('Игра не активна');
     }
 
