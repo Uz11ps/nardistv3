@@ -220,10 +220,8 @@ export default function Game() {
 
     socket.on('dice_rolled', (data: any) => {
       console.log('🎲 Получено dice_rolled:', data)
-      setGameState((prev) => ({
-        ...prev!,
-        dice: Array.isArray(data.dice) ? { die1: data.dice[0], die2: data.dice[1] } : data.dice,
-      }))
+      // Обновляем кубики, но также перезагружаем игру чтобы получить актуальное состояние
+      // Это важно, так как после хода бота может измениться currentPlayer
       loadGame()
     })
 
