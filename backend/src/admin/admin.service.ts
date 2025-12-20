@@ -6,12 +6,17 @@ import { TournamentsService } from '../tournaments/tournaments.service';
 import { AcademyService } from '../academy/academy.service';
 import { SkinsService } from '../skins/skins.service';
 import { GamesService } from '../games/games.service';
+import { QuestsService } from '../quests/quests.service';
+import { ClansService } from '../clans/clans.service';
 import { User } from '../users/user.entity';
 import { Game, GameMode, GameType, GameStatus } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
 import { Tournament } from '../tournaments/tournament.entity';
 import { Article } from '../academy/article.entity';
 import { Skin } from '../skins/skin.entity';
+import { Quest, QuestType, QuestTarget } from '../quests/quest.entity';
+import { Clan } from '../clans/clan.entity';
+import { ClanMember } from '../clans/clan-member.entity';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -30,11 +35,19 @@ export class AdminService {
     private articlesRepository: Repository<Article>,
     @InjectRepository(Skin)
     private skinsRepository: Repository<Skin>,
+    @InjectRepository(Quest)
+    private questsRepository: Repository<Quest>,
+    @InjectRepository(Clan)
+    private clansRepository: Repository<Clan>,
+    @InjectRepository(ClanMember)
+    private clanMembersRepository: Repository<ClanMember>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
     private academyService: AcademyService,
     private skinsService: SkinsService,
     private gamesService: GamesService,
+    private questsService: QuestsService,
+    private clansService: ClansService,
     private configService: ConfigService,
   ) {}
 
@@ -179,6 +192,53 @@ export class AdminService {
 
   async unbanUser(userId: string) {
     return this.usersService.unbanUser(userId);
+  }
+
+  async deleteUser(userId: string) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new Error('Пользователь не найден');
+    }
+
+    // Нельзя удалить админа
+    if (user.isAdmin) {
+      throw new Error('Нельзя удалить администратора');
+    }
+
+    // Удаляем все связанные данные пользователя
+    // Удаляем игры, где пользователь был игроком (каскадное удаление через БД)
+    const userGames = await this.gamesRepository.find({
+      where: [
+        { player1Id: userId },
+        { player2Id: userId },
+      ],
+      select: ['id'],
+    });
+    
+    if (userGames.length > 0) {
+      const gameIds = userGames.map(g => g.id);
+      // Удаляем ходы через QueryBuilder
+      await this.movesRepository
+        .createQueryBuilder()
+        .delete()
+        .where('gameId IN (:...gameIds)', { gameIds })
+        .execute();
+      
+      // Удаляем игры
+      await this.gamesRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IN (:...gameIds)', { gameIds })
+        .execute();
+    }
+
+    // Удаляем членство в кланах
+    await this.clanMembersRepository.delete({ userId });
+
+    // Удаляем самого пользователя
+    await this.usersRepository.remove(user);
+    
+    return { message: 'Пользователь удален', userId };
   }
 
   async sendNotification(data: { userId?: string; message: string; all?: boolean }) {
@@ -360,6 +420,177 @@ export class AdminService {
 
     skin.imageUrl = imageUrl;
     return this.skinsRepository.save(skin);
+  }
+
+  // CRUD для квестов
+  async getAllQuests() {
+    return this.questsRepository.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getQuest(id: string) {
+    const quest = await this.questsRepository.findOne({ where: { id } });
+    if (!quest) {
+      throw new Error('Квест не найден');
+    }
+    return quest;
+  }
+
+  async createQuest(data: {
+    name: string;
+    description?: string;
+    type: QuestType;
+    target: QuestTarget;
+    targetValue: number;
+    rewardNarCoin: number;
+    rewardXP: number;
+    rewardSkin?: any;
+    isPremium: boolean;
+    startDate: Date;
+    endDate: Date;
+  }) {
+    const quest = this.questsRepository.create(data);
+    return this.questsRepository.save(quest);
+  }
+
+  async updateQuest(id: string, data: Partial<{
+    name: string;
+    description: string;
+    type: QuestType;
+    target: QuestTarget;
+    targetValue: number;
+    rewardNarCoin: number;
+    rewardXP: number;
+    rewardSkin: any;
+    isPremium: boolean;
+    startDate: Date;
+    endDate: Date;
+  }>) {
+    const quest = await this.questsRepository.findOne({ where: { id } });
+    if (!quest) {
+      throw new Error('Квест не найден');
+    }
+    Object.assign(quest, data);
+    return this.questsRepository.save(quest);
+  }
+
+  async deleteQuest(id: string) {
+    const quest = await this.questsRepository.findOne({ where: { id } });
+    if (!quest) {
+      throw new Error('Квест не найден');
+    }
+    await this.questsRepository.remove(quest);
+    return { message: 'Квест удален' };
+  }
+
+  // CRUD для кланов
+  async getAllClans() {
+    return this.clansRepository.find({
+      relations: ['members'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getClan(id: string) {
+    const clan = await this.clansRepository.findOne({
+      where: { id },
+      relations: ['members'],
+    });
+    if (!clan) {
+      throw new Error('Клан не найден');
+    }
+    return clan;
+  }
+
+  async updateClan(id: string, data: Partial<{
+    name: string;
+    description: string;
+    level: number;
+    maxMembers: number;
+    treasury: number;
+    weeklyIncome: number;
+    clanLevel: number;
+    districtStrength: number;
+    economy: number;
+    fortLevel: number;
+  }>) {
+    const clan = await this.clansRepository.findOne({ where: { id } });
+    if (!clan) {
+      throw new Error('Клан не найден');
+    }
+    Object.assign(clan, data);
+    return this.clansRepository.save(clan);
+  }
+
+  async deleteClan(id: string) {
+    const clan = await this.clansRepository.findOne({
+      where: { id },
+      relations: ['members'],
+    });
+    if (!clan) {
+      throw new Error('Клан не найден');
+    }
+
+    // Удаляем всех членов клана
+    await this.clanMembersRepository.delete({ clanId: id });
+
+    // Удаляем клан
+    await this.clansRepository.remove(clan);
+    return { message: 'Клан удален' };
+  }
+
+  async removeClanMember(clanId: string, userId: string) {
+    const member = await this.clanMembersRepository.findOne({
+      where: { clanId, userId },
+    });
+    if (!member) {
+      throw new Error('Член клана не найден');
+    }
+
+    await this.clanMembersRepository.remove(member);
+
+    // Обновляем счетчик членов
+    const clan = await this.clansRepository.findOne({ where: { id: clanId } });
+    if (clan) {
+      clan.memberCount = Math.max(0, clan.memberCount - 1);
+      await this.clansRepository.save(clan);
+    }
+
+    return { message: 'Член клана удален' };
+  }
+
+  // Расширенные функции управления пользователями
+  async updateUserBalance(userId: string, narCoin: number, xp?: number) {
+    const user = await this.usersService.findOne(userId);
+    const updateData: any = { narCoin };
+    if (xp !== undefined) {
+      updateData.xp = xp;
+    }
+    return this.usersService.update(userId, updateData);
+  }
+
+  async setUserLevel(userId: string, level: number) {
+    const user = await this.usersService.findOne(userId);
+    user.level = level;
+    return this.usersRepository.save(user);
+  }
+
+  async setUserRole(userId: string, isAdmin: boolean, isTrainer: boolean) {
+    const user = await this.usersService.findOne(userId);
+    user.isAdmin = isAdmin;
+    user.isTrainer = isTrainer;
+    return this.usersRepository.save(user);
+  }
+
+  async resetUserProgress(userId: string) {
+    const user = await this.usersService.findOne(userId);
+    user.xp = BigInt(0);
+    user.level = 1;
+    user.narCoin = BigInt(1000);
+    user.energy = user.maxEnergy;
+    user.lives = user.maxLives;
+    return this.usersRepository.save(user);
   }
 }
 

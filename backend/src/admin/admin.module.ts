@@ -9,16 +9,21 @@ import { TournamentsModule } from '../tournaments/tournaments.module';
 import { AcademyModule } from '../academy/academy.module';
 import { SkinsModule } from '../skins/skins.module';
 import { GamesModule } from '../games/games.module';
+import { QuestsModule } from '../quests/quests.module';
+import { ClansModule } from '../clans/clans.module';
 import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
 import { Tournament } from '../tournaments/tournament.entity';
 import { Article } from '../academy/article.entity';
 import { Skin } from '../skins/skin.entity';
+import { Quest } from '../quests/quest.entity';
+import { Clan } from '../clans/clan.entity';
+import { ClanMember } from '../clans/clan-member.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, Quest, Clan, ClanMember]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -34,6 +39,8 @@ import { Skin } from '../skins/skin.entity';
     AcademyModule,
     SkinsModule,
     GamesModule,
+    QuestsModule,
+    ClansModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

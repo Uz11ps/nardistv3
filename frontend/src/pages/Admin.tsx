@@ -31,10 +31,17 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans'>('stats')
   const [tournaments, setTournaments] = useState<any[]>([])
   const [articles, setArticles] = useState<any[]>([])
   const [cityRewards, setCityRewards] = useState<any>(null)
+  const [skins, setSkins] = useState<any[]>([])
+  const [selectedGame, setSelectedGame] = useState<any>(null)
+  const [gameReplay, setGameReplay] = useState<any>(null)
+  const [replayStep, setReplayStep] = useState(0)
+  const [quests, setQuests] = useState<any[]>([])
+  const [clans, setClans] = useState<any[]>([])
+  const [selectedUser, setSelectedUser] = useState<any>(null)
   
   // Формы создания
   const [newGame, setNewGame] = useState({ player1Id: '', player2Id: '', mode: 'short', type: 'vs_player' })
@@ -79,13 +86,16 @@ export default function Admin() {
 
   const loadStats = async () => {
     try {
-      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes] = await Promise.all([
+      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes] = await Promise.all([
         apiClient.get('/admin/stats'),
         apiClient.get('/admin/users'),
         apiClient.get('/admin/games'),
         apiClient.get('/admin/tournaments').catch(() => ({ data: [] })),
         apiClient.get('/admin/academy').catch(() => ({ data: [] })),
         apiClient.get('/admin/city/rewards').catch(() => ({ data: null })),
+        apiClient.get('/admin/skins').catch(() => ({ data: [] })),
+        apiClient.get('/admin/quests').catch(() => ({ data: [] })),
+        apiClient.get('/admin/clans').catch(() => ({ data: [] })),
       ])
       setStats(statsRes.data)
       setUsers(usersRes.data)
@@ -93,6 +103,9 @@ export default function Admin() {
       setTournaments(tournamentsRes.data || [])
       setArticles(articlesRes.data || [])
       setCityRewards(cityRes.data)
+      setSkins(skinsRes.data || [])
+      setQuests(questsRes.data || [])
+      setClans(clansRes.data || [])
     } catch (error) {
       console.error('Ошибка загрузки данных:', error)
     }
@@ -203,6 +216,24 @@ export default function Admin() {
         >
           Город
         </button>
+        <button
+          className={activeTab === 'skins' ? 'active' : ''}
+          onClick={() => setActiveTab('skins')}
+        >
+          Скины
+        </button>
+        <button
+          className={activeTab === 'quests' ? 'active' : ''}
+          onClick={() => setActiveTab('quests')}
+        >
+          Квесты
+        </button>
+        <button
+          className={activeTab === 'clans' ? 'active' : ''}
+          onClick={() => setActiveTab('clans')}
+        >
+          Кланы
+        </button>
       </div>
 
       <div className="admin-content">
@@ -304,32 +335,174 @@ export default function Admin() {
                         )}
                       </td>
                       <td>
-                        {user.isBanned ? (
-                          <button
-                            onClick={() => {
-                              apiClient.post(`/admin/users/${user.id}/unban`).then(() => loadStats())
-                            }}
-                          >
-                            Разбанить
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              const reason = prompt('Причина бана:')
-                              if (reason) {
-                                apiClient.post(`/admin/users/${user.id}/ban`, { reason }).then(() => loadStats())
-                              }
-                            }}
-                          >
-                            Забанить
-                          </button>
-                        )}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {user.isBanned ? (
+                            <button
+                              onClick={() => {
+                                apiClient.post(`/admin/users/${user.id}/unban`).then(() => loadStats())
+                              }}
+                            >
+                              Разбанить
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const reason = prompt('Причина бана:')
+                                if (reason) {
+                                  apiClient.post(`/admin/users/${user.id}/ban`, { reason }).then(() => loadStats())
+                                }
+                              }}
+                            >
+                              Забанить
+                            </button>
+                          )}
+                          {!user.isAdmin && (
+                            <>
+                              <button
+                                style={{ background: '#dc3545', color: 'white' }}
+                                onClick={() => {
+                                  if (confirm(`Вы уверены, что хотите удалить пользователя ${user.nickname || user.username}? Это действие необратимо!`)) {
+                                    apiClient.delete(`/admin/users/${user.id}`).then(() => {
+                                      alert('Пользователь удален')
+                                      loadStats()
+                                    }).catch((err) => {
+                                      alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                                    })
+                                  }
+                                }}
+                              >
+                                Удалить
+                              </button>
+                              <button
+                                style={{ background: '#17a2b8', color: 'white' }}
+                                onClick={() => {
+                                  setSelectedUser(user)
+                                }}
+                              >
+                                Редактировать
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {selectedUser && (
+              <div style={{ marginTop: '20px', padding: '20px', background: '#2a2a2a', borderRadius: '8px' }}>
+                <h3>Редактирование пользователя: {selectedUser.nickname || selectedUser.username}</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div>
+                    <label>NAR-coin:</label>
+                    <input
+                      type="number"
+                      id="edit-narcoin"
+                      defaultValue={Number(selectedUser.narCoin)}
+                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
+                    />
+                  </div>
+                  <div>
+                    <label>XP:</label>
+                    <input
+                      type="number"
+                      id="edit-xp"
+                      defaultValue={Number(selectedUser.xp)}
+                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
+                    />
+                  </div>
+                  <div>
+                    <label>Уровень:</label>
+                    <input
+                      type="number"
+                      id="edit-level"
+                      defaultValue={selectedUser.level}
+                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
+                    />
+                  </div>
+                  <div>
+                    <label>
+                      <input type="checkbox" id="edit-admin" defaultChecked={selectedUser.isAdmin} />
+                      Администратор
+                    </label>
+                  </div>
+                  <div>
+                    <label>
+                      <input type="checkbox" id="edit-trainer" defaultChecked={selectedUser.isTrainer} />
+                      Тренер
+                    </label>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const narCoin = parseInt((document.getElementById('edit-narcoin') as HTMLInputElement).value)
+                          const xp = parseInt((document.getElementById('edit-xp') as HTMLInputElement).value)
+                          await apiClient.put(`/admin/users/${selectedUser.id}/balance`, { narCoin, xp })
+                          alert('Баланс обновлен')
+                          loadStats()
+                          setSelectedUser(null)
+                        } catch (err: any) {
+                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                        }
+                      }}
+                    >
+                      Сохранить баланс
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const level = parseInt((document.getElementById('edit-level') as HTMLInputElement).value)
+                          await apiClient.put(`/admin/users/${selectedUser.id}/level`, { level })
+                          alert('Уровень обновлен')
+                          loadStats()
+                          setSelectedUser(null)
+                        } catch (err: any) {
+                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                        }
+                      }}
+                    >
+                      Сохранить уровень
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const isAdmin = (document.getElementById('edit-admin') as HTMLInputElement).checked
+                          const isTrainer = (document.getElementById('edit-trainer') as HTMLInputElement).checked
+                          await apiClient.put(`/admin/users/${selectedUser.id}/role`, { isAdmin, isTrainer })
+                          alert('Роли обновлены')
+                          loadStats()
+                          setSelectedUser(null)
+                        } catch (err: any) {
+                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                        }
+                      }}
+                    >
+                      Сохранить роли
+                    </button>
+                    <button
+                      style={{ background: '#ffc107', color: 'black' }}
+                      onClick={async () => {
+                        if (confirm('Сбросить весь прогресс пользователя? (XP, уровень, валюта)')) {
+                          try {
+                            await apiClient.post(`/admin/users/${selectedUser.id}/reset-progress`)
+                            alert('Прогресс сброшен')
+                            loadStats()
+                            setSelectedUser(null)
+                          } catch (err: any) {
+                            alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                          }
+                        }
+                      }}
+                    >
+                      Сбросить прогресс
+                    </button>
+                    <button onClick={() => setSelectedUser(null)}>Отмена</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -362,9 +535,22 @@ export default function Admin() {
                       <td>{game.player2?.nickname || game.player2?.username || 'Бот'}</td>
                       <td>{new Date(game.createdAt).toLocaleString()}</td>
                       <td>
-                        <button onClick={() => {
-                          window.open(`/admin/games/${game.id}`, '_blank')
-                        }}>Детали</button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={async () => {
+                            try {
+                              const gameDetails = await apiClient.get(`/admin/games/${game.id}`)
+                              setSelectedGame(gameDetails.data)
+                              setGameReplay({
+                                game: gameDetails.data,
+                                moves: gameDetails.data.moves || []
+                              })
+                              setReplayStep(0)
+                              setActiveTab('games')
+                            } catch (error: any) {
+                              alert('Ошибка загрузки: ' + (error.response?.data?.message || error.message))
+                            }
+                          }}>Просмотр</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -669,6 +855,387 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'skins' && (
+          <div className="admin-skins">
+            <h3>Управление скинами</h3>
+            <div className="skins-list">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Название</th>
+                    <th>Тема</th>
+                    <th>Редкость</th>
+                    <th>Цена</th>
+                    <th>Вес</th>
+                    <th>Премиум</th>
+                    <th>По умолчанию</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {skins.map((skin) => (
+                    <tr key={skin.id}>
+                      <td>{skin.name}</td>
+                      <td>{skin.theme}</td>
+                      <td>{skin.rarity || 'common'}</td>
+                      <td>{skin.price || 0} NAR</td>
+                      <td>{skin.weight || 1}</td>
+                      <td>{skin.isPremium ? 'Да' : 'Нет'}</td>
+                      <td>{skin.isDefault ? 'Да' : 'Нет'}</td>
+                      <td>
+                        <button onClick={() => {
+                          if (confirm('Удалить скин?')) {
+                            apiClient.delete(`/admin/skins/${skin.id}`).then(() => {
+                              alert('Скин удален')
+                              loadStats()
+                            }).catch((err) => {
+                              alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                            })
+                          }
+                        }}>Удалить</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="create-skin-form" style={{ marginTop: '20px', padding: '20px', background: '#2a2a2a', borderRadius: '8px' }}>
+              <h4>Создать новый скин</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <input type="text" placeholder="Название" id="skin-name" />
+                <input type="text" placeholder="Тема" id="skin-theme" />
+                <input type="number" placeholder="Цена (NAR)" id="skin-price" />
+                <input type="number" placeholder="Вес" id="skin-weight" />
+                <select id="skin-rarity">
+                  <option value="common">Обычный</option>
+                  <option value="rare">Редкий</option>
+                  <option value="epic">Эпический</option>
+                  <option value="legendary">Легендарный</option>
+                </select>
+                <label>
+                  <input type="checkbox" id="skin-premium" /> Премиум
+                </label>
+                <label>
+                  <input type="checkbox" id="skin-default" /> По умолчанию
+                </label>
+                <input type="file" accept="image/*" id="skin-image" />
+                <button onClick={async () => {
+                  const formData = new FormData()
+                  formData.append('name', (document.getElementById('skin-name') as HTMLInputElement).value)
+                  formData.append('theme', (document.getElementById('skin-theme') as HTMLInputElement).value)
+                  formData.append('price', (document.getElementById('skin-price') as HTMLInputElement).value)
+                  formData.append('weight', (document.getElementById('skin-weight') as HTMLInputElement).value)
+                  formData.append('rarity', (document.getElementById('skin-rarity') as HTMLSelectElement).value)
+                  formData.append('isPremium', (document.getElementById('skin-premium') as HTMLInputElement).checked.toString())
+                  formData.append('isDefault', (document.getElementById('skin-default') as HTMLInputElement).checked.toString())
+                  
+                  const fileInput = document.getElementById('skin-image') as HTMLInputElement
+                  if (fileInput.files && fileInput.files[0]) {
+                    formData.append('image', fileInput.files[0])
+                  }
+
+                  try {
+                    await apiClient.post('/admin/skins', formData, {
+                      headers: { 'Content-Type': 'multipart/form-data' }
+                    })
+                    alert('Скин создан!')
+                    loadStats()
+                    // Очистить форму
+                    ;(document.getElementById('skin-name') as HTMLInputElement).value = ''
+                    ;(document.getElementById('skin-theme') as HTMLInputElement).value = ''
+                    ;(document.getElementById('skin-price') as HTMLInputElement).value = ''
+                    ;(document.getElementById('skin-weight') as HTMLInputElement).value = ''
+                    fileInput.value = ''
+                  } catch (error: any) {
+                    alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                  }
+                }}>Создать скин</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'quests' && (
+          <div className="admin-quests">
+            <h3>Управление квестами</h3>
+            <div className="quests-list">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Название</th>
+                    <th>Тип</th>
+                    <th>Цель</th>
+                    <th>Целевое значение</th>
+                    <th>Награда NAR</th>
+                    <th>Награда XP</th>
+                    <th>Премиум</th>
+                    <th>Период</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quests.map((quest) => (
+                    <tr key={quest.id}>
+                      <td>{quest.name}</td>
+                      <td>{quest.type === 'daily' ? 'Ежедневный' : 'Еженедельный'}</td>
+                      <td>{quest.target}</td>
+                      <td>{quest.targetValue}</td>
+                      <td>{Number(quest.rewardNarCoin || 0).toLocaleString()}</td>
+                      <td>{quest.rewardXP || 0}</td>
+                      <td>{quest.isPremium ? 'Да' : 'Нет'}</td>
+                      <td>
+                        {new Date(quest.startDate).toLocaleDateString()} - {new Date(quest.endDate).toLocaleDateString()}
+                      </td>
+                      <td>
+                        <button
+                          style={{ background: '#dc3545', color: 'white' }}
+                          onClick={() => {
+                            if (confirm('Удалить квест?')) {
+                              apiClient.delete(`/admin/quests/${quest.id}`).then(() => {
+                                alert('Квест удален')
+                                loadStats()
+                              }).catch((err) => {
+                                alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                              })
+                            }
+                          }}
+                        >
+                          Удалить
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="create-quest-form" style={{ marginTop: '20px', padding: '20px', background: '#2a2a2a', borderRadius: '8px' }}>
+              <h4>Создать новый квест</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <input type="text" placeholder="Название" id="quest-name" />
+                <textarea placeholder="Описание" id="quest-description" rows={3}></textarea>
+                <select id="quest-type">
+                  <option value="daily">Ежедневный</option>
+                  <option value="weekly">Еженедельный</option>
+                </select>
+                <select id="quest-target">
+                  <option value="play_matches">Играть матчи</option>
+                  <option value="win_streak">Серия побед</option>
+                  <option value="collect_income">Собрать доход</option>
+                  <option value="tournament">Турнир</option>
+                </select>
+                <input type="number" placeholder="Целевое значение" id="quest-target-value" />
+                <input type="number" placeholder="Награда NAR-coin" id="quest-reward-nar" />
+                <input type="number" placeholder="Награда XP" id="quest-reward-xp" />
+                <label>
+                  <input type="checkbox" id="quest-premium" /> Премиум квест
+                </label>
+                <div>
+                  <label>Дата начала:</label>
+                  <input type="datetime-local" id="quest-start-date" />
+                </div>
+                <div>
+                  <label>Дата окончания:</label>
+                  <input type="datetime-local" id="quest-end-date" />
+                </div>
+                <button onClick={async () => {
+                  try {
+                    await apiClient.post('/admin/quests', {
+                      name: (document.getElementById('quest-name') as HTMLInputElement).value,
+                      description: (document.getElementById('quest-description') as HTMLTextAreaElement).value,
+                      type: (document.getElementById('quest-type') as HTMLSelectElement).value,
+                      target: (document.getElementById('quest-target') as HTMLSelectElement).value,
+                      targetValue: parseInt((document.getElementById('quest-target-value') as HTMLInputElement).value),
+                      rewardNarCoin: parseInt((document.getElementById('quest-reward-nar') as HTMLInputElement).value || '0'),
+                      rewardXP: parseInt((document.getElementById('quest-reward-xp') as HTMLInputElement).value || '0'),
+                      isPremium: (document.getElementById('quest-premium') as HTMLInputElement).checked,
+                      startDate: (document.getElementById('quest-start-date') as HTMLInputElement).value,
+                      endDate: (document.getElementById('quest-end-date') as HTMLInputElement).value,
+                    })
+                    alert('Квест создан!')
+                    loadStats()
+                  } catch (error: any) {
+                    alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                  }
+                }}>Создать квест</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'clans' && (
+          <div className="admin-clans">
+            <h3>Управление кланами</h3>
+            <div className="clans-list">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Название</th>
+                    <th>Лидер</th>
+                    <th>Уровень</th>
+                    <th>Участников</th>
+                    <th>Казна</th>
+                    <th>Доход/неделю</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clans.map((clan) => (
+                    <tr key={clan.id}>
+                      <td>{clan.name}</td>
+                      <td>{clan.leaderId?.substring(0, 8) || 'N/A'}...</td>
+                      <td>{clan.level || 1}</td>
+                      <td>{clan.memberCount || 0}/{clan.maxMembers || 10}</td>
+                      <td>{Number(clan.treasury || 0).toLocaleString()}</td>
+                      <td>{Number(clan.weeklyIncome || 0).toLocaleString()}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => {
+                              setSelectedUser({ type: 'clan', ...clan })
+                            }}
+                          >
+                            Редактировать
+                          </button>
+                          <button
+                            style={{ background: '#dc3545', color: 'white' }}
+                            onClick={() => {
+                              if (confirm(`Удалить клан "${clan.name}"? Это удалит клан и всех его участников!`)) {
+                                apiClient.delete(`/admin/clans/${clan.id}`).then(() => {
+                                  alert('Клан удален')
+                                  loadStats()
+                                }).catch((err) => {
+                                  alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                                })
+                              }
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {selectedUser && selectedUser.type === 'clan' && (
+              <div style={{ marginTop: '20px', padding: '20px', background: '#2a2a2a', borderRadius: '8px' }}>
+                <h3>Редактирование клана: {selectedUser.name}</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div>
+                    <label>Уровень:</label>
+                    <input
+                      type="number"
+                      id="edit-clan-level"
+                      defaultValue={selectedUser.level || 1}
+                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
+                    />
+                  </div>
+                  <div>
+                    <label>Макс участников:</label>
+                    <input
+                      type="number"
+                      id="edit-clan-max-members"
+                      defaultValue={selectedUser.maxMembers || 10}
+                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
+                    />
+                  </div>
+                  <div>
+                    <label>Казна:</label>
+                    <input
+                      type="number"
+                      id="edit-clan-treasury"
+                      defaultValue={Number(selectedUser.treasury || 0)}
+                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
+                    />
+                  </div>
+                  <div>
+                    <label>Доход/неделю:</label>
+                    <input
+                      type="number"
+                      id="edit-clan-income"
+                      defaultValue={Number(selectedUser.weeklyIncome || 0)}
+                      style={{ marginLeft: '10px', padding: '5px', width: '150px' }}
+                    />
+                  </div>
+                  <div>
+                    <label>Описание:</label>
+                    <textarea
+                      id="edit-clan-description"
+                      defaultValue={selectedUser.description || ''}
+                      rows={3}
+                      style={{ marginLeft: '10px', padding: '5px', width: '100%' }}
+                    ></textarea>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await apiClient.put(`/admin/clans/${selectedUser.id}`, {
+                            level: parseInt((document.getElementById('edit-clan-level') as HTMLInputElement).value),
+                            maxMembers: parseInt((document.getElementById('edit-clan-max-members') as HTMLInputElement).value),
+                            treasury: parseInt((document.getElementById('edit-clan-treasury') as HTMLInputElement).value),
+                            weeklyIncome: parseInt((document.getElementById('edit-clan-income') as HTMLInputElement).value),
+                            description: (document.getElementById('edit-clan-description') as HTMLTextAreaElement).value,
+                          })
+                          alert('Клан обновлен')
+                          loadStats()
+                          setSelectedUser(null)
+                        } catch (err: any) {
+                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                        }
+                      }}
+                    >
+                      Сохранить
+                    </button>
+                    <button onClick={() => setSelectedUser(null)}>Отмена</button>
+                  </div>
+                  {selectedUser.members && selectedUser.members.length > 0 && (
+                    <div style={{ marginTop: '20px' }}>
+                      <h4>Участники клана:</h4>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>ID пользователя</th>
+                            <th>Роль</th>
+                            <th>Действия</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedUser.members.map((member: any) => (
+                            <tr key={member.id}>
+                              <td>{member.userId?.substring(0, 8)}...</td>
+                              <td>{member.role}</td>
+                              <td>
+                                <button
+                                  style={{ background: '#dc3545', color: 'white' }}
+                                  onClick={() => {
+                                    if (confirm('Удалить участника из клана?')) {
+                                      apiClient.delete(`/admin/clans/${selectedUser.id}/members/${member.userId}`).then(() => {
+                                        alert('Участник удален')
+                                        loadStats()
+                                        setSelectedUser(null)
+                                      }).catch((err) => {
+                                        alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                                      })
+                                    }
+                                  }}
+                                >
+                                  Удалить
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

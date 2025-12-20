@@ -111,6 +111,15 @@ export class AdminController {
     return this.adminService.unbanUser(id);
   }
 
+  @Delete('users/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteUser(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteUser(id);
+  }
+
   @Get('games')
   @UseGuards(JwtAuthGuard)
   async getGames(@CurrentUser() user: any) {
@@ -287,6 +296,135 @@ export class AdminController {
       throw new UnauthorizedException('Недостаточно прав');
     }
     return this.adminService.updateSkinImage(id, body.imageUrl);
+  }
+
+  // CRUD для квестов
+  @Get('quests')
+  @UseGuards(JwtAuthGuard)
+  async getQuests(@CurrentUser() user: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getAllQuests();
+  }
+
+  @Get('quests/:id')
+  @UseGuards(JwtAuthGuard)
+  async getQuest(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getQuest(id);
+  }
+
+  @Post('quests')
+  @UseGuards(JwtAuthGuard)
+  async createQuest(@CurrentUser() user: any, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.createQuest(body);
+  }
+
+  @Put('quests/:id')
+  @UseGuards(JwtAuthGuard)
+  async updateQuest(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateQuest(id, body);
+  }
+
+  @Delete('quests/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteQuest(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteQuest(id);
+  }
+
+  // CRUD для кланов
+  @Get('clans')
+  @UseGuards(JwtAuthGuard)
+  async getClans(@CurrentUser() user: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getAllClans();
+  }
+
+  @Get('clans/:id')
+  @UseGuards(JwtAuthGuard)
+  async getClan(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getClan(id);
+  }
+
+  @Put('clans/:id')
+  @UseGuards(JwtAuthGuard)
+  async updateClan(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateClan(id, body);
+  }
+
+  @Delete('clans/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteClan(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteClan(id);
+  }
+
+  @Delete('clans/:clanId/members/:userId')
+  @UseGuards(JwtAuthGuard)
+  async removeClanMember(@CurrentUser() user: any, @Param('clanId') clanId: string, @Param('userId') userId: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.removeClanMember(clanId, userId);
+  }
+
+  // Расширенное управление пользователями
+  @Put('users/:id/balance')
+  @UseGuards(JwtAuthGuard)
+  async updateUserBalance(@CurrentUser() user: any, @Param('id') userId: string, @Body() body: { narCoin: number; xp?: number }) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateUserBalance(userId, body.narCoin, body.xp);
+  }
+
+  @Put('users/:id/level')
+  @UseGuards(JwtAuthGuard)
+  async setUserLevel(@CurrentUser() user: any, @Param('id') userId: string, @Body() body: { level: number }) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.setUserLevel(userId, body.level);
+  }
+
+  @Put('users/:id/role')
+  @UseGuards(JwtAuthGuard)
+  async setUserRole(@CurrentUser() user: any, @Param('id') userId: string, @Body() body: { isAdmin: boolean; isTrainer: boolean }) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.setUserRole(userId, body.isAdmin, body.isTrainer);
+  }
+
+  @Post('users/:id/reset-progress')
+  @UseGuards(JwtAuthGuard)
+  async resetUserProgress(@CurrentUser() user: any, @Param('id') userId: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.resetUserProgress(userId);
   }
 }
 
