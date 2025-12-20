@@ -194,15 +194,21 @@ export default function Game() {
 
     socket.on('move_made', (data: any) => {
       console.log('🎯 Получено move_made:', data)
+      const diceData = data.gameState?.dice
+      const formattedDice = Array.isArray(diceData) && diceData.length >= 2
+        ? { die1: diceData[0], die2: diceData[1] }
+        : diceData || null
+      
       setGameState({
         points: data.gameState?.points || [],
         bar: data.gameState?.bar || { white: 0, black: 0 },
         bearOff: data.gameState?.bearOff || data.gameState?.borneOff || { white: 0, black: 0 },
         currentPlayer: data.currentPlayer || 0,
-        dice: data.gameState?.dice || null,
+        dice: formattedDice,
         canMove: data.currentPlayer === (data.player1Id === user?.id ? 0 : 1),
       })
       setGameStatus(data.status || 'in_progress')
+      console.log('🔄 Обновляем состояние игры после хода')
       loadGame()
     })
 
