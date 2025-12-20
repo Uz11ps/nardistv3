@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game, GameMode, GameStatus, GameType } from './game.entity';
@@ -9,7 +9,6 @@ import { ProgressService } from '../progress/progress.service';
 import { RatingsService } from '../ratings/ratings.service';
 import { UsersService } from '../users/users.service';
 import { BotService } from '../bot/bot.service';
-import { GamesGateway } from './games.gateway';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -31,9 +30,6 @@ export class GamesService {
     private usersService: UsersService,
     @Inject(forwardRef(() => BotService))
     private botService: BotService,
-    @Optional()
-    @Inject(forwardRef(() => GamesGateway))
-    private gamesGateway?: GamesGateway,
   ) {}
 
   async create(
@@ -299,68 +295,8 @@ export class GamesService {
 
     const savedGame = await this.gamesRepository.save(game);
 
-    // Если следующий игрок - бот, делаем автоматический ход
-    // В играх с ботом player2Id === null означает что бот это player2
-    if (game.type === GameType.VS_BOT && savedGame.status === GameStatus.IN_PROGRESS && savedGame.player2Id === null) {
-      // Если следующий ход бота (currentPlayer === 1 означает что бот ходит)
-      if (savedGame.currentPlayer === 1) {
-        // Бросаем кубики для бота и делаем ход
-        setTimeout(async () => {
-          try {
-            const botGame = await this.findOne(savedGame.id);
-            if (botGame.status === GameStatus.FINISHED) return;
-            
-            // Бросаем кубики для бота (используем player1Id для bypass, but isBotTurn check will allow it)
-            const botDice = await this.rollDice(savedGame.id, botGame.player1Id);
-            
-            // Emit dice rolled event for bot
-            const gameStateAfterDice = await this.getGameState(savedGame.id);
-            if (this.gamesGateway?.server) {
-              this.gamesGateway.server.to(`game:${savedGame.id}`).emit('dice_rolled', { 
-                dice: botDice, 
-                playerId: null // Bot has no player ID
-              });
-              this.gamesGateway.server.to(`game:${savedGame.id}`).emit('game_state', gameStateAfterDice);
-            }
-            
-            // Ждем немного и делаем ход бота
-            setTimeout(async () => {
-              try {
-                const updatedGame = await this.findOne(savedGame.id);
-                if (updatedGame.status === GameStatus.FINISHED) return;
-                
-                const botMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
-                if (botMoves.length > 0) {
-                  // Use player1Id for bot moves (isBotTurn check will allow it)
-                  await this.makeMove(savedGame.id, botGame.player1Id, botMoves);
-                  
-                  // Emit move_made event for bot
-                  const gameStateAfterMove = await this.getGameState(savedGame.id);
-                  if (this.gamesGateway?.server) {
-                    this.gamesGateway.server.to(`game:${savedGame.id}`).emit('move_made', gameStateAfterMove);
-                    
-                    // Check if game finished
-                    const finalGame = await this.findOne(savedGame.id);
-                    if (finalGame.status === GameStatus.FINISHED) {
-                      this.gamesGateway.server.to(`game:${savedGame.id}`).emit('game_finished', {
-                        winnerId: finalGame.winnerId,
-                        player1Score: finalGame.player1Score,
-                        player2Score: finalGame.player2Score,
-                        gameState: gameStateAfterMove,
-                      });
-                    }
-                  }
-                }
-              } catch (error) {
-                this.logger.error(`Bot move error: ${error.message}`, error.stack);
-              }
-            }, 1500);
-          } catch (error) {
-            this.logger.error(`Bot dice roll error: ${error.message}`, error.stack);
-          }
-        }, 1000); // Задержка 1 секунда для визуализации
-      }
-    }
+    // Bot moves are now handled by GamesGateway.handleBotTurnIfNeeded()
+    // This avoids circular dependency issues
 
     return savedGame;
   }

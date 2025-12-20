@@ -105,9 +105,69 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
           player2Score: game.player2Score,
           gameState,
         });
+      } else {
+        // Check if next player is bot and trigger bot move
+        await this.handleBotTurnIfNeeded(data.gameId);
       }
     } catch (error) {
       client.emit('error', { message: error.message });
+    }
+  }
+
+  /**
+   * Handle bot turn if next player is bot
+   */
+  async handleBotTurnIfNeeded(gameId: string): Promise<void> {
+    try {
+      const game = await this.gamesService.findOne(gameId);
+      
+      // Check if it's a bot game and bot's turn
+      if (game.type === 'vs_bot' && game.player2Id === null && game.currentPlayer === 1 && game.status === 'in_progress') {
+        // Roll dice for bot
+        const botDice = await this.gamesService.rollDice(gameId, game.player1Id);
+        const gameStateAfterDice = await this.gamesService.getGameState(gameId);
+        
+        // Emit dice rolled event
+        this.server.to(`game:${gameId}`).emit('dice_rolled', { 
+          dice: botDice, 
+          playerId: null 
+        });
+        this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
+        
+        // Wait and make bot move
+        setTimeout(async () => {
+          try {
+            const updatedGame = await this.gamesService.findOne(gameId);
+            if (updatedGame.status === 'finished') return;
+            
+            const botMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
+            if (botMoves.length > 0) {
+              const botMoveResult = await this.gamesService.makeMove(gameId, game.player1Id, botMoves);
+              const gameStateAfterMove = await this.gamesService.getGameState(gameId);
+              
+              // Emit move_made event
+              this.server.to(`game:${gameId}`).emit('move_made', gameStateAfterMove);
+              
+              // Check if game finished
+              if (botMoveResult.status === 'finished') {
+                this.server.to(`game:${gameId}`).emit('game_finished', {
+                  winnerId: botMoveResult.winnerId,
+                  player1Score: botMoveResult.player1Score,
+                  player2Score: botMoveResult.player2Score,
+                  gameState: gameStateAfterMove,
+                });
+              } else {
+                // Recursively check if bot needs to move again (if it's still bot's turn)
+                await this.handleBotTurnIfNeeded(gameId);
+              }
+            }
+          } catch (error) {
+            console.error(`Bot move error: ${error.message}`, error.stack);
+          }
+        }, 1500);
+      }
+    } catch (error) {
+      console.error(`Bot turn check error: ${error.message}`, error.stack);
     }
   }
 }
