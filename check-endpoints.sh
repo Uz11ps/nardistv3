@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 # Конфигурация
 # Автоматически определяем API URL
 if [ -z "$API_URL" ]; then
-  # Сначала пробуем локальный API
+  # Сначала пробуем локальный API (с префиксом /api)
   if curl -s -f http://localhost:3000/api/health > /dev/null 2>&1; then
     API_URL="http://localhost:3000/api"
     echo -e "${YELLOW}Используется локальный API: $API_URL${NC}"
@@ -18,9 +18,15 @@ if [ -z "$API_URL" ]; then
     API_URL="https://nardist.site/api"
     echo -e "${YELLOW}Используется внешний API: $API_URL${NC}"
   else
-    API_URL="https://nardist.site/api"
-    echo -e "${YELLOW}Используется API по умолчанию: $API_URL${NC}"
-    echo -e "${YELLOW}Если API недоступен, установите переменную: API_URL=http://localhost:3000/api${NC}"
+    # Пробуем без префикса (старая версия)
+    if curl -s -f http://localhost:3000/health > /dev/null 2>&1; then
+      API_URL="http://localhost:3000"
+      echo -e "${YELLOW}Используется локальный API (без префикса): $API_URL${NC}"
+    else
+      API_URL="https://nardist.site/api"
+      echo -e "${YELLOW}Используется API по умолчанию: $API_URL${NC}"
+      echo -e "${YELLOW}Если API недоступен, установите переменную: API_URL=http://localhost:3000/api${NC}"
+    fi
   fi
 fi
 
