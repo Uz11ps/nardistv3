@@ -203,7 +203,8 @@ export default function BackgammonBoard({
         x = boardPadding + (i - 12) * pointWidth
       }
 
-      // Позиция точки: для верхних - сверху, для нижних - снизу (прижаты к краю)
+      // Позиция точки: для верхних - сверху, для нижних - снизу (прижаты к краю доски)
+      // boardHeight - это высота всей доски, поэтому нижний край = boardPadding + boardHeight
       const y = isTop ? boardPadding : boardPadding + boardHeight
 
       // Цвет точки (чередование)

@@ -140,9 +140,23 @@ export default function Game() {
 
   const connectToGame = () => {
     const socket = getSocket()
-    if (!socket || !gameId) return
+    if (!socket || !gameId) {
+      console.error('❌ WebSocket не подключен или нет gameId', { socket: !!socket, gameId })
+      // Попробуем переподключиться
+      const { token } = useAuthStore.getState()
+      if (token) {
+        connectWebSocket(token)
+        setTimeout(() => {
+          const newSocket = getSocket()
+          if (newSocket && gameId) {
+            newSocket.emit('join_game', { gameId })
+          }
+        }, 1000)
+      }
+      return
+    }
 
-    console.log('🔌 Подключаемся к игре через WebSocket:', gameId)
+    console.log('🔌 Подключаемся к игре через WebSocket:', gameId, 'Socket connected:', socket.connected)
 
     // Подключаемся к игре через WebSocket (правильное имя события)
     socket.emit('join_game', { gameId })
