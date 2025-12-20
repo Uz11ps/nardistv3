@@ -276,27 +276,29 @@ export class GamesService {
     
     this.logger.log(`Saving move: gameId=${finalGameId}, playerId=${playerId}, moveNumber=${moveNumber}, moves count=${moves.length}`);
     
-    // Создаем запись напрямую без использования create(), чтобы избежать проблем с relations
-    const moveRecord = new GameMove();
-    moveRecord.gameId = finalGameId; // Устанавливаем напрямую
-    moveRecord.playerId = playerId;
-    moveRecord.moveNumber = moveNumber;
-    moveRecord.dice = dice;
-    moveRecord.moves = moves;
-    moveRecord.gameStateBefore = game.gameState;
-    moveRecord.gameStateAfter = currentState;
-    
+    // Используем insert() вместо save() чтобы избежать проблем с relations
+    // insert() не пытается обновлять relations, только вставляет данные напрямую
     try {
-      const savedMove = await this.movesRepository.save(moveRecord);
-      this.logger.log(`Move saved successfully: moveId=${savedMove.id}, gameId=${savedMove.gameId}`);
+      const insertResult = await this.movesRepository.insert({
+        gameId: finalGameId,
+        playerId: playerId,
+        moveNumber: moveNumber,
+        dice: dice,
+        moves: moves,
+        gameStateBefore: game.gameState,
+        gameStateAfter: currentState,
+      });
+      
+      const moveId = insertResult.identifiers[0].id;
+      this.logger.log(`Move saved successfully: moveId=${moveId}, gameId=${finalGameId}`);
     } catch (error) {
       this.logger.error(`Failed to save move:`, error);
-      this.logger.error(`Move record data before save:`, {
-        gameId: moveRecord.gameId,
-        playerId: moveRecord.playerId,
-        moveNumber: moveRecord.moveNumber,
-        dice: moveRecord.dice,
-        movesCount: moveRecord.moves?.length
+      this.logger.error(`Move record data before insert:`, {
+        gameId: finalGameId,
+        playerId: playerId,
+        moveNumber: moveNumber,
+        dice: dice,
+        movesCount: moves?.length
       });
       throw error;
     }
