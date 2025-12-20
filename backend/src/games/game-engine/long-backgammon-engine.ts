@@ -12,8 +12,11 @@ export interface LongBoardState {
 @Injectable()
 export class LongBackgammonEngine {
   private readonly BOARD_SIZE = 24;
+  // Начальная позиция для длинных нард:
+  // Белые (положительные): 15 фишек на точке 1
+  // Черные (отрицательные): 15 фишек на точке 13
   private readonly INITIAL_BOARD = [
-    0, 0, 0, 0, 0, 0, -5, 0, -3, 0, 0, 0, 5, -5, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0,
+    0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ];
 
   createInitialState(): LongBoardState {
@@ -148,18 +151,35 @@ export class LongBackgammonEngine {
     if (state.bar[1] > 0 && from === -1) {
       state.bar[1]--;
       const enterPoint = die - 1;
-      state.points[enterPoint]--;
+      if (state.points[enterPoint] > 0) {
+        // Если на точке есть фишки белых, их сбиваем на бар
+        state.bar[0] += state.points[enterPoint];
+      }
+      state.points[enterPoint] = -1; // Ставим черную фишку
       return;
     }
 
-    if (to >= this.BOARD_SIZE) {
+    if (to >= this.BOARD_SIZE || to === -1) {
+      // Вынос для черных (to >= 24 или to === -1 для белых)
+      if (state.points[from] < 0) {
+        state.points[from]++;
+        state.borneOff[1]++;
+      }
+      return;
+    }
+
+    // Обычный ход
+    if (state.points[from] < 0) {
       state.points[from]++;
-      state.borneOff[1]++;
-      return;
     }
-
-    state.points[from]++;
-    state.points[to]--;
+    
+    if (state.points[to] > 0) {
+      // Если на точке есть фишки белых, их сбиваем на бар
+      state.bar[0] += state.points[to];
+      state.points[to] = -1;
+    } else {
+      state.points[to]--;
+    }
   }
 
   isGameFinished(state: LongBoardState): boolean {

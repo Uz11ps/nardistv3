@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game, GameMode, GameStatus, GameType } from './game.entity';
@@ -8,10 +8,13 @@ import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
 import { ProgressService } from '../progress/progress.service';
 import { RatingsService } from '../ratings/ratings.service';
 import { UsersService } from '../users/users.service';
+import { BotService } from '../bot/bot.service';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class GamesService {
+  private readonly logger = new Logger(GamesService.name);
+
   constructor(
     @InjectRepository(Game)
     private gamesRepository: Repository<Game>,
@@ -25,6 +28,8 @@ export class GamesService {
     private ratingsService: RatingsService,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
+    @Inject(forwardRef(() => BotService))
+    private botService: BotService,
   ) {}
 
   async create(
@@ -119,6 +124,25 @@ export class GamesService {
   }
 
   async rollDice(gameId: string, playerId: string): Promise<number[]> {
+    const game = await this.findOne(gameId);
+    
+    // Если это бот и игра с ботом, автоматически делаем ход после броска кубиков
+    if (game.type === GameType.VS_BOT && (game.player2Id === null || playerId === game.player2Id)) {
+      // Это бот, делаем автоматический ход
+      setTimeout(async () => {
+        try {
+          const botGame = await this.findOne(gameId);
+          if (botGame.status === GameStatus.FINISHED) return;
+          
+          const botMoves = await this.botService.makeBotMove(botGame.gameState, botGame.mode);
+          if (botMoves.length > 0) {
+            await this.makeMove(gameId, playerId, botMoves);
+          }
+        } catch (error) {
+          this.logger.error(`Bot auto-move error: ${error.message}`, error.stack);
+        }
+      }, 1500); // Задержка 1.5 секунды для визуализации
+    }
     const game = await this.findOne(gameId);
     
     if (game.status !== GameStatus.IN_PROGRESS) {
@@ -256,7 +280,34 @@ export class GamesService {
       await this.onGameFinished(game);
     }
 
-    return this.gamesRepository.save(game);
+    const savedGame = await this.gamesRepository.save(game);
+
+    // Если следующий игрок - бот, делаем автоматический ход
+    if (game.type === GameType.VS_BOT && savedGame.status === GameStatus.IN_PROGRESS) {
+      const nextPlayerId = savedGame.currentPlayer === 0 ? savedGame.player1Id : savedGame.player2Id;
+      const botPlayerId = savedGame.player2Id === null ? savedGame.player1Id : savedGame.player2Id;
+      
+      // Если следующий ход бота
+      if (nextPlayerId === botPlayerId || savedGame.player2Id === null) {
+        // Бросаем кубики для бота
+        setTimeout(async () => {
+          try {
+            const botDice = await this.rollDice(savedGame.id, botPlayerId);
+            const botGame = await this.findOne(savedGame.id);
+            
+            // Делаем ход бота
+            const botMoves = await this.botService.makeBotMove(botGame.gameState, botGame.mode);
+            if (botMoves.length > 0) {
+              await this.makeMove(savedGame.id, botPlayerId, botMoves);
+            }
+          } catch (error) {
+            this.logger.error(`Bot move error: ${error.message}`, error.stack);
+          }
+        }, 1000); // Задержка 1 секунда для визуализации
+      }
+    }
+
+    return savedGame;
   }
 
   /**

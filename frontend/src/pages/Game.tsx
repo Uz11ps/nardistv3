@@ -371,6 +371,7 @@ export default function Game() {
           canMove={gameState.canMove}
           isMyTurn={isMyTurn}
           gameId={gameId}
+          gameMode={gameInfo?.mode || 'long'}
         />
       </div>
 

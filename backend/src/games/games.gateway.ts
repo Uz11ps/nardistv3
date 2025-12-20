@@ -28,6 +28,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private gamesService: GamesService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    @Inject(forwardRef(() => BotService))
+    private botService: BotService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -72,7 +74,30 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.data.userId;
     try {
       const dice = await this.gamesService.rollDice(data.gameId, userId);
+      const gameState = await this.gamesService.getGameState(data.gameId);
       this.server.to(`game:${data.gameId}`).emit('dice_rolled', { dice, playerId: userId });
+      this.server.to(`game:${data.gameId}`).emit('game_state', gameState);
+      
+      // Если это бот и игра с ботом, автоматически делаем ход после броска кубиков
+      const game = await this.gamesService.findOne(data.gameId);
+      if (game.type === 'vs_bot' && game.player2Id === null && game.currentPlayer === 1) {
+        // Это бот, делаем автоматический ход
+        setTimeout(async () => {
+          try {
+            const botGame = await this.gamesService.findOne(data.gameId);
+            if (botGame.status === 'finished') return;
+            
+            const botMoves = await this.botService.makeBotMove(botGame.gameState, botGame.mode);
+            if (botMoves.length > 0) {
+              await this.gamesService.makeMove(data.gameId, botGame.player1Id, botMoves);
+              const updatedState = await this.gamesService.getGameState(data.gameId);
+              this.server.to(`game:${data.gameId}`).emit('move_made', updatedState);
+            }
+          } catch (error) {
+            console.error(`Bot auto-move error: ${error.message}`, error.stack);
+          }
+        }, 1500); // Задержка 1.5 секунды для визуализации
+      }
     } catch (error) {
       client.emit('error', { message: error.message });
     }

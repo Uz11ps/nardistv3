@@ -22,14 +22,17 @@ interface BackgammonBoardProps {
   canMove: boolean
   isMyTurn: boolean
   gameId?: string
+  gameMode?: 'short' | 'long'
   playerSkins?: { board?: any; dice?: any; checkers?: any }
   opponentSkins?: { board?: any; dice?: any; checkers?: any }
 }
 
-// Нумерация точек в нардах (от 1 до 24, где 1 - верхний правый угол для белых)
+// Правильная нумерация точек в нардах для отображения
+// Верхний ряд: точки 24-13 (справа налево)
+// Нижний ряд: точки 12-1 (слева направо)
 const POINT_NUMBERS = [
-  24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, // Верхний ряд (справа налево)
-  12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, // Нижний ряд (слева направо)
+  24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, // Верхний ряд (справа налево) - индексы 0-11
+  12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, // Нижний ряд (слева направо) - индексы 12-23
 ]
 
 export default function BackgammonBoard({
@@ -41,6 +44,7 @@ export default function BackgammonBoard({
   canMove,
   isMyTurn,
   gameId,
+  gameMode = 'long', // По умолчанию длинные нарды
   playerSkins,
   opponentSkins,
 }: BackgammonBoardProps) {
@@ -224,11 +228,15 @@ export default function BackgammonBoard({
       ctx.lineWidth = 2
       ctx.stroke()
 
-      // Номер точки (для отладки, можно убрать)
-      ctx.fillStyle = '#654321'
-      ctx.font = 'bold 10px Arial'
+      // Номер точки - показываем всегда для удобства
+      ctx.fillStyle = '#FFFFFF'
+      ctx.font = 'bold 11px Arial'
       ctx.textAlign = 'center'
-      ctx.fillText(pointNum.toString(), x + pointWidth / 2, isTop ? y + 15 : y - 5)
+      ctx.strokeStyle = '#654321'
+      ctx.lineWidth = 2
+      const numY = isTop ? y + 18 : y - 8
+      ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
+      ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)
 
       // Фишки на точке - используем скин если есть
       const pointValue = points[i] || 0

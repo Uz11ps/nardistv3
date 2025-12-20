@@ -1,10 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BotService } from './bot.service';
+import { GptBotService } from './gpt-bot.service';
 import { GamesModule } from '../games/games.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [GamesModule],
-  providers: [BotService],
+  imports: [forwardRef(() => GamesModule), ConfigModule],
+  providers: [BotService, GptBotService],
   exports: [BotService],
 })
 export class BotModule {}
