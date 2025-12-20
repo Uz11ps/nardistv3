@@ -169,8 +169,11 @@ export default function Game() {
     socket.on('game_state', (data: any) => {
       console.log('📊 Получено game_state:', data)
       const diceData = data.gameState?.dice
+      // Если dice пустой массив или null/undefined, formattedDice должен быть null
       const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
         ? { die1: diceData[0], die2: diceData[1] } 
+        : (Array.isArray(diceData) && diceData.length === 0) || !diceData
+        ? null
         : diceData
       
       setGameState({
@@ -195,9 +198,12 @@ export default function Game() {
     socket.on('move_made', (data: any) => {
       console.log('🎯 Получено move_made:', data)
       const diceData = data.gameState?.dice
-      const formattedDice = Array.isArray(diceData) && diceData.length >= 2
-        ? { die1: diceData[0], die2: diceData[1] }
-        : diceData || null
+      // Если dice пустой массив или null/undefined, formattedDice должен быть null
+      const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
+        ? { die1: diceData[0], die2: diceData[1] } 
+        : (Array.isArray(diceData) && diceData.length === 0) || !diceData
+        ? null
+        : diceData
       
       setGameState({
         points: data.gameState?.points || [],
