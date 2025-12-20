@@ -145,15 +145,26 @@ export default function BackgammonBoard({
         return move.from === selectedPoint
       })
       
-      console.log(`✨ Подсвечиваем ходы для точки ${selectedPoint === -1 ? 'бар' : POINT_NUMBERS[selectedPoint]}:`, filteredMoves)
+      console.log(`✨ Подсвечиваем ходы для точки ${selectedPoint === -1 ? 'бар' : POINT_NUMBERS[selectedPoint]} (индекс ${selectedPoint}):`, filteredMoves)
+      console.log(`📊 Всего возможных ходов: ${possibleMoves.length}, отфильтровано: ${filteredMoves.length}`)
       
       filteredMoves.forEach((move) => {
+        // Добавляем все валидные целевые точки (включая вынос, но для визуализации используем только точки на доске)
         if (move.to >= 0 && move.to < 24) {
           highlights.add(move.to)
+          console.log(`  ✅ Добавлена подсветка для точки ${POINT_NUMBERS[move.to]} (индекс ${move.to})`)
+        } else if (move.to === -1 || move.to < 0) {
+          // Вынос - не добавляем в highlights, но логируем
+          console.log(`  📤 Вынос с точки ${POINT_NUMBERS[move.from]} (индекс ${move.from}) кубиком ${move.die}`)
         }
       })
+      
+      console.log(`🎯 Итоговые подсвеченные точки:`, Array.from(highlights).map(idx => `${POINT_NUMBERS[idx]} (${idx})`).join(', '))
       setHighlightedPoints(highlights)
     } else {
+      if (selectedPoint !== null) {
+        console.log(`⚠️ Нет возможных ходов для точки ${selectedPoint === -1 ? 'бар' : POINT_NUMBERS[selectedPoint]}`)
+      }
       setHighlightedPoints(new Set())
     }
   }, [selectedPoint, possibleMoves])
