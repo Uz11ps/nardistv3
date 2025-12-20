@@ -20,10 +20,17 @@ RUN npm run build
 
 FROM nginx:alpine
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Копируем собранные файлы в временную директорию
+COPY --from=builder /app/dist /tmp/dist
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Скрипт для копирования файлов в volume при запуске
+RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
+    echo 'cp -r /tmp/dist/* /usr/share/nginx/html/ || true' >> /docker-entrypoint.sh && \
+    echo 'exec nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
 
 EXPOSE 5173
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/docker-entrypoint.sh"]
 
