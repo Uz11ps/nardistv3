@@ -340,16 +340,32 @@ export class LongBackgammonEngine {
           } else {
             // Черные двигаются циклически: от большего индекса к меньшему, затем циклически
             // Черные начинают на точке 1 (индекс 23) и двигаются к точке 13 (индекс 11)
-            // Затем циклически: от индекса 11 к индексу 23 (через 0)
-            to = from + die;
-            if (to >= this.BOARD_SIZE) {
-              if (this.canBearOff(currentState, 1)) {
-                to = -1; // Вынос
-              } else {
-                // Циклический переход: если to >= 24, то переходим через точку 1
-                // Например: индекс 23 + 1 = 24, что становится индексом 0
-                to = to % this.BOARD_SIZE;
+            // Затем циклически: от индекса 11 к индексу 23 (через точку 1)
+            let calculatedTo: number;
+            
+            if (from >= 12) {
+              // От точки 1 (индекс 23) к точке 13 (индекс 11) - движение от большего к меньшему
+              calculatedTo = from - die;
+              if (calculatedTo < 12) {
+                // Переход через точку 13 (индекс 11) - циклический переход
+                const overflow = 12 - calculatedTo;
+                calculatedTo = 23 - (overflow - 1);
               }
+            } else {
+              // От точки 13 (индекс 11) к точке 1 (индекс 23) - циклический переход
+              calculatedTo = from - die;
+              if (calculatedTo < 0) {
+                // Переход через точку 1 (индекс 23)
+                const overflow = Math.abs(calculatedTo);
+                calculatedTo = 23 - (overflow - 1);
+              }
+            }
+            
+            // Если calculatedTo указывает на дом (точки 1-6, индексы 0-5), проверяем вынос
+            if (calculatedTo < 6 && this.canBearOff(currentState, 1)) {
+              to = -1; // Вынос
+            } else {
+              to = calculatedTo;
             }
           }
 
