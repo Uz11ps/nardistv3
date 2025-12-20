@@ -235,8 +235,17 @@ export default function Game() {
       })
       setGameStatus(data.status || 'in_progress')
       console.log('🔄 Обновляем состояние игры после хода')
-      // Не вызываем loadGame() здесь, так как это может перезаписать состояние
-      // Вместо этого полагаемся на game_state событие
+      
+      // Если это мой ход и нет кубиков - автоматически бросаем кубики
+      if (canMove && !formattedDice && data.status === 'in_progress') {
+        console.log('🎲 Автоматически бросаем кубики после хода бота')
+        setTimeout(() => {
+          const socket = getSocket()
+          if (socket && socket.connected) {
+            socket.emit('roll_dice', { gameId: data.id })
+          }
+        }, 500)
+      }
     })
 
     socket.on('dice_rolled', (data: any) => {
