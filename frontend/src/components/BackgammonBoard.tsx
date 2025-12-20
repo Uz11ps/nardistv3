@@ -351,8 +351,30 @@ export default function BackgammonBoard({
         }
       }
 
-      // Подсветка при наведении
-      if (hoverPoint === i && isMyTurn && canMove) {
+      // Подсветка возможных ходов (когда точка выбрана)
+      if (highlightedPoints.has(i) && isMyTurn && canMove) {
+        ctx.beginPath()
+        if (isTop) {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        } else {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        }
+        ctx.closePath()
+        
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
+        ctx.fill()
+        
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.9)'
+        ctx.lineWidth = 3
+        ctx.stroke()
+      }
+
+      // Подсветка при наведении (если точка не выбрана)
+      if (hoverPoint === i && selectedPoint === null && isMyTurn && canMove) {
         ctx.beginPath()
         if (isTop) {
           ctx.moveTo(x, y)
@@ -478,7 +500,7 @@ export default function BackgammonBoard({
         })
       }
     }
-  }, [points, bar, bearOff, selectedPoint, hoverPoint, dice, diceRolling, isMyTurn, canMove])
+  }, [points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, isMyTurn, canMove])
 
   const drawDice = (
     ctx: CanvasRenderingContext2D,
