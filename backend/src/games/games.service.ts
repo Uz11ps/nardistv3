@@ -174,18 +174,30 @@ export class GamesService {
     const diceCopy = [...dice];
 
     for (const move of moves) {
-      if (!engine.validateMove(currentState, move.from, move.to, move.die)) {
-        throw new BadRequestException(`Недопустимый ход: с ${move.from} на ${move.to} кубиком ${move.die}`);
+      console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+      const isValid = engine.validateMove(currentState, move.from, move.to, move.die);
+      console.log(`  Результат валидации: ${isValid ? '✅ валиден' : '❌ невалиден'}`);
+      
+      if (!isValid) {
+        console.error(`❌ Ход отклонен: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+        throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       }
       
       // Удаляем использованный кубик
       const dieIndex = diceCopy.indexOf(move.die);
       if (dieIndex === -1) {
+        console.error(`❌ Кубик ${move.die} уже использован или недоступен. Доступные кубики:`, diceCopy);
         throw new BadRequestException(`Кубик ${move.die} уже использован или недоступен`);
       }
       diceCopy.splice(dieIndex, 1);
       
+      console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       currentState = engine.applyMove(currentState, move.from, move.to, move.die);
+      console.log(`  Состояние после хода:`, {
+        points: currentState.points,
+        bar: currentState.bar,
+        borneOff: currentState.borneOff,
+      });
     }
 
     // Проверяем обязательность использования всех кубиков, если это возможно

@@ -227,20 +227,28 @@ export default function Game() {
   }
 
   const handleMove = async (from: number, to: number, die: number) => {
-    if (!gameId || !gameState?.canMove) return
+    if (!gameId || !gameState?.canMove) {
+      console.error('❌ Не могу сделать ход:', { gameId, canMove: gameState?.canMove })
+      return
+    }
 
     const socket = getSocket()
-    if (!socket) return
+    if (!socket) {
+      console.error('❌ WebSocket не подключен')
+      return
+    }
 
     try {
       // Собираем все ходы в массив (пока один ход)
       const moves = [{ from, to, die }]
+      console.log('📤 Отправляем ход на сервер:', { gameId, moves })
       socket.emit('make_move', {
         gameId,
         moves,
       })
+      console.log('✅ Ход отправлен на сервер')
     } catch (error) {
-      console.error('Failed to make move:', error)
+      console.error('❌ Ошибка отправки хода:', error)
     }
   }
 

@@ -760,17 +760,27 @@ export default function BackgammonBoard({
           move => move.from === selectedPoint && move.to === clickedPoint
         )
         
-        console.log('🎲 Делаем ход:', { from: selectedPoint, to: clickedPoint, validMove })
+        console.log('🎲 Делаем ход:', { 
+          from: selectedPoint, 
+          fromPoint: POINT_NUMBERS[selectedPoint],
+          to: clickedPoint, 
+          toPoint: POINT_NUMBERS[clickedPoint],
+          validMove,
+          allPossibleMoves: possibleMoves.filter(m => m.from === selectedPoint)
+        })
         
         if (validMove) {
+          console.log('✅ Ход валиден, отправляем на сервер')
           onMove(selectedPoint, clickedPoint, validMove.die)
           setSelectedPoint(null)
           setHighlightedPoints(new Set())
         } else {
-          console.log('❌ Ход невалиден')
+          console.log('❌ Ход невалиден - не найден в списке возможных ходов')
+          console.log('Доступные ходы с точки', POINT_NUMBERS[selectedPoint], ':', possibleMoves.filter(m => m.from === selectedPoint))
         }
       } else {
         // Отмена выбора или выбор другой точки
+        console.log('🔄 Отмена выбора или выбор другой точки', { selectedPoint, clickedPoint, isHighlighted: highlightedPoints.has(clickedPoint) })
         setSelectedPoint(null)
       }
     }
