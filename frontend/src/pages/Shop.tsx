@@ -132,10 +132,10 @@ export default function Shop() {
 
   const getRarityName = (rarity: string) => {
     const rarityNames: { [key: string]: string } = {
-      common: 'Обычный',
-      rare: 'Редкий',
-      epic: 'Эпический',
-      legendary: 'Легендарный',
+      common: 'Обычная',
+      rare: 'Редкая',
+      epic: 'Эпическая',
+      legendary: 'Легендарная',
     }
     return rarityNames[rarity] || rarity
   }
@@ -191,7 +191,7 @@ export default function Shop() {
                 <Card key={pkg.amount} className="shop-nar-coin-card">
                   <div className="shop-nar-coin-content">
                     <div className="shop-nar-coin-info">
-                      <div className="shop-nar-coin-amount">{pkg.amount.toLocaleString()} NAR</div>
+                      <div className="shop-nar-coin-amount">{pkg.amount.toLocaleString('ru-RU')} NAR</div>
                       <div className="shop-nar-coin-price">Цена: {pkg.price} {pkg.currency}</div>
                       <Button 
                         variant="primary" 
@@ -202,7 +202,7 @@ export default function Shop() {
                       </Button>
                     </div>
                     <div className="shop-nar-coin-icon">
-                      <Icon name="coin" size={64} style={{ filter: 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.6))' }} />
+                      <Icon name="coin" size={80} style={{ filter: 'drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))' }} />
                     </div>
                   </div>
                 </Card>
@@ -253,6 +253,12 @@ export default function Shop() {
                 return (
                   <Card key={skin.id} className="shop-skin-card">
                     <div className="shop-skin-content">
+                      <div className="shop-skin-header">
+                        <div className="shop-skin-name">{skin.name}</div>
+                        <div className={`shop-skin-rarity ${getRarityBadgeClass(skin.rarity)}`}>
+                          {getRarityName(skin.rarity)}
+                        </div>
+                      </div>
                       <div className="shop-skin-image">
                         {skin.imageUrl ? (
                           <img
@@ -268,33 +274,33 @@ export default function Shop() {
                             />
                           </div>
                         )}
-                      </div>
-                      <div className="shop-skin-info">
-                        <div className="shop-skin-name">{skin.name}</div>
-                        <div className={getRarityBadgeClass(skin.rarity)}>
-                          {getRarityName(skin.rarity)}
-                        </div>
                         {!isOwned && skin.price && (
-                          <div className="shop-skin-price">{skin.price.toLocaleString()} NAR</div>
+                          <div className="shop-skin-price-overlay">
+                            {skin.price.toLocaleString('ru-RU')} NAR
+                          </div>
                         )}
                       </div>
-                      {isOwned ? (
-                        <Button
-                          variant="secondary"
-                          className="shop-buy-btn shop-buy-btn-purchased"
-                          disabled
-                        >
-                          Куплено
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="primary"
-                          className="shop-buy-btn"
-                          onClick={() => handleBuySkin(skin.id)}
-                        >
-                          Купить
-                        </Button>
-                      )}
+                      <div className="shop-skin-actions">
+                        {isOwned ? (
+                          <Button
+                            variant="secondary"
+                            className="shop-buy-btn shop-buy-btn-purchased"
+                            fullWidth
+                            disabled
+                          >
+                            Куплено
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="primary"
+                            className="shop-buy-btn"
+                            fullWidth
+                            onClick={() => handleBuySkin(skin.id)}
+                          >
+                            Купить
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 )

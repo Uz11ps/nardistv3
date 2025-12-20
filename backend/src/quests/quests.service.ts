@@ -98,7 +98,26 @@ export class QuestsService {
     }
 
     // Вычисляем время до сброса
-    const resetTime = type === 'daily' ? '24ч' : '7д';
+    let resetTime = '';
+    if (type === 'daily') {
+      // Сброс ежедневных квестов в 00:00 следующего дня
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      const diff = tomorrow.getTime() - now.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      resetTime = `${hours}ч`;
+    } else if (type === 'weekly') {
+      // Сброс недельных квестов в понедельник в 00:00
+      const nextMonday = new Date();
+      const daysUntilMonday = (8 - nextMonday.getDay()) % 7 || 7;
+      nextMonday.setDate(nextMonday.getDate() + daysUntilMonday);
+      nextMonday.setHours(0, 0, 0, 0);
+      const diff = nextMonday.getTime() - now.getTime();
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      resetTime = days > 0 ? `${days}д ${hours}ч` : `${hours}ч`;
+    }
     return { quests: result, resetTime };
   }
 

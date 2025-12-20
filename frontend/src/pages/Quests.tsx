@@ -121,7 +121,7 @@ export default function Quests() {
         </div>
 
         {/* Таймер сброса */}
-        {resetTime && (
+        {activeTab === 'weekly' && resetTime && (
           <div className="quests-reset-time">
             До сброса {formatResetTime(resetTime)}
           </div>
@@ -148,11 +148,10 @@ export default function Quests() {
                     <div className="quest-info">
                       <div className="quest-name">{quest.name}</div>
                       <div className="quest-reward">
-                        Награда: {quest.rewardNarCoin.toLocaleString()} NAR - {quest.rewardXP} XP
+                        Награда: {quest.rewardNarCoin.toLocaleString('ru-RU')} NAR - {quest.rewardXP} XP
                       </div>
                       <div className="quest-progress-section">
                         <div className="quest-progress-header">
-                          <span className="quest-progress-label">Прогресс</span>
                           <span className="quest-progress-value">
                             {quest.progress}/{quest.target}
                           </span>
