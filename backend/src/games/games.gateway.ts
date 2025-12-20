@@ -187,14 +187,16 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 const finalGame = await this.gamesService.findOne(gameId);
                 if (finalGame.status === 'finished') return;
                 
-                // If it's now player's turn (currentPlayer === 0), we don't auto-roll dice
-                // Player should roll dice themselves. But we emit game_state to notify frontend
+                // If it's now player's turn (currentPlayer === 0), emit game_state
+                // Frontend should show button to roll dice
                 if (finalGame.currentPlayer === 0) {
                   this.logger.log(`👤 Player's turn after bot move, emitting game_state for gameId=${gameId}`);
                   const playerGameState = await this.gamesService.getGameState(gameId);
+                  this.logger.log(`📊 Player game state: currentPlayer=${playerGameState.currentPlayer}, dice=${JSON.stringify(playerGameState.gameState?.dice)}`);
                   this.server.to(`game:${gameId}`).emit('game_state', playerGameState);
                 } else {
                   // Recursively check if bot needs to move again (if it's still bot's turn)
+                  this.logger.log(`🤖 Still bot's turn, recursively calling handleBotTurnIfNeeded for gameId=${gameId}`);
                   await this.handleBotTurnIfNeeded(gameId);
                 }
               }
