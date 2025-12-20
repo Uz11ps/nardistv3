@@ -152,7 +152,18 @@ export class GamesService {
     playerId: string,
     moves: Array<{ from: number; to: number; die: number }>,
   ): Promise<Game> {
+    if (!gameId) {
+      this.logger.error(`makeMove called with null/undefined gameId! playerId: ${playerId}`);
+      throw new BadRequestException('ID игры не указан');
+    }
+
     const game = await this.findOne(gameId);
+    
+    // Проверяем что game.id существует сразу после загрузки
+    if (!game || !game.id) {
+      this.logger.error(`Game not found or missing ID! gameId param: ${gameId}, game object:`, game ? JSON.stringify({ id: game.id, status: game.status }, null, 2) : 'null');
+      throw new BadRequestException('Игра не найдена или ID игры отсутствует');
+    }
 
     // Разрешаем ход если игра в ожидании или в процессе
     if (game.status !== GameStatus.IN_PROGRESS && game.status !== GameStatus.WAITING) {
@@ -254,16 +265,19 @@ export class GamesService {
       }
     }
 
-    const moveNumber = game.moves.length + 1;
+    const moveNumber = (game.moves?.length || 0) + 1;
     
-    // Проверяем что game.id существует
-    if (!game.id) {
-      this.logger.error(`Game ID is missing! Game object:`, JSON.stringify(game, null, 2));
+    // Используем gameId параметр напрямую для надежности
+    const finalGameId = game.id || gameId;
+    if (!finalGameId) {
+      this.logger.error(`Game ID is missing! gameId param: ${gameId}, game.id: ${game.id}, game object keys:`, Object.keys(game));
       throw new BadRequestException('Ошибка: ID игры не найден');
     }
     
+    this.logger.log(`Saving move: gameId=${finalGameId}, playerId=${playerId}, moveNumber=${moveNumber}, moves count=${moves.length}`);
+    
     const moveRecord = this.movesRepository.create({
-      gameId: game.id,
+      gameId: finalGameId,
       playerId,
       moveNumber,
       dice: dice,
@@ -271,7 +285,15 @@ export class GamesService {
       gameStateBefore: game.gameState,
       gameStateAfter: currentState,
     });
-    await this.movesRepository.save(moveRecord);
+    
+    try {
+      await this.movesRepository.save(moveRecord);
+      this.logger.log(`Move saved successfully: moveId=${moveRecord.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to save move:`, error);
+      this.logger.error(`Move record data:`, JSON.stringify({ gameId: finalGameId, playerId, moveNumber, dice, moves }, null, 2));
+      throw error;
+    }
 
     currentState.dice = [];
     currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
