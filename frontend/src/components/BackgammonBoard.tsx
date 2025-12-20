@@ -582,8 +582,9 @@ export default function BackgammonBoard({
     const height = canvas.height
     const boardPadding = 20
     const boardWidth = width - boardPadding * 2
+    const boardHeight = height - boardPadding * 2
     const pointWidth = boardWidth / 12
-    const pointHeight = (height - boardPadding * 2) / 2
+    const pointHeight = boardHeight / 2
 
     for (let i = 0; i < 24; i++) {
       const isTop = i < 12
