@@ -12,7 +12,7 @@ import { GamesService } from './games.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { BotService } from '../bot/bot.service';
-import { Inject, forwardRef } from '@nestjs/common';
+import { Inject, forwardRef, Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
@@ -24,6 +24,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
+  private readonly logger = new Logger(GamesGateway.name);
   private connectedUsers = new Map<string, string>();
 
   constructor(
