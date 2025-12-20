@@ -193,3 +193,4 @@ echo "   docker-compose ps               # Статус контейнеров"
 echo "   docker-compose restart          # Перезапуск всех контейнеров"
 
 
+

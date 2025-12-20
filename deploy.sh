@@ -52,6 +52,14 @@ docker-compose logs --tail=20 backend
 echo -e "${YELLOW}📝 Последние логи frontend...${NC}"
 docker-compose logs --tail=20 frontend
 
+echo -e "${YELLOW}🔍 Проверка доступности сервиса...${NC}"
+if curl -s -o /dev/null -w "%{http_code}" https://nardist.site | grep -q "200\|301\|302"; then
+    echo -e "${GREEN}✅ HTTPS работает!${NC}"
+else
+    echo -e "${YELLOW}⚠️  HTTPS может быть еще не настроен или есть проблемы${NC}"
+fi
+
 echo -e "${GREEN}✅ Деплой завершен!${NC}"
 echo -e "${GREEN}Проверьте логи выше на наличие ошибок.${NC}"
-echo -e "${GREEN}Админ-панель доступна по адресу: https://nardist.site/admin${NC}"
+echo -e "${GREEN}🌐 Сайт доступен по адресу: https://nardist.site${NC}"
+echo -e "${GREEN}📝 Админ-панель: https://nardist.site/admin${NC}"

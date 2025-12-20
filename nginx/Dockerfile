@@ -1,13 +1,19 @@
 FROM nginx:alpine
 
-# Копируем конфигурацию
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Копируем конфигурацию (полный конфиг)
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Создаем директории для SSL
-RUN mkdir -p /etc/nginx/ssl
+RUN mkdir -p /etc/nginx/ssl && \
+    mkdir -p /var/log/nginx && \
+    mkdir -p /usr/share/nginx/html
 
-# Копируем SSL сертификаты (если есть)
-# Если сертификаты на хосте, они будут смонтированы через volumes
+# Создаем простые страницы ошибок
+RUN echo '<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1></body></html>' > /usr/share/nginx/html/404.html && \
+    echo '<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Server Error</h1></body></html>' > /usr/share/nginx/html/50x.html
+
+# Проверяем конфигурацию
+RUN nginx -t
 
 EXPOSE 80 443
 
