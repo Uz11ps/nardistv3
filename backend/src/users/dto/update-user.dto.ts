@@ -28,5 +28,9 @@ export class UpdateUserDto {
   @IsBoolean()
   @IsOptional()
   starterKitClaimed?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isGuest?: boolean;
 }
 
