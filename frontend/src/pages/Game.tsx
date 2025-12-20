@@ -297,7 +297,12 @@ export default function Game() {
   }
 
   const handleConfirm = async () => {
-    console.log('🔘 handleConfirm вызван', { gameId, gameStatus, isMyTurn, hasDice: !!gameState?.dice })
+    // Правильно проверяем наличие кубиков: массив должен быть непустым
+    const hasDice = gameState?.dice && (
+      (Array.isArray(gameState.dice) && gameState.dice.length >= 2) ||
+      (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
+    )
+    console.log('🔘 handleConfirm вызван', { gameId, gameStatus, isMyTurn, hasDice, dice: gameState?.dice })
     
     if (!gameId) {
       console.error('❌ Нет gameId')
@@ -346,13 +351,13 @@ export default function Game() {
 
     // Если игра в процессе и есть кубики и это мой ход - ничего не делаем
     // Ход уже сделан через клик по доске, подтверждение не требуется
-    if (gameStatus === 'in_progress' && gameState?.dice && isMyTurn) {
+    if (gameStatus === 'in_progress' && hasDice && isMyTurn) {
       console.log('ℹ️ Ход уже сделан, подтверждение не требуется')
       return
     }
     
     // Если игра в процессе и нет кубиков и это мой ход - бросаем кубики
-    if (gameStatus === 'in_progress' && !gameState?.dice && isMyTurn) {
+    if (gameStatus === 'in_progress' && !hasDice && isMyTurn) {
       console.log('🎲 Бросаем кубики для нового хода')
       try {
         const socket = getSocket()
@@ -367,7 +372,7 @@ export default function Game() {
       return
     }
     
-    console.log('⚠️ Условия не выполнены:', { gameStatus, hasDice: !!gameState?.dice, isMyTurn })
+    console.log('⚠️ Условия не выполнены:', { gameStatus, hasDice, isMyTurn, dice: gameState?.dice })
   }
 
   const startTimers = () => {
@@ -502,7 +507,10 @@ export default function Game() {
       </div>
 
       {/* Кнопка подтверждения */}
-      {(gameStatus === 'waiting' || (gameStatus === 'in_progress' && isMyTurn && gameState.dice)) && (
+      {(gameStatus === 'waiting' || (gameStatus === 'in_progress' && isMyTurn && gameState.dice && (
+        (Array.isArray(gameState.dice) && gameState.dice.length >= 2) ||
+        (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
+      ))) && (
         <div className="game-confirm-section">
           <Button 
             variant="primary" 
