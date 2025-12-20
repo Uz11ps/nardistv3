@@ -65,9 +65,13 @@ export class LongBackgammonEngine {
   }
 
   private validateMovePlayer1(state: LongBoardState, from: number, to: number, die: number): boolean {
+    // Белые начинают на точке 1 (индекс 23) и двигаются к точке 24 (индекс 0)
+    // Движение: от большего индекса к меньшему (23 -> 0)
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      const enterPoint = 24 - die;
+      // Вход с бара: белые входят на точку (24 - die), что соответствует индексу (die - 1)
+      const enterPoint = die - 1;
+      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
       if (state.points[enterPoint] < 0) return false;
       return true;
     }
@@ -75,22 +79,29 @@ export class LongBackgammonEngine {
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] <= 0) return false;
 
+    // Белые двигаются от большего индекса к меньшему: from - die
     const toPoint = from - die;
     if (toPoint < 0) {
+      // Вынос возможен только если все фишки в доме (точки 19-24, индексы 18-23)
       if (this.canBearOff(state, 0)) {
         return true;
       }
       return false;
     }
 
+    // Нельзя ходить на точку с фишками противника
     if (state.points[toPoint] < 0) return false;
     return true;
   }
 
   private validateMovePlayer2(state: LongBoardState, from: number, to: number, die: number): boolean {
+    // Черные начинают на точке 13 (индекс 11) и двигаются к точке 1 (индекс 23), затем к точке 12 (индекс 12)
+    // Движение: от меньшего индекса к большему (11 -> 23), затем циклически к меньшему (23 -> 12)
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
+      // Вход с бара: черные входят на точку die (индекс die - 1)
       const enterPoint = die - 1;
+      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
       if (state.points[enterPoint] > 0) return false;
       return true;
     }
@@ -98,14 +109,19 @@ export class LongBackgammonEngine {
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] >= 0) return false;
 
-    const toPoint = from + die;
+    // Черные двигаются циклически: от меньшего к большему, затем циклически
+    // Если from + die >= 24, то это циклический переход через точку 1
+    let toPoint = from + die;
     if (toPoint >= this.BOARD_SIZE) {
+      // Вынос возможен только если все фишки в доме (точки 1-6, индексы 0-5)
       if (this.canBearOff(state, 1)) {
         return true;
       }
-      return false;
+      // Циклический переход: (from + die) % 24
+      toPoint = toPoint % this.BOARD_SIZE;
     }
 
+    // Нельзя ходить на точку с фишками противника
     if (state.points[toPoint] > 0) return false;
     return true;
   }
@@ -135,11 +151,13 @@ export class LongBackgammonEngine {
   }
 
   private applyMovePlayer1(state: LongBoardState, from: number, to: number, die: number): void {
+    // Белые двигаются от точки 1 (индекс 23) к точке 24 (индекс 0)
     if (state.bar[0] > 0 && from === -1) {
       state.bar[0]--;
-      const enterPoint = 24 - die;
+      // Вход с бара: белые входят на точку (24 - die), что соответствует индексу (die - 1)
+      const enterPoint = die - 1;
       // В длинных нардах нельзя входить на точку с фишками противника
-      if (state.points[enterPoint] < 0) {
+      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE || state.points[enterPoint] < 0) {
         // Возвращаем фишку на бар если нельзя войти
         state.bar[0]++;
         return;
