@@ -647,9 +647,7 @@ export default function Game() {
             onClick={handleConfirm}
             className="game-confirm-btn"
           >
-            {gameStatus === 'waiting' 
-              ? 'Начать игру' 
-              : (gameState.dice && (
+            {(gameState.dice && (
                   (Array.isArray(gameState.dice) && gameState.dice.length >= 2) ||
                   (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
                 ))
