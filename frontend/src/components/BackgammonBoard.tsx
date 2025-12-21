@@ -387,9 +387,6 @@ export default function BackgammonBoard({
         const isDraggingFromThisPoint = dragging && dragFromPoint === i
         const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, maxStack) : Math.min(checkerCount, maxStack)
         
-        // Размер квадратной шашки
-        const checkerSize = checkerRadius * 2
-        
         for (let j = 0; j < checkersToDraw; j++) {
           let checkerY: number
           if (isTop) {
@@ -418,8 +415,8 @@ export default function BackgammonBoard({
           ctx.shadowOffsetX = 2
           ctx.shadowOffsetY = 2
 
-          // Градиент для квадратной фишки
-          const checkerGradient = ctx.createLinearGradient(-checkerRadius, -checkerRadius, checkerRadius, checkerRadius)
+          // Градиент для круглой фишки
+          const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
           if (checkerColor === '#FFFFFF') {
             checkerGradient.addColorStop(0, '#FFFFFF')
             checkerGradient.addColorStop(1, '#E0E0E0')
@@ -428,18 +425,22 @@ export default function BackgammonBoard({
             checkerGradient.addColorStop(1, '#1a1a1a')
           }
 
-          // Квадратная фишка
+          // Круглая фишка
+          ctx.beginPath()
+          ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
           ctx.fillStyle = checkerGradient
-          ctx.fillRect(-checkerRadius, -checkerRadius, checkerSize, checkerSize)
+          ctx.fill()
           
           // Обводка фишки
           ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
           ctx.lineWidth = 2
-          ctx.strokeRect(-checkerRadius, -checkerRadius, checkerSize, checkerSize)
+          ctx.stroke()
 
-          // Блик на фишке (верхний левый угол)
+          // Блик на фишке
+          ctx.beginPath()
+          ctx.arc(-4, -4, 4, 0, Math.PI * 2)
           ctx.fillStyle = checkerColor === '#FFFFFF' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'
-          ctx.fillRect(-checkerRadius, -checkerRadius, checkerSize / 2, checkerSize / 2)
+          ctx.fill()
 
           ctx.restore()
         }
@@ -547,7 +548,6 @@ export default function BackgammonBoard({
       for (let i = 0; i < Math.min(bar.white, 5); i++) {
         const checkerX = barCenterX - 20 + (i % 3) * 15
         const checkerY = barCenterY - 5 + Math.floor(i / 3) * 15
-        const checkerSize = 24
         
         ctx.save()
         ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
@@ -555,15 +555,14 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Квадратная шашка
-        const checkerGradient = ctx.createLinearGradient(checkerX, checkerY, checkerX + checkerSize, checkerY + checkerSize)
-        checkerGradient.addColorStop(0, '#FFFFFF')
-        checkerGradient.addColorStop(1, '#E0E0E0')
-        ctx.fillStyle = checkerGradient
-        ctx.fillRect(checkerX - checkerSize / 2, checkerY - checkerSize / 2, checkerSize, checkerSize)
+        // Круглая шашка
+        ctx.beginPath()
+        ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
+        ctx.fillStyle = '#FFFFFF'
+        ctx.fill()
         ctx.strokeStyle = '#1a1a1a'
         ctx.lineWidth = 2
-        ctx.strokeRect(checkerX - checkerSize / 2, checkerY - checkerSize / 2, checkerSize, checkerSize)
+        ctx.stroke()
         ctx.restore()
       }
       
@@ -578,7 +577,6 @@ export default function BackgammonBoard({
       for (let i = 0; i < Math.min(bar.black, 5); i++) {
         const checkerX = barCenterX - 20 + (i % 3) * 15
         const checkerY = barCenterY + 10 + Math.floor(i / 3) * 15
-        const checkerSize = 24
         
         ctx.save()
         ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
@@ -586,15 +584,14 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Квадратная шашка
-        const checkerGradient = ctx.createLinearGradient(checkerX, checkerY, checkerX + checkerSize, checkerY + checkerSize)
-        checkerGradient.addColorStop(0, '#2a2a2a')
-        checkerGradient.addColorStop(1, '#1a1a1a')
-        ctx.fillStyle = checkerGradient
-        ctx.fillRect(checkerX - checkerSize / 2, checkerY - checkerSize / 2, checkerSize, checkerSize)
+        // Круглая шашка
+        ctx.beginPath()
+        ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
+        ctx.fillStyle = '#1a1a1a'
+        ctx.fill()
         ctx.strokeStyle = '#FFFFFF'
         ctx.lineWidth = 2
-        ctx.strokeRect(checkerX - checkerSize / 2, checkerY - checkerSize / 2, checkerSize, checkerSize)
+        ctx.stroke()
         ctx.restore()
       }
       
@@ -644,13 +641,12 @@ export default function BackgammonBoard({
         })
       }
     }
-    // Рисуем перетаскиваемую шашку (квадратную)
+    // Рисуем перетаскиваемую шашку (круглую)
     if (dragging && dragFromPoint !== null && dragPosition) {
       const pointValue = points[dragFromPoint] || 0
       const isPlayer1Checker = pointValue > 0
       const checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
       const checkerRadius = 14
-      const checkerSize = checkerRadius * 2
 
       ctx.save()
       ctx.translate(dragPosition.x, dragPosition.y)
@@ -661,8 +657,8 @@ export default function BackgammonBoard({
       ctx.shadowOffsetX = 4
       ctx.shadowOffsetY = 4
 
-      // Градиент для квадратной фишки
-      const checkerGradient = ctx.createLinearGradient(-checkerRadius, -checkerRadius, checkerRadius, checkerRadius)
+      // Градиент для круглой фишки
+      const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
       if (checkerColor === '#FFFFFF') {
         checkerGradient.addColorStop(0, '#FFFFFF')
         checkerGradient.addColorStop(1, '#E0E0E0')
@@ -671,18 +667,22 @@ export default function BackgammonBoard({
         checkerGradient.addColorStop(1, '#1a1a1a')
       }
 
-      // Квадратная фишка
+      // Круглая фишка
+      ctx.beginPath()
+      ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
       ctx.fillStyle = checkerGradient
-      ctx.fillRect(-checkerRadius, -checkerRadius, checkerSize, checkerSize)
+      ctx.fill()
       
       // Обводка фишки
       ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
       ctx.lineWidth = 2
-      ctx.strokeRect(-checkerRadius, -checkerRadius, checkerSize, checkerSize)
+      ctx.stroke()
 
-      // Блик (верхний левый угол)
+      // Блик
+      ctx.beginPath()
+      ctx.arc(-4, -4, 4, 0, Math.PI * 2)
       ctx.fillStyle = checkerColor === '#FFFFFF' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'
-      ctx.fillRect(-checkerRadius, -checkerRadius, checkerSize / 2, checkerSize / 2)
+      ctx.fill()
 
       ctx.restore()
     }
