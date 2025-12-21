@@ -96,6 +96,18 @@ export default function Game() {
       setScore({ player1: game.player1Score || 0, player2: game.player2Score || 0 })
       setGameStatus(game.status)
       
+      // Инициализируем таймер при загрузке игры
+      if (game.status === 'in_progress') {
+        // Если игра в процессе, инициализируем таймер на 60 секунд
+        // Точное значение придет через WebSocket событие timer_update
+        setPlayer1Timer(60)
+        setPlayer2Timer(60)
+      } else {
+        // Если игра не началась, таймеры на 0
+        setPlayer1Timer(0)
+        setPlayer2Timer(0)
+      }
+      
       // Для игр с игроками в статусе waiting, сбрасываем готовность
       if (game.status === 'waiting' && game.type === 'vs_player' && !isBotGame) {
         setPlayer1Ready(false)
@@ -257,6 +269,15 @@ export default function Game() {
       const isMyTurnNow = canMove
       const wasMyTurn = gameState?.canMove || false
       
+      // Сбрасываем таймер при смене хода
+      if (data.currentPlayer === 0) {
+        setPlayer1Timer(60)
+        setPlayer2Timer(60)
+      } else {
+        setPlayer2Timer(60)
+        setPlayer1Timer(60)
+      }
+      
       console.log('🎯 Вычислено canMove:', canMove, 'currentPlayer:', data.currentPlayer, 'player1Id === myId:', data.player1Id === user?.id)
       
       setGameState({
@@ -297,10 +318,17 @@ export default function Game() {
     // Слушаем обновления таймера с бэкенда
     socket.on('timer_update', (data: any) => {
       if (data.gameId === gameId) {
+        // Используем timeRemaining (оставшееся время) вместо timeElapsed
+        const timeRemaining = data.timeRemaining !== undefined ? data.timeRemaining : Math.max(0, 60 - (data.timeElapsed || 0))
+        
         if (data.currentPlayer === 0) {
-          setPlayer1Timer(data.timeElapsed || 0)
+          setPlayer1Timer(timeRemaining)
+          // Сбрасываем таймер второго игрока, когда ход переходит к первому
+          setPlayer2Timer(60)
         } else {
-          setPlayer2Timer(data.timeElapsed || 0)
+          setPlayer2Timer(timeRemaining)
+          // Сбрасываем таймер первого игрока, когда ход переходит ко второму
+          setPlayer1Timer(60)
         }
       }
     })

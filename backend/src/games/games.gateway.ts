@@ -75,6 +75,31 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
   }
 
   /**
+   * Отправляет обновление таймера для конкретной игры
+   */
+  private async sendTimerUpdateForGame(gameId: string): Promise<void> {
+    try {
+      const game = await this.gamesService.findOne(gameId);
+      if (!game || game.status !== 'in_progress' || !game.lastMoveAt) {
+        return;
+      }
+
+      const now = new Date();
+      const timeSinceLastMove = Math.floor((now.getTime() - game.lastMoveAt.getTime()) / 1000);
+      
+      // Отправляем таймер всем участникам игры
+      this.server.to(`game:${gameId}`).emit('timer_update', {
+        gameId: game.id,
+        currentPlayer: game.currentPlayer,
+        timeElapsed: timeSinceLastMove,
+        timeRemaining: Math.max(0, 60 - timeSinceLastMove), // 60 секунд на ход
+      });
+    } catch (error) {
+      this.logger.error(`❌ Error sending timer update for game ${gameId}:`, error);
+    }
+  }
+
+  /**
    * Отправляет обновления таймеров для всех активных игр
    */
   private async sendTimerUpdates(): Promise<void> {
@@ -207,6 +232,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       this.server.to(`game:${data.gameId}`).emit('dice_rolled', { dice, playerId: userId });
       this.server.to(`game:${data.gameId}`).emit('game_state', gameState);
       
+      // Отправляем обновление таймера сразу после броска кубиков
+      await this.sendTimerUpdateForGame(data.gameId);
+      
       // Bot auto-move is now handled in games.service.ts after makeMove
       // This ensures proper sequencing and state management
     } catch (error) {
@@ -235,6 +263,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       const gameState = await this.gamesService.getGameState(data.gameId);
       this.logger.log(`✅ Emitting move_made event for gameId=${data.gameId}`);
       this.server.to(`game:${data.gameId}`).emit('move_made', gameState);
+      
+      // Отправляем обновление таймера сразу после хода
+      await this.sendTimerUpdateForGame(data.gameId);
       
       if (game.status === 'finished') {
         this.logger.log(`🏁 Game finished, emitting game_finished for gameId=${data.gameId}`);

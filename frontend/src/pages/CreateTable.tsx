@@ -11,6 +11,7 @@ export default function CreateTable() {
   const navigate = useNavigate()
   const [stake, setStake] = useState<100 | 500 | 1000 | 5000>(100)
   const [mode, setMode] = useState<'long' | 'short'>('short')
+  const [timeLimit, setTimeLimit] = useState<30 | 60>(60)
   const [access, setAccess] = useState<'open' | 'private'>('open')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -74,7 +75,7 @@ export default function CreateTable() {
 
       socket.emit('create_table', {
         mode,
-        timeLimit: 60,
+        timeLimit: timeLimit,
         stake: stake,
       })
     } catch (error: any) {
@@ -126,6 +127,25 @@ export default function CreateTable() {
                 onClick={() => setMode('long')}
               >
                 Длинные
+              </button>
+            </div>
+          </div>
+
+          {/* Время на ход */}
+          <div className="create-table-field">
+            <div className="create-table-label">Время на ход:</div>
+            <div className="toggle-group">
+              <button
+                className={`toggle-btn ${timeLimit === 30 ? 'active' : ''}`}
+                onClick={() => setTimeLimit(30)}
+              >
+                30 сек
+              </button>
+              <button
+                className={`toggle-btn ${timeLimit === 60 ? 'active' : ''}`}
+                onClick={() => setTimeLimit(60)}
+              >
+                60 сек
               </button>
             </div>
           </div>
