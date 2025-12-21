@@ -27,12 +27,17 @@ export default function GameTables() {
     loadTables()
     const socket = getMatchmakingSocket()
     if (socket) {
+      console.log('📡 WebSocket найден, состояние подключения:', socket.connected)
+      
       // Запрашиваем столы всех режимов при подключении
-      socket.emit('get_open_tables', {})
+      if (socket.connected) {
+        console.log('📋 Запрашиваем список столов...')
+        socket.emit('get_open_tables', {})
+      }
       
       // Слушаем обновления списка столов
       const handleOpenTables = (data: any) => {
-        console.log('📋 Получен обновленный список столов:', data)
+        console.log('📋 Получен обновленный список столов:', data?.length || 0, 'столов')
         setTables(data || [])
         setLoading(false)
       }
@@ -40,19 +45,27 @@ export default function GameTables() {
       socket.on('open_tables', handleOpenTables)
       
       // Также запрашиваем список при каждом подключении
-      socket.on('connect', () => {
+      const handleConnect = () => {
         console.log('🔄 WebSocket подключен, запрашиваем список столов')
         socket.emit('get_open_tables', {})
+      }
+      
+      socket.on('connect', handleConnect)
+      
+      // Обработка ошибок подключения
+      socket.on('connect_error', (error) => {
+        console.error('❌ Ошибка подключения WebSocket:', error)
       })
 
     } else {
-      console.warn('⚠️ WebSocket не подключен!')
+      console.warn('⚠️ WebSocket не найден!')
     }
 
     return () => {
       if (socket) {
         socket.off('open_tables')
         socket.off('connect')
+        socket.off('connect_error')
       }
     }
   }, [])
@@ -73,20 +86,31 @@ export default function GameTables() {
     try {
       const socket = getMatchmakingSocket()
       if (!socket) {
+        console.error('❌ WebSocket не подключен!')
         alert('WebSocket не подключен. Перезагрузите страницу.')
         return
       }
 
+      if (!socket.connected) {
+        console.error('❌ WebSocket не подключен (connected=false)!')
+        alert('WebSocket не подключен. Перезагрузите страницу.')
+        return
+      }
+
+      console.log('🪑 Попытка присоединиться к столу:', tableId)
       socket.emit('join_table', { gameId: tableId })
+      
       socket.once('table_joined', (data: any) => {
+        console.log('✅ Успешно присоединились к столу:', data)
         navigate(`/game/${tableId}`)
       })
 
       socket.once('error', (error: any) => {
+        console.error('❌ Ошибка при присоединении к столу:', error)
         alert(error.message || 'Не удалось присоединиться к столу')
       })
     } catch (error) {
-      console.error('Failed to join table:', error)
+      console.error('❌ Ошибка при присоединении к столу:', error)
       alert('Не удалось присоединиться к столу')
     }
   }

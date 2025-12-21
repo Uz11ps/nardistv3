@@ -116,7 +116,10 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
 
   @SubscribeMessage('get_open_tables')
   async handleGetOpenTables(@ConnectedSocket() client: Socket, @MessageBody() data: { mode?: GameMode }) {
+    const userId = client.data.userId;
+    this.logger.log(`📋 Запрос списка столов от пользователя ${userId}, режим: ${data.mode || 'все'}`);
     const tables = await this.matchmakingService.getOpenTables(data.mode);
+    this.logger.log(`📋 Отправка списка столов пользователю ${userId}: найдено ${tables.length} столов`);
     client.emit('open_tables', tables);
   }
 
@@ -162,22 +165,32 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   @SubscribeMessage('join_table')
   async handleJoinTable(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string }) {
     const userId = client.data.userId;
+    this.logger.log(`🪑 Попытка присоединения к столу ${data.gameId} пользователем ${userId}`);
     try {
       await this.matchmakingService.joinTable(data.gameId, userId);
+      this.logger.log(`✅ Пользователь ${userId} успешно присоединился к столу ${data.gameId}`);
       const game = await this.gamesService.findOne(data.gameId);
       
       // Отправляем событие клиенту
       client.emit('table_joined', { gameId: data.gameId, game });
+      this.logger.log(`📤 Событие table_joined отправлено пользователю ${userId}`);
       
       // Уведомляем первого игрока о том, что второй присоединился
       if (game.player1Id && game.player1Id !== userId) {
+        this.logger.log(`📤 Отправка события opponent_joined пользователю ${game.player1Id}`);
         this.server.to(`user:${game.player1Id}`).emit('opponent_joined', { gameId: data.gameId, game });
-        await this.sendTelegramNotification(game.player1Id, `✅ Игрок присоединился к столу! Игра #${data.gameId.substring(0, 8)}`);
+        await this.sendTelegramNotification(game.player1Id, `✅ Игрок присоединился к столу! Игра #${data.gameId.substring(0, 8)}`).catch(err => {
+          this.logger.warn(`Не удалось отправить уведомление в Telegram: ${err.message}`);
+        });
       }
-      await this.sendTelegramNotification(userId, `✅ Вы присоединились к столу! Игра #${data.gameId.substring(0, 8)}`);
+      await this.sendTelegramNotification(userId, `✅ Вы присоединились к столу! Игра #${data.gameId.substring(0, 8)}`).catch(err => {
+        this.logger.warn(`Не удалось отправить уведомление в Telegram: ${err.message}`);
+      });
       
       // Отправляем обновление списка столов всем подписчикам (все режимы)
       const tables = await this.matchmakingService.getOpenTables();
+      const connectedClients = this.server.sockets.sockets.size;
+      this.logger.log(`📤 Обновление списка столов для всех ${connectedClients} клиентов (столов: ${tables.length})`);
       this.server.emit('open_tables', tables);
       
       // Если оба игрока уже в лобби (оба присоединились), устанавливаем таймауты для обоих
@@ -204,7 +217,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
         this.logger.log(`⏱️ Таймауты установлены для обоих игроков стола ${data.gameId}`);
       }
     } catch (error) {
-      this.logger.error(`Ошибка при присоединении к столу: ${error.message}`);
+      this.logger.error(`❌ Ошибка при присоединении к столу ${data.gameId} пользователем ${userId}: ${error.message}`, error.stack);
       client.emit('error', { message: error.message });
     }
   }
