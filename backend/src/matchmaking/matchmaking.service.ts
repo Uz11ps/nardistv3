@@ -199,15 +199,23 @@ export class MatchmakingService {
   }
 
   async getOpenTables(mode?: GameMode): Promise<any[]> {
-    const keys = await this.redis.keys('table:*');
-    const tables: any[] = [];
+    try {
+      const keys = await this.redis.keys('table:*');
+      const tables: any[] = [];
 
-    for (const key of keys) {
-      const tableStr = await this.redis.get(key);
-      if (tableStr) {
-        const table = JSON.parse(tableStr);
-        // Если mode указан, фильтруем по режиму, иначе показываем все
-        if (!mode || table.mode === mode) {
+      for (const key of keys) {
+        try {
+          const tableStr = await this.redis.get(key);
+          if (!tableStr) {
+            continue;
+          }
+
+          const table = JSON.parse(tableStr);
+          // Если mode указан, фильтруем по режиму, иначе показываем все
+          if (mode && table.mode !== mode) {
+            continue;
+          }
+
           const gameId = key.replace('table:', '');
           try {
             const game = await this.gamesService.findOne(gameId);
@@ -227,14 +235,22 @@ export class MatchmakingService {
             }
           } catch (error) {
             // Если игра не найдена, пропускаем этот стол
+            // Возможно, игра была удалена или стол устарел
             continue;
           }
+        } catch (error) {
+          // Ошибка парсинга JSON или получения из Redis - пропускаем
+          continue;
         }
       }
-    }
 
-    const sortedTables = tables.sort((a, b) => b.createdAt - a.createdAt);
-    return sortedTables;
+      const sortedTables = tables.sort((a, b) => b.createdAt - a.createdAt);
+      return sortedTables;
+    } catch (error) {
+      // Критическая ошибка - возвращаем пустой массив
+      console.error('Ошибка при получении списка столов:', error);
+      return [];
+    }
   }
 
   async joinTable(gameId: string, userId: string): Promise<void> {
@@ -244,9 +260,10 @@ export class MatchmakingService {
       throw new Error('Вы уже находитесь в активной игре. Завершите текущую игру перед присоединением к другому столу.');
     }
 
+    // Проверяем существование стола в Redis
     const tableStr = await this.redis.get(`table:${gameId}`);
     if (!tableStr) {
-      throw new Error('Стол не найден');
+      throw new Error('Стол не найден или уже закрыт');
     }
 
     // Проверяем, не заблокирован ли этот игрок от этого стола
@@ -256,21 +273,42 @@ export class MatchmakingService {
       throw new Error('Вы были исключены из этого стола из-за таймаута');
     }
 
+    // Получаем игру из БД
     const game = await this.gamesService.findOne(gameId);
+    
+    // Проверяем статус игры
+    if (game.status !== GameStatus.WAITING) {
+      throw new Error(`Стол недоступен. Статус игры: ${game.status}`);
+    }
+
+    // Проверяем, не занят ли стол
     if (game.player2Id) {
+      if (game.player2Id === userId) {
+        // Игрок уже присоединен к этому столу
+        return;
+      }
       throw new Error('Стол уже занят');
     }
 
+    // Проверяем, что игрок не является создателем стола
+    if (game.player1Id === userId) {
+      throw new Error('Вы не можете присоединиться к своему собственному столу');
+    }
+
+    // Присоединяем игрока
     game.player2Id = userId;
     // Статус остается WAITING до тех пор, пока оба игрока не будут готовы
-    // game.status остается 'waiting'
     await this.gamesService['gamesRepository'].save(game);
     
-    // Создаем запись о готовности игроков в Redis
-    await this.redis.set(`game:${gameId}:ready`, JSON.stringify({
-      player1Ready: false,
-      player2Ready: false,
-    }), 'EX', 3600);
+    // Создаем запись о готовности игроков в Redis (если еще не создана)
+    const readyKey = `game:${gameId}:ready`;
+    const existingReady = await this.redis.get(readyKey);
+    if (!existingReady) {
+      await this.redis.set(readyKey, JSON.stringify({
+        player1Ready: false,
+        player2Ready: false,
+      }), 'EX', 3600);
+    }
     
     // Сохраняем время присоединения игрока для таймаута (60 секунд)
     await this.redis.set(`game:${gameId}:joined:${userId}`, Date.now().toString(), 'EX', 120);

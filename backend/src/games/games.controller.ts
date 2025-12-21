@@ -15,6 +15,12 @@ export class GamesController {
     private readonly matchmakingService: MatchmakingService,
   ) {}
 
+  @Get('tables')
+  @UseGuards(JwtAuthGuard)
+  async getTables() {
+    return this.matchmakingService.getOpenTables();
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getGame(@Param('id') id: string) {
