@@ -805,8 +805,11 @@ export default function BackgammonBoard({
     const canvas = canvasRef.current
     if (!canvas) return null
 
-    const width = canvas.width
-    const height = canvas.height
+    // Используем размеры canvas из стилей (CSS пиксели), а не canvas.width/height (физические пиксели)
+    // Это важно, так как координаты кликов приходят в CSS пикселях
+    const rect = canvas.getBoundingClientRect()
+    const width = rect.width
+    const height = rect.height
     const boardPadding = 20
     const boardWidth = width - boardPadding * 2
     const boardHeight = height - boardPadding * 2
@@ -850,6 +853,7 @@ export default function BackgammonBoard({
     if (!canvas) return
 
     const rect = canvas.getBoundingClientRect()
+    // Координаты уже в CSS пикселях, используем их напрямую
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
