@@ -472,8 +472,9 @@ export class LongBackgammonEngine {
 
     const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
     
-    // Reset movesFromHead for new turn
-    const stateWithReset = { ...state, movesFromHead: 0 };
+    // Use current state with existing movesFromHead value
+    // Don't reset it here - it should reflect moves already made in this turn
+    const stateWithReset = { ...state };
 
     const generateMoves = (
       currentState: LongBoardState,
