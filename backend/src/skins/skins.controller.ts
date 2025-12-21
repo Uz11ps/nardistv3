@@ -30,6 +30,12 @@ export class SkinsController {
     return this.skinsService.getSelectedSkin(user.id);
   }
 
+  @Get('user/:userId/selected')
+  @UseGuards(JwtAuthGuard)
+  async getUserSelectedSkin(@Param('userId') userId: string) {
+    return this.skinsService.getSelectedSkin(userId);
+  }
+
   @Post('select')
   @UseGuards(JwtAuthGuard)
   async selectSkin(@CurrentUser() user: any, @Body('skinId') skinId: string) {

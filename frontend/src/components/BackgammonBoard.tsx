@@ -85,6 +85,7 @@ export default function BackgammonBoard({
   
   // Загружаем текстуры скинов
   useEffect(() => {
+    console.log('Loading textures for playerSkins:', playerSkins)
     const textures: { board?: HTMLImageElement; dice?: HTMLImageElement; checkers?: HTMLImageElement } = {}
     let loadedCount = 0
     const totalTextures = 3
@@ -92,46 +93,65 @@ export default function BackgammonBoard({
     const checkAndDraw = () => {
       loadedCount++
       if (loadedCount === totalTextures) {
+        console.log('All textures loaded:', textures)
         setLoadedTextures(textures)
       }
     }
     
     // Загружаем текстуру доски
     if (playerSkins?.board?.boardTextureUrl) {
+      console.log('Loading board texture:', playerSkins.board.boardTextureUrl)
       const img = new Image()
       img.onload = () => {
+        console.log('Board texture loaded successfully')
         textures.board = img
         checkAndDraw()
       }
-      img.onerror = () => checkAndDraw()
+      img.onerror = (err) => {
+        console.error('Failed to load board texture:', playerSkins.board.boardTextureUrl, err)
+        checkAndDraw()
+      }
       img.src = getImageUrl(playerSkins.board.boardTextureUrl) || ''
     } else {
+      console.log('No board texture URL found in playerSkins.board:', playerSkins?.board)
       checkAndDraw()
     }
     
     // Загружаем текстуру кубиков
     if (playerSkins?.dice?.diceTextureUrl) {
+      console.log('Loading dice texture:', playerSkins.dice.diceTextureUrl)
       const img = new Image()
       img.onload = () => {
+        console.log('Dice texture loaded successfully')
         textures.dice = img
         checkAndDraw()
       }
-      img.onerror = () => checkAndDraw()
+      img.onerror = (err) => {
+        console.error('Failed to load dice texture:', playerSkins.dice.diceTextureUrl, err)
+        checkAndDraw()
+      }
       img.src = getImageUrl(playerSkins.dice.diceTextureUrl) || ''
     } else {
+      console.log('No dice texture URL found in playerSkins.dice:', playerSkins?.dice)
       checkAndDraw()
     }
     
     // Загружаем текстуру шашек
     if (playerSkins?.checkers?.checkersTextureUrl) {
+      console.log('Loading checkers texture:', playerSkins.checkers.checkersTextureUrl)
       const img = new Image()
       img.onload = () => {
+        console.log('Checkers texture loaded successfully')
         textures.checkers = img
         checkAndDraw()
       }
-      img.onerror = () => checkAndDraw()
+      img.onerror = (err) => {
+        console.error('Failed to load checkers texture:', playerSkins.checkers.checkersTextureUrl, err)
+        checkAndDraw()
+      }
       img.src = getImageUrl(playerSkins.checkers.checkersTextureUrl) || ''
     } else {
+      console.log('No checkers texture URL found in playerSkins.checkers:', playerSkins?.checkers)
       checkAndDraw()
     }
   }, [playerSkins])

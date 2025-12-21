@@ -125,39 +125,38 @@ export default function Game() {
 
   const loadPlayerSkins = async (player1Id: string, player2Id: string) => {
     try {
-      const [player1SkinsRes, player2SkinsRes] = await Promise.all([
-        apiClient.get(`/skins/user/${player1Id}`).catch(() => ({ data: [] })),
-        player2Id ? apiClient.get(`/skins/user/${player2Id}`).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
-      ])
+      // Загружаем выбранные скины для текущего игрока
+      const mySkinsRes = await apiClient.get('/skins/selected').catch(() => ({ data: {} }))
+      const mySkins = mySkinsRes.data || {}
       
-      // Выбираем скины с наибольшим весом/рарностью для каждого типа
-      const getBestSkin = (skins: any[], type: string) => {
-        const typeSkins = skins.filter(s => s.type === type)
-        if (typeSkins.length === 0) return null
-        
-        // Сортируем по рарности (legendary > epic > rare > common) и весу
-        const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, common: 1 }
-        return typeSkins.sort((a, b) => {
-          const rarityDiff = (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0)
-          if (rarityDiff !== 0) return rarityDiff
-          return (b.weight || 0) - (a.weight || 0)
-        })[0]
+      // Для соперника загружаем его выбранные скины (если есть player2Id)
+      let opponentSkins = {}
+      if (player2Id && user?.id !== player2Id) {
+        try {
+          const opponentSkinsRes = await apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} }))
+          opponentSkins = opponentSkinsRes.data || {}
+        } catch (err) {
+          console.warn('Could not load opponent skins:', err)
+        }
       }
       
-      const player1Skins = player1SkinsRes.data || []
-      const player2Skins = player2SkinsRes.data || []
+      // Определяем, кто является player1 и player2
+      const isPlayer1 = user?.id === player1Id
       
       setPlayerSkins({
-        player1: {
-          board: getBestSkin(player1Skins, 'board'),
-          dice: getBestSkin(player1Skins, 'dice'),
-          checkers: getBestSkin(player1Skins, 'checkers'),
-        },
-        player2: {
-          board: getBestSkin(player2Skins, 'board'),
-          dice: getBestSkin(player2Skins, 'dice'),
-          checkers: getBestSkin(player2Skins, 'checkers'),
-        },
+        player1: isPlayer1 ? mySkins : opponentSkins,
+        player2: isPlayer1 ? opponentSkins : mySkins,
+      })
+      
+      console.log('Loaded skins:', { 
+        mySkins, 
+        opponentSkins, 
+        isPlayer1, 
+        player1Id, 
+        player2Id, 
+        userId: user?.id,
+        player1Skins: isPlayer1 ? mySkins : opponentSkins,
+        player2Skins: isPlayer1 ? opponentSkins : mySkins
       })
     } catch (error) {
       console.error('Failed to load player skins:', error)
