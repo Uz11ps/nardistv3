@@ -483,7 +483,7 @@ export class GamesService {
   }
 
   /**
-   * Обработка завершения игры: жизни, рейтинги, награды
+   * Обработка завершения игры: жизни, рейтинги, награды (ставки, опыт)
    */
   private async onGameFinished(game: Game): Promise<void> {
     const loserId = game.winnerId === game.player1Id ? game.player2Id : game.player1Id;
@@ -493,12 +493,9 @@ export class GamesService {
       await this.progressService.loseLifeOnDefeat(loserId);
     }
 
-    // Обработка ставок
+    // Обработка ставок - победитель получает обе ставки (с учетом комиссии)
     if (game.stake > 0 && game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
       const stake = Number(game.stake);
-      
-      // Победитель получает обе ставки (с учетом комиссии)
-      const winner = await this.usersService.findOne(game.winnerId);
       const totalPot = stake * 2;
       const baseCommission = Math.floor(totalPot * 0.05); // 5% комиссия
       
@@ -508,9 +505,18 @@ export class GamesService {
       const finalCommission = this.progressService.calculateFeeWithEconomy(baseCommission, economyLevel);
       const winnerReward = totalPot - finalCommission;
 
-      const winnerBalance = Number(winner.narCoin);
+      const winnerBalance = Number(winnerUser.narCoin);
       const newWinnerBalance = winnerBalance + winnerReward;
       await this.usersService.update(game.winnerId, { narCoin: newWinnerBalance });
+    }
+
+    // Начисление опыта: победителю больше, проигравшему меньше
+    if (game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
+      const WINNER_XP = 50; // Опыт за победу
+      const LOSER_XP = 25; // Опыт за участие (проигрыш)
+      
+      await this.progressService.addXP(game.winnerId, WINNER_XP);
+      await this.progressService.addXP(loserId, LOSER_XP);
     }
 
     // Обновление рейтингов (если RatingsService подключен)
@@ -534,40 +540,79 @@ export class GamesService {
    */
   async resignGame(gameId: string, playerId: string): Promise<Game> {
     const game = await this.findOne(gameId);
-    
-    if (game.status === GameStatus.FINISHED) {
-      throw new BadRequestException('Игра уже завершена');
-    }
 
     if (game.player1Id !== playerId && game.player2Id !== playerId) {
       throw new BadRequestException('Вы не участник этой игры');
     }
 
-    // Определяем победителя (противник сдавшегося игрока)
-    const winnerId = game.player1Id === playerId ? game.player2Id : game.player1Id;
-    
-    if (!winnerId) {
-      throw new BadRequestException('Невозможно сдать игру без противника');
+    // Если игра уже завершена - награды уже начислены, просто возвращаем игру
+    if (game.status === GameStatus.FINISHED) {
+      // Награды уже должны быть начислены при первом завершении игры
+      // Повторное начисление не требуется
+      return game;
     }
 
-    // Завершаем игру
-    game.status = GameStatus.FINISHED;
-    game.winnerId = winnerId;
-    
-    if (winnerId === game.player1Id) {
-      game.player1Score = 1;
-      game.player2Score = 0;
-    } else {
-      game.player1Score = 0;
-      game.player2Score = 1;
+    // Если игра в статусе WAITING (ожидание) - отменяем игру, возвращаем ставки
+    if (game.status === GameStatus.WAITING) {
+      // Возвращаем ставки обоим игрокам (если были ставки)
+      if (game.stake > 0 && game.type === GameType.VS_PLAYER) {
+        const stake = Number(game.stake);
+        
+        // Возвращаем ставку player1
+        const player1 = await this.usersService.findOne(game.player1Id);
+        const player1Balance = Number(player1.narCoin);
+        await this.usersService.update(game.player1Id, { narCoin: player1Balance + stake });
+        
+        // Возвращаем ставку player2 (если был)
+        if (game.player2Id) {
+          const player2 = await this.usersService.findOne(game.player2Id);
+          const player2Balance = Number(player2.narCoin);
+          await this.usersService.update(game.player2Id, { narCoin: player2Balance + stake });
+        }
+      }
+
+      // Помечаем игру как ABANDONED (не состоялась)
+      game.status = GameStatus.ABANDONED;
+      const savedGame = await this.gamesRepository.save(game);
+      
+      // Удаляем стол из Redis через MatchmakingService (если есть)
+      // Note: Это требует инжекции MatchmakingService, но для избежания циклической зависимости
+      // можно использовать прямое удаление через Redis или событие
+      
+      return savedGame;
     }
 
-    const savedGame = await this.gamesRepository.save(game);
+    // Если игра в статусе IN_PROGRESS - засчитываем поражение выходящему игроку
+    if (game.status === GameStatus.IN_PROGRESS) {
+      // Определяем победителя (противник сдавшегося игрока)
+      const winnerId = game.player1Id === playerId ? game.player2Id : game.player1Id;
+      
+      if (!winnerId) {
+        throw new BadRequestException('Невозможно сдать игру без противника');
+      }
 
-    // Применяем логику после завершения игры
-    await this.onGameFinished(savedGame);
+      // Завершаем игру с поражением вышедшего
+      game.status = GameStatus.FINISHED;
+      game.winnerId = winnerId;
+      
+      if (winnerId === game.player1Id) {
+        game.player1Score = 1;
+        game.player2Score = 0;
+      } else {
+        game.player1Score = 0;
+        game.player2Score = 1;
+      }
 
-    return savedGame;
+      const savedGame = await this.gamesRepository.save(game);
+
+      // Применяем логику после завершения игры (награды, рейтинги)
+      await this.onGameFinished(savedGame);
+
+      return savedGame;
+    }
+
+    // Если статус неожиданный, просто возвращаем игру
+    return game;
   }
 
   async createBotGame(playerId: string): Promise<Game> {
