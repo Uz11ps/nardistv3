@@ -107,13 +107,14 @@ export class GamesService {
     // Если игра на ставки, проверяем баланс и блокируем средства
     if (stake > 0 && type === GameType.VS_PLAYER) {
       const player1 = await this.usersService.findOne(player1Id);
-      if (Number(player1.narCoin) < stake) {
+      const player1Balance = Number(player1.narCoin);
+      if (player1Balance < stake) {
         throw new BadRequestException('Недостаточно NAR-coin для ставки');
       }
       // Блокируем ставку (вычитаем сразу, вернем проигравшему позже при завершении)
-      const player1Balance = Number(player1.narCoin);
       const newPlayer1Balance = player1Balance - stake;
       await this.usersService.update(player1Id, { narCoin: newPlayer1Balance });
+      this.logger.log(`💰 Ставка списана у игрока ${player1Id}: -${stake} NAR (было ${player1Balance}, стало ${newPlayer1Balance})`);
 
       if (player2Id) {
         const player2 = await this.usersService.findOne(player2Id);
@@ -125,6 +126,7 @@ export class GamesService {
         }
         const newPlayer2Balance = player2Balance - stake;
         await this.usersService.update(player2Id, { narCoin: newPlayer2Balance });
+        this.logger.log(`💰 Ставка списана у игрока ${player2Id}: -${stake} NAR (было ${player2Balance}, стало ${newPlayer2Balance})`);
       }
     }
 

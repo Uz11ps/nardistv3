@@ -307,6 +307,18 @@ export class MatchmakingService {
       throw new Error('Вы не можете присоединиться к своему собственному столу');
     }
 
+    // Если игра на ставки, списываем ставку у второго игрока
+    if (game.stake > 0 && game.type === GameType.VS_PLAYER) {
+      const player2 = await this.usersService.findOne(userId);
+      const player2Balance = Number(player2.narCoin);
+      if (player2Balance < game.stake) {
+        throw new Error('Недостаточно NAR-coin для ставки');
+      }
+      const newPlayer2Balance = player2Balance - Number(game.stake);
+      await this.usersService.update(userId, { narCoin: newPlayer2Balance });
+      this.logger.log(`💰 Ставка списана у игрока ${userId}: -${game.stake} NAR (было ${player2Balance}, стало ${newPlayer2Balance})`);
+    }
+
     // Присоединяем игрока
     game.player2Id = userId;
     // Статус остается WAITING до тех пор, пока оба игрока не будут готовы
