@@ -40,6 +40,19 @@ export default function Admin() {
   const [selectedGame, setSelectedGame] = useState<any>(null)
   const [gameReplay, setGameReplay] = useState<any>(null)
   const [replayStep, setReplayStep] = useState(0)
+  
+  // Функция для загрузки состояния на конкретном шаге
+  const loadReplayStep = async (step: number) => {
+    if (!selectedGame) return
+    try {
+      const response = await apiClient.get(`/history/replay/${selectedGame.id}?step=${step}`)
+      if (response.data) {
+        setGameReplay(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to load replay step:', error)
+    }
+  }
   const [quests, setQuests] = useState<any[]>([])
   const [clans, setClans] = useState<any[]>([])
   const [selectedUser, setSelectedUser] = useState<any>(null)
@@ -1714,6 +1727,283 @@ export default function Admin() {
           </div>
         )}
       </div>
+
+      {/* Модальное окно реплея игры */}
+      {selectedGame && gameReplay && (
+        <div className="replay-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }} onClick={() => {
+          setSelectedGame(null)
+          setGameReplay(null)
+          setReplayStep(0)
+        }}>
+          <div className="replay-modal" style={{
+            background: '#1a1a1a',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            position: 'relative'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, color: '#fff' }}>Реплей игры #{selectedGame.id}</h3>
+              <button style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                padding: '0 8px'
+              }} onClick={() => {
+                setSelectedGame(null)
+                setGameReplay(null)
+                setReplayStep(0)
+              }}>×</button>
+            </div>
+            
+            <div style={{ marginBottom: '16px', color: '#aaa', fontSize: '14px' }}>
+              <div>
+                Ход {replayStep} из {gameReplay.moves?.length || 0}
+                {gameReplay.moves && gameReplay.moves[replayStep - 1] && (
+                  <span style={{ marginLeft: '12px', color: '#ffffff' }}>
+                    {gameReplay.moves[replayStep - 1].player.username}
+                  </span>
+                )}
+              </div>
+              <div>{selectedGame.mode === 'long' ? 'Длинные' : 'Короткие'} нарды</div>
+            </div>
+            
+            <div style={{ marginBottom: '16px' }}>
+              {(() => {
+                // Преобразуем gameState для BackgammonBoard
+                const convertGameStateForBoard = (gameState: any) => {
+                  if (!gameState) return null
+                  
+                  const points = gameState.points || []
+                  const convertedPoints = points.map((pointValue: number, index: number) => {
+                    const checkers: number[] = []
+                    const absValue = Math.abs(pointValue)
+                    
+                    for (let i = 0; i < absValue; i++) {
+                      checkers.push(pointValue > 0 ? 0 : 1)
+                    }
+                    
+                    return {
+                      index,
+                      checkers,
+                      color: pointValue > 0 ? 'white' : pointValue < 0 ? 'black' : null,
+                    }
+                  })
+                  
+                  return {
+                    ...gameState,
+                    points: convertedPoints,
+                    bar: Array.isArray(gameState.bar) 
+                      ? { white: gameState.bar[0] || 0, black: gameState.bar[1] || 0 }
+                      : gameState.bar || { white: 0, black: 0 },
+                    bearOff: Array.isArray(gameState.borneOff)
+                      ? { white: gameState.borneOff[0] || 0, black: gameState.borneOff[1] || 0 }
+                      : gameState.bearOff || { white: 0, black: 0 },
+                  }
+                }
+                
+                const getCurrentGameState = () => {
+                  if (!gameReplay || !gameReplay.game) return null
+                  
+                  if (gameReplay.currentGameState) {
+                    return convertGameStateForBoard(gameReplay.currentGameState)
+                  }
+                  
+                  const { game, moves } = gameReplay
+                  let currentState: any = null
+                  
+                  if (replayStep === 0) {
+                    currentState = game.initialGameState || game.gameState
+                  } else if (moves && moves[replayStep - 1]) {
+                    currentState = moves[replayStep - 1].gameStateAfter
+                  } else {
+                    currentState = game.initialGameState || game.gameState
+                  }
+                  
+                  return convertGameStateForBoard(currentState)
+                }
+                
+                const getCurrentPlayer = () => {
+                  if (!gameReplay || !gameReplay.game) return 0
+                  if (replayStep === 0) return 0
+                  
+                  const { moves } = gameReplay
+                  if (moves && moves[replayStep - 1]) {
+                    const move = moves[replayStep - 1]
+                    return move.player.id === gameReplay.game.player1.id ? 1 : 0
+                  }
+                  
+                  return 0
+                }
+                
+                const getCurrentDice = () => {
+                  if (!gameReplay || !gameReplay.moves || replayStep === 0) return null
+                  
+                  const move = gameReplay.moves[replayStep - 1]
+                  if (move && move.dice && move.dice.length >= 2) {
+                    return { die1: move.dice[0], die2: move.dice[1] }
+                  }
+                  
+                  return null
+                }
+                
+                const currentState = getCurrentGameState()
+                
+                return currentState ? (
+                  <BackgammonBoard
+                    gameState={currentState}
+                    currentPlayer={getCurrentPlayer()}
+                    dice={getCurrentDice()}
+                    onMove={() => {}}
+                    onRollDice={() => {}}
+                    canMove={false}
+                    isMyTurn={false}
+                  />
+                ) : (
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#aaaaaa' }}>
+                    Нет данных для отображения
+                  </div>
+                )
+              })()}
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  background: replayStep === 0 ? '#333' : '#4a4a4a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: replayStep === 0 ? 'not-allowed' : 'pointer'
+                }}
+                onClick={() => {
+                  setReplayStep(0)
+                  loadReplayStep(0)
+                }}
+                disabled={replayStep === 0}
+                title="В начало"
+              >
+                ⏮
+              </button>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  background: replayStep === 0 ? '#333' : '#4a4a4a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: replayStep === 0 ? 'not-allowed' : 'pointer'
+                }}
+                onClick={() => {
+                  const newStep = Math.max(0, replayStep - 1)
+                  setReplayStep(newStep)
+                  loadReplayStep(newStep)
+                }}
+                disabled={replayStep === 0}
+                title="Назад"
+              >
+                ⏪
+              </button>
+              
+              <input
+                type="range"
+                min="0"
+                max={gameReplay.moves?.length || 0}
+                value={replayStep}
+                onChange={(e) => {
+                  const newStep = parseInt(e.target.value, 10)
+                  setReplayStep(newStep)
+                  loadReplayStep(newStep)
+                }}
+                style={{ flex: 1 }}
+              />
+              
+              <button
+                style={{
+                  padding: '8px 16px',
+                  background: replayStep >= (gameReplay.moves?.length || 0) ? '#333' : '#4a4a4a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: replayStep >= (gameReplay.moves?.length || 0) ? 'not-allowed' : 'pointer'
+                }}
+                onClick={() => {
+                  const newStep = Math.min(gameReplay.moves?.length || 0, replayStep + 1)
+                  setReplayStep(newStep)
+                  loadReplayStep(newStep)
+                }}
+                disabled={replayStep >= (gameReplay.moves?.length || 0)}
+                title="Вперед"
+              >
+                ⏩
+              </button>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  background: replayStep >= (gameReplay.moves?.length || 0) ? '#333' : '#4a4a4a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: replayStep >= (gameReplay.moves?.length || 0) ? 'not-allowed' : 'pointer'
+                }}
+                onClick={() => {
+                  const maxStep = gameReplay.moves?.length || 0
+                  setReplayStep(maxStep)
+                  loadReplayStep(maxStep)
+                }}
+                disabled={replayStep >= (gameReplay.moves?.length || 0)}
+                title="В конец"
+              >
+                ⏭
+              </button>
+            </div>
+            
+            {/* Информация о текущем ходе */}
+            {gameReplay.moves && gameReplay.moves[replayStep - 1] && (
+              <div style={{ 
+                padding: '12px', 
+                background: 'rgba(0,0,0,0.3)', 
+                borderRadius: '8px',
+                fontSize: '14px',
+                color: '#fff'
+              }}>
+                <div style={{ marginBottom: '8px' }}>
+                  <strong>Ход {replayStep}:</strong> {gameReplay.moves[replayStep - 1].player.username}
+                </div>
+                <div style={{ marginBottom: '4px' }}>
+                  Кубики: {gameReplay.moves[replayStep - 1].dice?.join(', ') || 'N/A'}
+                </div>
+                {gameReplay.moves[replayStep - 1].moves && gameReplay.moves[replayStep - 1].moves.length > 0 && (
+                  <div>
+                    Ходы: {gameReplay.moves[replayStep - 1].moves.map((m: any, idx: number) => (
+                      <span key={idx}>
+                        {idx > 0 ? ', ' : ''}
+                        {m.from === -1 ? 'бар' : m.from} → {m.to === -1 ? 'вынос' : m.to >= 24 ? 'вынос' : m.to}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

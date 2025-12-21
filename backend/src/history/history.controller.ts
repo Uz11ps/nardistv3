@@ -25,7 +25,8 @@ export class HistoryController {
     const replay = await this.historyService.getGameReplay(gameId, step ? parseInt(step, 10) : undefined);
     const game = replay.game;
     
-    if (game.player1Id !== user.id && game.player2Id !== user.id) {
+    // Админы могут просматривать любую игру
+    if (!user.isAdmin && game.player1Id !== user.id && game.player2Id !== user.id) {
       throw new Error('Нет доступа к этой игре');
     }
     
