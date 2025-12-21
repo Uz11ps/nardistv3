@@ -41,8 +41,23 @@ export class GamesController {
 
   @Get(':id/possible-moves')
   @UseGuards(JwtAuthGuard)
-  async getPossibleMoves(@CurrentUser() user: any, @Param('id') id: string) {
-    return this.gamesService.getPossibleMoves(id, user.id);
+  async getPossibleMoves(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body?: { fromPoint?: number },
+  ) {
+    return this.gamesService.getPossibleMoves(id, user.id, body?.fromPoint);
+  }
+
+  @Get(':id/possible-moves/:fromPoint')
+  @UseGuards(JwtAuthGuard)
+  async getPossibleMovesFromPoint(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Param('fromPoint') fromPoint: string,
+  ) {
+    const from = parseInt(fromPoint, 10);
+    return this.gamesService.getPossibleMoves(id, user.id, from);
   }
 
   @Post(':id/resign')

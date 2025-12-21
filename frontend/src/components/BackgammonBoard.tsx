@@ -100,8 +100,9 @@ export default function BackgammonBoard({
       apiClient
         .get(`/games/${gameId}/possible-moves`)
         .then((response: any) => {
-          const allMoves = response.data || []
-          console.log('✅ Получены возможные ходы:', allMoves)
+          const data = response.data || {}
+          const allMoves = data.allMoves || []
+          console.log('✅ Получены возможные ходы с бэкенда:', allMoves)
           
           // Извлекаем все возможные ходы из всех комбинаций
           const movesSet = new Set<string>()
@@ -117,12 +118,6 @@ export default function BackgammonBoard({
           })
           
           console.log('📋 Уникальные ходы:', uniqueMoves)
-          // Логируем ходы с номерами точек для отладки
-          uniqueMoves.forEach(move => {
-            const fromPoint = move.from === -1 ? 'бар' : POINT_NUMBERS[move.from]
-            const toPoint = move.to === -1 ? 'вынос' : (move.to >= 0 && move.to < 24 ? POINT_NUMBERS[move.to] : `индекс ${move.to}`)
-            console.log(`  📍 Ход: с точки ${fromPoint} (индекс ${move.from}) на точку ${toPoint} (индекс ${move.to}) кубиком ${move.die}`)
-          })
           setPossibleMoves(uniqueMoves)
         })
         .catch((error) => {
@@ -135,6 +130,35 @@ export default function BackgammonBoard({
       setSelectedPoint(null)
     }
   }, [gameId, diceArray.join(','), isMyTurn, canMove, gameState?.currentPlayer])
+
+  // Загружаем возможные ходы с конкретной точки при выборе точки
+  useEffect(() => {
+    if (gameId && selectedPoint !== null && diceArray.length > 0 && isMyTurn && canMove) {
+      console.log(`🔄 Загружаем возможные ходы с точки ${selectedPoint} для игры`, gameId)
+      apiClient
+        .get(`/games/${gameId}/possible-moves/${selectedPoint}`)
+        .then((response: any) => {
+          const data = response.data || {}
+          const movesFromPoint = data.movesFromPoint || []
+          console.log(`✅ Получены возможные ходы с точки ${selectedPoint}:`, movesFromPoint)
+          
+          // Подсвечиваем точки, куда можно сделать ход
+          const highlights = new Set<number>()
+          movesFromPoint.forEach((move: any) => {
+            if (move.to >= 0 && move.to < 24) {
+              highlights.add(move.to)
+            }
+          })
+          setHighlightedPoints(highlights)
+        })
+        .catch((error) => {
+          console.error(`❌ Ошибка загрузки возможных ходов с точки ${selectedPoint}:`, error)
+          setHighlightedPoints(new Set())
+        })
+    } else if (selectedPoint === null) {
+      setHighlightedPoints(new Set())
+    }
+  }, [gameId, selectedPoint, diceArray.join(','), isMyTurn, canMove])
 
   // При выборе точки подсвечиваем возможные ходы
   useEffect(() => {

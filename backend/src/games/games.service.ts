@@ -481,7 +481,14 @@ export class GamesService {
   /**
    * Получить все возможные ходы для текущей позиции
    */
-  async getPossibleMoves(gameId: string, playerId: string): Promise<Array<Array<{ from: number; to: number; die: number }>>> {
+  async getPossibleMoves(
+    gameId: string,
+    playerId: string,
+    fromPoint?: number,
+  ): Promise<{
+    allMoves: Array<Array<{ from: number; to: number; die: number }>>;
+    movesFromPoint?: Array<{ from: number; to: number; die: number }>;
+  }> {
     const game = await this.findOne(gameId);
 
     if (game.status !== GameStatus.IN_PROGRESS && game.status !== GameStatus.WAITING) {
@@ -494,18 +501,38 @@ export class GamesService {
     }
 
     if (!game.gameState.dice || game.gameState.dice.length === 0) {
-      return [];
+      return { allMoves: [] };
     }
 
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     
-    // getAllValidMoves доступен только для BackgammonEngine
+    // Получаем все возможные комбинации ходов
+    let allMoves: Array<Array<{ from: number; to: number; die: number }>> = [];
     if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
-      return engine.getAllValidMoves(game.gameState, game.gameState.dice);
+      allMoves = engine.getAllValidMoves(game.gameState, game.gameState.dice);
     }
     
-    // Для LongBackgammonEngine возвращаем пустой массив (можно будет реализовать позже)
-    return [];
+    // Если указана точка, фильтруем ходы для этой точки
+    let movesFromPoint: Array<{ from: number; to: number; die: number }> | undefined;
+    if (fromPoint !== undefined) {
+      const movesSet = new Set<string>();
+      allMoves.forEach((moveSeq) => {
+        moveSeq.forEach((move) => {
+          if (move.from === fromPoint) {
+            movesSet.add(`${move.from}-${move.to}-${move.die}`);
+          }
+        });
+      });
+      movesFromPoint = Array.from(movesSet).map((key) => {
+        const [from, to, die] = key.split('-').map(Number);
+        return { from, to, die };
+      });
+    }
+    
+    return {
+      allMoves,
+      ...(movesFromPoint && { movesFromPoint }),
+    };
   }
 
   /**
