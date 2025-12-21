@@ -201,6 +201,9 @@ export default function Game() {
         : diceData
       
       const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
+      const isMyTurnNow = canMove
+      const wasMyTurn = gameState?.canMove || false
+      
       console.log('📊 Вычислено canMove:', canMove, 'currentPlayer:', data.currentPlayer, 'player1Id === myId:', data.player1Id === user?.id)
       
       setGameState({
@@ -214,6 +217,17 @@ export default function Game() {
       const newStatus = data.status || 'waiting'
       setGameStatus(newStatus)
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+      
+      // Автоматически бросаем кубики когда начинается ход игрока и нет кубиков
+      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && !isBotGame) {
+        console.log('🎲 Автоматически бросаем кубики - начался мой ход')
+        setTimeout(() => {
+          const socket = getSocket()
+          if (socket) {
+            socket.emit('roll_dice', { gameId })
+          }
+        }, 500)
+      }
       
       // Если статус изменился на in_progress, обновляем игру
       if (newStatus === 'in_progress') {
@@ -240,6 +254,9 @@ export default function Game() {
         : diceData
       
       const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
+      const isMyTurnNow = canMove
+      const wasMyTurn = gameState?.canMove || false
+      
       console.log('🎯 Вычислено canMove:', canMove, 'currentPlayer:', data.currentPlayer, 'player1Id === myId:', data.player1Id === user?.id)
       
       setGameState({
@@ -252,6 +269,17 @@ export default function Game() {
       })
       setGameStatus(data.status || 'in_progress')
       console.log('🔄 Обновляем состояние игры после хода')
+      
+      // Автоматически бросаем кубики когда начинается ход игрока и нет кубиков
+      if (data.status === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && !isBotGame) {
+        console.log('🎲 Автоматически бросаем кубики - начался мой ход после хода соперника')
+        setTimeout(() => {
+          const socket = getSocket()
+          if (socket) {
+            socket.emit('roll_dice', { gameId })
+          }
+        }, 500)
+      }
     })
 
     socket.on('dice_rolled', (data: any) => {
@@ -638,8 +666,11 @@ export default function Game() {
         </div>
       )}
 
-      {/* Кнопка броска кубиков для игр в процессе */}
-      {(gameStatus === 'in_progress' && isMyTurn) && (
+      {/* Кнопка подтверждения хода (кубики бросаются автоматически) */}
+      {(gameStatus === 'in_progress' && isMyTurn && gameState.dice && (
+        (Array.isArray(gameState.dice) && gameState.dice.length >= 2) ||
+        (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
+      )) && (
         <div className="game-confirm-section">
           <Button 
             variant="primary" 
@@ -647,12 +678,7 @@ export default function Game() {
             onClick={handleConfirm}
             className="game-confirm-btn"
           >
-            {(gameState.dice && (
-                  (Array.isArray(gameState.dice) && gameState.dice.length >= 2) ||
-                  (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
-                ))
-              ? 'Подтвердить ход'
-              : 'Бросить кубики'}
+            Подтвердить ход
           </Button>
         </div>
       )}
@@ -673,6 +699,11 @@ export default function Game() {
             gameId={gameId}
             gameMode={gameInfo?.mode || 'long'}
             diceAnimating={diceAnimating}
+            myPlayerId={user?.id}
+            player1Id={gameInfo?.player1Id}
+            player2Id={gameInfo?.player2Id}
+            player1Name={gameInfo?.player1?.nickname || gameInfo?.player1?.username}
+            player2Name={gameInfo?.player2?.nickname || gameInfo?.player2?.username || 'Бот'}
           />
         </div>
       ) : null}

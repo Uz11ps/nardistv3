@@ -49,6 +49,11 @@ export default function BackgammonBoard({
   playerSkins,
   opponentSkins,
   diceAnimating = false,
+  myPlayerId,
+  player1Id,
+  player2Id,
+  player1Name,
+  player2Name,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
@@ -60,7 +65,11 @@ export default function BackgammonBoard({
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const animationFrameRef = useRef<number>()
 
-  // gameState.points - это массив чисел, где положительное число = белые шашки, отрицательное = черные
+  // Определяем, кто я (player1 или player2) для визуального отображения
+  const isPlayer1 = myPlayerId === player1Id
+  const myPlayerIndex = isPlayer1 ? 0 : 1
+
+  // gameState.points - это массив чисел, где положительное число = белые шашки (player1), отрицательное = черные (player2)
   const pointsRaw = gameState?.points || []
   const points: number[] = Array.isArray(pointsRaw)
     ? pointsRaw.map((p: any) => {
@@ -776,15 +785,16 @@ export default function BackgammonBoard({
 
     if (selectedPoint === null) {
       // Выбираем точку или бар
-      const hasBarCheckers = (currentPlayer === 0 && bar.white > 0) || (currentPlayer === 1 && bar.black > 0)
+      const hasBarCheckers = (myPlayerIndex === 0 && bar.white > 0) || (myPlayerIndex === 1 && bar.black > 0)
       
       // Проверяем клик по бару (обрабатывается отдельно, но для простоты считаем что бар = -1)
       // Сначала пробуем выбрать точку с шашкой
       if (clickedPoint >= 0 && clickedPoint < 24) {
         const pointValue = points[clickedPoint] || 0
         if (pointValue !== 0) {
-          const checkerCount = currentPlayer === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
-          const isMyChecker = currentPlayer === 0 ? pointValue > 0 : pointValue < 0
+          // Определяем, мои ли это шашки: player1 = положительные, player2 = отрицательные
+          const checkerCount = myPlayerIndex === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
+          const isMyChecker = myPlayerIndex === 0 ? pointValue > 0 : pointValue < 0
           if (isMyChecker && checkerCount > 0) {
             // Проверяем, есть ли возможные ходы с этой точки
             const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
@@ -886,6 +896,33 @@ export default function BackgammonBoard({
 
   return (
     <div className="backgammon-board-container">
+      {/* Отображение никнеймов игроков */}
+      {(player1Name || player2Name) && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          padding: '8px 16px',
+          background: 'rgba(0,0,0,0.3)',
+          borderRadius: '8px 8px 0 0',
+          fontSize: '14px',
+          color: '#fff'
+        }}>
+          <div style={{ fontWeight: 'bold', color: isPlayer1 ? '#fff' : '#888' }}>
+            {player1Name || 'Игрок 1'}
+            <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
+              ⬜
+            </span>
+            {isPlayer1 && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#4CAF50' }}>(Вы)</span>}
+          </div>
+          <div style={{ fontWeight: 'bold', color: !isPlayer1 ? '#fff' : '#888' }}>
+            {player2Name || 'Игрок 2'}
+            <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
+              ⬛
+            </span>
+            {!isPlayer1 && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#4CAF50' }}>(Вы)</span>}
+          </div>
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         onClick={handleCanvasClick}
@@ -893,11 +930,6 @@ export default function BackgammonBoard({
         className="backgammon-board"
         style={{ cursor: 'pointer' }}
       />
-      {!dice && isMyTurn && (
-        <button className="roll-dice-button" onClick={handleRollDice} disabled={animating}>
-          {animating ? 'Бросаю...' : 'Бросить кубики'}
-        </button>
-      )}
       {selectedPoint !== null && (
         <div className="selected-point-indicator">
           Выбрана точка {POINT_NUMBERS[selectedPoint]}
