@@ -22,6 +22,7 @@ import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AdminService {
@@ -57,6 +58,7 @@ export class AdminService {
     private clansService: ClansService,
     private subscriptionService: SubscriptionService,
     private configService: ConfigService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async getStats() {
@@ -251,30 +253,49 @@ export class AdminService {
 
   async sendNotification(data: { userId?: string; message: string; all?: boolean }) {
     const botToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
-    if (!botToken) {
-      throw new Error('TELEGRAM_BOT_TOKEN не настроен');
-    }
+    const title = 'Уведомление от администратора';
+    const message = data.message;
+    const type = 'info' as const;
 
     if (data.all) {
       // Отправить всем пользователям
       const users = await this.usersRepository.find({
         where: { isBanned: false },
-        select: ['telegramId'],
+        select: ['id', 'telegramId'],
       });
 
+      const userIds = users.map(u => u.id);
+      
+      // Сохраняем уведомления в БД
+      await this.notificationsService.createNotificationForAllUsers(
+        title,
+        message,
+        type,
+        userIds,
+      );
+
+      // Отправляем через Telegram (если настроен)
       const results = [];
-      for (const user of users) {
-        try {
-          await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            chat_id: user.telegramId,
-            text: data.message,
-          });
-          results.push({ userId: user.telegramId, status: 'sent' });
-        } catch (error) {
-          results.push({ userId: user.telegramId, status: 'error', error: error.message });
+      if (botToken) {
+        for (const user of users) {
+          try {
+            await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              chat_id: user.telegramId,
+              text: message,
+            });
+            results.push({ userId: user.telegramId, status: 'sent' });
+          } catch (error) {
+            results.push({ userId: user.telegramId, status: 'error', error: error.message });
+          }
         }
       }
-      return { sent: results.filter(r => r.status === 'sent').length, total: users.length, results };
+
+      return { 
+        sent: results.filter(r => r.status === 'sent').length, 
+        total: users.length, 
+        notificationsCreated: userIds.length,
+        results 
+      };
     } else if (data.userId) {
       // Отправить конкретному пользователю
       const user = await this.usersRepository.findOne({ where: { id: data.userId } });
@@ -282,12 +303,22 @@ export class AdminService {
         throw new Error('Пользователь не найден');
       }
 
-      await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        chat_id: user.telegramId,
-        text: data.message,
-      });
+      // Сохраняем уведомление в БД
+      await this.notificationsService.createNotification(user.id, title, message, type);
 
-      return { success: true, userId: user.telegramId };
+      // Отправляем через Telegram (если настроен)
+      if (botToken) {
+        try {
+          await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            chat_id: user.telegramId,
+            text: message,
+          });
+        } catch (error) {
+          // Игнорируем ошибки Telegram, так как уведомление уже сохранено в БД
+        }
+      }
+
+      return { success: true, userId: user.id };
     }
 
     throw new Error('Укажите userId или установите all=true');

@@ -30,6 +30,7 @@ import { TrainingModule } from './training/training.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { UploadModule } from './upload/upload.module';
 import { PaymentModule } from './payment/payment.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { PaymentModule } from './payment/payment.module';
     OnboardingModule,
     UploadModule,
     PaymentModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

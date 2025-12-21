@@ -13,6 +13,7 @@ import { GamesModule } from '../games/games.module';
 import { QuestsModule } from '../quests/quests.module';
 import { ClansModule } from '../clans/clans.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
@@ -47,6 +48,7 @@ import { Subscription } from '../subscription/subscription.entity';
     QuestsModule,
     ClansModule,
     SubscriptionModule,
+    NotificationsModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],
