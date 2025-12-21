@@ -32,51 +32,91 @@ export class SkinsService implements OnModuleInit {
         where: { isDefault: true },
       });
 
+      const defaultSkinsData = [
+        {
+          name: 'Классическая доска',
+          description: 'Классическая доска для нардов',
+          type: 'board',
+          theme: 'classic',
+          isDefault: true,
+          isPremium: false,
+          weight: 1,
+          price: null, // Бесплатный
+          rarity: 'common',
+          boardTextureUrl: '/skins/default-board.svg',
+        },
+        {
+          name: 'Классические кубики',
+          description: 'Классические кубики для нардов',
+          type: 'dice',
+          theme: 'classic',
+          isDefault: true,
+          isPremium: false,
+          weight: 1,
+          price: null, // Бесплатный
+          rarity: 'common',
+          diceTextureUrl: '/skins/default-dice.svg',
+        },
+        {
+          name: 'Классические шашки',
+          description: 'Классические шашки для нардов',
+          type: 'checkers',
+          theme: 'classic',
+          isDefault: true,
+          isPremium: false,
+          weight: 1,
+          price: null, // Бесплатный
+          rarity: 'common',
+          whiteCheckersTextureUrl: '/skins/default-checkers-white.svg',
+          blackCheckersTextureUrl: '/skins/default-checkers-black.svg',
+          checkersTextureUrl: '/skins/default-checkers.svg', // Для обратной совместимости
+        },
+      ];
+
       if (existingDefaultSkins.length === 0) {
         // Создаем дефолтные скины
-        const defaultSkins = [
-          {
-            name: 'Классическая доска',
-            description: 'Классическая доска для нардов',
-            type: 'board',
-            theme: 'classic',
-            isDefault: true,
-            isPremium: false,
-            weight: 1,
-            price: null, // Бесплатный
-            rarity: 'common',
-            boardTextureUrl: '/skins/default-board.svg',
-          },
-          {
-            name: 'Классические кубики',
-            description: 'Классические кубики для нардов',
-            type: 'dice',
-            theme: 'classic',
-            isDefault: true,
-            isPremium: false,
-            weight: 1,
-            price: null, // Бесплатный
-            rarity: 'common',
-            diceTextureUrl: '/skins/default-dice.svg',
-          },
-          {
-            name: 'Классические шашки',
-            description: 'Классические шашки для нардов',
-            type: 'checkers',
-            theme: 'classic',
-            isDefault: true,
-            isPremium: false,
-            weight: 1,
-            price: null, // Бесплатный
-            rarity: 'common',
-            checkersTextureUrl: '/skins/default-checkers.svg',
-          },
-        ];
-
-        for (const skinData of defaultSkins) {
+        for (const skinData of defaultSkinsData) {
           const skin = this.skinsRepository.create(skinData);
           await this.skinsRepository.save(skin);
           this.logger.log(`✅ Создан дефолтный скин: ${skinData.name} (${skinData.type})`);
+        }
+      } else {
+        // Обновляем существующие дефолтные скины, если у них нет нужных полей
+        for (const skinData of defaultSkinsData) {
+          const existingSkin = existingDefaultSkins.find(s => s.type === skinData.type);
+          if (existingSkin) {
+            let needsUpdate = false;
+            
+            // Обновляем поля, если их нет
+            if (skinData.type === 'board' && !existingSkin.boardTextureUrl) {
+              existingSkin.boardTextureUrl = skinData.boardTextureUrl;
+              needsUpdate = true;
+            }
+            if (skinData.type === 'dice' && !existingSkin.diceTextureUrl) {
+              existingSkin.diceTextureUrl = skinData.diceTextureUrl;
+              needsUpdate = true;
+            }
+            if (skinData.type === 'checkers') {
+              if (!existingSkin.whiteCheckersTextureUrl) {
+                existingSkin.whiteCheckersTextureUrl = skinData.whiteCheckersTextureUrl;
+                needsUpdate = true;
+              }
+              if (!existingSkin.blackCheckersTextureUrl) {
+                existingSkin.blackCheckersTextureUrl = skinData.blackCheckersTextureUrl;
+                needsUpdate = true;
+              }
+            }
+            
+            if (needsUpdate) {
+              await this.skinsRepository.save(existingSkin);
+              this.logger.log(`✅ Обновлен дефолтный скин: ${skinData.name} (${skinData.type})`);
+            }
+          } else {
+            // Если скина нет, создаем его
+            const skin = this.skinsRepository.create(skinData);
+            await this.skinsRepository.save(skin);
+            this.logger.log(`✅ Создан дефолтный скин: ${skinData.name} (${skinData.type})`);
+          }
         }
       }
     } catch (error) {
