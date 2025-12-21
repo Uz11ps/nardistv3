@@ -25,6 +25,7 @@ interface BackgammonBoardProps {
   gameMode?: 'short' | 'long'
   playerSkins?: { board?: any; dice?: any; checkers?: any }
   opponentSkins?: { board?: any; dice?: any; checkers?: any }
+  diceAnimating?: boolean
 }
 
 // Правильная нумерация точек в нардах для отображения
@@ -47,12 +48,14 @@ export default function BackgammonBoard({
   gameMode = 'long', // По умолчанию длинные нарды
   playerSkins,
   opponentSkins,
+  diceAnimating = false,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
   const [hoverPoint, setHoverPoint] = useState<number | null>(null)
   const [animating, setAnimating] = useState(false)
   const [diceRolling, setDiceRolling] = useState(false)
+  const [diceAnimationStart, setDiceAnimationStart] = useState<number | null>(null)
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const animationFrameRef = useRef<number>()
@@ -534,7 +537,7 @@ export default function BackgammonBoard({
         })
       }
     }
-  }, [points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, isMyTurn, canMove])
+  }, [points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, diceAnimating, isMyTurn, canMove])
 
   const drawDice = (
     ctx: CanvasRenderingContext2D,
@@ -542,9 +545,39 @@ export default function BackgammonBoard({
     y: number,
     value: number,
     size: number,
-    rolling: boolean
+    rolling: boolean,
+    dropping: boolean
   ) => {
     ctx.save()
+    
+    // Анимация прилета сверху
+    if (dropping) {
+      const now = Date.now()
+      if (!diceAnimationStart) {
+        setDiceAnimationStart(now)
+      }
+      const elapsed = now - (diceAnimationStart || now)
+      const duration = 1000 // 1 секунда
+      const progress = Math.min(elapsed / duration, 1)
+      
+      // Easing функция для плавного падения
+      const easeOut = 1 - Math.pow(1 - progress, 3)
+      const dropDistance = 200
+      const currentY = y - (dropDistance * (1 - easeOut))
+      const rotation = progress * 180
+      
+      ctx.translate(x + size / 2, currentY + size / 2)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.translate(-size / 2, -size / 2)
+      
+      // Обновляем позицию для отрисовки
+      y = currentY
+      
+      // Если анимация завершена, сбрасываем
+      if (progress >= 1) {
+        setDiceAnimationStart(null)
+      }
+    }
     
     // Анимация вращения при броске
     if (rolling) {

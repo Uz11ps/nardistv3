@@ -21,6 +21,12 @@ export class GamesController {
     return this.matchmakingService.getOpenTables();
   }
 
+  @Get('active')
+  @UseGuards(JwtAuthGuard)
+  async getActiveGame(@CurrentUser() user: any) {
+    return this.gamesService.getActiveGame(user.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getGame(@Param('id') id: string) {

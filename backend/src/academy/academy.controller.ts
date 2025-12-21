@@ -40,7 +40,7 @@ export class AcademyController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@CurrentUser() user: any, @Body() articleData: any) {
-    if (!user.isTrainer && !user.isAdmin) {
+    if (!user.isAdmin) {
       throw new Error('Недостаточно прав');
     }
     return this.academyService.create({ ...articleData, author: user.username });
@@ -49,7 +49,7 @@ export class AcademyController {
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   async update(@CurrentUser() user: any, @Param('id') id: string, @Body() articleData: any) {
-    if (!user.isTrainer && !user.isAdmin) {
+    if (!user.isAdmin) {
       throw new Error('Недостаточно прав');
     }
     return this.academyService.update(id, articleData);

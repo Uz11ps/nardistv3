@@ -120,6 +120,19 @@ export class AdminController {
     return this.adminService.deleteUser(id);
   }
 
+  @Post('users/:id/subscription')
+  @UseGuards(JwtAuthGuard)
+  async giveSubscription(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { plan: string; months?: number },
+  ) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.giveSubscription(id, body.plan, body.months);
+  }
+
   @Get('games')
   @UseGuards(JwtAuthGuard)
   async getGames(@CurrentUser() user: any) {

@@ -5,9 +5,10 @@ interface DiceProps {
   value: number
   size?: 'small' | 'medium' | 'large'
   className?: string
+  animating?: boolean
 }
 
-export default function Dice({ value, size = 'medium', className = '' }: DiceProps) {
+export default function Dice({ value, size = 'medium', className = '', animating = false }: DiceProps) {
   const getDots = (val: number): number[] => {
     // Возвращает позиции точек для значения кости
     const patterns: { [key: number]: number[] } = {
@@ -23,9 +24,10 @@ export default function Dice({ value, size = 'medium', className = '' }: DicePro
 
   const dots = getDots(value)
   const sizeClass = `dice-${size}`
+  const animatingClass = animating ? 'dice-animating' : ''
 
   return (
-    <div className={`dice ${sizeClass} ${className}`}>
+    <div className={`dice ${sizeClass} ${animatingClass} ${className}`}>
       {dots.map((pos, index) => {
         const row = Math.floor(pos / 3) + 1
         const col = (pos % 3) + 1

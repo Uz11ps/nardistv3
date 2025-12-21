@@ -70,7 +70,36 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     // Проверяем каждые 10 секунд
     this.moveTimeoutCheckInterval = setInterval(async () => {
       await this.checkMoveTimeouts();
-    }, 10000);
+      await this.sendTimerUpdates();
+    }, 1000); // Обновляем таймер каждую секунду
+  }
+
+  /**
+   * Отправляет обновления таймеров для всех активных игр
+   */
+  private async sendTimerUpdates(): Promise<void> {
+    try {
+      const activeGames = await this.gamesService.getActiveInProgressGames();
+      const now = new Date();
+
+      for (const game of activeGames) {
+        if (!game.lastMoveAt) {
+          continue;
+        }
+
+        const timeSinceLastMove = Math.floor((now.getTime() - game.lastMoveAt.getTime()) / 1000);
+        
+        // Отправляем таймер всем участникам игры
+        this.server.to(`game:${game.id}`).emit('timer_update', {
+          gameId: game.id,
+          currentPlayer: game.currentPlayer,
+          timeElapsed: timeSinceLastMove,
+          timeRemaining: Math.max(0, 60 - timeSinceLastMove), // 60 секунд на ход
+        });
+      }
+    } catch (error) {
+      this.logger.error(`❌ Error sending timer updates:`, error);
+    }
   }
 
   /**

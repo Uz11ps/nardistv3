@@ -465,12 +465,6 @@ export default function Admin() {
                     Администратор
                   </label>
                 </div>
-                <div className="form-group checkbox-group">
-                  <label className="checkbox-label">
-                    <input type="checkbox" id="edit-trainer" defaultChecked={selectedUser.isTrainer} />
-                    Тренер
-                  </label>
-                </div>
                 <div className="edit-form-actions">
                     <button className="btn btn-primary"
                       onClick={async () => {
@@ -507,9 +501,8 @@ export default function Admin() {
                       onClick={async () => {
                         try {
                           const isAdmin = (document.getElementById('edit-admin') as HTMLInputElement).checked
-                          const isTrainer = (document.getElementById('edit-trainer') as HTMLInputElement).checked
-                          await apiClient.put(`/admin/users/${selectedUser.id}/role`, { isAdmin, isTrainer })
-                          alert('Роли обновлены')
+                          await apiClient.put(`/admin/users/${selectedUser.id}/role`, { isAdmin, isTrainer: false })
+                          alert('Роль обновлена')
                           loadStats()
                           setSelectedUser(null)
                         } catch (err: any) {
@@ -517,7 +510,7 @@ export default function Admin() {
                         }
                       }}
                     >
-                      Сохранить роли
+                      Сохранить роль
                     </button>
                     <button
                       className="btn btn-warning"
@@ -535,6 +528,64 @@ export default function Admin() {
                       }}
                     >
                       Сбросить прогресс
+                    </button>
+                  </div>
+                  <div className="edit-form-section">
+                    <h4>Премиум подписка</h4>
+                    <div className="form-group">
+                      <label>План подписки:</label>
+                      <select 
+                        id="subscription-plan"
+                        onChange={(e) => {
+                          const customGroup = document.getElementById('custom-months-group')
+                          if (customGroup) {
+                            customGroup.style.display = e.target.value === 'custom' ? 'block' : 'none'
+                          }
+                        }}
+                      >
+                        <option value="month_1">1 месяц</option>
+                        <option value="month_3">3 месяца</option>
+                        <option value="month_12">12 месяцев</option>
+                        <option value="custom">Кастомный (указать месяцы)</option>
+                      </select>
+                    </div>
+                    <div className="form-group" id="custom-months-group" style={{ display: 'none' }}>
+                      <label>Количество месяцев:</label>
+                      <input
+                        type="number"
+                        id="subscription-months"
+                        min="1"
+                        max="24"
+                        defaultValue="1"
+                      />
+                    </div>
+                    <button
+                      className="btn btn-success"
+                      onClick={async () => {
+                        try {
+                          const planSelect = document.getElementById('subscription-plan') as HTMLSelectElement
+                          const plan = planSelect.value
+                          const monthsInput = document.getElementById('subscription-months') as HTMLInputElement
+                          const months = plan === 'custom' ? parseInt(monthsInput.value) : undefined
+                          
+                          if (plan === 'custom' && (!months || months < 1)) {
+                            alert('Укажите количество месяцев (от 1 до 24)')
+                            return
+                          }
+                          
+                          await apiClient.post(`/admin/users/${selectedUser.id}/subscription`, {
+                            plan: plan === 'custom' ? '1' : plan,
+                            months: plan === 'custom' ? months : undefined,
+                          })
+                          alert('Премиум подписка выдана!')
+                          loadStats()
+                          setSelectedUser(null)
+                        } catch (err: any) {
+                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                        }
+                      }}
+                    >
+                      Выдать премиум подписку
                     </button>
                     <button className="btn btn-secondary" onClick={() => setSelectedUser(null)}>Отмена</button>
                   </div>

@@ -12,6 +12,7 @@ import { SkinsModule } from '../skins/skins.module';
 import { GamesModule } from '../games/games.module';
 import { QuestsModule } from '../quests/quests.module';
 import { ClansModule } from '../clans/clans.module';
+import { SubscriptionModule } from '../subscription/subscription.module';
 import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
@@ -22,10 +23,11 @@ import { UserSkin } from '../skins/user-skin.entity';
 import { Quest } from '../quests/quest.entity';
 import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
+import { Subscription } from '../subscription/subscription.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, Subscription]),
     AuthModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -44,6 +46,7 @@ import { ClanMember } from '../clans/clan-member.entity';
     GamesModule,
     QuestsModule,
     ClansModule,
+    SubscriptionModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

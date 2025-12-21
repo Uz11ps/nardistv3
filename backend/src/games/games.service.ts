@@ -170,6 +170,30 @@ export class GamesService {
     });
   }
 
+  /**
+   * Получить активную игру пользователя (только IN_PROGRESS, исключая игры с ботом)
+   */
+  async getActiveGame(userId: string): Promise<Game | null> {
+    const activeGames = await this.gamesRepository.find({
+      where: [
+        { player1Id: userId, status: GameStatus.IN_PROGRESS },
+        { player2Id: userId, status: GameStatus.IN_PROGRESS },
+      ],
+    });
+
+    // Фильтруем только действительно активные игры (исключаем игры с ботом)
+    const trulyActiveGames = activeGames.filter(game => 
+      game.status === GameStatus.IN_PROGRESS &&
+      game.type !== GameType.VS_BOT
+    );
+
+    if (trulyActiveGames.length > 0) {
+      return trulyActiveGames[0];
+    }
+
+    return null;
+  }
+
   async rollDice(gameId: string, playerId: string): Promise<number[]> {
     const game = await this.findOne(gameId);
     

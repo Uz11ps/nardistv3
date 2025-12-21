@@ -8,6 +8,8 @@ import { SkinsService } from '../skins/skins.service';
 import { GamesService } from '../games/games.service';
 import { QuestsService } from '../quests/quests.service';
 import { ClansService } from '../clans/clans.service';
+import { SubscriptionService } from '../subscription/subscription.service';
+import { Subscription, SubscriptionPlan } from '../subscription/subscription.entity';
 import { User } from '../users/user.entity';
 import { Game, GameMode, GameType, GameStatus } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
@@ -44,6 +46,8 @@ export class AdminService {
     private clansRepository: Repository<Clan>,
     @InjectRepository(ClanMember)
     private clanMembersRepository: Repository<ClanMember>,
+    @InjectRepository(Subscription)
+    private subscriptionsRepository: Repository<Subscription>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
     private academyService: AcademyService,
@@ -51,6 +55,7 @@ export class AdminService {
     private gamesService: GamesService,
     private questsService: QuestsService,
     private clansService: ClansService,
+    private subscriptionService: SubscriptionService,
     private configService: ConfigService,
   ) {}
 
@@ -609,6 +614,54 @@ export class AdminService {
     user.energy = user.maxEnergy;
     user.lives = user.maxLives;
     return this.usersRepository.save(user);
+  }
+
+  async giveSubscription(userId: string, plan: string, months?: number): Promise<any> {
+    const user = await this.usersService.findOne(userId);
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    // Если указано количество месяцев, создаем кастомную подписку
+    if (months && months > 0) {
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + months);
+      
+      // Используем MONTH_1 как базовый план, но с кастомной датой окончания
+      const subscriptionPlan = SubscriptionPlan.MONTH_1;
+      
+      // Деактивируем предыдущие активные подписки
+      await this.subscriptionsRepository.update(
+        { userId, isActive: true },
+        { isActive: false },
+      );
+      
+      // Создаем новую подписку
+      const subscription = this.subscriptionsRepository.create({
+        userId,
+        plan: subscriptionPlan,
+        startDate,
+        endDate,
+        isActive: true,
+      });
+      
+      return this.subscriptionsRepository.save(subscription);
+    }
+
+    // Определяем план подписки для стандартных планов
+    let subscriptionPlan: SubscriptionPlan;
+    if (plan === 'month_1' || plan === '1') {
+      subscriptionPlan = SubscriptionPlan.MONTH_1;
+    } else if (plan === 'month_3' || plan === '3') {
+      subscriptionPlan = SubscriptionPlan.MONTH_3;
+    } else if (plan === 'month_12' || plan === '12') {
+      subscriptionPlan = SubscriptionPlan.MONTH_12;
+    } else {
+      throw new BadRequestException('Неверный план подписки или количество месяцев');
+    }
+
+    return this.subscriptionService.createSubscription(userId, subscriptionPlan);
   }
 }
 

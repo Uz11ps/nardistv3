@@ -31,6 +31,7 @@ export default function Game() {
   const [gameStatus, setGameStatus] = useState<string>('waiting')
   const [player1Timer, setPlayer1Timer] = useState<number>(0)
   const [player2Timer, setPlayer2Timer] = useState<number>(0)
+  const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any }>({ player1: null, player2: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
   const [player2Ready, setPlayer2Ready] = useState<boolean>(false)
@@ -251,24 +252,29 @@ export default function Game() {
       })
       setGameStatus(data.status || 'in_progress')
       console.log('🔄 Обновляем состояние игры после хода')
-      
-      // Если это мой ход и нет кубиков - автоматически бросаем кубики
-      if (canMove && !formattedDice && data.status === 'in_progress') {
-        console.log('🎲 Автоматически бросаем кубики после хода бота')
-        setTimeout(() => {
-          const socket = getSocket()
-          if (socket && socket.connected) {
-            socket.emit('roll_dice', { gameId: data.id })
-          }
-        }, 500)
-      }
     })
 
     socket.on('dice_rolled', (data: any) => {
       console.log('🎲 Получено dice_rolled:', data)
+      // Запускаем анимацию кубиков
+      setDiceAnimating(true)
+      setTimeout(() => {
+        setDiceAnimating(false)
+      }, 1000) // Анимация длится 1 секунду
       // Обновляем кубики, но также перезагружаем игру чтобы получить актуальное состояние
       // Это важно, так как после хода бота может измениться currentPlayer
       loadGame()
+    })
+
+    // Слушаем обновления таймера с бэкенда
+    socket.on('timer_update', (data: any) => {
+      if (data.gameId === gameId) {
+        if (data.currentPlayer === 0) {
+          setPlayer1Timer(data.timeElapsed || 0)
+        } else {
+          setPlayer2Timer(data.timeElapsed || 0)
+        }
+      }
     })
 
     socket.on('game_finished', (data: any) => {
@@ -470,51 +476,12 @@ export default function Game() {
       return
     }
     
-    // Если игра в процессе и нет кубиков и это мой ход - бросаем кубики
-    if (gameStatus === 'in_progress' && !hasDice && isMyTurn) {
-      console.log('🎲 Бросаем кубики для нового хода')
-      try {
-        const socket = getSocket()
-        if (socket && socket.connected) {
-          socket.emit('roll_dice', { gameId })
-        } else {
-          console.error('❌ WebSocket не подключен')
-        }
-      } catch (error) {
-        console.error('❌ Failed to roll dice:', error)
-      }
-      return
-    }
-    
-    console.log('⚠️ Условия не выполнены:', { gameStatus, hasDice, isMyTurn, dice: gameState?.dice })
+    // Кубики теперь бросаются только по кнопке, не автоматически
+    console.log('ℹ️ Для броска кубиков используйте кнопку "Бросить кубики"')
   }
 
-  const startTimers = () => {
-    if (timerRef.current) clearInterval(timerRef.current)
-
-    timerRef.current = setInterval(() => {
-      if (gameState?.currentPlayer === 0) {
-        setPlayer1Timer((prev) => prev + 1)
-      } else {
-        setPlayer2Timer((prev) => prev + 1)
-      }
-    }, 1000)
-  }
-
-  useEffect(() => {
-    if (gameStatus === 'in_progress' && gameState) {
-      startTimers()
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-    }
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-    }
-  }, [gameState?.currentPlayer, gameStatus])
+  // Таймер теперь управляется бэкендом через WebSocket событие timer_update
+  // Локальный таймер больше не нужен
 
   if (!gameState || !gameInfo) {
     return (
@@ -706,6 +673,7 @@ export default function Game() {
             isMyTurn={isMyTurn}
             gameId={gameId}
             gameMode={gameInfo?.mode || 'long'}
+            diceAnimating={diceAnimating}
           />
         </div>
       ) : null}

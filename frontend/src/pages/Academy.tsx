@@ -67,7 +67,7 @@ export default function Academy() {
     navigate(`/academy/${material.id}`)
   }
 
-  const canPublish = (user?.level || 0) >= 20 && (user?.isTrainer === true)
+  const canPublish = user?.isAdmin === true
 
   if ((user?.level || 0) < 20) {
     return (

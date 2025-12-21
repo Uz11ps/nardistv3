@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { initTelegram } from './config/telegram'
 import { useAuthStore } from './store/authStore'
 import { connectWebSocket } from './api/websocket'
+import { apiClient } from './api/client'
 import ErrorBoundary from './components/ErrorBoundary'
 import Home from './pages/Home'
 import Onboarding from './pages/Onboarding'
@@ -94,6 +95,43 @@ function App() {
       }
     }
   }, [token, initialized])
+
+  // Проверяем активную игру при инициализации
+  useEffect(() => {
+    const checkActiveGame = async () => {
+      if (!user || !initialized) return
+
+      // Проверяем, не находимся ли мы уже на странице игры
+      const currentPath = window.location.pathname
+      if (currentPath.startsWith('/game/') && currentPath !== '/game/search' && currentPath !== '/game/tables' && currentPath !== '/game/tables/create' && currentPath !== '/game/modes' && currentPath !== '/game/result') {
+        // Уже на странице игры, не перенаправляем
+        return
+      }
+
+      try {
+        const response = await apiClient.get('/games/active')
+        const activeGame = response.data
+
+        if (activeGame && activeGame.id) {
+          console.log('🎮 Найдена активная игра:', activeGame.id, 'Перенаправляем...')
+          // Перенаправляем на страницу игры
+          window.location.href = `/game/${activeGame.id}`
+        }
+      } catch (error: any) {
+        // Если ошибка 404 или нет активной игры - игнорируем
+        if (error.response?.status !== 404) {
+          console.error('Ошибка при проверке активной игры:', error)
+        }
+      }
+    }
+
+    // Небольшая задержка, чтобы дать время для инициализации роутера
+    const timer = setTimeout(() => {
+      checkActiveGame()
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [user, initialized])
 
   if (!initialized) {
     return (
