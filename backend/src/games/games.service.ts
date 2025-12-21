@@ -332,10 +332,44 @@ export class GamesService {
       throw error;
     }
 
-    currentState.dice = [];
-    currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
-    // Reset movesFromHead for the new player's turn
-    currentState.movesFromHead = 0;
+    // Calculate remaining dice after moves
+    const remainingDice = diceCopy; // diceCopy contains unused dice after moves
+    
+    // In Long Backgammon, turn switches only when:
+    // 1. All dice are used, OR
+    // 2. No more valid moves are possible with remaining dice
+    if (game.mode === GameMode.LONG) {
+      if (remainingDice.length === 0) {
+        // All dice used - switch turn
+        currentState.dice = [];
+        currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
+        currentState.movesFromHead = 0;
+      } else {
+        // Check if there are any valid moves with remaining dice
+        let hasValidMoves = false;
+        if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
+          const remainingMoves = engine.getAllValidMoves(currentState, remainingDice);
+          hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
+        }
+        
+        if (hasValidMoves) {
+          // Not all dice used, but there are valid moves - keep remaining dice and same player
+          currentState.dice = remainingDice;
+          // Keep same player - don't switch turn
+          // movesFromHead stays as is (already tracked in currentState)
+        } else {
+          // No valid moves with remaining dice - switch turn
+          currentState.dice = [];
+          currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
+          currentState.movesFromHead = 0;
+        }
+      }
+    } else {
+      // Short Backgammon: always switch turn after move
+      currentState.dice = [];
+      currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
+      currentState.movesFromHead = 0;
+    }
     
     // Перезагружаем игру чтобы TypeORM знал о новом ходе и не пытался синхронизировать relations
     const updatedGame = await this.findOne(gameId);
