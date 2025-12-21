@@ -17,8 +17,32 @@ export class TournamentsService {
   ) {}
 
   async create(tournamentData: Partial<Tournament>): Promise<Tournament> {
-    const tournament = this.tournamentsRepository.create(tournamentData);
-    return this.tournamentsRepository.save(tournament);
+    try {
+      // Валидация обязательных полей
+      if (!tournamentData.name) {
+        throw new BadRequestException('Название турнира обязательно');
+      }
+      if (!tournamentData.maxParticipants || tournamentData.maxParticipants < 2) {
+        throw new BadRequestException('Максимальное количество участников должно быть не менее 2');
+      }
+      if (!tournamentData.registrationStart || !tournamentData.registrationEnd || !tournamentData.startDate) {
+        throw new BadRequestException('Даты регистрации и начала турнира обязательны');
+      }
+
+      const tournament = this.tournamentsRepository.create({
+        ...tournamentData,
+        currentParticipants: 0,
+        status: tournamentData.status || TournamentStatus.UPCOMING,
+        format: tournamentData.format || TournamentFormat.BRACKET,
+        mode: tournamentData.mode || GameMode.SHORT,
+      });
+      return await this.tournamentsRepository.save(tournament);
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при создании турнира: ${error.message}`);
+    }
   }
 
   async findAll(status?: string): Promise<Tournament[]> {

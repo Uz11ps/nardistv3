@@ -110,7 +110,8 @@ function App() {
 
       try {
         const response = await apiClient.get('/games/active')
-        const activeGame = response.data
+        // Поддержка нового формата { game: {...} } и старого формата (прямой объект)
+        const activeGame = response.data?.game || response.data
 
         if (activeGame && activeGame.id) {
           console.log('🎮 Найдена активная игра:', activeGame.id, 'Перенаправляем...')
@@ -118,8 +119,8 @@ function App() {
           window.location.href = `/game/${activeGame.id}`
         }
       } catch (error: any) {
-        // Если ошибка 404 или нет активной игры - игнорируем
-        if (error.response?.status !== 404) {
+        // Если ошибка 404 или 500 - игнорируем (значит нет активной игры)
+        if (error.response?.status !== 404 && error.response?.status !== 500) {
           console.error('Ошибка при проверке активной игры:', error)
         }
       }

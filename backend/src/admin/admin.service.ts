@@ -334,7 +334,11 @@ export class AdminService {
   }
 
   async createTournament(data: any) {
-    return this.tournamentsService.create(data);
+    try {
+      return await this.tournamentsService.create(data);
+    } catch (error) {
+      throw new Error(`Ошибка при создании турнира: ${error.message}`);
+    }
   }
 
   async getAllTournaments() {

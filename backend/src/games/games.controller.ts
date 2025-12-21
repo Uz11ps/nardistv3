@@ -24,7 +24,28 @@ export class GamesController {
   @Get('active')
   @UseGuards(JwtAuthGuard)
   async getActiveGame(@CurrentUser() user: any) {
-    return this.gamesService.getActiveGame(user.id);
+    try {
+      const game = await this.gamesService.getActiveGame(user.id);
+      if (!game) {
+        return { game: null };
+      }
+      // Возвращаем только необходимые поля, чтобы избежать проблем с сериализацией
+      return {
+        game: {
+          id: game.id,
+          status: game.status,
+          mode: game.mode,
+          type: game.type,
+          player1Id: game.player1Id,
+          player2Id: game.player2Id,
+          currentPlayer: game.currentPlayer,
+        },
+      };
+    } catch (error) {
+      // Логируем ошибку, но возвращаем null вместо ошибки 500
+      console.error('Ошибка при получении активной игры:', error);
+      return { game: null };
+    }
   }
 
   @Get(':id')

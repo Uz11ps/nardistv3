@@ -81,26 +81,29 @@ export default function Notifications() {
 
   const unreadCount = notifications.filter(n => !n.read).length
 
+  const markAllButton = unreadCount > 0 ? (
+    <button
+      onClick={handleMarkAllAsRead}
+      style={{
+        padding: '8px 16px',
+        background: 'var(--color-primary)',
+        color: 'var(--color-text-on-primary)',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        cursor: 'pointer',
+        fontSize: '14px',
+      }}
+    >
+      Отметить все
+    </button>
+  ) : undefined
+
   return (
     <div className="app-container">
-      <PageHeader title="Уведомления">
-        {unreadCount > 0 && (
-          <button
-            onClick={handleMarkAllAsRead}
-            style={{
-              padding: '8px 16px',
-              background: 'var(--color-primary)',
-              color: 'var(--color-text-on-primary)',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            Отметить все как прочитанные
-          </button>
-        )}
-      </PageHeader>
+      <PageHeader 
+        title="Уведомления"
+        rightAction={markAllButton}
+      />
       
       <div style={{ padding: '20px' }}>
         {loading ? (
@@ -162,4 +165,3 @@ export default function Notifications() {
     </div>
   )
 }
-
