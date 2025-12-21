@@ -24,10 +24,11 @@ export class MatchmakingService {
   ) {}
 
   /**
-   * Проверяет, находится ли игрок уже в активной игре
+   * Проверяет, находится ли игрок уже в активной игре (исключая finished и abandoned)
    */
   async isUserInActiveGame(userId: string): Promise<{ isInGame: boolean; gameId?: string }> {
     // Ищем игры где пользователь является player1 или player2 и статус waiting или in_progress
+    // Исключаем finished и abandoned игры
     const activeGames = await this.gamesService['gamesRepository'].find({
       where: [
         { player1Id: userId, status: 'waiting' as any },
@@ -37,8 +38,13 @@ export class MatchmakingService {
       ],
     });
 
-    if (activeGames.length > 0) {
-      return { isInGame: true, gameId: activeGames[0].id };
+    // Фильтруем только действительно активные игры (исключаем finished и abandoned, если они попали)
+    const trulyActiveGames = activeGames.filter(game => 
+      game.status === 'waiting' || game.status === 'in_progress'
+    );
+
+    if (trulyActiveGames.length > 0) {
+      return { isInGame: true, gameId: trulyActiveGames[0].id };
     }
 
     return { isInGame: false };

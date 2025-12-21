@@ -39,7 +39,7 @@ export class GamesService {
     type: GameType,
     stake: number = 0,
   ): Promise<Game> {
-    // Проверяем, не находится ли player1 уже в активной игре
+    // Проверяем, не находится ли player1 уже в активной игре (исключаем finished и abandoned)
     const player1ActiveGames = await this.gamesRepository.find({
       where: [
         { player1Id, status: GameStatus.WAITING },
@@ -48,7 +48,11 @@ export class GamesService {
         { player2Id: player1Id, status: GameStatus.IN_PROGRESS },
       ],
     });
-    if (player1ActiveGames.length > 0) {
+    // Фильтруем только действительно активные игры
+    const trulyActivePlayer1Games = player1ActiveGames.filter(game => 
+      game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS
+    );
+    if (trulyActivePlayer1Games.length > 0) {
       throw new BadRequestException('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
     }
 
@@ -62,7 +66,11 @@ export class GamesService {
           { player2Id, status: GameStatus.IN_PROGRESS },
         ],
       });
-      if (player2ActiveGames.length > 0) {
+      // Фильтруем только действительно активные игры
+      const trulyActivePlayer2Games = player2ActiveGames.filter(game => 
+        game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS
+      );
+      if (trulyActivePlayer2Games.length > 0) {
         throw new BadRequestException('Соперник уже находится в активной игре.');
       }
     }
@@ -149,6 +157,15 @@ export class GamesService {
       throw new NotFoundException('Игра не найдена');
     }
     return game;
+  }
+
+  /**
+   * Получает все активные игры в статусе IN_PROGRESS для проверки таймаутов
+   */
+  async getActiveInProgressGames(): Promise<Game[]> {
+    return this.gamesRepository.find({
+      where: { status: GameStatus.IN_PROGRESS },
+    });
   }
 
   async rollDice(gameId: string, playerId: string): Promise<number[]> {

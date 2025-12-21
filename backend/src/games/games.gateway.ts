@@ -12,7 +12,8 @@ import { GamesService } from './games.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { BotService } from '../bot/bot.service';
-import { Inject, forwardRef, Logger } from '@nestjs/common';
+import { Inject, forwardRef, Logger, OnModuleDestroy } from '@nestjs/common';
+import { GameType } from './game.entity';
 
 @WebSocketGateway({
   cors: {
@@ -20,12 +21,13 @@ import { Inject, forwardRef, Logger } from '@nestjs/common';
   },
   namespace: '/games',
 })
-export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
   @WebSocketServer()
   server: Server;
 
   private readonly logger = new Logger(GamesGateway.name);
   private connectedUsers = new Map<string, string>();
+  private moveTimeoutCheckInterval: NodeJS.Timeout | null = null;
 
   constructor(
     private gamesService: GamesService,
@@ -33,7 +35,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private configService: ConfigService,
     @Inject(forwardRef(() => BotService))
     private botService: BotService,
-  ) {}
+  ) {
+    // Запускаем периодическую проверку таймаутов ходов каждые 10 секунд
+    this.startMoveTimeoutChecker();
+  }
 
   async handleConnection(client: Socket) {
     try {
@@ -56,6 +61,98 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     this.connectedUsers.delete(client.id);
+  }
+
+  /**
+   * Запускает периодическую проверку таймаутов ходов в активных играх
+   */
+  private startMoveTimeoutChecker(): void {
+    // Проверяем каждые 10 секунд
+    this.moveTimeoutCheckInterval = setInterval(async () => {
+      await this.checkMoveTimeouts();
+    }, 10000);
+  }
+
+  /**
+   * Проверяет все активные игры на таймауты ходов
+   */
+  private async checkMoveTimeouts(): Promise<void> {
+    try {
+      // Используем метод из GamesService для получения активных игр
+      const activeGames = await this.gamesService.getActiveInProgressGames();
+
+      const now = new Date();
+      const timeoutMs = 60000; // 60 секунд
+
+      for (const game of activeGames) {
+        // Пропускаем игры с ботом (бот не должен таймаутить)
+        if (game.type === GameType.VS_BOT && game.player2Id === null) {
+          continue;
+        }
+
+        // Проверяем только игры где кубики уже брошены (есть lastMoveAt)
+        if (!game.lastMoveAt) {
+          continue;
+        }
+
+        // Проверяем что кубики брошены (dice не пустой)
+        if (!game.gameState?.dice || game.gameState.dice.length === 0) {
+          continue;
+        }
+
+        const timeSinceLastMove = now.getTime() - game.lastMoveAt.getTime();
+
+        // Если прошло более 60 секунд, завершаем игру в пользу противника
+        if (timeSinceLastMove > timeoutMs) {
+          this.logger.warn(`⏱️ Move timeout detected for game ${game.id}, currentPlayer: ${game.currentPlayer}`);
+          
+          try {
+            // Определяем игрока, который должен был сделать ход
+            const timeoutPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
+            
+            // Проверяем что игра еще активна (могла завершиться между проверками)
+            const currentGame = await this.gamesService.findOne(game.id);
+            if (currentGame.status === 'finished') {
+              continue;
+            }
+            
+            // Автоматически сдаем игру от его имени (победит противник)
+            await this.gamesService.resignGame(game.id, timeoutPlayerId);
+            
+            const gameState = await this.gamesService.getGameState(game.id);
+            const finishedGame = await this.gamesService.findOne(game.id);
+            
+            // Уведомляем всех участников игры
+            this.server.to(`game:${game.id}`).emit('game_finished', {
+              winnerId: finishedGame.winnerId,
+              player1Score: finishedGame.player1Score,
+              player2Score: finishedGame.player2Score,
+              gameState,
+              reason: 'move_timeout',
+            });
+            
+            this.logger.log(`✅ Game ${game.id} finished due to move timeout, winner: ${finishedGame.winnerId}`);
+          } catch (error) {
+            // Если игра уже завершена, игнорируем ошибку
+            if (error.message && error.message.includes('уже завершена')) {
+              continue;
+            }
+            this.logger.error(`❌ Error handling move timeout for game ${game.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(`❌ Error checking move timeouts:`, error);
+    }
+  }
+
+  /**
+   * Останавливает проверку таймаутов (например, при остановке сервера)
+   */
+  onModuleDestroy(): void {
+    if (this.moveTimeoutCheckInterval) {
+      clearInterval(this.moveTimeoutCheckInterval);
+    }
   }
 
   @SubscribeMessage('join_game')
