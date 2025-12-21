@@ -69,12 +69,15 @@ export default function Admin() {
     const token = localStorage.getItem('admin_token')
     if (token) {
       try {
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`
+        // Токен уже будет добавлен через interceptor
         await loadStats()
         setIsAuthenticated(true)
       } catch (error) {
         localStorage.removeItem('admin_token')
+        setIsAuthenticated(false)
       }
+    } else {
+      setIsAuthenticated(false)
     }
     setLoading(false)
   }
@@ -84,7 +87,7 @@ export default function Admin() {
     try {
       const response = await apiClient.post('/admin/login', { login, password })
       localStorage.setItem('admin_token', response.data.access_token)
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`
+      // Токен будет автоматически добавлен через interceptor
       setIsAuthenticated(true)
       await loadStats()
     } catch (error: any) {

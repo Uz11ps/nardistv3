@@ -11,7 +11,10 @@ export const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  // Для админ-запросов используем admin_token, иначе обычный token
+  const adminToken = localStorage.getItem('admin_token')
+  const userToken = localStorage.getItem('token')
+  const token = adminToken || userToken
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
