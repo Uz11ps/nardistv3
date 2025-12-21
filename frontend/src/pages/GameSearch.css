@@ -91,6 +91,24 @@
   box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
 
+.stake-prize-info {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  text-align: center;
+  font-weight: 500;
+}
+
+.stake-commission {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
 .game-search-start-btn {
   margin-top: 24px;
 }
