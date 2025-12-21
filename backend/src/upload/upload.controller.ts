@@ -125,10 +125,14 @@ export class UploadController {
 
       const contentType = mimeTypes[ext || ''] || 'application/octet-stream';
       res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
-    const fileStream = createReadStream(filePath);
-    fileStream.pipe(res);
+      const fileStream = createReadStream(filePath);
+      fileStream.pipe(res);
+    } catch (error) {
+      this.logger.error(`Error serving image ${filename}:`, error);
+      throw error;
+    }
   }
 }
 
@@ -171,7 +175,7 @@ export class UploadFileController {
     const domain = this.configService.get<string>('DOMAIN', 'nardist.site');
     const protocol = this.configService.get<string>('NODE_ENV') === 'production' ? 'https' : 'http';
     
-    const url = `${protocol}://${domain}/api/uploads/images/${file.filename}`;
+    const url = `${protocol}://${domain}/uploads/images/${file.filename}`;
 
     return {
       url,
