@@ -339,9 +339,14 @@ export class AdminService {
 
   async createTournament(data: any) {
     try {
+      this.logger.log(`Creating tournament with data: ${JSON.stringify(data)}`);
       return await this.tournamentsService.create(data);
     } catch (error) {
-      throw new Error(`Ошибка при создании турнира: ${error.message}`);
+      this.logger.error(`Error creating tournament: ${error.message}`, error.stack);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при создании турнира: ${error.message}`);
     }
   }
 
@@ -395,6 +400,10 @@ export class AdminService {
     return this.skinsRepository.find({
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async getSkin(id: string) {
+    return this.skinsRepository.findOne({ where: { id } });
   }
 
   async createSkin(data: {

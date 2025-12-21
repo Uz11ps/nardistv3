@@ -1161,7 +1161,7 @@ export default function Admin() {
                   </label>
                 </div>
                 <div className="form-group">
-                  <label>Изображение:</label>
+                  <label>Превью (для магазина):</label>
                   {selectedSkin.imageUrl && (
                     <div style={{ marginBottom: '8px' }}>
                       <img 
@@ -1175,8 +1175,65 @@ export default function Admin() {
                     </div>
                   )}
                   <input type="file" accept="image/*" id="edit-skin-image" />
-                  <span className="field-hint">Оставьте пустым, чтобы не изменять изображение</span>
+                  <span className="field-hint">Оставьте пустым, чтобы не изменять превью</span>
                 </div>
+                {selectedSkin.type === 'board' && (
+                  <div className="form-group">
+                    <label>Текстура доски (файл для игры):</label>
+                    {selectedSkin.boardTextureUrl && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <img 
+                          src={getImageUrl(selectedSkin.boardTextureUrl)} 
+                          alt="Board texture"
+                          style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" id="edit-skin-board-texture" />
+                    <span className="field-hint">Оставьте пустым, чтобы не изменять текстуру</span>
+                  </div>
+                )}
+                {selectedSkin.type === 'dice' && (
+                  <div className="form-group">
+                    <label>Текстура кубиков (файл для игры):</label>
+                    {selectedSkin.diceTextureUrl && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <img 
+                          src={getImageUrl(selectedSkin.diceTextureUrl)} 
+                          alt="Dice texture"
+                          style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" id="edit-skin-dice-texture" />
+                    <span className="field-hint">Оставьте пустым, чтобы не изменять текстуру</span>
+                  </div>
+                )}
+                {selectedSkin.type === 'checkers' && (
+                  <div className="form-group">
+                    <label>Текстура шашек (файл для игры):</label>
+                    {selectedSkin.checkersTextureUrl && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <img 
+                          src={getImageUrl(selectedSkin.checkersTextureUrl)} 
+                          alt="Checkers texture"
+                          style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" id="edit-skin-checkers-texture" />
+                    <span className="field-hint">Оставьте пустым, чтобы не изменять текстуру</span>
+                  </div>
+                )}
                 <div className="btn-group">
                   <button className="btn btn-primary" onClick={async () => {
                     try {
@@ -1262,9 +1319,33 @@ export default function Admin() {
                 </label>
               </div>
               <div className="form-group">
-                <label>Изображение:</label>
+                <label>Превью (для магазина):</label>
                 <input type="file" accept="image/*" id="skin-image" />
               </div>
+              <div className="form-group" id="skin-texture-group" style={{ display: 'none' }}>
+                <label id="skin-texture-label">Текстура (файл для игры):</label>
+                <input type="file" accept="image/*" id="skin-texture" />
+                <span className="field-hint">Этот файл будет использоваться в игре</span>
+              </div>
+              <script dangerouslySetInnerHTML={{__html: `
+                document.getElementById('skin-type').addEventListener('change', function() {
+                  const type = this.value;
+                  const textureGroup = document.getElementById('skin-texture-group');
+                  const textureLabel = document.getElementById('skin-texture-label');
+                  if (type) {
+                    textureGroup.style.display = 'block';
+                    if (type === 'board') {
+                      textureLabel.textContent = 'Текстура доски (файл для игры):';
+                    } else if (type === 'dice') {
+                      textureLabel.textContent = 'Текстура кубиков (файл для игры):';
+                    } else if (type === 'checkers') {
+                      textureLabel.textContent = 'Текстура шашек (файл для игры):';
+                    }
+                  } else {
+                    textureGroup.style.display = 'none';
+                  }
+                });
+              `}} />
               <button className="btn btn-primary" onClick={async () => {
                 const skinType = (document.getElementById('skin-type') as HTMLSelectElement).value
                 if (!skinType) {
@@ -1298,7 +1379,19 @@ export default function Admin() {
                 
                 const fileInput = document.getElementById('skin-image') as HTMLInputElement
                 if (fileInput.files && fileInput.files[0]) {
-                  formData.append('image', fileInput.files[0])
+                  formData.append('preview', fileInput.files[0])
+                }
+                
+                // Добавляем текстуру в зависимости от типа
+                const textureInput = document.getElementById('skin-texture') as HTMLInputElement
+                if (textureInput.files && textureInput.files[0]) {
+                  if (skinType === 'board') {
+                    formData.append('boardTexture', textureInput.files[0])
+                  } else if (skinType === 'dice') {
+                    formData.append('diceTexture', textureInput.files[0])
+                  } else if (skinType === 'checkers') {
+                    formData.append('checkersTexture', textureInput.files[0])
+                  }
                 }
 
                 try {

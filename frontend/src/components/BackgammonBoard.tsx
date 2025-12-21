@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { apiClient } from '../api/client'
+import { apiClient, getImageUrl } from '../api/client'
 import './BackgammonBoard.css'
 
 interface Point {
@@ -75,6 +75,66 @@ export default function BackgammonBoard({
   const [dragFromPoint, setDragFromPoint] = useState<number | null>(null)
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [dragHoverPoint, setDragHoverPoint] = useState<number | null>(null)
+  
+  // Загруженные текстуры скинов
+  const [loadedTextures, setLoadedTextures] = useState<{
+    board?: HTMLImageElement
+    dice?: HTMLImageElement
+    checkers?: HTMLImageElement
+  }>({})
+  
+  // Загружаем текстуры скинов
+  useEffect(() => {
+    const textures: { board?: HTMLImageElement; dice?: HTMLImageElement; checkers?: HTMLImageElement } = {}
+    let loadedCount = 0
+    const totalTextures = 3
+    
+    const checkAndDraw = () => {
+      loadedCount++
+      if (loadedCount === totalTextures) {
+        setLoadedTextures(textures)
+      }
+    }
+    
+    // Загружаем текстуру доски
+    if (playerSkins?.board?.boardTextureUrl) {
+      const img = new Image()
+      img.onload = () => {
+        textures.board = img
+        checkAndDraw()
+      }
+      img.onerror = () => checkAndDraw()
+      img.src = getImageUrl(playerSkins.board.boardTextureUrl) || ''
+    } else {
+      checkAndDraw()
+    }
+    
+    // Загружаем текстуру кубиков
+    if (playerSkins?.dice?.diceTextureUrl) {
+      const img = new Image()
+      img.onload = () => {
+        textures.dice = img
+        checkAndDraw()
+      }
+      img.onerror = () => checkAndDraw()
+      img.src = getImageUrl(playerSkins.dice.diceTextureUrl) || ''
+    } else {
+      checkAndDraw()
+    }
+    
+    // Загружаем текстуру шашек
+    if (playerSkins?.checkers?.checkersTextureUrl) {
+      const img = new Image()
+      img.onload = () => {
+        textures.checkers = img
+        checkAndDraw()
+      }
+      img.onerror = () => checkAndDraw()
+      img.src = getImageUrl(playerSkins.checkers.checkersTextureUrl) || ''
+    } else {
+      checkAndDraw()
+    }
+  }, [playerSkins])
 
   // Определяем, кто я (player1 или player2) для отзеркаливания доски
   const isPlayer1 = myPlayerId === player1Id
@@ -293,13 +353,18 @@ export default function BackgammonBoard({
     // Очистка
     ctx.clearRect(0, 0, width, height)
 
-    // Фон доски (темное дерево)
-    const boardGradient = ctx.createLinearGradient(0, 0, width, height)
-    boardGradient.addColorStop(0, '#8B4513')
-    boardGradient.addColorStop(0.5, '#A0522D')
-    boardGradient.addColorStop(1, '#8B4513')
-    ctx.fillStyle = boardGradient
-    ctx.fillRect(0, 0, width, height)
+    // Фон доски - используем текстуру если есть, иначе градиент
+    if (loadedTextures.board) {
+      ctx.drawImage(loadedTextures.board, 0, 0, width, height)
+    } else {
+      // Фон доски (темное дерево) - дефолтный градиент
+      const boardGradient = ctx.createLinearGradient(0, 0, width, height)
+      boardGradient.addColorStop(0, '#8B4513')
+      boardGradient.addColorStop(0.5, '#A0522D')
+      boardGradient.addColorStop(1, '#8B4513')
+      ctx.fillStyle = boardGradient
+      ctx.fillRect(0, 0, width, height)
+    }
 
     // Рамка доски - без padding
     ctx.strokeStyle = '#654321'
@@ -415,32 +480,47 @@ export default function BackgammonBoard({
           ctx.shadowOffsetX = 2
           ctx.shadowOffsetY = 2
 
-          // Градиент для круглой фишки
-          const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
-          if (checkerColor === '#FFFFFF') {
-            checkerGradient.addColorStop(0, '#FFFFFF')
-            checkerGradient.addColorStop(1, '#E0E0E0')
+          // Круглая фишка - используем текстуру если есть
+          if (loadedTextures.checkers) {
+            // Используем текстуру шашек
+            ctx.beginPath()
+            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+            ctx.save()
+            ctx.clip()
+            ctx.drawImage(loadedTextures.checkers, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
+            ctx.restore()
           } else {
-            checkerGradient.addColorStop(0, '#2a2a2a')
-            checkerGradient.addColorStop(1, '#1a1a1a')
+            // Градиент для круглой фишки (дефолтный)
+            const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
+            if (checkerColor === '#FFFFFF') {
+              checkerGradient.addColorStop(0, '#FFFFFF')
+              checkerGradient.addColorStop(1, '#E0E0E0')
+            } else {
+              checkerGradient.addColorStop(0, '#2a2a2a')
+              checkerGradient.addColorStop(1, '#1a1a1a')
+            }
+            
+            // Круглая фишка
+            ctx.beginPath()
+            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+            ctx.fillStyle = checkerGradient
+            ctx.fill()
           }
-
-          // Круглая фишка
-          ctx.beginPath()
-          ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-          ctx.fillStyle = checkerGradient
-          ctx.fill()
           
           // Обводка фишки
+          ctx.beginPath()
+          ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
           ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
           ctx.lineWidth = 2
           ctx.stroke()
 
-          // Блик на фишке
-          ctx.beginPath()
-          ctx.arc(-4, -4, 4, 0, Math.PI * 2)
-          ctx.fillStyle = checkerColor === '#FFFFFF' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'
-          ctx.fill()
+          // Блик на фишке (только если нет текстуры)
+          if (!loadedTextures.checkers) {
+            ctx.beginPath()
+            ctx.arc(-4, -4, 4, 0, Math.PI * 2)
+            ctx.fillStyle = checkerColor === '#FFFFFF' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'
+            ctx.fill()
+          }
 
           ctx.restore()
         }
@@ -686,7 +766,7 @@ export default function BackgammonBoard({
 
       ctx.restore()
     }
-  }, [points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, diceAnimating, isMyTurn, canMove, dragging, dragFromPoint, dragPosition])
+  }, [points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, diceAnimating, isMyTurn, canMove, dragging, dragFromPoint, dragPosition, loadedTextures])
 
   const drawDice = (
     ctx: CanvasRenderingContext2D,
@@ -697,6 +777,38 @@ export default function BackgammonBoard({
     rolling: boolean,
     dropping: boolean
   ) => {
+    // Используем текстуру кубиков если есть
+    if (loadedTextures.dice) {
+      ctx.save()
+      let drawX = x
+      let drawY = y
+      
+      // Анимация прилета сверху
+      if (dropping && diceAnimationStart) {
+        const elapsed = Date.now() - diceAnimationStart
+        const dropDuration = 500
+        if (elapsed < dropDuration) {
+          const progress = elapsed / dropDuration
+          drawY = y - 100 * (1 - progress) * (1 - progress)
+        }
+      }
+      
+      // Анимация вращения при броске
+      if (rolling) {
+        const rotation = (Date.now() / 50) % 360
+        ctx.translate(drawX + size / 2, drawY + size / 2)
+        ctx.rotate((rotation * Math.PI) / 180)
+        ctx.translate(-size / 2, -size / 2)
+        drawX = 0
+        drawY = 0
+      }
+      
+      ctx.drawImage(loadedTextures.dice, drawX, drawY, size, size)
+      ctx.restore()
+      return
+    }
+    
+    // Дефолтная отрисовка кубиков (если текстуры нет)
     ctx.save()
     
     // Анимация прилета сверху

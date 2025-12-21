@@ -307,11 +307,11 @@ export class AdminController {
         // Определяем тип файла по fieldname
         if (file.fieldname === 'preview' || file.fieldname === 'image') {
           imageUrl = fileUrl;
-        } else if (file.fieldname === 'boardTexture' && skinType === 'board') {
+        } else if (file.fieldname === 'boardTexture') {
           boardTextureUrl = fileUrl;
-        } else if (file.fieldname === 'diceTexture' && skinType === 'dice') {
+        } else if (file.fieldname === 'diceTexture') {
           diceTextureUrl = fileUrl;
-        } else if (file.fieldname === 'checkersTexture' && skinType === 'checkers') {
+        } else if (file.fieldname === 'checkersTexture') {
           checkersTextureUrl = fileUrl;
         }
       }
@@ -370,15 +370,13 @@ export class AdminController {
     return this.adminService.deleteSkin(id);
   }
 
-  @Post('skins/:id/upload-image')
+  @Post('skins/:id/upload-textures')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
-    FileInterceptor('image', {
+    FilesInterceptor('files', 3, { // preview, boardTexture/diceTexture/checkersTexture
       storage: diskStorage({
         destination: (req, file, cb) => {
-          // Используем абсолютный путь для Docker
           const uploadsDir = join(process.cwd(), 'uploads', 'skins');
-          // Создаем директорию если её нет
           if (!existsSync(uploadsDir)) {
             mkdirSync(uploadsDir, { recursive: true });
           }
@@ -386,7 +384,8 @@ export class AdminController {
         },
         filename: (req, file, cb) => {
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, `skin-${uniqueSuffix}${extname(file.originalname)}`);
+          const fieldName = file.fieldname || 'skin';
+          cb(null, `${fieldName}-${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),
       fileFilter: (req, file, cb) => {
@@ -396,22 +395,48 @@ export class AdminController {
           cb(new Error('Только изображения разрешены'), false);
         }
       },
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB для текстур
     }),
   )
-  async uploadSkinImage(
+  async uploadSkinTextures(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @UploadedFile() file?: { filename: string; originalname: string; mimetype: string; size: number },
+    @UploadedFiles() files?: Array<{ fieldname: string; filename: string; originalname: string; mimetype: string; size: number }>,
   ) {
     if (!user.isAdmin) {
       throw new UnauthorizedException('Недостаточно прав');
     }
-    const imageUrl = file ? `/uploads/skins/${file.filename}` : null;
-    if (!imageUrl) {
-      throw new BadRequestException('Изображение не загружено');
+    
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Файлы не загружены');
     }
-    return this.adminService.updateSkinImage(id, imageUrl);
+    
+    // Получаем скин для определения типа
+    const skin = await this.adminService.getSkin(id);
+    if (!skin) {
+      throw new BadRequestException('Скин не найден');
+    }
+    
+    const updateData: any = {};
+    
+    for (const file of files) {
+      const fileUrl = `/uploads/skins/${file.filename}`;
+      if (file.fieldname === 'image' || file.fieldname === 'preview') {
+        updateData.imageUrl = fileUrl;
+      } else if (file.fieldname === 'boardTexture' && skin.type === 'board') {
+        updateData.boardTextureUrl = fileUrl;
+      } else if (file.fieldname === 'diceTexture' && skin.type === 'dice') {
+        updateData.diceTextureUrl = fileUrl;
+      } else if (file.fieldname === 'checkersTexture' && skin.type === 'checkers') {
+        updateData.checkersTextureUrl = fileUrl;
+      }
+    }
+    
+    if (Object.keys(updateData).length === 0) {
+      throw new BadRequestException('Неверные поля файлов');
+    }
+    
+    return this.adminService.updateSkin(id, updateData);
   }
 
   // CRUD для квестов
