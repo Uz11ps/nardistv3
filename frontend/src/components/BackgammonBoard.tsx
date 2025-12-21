@@ -528,12 +528,12 @@ export default function BackgammonBoard({
         // Анимация броска кубиков
         const roll1 = Math.floor(Math.random() * 6) + 1
         const roll2 = Math.floor(Math.random() * 6) + 1
-        drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true)
-        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true)
+        drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true, false)
+        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true, false)
       } else if (diceArray.length > 0) {
         // Отрисовка кубиков из массива
         diceArray.forEach((die, index) => {
-          drawDice(ctx, diceAreaX + index * diceSpacing, diceAreaY, die, diceSize, false)
+          drawDice(ctx, diceAreaX + index * diceSpacing, diceAreaY, die, diceSize, false, false)
         })
       }
     }
