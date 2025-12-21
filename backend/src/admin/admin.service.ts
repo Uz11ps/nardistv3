@@ -421,6 +421,8 @@ export class AdminService {
     boardTextureUrl?: string;
     diceTextureUrl?: string;
     checkersTextureUrl?: string;
+    whiteCheckersTextureUrl?: string;
+    blackCheckersTextureUrl?: string;
     price?: number;
     rarity?: string;
   }) {
@@ -439,6 +441,8 @@ export class AdminService {
       boardTextureUrl: data.boardTextureUrl || null,
       diceTextureUrl: data.diceTextureUrl || null,
       checkersTextureUrl: data.checkersTextureUrl || null,
+      whiteCheckersTextureUrl: data.whiteCheckersTextureUrl || null,
+      blackCheckersTextureUrl: data.blackCheckersTextureUrl || null,
       price: data.price || null,
       rarity: data.rarity || 'common',
     });
@@ -461,6 +465,8 @@ export class AdminService {
     boardTextureUrl: string;
     diceTextureUrl: string;
     checkersTextureUrl: string;
+    whiteCheckersTextureUrl: string;
+    blackCheckersTextureUrl: string;
     price: number;
     rarity: string;
   }>) {

@@ -859,21 +859,35 @@ export default function BackgammonBoard({
       ctx.shadowOffsetX = 4
       ctx.shadowOffsetY = 4
 
-      // Градиент для круглой фишки
-      const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
-      if (checkerColor === '#FFFFFF') {
-        checkerGradient.addColorStop(0, '#FFFFFF')
-        checkerGradient.addColorStop(1, '#E0E0E0')
+      // Круглая фишка - используем текстуру если есть
+      const draggedCheckerTexture = isPlayer1Checker
+        ? (checkerColor === '#FFFFFF' ? loadedTextures.whiteCheckers : loadedTextures.blackCheckers)
+        : (checkerColor === '#FFFFFF' ? loadedTextures.opponentWhiteCheckers : loadedTextures.opponentBlackCheckers)
+      
+      if (draggedCheckerTexture) {
+        ctx.beginPath()
+        ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+        ctx.save()
+        ctx.clip()
+        ctx.drawImage(draggedCheckerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
+        ctx.restore()
       } else {
-        checkerGradient.addColorStop(0, '#2a2a2a')
-        checkerGradient.addColorStop(1, '#1a1a1a')
-      }
+        // Градиент для круглой фишки (fallback)
+        const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
+        if (checkerColor === '#FFFFFF') {
+          checkerGradient.addColorStop(0, '#FFFFFF')
+          checkerGradient.addColorStop(1, '#E0E0E0')
+        } else {
+          checkerGradient.addColorStop(0, '#2a2a2a')
+          checkerGradient.addColorStop(1, '#1a1a1a')
+        }
 
-      // Круглая фишка
-      ctx.beginPath()
-      ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-      ctx.fillStyle = checkerGradient
-      ctx.fill()
+        // Круглая фишка
+        ctx.beginPath()
+        ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+        ctx.fillStyle = checkerGradient
+        ctx.fill()
+      }
       
       // Обводка фишки
       ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'

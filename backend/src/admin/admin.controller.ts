@@ -300,6 +300,8 @@ export class AdminController {
     let boardTextureUrl = null;
     let diceTextureUrl = null;
     let checkersTextureUrl = null;
+    let whiteCheckersTextureUrl = null;
+    let blackCheckersTextureUrl = null;
     
     if (files && files.length > 0) {
       for (const file of files) {
@@ -313,6 +315,10 @@ export class AdminController {
           diceTextureUrl = fileUrl;
         } else if (file.fieldname === 'checkersTexture') {
           checkersTextureUrl = fileUrl;
+        } else if (file.fieldname === 'whiteCheckersTexture') {
+          whiteCheckersTextureUrl = fileUrl;
+        } else if (file.fieldname === 'blackCheckersTexture') {
+          blackCheckersTextureUrl = fileUrl;
         }
       }
     }
@@ -347,6 +353,8 @@ export class AdminController {
       boardTextureUrl,
       diceTextureUrl,
       checkersTextureUrl,
+      whiteCheckersTextureUrl,
+      blackCheckersTextureUrl,
     };
     
     return this.adminService.createSkin(skinData);
