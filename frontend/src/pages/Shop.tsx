@@ -201,22 +201,41 @@ export default function Shop() {
             </div>
           </div>
           <div className="shop-skin-image">
-            {skin.imageUrl ? (
-              <img
-                src={getImageUrl(skin.imageUrl) || ''}
-                alt={skin.name}
-                className="shop-skin-img"
-                onError={(e) => {
-                  console.error('Failed to load skin image:', skin.imageUrl, 'Resolved URL:', getImageUrl(skin.imageUrl))
-                  e.currentTarget.style.display = 'none'
-                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement
-                  if (placeholder && placeholder.classList.contains('shop-skin-placeholder')) {
-                    placeholder.style.display = 'flex'
-                  }
-                }}
-              />
-            ) : null}
-            <div className="shop-skin-placeholder" style={{ display: skin.imageUrl ? 'none' : 'flex' }}>
+            {(() => {
+              // Определяем URL для превью: сначала imageUrl, потом textureUrl в зависимости от типа
+              let previewUrl: string | undefined = skin.imageUrl
+              if (!previewUrl) {
+                if (skin.type === 'board' && skin.boardTextureUrl) {
+                  previewUrl = skin.boardTextureUrl
+                } else if (skin.type === 'dice' && skin.diceTextureUrl) {
+                  previewUrl = skin.diceTextureUrl
+                } else if (skin.type === 'checkers') {
+                  previewUrl = skin.whiteCheckersTextureUrl || skin.blackCheckersTextureUrl || skin.checkersTextureUrl
+                }
+              }
+              
+              return previewUrl ? (
+                <img
+                  src={getImageUrl(previewUrl) || ''}
+                  alt={skin.name}
+                  className="shop-skin-img"
+                  onError={(e) => {
+                    console.error('Failed to load skin image:', previewUrl, 'Resolved URL:', getImageUrl(previewUrl || ''))
+                    e.currentTarget.style.display = 'none'
+                    const placeholder = e.currentTarget.nextElementSibling as HTMLElement
+                    if (placeholder && placeholder.classList.contains('shop-skin-placeholder')) {
+                      placeholder.style.display = 'flex'
+                    }
+                  }}
+                />
+              ) : null
+            })()}
+            <div className="shop-skin-placeholder" style={{ 
+              display: (skin.imageUrl || 
+                (skin.type === 'board' && skin.boardTextureUrl) ||
+                (skin.type === 'dice' && skin.diceTextureUrl) ||
+                (skin.type === 'checkers' && (skin.whiteCheckersTextureUrl || skin.blackCheckersTextureUrl || skin.checkersTextureUrl))) ? 'none' : 'flex' 
+            }}>
               <Icon 
                 name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} 
                 size={48} 

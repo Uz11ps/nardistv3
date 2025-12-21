@@ -13,6 +13,11 @@ interface Skin {
   type: string
   theme: string
   imageUrl?: string
+  boardTextureUrl?: string
+  diceTextureUrl?: string
+  checkersTextureUrl?: string
+  whiteCheckersTextureUrl?: string
+  blackCheckersTextureUrl?: string
   price?: number
   rarity: string
   weight: number
@@ -161,19 +166,33 @@ export default function Inventory() {
                   <Card key={skin.id} className="inventory-item">
                     <div className="inventory-item-content">
                       <div className="inventory-item-image">
-                        {skin.imageUrl ? (
-                          <img
-                            src={getImageUrl(skin.imageUrl) || ''}
-                            alt={skin.name}
-                            className="inventory-image"
-                            onError={(e) => {
-                              console.error('Failed to load skin image:', skin.imageUrl)
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        ) : (
-                          <Icon name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} size={48} />
-                        )}
+                        {(() => {
+                          // Определяем URL для превью: сначала imageUrl, потом textureUrl в зависимости от типа
+                          let previewUrl: string | undefined = skin.imageUrl
+                          if (!previewUrl) {
+                            if (skin.type === 'board' && skin.boardTextureUrl) {
+                              previewUrl = skin.boardTextureUrl
+                            } else if (skin.type === 'dice' && skin.diceTextureUrl) {
+                              previewUrl = skin.diceTextureUrl
+                            } else if (skin.type === 'checkers') {
+                              previewUrl = skin.whiteCheckersTextureUrl || skin.blackCheckersTextureUrl || skin.checkersTextureUrl
+                            }
+                          }
+                          
+                          return previewUrl ? (
+                            <img
+                              src={getImageUrl(previewUrl) || ''}
+                              alt={skin.name}
+                              className="inventory-image"
+                              onError={(e) => {
+                                console.error('Failed to load skin image:', previewUrl)
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          ) : (
+                            <Icon name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} size={48} />
+                          )
+                        })()}
                         {selectedSkinIds.has(skin.id) && (
                           <div className="inventory-item-selected">
                             <Icon name="check" size={16} />
