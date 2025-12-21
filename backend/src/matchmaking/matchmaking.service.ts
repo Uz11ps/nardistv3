@@ -23,7 +23,34 @@ export class MatchmakingService {
     private subscriptionService: SubscriptionService,
   ) {}
 
+  /**
+   * Проверяет, находится ли игрок уже в активной игре
+   */
+  async isUserInActiveGame(userId: string): Promise<{ isInGame: boolean; gameId?: string }> {
+    // Ищем игры где пользователь является player1 или player2 и статус waiting или in_progress
+    const activeGames = await this.gamesService['gamesRepository'].find({
+      where: [
+        { player1Id: userId, status: 'waiting' as any },
+        { player1Id: userId, status: 'in_progress' as any },
+        { player2Id: userId, status: 'waiting' as any },
+        { player2Id: userId, status: 'in_progress' as any },
+      ],
+    });
+
+    if (activeGames.length > 0) {
+      return { isInGame: true, gameId: activeGames[0].id };
+    }
+
+    return { isInGame: false };
+  }
+
   async joinQueue(userId: string, mode: GameMode): Promise<void> {
+    // Проверяем, не находится ли игрок уже в активной игре
+    const activeGameCheck = await this.isUserInActiveGame(userId);
+    if (activeGameCheck.isInGame) {
+      throw new Error('Вы уже находитесь в активной игре. Завершите текущую игру перед поиском новой.');
+    }
+
     const rating = await this.ratingsService.getRating(userId, mode);
     const isPremium = await this.subscriptionService.hasActiveSubscription(userId);
     
@@ -124,6 +151,12 @@ export class MatchmakingService {
     mode: GameMode,
     timeLimit: number,
   ): Promise<string> {
+    // Проверяем, не находится ли игрок уже в активной игре
+    const activeGameCheck = await this.isUserInActiveGame(userId);
+    if (activeGameCheck.isInGame) {
+      throw new Error('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
+    }
+
     const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER);
     await this.redis.set(
       `table:${game.id}`,
@@ -169,9 +202,22 @@ export class MatchmakingService {
   }
 
   async joinTable(gameId: string, userId: string): Promise<void> {
+    // Проверяем, не находится ли игрок уже в активной игре
+    const activeGameCheck = await this.isUserInActiveGame(userId);
+    if (activeGameCheck.isInGame && activeGameCheck.gameId !== gameId) {
+      throw new Error('Вы уже находитесь в активной игре. Завершите текущую игру перед присоединением к другому столу.');
+    }
+
     const tableStr = await this.redis.get(`table:${gameId}`);
     if (!tableStr) {
       throw new Error('Стол не найден');
+    }
+
+    // Проверяем, не заблокирован ли этот игрок от этого стола
+    const blockedKey = `game:${gameId}:blocked:${userId}`;
+    const isBlocked = await this.redis.exists(blockedKey);
+    if (isBlocked) {
+      throw new Error('Вы были исключены из этого стола из-за таймаута');
     }
 
     const game = await this.gamesService.findOne(gameId);
@@ -189,6 +235,9 @@ export class MatchmakingService {
       player1Ready: false,
       player2Ready: false,
     }), 'EX', 3600);
+    
+    // Сохраняем время присоединения игрока для таймаута (60 секунд)
+    await this.redis.set(`game:${gameId}:joined:${userId}`, Date.now().toString(), 'EX', 120);
     
     // Стол удаляем из списка открытых, но игра остается в статусе waiting
     await this.redis.del(`table:${gameId}`);
@@ -219,6 +268,34 @@ export class MatchmakingService {
       player1Ready: ready.player1Ready,
       player2Ready: ready.player2Ready,
     };
+  }
+
+  async blockPlayerFromTable(gameId: string, userId: string): Promise<void> {
+    await this.redis.set(`game:${gameId}:blocked:${userId}`, '1', 'EX', 3600);
+  }
+
+  async getReadyStatus(gameId: string): Promise<{ player1Ready: boolean; player2Ready: boolean } | null> {
+    const readyKey = `game:${gameId}:ready`;
+    const readyStr = await this.redis.get(readyKey);
+    return readyStr ? JSON.parse(readyStr) : null;
+  }
+
+  async reopenTable(gameId: string, hostId: string, mode: GameMode, timeLimit: number, createdAt: number): Promise<void> {
+    await this.redis.set(
+      `table:${gameId}`,
+      JSON.stringify({
+        hostId,
+        mode,
+        timeLimit,
+        createdAt,
+      }),
+      'EX',
+      3600,
+    );
+  }
+
+  async clearReadyStatus(gameId: string): Promise<void> {
+    await this.redis.del(`game:${gameId}:ready`);
   }
 }
 

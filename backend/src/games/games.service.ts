@@ -39,6 +39,34 @@ export class GamesService {
     type: GameType,
     stake: number = 0,
   ): Promise<Game> {
+    // Проверяем, не находится ли player1 уже в активной игре
+    const player1ActiveGames = await this.gamesRepository.find({
+      where: [
+        { player1Id, status: GameStatus.WAITING },
+        { player1Id, status: GameStatus.IN_PROGRESS },
+        { player2Id: player1Id, status: GameStatus.WAITING },
+        { player2Id: player1Id, status: GameStatus.IN_PROGRESS },
+      ],
+    });
+    if (player1ActiveGames.length > 0) {
+      throw new BadRequestException('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
+    }
+
+    // Проверяем, не находится ли player2 уже в активной игре (если указан)
+    if (player2Id) {
+      const player2ActiveGames = await this.gamesRepository.find({
+        where: [
+          { player1Id: player2Id, status: GameStatus.WAITING },
+          { player1Id: player2Id, status: GameStatus.IN_PROGRESS },
+          { player2Id, status: GameStatus.WAITING },
+          { player2Id, status: GameStatus.IN_PROGRESS },
+        ],
+      });
+      if (player2ActiveGames.length > 0) {
+        throw new BadRequestException('Соперник уже находится в активной игре.');
+      }
+    }
+
     // Проверка жизней для player1 (только для игр с игроками)
     if (type === GameType.VS_PLAYER) {
       const hasLives = await this.progressService.checkLives(player1Id);

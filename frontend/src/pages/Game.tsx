@@ -312,6 +312,22 @@ export default function Game() {
           loadGame()
         }
       })
+
+      matchmakingSocket.on('player_timeout', (data: any) => {
+        console.log('⏱️ Игрок не подтвердил готовность:', data)
+        if (data.gameId === gameId) {
+          const isPlayer1 = gameInfo?.player1Id === user?.id
+          if (data.timeoutPlayerId !== user?.id) {
+            // Это не наш таймаут, значит выкинули соперника
+            alert('Соперник не подтвердил готовность в течение минуты и был исключен. Ожидание нового соперника...')
+            // Сбрасываем состояние готовности
+            setPlayer1Ready(false)
+            setPlayer2Ready(false)
+            setMyReady(false)
+            loadGame()
+          }
+        }
+      })
     }
   }
 

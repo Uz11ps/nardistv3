@@ -29,6 +29,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
 
   private readonly logger = new Logger(MatchmakingGateway.name);
   private matchmakingIntervals = new Map<string, NodeJS.Timeout>();
+  private joinTimeouts = new Map<string, NodeJS.Timeout>(); // Таймауты для игроков, присоединившихся к столу
 
   constructor(
     private matchmakingService: MatchmakingService,
@@ -153,6 +154,30 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
         await this.sendTelegramNotification(game.player1Id, `✅ Игрок присоединился к столу! Игра #${data.gameId.substring(0, 8)}`);
       }
       await this.sendTelegramNotification(userId, `✅ Вы присоединились к столу! Игра #${data.gameId.substring(0, 8)}`);
+      
+      // Если оба игрока уже в лобби (оба присоединились), устанавливаем таймауты для обоих
+      if (game.player1Id && game.player2Id) {
+        // Устанавливаем таймаут 60 секунд для обоих игроков
+        const timeoutDelay = 60000; // 60 секунд
+        
+        // Таймаут для первого игрока
+        const timeoutKey1 = `${data.gameId}:${game.player1Id}`;
+        const timeout1 = setTimeout(async () => {
+          await this.handlePlayerTimeout(data.gameId, game.player1Id);
+          this.joinTimeouts.delete(timeoutKey1);
+        }, timeoutDelay);
+        this.joinTimeouts.set(timeoutKey1, timeout1);
+        
+        // Таймаут для второго игрока
+        const timeoutKey2 = `${data.gameId}:${game.player2Id}`;
+        const timeout2 = setTimeout(async () => {
+          await this.handlePlayerTimeout(data.gameId, game.player2Id);
+          this.joinTimeouts.delete(timeoutKey2);
+        }, timeoutDelay);
+        this.joinTimeouts.set(timeoutKey2, timeout2);
+        
+        this.logger.log(`⏱️ Таймауты установлены для обоих игроков стола ${data.gameId}`);
+      }
     } catch (error) {
       this.logger.error(`Ошибка при присоединении к столу: ${error.message}`);
       client.emit('error', { message: error.message });
@@ -163,6 +188,14 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   async handleReadyToStart(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string }) {
     const userId = client.data.userId;
     try {
+      // Отменяем таймаут, так как игрок нажал "Начать игру"
+      const timeoutKey = `${data.gameId}:${userId}`;
+      const timeout = this.joinTimeouts.get(timeoutKey);
+      if (timeout) {
+        clearTimeout(timeout);
+        this.joinTimeouts.delete(timeoutKey);
+      }
+
       const readyStatus = await this.matchmakingService.setPlayerReady(data.gameId, userId);
       const game = await this.gamesService.findOne(data.gameId);
       
@@ -197,6 +230,62 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
     } catch (error) {
       this.logger.error(`Ошибка при готовности к старту: ${error.message}`);
       client.emit('error', { message: error.message });
+    }
+  }
+
+  private async handlePlayerTimeout(gameId: string, userId: string): Promise<void> {
+    try {
+      const game = await this.gamesService.findOne(gameId);
+      
+      // Проверяем, что игра все еще в статусе waiting и этот игрок еще не готов
+      if (game.status !== 'waiting') {
+        return; // Игра уже началась, таймаут не нужен
+      }
+
+      // Проверяем готовность игрока
+      const ready = await this.matchmakingService.getReadyStatus(gameId);
+      if (ready) {
+        const isPlayer1 = game.player1Id === userId;
+        if (isPlayer1 && ready.player1Ready) {
+          return; // Игрок уже готов, таймаут не нужен
+        }
+        if (!isPlayer1 && ready.player2Ready) {
+          return; // Игрок уже готов, таймаут не нужен
+        }
+      }
+
+      // Удаляем игрока из игры
+      if (game.player1Id === userId) {
+        // Если это первый игрок (создатель стола), удаляем игру полностью
+        game.status = 'abandoned' as any;
+        await this.gamesService['gamesRepository'].save(game);
+        this.server.to(`user:${game.player2Id || ''}`).emit('player_timeout', { gameId, timeoutPlayerId: userId });
+      } else if (game.player2Id === userId) {
+        // Если это второй игрок, удаляем его из игры и открываем стол снова
+        game.player2Id = null;
+        await this.gamesService['gamesRepository'].save(game);
+        
+        // Блокируем этого игрока от повторного присоединения к этому столу
+        await this.matchmakingService.blockPlayerFromTable(gameId, userId);
+        
+        // Возвращаем стол в список открытых
+        await this.matchmakingService.reopenTable(
+          gameId,
+          game.player1Id,
+          game.mode,
+          game.moveTimeLimit || 60000,
+          game.createdAt.getTime(),
+        );
+        
+        // Удаляем запись о готовности
+        await this.matchmakingService.clearReadyStatus(gameId);
+        
+        // Уведомляем первого игрока
+        this.server.to(`user:${game.player1Id}`).emit('player_timeout', { gameId, timeoutPlayerId: userId });
+        await this.sendTelegramNotification(game.player1Id, `⏱️ Игрок не подтвердил готовность. Ожидание нового соперника... Игра #${gameId.substring(0, 8)}`);
+      }
+    } catch (error) {
+      this.logger.error(`Ошибка при обработке таймаута игрока: ${error.message}`);
     }
   }
 
