@@ -1,6 +1,6 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { GamesService } from '../games/games.service';
-import { GameMode, GameType } from '../games/game.entity';
+import { GameMode, GameType, GameStatus } from '../games/game.entity';
 import { RatingsService } from '../ratings/ratings.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import Redis from 'ioredis';
@@ -168,18 +168,33 @@ export class MatchmakingService {
     }
 
     const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER, stake);
+    
+    // Проверяем, что игра создана со статусом WAITING
+    if (game.status !== GameStatus.WAITING) {
+      throw new Error(`Игра создана со статусом ${game.status}, ожидался WAITING`);
+    }
+    
+    const tableData = {
+      hostId: userId,
+      mode,
+      timeLimit,
+      stake,
+      createdAt: Date.now(),
+    };
+    
     await this.redis.set(
       `table:${game.id}`,
-      JSON.stringify({
-        hostId: userId,
-        mode,
-        timeLimit,
-        stake,
-        createdAt: Date.now(),
-      }),
+      JSON.stringify(tableData),
       'EX',
       3600,
     );
+    
+    // Проверяем, что ключ сохранен
+    const savedTable = await this.redis.get(`table:${game.id}`);
+    if (!savedTable) {
+      throw new Error('Не удалось сохранить стол в Redis');
+    }
+    
     return game.id;
   }
 
@@ -197,7 +212,7 @@ export class MatchmakingService {
           try {
             const game = await this.gamesService.findOne(gameId);
             // Показываем стол только если игра в статусе WAITING (ожидание соперника или готовности)
-            if (game.status === 'waiting') {
+            if (game && game.status === GameStatus.WAITING) {
               tables.push({
                 id: gameId,
                 hostId: table.hostId,
@@ -218,7 +233,8 @@ export class MatchmakingService {
       }
     }
 
-    return tables.sort((a, b) => b.createdAt - a.createdAt);
+    const sortedTables = tables.sort((a, b) => b.createdAt - a.createdAt);
+    return sortedTables;
   }
 
   async joinTable(gameId: string, userId: string): Promise<void> {

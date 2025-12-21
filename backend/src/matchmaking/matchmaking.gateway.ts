@@ -127,21 +127,34 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   ) {
     const userId = client.data.userId;
     try {
+      this.logger.log(`Создание стола для пользователя ${userId}, режим: ${data.mode}, ставка: ${data.stake || 0}`);
       const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit, data.stake || 0);
+      this.logger.log(`Стол создан: ${gameId}`);
       
       // Сначала отправляем событие клиенту, чтобы он не завис
       client.emit('table_created', { gameId });
       
-      // Сразу обновляем список столов для всех клиентов (все режимы)
-      const tables = await this.matchmakingService.getOpenTables();
-      this.server.emit('open_tables', tables);
+      // Обновляем список столов для всех клиентов (все режимы)
+      // Делаем это асинхронно, чтобы не блокировать ответ
+      setImmediate(async () => {
+        try {
+          const tables = await this.matchmakingService.getOpenTables();
+          const connectedClients = this.server.sockets.sockets.size;
+          this.logger.log(`Отправка списка столов всем клиентам. Столов: ${tables.length}, Подключено клиентов: ${connectedClients}`);
+          // Отправляем всем подключенным клиентам обновленный список
+          this.server.emit('open_tables', tables);
+          this.logger.log(`✅ Список столов отправлен всем ${connectedClients} клиентам`);
+        } catch (error) {
+          this.logger.error(`Ошибка при обновлении списка столов: ${error.message}`, error.stack);
+        }
+      });
       
       // Отправляем уведомление в Telegram (не блокируем)
       this.sendTelegramNotification(userId, `🪑 Стол создан! ID игры: #${gameId.substring(0, 8)}`).catch(err => {
         this.logger.warn(`Не удалось отправить уведомление в Telegram: ${err.message}`);
       });
     } catch (error) {
-      this.logger.error(`Ошибка при создании стола: ${error.message}`);
+      this.logger.error(`Ошибка при создании стола: ${error.message}`, error.stack);
       client.emit('error', { message: error.message || 'Ошибка при создании стола' });
     }
   }

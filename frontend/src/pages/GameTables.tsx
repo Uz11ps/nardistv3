@@ -27,17 +27,32 @@ export default function GameTables() {
     loadTables()
     const socket = getMatchmakingSocket()
     if (socket) {
-      // Запрашиваем столы всех режимов
+      // Запрашиваем столы всех режимов при подключении
       socket.emit('get_open_tables', {})
-      socket.on('open_tables', (data: any) => {
+      
+      // Слушаем обновления списка столов
+      const handleOpenTables = (data: any) => {
+        console.log('📋 Получен обновленный список столов:', data)
         setTables(data || [])
         setLoading(false)
+      }
+      
+      socket.on('open_tables', handleOpenTables)
+      
+      // Также запрашиваем список при каждом подключении
+      socket.on('connect', () => {
+        console.log('🔄 WebSocket подключен, запрашиваем список столов')
+        socket.emit('get_open_tables', {})
       })
+
+    } else {
+      console.warn('⚠️ WebSocket не подключен!')
     }
 
     return () => {
       if (socket) {
         socket.off('open_tables')
+        socket.off('connect')
       }
     }
   }, [])
