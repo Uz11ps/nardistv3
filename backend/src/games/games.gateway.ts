@@ -105,27 +105,40 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
    */
   private async sendTimerUpdates(): Promise<void> {
     try {
+      // Проверяем, что server инициализирован
+      if (!this.server) {
+        return;
+      }
+
       const activeGames = await this.gamesService.getActiveInProgressGames();
       const now = new Date();
 
       for (const game of activeGames) {
-        if (!game.lastMoveAt) {
+        if (!game.lastMoveAt || !game.id) {
           continue;
         }
 
-        const timeSinceLastMove = Math.floor((now.getTime() - game.lastMoveAt.getTime()) / 1000);
-        const timeLimitSeconds = Math.floor((game.moveTimeLimit || 60000) / 1000); // Конвертируем миллисекунды в секунды
-        
-        // Отправляем таймер всем участникам игры
-        this.server.to(`game:${game.id}`).emit('timer_update', {
-          gameId: game.id,
-          currentPlayer: game.currentPlayer,
-          timeElapsed: timeSinceLastMove,
-          timeRemaining: Math.max(0, timeLimitSeconds - timeSinceLastMove),
-        });
+        try {
+          // Убеждаемся, что lastMoveAt это Date объект
+          const lastMoveAt = game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt);
+          const timeSinceLastMove = Math.floor((now.getTime() - lastMoveAt.getTime()) / 1000);
+          const timeLimitSeconds = Math.floor((game.moveTimeLimit || 60000) / 1000); // Конвертируем миллисекунды в секунды
+          
+          // Отправляем таймер всем участникам игры
+          this.server.to(`game:${game.id}`).emit('timer_update', {
+            gameId: game.id,
+            currentPlayer: game.currentPlayer,
+            timeElapsed: timeSinceLastMove,
+            timeRemaining: Math.max(0, timeLimitSeconds - timeSinceLastMove),
+          });
+        } catch (gameError) {
+          this.logger.warn(`Error sending timer update for game ${game.id}:`, gameError);
+          // Продолжаем с другими играми
+        }
       }
     } catch (error) {
-      this.logger.error(`❌ Error sending timer updates:`, error);
+      this.logger.error(`❌ Error sending timer updates:`, error instanceof Error ? error.message : error);
+      this.logger.debug(`Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
     }
   }
 

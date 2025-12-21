@@ -24,15 +24,8 @@ async function bootstrap() {
     }
   });
 
-  // Настройка статической отдачи файлов (ПЕРЕД установкой глобального префикса)
-  // useStaticAssets регистрирует статику до применения глобального префикса
-  // Поэтому мы можем использовать полный путь /api/uploads/
-  const uploadsPath = join(__dirname, '..', 'uploads');
-  app.useStaticAssets(uploadsPath, {
-    prefix: '/api/uploads/',
-  });
-
-  // Устанавливаем глобальный префикс для всех роутов (ПОСЛЕ статики)
+  // Устанавливаем глобальный префикс для всех роутов
+  // Статические файлы теперь обслуживаются через контроллер UploadController
   app.setGlobalPrefix('api');
 
   app.useGlobalPipes(

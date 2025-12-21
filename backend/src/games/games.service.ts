@@ -166,11 +166,21 @@ export class GamesService {
 
   /**
    * Получает все активные игры в статусе IN_PROGRESS для проверки таймаутов
+   * Исключает игры с ботом
    */
   async getActiveInProgressGames(): Promise<Game[]> {
-    return this.gamesRepository.find({
-      where: { status: GameStatus.IN_PROGRESS },
-    });
+    try {
+      return this.gamesRepository.find({
+        where: { 
+          status: GameStatus.IN_PROGRESS,
+          type: GameType.VS_PLAYER, // Исключаем игры с ботом
+        },
+        relations: [], // Не загружаем relations для производительности
+      });
+    } catch (error) {
+      this.logger.error(`Error fetching active in-progress games:`, error);
+      return []; // Возвращаем пустой массив при ошибке
+    }
   }
 
   /**

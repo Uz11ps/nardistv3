@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
-import { UploadController } from './upload.controller';
+import { UploadController, UploadFileController } from './upload.controller';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -10,7 +10,7 @@ import { ConfigModule } from '@nestjs/config';
     }),
     ConfigModule,
   ],
-  controllers: [UploadController],
+  controllers: [UploadController, UploadFileController],
 })
 export class UploadModule {}
 
