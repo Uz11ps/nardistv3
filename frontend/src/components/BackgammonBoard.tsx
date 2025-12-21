@@ -461,100 +461,100 @@ export default function BackgammonBoard({
         ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
         ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)
 
-      // Фишки на точке - простая отрисовка без скинов
-      const pointValue = points[i] || 0
-      const checkerCount = Math.abs(pointValue)
-      if (checkerCount > 0) {
-        const isPlayer1Checker = pointValue > 0
-        // Простые цвета: белые для player1, черные для player2
-        const checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
-        const checkerRadius = 14
-        const maxStack = 5
-        const stackSpacing = 4
+        // Фишки на точке - ТОЛЬКО если есть текстура шашек
+        const pointValue = points[i] || 0
+        const checkerCount = Math.abs(pointValue)
+        if (checkerCount > 0) {
+          const isPlayer1Checker = pointValue > 0
+          // Простые цвета: белые для player1, черные для player2
+          const checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
+          const checkerRadius = 14
+          const maxStack = 5
+          const stackSpacing = 4
 
-        // Рисуем фишки
-        // Если идет перетаскивание с этой точки, не рисуем верхнюю шашку (она перетаскивается)
-        const isDraggingFromThisPoint = dragging && dragFromPoint === i
-        const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, maxStack) : Math.min(checkerCount, maxStack)
-        
-        for (let j = 0; j < checkersToDraw; j++) {
-          let checkerY: number
-          if (isTop) {
-            // Верхние шашки должны быть в верхней части треугольника (начинаем сверху)
-            checkerY = y + (j * stackSpacing) + checkerRadius
-          } else {
-            // Нижние шашки должны быть в нижней части треугольника (начинаем снизу)
-            checkerY = y - (j * stackSpacing) - checkerRadius
-          }
-
-          const checkerX = x + pointWidth / 2
-
-          // Анимация выбранной фишки (только если не идет перетаскивание)
-          const isSelected = !isDraggingFromThisPoint && selectedPoint === i && j === checkersToDraw - 1
-          const scale = isSelected ? 1.2 : 1.0
-          const offsetX = isSelected ? Math.sin(Date.now() / 100) * 3 : 0
-          const offsetY = isSelected ? Math.cos(Date.now() / 100) * 2 : 0
-
-          ctx.save()
-          ctx.translate(checkerX + offsetX, checkerY + offsetY)
-          ctx.scale(scale, scale)
-
-          // Тень фишки
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
-          ctx.shadowBlur = 8
-          ctx.shadowOffsetX = 2
-          ctx.shadowOffsetY = 2
-
-          // Круглая фишка - используем текстуру если есть
-          // Player1 играет белыми, Player2 играет черными
-          const checkerTexture = checkerColor === '#FFFFFF' 
-            ? loadedTextures.whiteCheckers   // Белые шашки = player1
-            : loadedTextures.blackCheckers   // Черные шашки = player2
+          // Рисуем фишки
+          // Если идет перетаскивание с этой точки, не рисуем верхнюю шашку (она перетаскивается)
+          const isDraggingFromThisPoint = dragging && dragFromPoint === i
+          const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, maxStack) : Math.min(checkerCount, maxStack)
           
-          // Рисуем шашку ТОЛЬКО если есть текстура
-          // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
-          if (checkerTexture) {
-            // Используем текстуру шашек
-            ctx.beginPath()
-            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+          for (let j = 0; j < checkersToDraw; j++) {
+            let checkerY: number
+            if (isTop) {
+              // Верхние шашки должны быть в верхней части треугольника (начинаем сверху)
+              checkerY = y + (j * stackSpacing) + checkerRadius
+            } else {
+              // Нижние шашки должны быть в нижней части треугольника (начинаем снизу)
+              checkerY = y - (j * stackSpacing) - checkerRadius
+            }
+
+            const checkerX = x + pointWidth / 2
+
+            // Анимация выбранной фишки (только если не идет перетаскивание)
+            const isSelected = !isDraggingFromThisPoint && selectedPoint === i && j === checkersToDraw - 1
+            const scale = isSelected ? 1.2 : 1.0
+            const offsetX = isSelected ? Math.sin(Date.now() / 100) * 3 : 0
+            const offsetY = isSelected ? Math.cos(Date.now() / 100) * 2 : 0
+
             ctx.save()
-            ctx.clip()
-            ctx.drawImage(checkerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
-            ctx.restore()
+            ctx.translate(checkerX + offsetX, checkerY + offsetY)
+            ctx.scale(scale, scale)
+
+            // Тень фишки
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
+            ctx.shadowBlur = 8
+            ctx.shadowOffsetX = 2
+            ctx.shadowOffsetY = 2
+
+            // Круглая фишка - используем текстуру если есть
+            // Player1 играет белыми, Player2 играет черными
+            const checkerTexture = checkerColor === '#FFFFFF' 
+              ? loadedTextures.whiteCheckers   // Белые шашки = player1
+              : loadedTextures.blackCheckers   // Черные шашки = player2
             
-            // Обводка фишки
-            ctx.beginPath()
-            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-            ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
-            ctx.lineWidth = 2
-            ctx.stroke()
-          } else {
-            // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
-            // Просто пропускаем её
+            // Рисуем шашку ТОЛЬКО если есть текстура
+            // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
+            if (checkerTexture) {
+              // Используем текстуру шашек
+              ctx.beginPath()
+              ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+              ctx.save()
+              ctx.clip()
+              ctx.drawImage(checkerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
+              ctx.restore()
+              
+              // Обводка фишки
+              ctx.beginPath()
+              ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+              ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
+              ctx.lineWidth = 2
+              ctx.stroke()
+            } else {
+              // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
+              // Просто пропускаем её
+            }
+
+            ctx.restore()
           }
 
-          ctx.restore()
+          // Показываем количество если больше maxStack
+          if (checkerCount > maxStack) {
+            ctx.fillStyle = '#FFFFFF'
+            ctx.font = 'bold 12px Arial'
+            ctx.textAlign = 'center'
+            // Позиция текста количества фишек: для верхних - внизу стопки, для нижних - вверху стопки
+            const countTextY = isTop 
+              ? y + maxStack * stackSpacing + checkerRadius + 15
+              : y - maxStack * stackSpacing - checkerRadius - 10
+            ctx.fillText(
+              checkerCount.toString(),
+              x + pointWidth / 2,
+              countTextY
+            )
+          }
         }
 
-        // Показываем количество если больше maxStack
-        if (checkerCount > maxStack) {
-          ctx.fillStyle = '#FFFFFF'
-          ctx.font = 'bold 12px Arial'
-          ctx.textAlign = 'center'
-          // Позиция текста количества фишек: для верхних - внизу стопки, для нижних - вверху стопки
-          const countTextY = isTop 
-            ? y + maxStack * stackSpacing + checkerRadius + 15
-            : y - maxStack * stackSpacing - checkerRadius - 10
-          ctx.fillText(
-            checkerCount.toString(),
-            x + pointWidth / 2,
-            countTextY
-          )
-        }
-      }
-
-      // Подсветка выбранной точки
-      if (selectedPoint === i && isMyTurn && canMove) {
+        // Подсветка выбранной точки
+        if (selectedPoint === i && isMyTurn && canMove) {
         ctx.beginPath()
         if (isTop) {
           ctx.moveTo(x, y)
@@ -768,6 +768,8 @@ export default function BackgammonBoard({
         ? loadedTextures.whiteCheckers   // Белые шашки = player1
         : loadedTextures.blackCheckers   // Черные шашки = player2
       
+      // Круглая фишка - используем текстуру ТОЛЬКО если есть
+      // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
       if (draggedCheckerTexture) {
         ctx.beginPath()
         ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
@@ -775,34 +777,15 @@ export default function BackgammonBoard({
         ctx.clip()
         ctx.drawImage(draggedCheckerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
         ctx.restore()
-      } else {
-        // Градиент для круглой фишки (fallback)
-        const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
-        if (checkerColor === '#FFFFFF') {
-          checkerGradient.addColorStop(0, '#FFFFFF')
-          checkerGradient.addColorStop(1, '#E0E0E0')
-        } else {
-          checkerGradient.addColorStop(0, '#2a2a2a')
-          checkerGradient.addColorStop(1, '#1a1a1a')
-        }
-
-        // Круглая фишка
+        
+        // Обводка фишки
         ctx.beginPath()
         ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-        ctx.fillStyle = checkerGradient
-        ctx.fill()
+        ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
+        ctx.lineWidth = 2
+        ctx.stroke()
       }
-      
-      // Обводка фишки
-      ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
-      ctx.lineWidth = 2
-      ctx.stroke()
-
-      // Блик
-      ctx.beginPath()
-      ctx.arc(-4, -4, 4, 0, Math.PI * 2)
-      ctx.fillStyle = checkerColor === '#FFFFFF' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'
-      ctx.fill()
+      // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
 
       ctx.restore()
     }
