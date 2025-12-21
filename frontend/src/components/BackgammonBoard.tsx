@@ -26,6 +26,11 @@ interface BackgammonBoardProps {
   playerSkins?: { board?: any; dice?: any; checkers?: any }
   opponentSkins?: { board?: any; dice?: any; checkers?: any }
   diceAnimating?: boolean
+  myPlayerId?: string
+  player1Id?: string
+  player2Id?: string
+  player1Name?: string
+  player2Name?: string
 }
 
 // Правильная нумерация точек в нардах для отображения
