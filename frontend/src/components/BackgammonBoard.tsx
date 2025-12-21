@@ -92,15 +92,6 @@ export default function BackgammonBoard({
   // - Белые шашки: из player1Skins (player1 всегда играет белыми)
   // - Черные шашки: из player2Skins (player2 всегда играет черными)
   useEffect(() => {
-    console.log('🔄 ========== LOADING TEXTURES ==========')
-    console.log('🔄 player1Skins:', player1Skins)
-    console.log('🔄 player2Skins:', player2Skins)
-    console.log('🔄 mySkins:', mySkins)
-    console.log('🔄 player1Skins.board:', player1Skins?.board)
-    console.log('🔄 player1Skins.board?.boardTextureUrl:', player1Skins?.board?.boardTextureUrl)
-    console.log('🔄 mySkins.board:', mySkins?.board)
-    console.log('🔄 mySkins.board?.boardTextureUrl:', mySkins?.board?.boardTextureUrl)
-    
     const textures: {
       board?: HTMLImageElement
       dice?: HTMLImageElement
@@ -108,170 +99,98 @@ export default function BackgammonBoard({
       blackCheckers?: HTMLImageElement
     } = {}
     let loadedCount = 0
-    let expectedCount = 0 // Считаем сколько текстур мы реально пытаемся загрузить
+    let expectedCount = 0
     
     const checkAndDraw = () => {
       loadedCount++
-      console.log(`📊 Texture loading progress: ${loadedCount}/${expectedCount}`)
       if (loadedCount === expectedCount) {
-        console.log('✅ All textures loaded (or skipped):', textures)
         setLoadedTextures(textures)
       }
     }
     
-    // 1. Загружаем текстуру ДОСКИ из mySkins (скины текущего пользователя)
-    // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
+    // 1. Загружаем текстуру ДОСКИ из mySkins
     const boardTextureUrl = mySkins?.board?.boardTextureUrl
-    expectedCount++ // Всегда считаем, даже если нет текстуры
+    expectedCount++
     if (boardTextureUrl) {
       const boardUrl = getImageUrl(boardTextureUrl)
-      console.log('🎨 Loading board texture:', {
-        originalUrl: boardTextureUrl,
-        processedUrl: boardUrl,
-        mySkinsBoard: mySkins?.board,
-        fullMySkins: mySkins
-      })
       const boardImg = new Image()
-      boardImg.crossOrigin = 'anonymous' // Для CORS если нужно
+      boardImg.crossOrigin = 'anonymous'
       boardImg.onload = () => {
-        console.log('✅ Board texture loaded successfully:', boardUrl)
         textures.board = boardImg
         checkAndDraw()
       }
-      boardImg.onerror = (err) => {
-        console.error('❌ Failed to load board texture:', {
-          url: boardUrl,
-          originalUrl: boardTextureUrl,
-          error: err,
-          imageSrc: boardImg.src
-        })
-        checkAndDraw()
-      }
+      boardImg.onerror = () => checkAndDraw()
       if (boardUrl) {
         boardImg.src = boardUrl
       } else {
-        console.error('❌ boardUrl is undefined!')
         checkAndDraw()
       }
     } else {
-      console.warn('⚠️ No board texture URL in mySkins.board. Full mySkins:', JSON.stringify(mySkins, null, 2))
       checkAndDraw()
     }
     
     // 2. Загружаем текстуру КУБИКОВ из mySkins
-    // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
     const diceTextureUrl = mySkins?.dice?.diceTextureUrl
     expectedCount++
     if (diceTextureUrl) {
       const diceUrl = getImageUrl(diceTextureUrl)
-      console.log('🎲 Loading dice texture:', {
-        originalUrl: diceTextureUrl,
-        processedUrl: diceUrl,
-        mySkinsDice: mySkins?.dice
-      })
       const diceImg = new Image()
       diceImg.crossOrigin = 'anonymous'
       diceImg.onload = () => {
-        console.log('✅ Dice texture loaded successfully:', diceUrl)
         textures.dice = diceImg
         checkAndDraw()
       }
-      diceImg.onerror = (err) => {
-        console.error('❌ Failed to load dice texture:', {
-          url: diceUrl,
-          originalUrl: diceTextureUrl,
-          error: err
-        })
-        checkAndDraw()
-      }
+      diceImg.onerror = () => checkAndDraw()
       if (diceUrl) {
         diceImg.src = diceUrl
       } else {
-        console.error('❌ diceUrl is undefined!')
         checkAndDraw()
       }
     } else {
-      console.warn('⚠️ No dice texture URL in mySkins.dice. Full mySkins:', JSON.stringify(mySkins, null, 2))
       checkAndDraw()
     }
     
-    // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins (player1 всегда играет белыми)
-    // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
+    // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins
     const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl
     expectedCount++
     if (whiteCheckersTextureUrl) {
       const whiteCheckersUrl = getImageUrl(whiteCheckersTextureUrl)
-      console.log('⚪ Loading white checkers texture:', {
-        originalUrl: whiteCheckersTextureUrl,
-        processedUrl: whiteCheckersUrl,
-        player1SkinsCheckers: player1Skins?.checkers,
-        fullPlayer1Skins: player1Skins
-      })
       const whiteCheckersImg = new Image()
       whiteCheckersImg.crossOrigin = 'anonymous'
       whiteCheckersImg.onload = () => {
-        console.log('✅ White checkers texture loaded successfully:', whiteCheckersUrl)
         textures.whiteCheckers = whiteCheckersImg
         checkAndDraw()
       }
-      whiteCheckersImg.onerror = (err) => {
-        console.error('❌ Failed to load white checkers texture:', {
-          url: whiteCheckersUrl,
-          originalUrl: whiteCheckersTextureUrl,
-          error: err
-        })
-        checkAndDraw()
-      }
+      whiteCheckersImg.onerror = () => checkAndDraw()
       if (whiteCheckersUrl) {
         whiteCheckersImg.src = whiteCheckersUrl
       } else {
-        console.error('❌ whiteCheckersUrl is undefined!')
         checkAndDraw()
       }
     } else {
-      console.warn('⚠️ No white checkers texture URL in player1Skins.checkers. Full player1Skins:', JSON.stringify(player1Skins, null, 2))
       checkAndDraw()
     }
     
-    // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins (player2 всегда играет черными)
-    // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
+    // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins
     const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl
     expectedCount++
     if (blackCheckersTextureUrl) {
       const blackCheckersUrl = getImageUrl(blackCheckersTextureUrl)
-      console.log('⚫ Loading black checkers texture:', {
-        originalUrl: blackCheckersTextureUrl,
-        processedUrl: blackCheckersUrl,
-        player2SkinsCheckers: player2Skins?.checkers,
-        fullPlayer2Skins: player2Skins
-      })
       const blackCheckersImg = new Image()
       blackCheckersImg.crossOrigin = 'anonymous'
       blackCheckersImg.onload = () => {
-        console.log('✅ Black checkers texture loaded successfully:', blackCheckersUrl)
         textures.blackCheckers = blackCheckersImg
         checkAndDraw()
       }
-      blackCheckersImg.onerror = (err) => {
-        console.error('❌ Failed to load black checkers texture:', {
-          url: blackCheckersUrl,
-          originalUrl: blackCheckersTextureUrl,
-          error: err
-        })
-        checkAndDraw()
-      }
+      blackCheckersImg.onerror = () => checkAndDraw()
       if (blackCheckersUrl) {
         blackCheckersImg.src = blackCheckersUrl
       } else {
-        console.error('❌ blackCheckersUrl is undefined!')
         checkAndDraw()
       }
     } else {
-      console.warn('⚠️ No black checkers texture URL in player2Skins.checkers. Full player2Skins:', JSON.stringify(player2Skins, null, 2))
       checkAndDraw()
     }
-    
-    console.log(`📊 Expected ${expectedCount} texture checks (some may be skipped)`)
   }, [player1Skins, player2Skins, mySkins])
 
   // Определяем, кто я (player1 или player2) для отзеркаливания доски

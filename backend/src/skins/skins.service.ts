@@ -252,13 +252,10 @@ export class SkinsService implements OnModuleInit {
       relations: ['skin'],
     });
 
-    this.logger.log(`🔍 Getting selected skins for user ${userId}, found ${userSkins.length} selected skins`);
-
     const result: { board?: Skin; dice?: Skin; checkers?: Skin } = {};
     
     for (const userSkin of userSkins) {
       if (userSkin.skin) {
-        this.logger.log(`  - Found selected skin: ${userSkin.skin.name} (${userSkin.skin.type})`);
         if (userSkin.skin.type === 'board' && !result.board) {
           result.board = userSkin.skin;
         } else if (userSkin.skin.type === 'dice' && !result.dice) {
@@ -274,44 +271,23 @@ export class SkinsService implements OnModuleInit {
       where: { isDefault: true },
     });
     
-    this.logger.log(`🔍 Found ${allSkins.length} default skins in database`);
-    
     if (!result.board) {
       const defaultBoard = allSkins.find(s => s.type === 'board');
       if (defaultBoard) {
-        this.logger.log(`  - Using default board: ${defaultBoard.name}, boardTextureUrl: ${defaultBoard.boardTextureUrl}`);
         result.board = defaultBoard;
-      } else {
-        this.logger.warn(`  - No default board found!`);
       }
     }
     if (!result.dice) {
       const defaultDice = allSkins.find(s => s.type === 'dice');
       if (defaultDice) {
-        this.logger.log(`  - Using default dice: ${defaultDice.name}, diceTextureUrl: ${defaultDice.diceTextureUrl}`);
         result.dice = defaultDice;
-      } else {
-        this.logger.warn(`  - No default dice found!`);
       }
     }
     if (!result.checkers) {
       const defaultCheckers = allSkins.find(s => s.type === 'checkers');
       if (defaultCheckers) {
-        this.logger.log(`  - Using default checkers: ${defaultCheckers.name}, whiteCheckersTextureUrl: ${defaultCheckers.whiteCheckersTextureUrl}, blackCheckersTextureUrl: ${defaultCheckers.blackCheckersTextureUrl}`);
         result.checkers = defaultCheckers;
-      } else {
-        this.logger.warn(`  - No default checkers found!`);
       }
-    }
-
-    this.logger.log(`✅ ========== Final result for user ${userId} ==========`);
-    this.logger.log(`  Board: ${result.board ? `${result.board.name} (id: ${result.board.id}, boardTextureUrl: ${result.board.boardTextureUrl})` : 'NULL'}`);
-    this.logger.log(`  Dice: ${result.dice ? `${result.dice.name} (id: ${result.dice.id}, diceTextureUrl: ${result.dice.diceTextureUrl})` : 'NULL'}`);
-    this.logger.log(`  Checkers: ${result.checkers ? `${result.checkers.name} (id: ${result.checkers.id}, white: ${result.checkers.whiteCheckersTextureUrl}, black: ${result.checkers.blackCheckersTextureUrl})` : 'NULL'}`);
-    
-    // Проверяем, что все скины есть
-    if (!result.board || !result.dice || !result.checkers) {
-      this.logger.error(`❌ CRITICAL: Missing skins! board: ${!!result.board}, dice: ${!!result.dice}, checkers: ${!!result.checkers}`);
     }
 
     return result;
