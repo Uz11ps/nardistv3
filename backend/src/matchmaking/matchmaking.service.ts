@@ -183,7 +183,7 @@ export class MatchmakingService {
     return game.id;
   }
 
-  async getOpenTables(mode: GameMode): Promise<any[]> {
+  async getOpenTables(mode?: GameMode): Promise<any[]> {
     const keys = await this.redis.keys('table:*');
     const tables: any[] = [];
 
@@ -191,7 +191,8 @@ export class MatchmakingService {
       const tableStr = await this.redis.get(key);
       if (tableStr) {
         const table = JSON.parse(tableStr);
-        if (table.mode === mode) {
+        // Если mode указан, фильтруем по режиму, иначе показываем все
+        if (!mode || table.mode === mode) {
           const gameId = key.replace('table:', '');
           try {
             const game = await this.gamesService.findOne(gameId);

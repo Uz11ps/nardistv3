@@ -115,7 +115,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   }
 
   @SubscribeMessage('get_open_tables')
-  async handleGetOpenTables(@ConnectedSocket() client: Socket, @MessageBody() data: { mode: GameMode }) {
+  async handleGetOpenTables(@ConnectedSocket() client: Socket, @MessageBody() data: { mode?: GameMode }) {
     const tables = await this.matchmakingService.getOpenTables(data.mode);
     client.emit('open_tables', tables);
   }
@@ -132,16 +132,13 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
       // Сначала отправляем событие клиенту, чтобы он не завис
       client.emit('table_created', { gameId });
       
-      // Затем обновляем список столов и отправляем уведомление (не блокируем основной поток)
-      Promise.all([
-        this.matchmakingService.getOpenTables(data.mode).then(tables => {
-          this.server.emit('open_tables', tables);
-        }),
-        this.sendTelegramNotification(userId, `🪑 Стол создан! ID игры: #${gameId.substring(0, 8)}`).catch(err => {
-          this.logger.warn(`Не удалось отправить уведомление в Telegram: ${err.message}`);
-        }),
-      ]).catch(err => {
-        this.logger.error(`Ошибка при обработке созданного стола: ${err.message}`);
+      // Сразу обновляем список столов для всех клиентов (все режимы)
+      const tables = await this.matchmakingService.getOpenTables();
+      this.server.emit('open_tables', tables);
+      
+      // Отправляем уведомление в Telegram (не блокируем)
+      this.sendTelegramNotification(userId, `🪑 Стол создан! ID игры: #${gameId.substring(0, 8)}`).catch(err => {
+        this.logger.warn(`Не удалось отправить уведомление в Telegram: ${err.message}`);
       });
     } catch (error) {
       this.logger.error(`Ошибка при создании стола: ${error.message}`);
@@ -166,8 +163,8 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
       }
       await this.sendTelegramNotification(userId, `✅ Вы присоединились к столу! Игра #${data.gameId.substring(0, 8)}`);
       
-      // Отправляем обновление списка столов всем подписчикам
-      const tables = await this.matchmakingService.getOpenTables(game.mode);
+      // Отправляем обновление списка столов всем подписчикам (все режимы)
+      const tables = await this.matchmakingService.getOpenTables();
       this.server.emit('open_tables', tables);
       
       // Если оба игрока уже в лобби (оба присоединились), устанавливаем таймауты для обоих

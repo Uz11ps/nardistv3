@@ -27,7 +27,8 @@ export default function GameTables() {
     loadTables()
     const socket = getMatchmakingSocket()
     if (socket) {
-      socket.emit('get_open_tables', { mode: 'long' })
+      // Запрашиваем столы всех режимов
+      socket.emit('get_open_tables', {})
       socket.on('open_tables', (data: any) => {
         setTables(data || [])
         setLoading(false)
