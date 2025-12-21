@@ -439,12 +439,14 @@ export class GamesService {
       } else {
         updatedGame.player2Score = 1;
       }
-
-      // Применяем логику после завершения игры
-      await this.onGameFinished(updatedGame);
     }
 
     const savedGame = await this.gamesRepository.save(updatedGame);
+
+    // Применяем логику после завершения игры (после сохранения)
+    if (savedGame.status === GameStatus.FINISHED) {
+      await this.onGameFinished(savedGame);
+    }
 
     // Bot moves are now handled by GamesGateway.handleBotTurnIfNeeded()
     // This avoids circular dependency issues
@@ -486,37 +488,74 @@ export class GamesService {
    * Обработка завершения игры: жизни, рейтинги, награды (ставки, опыт)
    */
   private async onGameFinished(game: Game): Promise<void> {
+    this.logger.log(`🎁 onGameFinished вызван для игры ${game.id}, тип: ${game.type}, статус: ${game.status}, winnerId: ${game.winnerId}`);
+    
+    // Проверяем, что игра действительно завершена
+    if (game.status !== GameStatus.FINISHED) {
+      this.logger.warn(`⚠️ Игра ${game.id} не в статусе FINISHED, статус: ${game.status}`);
+      return;
+    }
+
+    // Проверяем, что есть победитель
+    if (!game.winnerId) {
+      this.logger.warn(`⚠️ Игра ${game.id} завершена, но нет winnerId`);
+      return;
+    }
+
     const loserId = game.winnerId === game.player1Id ? game.player2Id : game.player1Id;
+    
+    // Проверяем, что есть проигравший (для игр с игроками)
+    if (game.type === GameType.VS_PLAYER && !loserId) {
+      this.logger.warn(`⚠️ Игра ${game.id} типа VS_PLAYER, но нет loserId`);
+      return;
+    }
+    
+    this.logger.log(`🎮 Обработка наград: winnerId=${game.winnerId}, loserId=${loserId}, stake=${game.stake}`);
     
     // Только для игр с реальными игроками применяем жизни
     if (game.type === GameType.VS_PLAYER && loserId) {
-      await this.progressService.loseLifeOnDefeat(loserId);
+      try {
+        await this.progressService.loseLifeOnDefeat(loserId);
+        this.logger.log(`💔 Жизнь отнята у проигравшего ${loserId}`);
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при отнятии жизни: ${error.message}`);
+      }
     }
 
     // Обработка ставок - победитель получает обе ставки (с учетом комиссии)
     if (game.stake > 0 && game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
-      const stake = Number(game.stake);
-      const totalPot = stake * 2;
-      const baseCommission = Math.floor(totalPot * 0.05); // 5% комиссия
-      
-      // Применяем снижение комиссии через экономику
-      const winnerUser = await this.usersService.findOne(game.winnerId);
-      const economyLevel = winnerUser.enhancement === 'economy' ? 1 : 0; // TODO: получить уровень экономики
-      const finalCommission = this.progressService.calculateFeeWithEconomy(baseCommission, economyLevel);
-      const winnerReward = totalPot - finalCommission;
+      try {
+        const stake = Number(game.stake);
+        const totalPot = stake * 2;
+        const baseCommission = Math.floor(totalPot * 0.05); // 5% комиссия
+        
+        // Применяем снижение комиссии через экономику
+        const winnerUser = await this.usersService.findOne(game.winnerId);
+        const economyLevel = winnerUser.enhancement === 'economy' ? 1 : 0; // TODO: получить уровень экономики
+        const finalCommission = this.progressService.calculateFeeWithEconomy(baseCommission, economyLevel);
+        const winnerReward = totalPot - finalCommission;
 
-      const winnerBalance = Number(winnerUser.narCoin);
-      const newWinnerBalance = winnerBalance + winnerReward;
-      await this.usersService.update(game.winnerId, { narCoin: newWinnerBalance });
+        const winnerBalance = Number(winnerUser.narCoin);
+        const newWinnerBalance = winnerBalance + winnerReward;
+        await this.usersService.update(game.winnerId, { narCoin: newWinnerBalance });
+        this.logger.log(`💰 Награда начислена победителю ${game.winnerId}: +${winnerReward} NAR (было ${winnerBalance}, стало ${newWinnerBalance})`);
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при начислении ставки: ${error.message}`, error.stack);
+      }
     }
 
     // Начисление опыта: победителю больше, проигравшему меньше
     if (game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
-      const WINNER_XP = 50; // Опыт за победу
-      const LOSER_XP = 25; // Опыт за участие (проигрыш)
-      
-      await this.progressService.addXP(game.winnerId, WINNER_XP);
-      await this.progressService.addXP(loserId, LOSER_XP);
+      try {
+        const WINNER_XP = 50; // Опыт за победу
+        const LOSER_XP = 25; // Опыт за участие (проигрыш)
+        
+        await this.progressService.addXP(game.winnerId, WINNER_XP);
+        await this.progressService.addXP(loserId, LOSER_XP);
+        this.logger.log(`⭐ Опыт начислен: победитель ${game.winnerId} +${WINNER_XP} XP, проигравший ${loserId} +${LOSER_XP} XP`);
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при начислении опыта: ${error.message}`, error.stack);
+      }
     }
 
     // Обновление рейтингов (если RatingsService подключен)
@@ -528,11 +567,14 @@ export class GamesService {
           game.mode,
           false,
         );
+        this.logger.log(`📊 Рейтинги обновлены для игры ${game.id}`);
       } catch (error) {
         // Игнорируем ошибки рейтинга, чтобы не сломать завершение игры
-        console.error('Error updating ratings:', error);
+        this.logger.error(`❌ Ошибка при обновлении рейтингов: ${error.message}`);
       }
     }
+    
+    this.logger.log(`✅ onGameFinished завершен для игры ${game.id}`);
   }
 
   /**
