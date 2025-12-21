@@ -108,86 +108,126 @@ export default function BackgammonBoard({
       }
     }
     
-    // 1. Загружаем текстуру ДОСКИ из mySkins
-    const boardTextureUrl = mySkins?.board?.boardTextureUrl
+    // 1. Загружаем текстуру ДОСКИ из mySkins (с fallback на дефолтную)
+    const boardTextureUrl = mySkins?.board?.boardTextureUrl || '/skins/default-board.svg'
     expectedCount++
-    if (boardTextureUrl) {
-      const boardUrl = getImageUrl(boardTextureUrl)
-      const boardImg = new Image()
-      boardImg.crossOrigin = 'anonymous'
-      boardImg.onload = () => {
-        textures.board = boardImg
-        checkAndDraw()
-      }
-      boardImg.onerror = () => checkAndDraw()
-      if (boardUrl) {
-        boardImg.src = boardUrl
+    const boardUrl = getImageUrl(boardTextureUrl)
+    const boardImg = new Image()
+    boardImg.crossOrigin = 'anonymous'
+    boardImg.onload = () => {
+      textures.board = boardImg
+      checkAndDraw()
+    }
+    boardImg.onerror = () => {
+      // Если не загрузилась кастомная, пробуем дефолтную
+      if (boardTextureUrl !== '/skins/default-board.svg') {
+        const defaultBoardImg = new Image()
+        defaultBoardImg.crossOrigin = 'anonymous'
+        defaultBoardImg.onload = () => {
+          textures.board = defaultBoardImg
+          checkAndDraw()
+        }
+        defaultBoardImg.onerror = () => checkAndDraw()
+        defaultBoardImg.src = '/skins/default-board.svg'
       } else {
         checkAndDraw()
       }
+    }
+    if (boardUrl) {
+      boardImg.src = boardUrl
     } else {
       checkAndDraw()
     }
     
-    // 2. Загружаем текстуру КУБИКОВ из mySkins
-    const diceTextureUrl = mySkins?.dice?.diceTextureUrl
+    // 2. Загружаем текстуру КУБИКОВ из mySkins (с fallback на дефолтную)
+    const diceTextureUrl = mySkins?.dice?.diceTextureUrl || '/skins/default-dice.svg'
     expectedCount++
-    if (diceTextureUrl) {
-      const diceUrl = getImageUrl(diceTextureUrl)
-      const diceImg = new Image()
-      diceImg.crossOrigin = 'anonymous'
-      diceImg.onload = () => {
-        textures.dice = diceImg
-        checkAndDraw()
-      }
-      diceImg.onerror = () => checkAndDraw()
-      if (diceUrl) {
-        diceImg.src = diceUrl
+    const diceUrl = getImageUrl(diceTextureUrl)
+    const diceImg = new Image()
+    diceImg.crossOrigin = 'anonymous'
+    diceImg.onload = () => {
+      textures.dice = diceImg
+      checkAndDraw()
+    }
+    diceImg.onerror = () => {
+      // Если не загрузилась кастомная, пробуем дефолтную
+      if (diceTextureUrl !== '/skins/default-dice.svg') {
+        const defaultDiceImg = new Image()
+        defaultDiceImg.crossOrigin = 'anonymous'
+        defaultDiceImg.onload = () => {
+          textures.dice = defaultDiceImg
+          checkAndDraw()
+        }
+        defaultDiceImg.onerror = () => checkAndDraw()
+        defaultDiceImg.src = '/skins/default-dice.svg'
       } else {
         checkAndDraw()
       }
+    }
+    if (diceUrl) {
+      diceImg.src = diceUrl
     } else {
       checkAndDraw()
     }
     
-    // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins
-    const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl
+    // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins (с fallback на дефолтную)
+    const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl || '/skins/default-checkers-white.svg'
     expectedCount++
-    if (whiteCheckersTextureUrl) {
-      const whiteCheckersUrl = getImageUrl(whiteCheckersTextureUrl)
-      const whiteCheckersImg = new Image()
-      whiteCheckersImg.crossOrigin = 'anonymous'
-      whiteCheckersImg.onload = () => {
-        textures.whiteCheckers = whiteCheckersImg
-        checkAndDraw()
-      }
-      whiteCheckersImg.onerror = () => checkAndDraw()
-      if (whiteCheckersUrl) {
-        whiteCheckersImg.src = whiteCheckersUrl
+    const whiteCheckersUrl = getImageUrl(whiteCheckersTextureUrl)
+    const whiteCheckersImg = new Image()
+    whiteCheckersImg.crossOrigin = 'anonymous'
+    whiteCheckersImg.onload = () => {
+      textures.whiteCheckers = whiteCheckersImg
+      checkAndDraw()
+    }
+    whiteCheckersImg.onerror = () => {
+      // Если не загрузилась кастомная, пробуем дефолтную
+      if (whiteCheckersTextureUrl !== '/skins/default-checkers-white.svg') {
+        const defaultWhiteCheckersImg = new Image()
+        defaultWhiteCheckersImg.crossOrigin = 'anonymous'
+        defaultWhiteCheckersImg.onload = () => {
+          textures.whiteCheckers = defaultWhiteCheckersImg
+          checkAndDraw()
+        }
+        defaultWhiteCheckersImg.onerror = () => checkAndDraw()
+        defaultWhiteCheckersImg.src = '/skins/default-checkers-white.svg'
       } else {
         checkAndDraw()
       }
+    }
+    if (whiteCheckersUrl) {
+      whiteCheckersImg.src = whiteCheckersUrl
     } else {
       checkAndDraw()
     }
     
-    // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins
-    const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl
+    // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins (с fallback на дефолтную)
+    const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl || '/skins/default-checkers-black.svg'
     expectedCount++
-    if (blackCheckersTextureUrl) {
-      const blackCheckersUrl = getImageUrl(blackCheckersTextureUrl)
-      const blackCheckersImg = new Image()
-      blackCheckersImg.crossOrigin = 'anonymous'
-      blackCheckersImg.onload = () => {
-        textures.blackCheckers = blackCheckersImg
-        checkAndDraw()
-      }
-      blackCheckersImg.onerror = () => checkAndDraw()
-      if (blackCheckersUrl) {
-        blackCheckersImg.src = blackCheckersUrl
+    const blackCheckersUrl = getImageUrl(blackCheckersTextureUrl)
+    const blackCheckersImg = new Image()
+    blackCheckersImg.crossOrigin = 'anonymous'
+    blackCheckersImg.onload = () => {
+      textures.blackCheckers = blackCheckersImg
+      checkAndDraw()
+    }
+    blackCheckersImg.onerror = () => {
+      // Если не загрузилась кастомная, пробуем дефолтную
+      if (blackCheckersTextureUrl !== '/skins/default-checkers-black.svg') {
+        const defaultBlackCheckersImg = new Image()
+        defaultBlackCheckersImg.crossOrigin = 'anonymous'
+        defaultBlackCheckersImg.onload = () => {
+          textures.blackCheckers = defaultBlackCheckersImg
+          checkAndDraw()
+        }
+        defaultBlackCheckersImg.onerror = () => checkAndDraw()
+        defaultBlackCheckersImg.src = '/skins/default-checkers-black.svg'
       } else {
         checkAndDraw()
       }
+    }
+    if (blackCheckersUrl) {
+      blackCheckersImg.src = blackCheckersUrl
     } else {
       checkAndDraw()
     }
@@ -414,21 +454,18 @@ export default function BackgammonBoard({
     // Очистка
     ctx.clearRect(0, 0, width, height)
 
-    // Фон доски - ТОЛЬКО если есть текстура из скина
-    // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
+    // Фон доски - используем текстуру (кастомную или дефолтную)
     if (loadedTextures.board) {
       // Рисуем текстуру доски - она должна содержать всю доску целиком
       ctx.drawImage(loadedTextures.board, 0, 0, width, height)
     } else {
-      // Если нет текстуры - НЕ РИСУЕМ НИЧЕГО
-      // Просто оставляем пустой canvas
-      console.warn('⚠️ No board texture loaded - board will be empty')
+      // Если текстура еще не загрузилась, рисуем простой фон
+      ctx.fillStyle = '#8B4513'
+      ctx.fillRect(0, 0, width, height)
     }
     
-    // Номера точек и шашки рисуем ТОЛЬКО если есть текстура доски
-    // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
-    if (loadedTextures.board) {
-      for (let i = 0; i < 24; i++) {
+    // Номера точек и шашки рисуем всегда
+    for (let i = 0; i < 24; i++) {
         const pointNum = POINT_NUMBERS[i]
         const isTop = i < 12
         
@@ -501,8 +538,7 @@ export default function BackgammonBoard({
               ? loadedTextures.whiteCheckers   // Белые шашки = player1
               : loadedTextures.blackCheckers   // Черные шашки = player2
             
-            // Рисуем шашку ТОЛЬКО если есть текстура
-            // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
+            // Рисуем шашку - используем текстуру или дефолтный цвет
             if (checkerTexture) {
               // Используем текстуру шашек
               ctx.beginPath()
@@ -519,8 +555,14 @@ export default function BackgammonBoard({
               ctx.lineWidth = 2
               ctx.stroke()
             } else {
-              // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
-              // Просто пропускаем её
+              // Если текстура еще не загрузилась, рисуем простой цветной круг
+              ctx.fillStyle = checkerColor
+              ctx.beginPath()
+              ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+              ctx.fill()
+              ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
+              ctx.lineWidth = 2
+              ctx.stroke()
             }
 
             ctx.restore()
@@ -615,7 +657,6 @@ export default function BackgammonBoard({
           ctx.stroke()
         }
       }
-    }
 
     // Фишки на баре (сбитые)
     const barCenterX = barX + barWidth / 2
@@ -637,8 +678,7 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка - белые шашки ТОЛЬКО если есть текстура
-        // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
+        // Круглая шашка - белые шашки (используем текстуру или дефолтный цвет)
         const whiteCheckerTexture = loadedTextures.whiteCheckers
         if (whiteCheckerTexture) {
           ctx.beginPath()
@@ -650,8 +690,16 @@ export default function BackgammonBoard({
           ctx.strokeStyle = '#1a1a1a'
           ctx.lineWidth = 2
           ctx.stroke()
+        } else {
+          // Если текстура еще не загрузилась, рисуем простой белый круг
+          ctx.fillStyle = '#FFFFFF'
+          ctx.beginPath()
+          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.strokeStyle = '#1a1a1a'
+          ctx.lineWidth = 2
+          ctx.stroke()
         }
-        // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
         ctx.restore()
       }
       
@@ -673,8 +721,7 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка - черные шашки ТОЛЬКО если есть текстура
-        // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
+        // Круглая шашка - черные шашки (используем текстуру или дефолтный цвет)
         const blackCheckerTexture = loadedTextures.blackCheckers
         if (blackCheckerTexture) {
           ctx.beginPath()
@@ -686,8 +733,16 @@ export default function BackgammonBoard({
           ctx.strokeStyle = '#FFFFFF'
           ctx.lineWidth = 2
           ctx.stroke()
+        } else {
+          // Если текстура еще не загрузилась, рисуем простой черный круг
+          ctx.fillStyle = '#1a1a1a'
+          ctx.beginPath()
+          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.strokeStyle = '#FFFFFF'
+          ctx.lineWidth = 2
+          ctx.stroke()
         }
-        // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
         ctx.restore()
       }
       
@@ -759,8 +814,7 @@ export default function BackgammonBoard({
         ? loadedTextures.whiteCheckers   // Белые шашки = player1
         : loadedTextures.blackCheckers   // Черные шашки = player2
       
-      // Круглая фишка - используем текстуру ТОЛЬКО если есть
-      // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
+      // Круглая фишка - используем текстуру или дефолтный цвет
       if (draggedCheckerTexture) {
         ctx.beginPath()
         ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
@@ -775,8 +829,16 @@ export default function BackgammonBoard({
         ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
         ctx.lineWidth = 2
         ctx.stroke()
+      } else {
+        // Если текстура еще не загрузилась, рисуем простой цветной круг
+        ctx.fillStyle = checkerColor
+        ctx.beginPath()
+        ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
+        ctx.lineWidth = 2
+        ctx.stroke()
       }
-      // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
 
       ctx.restore()
     }
@@ -791,10 +853,32 @@ export default function BackgammonBoard({
     rolling: boolean,
     dropping: boolean
   ) => {
-    // Кубик - ТОЛЬКО если есть текстура
-    // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
+    // Кубик - используем текстуру или дефолтное отображение
     if (!loadedTextures.dice) {
-      // Если нет текстуры - НЕ РИСУЕМ КУБИК
+      // Если текстура еще не загрузилась, рисуем простой кубик
+      ctx.fillStyle = '#FFFFFF'
+      ctx.fillRect(x, y, size, size)
+      ctx.strokeStyle = '#1a1a1a'
+      ctx.lineWidth = 2
+      ctx.strokeRect(x, y, size, size)
+      
+      // Рисуем точки на кубике
+      ctx.fillStyle = '#1a1a1a'
+      const dotSize = size / 6
+      const dotPositions: { [key: number]: Array<[number, number]> } = {
+        1: [[size / 2, size / 2]],
+        2: [[size / 4, size / 4], [3 * size / 4, 3 * size / 4]],
+        3: [[size / 4, size / 4], [size / 2, size / 2], [3 * size / 4, 3 * size / 4]],
+        4: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
+        5: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 2, size / 2], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
+        6: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 4, size / 2], [3 * size / 4, size / 2], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
+      }
+      const dots = dotPositions[value] || []
+      dots.forEach(([dx, dy]) => {
+        ctx.beginPath()
+        ctx.arc(x + dx, y + dy, dotSize, 0, Math.PI * 2)
+        ctx.fill()
+      })
       return
     }
     

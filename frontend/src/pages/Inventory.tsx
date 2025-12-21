@@ -163,15 +163,16 @@ export default function Inventory() {
                       <div className="inventory-item-image">
                         {skin.imageUrl ? (
                           <img
-                            src={getImageUrl(skin.imageUrl)}
+                            src={getImageUrl(skin.imageUrl) || ''}
                             alt={skin.name}
                             className="inventory-image"
                             onError={(e) => {
+                              console.error('Failed to load skin image:', skin.imageUrl)
                               e.currentTarget.style.display = 'none'
                             }}
                           />
                         ) : (
-                          <Icon name="board" size={48} />
+                          <Icon name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} size={48} />
                         )}
                         {selectedSkinIds.has(skin.id) && (
                           <div className="inventory-item-selected">
