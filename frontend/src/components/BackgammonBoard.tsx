@@ -69,6 +69,12 @@ export default function BackgammonBoard({
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const animationFrameRef = useRef<number>()
+  
+  // Состояние для drag and drop
+  const [dragging, setDragging] = useState(false)
+  const [dragFromPoint, setDragFromPoint] = useState<number | null>(null)
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
+  const [dragHoverPoint, setDragHoverPoint] = useState<number | null>(null)
 
   // Определяем, кто я (player1 или player2) для отзеркаливания доски
   const isPlayer1 = myPlayerId === player1Id
@@ -188,6 +194,25 @@ export default function BackgammonBoard({
       // Преобразуем индекс точки обратно для запроса к серверу
       const originalPointIndex = shouldMirror ? unmirrorPointIndex(selectedPoint) : selectedPoint
       
+      // Сначала показываем подсветку из possibleMoves (быстро)
+      const quickHighlights = new Set<number>()
+      const filteredMoves = possibleMoves.filter((move) => {
+        if (selectedPoint === -1) {
+          return move.from === -1
+        }
+        return move.from === selectedPoint
+      })
+      filteredMoves.forEach((move) => {
+        if (move.to >= 0 && move.to < 24) {
+          quickHighlights.add(move.to)
+        }
+      })
+      if (quickHighlights.size > 0) {
+        console.log(`⚡ Быстрая подсветка из possibleMoves:`, Array.from(quickHighlights).map(idx => `${POINT_NUMBERS[idx]}`).join(', '))
+        setHighlightedPoints(quickHighlights)
+      }
+      
+      // Затем загружаем с сервера для точности
       apiClient
         .get(`/games/${gameId}/possible-moves/${originalPointIndex}`)
         .then((response: any) => {
@@ -203,51 +228,19 @@ export default function BackgammonBoard({
               highlights.add(displayIndex)
             }
           })
+          console.log(`🎯 Обновляем подсветку с сервера:`, Array.from(highlights).map(idx => `${POINT_NUMBERS[idx]}`).join(', '))
           setHighlightedPoints(highlights)
         })
         .catch((error) => {
           console.error(`❌ Ошибка загрузки возможных ходов с точки ${selectedPoint}:`, error)
-          setHighlightedPoints(new Set())
+          // При ошибке оставляем подсветку из possibleMoves
         })
     } else if (selectedPoint === null) {
       setHighlightedPoints(new Set())
     }
-  }, [gameId, selectedPoint, diceArray.join(','), isMyTurn, canMove])
+  }, [gameId, selectedPoint, diceArray.join(','), isMyTurn, canMove, shouldMirror, possibleMoves])
 
-  // При выборе точки подсвечиваем возможные ходы
-  useEffect(() => {
-    if (selectedPoint !== null && possibleMoves.length > 0) {
-      const highlights = new Set<number>()
-      const filteredMoves = possibleMoves.filter((move) => {
-        if (selectedPoint === -1) {
-          return move.from === -1
-        }
-        return move.from === selectedPoint
-      })
-      
-      console.log(`✨ Подсвечиваем ходы для точки ${selectedPoint === -1 ? 'бар' : POINT_NUMBERS[selectedPoint]} (индекс ${selectedPoint}):`, filteredMoves)
-      console.log(`📊 Всего возможных ходов: ${possibleMoves.length}, отфильтровано: ${filteredMoves.length}`)
-      
-      filteredMoves.forEach((move) => {
-        // Добавляем все валидные целевые точки (включая вынос, но для визуализации используем только точки на доске)
-        if (move.to >= 0 && move.to < 24) {
-          highlights.add(move.to)
-          console.log(`  ✅ Добавлена подсветка для точки ${POINT_NUMBERS[move.to]} (индекс ${move.to})`)
-        } else if (move.to === -1 || move.to < 0) {
-          // Вынос - не добавляем в highlights, но логируем
-          console.log(`  📤 Вынос с точки ${POINT_NUMBERS[move.from]} (индекс ${move.from}) кубиком ${move.die}`)
-        }
-      })
-      
-      console.log(`🎯 Итоговые подсвеченные точки:`, Array.from(highlights).map(idx => `${POINT_NUMBERS[idx]} (${idx})`).join(', '))
-      setHighlightedPoints(highlights)
-    } else {
-      if (selectedPoint !== null) {
-        console.log(`⚠️ Нет возможных ходов для точки ${selectedPoint === -1 ? 'бар' : POINT_NUMBERS[selectedPoint]}`)
-      }
-      setHighlightedPoints(new Set())
-    }
-  }, [selectedPoint, possibleMoves])
+  // Этот useEffect больше не нужен - подсветка теперь обрабатывается в основном useEffect выше
 
   const drawBoard = useCallback(() => {
     const canvas = canvasRef.current
@@ -390,7 +383,11 @@ export default function BackgammonBoard({
         const stackSpacing = 4
 
         // Рисуем фишки
-        for (let j = 0; j < Math.min(checkerCount, maxStack); j++) {
+        // Если идет перетаскивание с этой точки, не рисуем верхнюю шашку (она перетаскивается)
+        const isDraggingFromThisPoint = dragging && dragFromPoint === i
+        const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, maxStack) : Math.min(checkerCount, maxStack)
+        
+        for (let j = 0; j < checkersToDraw; j++) {
           let checkerY: number
           if (isTop) {
             checkerY = y + pointHeight - checkerRadius - (j * stackSpacing)
@@ -401,8 +398,8 @@ export default function BackgammonBoard({
 
           const checkerX = x + pointWidth / 2
 
-          // Анимация выбранной фишки
-          const isSelected = selectedPoint === i && j === checkerCount - 1
+          // Анимация выбранной фишки (только если не идет перетаскивание)
+          const isSelected = !isDraggingFromThisPoint && selectedPoint === i && j === checkersToDraw - 1
           const scale = isSelected ? 1.2 : 1.0
           const offsetX = isSelected ? Math.sin(Date.now() / 100) * 3 : 0
           const offsetY = isSelected ? Math.cos(Date.now() / 100) * 2 : 0
@@ -487,8 +484,10 @@ export default function BackgammonBoard({
         ctx.stroke()
       }
 
-      // Подсветка возможных ходов (когда точка выбрана) - рисуем поверх всего
-      if (highlightedPoints.has(i) && isMyTurn && canMove && selectedPoint !== null && selectedPoint !== i) {
+      // Подсветка возможных ходов (когда точка выбрана или перетаскивается) - рисуем поверх всего
+      const isHighlighted = highlightedPoints.has(i) && isMyTurn && canMove && 
+        ((selectedPoint !== null && selectedPoint !== i) || (dragging && dragFromPoint !== null && dragFromPoint !== i))
+      if (isHighlighted) {
         ctx.beginPath()
         if (isTop) {
           ctx.moveTo(x, y)
@@ -502,11 +501,13 @@ export default function BackgammonBoard({
         ctx.closePath()
         
         // Более яркая подсветка для лучшей видимости
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.6)'
+        // Если это точка под курсором при перетаскивании, делаем еще ярче
+        const isDragTarget = dragging && dragHoverPoint === i
+        ctx.fillStyle = isDragTarget ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.6)'
         ctx.fill()
         
         ctx.strokeStyle = 'rgba(0, 255, 0, 1.0)'
-        ctx.lineWidth = 4
+        ctx.lineWidth = isDragTarget ? 5 : 4
         ctx.stroke()
       }
 
@@ -637,7 +638,52 @@ export default function BackgammonBoard({
         })
       }
     }
-  }, [points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, diceAnimating, isMyTurn, canMove])
+    // Рисуем перетаскиваемую шашку
+    if (dragging && dragFromPoint !== null && dragPosition) {
+      const pointValue = points[dragFromPoint] || 0
+      const isPlayer1Checker = pointValue > 0
+      const checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
+      const checkerRadius = 14
+
+      ctx.save()
+      ctx.translate(dragPosition.x, dragPosition.y)
+      
+      // Тень
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
+      ctx.shadowBlur = 12
+      ctx.shadowOffsetX = 4
+      ctx.shadowOffsetY = 4
+
+      // Градиент для фишки
+      const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
+      if (checkerColor === '#FFFFFF') {
+        checkerGradient.addColorStop(0, '#FFFFFF')
+        checkerGradient.addColorStop(1, '#E0E0E0')
+      } else {
+        checkerGradient.addColorStop(0, '#2a2a2a')
+        checkerGradient.addColorStop(1, '#1a1a1a')
+      }
+
+      // Фишка
+      ctx.beginPath()
+      ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+      ctx.fillStyle = checkerGradient
+      ctx.fill()
+      
+      // Обводка фишки
+      ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
+      ctx.lineWidth = 2
+      ctx.stroke()
+
+      // Блик
+      ctx.beginPath()
+      ctx.arc(-4, -4, 4, 0, Math.PI * 2)
+      ctx.fillStyle = checkerColor === '#FFFFFF' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'
+      ctx.fill()
+
+      ctx.restore()
+    }
+  }, [points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, diceAnimating, isMyTurn, canMove, dragging, dragFromPoint, dragPosition])
 
   const drawDice = (
     ctx: CanvasRenderingContext2D,
@@ -844,12 +890,97 @@ export default function BackgammonBoard({
     if (!canvas) return
 
     const rect = canvas.getBoundingClientRect()
-    // Координаты уже в CSS пикселях, используем их напрямую
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
+    // Если идет перетаскивание, обновляем позицию и проверяем, над какой точкой мы находимся
+    if (dragging && dragFromPoint !== null) {
+      setDragPosition({ x, y })
+      const hoveredPoint = getPointFromCoords(x, y)
+      setDragHoverPoint(hoveredPoint)
+      return
+    }
+
+    // Обычное наведение
     const hoveredPoint = getPointFromCoords(x, y)
     setHoverPoint(hoveredPoint)
+  }
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isMyTurn || !canMove || diceArray.length === 0) return
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    const clickedPoint = getPointFromCoords(x, y)
+    if (clickedPoint === null || clickedPoint < 0 || clickedPoint >= 24) return
+
+    // Проверяем, есть ли на этой точке наша шашка
+    const pointValue = points[clickedPoint] || 0
+    const myPlayerIndexMirrored = shouldMirror ? (myPlayerIndex === 0 ? 1 : 0) : myPlayerIndex
+    const checkerCount = myPlayerIndexMirrored === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
+    const isMyChecker = myPlayerIndexMirrored === 0 ? pointValue > 0 : pointValue < 0
+
+    if (isMyChecker && checkerCount > 0) {
+      // Проверяем, есть ли возможные ходы с этой точки
+      const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
+      if (hasPossibleMoves) {
+        console.log(`🎯 Начинаем перетаскивание с точки ${POINT_NUMBERS[clickedPoint]} (индекс ${clickedPoint})`)
+        setDragging(true)
+        setDragFromPoint(clickedPoint)
+        setDragPosition({ x, y })
+        setSelectedPoint(clickedPoint) // Также выбираем точку для подсветки
+      }
+    }
+  }
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!dragging || dragFromPoint === null) {
+      // Если не было перетаскивания, обрабатываем как обычный клик
+      handleCanvasClick(e)
+      return
+    }
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    const dropPoint = getPointFromCoords(x, y)
+    
+    // Завершаем перетаскивание
+    setDragging(false)
+    const fromPoint = dragFromPoint
+    setDragFromPoint(null)
+    setDragPosition(null)
+    setDragHoverPoint(null)
+
+    // Если отпустили на валидной точке, делаем ход
+    if (dropPoint !== null && dropPoint >= 0 && dropPoint < 24 && highlightedPoints.has(dropPoint)) {
+      const validMove = possibleMoves.find(
+        move => move.from === fromPoint && move.to === dropPoint
+      )
+      
+      if (validMove) {
+        console.log('✅ Ход валиден через drag and drop, отправляем на сервер')
+        const originalFrom = shouldMirror ? unmirrorPointIndex(fromPoint) : fromPoint
+        const originalTo = shouldMirror ? unmirrorPointIndex(dropPoint) : dropPoint
+        onMove(originalFrom, originalTo, validMove.die)
+        setSelectedPoint(null)
+        setHighlightedPoints(new Set())
+        return
+      }
+    }
+
+    // Если не валидный ход, просто отменяем выбор
+    setSelectedPoint(null)
+    setHighlightedPoints(new Set())
   }
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1019,8 +1150,21 @@ export default function BackgammonBoard({
         ref={canvasRef}
         onClick={handleCanvasClick}
         onMouseMove={handleMouseMove}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={() => {
+          // Отменяем перетаскивание при выходе курсора за пределы canvas
+          if (dragging) {
+            setDragging(false)
+            setDragFromPoint(null)
+            setDragPosition(null)
+            setDragHoverPoint(null)
+            setSelectedPoint(null)
+            setHighlightedPoints(new Set())
+          }
+        }}
         className="backgammon-board"
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: dragging ? 'grabbing' : 'pointer' }}
       />
       {selectedPoint !== null && (
         <div className="selected-point-indicator">
