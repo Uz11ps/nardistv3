@@ -715,10 +715,10 @@ export class GamesService {
     // Проверяем, не находится ли игрок уже в активной игре
     const player1ActiveGames = await this.gamesRepository.find({
       where: [
-        { player1Id, status: GameStatus.WAITING },
-        { player1Id, status: GameStatus.IN_PROGRESS },
-        { player2Id: player1Id, status: GameStatus.WAITING },
-        { player2Id: player1Id, status: GameStatus.IN_PROGRESS },
+        { player1Id: playerId, status: GameStatus.WAITING },
+        { player1Id: playerId, status: GameStatus.IN_PROGRESS },
+        { player2Id: playerId, status: GameStatus.WAITING },
+        { player2Id: playerId, status: GameStatus.IN_PROGRESS },
       ],
     });
     // Фильтруем только действительно активные игры (исключаем игры с ботом)
@@ -741,7 +741,7 @@ export class GamesService {
 
     // Игра с ИИ сразу начинается (IN_PROGRESS)
     const game = this.gamesRepository.create({
-      player1Id,
+      player1Id: playerId,
       player2Id: null, // Бот не имеет player2Id
       mode: gameMode,
       type: GameType.VS_BOT,
@@ -758,9 +758,9 @@ export class GamesService {
     const savedGame = await this.gamesRepository.save(game);
 
     // Сразу бросаем кубики для игрока
-    const dice = await this.rollDice(savedGame.id, player1Id);
+    const dice = await this.rollDice(savedGame.id, playerId);
     
-    this.logger.log(`🤖 Создана игра с ИИ: gameId=${savedGame.id}, playerId=${player1Id}, mode=${gameMode}, dice=[${dice.join(', ')}]`);
+    this.logger.log(`🤖 Создана игра с ИИ: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}, dice=[${dice.join(', ')}]`);
 
     return savedGame;
   }
