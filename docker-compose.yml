@@ -114,6 +114,8 @@ services:
       - /etc/letsencrypt/live/nardist.site/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
       # Монтируем статические файлы frontend из контейнера
       - frontend_static:/usr/share/nginx/html:ro
+      # Монтируем uploads для прямой отдачи файлов
+      - ./backend/uploads:/app/uploads:ro
     depends_on:
       backend:
         condition: service_healthy

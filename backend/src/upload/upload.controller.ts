@@ -9,6 +9,7 @@ import {
   UseGuards,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -21,6 +22,8 @@ import { ConfigService } from '@nestjs/config';
 
 @Controller('uploads')
 export class UploadController {
+  private readonly logger = new Logger(UploadController.name);
+
   constructor(private configService: ConfigService) {}
 
   /**
@@ -29,28 +32,54 @@ export class UploadController {
    */
   @Get('skins/:filename')
   async getSkinImage(@Param('filename') filename: string, @Res() res: Response) {
-    // Используем __dirname для правильного пути в Docker контейнере
-    const filePath = join(__dirname, '..', 'uploads', 'skins', filename);
-    
-    if (!existsSync(filePath)) {
-      throw new NotFoundException(`File not found: ${filename}`);
+    try {
+      // Пробуем разные варианты путей
+      const cwd = process.cwd();
+      const possiblePaths = [
+        join(cwd, 'uploads', 'skins', filename), // /app/uploads/skins/filename
+        join('/app', 'uploads', 'skins', filename), // Явный путь для Docker
+        join(__dirname, '..', '..', 'uploads', 'skins', filename), // Относительно dist
+      ];
+
+      let filePath: string | null = null;
+      for (const path of possiblePaths) {
+        if (existsSync(path)) {
+          filePath = path;
+          this.logger.log(`✅ File found at: ${path}`);
+          break;
+        }
+      }
+
+      if (!filePath) {
+        this.logger.error(`❌ File not found: ${filename}`);
+        this.logger.error(`Checked paths: ${possiblePaths.join(', ')}`);
+        this.logger.error(`Current working directory: ${cwd}`);
+        this.logger.error(`__dirname: ${__dirname}`);
+        throw new NotFoundException(`File not found: ${filename}`);
+      }
+
+      // Определяем MIME тип по расширению файла
+      const ext = filename.split('.').pop()?.toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        jpg: 'image/jpeg',  // .jpg и .jpeg - это один формат JPEG, поэтому одинаковый MIME-тип
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        svg: 'image/svg+xml',
+        ico: 'image/x-icon',
+      };
+
+      const contentType = mimeTypes[ext || ''] || 'application/octet-stream';
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+      const fileStream = createReadStream(filePath);
+      fileStream.pipe(res);
+    } catch (error) {
+      this.logger.error(`Error serving skin image ${filename}:`, error);
+      throw error;
     }
-
-    // Определяем MIME тип по расширению
-    const ext = filename.split('.').pop()?.toLowerCase();
-    const mimeTypes: Record<string, string> = {
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      gif: 'image/gif',
-      webp: 'image/webp',
-    };
-
-    res.setHeader('Content-Type', mimeTypes[ext || ''] || 'application/octet-stream');
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-
-    const fileStream = createReadStream(filePath);
-    fileStream.pipe(res);
   }
 
   /**
@@ -58,22 +87,44 @@ export class UploadController {
    */
   @Get('images/:filename')
   async getImage(@Param('filename') filename: string, @Res() res: Response) {
-    const filePath = join(__dirname, '..', 'uploads', 'images', filename);
-    
-    if (!existsSync(filePath)) {
-      throw new NotFoundException(`File not found: ${filename}`);
-    }
+    try {
+      // Пробуем разные варианты путей
+      const cwd = process.cwd();
+      const possiblePaths = [
+        join(cwd, 'uploads', 'images', filename),
+        join('/app', 'uploads', 'images', filename),
+        join(__dirname, '..', '..', 'uploads', 'images', filename),
+      ];
 
-    const ext = filename.split('.').pop()?.toLowerCase();
-    const mimeTypes: Record<string, string> = {
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      gif: 'image/gif',
-      webp: 'image/webp',
-    };
+      let filePath: string | null = null;
+      for (const path of possiblePaths) {
+        if (existsSync(path)) {
+          filePath = path;
+          this.logger.log(`✅ File found at: ${path}`);
+          break;
+        }
+      }
 
-    res.setHeader('Content-Type', mimeTypes[ext || ''] || 'application/octet-stream');
+      if (!filePath) {
+        this.logger.error(`❌ File not found: ${filename}`);
+        this.logger.error(`Checked paths: ${possiblePaths.join(', ')}`);
+        throw new NotFoundException(`File not found: ${filename}`);
+      }
+
+      // Определяем MIME тип по расширению файла
+      const ext = filename.split('.').pop()?.toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        jpg: 'image/jpeg',  // .jpg и .jpeg - это один формат JPEG, поэтому одинаковый MIME-тип
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        svg: 'image/svg+xml',
+        ico: 'image/x-icon',
+      };
+
+      const contentType = mimeTypes[ext || ''] || 'application/octet-stream';
+      res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
     const fileStream = createReadStream(filePath);

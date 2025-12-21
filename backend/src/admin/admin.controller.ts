@@ -7,6 +7,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { CreateSkinDto } from './dto/create-skin.dto';
 import { diskStorage } from 'multer';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { extname } from 'path';
 
 @Controller('admin')
@@ -256,7 +258,15 @@ export class AdminController {
   @UseInterceptors(
     FileInterceptor('image', {
       storage: diskStorage({
-        destination: './uploads/skins',
+        destination: (req, file, cb) => {
+          // Используем абсолютный путь для Docker
+          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
+          // Создаем директорию если её нет
+          if (!existsSync(uploadsDir)) {
+            mkdirSync(uploadsDir, { recursive: true });
+          }
+          cb(null, uploadsDir);
+        },
         filename: (req, file, cb) => {
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
           cb(null, `skin-${uniqueSuffix}${extname(file.originalname)}`);
@@ -341,7 +351,15 @@ export class AdminController {
   @UseInterceptors(
     FileInterceptor('image', {
       storage: diskStorage({
-        destination: './uploads/skins',
+        destination: (req, file, cb) => {
+          // Используем абсолютный путь для Docker
+          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
+          // Создаем директорию если её нет
+          if (!existsSync(uploadsDir)) {
+            mkdirSync(uploadsDir, { recursive: true });
+          }
+          cb(null, uploadsDir);
+        },
         filename: (req, file, cb) => {
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
           cb(null, `skin-${uniqueSuffix}${extname(file.originalname)}`);

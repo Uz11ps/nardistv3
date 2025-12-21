@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
@@ -22,10 +22,14 @@ import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
@@ -458,6 +462,24 @@ export class AdminService {
     }
 
     try {
+      // Удаляем файл изображения с сервера, если он есть
+      if (skin.imageUrl) {
+        try {
+          // imageUrl хранится как /uploads/skins/filename.jpg
+          const filename = skin.imageUrl.split('/').pop();
+          if (filename) {
+            const filePath = join(process.cwd(), 'uploads', 'skins', filename);
+            await unlink(filePath).catch((err) => {
+              // Игнорируем ошибку если файл уже удален
+              console.warn(`File ${filePath} not found or already deleted:`, err.message);
+            });
+          }
+        } catch (fileError) {
+          // Логируем, но не прерываем удаление скина
+          console.warn('Error deleting skin image file:', fileError);
+        }
+      }
+
       // Удаляем связанные записи user_skins сначала
       await this.userSkinsRepository.delete({ skinId: id });
       
@@ -474,6 +496,22 @@ export class AdminService {
     const skin = await this.skinsRepository.findOne({ where: { id } });
     if (!skin) {
       throw new Error('Скин не найден');
+    }
+
+    // Удаляем старое изображение, если оно было
+    if (skin.imageUrl && skin.imageUrl !== imageUrl) {
+      try {
+        const oldFilename = skin.imageUrl.split('/').pop();
+        if (oldFilename) {
+          const oldFilePath = join(process.cwd(), 'uploads', 'skins', oldFilename);
+          await unlink(oldFilePath).catch((err) => {
+            // Игнорируем ошибку если файл уже удален
+            console.warn(`Old file ${oldFilePath} not found:`, err.message);
+          });
+        }
+      } catch (fileError) {
+        console.warn('Error deleting old skin image file:', fileError);
+      }
     }
 
     skin.imageUrl = imageUrl;

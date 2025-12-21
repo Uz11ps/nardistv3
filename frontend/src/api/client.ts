@@ -34,32 +34,15 @@ export const getImageUrl = (imageUrl?: string | null): string | undefined => {
     return imageUrl
   }
   
-  // Если путь начинается с /uploads/, нужно добавить /api префикс
-  // потому что бэкенд отдает файлы через /api/uploads/ prefix
+  // Если путь начинается с /uploads/, возвращаем как есть
+  // Nginx отдает файлы напрямую без /api префикса
   if (imageUrl.startsWith('/uploads/')) {
-    // Убираем ведущий слэш для consistency
-    const path = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl
-    
-    if (import.meta.env.PROD) {
-      // В production используем /api/uploads/... (nginx проксирует на бэкенд)
-      return `/api/${path}`
-    } else {
-      // В dev добавляем полный URL бэкенда
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-      const baseURL = API_URL.replace('/api', '')
-      return `${baseURL}/api/${path}`
-    }
+    return imageUrl
   }
   
-  // Если путь уже содержит /api/uploads/, возвращаем как есть
+  // Если путь уже содержит /api/uploads/, убираем /api (для старых записей в БД)
   if (imageUrl.startsWith('/api/uploads/')) {
-    if (import.meta.env.PROD) {
-      return imageUrl
-    } else {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-      const baseURL = API_URL.replace('/api', '')
-      return `${baseURL}${imageUrl}`
-    }
+    return imageUrl.replace('/api/uploads/', '/uploads/')
   }
   
   // Для других путей (если вдруг есть)
