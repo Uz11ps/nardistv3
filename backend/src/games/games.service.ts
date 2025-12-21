@@ -39,7 +39,7 @@ export class GamesService {
     type: GameType,
     stake: number = 0,
   ): Promise<Game> {
-    // Проверяем, не находится ли player1 уже в активной игре (исключаем finished и abandoned)
+    // Проверяем, не находится ли player1 уже в активной игре (исключаем finished, abandoned и игры с ботом)
     const player1ActiveGames = await this.gamesRepository.find({
       where: [
         { player1Id, status: GameStatus.WAITING },
@@ -48,9 +48,10 @@ export class GamesService {
         { player2Id: player1Id, status: GameStatus.IN_PROGRESS },
       ],
     });
-    // Фильтруем только действительно активные игры
+    // Фильтруем только действительно активные игры (исключаем игры с ботом)
     const trulyActivePlayer1Games = player1ActiveGames.filter(game => 
-      game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS
+      (game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS) &&
+      game.type !== GameType.VS_BOT
     );
     if (trulyActivePlayer1Games.length > 0) {
       throw new BadRequestException('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
@@ -66,9 +67,10 @@ export class GamesService {
           { player2Id, status: GameStatus.IN_PROGRESS },
         ],
       });
-      // Фильтруем только действительно активные игры
+      // Фильтруем только действительно активные игры (исключаем игры с ботом)
       const trulyActivePlayer2Games = player2ActiveGames.filter(game => 
-        game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS
+        (game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS) &&
+        game.type !== GameType.VS_BOT
       );
       if (trulyActivePlayer2Games.length > 0) {
         throw new BadRequestException('Соперник уже находится в активной игре.');

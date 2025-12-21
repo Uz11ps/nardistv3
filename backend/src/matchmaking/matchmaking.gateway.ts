@@ -130,6 +130,10 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
       const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit);
       client.emit('table_created', { gameId });
       
+      // Отправляем обновление списка столов всем подписчикам
+      const tables = await this.matchmakingService.getOpenTables(data.mode);
+      this.server.emit('open_tables', tables);
+      
       // Отправляем уведомление в Telegram
       await this.sendTelegramNotification(userId, `🪑 Стол создан! ID игры: #${gameId.substring(0, 8)}`);
     } catch (error) {
@@ -154,6 +158,10 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
         await this.sendTelegramNotification(game.player1Id, `✅ Игрок присоединился к столу! Игра #${data.gameId.substring(0, 8)}`);
       }
       await this.sendTelegramNotification(userId, `✅ Вы присоединились к столу! Игра #${data.gameId.substring(0, 8)}`);
+      
+      // Отправляем обновление списка столов всем подписчикам
+      const tables = await this.matchmakingService.getOpenTables(game.mode);
+      this.server.emit('open_tables', tables);
       
       // Если оба игрока уже в лобби (оба присоединились), устанавливаем таймауты для обоих
       if (game.player1Id && game.player2Id) {
@@ -204,9 +212,16 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
         game.status = 'in_progress' as any;
         await this.gamesService['gamesRepository'].save(game);
         
+        // Удаляем стол из списка открытых, так как игра началась
+        await this.matchmakingService.deleteTableFromRedis(data.gameId);
+        
         // Отправляем событие начала игры обоим игрокам
         this.server.to(`user:${game.player1Id}`).emit('game_started', { gameId: data.gameId, game });
         this.server.to(`user:${game.player2Id}`).emit('game_started', { gameId: data.gameId, game });
+        
+        // Отправляем обновление списка столов всем подписчикам
+        const tables = await this.matchmakingService.getOpenTables(game.mode);
+        this.server.emit('open_tables', tables);
         
         // Отправляем уведомления в Telegram
         await this.sendTelegramNotification(game.player1Id, `🎮 Игра началась! Игра #${data.gameId.substring(0, 8)}`);
