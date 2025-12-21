@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import apiClient, { getImageUrl } from '../api/client'
+import BackgammonBoard from '../components/BackgammonBoard'
 import './Admin.css'
 
 interface Stats {
@@ -659,16 +660,13 @@ export default function Admin() {
                         <div className="btn-group">
                           <button onClick={async () => {
                             try {
-                              const gameDetails = await apiClient.get(`/admin/games/${game.id}`)
-                              setSelectedGame(gameDetails.data)
-                              setGameReplay({
-                                game: gameDetails.data,
-                                moves: gameDetails.data.moves || []
-                              })
+                              // Загружаем полные данные реплея
+                              const replayResponse = await apiClient.get(`/history/replay/${game.id}`)
+                              setSelectedGame(game)
+                              setGameReplay(replayResponse.data)
                               setReplayStep(0)
-                              setActiveTab('games')
                             } catch (error: any) {
-                              alert('Ошибка загрузки: ' + (error.response?.data?.message || error.message))
+                              alert('Ошибка загрузки реплея: ' + (error.response?.data?.message || error.message))
                             }
                           }}>Просмотр</button>
                         </div>

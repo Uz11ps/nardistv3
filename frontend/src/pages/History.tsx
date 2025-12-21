@@ -135,6 +135,11 @@ export default function History() {
   const getCurrentGameState = () => {
     if (!replayData || !replayData.game) return null
     
+    // Если есть currentGameState из сервера, используем его
+    if (replayData.currentGameState) {
+      return convertGameStateForBoard(replayData.currentGameState)
+    }
+    
     const { game, moves } = replayData
     let currentState: any = null
     
@@ -179,11 +184,47 @@ export default function History() {
     return null
   }
 
-  const handleReplayStep = (step: number) => {
-    if (!selectedGame) return
-    const maxStep = selectedGame.moves.length
+  const handleReplayStep = async (step: number) => {
+    if (!selectedGame || !replayData) return
+    const maxStep = replayData.moves?.length || selectedGame.moves.length
     const newStep = Math.max(0, Math.min(maxStep, replayStep + step))
     setReplayStep(newStep)
+    
+    // Загружаем состояние для нового шага с сервера
+    try {
+      const response = await apiClient.get(`/history/replay/${selectedGame.id}?step=${newStep}`)
+      if (response.data && response.data.currentGameState) {
+        // Обновляем replayData с новым состоянием
+        setReplayData({
+          ...replayData,
+          currentGameState: response.data.currentGameState,
+          currentStep: newStep,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load replay step:', error)
+    }
+  }
+
+  const handleReplayStepChange = async (newStep: number) => {
+    if (!selectedGame || !replayData) return
+    const maxStep = replayData.moves?.length || selectedGame.moves.length
+    const step = Math.max(0, Math.min(maxStep, newStep))
+    setReplayStep(step)
+    
+    // Загружаем состояние для нового шага с сервера
+    try {
+      const response = await apiClient.get(`/history/replay/${selectedGame.id}?step=${step}`)
+      if (response.data && response.data.currentGameState) {
+        setReplayData({
+          ...replayData,
+          currentGameState: response.data.currentGameState,
+          currentStep: step,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load replay step:', error)
+    }
   }
 
   const formatDuration = (seconds: number) => {
@@ -424,8 +465,9 @@ export default function History() {
             <div className="replay-controls">
               <button
                 className="replay-btn"
-                onClick={() => setReplayStep(0)}
+                onClick={() => handleReplayStepChange(0)}
                 disabled={replayStep === 0}
+                title="В начало"
               >
                 ⏮
               </button>
@@ -433,24 +475,114 @@ export default function History() {
                 className="replay-btn"
                 onClick={() => handleReplayStep(-1)}
                 disabled={replayStep === 0}
+                title="Назад"
               >
                 ⏪
               </button>
+              
+              {/* Слайдер для перемотки */}
+              <div style={{ flex: 1, margin: '0 16px', display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max={replayData?.moves?.length || selectedGame.moves.length || 0}
+                  value={replayStep}
+                  onChange={(e) => handleReplayStepChange(parseInt(e.target.value, 10))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              
               <button
                 className="replay-btn"
                 onClick={() => handleReplayStep(1)}
                 disabled={replayStep >= (replayData?.moves?.length || selectedGame.moves.length)}
+                title="Вперед"
               >
                 ⏩
               </button>
               <button
                 className="replay-btn"
-                onClick={() => setReplayStep(replayData?.moves?.length || selectedGame.moves.length)}
+                onClick={() => handleReplayStepChange(replayData?.moves?.length || selectedGame.moves.length)}
                 disabled={replayStep >= (replayData?.moves?.length || selectedGame.moves.length)}
+                title="В конец"
               >
                 ⏭
               </button>
             </div>
+            
+            {/* Информация о текущем ходе */}
+            {replayData?.moves && replayData.moves[replayStep - 1] && (
+              <div style={{ 
+                padding: '12px', 
+                background: 'rgba(0,0,0,0.3)', 
+                borderRadius: '8px',
+                marginTop: '12px',
+                fontSize: '14px'
+              }}>
+                <div style={{ marginBottom: '8px' }}>
+                  <strong>Ход {replayStep}:</strong> {replayData.moves[replayStep - 1].player.username}
+                </div>
+                <div style={{ marginBottom: '4px' }}>
+                  Кубики: {replayData.moves[replayStep - 1].dice?.join(', ') || 'N/A'}
+                </div>
+                {replayData.moves[replayStep - 1].moves && replayData.moves[replayStep - 1].moves.length > 0 && (
+                  <div>
+                    Ходы: {replayData.moves[replayStep - 1].moves.map((m: any, idx: number) => (
+                      <span key={idx}>
+                        {idx > 0 ? ', ' : ''}
+                        {m.from === -1 ? 'бар' : m.from} → {m.to === -1 ? 'вынос' : m.to >= 24 ? 'вынос' : m.to}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Аналитика для премиум пользователей */}
+                {hasPremium && analysisData && (
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                    {analysisData.errors
+                      .filter((error: any) => error.moveNumber === replayStep)
+                      .map((error: any, idx: number) => (
+                        <div key={idx} style={{
+                          padding: '8px',
+                          background: error.errorType === 'blunder' ? 'rgba(255, 51, 51, 0.2)' :
+                                     error.errorType === 'mistake' ? 'rgba(255, 136, 51, 0.2)' :
+                                     'rgba(255, 170, 51, 0.2)',
+                          borderRadius: '4px',
+                          marginTop: '8px'
+                        }}>
+                          <div style={{ 
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            color: error.errorType === 'blunder' ? '#ff3333' :
+                                   error.errorType === 'mistake' ? '#ff8833' : '#ffaa33'
+                          }}>
+                            {error.errorType === 'blunder' ? '⚠️ Грубая ошибка' :
+                             error.errorType === 'mistake' ? '⚠️ Ошибка' : '⚠️ Неточность'}
+                          </div>
+                          <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.9 }}>
+                            {error.errorDescription}
+                          </div>
+                          {error.scoreChange && (
+                            <div style={{ fontSize: '11px', marginTop: '4px', color: '#ff3333' }}>
+                              Упущено: {error.scoreChange.toFixed(1)} очков
+                            </div>
+                          )}
+                          {error.bestMove && error.bestMove.length > 0 && (
+                            <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.8 }}>
+                              Лучший ход: {error.bestMove.map((m: any, i: number) => (
+                                <span key={i}>
+                                  {i > 0 ? ', ' : ''}
+                                  {m.from === -1 ? 'бар' : m.from} → {m.to === -1 ? 'вынос' : m.to >= 24 ? 'вынос' : m.to}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}    </div>

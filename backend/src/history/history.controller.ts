@@ -16,9 +16,13 @@ export class HistoryController {
 
   @Get('replay/:gameId')
   @UseGuards(JwtAuthGuard)
-  async getReplay(@CurrentUser() user: any, @Param('gameId') gameId: string) {
+  async getReplay(
+    @CurrentUser() user: any,
+    @Param('gameId') gameId: string,
+    @Query('step') step?: string,
+  ) {
     // Проверяем, что пользователь имеет доступ к этой игре
-    const replay = await this.historyService.getGameReplay(gameId);
+    const replay = await this.historyService.getGameReplay(gameId, step ? parseInt(step, 10) : undefined);
     const game = replay.game;
     
     if (game.player1Id !== user.id && game.player2Id !== user.id) {

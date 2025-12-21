@@ -112,7 +112,7 @@ export class HistoryService {
     return result;
   }
 
-  async getGameReplay(gameId: string): Promise<any> {
+  async getGameReplay(gameId: string, step?: number): Promise<any> {
     // Загружаем игру со всеми связями
     const game = await this.gamesRepository.findOne({
       where: { id: gameId },
@@ -134,6 +134,25 @@ export class HistoryService {
     } else {
       // Сортируем ходы по номеру, если они уже загружены
       moves.sort((a, b) => a.moveNumber - b.moveNumber);
+    }
+
+    // Определяем текущее состояние на основе step
+    let currentGameState = game.gameState; // Начальное состояние
+    let currentStep = step !== undefined ? step : moves.length; // По умолчанию показываем финальное состояние
+    
+    if (currentStep === 0) {
+      // Начальное состояние
+      currentGameState = game.gameState;
+    } else if (currentStep > 0 && currentStep <= moves.length) {
+      // Состояние после хода currentStep
+      const move = moves[currentStep - 1];
+      currentGameState = move.gameStateAfter;
+    } else if (currentStep > moves.length) {
+      // Если step больше количества ходов, показываем финальное состояние
+      currentStep = moves.length;
+      if (moves.length > 0) {
+        currentGameState = moves[moves.length - 1].gameStateAfter;
+      }
     }
 
     return {
@@ -178,6 +197,9 @@ export class HistoryService {
         moveTimeMs: move.moveTimeMs,
         createdAt: move.createdAt.toISOString(),
       })),
+      currentStep,
+      totalSteps: moves.length,
+      currentGameState, // Текущее состояние для отображения
     };
   }
 
