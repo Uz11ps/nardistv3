@@ -104,12 +104,13 @@ export default function BackgammonBoard({
       blackCheckers?: HTMLImageElement
     } = {}
     let loadedCount = 0
-    const totalTextures = 4 // доска, кубики, белые шашки, черные шашки
+    let expectedCount = 0 // Считаем сколько текстур мы реально пытаемся загрузить
     
     const checkAndDraw = () => {
       loadedCount++
-      if (loadedCount === totalTextures) {
-        console.log('✅ All textures loaded:', textures)
+      console.log(`📊 Texture loading progress: ${loadedCount}/${expectedCount}`)
+      if (loadedCount === expectedCount) {
+        console.log('✅ All textures loaded (or skipped):', textures)
         setLoadedTextures(textures)
       }
     }
@@ -117,9 +118,10 @@ export default function BackgammonBoard({
     // 1. Загружаем текстуру ДОСКИ из mySkins (скины текущего пользователя)
     // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
     const boardTextureUrl = mySkins?.board?.boardTextureUrl
+    expectedCount++ // Всегда считаем, даже если нет текстуры
     if (boardTextureUrl) {
       const boardUrl = getImageUrl(boardTextureUrl)
-      console.log('🎨 Loading board texture:', boardUrl, 'from:', boardTextureUrl)
+      console.log('🎨 Loading board texture:', boardUrl, 'from:', boardTextureUrl, 'mySkins.board:', mySkins?.board)
       const boardImg = new Image()
       boardImg.onload = () => {
         console.log('✅ Board texture loaded')
@@ -132,16 +134,17 @@ export default function BackgammonBoard({
       }
       boardImg.src = boardUrl || ''
     } else {
-      console.warn('⚠️ No board texture URL in mySkins.board')
+      console.warn('⚠️ No board texture URL in mySkins.board. mySkins:', mySkins)
       checkAndDraw()
     }
     
     // 2. Загружаем текстуру КУБИКОВ из mySkins
     // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
     const diceTextureUrl = mySkins?.dice?.diceTextureUrl
+    expectedCount++
     if (diceTextureUrl) {
       const diceUrl = getImageUrl(diceTextureUrl)
-      console.log('🎲 Loading dice texture:', diceUrl)
+      console.log('🎲 Loading dice texture:', diceUrl, 'mySkins.dice:', mySkins?.dice)
       const diceImg = new Image()
       diceImg.onload = () => {
         console.log('✅ Dice texture loaded')
@@ -154,16 +157,17 @@ export default function BackgammonBoard({
       }
       diceImg.src = diceUrl || ''
     } else {
-      console.warn('⚠️ No dice texture URL in mySkins.dice')
+      console.warn('⚠️ No dice texture URL in mySkins.dice. mySkins:', mySkins)
       checkAndDraw()
     }
     
     // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins (player1 всегда играет белыми)
     // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
     const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl
+    expectedCount++
     if (whiteCheckersTextureUrl) {
       const whiteCheckersUrl = getImageUrl(whiteCheckersTextureUrl)
-      console.log('⚪ Loading white checkers texture:', whiteCheckersUrl, 'from player1Skins:', player1Skins?.checkers)
+      console.log('⚪ Loading white checkers texture:', whiteCheckersUrl, 'from player1Skins.checkers:', player1Skins?.checkers)
       const whiteCheckersImg = new Image()
       whiteCheckersImg.onload = () => {
         console.log('✅ White checkers texture loaded')
@@ -176,16 +180,17 @@ export default function BackgammonBoard({
       }
       whiteCheckersImg.src = whiteCheckersUrl || ''
     } else {
-      console.warn('⚠️ No white checkers texture URL in player1Skins.checkers')
+      console.warn('⚠️ No white checkers texture URL in player1Skins.checkers. player1Skins:', player1Skins)
       checkAndDraw()
     }
     
     // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins (player2 всегда играет черными)
     // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
     const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl
+    expectedCount++
     if (blackCheckersTextureUrl) {
       const blackCheckersUrl = getImageUrl(blackCheckersTextureUrl)
-      console.log('⚫ Loading black checkers texture:', blackCheckersUrl, 'from player2Skins:', player2Skins?.checkers)
+      console.log('⚫ Loading black checkers texture:', blackCheckersUrl, 'from player2Skins.checkers:', player2Skins?.checkers)
       const blackCheckersImg = new Image()
       blackCheckersImg.onload = () => {
         console.log('✅ Black checkers texture loaded')
@@ -198,9 +203,11 @@ export default function BackgammonBoard({
       }
       blackCheckersImg.src = blackCheckersUrl || ''
     } else {
-      console.warn('⚠️ No black checkers texture URL in player2Skins.checkers')
+      console.warn('⚠️ No black checkers texture URL in player2Skins.checkers. player2Skins:', player2Skins)
       checkAndDraw()
     }
+    
+    console.log(`📊 Expected ${expectedCount} texture checks (some may be skipped)`)
   }, [player1Skins, player2Skins, mySkins])
 
   // Определяем, кто я (player1 или player2) для отзеркаливания доски
