@@ -55,13 +55,6 @@ deploy() {
     LOCAL=$(git rev-parse HEAD)
     REMOTE=$(git rev-parse origin/$BRANCH)
     
-    if [ "$LOCAL" = "$REMOTE" ]; then
-        log "${GREEN}✅ Код уже актуален${NC}"
-        return 0
-    fi
-    
-    log "${YELLOW}📥 Обнаружены изменения, начинаю деплой...${NC}"
-    
     # Переключение на последнюю версию
     git reset --hard origin/$BRANCH
     git clean -fd
