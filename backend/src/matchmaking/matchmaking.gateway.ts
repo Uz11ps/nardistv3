@@ -73,26 +73,30 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   }
 
   @SubscribeMessage('find_match')
-  async handleFindMatch(@ConnectedSocket() client: Socket, @MessageBody() data: { mode: GameMode }) {
+  async handleFindMatch(@ConnectedSocket() client: Socket, @MessageBody() data: { mode: GameMode; timeLimit?: number; stake?: number }) {
     const userId = client.data.userId;
     
-    await this.matchmakingService.joinQueue(userId, data.mode);
+    const timeLimit = data.timeLimit || 60;
+    const stake = data.stake || 0;
+    
+    await this.matchmakingService.joinQueue(userId, data.mode, timeLimit, stake);
 
     const interval = setInterval(async () => {
-      const opponentId = await this.matchmakingService.findMatch(userId, data.mode);
-      if (opponentId) {
+      const matchResult = await this.matchmakingService.findMatch(userId, data.mode);
+      if (matchResult) {
         clearInterval(interval);
         this.matchmakingIntervals.delete(userId);
         
-        const game = await this.gamesService.create(userId, opponentId, data.mode, 'vs_player' as any);
+        const moveTimeLimit = (matchResult.timeLimit || 60) * 1000; // Конвертируем секунды в миллисекунды
+        const game = await this.gamesService.create(userId, matchResult.opponentId, data.mode, 'vs_player' as any, matchResult.stake, moveTimeLimit);
         
         // Отправляем события обоим игрокам
-        client.emit('match_found', { gameId: game.id, opponentId });
-        this.server.to(`user:${opponentId}`).emit('match_found', { gameId: game.id, opponentId: userId });
+        client.emit('match_found', { gameId: game.id, opponentId: matchResult.opponentId });
+        this.server.to(`user:${matchResult.opponentId}`).emit('match_found', { gameId: game.id, opponentId: userId });
         
         // Отправляем уведомления в Telegram
         await this.sendTelegramNotification(userId, `🎮 Найден соперник! Игра #${game.id.substring(0, 8)}`);
-        await this.sendTelegramNotification(opponentId, `🎮 Найден соперник! Игра #${game.id.substring(0, 8)}`);
+        await this.sendTelegramNotification(matchResult.opponentId, `🎮 Найден соперник! Игра #${game.id.substring(0, 8)}`);
       }
     }, 2000);
 

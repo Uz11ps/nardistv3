@@ -11,6 +11,8 @@ interface QueueEntry {
   rating: number;
   timestamp: number;
   isPremium?: boolean; // Приоритет для премиум
+  timeLimit?: number;
+  stake?: number;
 }
 
 @Injectable()
@@ -53,7 +55,7 @@ export class MatchmakingService {
     return { isInGame: false };
   }
 
-  async joinQueue(userId: string, mode: GameMode): Promise<void> {
+  async joinQueue(userId: string, mode: GameMode, timeLimit?: number, stake?: number): Promise<void> {
     // Проверяем, не находится ли игрок уже в активной игре
     const activeGameCheck = await this.isUserInActiveGame(userId);
     if (activeGameCheck.isInGame) {
@@ -73,6 +75,8 @@ export class MatchmakingService {
       rating: rating || 1000,
       timestamp: Date.now(),
       isPremium,
+      timeLimit: timeLimit || 60,
+      stake: stake || 0,
     };
 
     await this.redis.zadd(`queue:${mode}`, queueScore, JSON.stringify(entry));
@@ -106,7 +110,7 @@ export class MatchmakingService {
     }
   }
 
-  async findMatch(userId: string, mode: GameMode): Promise<string | null> {
+  async findMatch(userId: string, mode: GameMode): Promise<{ opponentId: string; timeLimit: number; stake: number } | null> {
     const userEntryStr = await this.redis.get(`queue:user:${userId}`);
     if (!userEntryStr) {
       return null;
@@ -121,16 +125,19 @@ export class MatchmakingService {
     // Премиум пользователи будут выше в списке из-за большего score
     const allCandidates = await this.redis.zrange(`queue:${mode}`, 0, 50, 'REV');
     
-    // Фильтруем по реальному рейтингу (не по score)
+    // Фильтруем по реальному рейтингу (не по score) и совпадению параметров
     const candidatesInRange: QueueEntry[] = [];
     for (const candidateStr of allCandidates) {
       try {
         const candidate: QueueEntry = JSON.parse(candidateStr);
         // Проверяем реальный рейтинг, а не score
+        // Также проверяем совпадение timeLimit и stake
         if (candidate.userId !== userId && 
             candidate.mode === mode &&
             candidate.rating >= minRating && 
-            candidate.rating <= maxRating) {
+            candidate.rating <= maxRating &&
+            candidate.timeLimit === userEntry.timeLimit &&
+            candidate.stake === userEntry.stake) {
           candidatesInRange.push(candidate);
         }
       } catch (error) {
@@ -148,7 +155,11 @@ export class MatchmakingService {
       if (candidate.userId !== userId) {
         await this.leaveQueue(userId);
         await this.leaveQueue(candidate.userId);
-        return candidate.userId;
+        return {
+          opponentId: candidate.userId,
+          timeLimit: candidate.timeLimit || 60,
+          stake: candidate.stake || 0,
+        };
       }
     }
 
@@ -167,7 +178,8 @@ export class MatchmakingService {
       throw new Error('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
     }
 
-    const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER, stake);
+    const moveTimeLimit = timeLimit * 1000; // Конвертируем секунды в миллисекунды
+    const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER, stake, moveTimeLimit);
     
     // Проверяем, что игра создана со статусом WAITING
     if (game.status !== GameStatus.WAITING) {

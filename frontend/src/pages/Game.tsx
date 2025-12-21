@@ -98,10 +98,11 @@ export default function Game() {
       
       // Инициализируем таймер при загрузке игры
       if (game.status === 'in_progress') {
-        // Если игра в процессе, инициализируем таймер на 60 секунд
+        // Используем moveTimeLimit из игры (в миллисекундах, конвертируем в секунды)
+        const timeLimitSeconds = game.moveTimeLimit ? Math.floor(game.moveTimeLimit / 1000) : 60
         // Точное значение придет через WebSocket событие timer_update
-        setPlayer1Timer(60)
-        setPlayer2Timer(60)
+        setPlayer1Timer(timeLimitSeconds)
+        setPlayer2Timer(timeLimitSeconds)
       } else {
         // Если игра не началась, таймеры на 0
         setPlayer1Timer(0)
@@ -270,12 +271,14 @@ export default function Game() {
       const wasMyTurn = gameState?.canMove || false
       
       // Сбрасываем таймер при смене хода
+      // Используем moveTimeLimit из gameInfo, если доступен, иначе 60 секунд
+      const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 60
       if (data.currentPlayer === 0) {
-        setPlayer1Timer(60)
-        setPlayer2Timer(60)
+        setPlayer1Timer(timeLimitSeconds)
+        setPlayer2Timer(timeLimitSeconds)
       } else {
-        setPlayer2Timer(60)
-        setPlayer1Timer(60)
+        setPlayer2Timer(timeLimitSeconds)
+        setPlayer1Timer(timeLimitSeconds)
       }
       
       console.log('🎯 Вычислено canMove:', canMove, 'currentPlayer:', data.currentPlayer, 'player1Id === myId:', data.player1Id === user?.id)
@@ -321,14 +324,17 @@ export default function Game() {
         // Используем timeRemaining (оставшееся время) вместо timeElapsed
         const timeRemaining = data.timeRemaining !== undefined ? data.timeRemaining : Math.max(0, 60 - (data.timeElapsed || 0))
         
+        // Используем moveTimeLimit из gameInfo, если доступен, иначе 60 секунд
+        const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 60
+        
         if (data.currentPlayer === 0) {
           setPlayer1Timer(timeRemaining)
           // Сбрасываем таймер второго игрока, когда ход переходит к первому
-          setPlayer2Timer(60)
+          setPlayer2Timer(timeLimitSeconds)
         } else {
           setPlayer2Timer(timeRemaining)
           // Сбрасываем таймер первого игрока, когда ход переходит ко второму
-          setPlayer1Timer(60)
+          setPlayer1Timer(timeLimitSeconds)
         }
       }
     })

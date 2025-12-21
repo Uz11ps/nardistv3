@@ -51,6 +51,8 @@ export default function GameSearch() {
     setSearching(true)
     socket.emit('find_match', {
       mode,
+      timeLimit,
+      stake,
     })
   }
 

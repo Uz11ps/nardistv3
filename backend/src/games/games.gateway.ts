@@ -86,13 +86,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
 
       const now = new Date();
       const timeSinceLastMove = Math.floor((now.getTime() - game.lastMoveAt.getTime()) / 1000);
+      const timeLimitSeconds = Math.floor((game.moveTimeLimit || 60000) / 1000); // Конвертируем миллисекунды в секунды
       
       // Отправляем таймер всем участникам игры
       this.server.to(`game:${gameId}`).emit('timer_update', {
         gameId: game.id,
         currentPlayer: game.currentPlayer,
         timeElapsed: timeSinceLastMove,
-        timeRemaining: Math.max(0, 60 - timeSinceLastMove), // 60 секунд на ход
+        timeRemaining: Math.max(0, timeLimitSeconds - timeSinceLastMove),
       });
     } catch (error) {
       this.logger.error(`❌ Error sending timer update for game ${gameId}:`, error);
@@ -113,13 +114,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         }
 
         const timeSinceLastMove = Math.floor((now.getTime() - game.lastMoveAt.getTime()) / 1000);
+        const timeLimitSeconds = Math.floor((game.moveTimeLimit || 60000) / 1000); // Конвертируем миллисекунды в секунды
         
         // Отправляем таймер всем участникам игры
         this.server.to(`game:${game.id}`).emit('timer_update', {
           gameId: game.id,
           currentPlayer: game.currentPlayer,
           timeElapsed: timeSinceLastMove,
-          timeRemaining: Math.max(0, 60 - timeSinceLastMove), // 60 секунд на ход
+          timeRemaining: Math.max(0, timeLimitSeconds - timeSinceLastMove),
         });
       }
     } catch (error) {
@@ -136,7 +138,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       const activeGames = await this.gamesService.getActiveInProgressGames();
 
       const now = new Date();
-      const timeoutMs = 60000; // 60 секунд
+      // Используем moveTimeLimit из каждой игры индивидуально
 
       for (const game of activeGames) {
         // Пропускаем игры с ботом (бот не должен таймаутить)
@@ -155,9 +157,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         }
 
         const timeSinceLastMove = now.getTime() - game.lastMoveAt.getTime();
+        const moveTimeLimit = game.moveTimeLimit || 60000; // Используем moveTimeLimit из игры
 
-        // Если прошло более 60 секунд, завершаем игру в пользу противника
-        if (timeSinceLastMove > timeoutMs) {
+        // Если прошло больше времени на ход, завершаем игру в пользу противника
+        if (timeSinceLastMove > moveTimeLimit) {
           this.logger.warn(`⏱️ Move timeout detected for game ${game.id}, currentPlayer: ${game.currentPlayer}`);
           
           try {

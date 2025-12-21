@@ -38,6 +38,7 @@ export class GamesService {
     mode: GameMode,
     type: GameType,
     stake: number = 0,
+    moveTimeLimit: number = 60000,
   ): Promise<Game> {
     // Проверяем, не находится ли player1 уже в активной игре (исключаем finished, abandoned и игры с ботом)
     const player1ActiveGames = await this.gamesRepository.find({
@@ -144,7 +145,7 @@ export class GamesService {
       rngSeed,
       rngHash,
       currentPlayer: 0,
-      moveTimeLimit: 60000,
+      moveTimeLimit: moveTimeLimit,
     });
 
     return this.gamesRepository.save(game);
