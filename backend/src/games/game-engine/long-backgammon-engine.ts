@@ -124,13 +124,18 @@ export class LongBackgammonEngine {
   }
 
   /**
-   * Check Head Rule: Only 1 checker can be moved from head per turn
+   * Check Head Rule: Only 1 checker can be moved from head per complete turn (using all dice)
    * Exception: Doubles on first move allow multiple checkers (up to 2)
    * 
    * According to Long Backgammon rules:
-   * - On first move from head, normally only 1 checker can be moved
-   * - Exception: If doubles are rolled on the FIRST move, player can move 2 checkers from head
-   * - On subsequent moves, only 1 checker per turn can be moved from head
+   * - In a complete turn (using all dice), you can take maximum 1 checker from head
+   * - Exception: If doubles are rolled on the FIRST move of the game, player can move 2 checkers from head
+   * - This rule applies to the entire turn, not individual moves
+   * 
+   * Examples:
+   * - With dice [6, 3]: Can take 1 checker from head and move it 6, then move another checker (not from head) 3
+   * - With dice [6, 3]: Can take 1 checker from head and move it 9 (combining dice)
+   * - With dice [6, 3]: Cannot take 2 checkers from head in the same turn
    */
   private checkHeadRule(state: LongBoardState, from: number, dice: number[]): boolean {
     const player = state.currentPlayer;
@@ -159,7 +164,8 @@ export class LongBackgammonEngine {
       return movedThisTurn < 2;
     }
     
-    // Otherwise, only 1 checker per turn from head
+    // Otherwise, only 1 checker per complete turn from head
+    // This means: if we've already moved 1 checker from head in this turn, we cannot move another
     return movedThisTurn === 0;
   }
 
