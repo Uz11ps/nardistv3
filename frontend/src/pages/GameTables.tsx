@@ -35,11 +35,13 @@ export default function GameTables() {
         socket.emit('get_open_tables', {})
       }
       
-      // Слушаем обновления списка столов
+      // Слушаем обновления списка столов в реальном времени
       const handleOpenTables = (data: any) => {
         console.log('📋 Получен обновленный список столов:', data?.length || 0, 'столов')
-        setTables(data || [])
-        setLoading(false)
+        if (Array.isArray(data)) {
+          setTables(data)
+          setLoading(false)
+        }
       }
       
       socket.on('open_tables', handleOpenTables)

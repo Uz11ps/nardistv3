@@ -281,20 +281,22 @@ export default function Game() {
       console.error('❌ WebSocket error:', error)
     })
 
-    // Подключаемся к matchmaking socket для событий готовности
+    // Подключаемся к matchmaking socket для событий готовности и присоединения
     const matchmakingSocket = getMatchmakingSocket()
-    if (matchmakingSocket && gameId && !isBotGame && gameInfo?.type === 'vs_player') {
+    if (matchmakingSocket && gameId && !isBotGame) {
+      // Слушаем статус готовности игроков
       matchmakingSocket.on('ready_status', (data: any) => {
         console.log('✅ Получено ready_status:', data)
         if (data.gameId === gameId) {
-          setPlayer1Ready(data.player1Ready)
-          setPlayer2Ready(data.player2Ready)
+          setPlayer1Ready(data.player1Ready || false)
+          setPlayer2Ready(data.player2Ready || false)
           // Определяем, готов ли текущий игрок
           const isPlayer1 = gameInfo?.player1Id === user?.id
-          setMyReady(isPlayer1 ? data.player1Ready : data.player2Ready)
+          setMyReady(isPlayer1 ? (data.player1Ready || false) : (data.player2Ready || false))
         }
       })
 
+      // Слушаем начало игры
       matchmakingSocket.on('game_started', (data: any) => {
         console.log('🎮 Игра началась:', data)
         if (data.gameId === gameId) {
@@ -302,21 +304,36 @@ export default function Game() {
           setPlayer1Ready(true)
           setPlayer2Ready(true)
           setMyReady(true)
+          // Обновляем информацию об игре
+          if (data.game) {
+            setGameInfo(data.game)
+          }
           loadGame()
         }
       })
 
+      // Слушаем присоединение соперника (в реальном времени)
       matchmakingSocket.on('opponent_joined', (data: any) => {
         console.log('👤 Соперник присоединился:', data)
         if (data.gameId === gameId) {
+          // Обновляем информацию об игре в реальном времени
+          if (data.game) {
+            setGameInfo(data.game)
+            setOpponent(data.game.player1Id === user?.id ? data.game.player2 : data.game.player1)
+            setGameStatus(data.game.status || 'waiting')
+            // Сбрасываем готовность при присоединении нового игрока
+            setPlayer1Ready(false)
+            setPlayer2Ready(false)
+            setMyReady(false)
+          }
           loadGame()
         }
       })
 
+      // Слушаем таймауты игроков
       matchmakingSocket.on('player_timeout', (data: any) => {
         console.log('⏱️ Игрок не подтвердил готовность:', data)
         if (data.gameId === gameId) {
-          const isPlayer1 = gameInfo?.player1Id === user?.id
           if (data.timeoutPlayerId !== user?.id) {
             // Это не наш таймаут, значит выкинули соперника
             alert('Соперник не подтвердил готовность в течение минуты и был исключен. Ожидание нового соперника...')

@@ -142,7 +142,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
       setImmediate(async () => {
         try {
           const tables = await this.matchmakingService.getOpenTables();
-          const connectedClients = this.server.sockets.sockets.size;
+          const connectedClients = this.server?.sockets?.sockets?.size || 0;
           this.logger.log(`Отправка списка столов всем клиентам. Столов: ${tables.length}, Подключено клиентов: ${connectedClients}`);
           // Отправляем всем подключенным клиентам обновленный список
           this.server.emit('open_tables', tables);
@@ -189,7 +189,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
       
       // Отправляем обновление списка столов всем подписчикам (все режимы)
       const tables = await this.matchmakingService.getOpenTables();
-      const connectedClients = this.server.sockets.sockets.size;
+      const connectedClients = this.server?.sockets?.sockets?.size || 0;
       this.logger.log(`📤 Обновление списка столов для всех ${connectedClients} клиентов (столов: ${tables.length})`);
       this.server.emit('open_tables', tables);
       
