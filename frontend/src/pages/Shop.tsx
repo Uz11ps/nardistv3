@@ -202,7 +202,7 @@ export default function Shop() {
           </div>
           <div className="shop-skin-image">
             {(() => {
-              // Определяем URL для превью: сначала imageUrl, потом textureUrl в зависимости от типа
+              // По умолчанию используем текстуру как превью, imageUrl - это опциональное переопределение
               let previewUrl: string | undefined = skin.imageUrl
               if (!previewUrl) {
                 if (skin.type === 'board' && skin.boardTextureUrl) {

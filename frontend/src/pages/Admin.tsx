@@ -1162,20 +1162,34 @@ export default function Admin() {
                 </div>
                 <div className="form-group">
                   <label>Превью (для магазина):</label>
-                  {selectedSkin.imageUrl && (
-                    <div style={{ marginBottom: '8px' }}>
-                      <img 
-                        src={getImageUrl(selectedSkin.imageUrl)} 
-                        alt={selectedSkin.name}
-                        style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    </div>
-                  )}
+                  {(() => {
+                    // Определяем URL для превью: сначала imageUrl, потом textureUrl в зависимости от типа
+                    let previewUrl: string | undefined = selectedSkin.imageUrl
+                    if (!previewUrl) {
+                      if (selectedSkin.type === 'board' && selectedSkin.boardTextureUrl) {
+                        previewUrl = selectedSkin.boardTextureUrl
+                      } else if (selectedSkin.type === 'dice' && selectedSkin.diceTextureUrl) {
+                        previewUrl = selectedSkin.diceTextureUrl
+                      } else if (selectedSkin.type === 'checkers') {
+                        previewUrl = selectedSkin.whiteCheckersTextureUrl || selectedSkin.blackCheckersTextureUrl || selectedSkin.checkersTextureUrl
+                      }
+                    }
+                    
+                    return previewUrl ? (
+                      <div style={{ marginBottom: '8px' }}>
+                        <img 
+                          src={getImageUrl(previewUrl)} 
+                          alt={selectedSkin.name}
+                          style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      </div>
+                    ) : null
+                  })()}
                   <input type="file" accept="image/*" id="edit-skin-image" />
-                  <span className="field-hint">Оставьте пустым, чтобы не изменять превью</span>
+                  <span className="field-hint">Оставьте пустым, чтобы не изменять превью. Если не указано, будет использоваться текстура для игры</span>
                 </div>
                 {selectedSkin.type === 'board' && (
                   <div className="form-group">
