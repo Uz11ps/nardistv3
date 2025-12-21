@@ -7,7 +7,7 @@ import Dice from '../components/Dice'
 import Icon from '../components/Icon'
 import Button from '../components/Button'
 import { apiClient } from '../api/client'
-import { getSocket, connectWebSocket } from '../api/websocket'
+import { getSocket, getMatchmakingSocket, connectWebSocket } from '../api/websocket'
 import './Game.css'
 
 interface GameState {
@@ -32,6 +32,9 @@ export default function Game() {
   const [player1Timer, setPlayer1Timer] = useState<number>(0)
   const [player2Timer, setPlayer2Timer] = useState<number>(0)
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any }>({ player1: null, player2: null })
+  const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
+  const [player2Ready, setPlayer2Ready] = useState<boolean>(false)
+  const [myReady, setMyReady] = useState<boolean>(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const mode = searchParams.get('mode')
@@ -61,6 +64,12 @@ export default function Game() {
         socket.off('dice_rolled')
         socket.off('game_finished')
       }
+      const matchmakingSocket = getMatchmakingSocket()
+      if (matchmakingSocket) {
+        matchmakingSocket.off('ready_status')
+        matchmakingSocket.off('game_started')
+        matchmakingSocket.off('opponent_joined')
+      }
     }
   }, [gameId, isBotGame])
 
@@ -85,6 +94,13 @@ export default function Game() {
       setOpponent(game.player1Id === user?.id ? game.player2 : game.player1)
       setScore({ player1: game.player1Score || 0, player2: game.player2Score || 0 })
       setGameStatus(game.status)
+      
+      // Для игр с игроками в статусе waiting, сбрасываем готовность
+      if (game.status === 'waiting' && game.type === 'vs_player' && !isBotGame) {
+        setPlayer1Ready(false)
+        setPlayer2Ready(false)
+        setMyReady(false)
+      }
       
       // Загружаем скины игроков
       await loadPlayerSkins(game.player1Id, game.player2Id)
@@ -264,6 +280,39 @@ export default function Game() {
     socket.on('error', (error: any) => {
       console.error('❌ WebSocket error:', error)
     })
+
+    // Подключаемся к matchmaking socket для событий готовности
+    const matchmakingSocket = getMatchmakingSocket()
+    if (matchmakingSocket && gameId && !isBotGame && gameInfo?.type === 'vs_player') {
+      matchmakingSocket.on('ready_status', (data: any) => {
+        console.log('✅ Получено ready_status:', data)
+        if (data.gameId === gameId) {
+          setPlayer1Ready(data.player1Ready)
+          setPlayer2Ready(data.player2Ready)
+          // Определяем, готов ли текущий игрок
+          const isPlayer1 = gameInfo?.player1Id === user?.id
+          setMyReady(isPlayer1 ? data.player1Ready : data.player2Ready)
+        }
+      })
+
+      matchmakingSocket.on('game_started', (data: any) => {
+        console.log('🎮 Игра началась:', data)
+        if (data.gameId === gameId) {
+          setGameStatus('in_progress')
+          setPlayer1Ready(true)
+          setPlayer2Ready(true)
+          setMyReady(true)
+          loadGame()
+        }
+      })
+
+      matchmakingSocket.on('opponent_joined', (data: any) => {
+        console.log('👤 Соперник присоединился:', data)
+        if (data.gameId === gameId) {
+          loadGame()
+        }
+      })
+    }
   }
 
   const handleMove = async (from: number, to: number, die: number) => {
@@ -305,6 +354,23 @@ export default function Game() {
     }
   }
 
+  const handleReadyToStart = async () => {
+    if (!gameId) return
+    
+    const matchmakingSocket = getMatchmakingSocket()
+    if (!matchmakingSocket) {
+      alert('WebSocket не подключен. Перезагрузите страницу.')
+      return
+    }
+
+    try {
+      matchmakingSocket.emit('ready_to_start', { gameId })
+      setMyReady(true)
+    } catch (error) {
+      console.error('Ошибка при отправке готовности:', error)
+    }
+  }
+
   const handleConfirm = async () => {
     // Правильно проверяем наличие кубиков: массив должен быть непустым
     const hasDice = gameState?.dice && (
@@ -319,8 +385,14 @@ export default function Game() {
       return
     }
 
-    // Если игра в статусе waiting - начинаем игру (бросаем кубики)
-    if (gameStatus === 'waiting') {
+    // Если игра в статусе waiting и это игра с игроком - обрабатываем готовность отдельно
+    if (gameStatus === 'waiting' && !isBotGame && gameInfo?.type === 'vs_player') {
+      // Не обрабатываем здесь - обрабатывается через handleReadyToStart
+      return
+    }
+
+    // Если игра в статусе waiting и это бот-игра - начинаем игру (бросаем кубики)
+    if (gameStatus === 'waiting' && isBotGame) {
       console.log('🎲 Начинаем игру - бросаем кубики')
       try {
         let socket = getSocket()
@@ -515,8 +587,58 @@ export default function Game() {
         </div>
       </div>
 
-      {/* Кнопка подтверждения / броска кубиков */}
-      {(gameStatus === 'waiting' || (gameStatus === 'in_progress' && isMyTurn)) && (
+      {/* Состояние ожидания соперника или готовности к старту */}
+      {gameStatus === 'waiting' && !isBotGame && gameInfo?.type === 'vs_player' && (
+        <div className="game-waiting-section" style={{ padding: '20px', textAlign: 'center' }}>
+          {!gameInfo?.player2Id ? (
+            <div>
+              <div style={{ marginBottom: '16px', fontSize: '18px', color: '#aaaaaa' }}>
+                ⏳ Ожидание соперника...
+              </div>
+              <div style={{ fontSize: '14px', color: '#666' }}>
+                Ждем пока другой игрок присоединится к столу
+              </div>
+            </div>
+          ) : (
+            <div>
+              {!myReady ? (
+                <div>
+                  <div style={{ marginBottom: '16px', fontSize: '18px', color: '#aaaaaa' }}>
+                    ✅ Соперник присоединился
+                  </div>
+                  <Button 
+                    variant="primary" 
+                    fullWidth 
+                    onClick={handleReadyToStart}
+                    className="game-confirm-btn"
+                  >
+                    Начать игру
+                  </Button>
+                  <div style={{ marginTop: '12px', fontSize: '14px', color: '#666' }}>
+                    {player1Ready && player2Ready 
+                      ? 'Оба игрока готовы, игра скоро начнется...'
+                      : (player1Ready || player2Ready)
+                      ? 'Ожидание готовности соперника...'
+                      : 'Нажмите кнопку когда будете готовы начать'}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ marginBottom: '16px', fontSize: '18px', color: '#aaaaaa' }}>
+                    ⏳ Ожидание готовности соперника...
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#666' }}>
+                    Вы готовы. Ждем пока соперник нажмет "Начать игру"
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Кнопка подтверждения / броска кубиков для бот-игр или игр в процессе */}
+      {((gameStatus === 'waiting' && (isBotGame || gameInfo?.type !== 'vs_player')) || (gameStatus === 'in_progress' && isMyTurn)) && (
         <div className="game-confirm-section">
           <Button 
             variant="primary" 
@@ -536,22 +658,24 @@ export default function Game() {
         </div>
       )}
 
-      {/* Доска */}
-      <div className="board-wrapper">
-        <BackgammonBoard
-          playerSkins={isPlayer1 ? playerSkins.player1 : playerSkins.player2}
-          opponentSkins={isPlayer1 ? playerSkins.player2 : playerSkins.player1}
-          gameState={gameState}
-          currentPlayer={gameState.currentPlayer}
-          dice={gameState.dice ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2]) : null}
-          onMove={handleMove}
-          onRollDice={handleRollDice}
-          canMove={gameState.canMove}
-          isMyTurn={isMyTurn}
-          gameId={gameId}
-          gameMode={gameInfo?.mode || 'long'}
-        />
-      </div>
+      {/* Доска - показываем только когда игра в процессе или завершена */}
+      {gameStatus === 'in_progress' || gameStatus === 'finished' ? (
+        <div className="board-wrapper">
+          <BackgammonBoard
+            playerSkins={isPlayer1 ? playerSkins.player1 : playerSkins.player2}
+            opponentSkins={isPlayer1 ? playerSkins.player2 : playerSkins.player1}
+            gameState={gameState}
+            currentPlayer={gameState.currentPlayer}
+            dice={gameState.dice ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2]) : null}
+            onMove={handleMove}
+            onRollDice={handleRollDice}
+            canMove={gameState.canMove}
+            isMyTurn={isMyTurn}
+            gameId={gameId}
+            gameMode={gameInfo?.mode || 'long'}
+          />
+        </div>
+      ) : null}
 
       {gameStatus === 'finished' && (
         <div className="game-overlay">

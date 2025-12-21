@@ -180,9 +180,45 @@ export class MatchmakingService {
     }
 
     game.player2Id = userId;
-    game.status = 'in_progress' as any;
+    // Статус остается WAITING до тех пор, пока оба игрока не будут готовы
+    // game.status остается 'waiting'
     await this.gamesService['gamesRepository'].save(game);
+    
+    // Создаем запись о готовности игроков в Redis
+    await this.redis.set(`game:${gameId}:ready`, JSON.stringify({
+      player1Ready: false,
+      player2Ready: false,
+    }), 'EX', 3600);
+    
+    // Стол удаляем из списка открытых, но игра остается в статусе waiting
     await this.redis.del(`table:${gameId}`);
+  }
+
+  async setPlayerReady(gameId: string, userId: string): Promise<{ bothReady: boolean; player1Ready: boolean; player2Ready: boolean }> {
+    const game = await this.gamesService.findOne(gameId);
+    if (game.player1Id !== userId && game.player2Id !== userId) {
+      throw new Error('Вы не участник этой игры');
+    }
+
+    const readyKey = `game:${gameId}:ready`;
+    const readyStr = await this.redis.get(readyKey);
+    const ready = readyStr ? JSON.parse(readyStr) : { player1Ready: false, player2Ready: false };
+
+    if (game.player1Id === userId) {
+      ready.player1Ready = true;
+    } else if (game.player2Id === userId) {
+      ready.player2Ready = true;
+    }
+
+    await this.redis.set(readyKey, JSON.stringify(ready), 'EX', 3600);
+
+    const bothReady = ready.player1Ready && ready.player2Ready;
+    
+    return {
+      bothReady,
+      player1Ready: ready.player1Ready,
+      player2Ready: ready.player2Ready,
+    };
   }
 }
 

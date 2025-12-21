@@ -147,13 +147,55 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
       // Отправляем событие клиенту
       client.emit('table_joined', { gameId: data.gameId, game });
       
-      // Отправляем уведомления в Telegram обоим игрокам
+      // Уведомляем первого игрока о том, что второй присоединился
       if (game.player1Id && game.player1Id !== userId) {
+        this.server.to(`user:${game.player1Id}`).emit('opponent_joined', { gameId: data.gameId, game });
         await this.sendTelegramNotification(game.player1Id, `✅ Игрок присоединился к столу! Игра #${data.gameId.substring(0, 8)}`);
       }
       await this.sendTelegramNotification(userId, `✅ Вы присоединились к столу! Игра #${data.gameId.substring(0, 8)}`);
     } catch (error) {
       this.logger.error(`Ошибка при присоединении к столу: ${error.message}`);
+      client.emit('error', { message: error.message });
+    }
+  }
+
+  @SubscribeMessage('ready_to_start')
+  async handleReadyToStart(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string }) {
+    const userId = client.data.userId;
+    try {
+      const readyStatus = await this.matchmakingService.setPlayerReady(data.gameId, userId);
+      const game = await this.gamesService.findOne(data.gameId);
+      
+      // Если оба игрока готовы, начинаем игру
+      if (readyStatus.bothReady) {
+        game.status = 'in_progress' as any;
+        await this.gamesService['gamesRepository'].save(game);
+        
+        // Отправляем событие начала игры обоим игрокам
+        this.server.to(`user:${game.player1Id}`).emit('game_started', { gameId: data.gameId, game });
+        this.server.to(`user:${game.player2Id}`).emit('game_started', { gameId: data.gameId, game });
+        
+        // Отправляем уведомления в Telegram
+        await this.sendTelegramNotification(game.player1Id, `🎮 Игра началась! Игра #${data.gameId.substring(0, 8)}`);
+        await this.sendTelegramNotification(game.player2Id, `🎮 Игра началась! Игра #${data.gameId.substring(0, 8)}`);
+      } else {
+        // Отправляем обновление статуса готовности обоим игрокам
+        const readyStatusData = {
+          gameId: data.gameId,
+          player1Ready: readyStatus.player1Ready,
+          player2Ready: readyStatus.player2Ready,
+        };
+        
+        client.emit('ready_status', readyStatusData);
+        
+        // Уведомляем другого игрока
+        const otherPlayerId = game.player1Id === userId ? game.player2Id : game.player1Id;
+        if (otherPlayerId) {
+          this.server.to(`user:${otherPlayerId}`).emit('ready_status', readyStatusData);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Ошибка при готовности к старту: ${error.message}`);
       client.emit('error', { message: error.message });
     }
   }
