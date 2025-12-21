@@ -118,19 +118,8 @@ export default function BackgammonBoard({
       }
     }
     
-    // 1. Загружаем текстуру ДОСКИ из mySkins (с fallback на дефолтную)
-    const boardTextureUrl = mySkins?.board?.boardTextureUrl || '/skins/default-board.svg'
-    expectedCount++
-    // Используем прямой путь - картинки грузятся напрямую
-    const boardUrl = boardTextureUrl
-    
-    const loadImage = async (url: string, isSvg: boolean) => {
+    const loadImage = async (url: string) => {
       const img = new Image()
-      // Для SVG и локальных файлов /skins/ не используем crossOrigin
-      if (!isSvg && !url.startsWith('/skins/')) {
-        img.crossOrigin = 'anonymous'
-      }
-      
       return new Promise<HTMLImageElement>((resolve, reject) => {
         img.onload = () => {
           console.log('✅ Image loaded successfully:', url)
@@ -140,126 +129,81 @@ export default function BackgammonBoard({
           console.error('❌ Image load error:', url, e)
           reject(e)
         }
-        
-        // Для всех типов файлов используем прямой путь
-        // Браузер должен уметь загружать SVG напрямую
         img.src = url
       })
     }
     
-    loadImage(boardUrl, boardUrl.endsWith('.svg'))
-      .then((img) => {
-        console.log('✅ Board texture loaded:', boardUrl)
-        textures.board = img
-        checkAndDraw()
-      })
-      .catch(() => {
-        console.error('Failed to load board texture:', boardUrl, 'Original:', boardTextureUrl)
-        // Если не загрузилась кастомная, пробуем дефолтную
-        if (boardTextureUrl !== '/skins/default-board.svg') {
-          loadImage('/skins/default-board.svg', true)
-            .then((img) => {
-              textures.board = img
-              checkAndDraw()
-            })
-            .catch(() => {
-              console.error('Failed to load default board texture')
-              checkAndDraw()
-            })
-        } else {
-          checkAndDraw()
-        }
-      })
-    
-    // 2. Загружаем текстуру КУБИКОВ из mySkins (с fallback на дефолтную)
-    const diceTextureUrl = mySkins?.dice?.diceTextureUrl || '/skins/default-dice.svg'
+    // 1. Загружаем текстуру ДОСКИ из mySkins
+    const boardTextureUrl = mySkins?.board?.boardTextureUrl
     expectedCount++
-    // Используем прямой путь - картинки грузятся напрямую
-    const diceUrl = diceTextureUrl
-    
-    loadImage(diceUrl, diceUrl.endsWith('.svg'))
-      .then((img) => {
-        console.log('✅ Dice texture loaded:', diceUrl)
-        textures.dice = img
-        checkAndDraw()
-      })
-      .catch(() => {
-        console.error('Failed to load dice texture:', diceUrl, 'Original:', diceTextureUrl)
-        // Если не загрузилась кастомная, пробуем дефолтную
-        if (diceTextureUrl !== '/skins/default-dice.svg') {
-          loadImage('/skins/default-dice.svg', true)
-            .then((img) => {
-              textures.dice = img
-              checkAndDraw()
-            })
-            .catch(() => {
-              console.error('Failed to load default dice texture')
-              checkAndDraw()
-            })
-        } else {
+    if (boardTextureUrl) {
+      loadImage(boardTextureUrl)
+        .then((img) => {
+          console.log('✅ Board texture loaded:', boardTextureUrl)
+          textures.board = img
           checkAndDraw()
-        }
-      })
+        })
+        .catch(() => {
+          console.error('Failed to load board texture:', boardTextureUrl)
+          checkAndDraw()
+        })
+    } else {
+      checkAndDraw()
+    }
     
-    // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins (с fallback на дефолтную)
-    const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl || '/skins/default-checkers-white.svg'
+    // 2. Загружаем текстуру КУБИКОВ из mySkins
+    const diceTextureUrl = mySkins?.dice?.diceTextureUrl
     expectedCount++
-    // Используем прямой путь - картинки грузятся напрямую
-    const whiteCheckersUrl = whiteCheckersTextureUrl
-    
-    loadImage(whiteCheckersUrl, whiteCheckersUrl.endsWith('.svg'))
-      .then((img) => {
-        console.log('✅ White checkers texture loaded:', whiteCheckersUrl)
-        textures.whiteCheckers = img
-        checkAndDraw()
-      })
-      .catch(() => {
-        console.error('Failed to load white checkers texture:', whiteCheckersUrl, 'Original:', whiteCheckersTextureUrl)
-        // Если не загрузилась кастомная, пробуем дефолтную
-        if (whiteCheckersTextureUrl !== '/skins/default-checkers-white.svg') {
-          loadImage('/skins/default-checkers-white.svg', true)
-            .then((img) => {
-              textures.whiteCheckers = img
-              checkAndDraw()
-            })
-            .catch(() => {
-              console.error('Failed to load default white checkers texture')
-              checkAndDraw()
-            })
-        } else {
+    if (diceTextureUrl) {
+      loadImage(diceTextureUrl)
+        .then((img) => {
+          console.log('✅ Dice texture loaded:', diceTextureUrl)
+          textures.dice = img
           checkAndDraw()
-        }
-      })
+        })
+        .catch(() => {
+          console.error('Failed to load dice texture:', diceTextureUrl)
+          checkAndDraw()
+        })
+    } else {
+      checkAndDraw()
+    }
     
-    // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins (с fallback на дефолтную)
-    const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl || '/skins/default-checkers-black.svg'
+    // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins
+    const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl
     expectedCount++
-    // Используем прямой путь - картинки грузятся напрямую
-    const blackCheckersUrl = blackCheckersTextureUrl
-    
-    loadImage(blackCheckersUrl, blackCheckersUrl.endsWith('.svg'))
-      .then((img) => {
-        console.log('✅ Black checkers texture loaded:', blackCheckersUrl)
-        textures.blackCheckers = img
-        checkAndDraw()
-      })
-      .catch(() => {
-        console.error('Failed to load black checkers texture:', blackCheckersUrl, 'Original:', blackCheckersTextureUrl)
-        // Если не загрузилась кастомная, пробуем дефолтную
-        if (blackCheckersTextureUrl !== '/skins/default-checkers-black.svg') {
-          loadImage('/skins/default-checkers-black.svg', true)
-            .then((img) => {
-              textures.blackCheckers = img
-              checkAndDraw()
-            })
-            .catch(() => {
-              console.error('Failed to load default black checkers texture')
-              checkAndDraw()
-            })
-        } else {
+    if (whiteCheckersTextureUrl) {
+      loadImage(whiteCheckersTextureUrl)
+        .then((img) => {
+          console.log('✅ White checkers texture loaded:', whiteCheckersTextureUrl)
+          textures.whiteCheckers = img
           checkAndDraw()
-        }
-      })
+        })
+        .catch(() => {
+          console.error('Failed to load white checkers texture:', whiteCheckersTextureUrl)
+          checkAndDraw()
+        })
+    } else {
+      checkAndDraw()
+    }
+    
+    // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins
+    const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl
+    expectedCount++
+    if (blackCheckersTextureUrl) {
+      loadImage(blackCheckersTextureUrl)
+        .then((img) => {
+          console.log('✅ Black checkers texture loaded:', blackCheckersTextureUrl)
+          textures.blackCheckers = img
+          checkAndDraw()
+        })
+        .catch(() => {
+          console.error('Failed to load black checkers texture:', blackCheckersTextureUrl)
+          checkAndDraw()
+        })
+    } else {
+      checkAndDraw()
+    }
   }, [player1Skins, player2Skins, mySkins])
 
   // Определяем, кто я (player1 или player2) для отзеркаливания доски
