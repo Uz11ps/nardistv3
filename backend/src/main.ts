@@ -13,18 +13,7 @@ async function bootstrap() {
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
-  // Устанавливаем глобальный префикс для всех роутов
-  app.setGlobalPrefix('api');
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-
-  // Создаем папки для загрузок, если их нет
+  // Создаем папки для загрузок, если их нет (ДО установки префикса)
   const uploadsDir = join(__dirname, '..', 'uploads');
   const imagesDir = join(uploadsDir, 'images');
   const skinsDir = join(uploadsDir, 'skins');
@@ -35,10 +24,22 @@ async function bootstrap() {
     }
   });
 
-  // Настройка статической отдачи файлов
+  // Настройка статической отдачи файлов (ДО установки глобального префикса)
+  // Используем полный путь /api/uploads/ чтобы обойти глобальный префикс
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/api/uploads/',
   });
+
+  // Устанавливаем глобальный префикс для всех роутов (ПОСЛЕ статики)
+  app.setGlobalPrefix('api');
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   app.enableCors({
     origin: true,
