@@ -123,11 +123,11 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   @SubscribeMessage('create_table')
   async handleCreateTable(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { mode: GameMode; timeLimit: number },
+    @MessageBody() data: { mode: GameMode; timeLimit: number; stake?: number },
   ) {
     const userId = client.data.userId;
     try {
-      const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit);
+      const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit, data.stake || 0);
       
       // Сначала отправляем событие клиенту, чтобы он не завис
       client.emit('table_created', { gameId });

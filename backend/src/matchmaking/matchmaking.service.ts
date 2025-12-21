@@ -159,6 +159,7 @@ export class MatchmakingService {
     userId: string,
     mode: GameMode,
     timeLimit: number,
+    stake: number = 0,
   ): Promise<string> {
     // Проверяем, не находится ли игрок уже в активной игре
     const activeGameCheck = await this.isUserInActiveGame(userId);
@@ -166,13 +167,14 @@ export class MatchmakingService {
       throw new Error('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
     }
 
-    const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER);
+    const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER, stake);
     await this.redis.set(
       `table:${game.id}`,
       JSON.stringify({
         hostId: userId,
         mode,
         timeLimit,
+        stake,
         createdAt: Date.now(),
       }),
       'EX',
