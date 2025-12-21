@@ -256,8 +256,26 @@ export default function BackgammonBoard({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const width = canvas.width
-    const height = canvas.height
+    // Используем фиксированный размер canvas для четкости отрисовки
+    // Размер будет адаптивным через CSS
+    const container = canvas.parentElement
+    if (!container) return
+    
+    const containerWidth = container.clientWidth
+    const containerHeight = container.clientHeight
+    
+    // Устанавливаем размер canvas с учетом devicePixelRatio для четкости
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = containerWidth * dpr
+    canvas.height = containerHeight * dpr
+    canvas.style.width = `${containerWidth}px`
+    canvas.style.height = `${containerHeight}px`
+    
+    // Масштабируем контекст для четкости
+    ctx.scale(dpr, dpr)
+    
+    const width = containerWidth
+    const height = containerHeight
     const boardPadding = 20
     const boardWidth = width - boardPadding * 2
     const boardHeight = height - boardPadding * 2
@@ -731,17 +749,31 @@ export default function BackgammonBoard({
     if (!canvas) return
 
     const resizeCanvas = () => {
-      const container = canvas.parentElement
-      if (container) {
-        canvas.width = container.clientWidth
-        canvas.height = container.clientHeight
-        drawBoard()
-      }
+      drawBoard() // drawBoard уже обрабатывает размер canvas с учетом devicePixelRatio
     }
 
-    resizeCanvas()
+    // Используем ResizeObserver для более точного отслеживания изменений размера
+    const container = canvas.parentElement
+    if (!container) return
+
+    const resizeObserver = new ResizeObserver(() => {
+      resizeCanvas()
+    })
+    
+    resizeObserver.observe(container)
+    
+    // Также слушаем изменения окна для случаев, когда ResizeObserver не срабатывает
     window.addEventListener('resize', resizeCanvas)
-    return () => window.removeEventListener('resize', resizeCanvas)
+    window.addEventListener('orientationchange', resizeCanvas)
+    
+    // Первоначальная отрисовка
+    resizeCanvas()
+    
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', resizeCanvas)
+      window.removeEventListener('orientationchange', resizeCanvas)
+    }
   }, [drawBoard])
 
   useEffect(() => {

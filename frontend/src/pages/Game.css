@@ -108,10 +108,50 @@
 .board-wrapper {
   flex: 1;
   padding: 16px;
-  overflow: hidden;
+  overflow: auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 0; /* Позволяет flex-элементу сжиматься */
+}
+
+/* Горизонтальная ориентация для игры */
+@media (orientation: portrait) {
+  .game-container {
+    /* На мобильных устройствах в портретной ориентации можно показать подсказку */
+  }
+}
+
+@media (orientation: landscape) {
+  .board-wrapper {
+    padding: 8px;
+  }
+}
+
+/* Адаптивность для разных размеров экранов */
+@media (max-width: 768px) {
+  .board-wrapper {
+    padding: 8px;
+  }
+  
+  .game-players-section {
+    padding: 12px;
+  }
+  
+  .game-player-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .game-score {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .board-wrapper {
+    padding: 4px;
+  }
 }
 
 .game-overlay {
