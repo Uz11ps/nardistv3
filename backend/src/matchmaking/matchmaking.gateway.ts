@@ -128,14 +128,21 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
     const userId = client.data.userId;
     try {
       const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit);
+      
+      // Сначала отправляем событие клиенту, чтобы он не завис
       client.emit('table_created', { gameId });
       
-      // Отправляем обновление списка столов всем подписчикам
-      const tables = await this.matchmakingService.getOpenTables(data.mode);
-      this.server.emit('open_tables', tables);
-      
-      // Отправляем уведомление в Telegram
-      await this.sendTelegramNotification(userId, `🪑 Стол создан! ID игры: #${gameId.substring(0, 8)}`);
+      // Затем обновляем список столов и отправляем уведомление (не блокируем основной поток)
+      Promise.all([
+        this.matchmakingService.getOpenTables(data.mode).then(tables => {
+          this.server.emit('open_tables', tables);
+        }),
+        this.sendTelegramNotification(userId, `🪑 Стол создан! ID игры: #${gameId.substring(0, 8)}`).catch(err => {
+          this.logger.warn(`Не удалось отправить уведомление в Telegram: ${err.message}`);
+        }),
+      ]).catch(err => {
+        this.logger.error(`Ошибка при обработке созданного стола: ${err.message}`);
+      });
     } catch (error) {
       this.logger.error(`Ошибка при создании стола: ${error.message}`);
       client.emit('error', { message: error.message || 'Ошибка при создании стола' });

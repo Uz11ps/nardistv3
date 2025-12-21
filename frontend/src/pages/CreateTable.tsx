@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
@@ -14,24 +14,39 @@ export default function CreateTable() {
   const [access, setAccess] = useState<'open' | 'private'>('open')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const socket = getMatchmakingSocket()
     if (!socket) return
 
-    socket.on('table_created', (data: any) => {
+    const handleTableCreated = (data: any) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
       setLoading(false)
       navigate(`/game/${data.gameId}`)
-    })
+    }
 
-    socket.on('error', (error: any) => {
+    const handleError = (error: any) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
       alert(error.message || 'Ошибка при создании стола')
       setLoading(false)
-    })
+    }
+
+    socket.on('table_created', handleTableCreated)
+    socket.on('error', handleError)
 
     return () => {
-      socket.off('table_created')
-      socket.off('error')
+      socket.off('table_created', handleTableCreated)
+      socket.off('error', handleError)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
     }
   }, [navigate])
 
@@ -50,11 +65,22 @@ export default function CreateTable() {
         return
       }
 
+      // Таймаут на случай если событие не придет
+      timeoutRef.current = setTimeout(() => {
+        alert('Таймаут при создании стола. Попробуйте еще раз.')
+        setLoading(false)
+        timeoutRef.current = null
+      }, 10000) // 10 секунд
+
       socket.emit('create_table', {
         mode,
         timeLimit: 60,
       })
     } catch (error: any) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
       alert(error.response?.data?.message || 'Ошибка при создании стола')
       setLoading(false)
     }
