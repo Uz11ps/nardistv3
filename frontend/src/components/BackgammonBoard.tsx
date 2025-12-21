@@ -92,7 +92,10 @@ export default function BackgammonBoard({
   // - Белые шашки: из player1Skins (player1 всегда играет белыми)
   // - Черные шашки: из player2Skins (player2 всегда играет черными)
   useEffect(() => {
-    console.log('🔄 Loading textures:', { player1Skins, player2Skins, mySkins })
+    console.log('🔄 ========== LOADING TEXTURES ==========')
+    console.log('🔄 player1Skins:', JSON.stringify(player1Skins, null, 2))
+    console.log('🔄 player2Skins:', JSON.stringify(player2Skins, null, 2))
+    console.log('🔄 mySkins:', JSON.stringify(mySkins, null, 2))
     
     const textures: {
       board?: HTMLImageElement
@@ -112,80 +115,92 @@ export default function BackgammonBoard({
     }
     
     // 1. Загружаем текстуру ДОСКИ из mySkins (скины текущего пользователя)
+    // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
     const boardTextureUrl = mySkins?.board?.boardTextureUrl
-    const boardUrl = boardTextureUrl 
-      ? getImageUrl(boardTextureUrl) 
-      : '/skins/default-board.svg'
-    
-    console.log('🎨 Loading board texture:', boardUrl, 'from:', boardTextureUrl)
-    const boardImg = new Image()
-    boardImg.onload = () => {
-      console.log('✅ Board texture loaded')
-      textures.board = boardImg
+    if (boardTextureUrl) {
+      const boardUrl = getImageUrl(boardTextureUrl)
+      console.log('🎨 Loading board texture:', boardUrl, 'from:', boardTextureUrl)
+      const boardImg = new Image()
+      boardImg.onload = () => {
+        console.log('✅ Board texture loaded')
+        textures.board = boardImg
+        checkAndDraw()
+      }
+      boardImg.onerror = (err) => {
+        console.error('❌ Failed to load board texture:', boardUrl, err)
+        checkAndDraw()
+      }
+      boardImg.src = boardUrl || ''
+    } else {
+      console.warn('⚠️ No board texture URL in mySkins.board')
       checkAndDraw()
     }
-    boardImg.onerror = (err) => {
-      console.error('❌ Failed to load board texture:', boardUrl, err)
-      checkAndDraw()
-    }
-    boardImg.src = boardUrl || ''
     
     // 2. Загружаем текстуру КУБИКОВ из mySkins
+    // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
     const diceTextureUrl = mySkins?.dice?.diceTextureUrl
-    const diceUrl = diceTextureUrl 
-      ? getImageUrl(diceTextureUrl) 
-      : '/skins/default-dice.svg'
-    
-    console.log('🎲 Loading dice texture:', diceUrl)
-    const diceImg = new Image()
-    diceImg.onload = () => {
-      console.log('✅ Dice texture loaded')
-      textures.dice = diceImg
+    if (diceTextureUrl) {
+      const diceUrl = getImageUrl(diceTextureUrl)
+      console.log('🎲 Loading dice texture:', diceUrl)
+      const diceImg = new Image()
+      diceImg.onload = () => {
+        console.log('✅ Dice texture loaded')
+        textures.dice = diceImg
+        checkAndDraw()
+      }
+      diceImg.onerror = (err) => {
+        console.error('❌ Failed to load dice texture:', diceUrl, err)
+        checkAndDraw()
+      }
+      diceImg.src = diceUrl || ''
+    } else {
+      console.warn('⚠️ No dice texture URL in mySkins.dice')
       checkAndDraw()
     }
-    diceImg.onerror = (err) => {
-      console.error('❌ Failed to load dice texture:', diceUrl, err)
-      checkAndDraw()
-    }
-    diceImg.src = diceUrl || ''
     
     // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins (player1 всегда играет белыми)
+    // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
     const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl
-    const whiteCheckersUrl = whiteCheckersTextureUrl 
-      ? getImageUrl(whiteCheckersTextureUrl) 
-      : '/skins/default-checkers.svg'
-    
-    console.log('⚪ Loading white checkers texture:', whiteCheckersUrl, 'from player1Skins:', player1Skins?.checkers)
-    const whiteCheckersImg = new Image()
-    whiteCheckersImg.onload = () => {
-      console.log('✅ White checkers texture loaded')
-      textures.whiteCheckers = whiteCheckersImg
+    if (whiteCheckersTextureUrl) {
+      const whiteCheckersUrl = getImageUrl(whiteCheckersTextureUrl)
+      console.log('⚪ Loading white checkers texture:', whiteCheckersUrl, 'from player1Skins:', player1Skins?.checkers)
+      const whiteCheckersImg = new Image()
+      whiteCheckersImg.onload = () => {
+        console.log('✅ White checkers texture loaded')
+        textures.whiteCheckers = whiteCheckersImg
+        checkAndDraw()
+      }
+      whiteCheckersImg.onerror = (err) => {
+        console.error('❌ Failed to load white checkers texture:', whiteCheckersUrl, err)
+        checkAndDraw()
+      }
+      whiteCheckersImg.src = whiteCheckersUrl || ''
+    } else {
+      console.warn('⚠️ No white checkers texture URL in player1Skins.checkers')
       checkAndDraw()
     }
-    whiteCheckersImg.onerror = (err) => {
-      console.error('❌ Failed to load white checkers texture:', whiteCheckersUrl, err)
-      checkAndDraw()
-    }
-    whiteCheckersImg.src = whiteCheckersUrl || ''
     
     // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins (player2 всегда играет черными)
+    // БЕЗ ДЕФОЛТНЫХ ФАЙЛОВ - только если есть скин в БД
     const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl
-    const blackCheckersUrl = blackCheckersTextureUrl 
-      ? getImageUrl(blackCheckersTextureUrl) 
-      : '/skins/default-checkers.svg'
-    
-    console.log('⚫ Loading black checkers texture:', blackCheckersUrl, 'from player2Skins:', player2Skins?.checkers)
-    const blackCheckersImg = new Image()
-    blackCheckersImg.onload = () => {
-      console.log('✅ Black checkers texture loaded')
-      textures.blackCheckers = blackCheckersImg
+    if (blackCheckersTextureUrl) {
+      const blackCheckersUrl = getImageUrl(blackCheckersTextureUrl)
+      console.log('⚫ Loading black checkers texture:', blackCheckersUrl, 'from player2Skins:', player2Skins?.checkers)
+      const blackCheckersImg = new Image()
+      blackCheckersImg.onload = () => {
+        console.log('✅ Black checkers texture loaded')
+        textures.blackCheckers = blackCheckersImg
+        checkAndDraw()
+      }
+      blackCheckersImg.onerror = (err) => {
+        console.error('❌ Failed to load black checkers texture:', blackCheckersUrl, err)
+        checkAndDraw()
+      }
+      blackCheckersImg.src = blackCheckersUrl || ''
+    } else {
+      console.warn('⚠️ No black checkers texture URL in player2Skins.checkers')
       checkAndDraw()
     }
-    blackCheckersImg.onerror = (err) => {
-      console.error('❌ Failed to load black checkers texture:', blackCheckersUrl, err)
-      checkAndDraw()
-    }
-    blackCheckersImg.src = blackCheckersUrl || ''
   }, [player1Skins, player2Skins, mySkins])
 
   // Определяем, кто я (player1 или player2) для отзеркаливания доски
@@ -409,34 +424,20 @@ export default function BackgammonBoard({
     // Очистка
     ctx.clearRect(0, 0, width, height)
 
-    // Фон доски - ВСЕГДА используем текстуру (дефолтную или кастомную)
-    // Текстура должна содержать всю доску целиком (фон, рамку, бар, точки)
+    // Фон доски - ТОЛЬКО если есть текстура из скина
+    // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
     if (loadedTextures.board) {
-      // Рисуем текстуру доски - она уже содержит все элементы
+      // Рисуем текстуру доски - она должна содержать всю доску целиком
       ctx.drawImage(loadedTextures.board, 0, 0, width, height)
-      // НЕ рисуем дефолтные элементы поверх текстуры
     } else {
-      // Fallback: если текстура еще не загрузилась, показываем пустой фон
-      // (текстура загрузится и перерисует доску)
-      ctx.fillStyle = '#8B4513'
-      ctx.fillRect(0, 0, width, height)
-      
-      // Рисуем рамку доски
-      ctx.strokeStyle = '#654321'
-      ctx.lineWidth = 4
-      ctx.strokeRect(0, 0, boardWidth, boardHeight)
-      
-      // Фон бара
-      ctx.fillStyle = '#654321'
-      ctx.fillRect(barX, barY, barWidth, barHeight)
-      ctx.strokeStyle = '#8B4513'
-      ctx.lineWidth = 2
-      ctx.strokeRect(barX, barY, barWidth, barHeight)
+      // Если нет текстуры - НЕ РИСУЕМ НИЧЕГО
+      // Просто оставляем пустой canvas
+      console.warn('⚠️ No board texture loaded - board will be empty')
     }
-
-    // Рисуем точки (треугольники) только если нет текстуры доски
-    // (текстура уже содержит точки)
-    if (!loadedTextures.board) {
+    
+    // Номера точек и шашки рисуем ТОЛЬКО если есть текстура доски
+    // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
+    if (loadedTextures.board) {
       for (let i = 0; i < 24; i++) {
         const pointNum = POINT_NUMBERS[i]
         const isTop = i < 12
@@ -450,54 +451,15 @@ export default function BackgammonBoard({
         }
         const y = isTop ? 0 : boardHeight
 
-        // Цвет точки (чередование)
-        const isLight = (Math.floor(i / 6) + i) % 2 === 0
-        ctx.fillStyle = isLight ? '#DEB887' : '#CD853F'
-        
-        // Рисуем треугольник точки
-        ctx.beginPath()
-        if (isTop) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        } else {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        }
-        ctx.closePath()
-        ctx.fill()
-        
-        // Обводка треугольника
+        // Номер точки - показываем только если есть текстура доски
+        ctx.fillStyle = '#FFFFFF'
+        ctx.font = 'bold 11px Arial'
+        ctx.textAlign = 'center'
         ctx.strokeStyle = '#654321'
         ctx.lineWidth = 2
-        ctx.stroke()
-      }
-    }
-    
-    // Номера точек и шашки рисуем всегда поверх текстуры
-    for (let i = 0; i < 24; i++) {
-      const pointNum = POINT_NUMBERS[i]
-      const isTop = i < 12
-      
-      // Позиция точки
-      let x: number
-      if (i < 12) {
-        x = (11 - i) * pointWidth
-      } else {
-        x = (i - 12) * pointWidth
-      }
-      const y = isTop ? 0 : boardHeight
-
-      // Номер точки - показываем всегда для удобства
-      ctx.fillStyle = '#FFFFFF'
-      ctx.font = 'bold 11px Arial'
-      ctx.textAlign = 'center'
-      ctx.strokeStyle = '#654321'
-      ctx.lineWidth = 2
-      const numY = isTop ? y + pointHeight - 5 : y - pointHeight + 15
-      ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
-      ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)
+        const numY = isTop ? y + pointHeight - 5 : y - pointHeight + 15
+        ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
+        ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)
 
       // Фишки на точке - простая отрисовка без скинов
       const pointValue = points[i] || 0
@@ -549,6 +511,8 @@ export default function BackgammonBoard({
             ? loadedTextures.whiteCheckers   // Белые шашки = player1
             : loadedTextures.blackCheckers   // Черные шашки = player2
           
+          // Рисуем шашку ТОЛЬКО если есть текстура
+          // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
           if (checkerTexture) {
             // Используем текстуру шашек
             ctx.beginPath()
@@ -557,37 +521,16 @@ export default function BackgammonBoard({
             ctx.clip()
             ctx.drawImage(checkerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
             ctx.restore()
-          } else {
-            // Градиент для круглой фишки (дефолтный)
-            const checkerGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, checkerRadius)
-            if (checkerColor === '#FFFFFF') {
-              checkerGradient.addColorStop(0, '#FFFFFF')
-              checkerGradient.addColorStop(1, '#E0E0E0')
-            } else {
-              checkerGradient.addColorStop(0, '#2a2a2a')
-              checkerGradient.addColorStop(1, '#1a1a1a')
-            }
             
-            // Круглая фишка
+            // Обводка фишки
             ctx.beginPath()
             ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-            ctx.fillStyle = checkerGradient
-            ctx.fill()
-          }
-          
-          // Обводка фишки
-          ctx.beginPath()
-          ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-          ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
-          ctx.lineWidth = 2
-          ctx.stroke()
-
-          // Блик на фишке (только если нет текстуры)
-          if (!checkerTexture) {
-            ctx.beginPath()
-            ctx.arc(-4, -4, 4, 0, Math.PI * 2)
-            ctx.fillStyle = checkerColor === '#FFFFFF' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'
-            ctx.fill()
+            ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
+            ctx.lineWidth = 2
+            ctx.stroke()
+          } else {
+            // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
+            // Просто пропускаем её
           }
 
           ctx.restore()
@@ -703,7 +646,8 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка - белые шашки всегда используют текстуру player1
+        // Круглая шашка - белые шашки ТОЛЬКО если есть текстура
+        // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
         const whiteCheckerTexture = loadedTextures.whiteCheckers
         if (whiteCheckerTexture) {
           ctx.beginPath()
@@ -712,15 +656,11 @@ export default function BackgammonBoard({
           ctx.clip()
           ctx.drawImage(whiteCheckerTexture, checkerX - 12, checkerY - 12, 24, 24)
           ctx.restore()
-        } else {
-          ctx.beginPath()
-          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
-          ctx.fillStyle = '#FFFFFF'
-          ctx.fill()
+          ctx.strokeStyle = '#1a1a1a'
+          ctx.lineWidth = 2
+          ctx.stroke()
         }
-        ctx.strokeStyle = '#1a1a1a'
-        ctx.lineWidth = 2
-        ctx.stroke()
+        // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
         ctx.restore()
       }
       
@@ -742,7 +682,8 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка - черные шашки всегда используют текстуру player2
+        // Круглая шашка - черные шашки ТОЛЬКО если есть текстура
+        // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
         const blackCheckerTexture = loadedTextures.blackCheckers
         if (blackCheckerTexture) {
           ctx.beginPath()
@@ -751,15 +692,11 @@ export default function BackgammonBoard({
           ctx.clip()
           ctx.drawImage(blackCheckerTexture, checkerX - 12, checkerY - 12, 24, 24)
           ctx.restore()
-        } else {
-          ctx.beginPath()
-          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
-          ctx.fillStyle = '#1a1a1a'
-          ctx.fill()
+          ctx.strokeStyle = '#FFFFFF'
+          ctx.lineWidth = 2
+          ctx.stroke()
         }
-        ctx.strokeStyle = '#FFFFFF'
-        ctx.lineWidth = 2
-        ctx.stroke()
+        // Если нет текстуры - НЕ РИСУЕМ ШАШКУ
         ctx.restore()
       }
       
@@ -880,134 +817,51 @@ export default function BackgammonBoard({
     rolling: boolean,
     dropping: boolean
   ) => {
-    // Используем текстуру кубиков если есть
-    if (loadedTextures.dice) {
-      ctx.save()
-      let drawX = x
-      let drawY = y
-      
-      // Анимация прилета сверху
-      if (dropping && diceAnimationStart) {
-        const elapsed = Date.now() - diceAnimationStart
-        const dropDuration = 500
-        if (elapsed < dropDuration) {
-          const progress = elapsed / dropDuration
-          drawY = y - 100 * (1 - progress) * (1 - progress)
-        }
-      }
-      
-      // Анимация вращения при броске
-      if (rolling) {
-        const rotation = (Date.now() / 50) % 360
-        ctx.translate(drawX + size / 2, drawY + size / 2)
-        ctx.rotate((rotation * Math.PI) / 180)
-        ctx.translate(-size / 2, -size / 2)
-        drawX = 0
-        drawY = 0
-      }
-      
-      ctx.drawImage(loadedTextures.dice, drawX, drawY, size, size)
-      ctx.restore()
+    // Кубик - ТОЛЬКО если есть текстура
+    // БЕЗ ДЕФОЛТНОГО ОТОБРАЖЕНИЯ
+    if (!loadedTextures.dice) {
+      // Если нет текстуры - НЕ РИСУЕМ КУБИК
       return
     }
     
-    // Дефолтная отрисовка кубиков (если текстуры нет)
     ctx.save()
+    let drawX = x
+    let drawY = y
     
     // Анимация прилета сверху
-    if (dropping) {
-      const now = Date.now()
-      if (!diceAnimationStart) {
-        setDiceAnimationStart(now)
-      }
-      const elapsed = now - (diceAnimationStart || now)
-      const duration = 1000 // 1 секунда
-      const progress = Math.min(elapsed / duration, 1)
-      
-      // Easing функция для плавного падения
-      const easeOut = 1 - Math.pow(1 - progress, 3)
-      const dropDistance = 200
-      const currentY = y - (dropDistance * (1 - easeOut))
-      const rotation = progress * 180
-      
-      ctx.translate(x + size / 2, currentY + size / 2)
-      ctx.rotate((rotation * Math.PI) / 180)
-      ctx.translate(-size / 2, -size / 2)
-      
-      // Обновляем позицию для отрисовки
-      y = currentY
-      
-      // Если анимация завершена, сбрасываем
-      if (progress >= 1) {
-        setDiceAnimationStart(null)
+    if (dropping && diceAnimationStart) {
+      const elapsed = Date.now() - diceAnimationStart
+      const dropDuration = 500
+      if (elapsed < dropDuration) {
+        const progress = elapsed / dropDuration
+        drawY = y - 100 * (1 - progress) * (1 - progress)
       }
     }
     
     // Анимация вращения при броске
     if (rolling) {
       const rotation = (Date.now() / 50) % 360
-      ctx.translate(x + size / 2, y + size / 2)
+      ctx.translate(drawX + size / 2, drawY + size / 2)
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.translate(-size / 2, -size / 2)
+      drawX = 0
+      drawY = 0
     }
-
+    
     // Тень кубика
     ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
     ctx.shadowBlur = 8
     ctx.shadowOffsetX = 3
     ctx.shadowOffsetY = 3
-
-    // Градиент кубика
-    const diceGradient = ctx.createLinearGradient(x, y, x + size, y + size)
-    diceGradient.addColorStop(0, '#FFFFFF')
-    diceGradient.addColorStop(1, '#E0E0E0')
     
-    // Кубик
-    ctx.fillStyle = diceGradient
-    ctx.fillRect(x, y, size, size)
+    // Рисуем текстуру кубика
+    ctx.drawImage(loadedTextures.dice, drawX, drawY, size, size)
     
     // Обводка кубика
     ctx.strokeStyle = '#1a1a1a'
     ctx.lineWidth = 2
-    ctx.strokeRect(x, y, size, size)
-
-    // Точки на кубике
-    ctx.fillStyle = '#1a1a1a'
-    const dotSize = size / 8
-    const dotPositions: Record<number, number[][]> = {
-      1: [[size / 2, size / 2]],
-      2: [[size / 3, size / 3], [size * 2 / 3, size * 2 / 3]],
-      3: [[size / 3, size / 3], [size / 2, size / 2], [size * 2 / 3, size * 2 / 3]],
-      4: [
-        [size / 3, size / 3],
-        [size * 2 / 3, size / 3],
-        [size / 3, size * 2 / 3],
-        [size * 2 / 3, size * 2 / 3],
-      ],
-      5: [
-        [size / 3, size / 3],
-        [size * 2 / 3, size / 3],
-        [size / 2, size / 2],
-        [size / 3, size * 2 / 3],
-        [size * 2 / 3, size * 2 / 3],
-      ],
-      6: [
-        [size / 3, size / 3],
-        [size * 2 / 3, size / 3],
-        [size / 3, size / 2],
-        [size * 2 / 3, size / 2],
-        [size / 3, size * 2 / 3],
-        [size * 2 / 3, size * 2 / 3],
-      ],
-    }
-
-    const positions = dotPositions[value] || []
-    positions.forEach(([dx, dy]) => {
-      ctx.beginPath()
-      ctx.arc(x + dx, y + dy, dotSize, 0, Math.PI * 2)
-      ctx.fill()
-    })
-
+    ctx.strokeRect(drawX, drawY, size, size)
+    
     ctx.restore()
   }
 

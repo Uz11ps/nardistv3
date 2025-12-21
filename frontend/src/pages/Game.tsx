@@ -73,6 +73,14 @@ export default function Game() {
       }
     }
   }, [gameId, isBotGame])
+  
+  // Перезагружаем скины при изменении gameInfo (когда присоединяется соперник)
+  useEffect(() => {
+    if (gameInfo?.player1Id && gameInfo?.player2Id) {
+      console.log('🔄 gameInfo updated, reloading skins...', { player1Id: gameInfo.player1Id, player2Id: gameInfo.player2Id })
+      loadPlayerSkins(gameInfo.player1Id, gameInfo.player2Id)
+    }
+  }, [gameInfo?.player1Id, gameInfo?.player2Id])
 
   const loadGame = async () => {
     try {
@@ -117,6 +125,7 @@ export default function Game() {
       }
       
       // Загружаем скины игроков
+      console.log('🔄 Loading player skins for game:', { player1Id: game.player1Id, player2Id: game.player2Id })
       await loadPlayerSkins(game.player1Id, game.player2Id)
     } catch (error) {
       console.error('Failed to load game:', error)
@@ -125,23 +134,49 @@ export default function Game() {
 
   const loadPlayerSkins = async (player1Id: string, player2Id: string) => {
     try {
+      console.log('📦 Starting to load skins for:', { player1Id, player2Id, myUserId: user?.id })
+      
       // Загружаем выбранные скины для player1
       let player1Skins = {}
       try {
-        const player1SkinsRes = await apiClient.get(`/skins/user/${player1Id}/selected`).catch(() => ({ data: {} }))
+        console.log('📥 Fetching player1 skins from:', `/skins/user/${player1Id}/selected`)
+        const player1SkinsRes = await apiClient.get(`/skins/user/${player1Id}/selected`)
         player1Skins = player1SkinsRes.data || {}
+        console.log('✅ Player1 skins loaded:', player1Skins)
       } catch (err) {
-        console.warn('Could not load player1 skins:', err)
+        console.warn('⚠️ Could not load player1 skins:', err)
+        // Пробуем загрузить через дефолтный endpoint
+        try {
+          const fallbackRes = await apiClient.get('/skins/selected').catch(() => ({ data: {} }))
+          if (user?.id === player1Id) {
+            player1Skins = fallbackRes.data || {}
+            console.log('✅ Player1 skins loaded via fallback:', player1Skins)
+          }
+        } catch (fallbackErr) {
+          console.warn('⚠️ Fallback also failed:', fallbackErr)
+        }
       }
       
       // Загружаем выбранные скины для player2 (если есть)
       let player2Skins = {}
       if (player2Id) {
         try {
-          const player2SkinsRes = await apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} }))
+          console.log('📥 Fetching player2 skins from:', `/skins/user/${player2Id}/selected`)
+          const player2SkinsRes = await apiClient.get(`/skins/user/${player2Id}/selected`)
           player2Skins = player2SkinsRes.data || {}
+          console.log('✅ Player2 skins loaded:', player2Skins)
         } catch (err) {
-          console.warn('Could not load player2 skins:', err)
+          console.warn('⚠️ Could not load player2 skins:', err)
+          // Пробуем загрузить через дефолтный endpoint
+          try {
+            const fallbackRes = await apiClient.get('/skins/selected').catch(() => ({ data: {} }))
+            if (user?.id === player2Id) {
+              player2Skins = fallbackRes.data || {}
+              console.log('✅ Player2 skins loaded via fallback:', player2Skins)
+            }
+          } catch (fallbackErr) {
+            console.warn('⚠️ Fallback also failed:', fallbackErr)
+          }
         }
       }
       
@@ -149,20 +184,27 @@ export default function Game() {
       const isPlayer1 = user?.id === player1Id
       const mySkins = isPlayer1 ? player1Skins : player2Skins
       
+      console.log('🎨 Setting skins state:', {
+        player1: player1Skins,
+        player2: player2Skins,
+        mySkins: mySkins,
+        isPlayer1
+      })
+      
       setPlayerSkins({
         player1: player1Skins,  // Скины player1 (играет белыми)
         player2: player2Skins,  // Скины player2 (играет черными)
         mySkins: mySkins,        // Скины текущего пользователя (для доски)
       })
       
-      console.log('✅ Loaded skins:', { 
+      console.log('✅ FINAL Loaded skins:', { 
         player1Id,
         player2Id,
         userId: user?.id,
         isPlayer1,
-        player1Skins,
-        player2Skins,
-        mySkins
+        player1Skins: JSON.stringify(player1Skins, null, 2),
+        player2Skins: JSON.stringify(player2Skins, null, 2),
+        mySkins: JSON.stringify(mySkins, null, 2)
       })
     } catch (error) {
       console.error('❌ Failed to load player skins:', error)
@@ -398,6 +440,11 @@ export default function Game() {
             setPlayer1Ready(false)
             setPlayer2Ready(false)
             setMyReady(false)
+            // Перезагружаем скины при присоединении соперника
+            if (data.game.player1Id && data.game.player2Id) {
+              console.log('🔄 Opponent joined, reloading skins...')
+              loadPlayerSkins(data.game.player1Id, data.game.player2Id)
+            }
           }
           loadGame()
         }
