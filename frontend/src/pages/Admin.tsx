@@ -1162,34 +1162,20 @@ export default function Admin() {
                 </div>
                 <div className="form-group">
                   <label>Превью (для магазина):</label>
-                  {(() => {
-                    // Определяем URL для превью: сначала imageUrl, потом textureUrl в зависимости от типа
-                    let previewUrl: string | undefined = selectedSkin.imageUrl
-                    if (!previewUrl) {
-                      if (selectedSkin.type === 'board' && selectedSkin.boardTextureUrl) {
-                        previewUrl = selectedSkin.boardTextureUrl
-                      } else if (selectedSkin.type === 'dice' && selectedSkin.diceTextureUrl) {
-                        previewUrl = selectedSkin.diceTextureUrl
-                      } else if (selectedSkin.type === 'checkers') {
-                        previewUrl = selectedSkin.whiteCheckersTextureUrl || selectedSkin.blackCheckersTextureUrl || selectedSkin.checkersTextureUrl
-                      }
-                    }
-                    
-                    return previewUrl ? (
-                      <div style={{ marginBottom: '8px' }}>
-                        <img 
-                          src={getImageUrl(previewUrl)} 
-                          alt={selectedSkin.name}
-                          style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      </div>
-                    ) : null
-                  })()}
+                  {selectedSkin.imageUrl && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <img 
+                        src={selectedSkin.imageUrl} 
+                        alt={selectedSkin.name}
+                        style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  )}
                   <input type="file" accept="image/*" id="edit-skin-image" />
-                  <span className="field-hint">Оставьте пустым, чтобы не изменять превью. Если не указано, будет использоваться текстура для игры</span>
+                  <span className="field-hint">Превью для отображения в магазине и инвентаре</span>
                 </div>
                 {selectedSkin.type === 'board' && (
                   <div className="form-group">
@@ -1197,7 +1183,7 @@ export default function Admin() {
                     {selectedSkin.boardTextureUrl && (
                       <div style={{ marginBottom: '8px' }}>
                         <img 
-                          src={getImageUrl(selectedSkin.boardTextureUrl)} 
+                          src={selectedSkin.boardTextureUrl} 
                           alt="Board texture"
                           style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
                           onError={(e) => {
@@ -1216,7 +1202,7 @@ export default function Admin() {
                     {selectedSkin.diceTextureUrl && (
                       <div style={{ marginBottom: '8px' }}>
                         <img 
-                          src={getImageUrl(selectedSkin.diceTextureUrl)} 
+                          src={selectedSkin.diceTextureUrl} 
                           alt="Dice texture"
                           style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
                           onError={(e) => {
@@ -1235,7 +1221,7 @@ export default function Admin() {
                     {selectedSkin.checkersTextureUrl && (
                       <div style={{ marginBottom: '8px' }}>
                         <img 
-                          src={getImageUrl(selectedSkin.checkersTextureUrl)} 
+                          src={selectedSkin.checkersTextureUrl} 
                           alt="Checkers texture"
                           style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
                           onError={(e) => {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { apiClient, getImageUrl } from '../api/client'
+import { apiClient } from '../api/client'
 import './BackgammonBoard.css'
 
 interface Point {
@@ -121,8 +121,8 @@ export default function BackgammonBoard({
     // 1. Загружаем текстуру ДОСКИ из mySkins (с fallback на дефолтную)
     const boardTextureUrl = mySkins?.board?.boardTextureUrl || '/skins/default-board.svg'
     expectedCount++
-    // Используем прямой путь для /skins/, как в инвентаре
-    const boardUrl = boardTextureUrl.startsWith('/skins/') ? boardTextureUrl : getImageUrl(boardTextureUrl) || boardTextureUrl
+    // Используем прямой путь - картинки грузятся напрямую
+    const boardUrl = boardTextureUrl
     
     const loadImage = async (url: string, isSvg: boolean) => {
       const img = new Image()
@@ -174,8 +174,8 @@ export default function BackgammonBoard({
     // 2. Загружаем текстуру КУБИКОВ из mySkins (с fallback на дефолтную)
     const diceTextureUrl = mySkins?.dice?.diceTextureUrl || '/skins/default-dice.svg'
     expectedCount++
-    // Используем прямой путь для /skins/, как в инвентаре
-    const diceUrl = diceTextureUrl.startsWith('/skins/') ? diceTextureUrl : getImageUrl(diceTextureUrl) || diceTextureUrl
+    // Используем прямой путь - картинки грузятся напрямую
+    const diceUrl = diceTextureUrl
     
     loadImage(diceUrl, diceUrl.endsWith('.svg'))
       .then((img) => {
@@ -204,8 +204,8 @@ export default function BackgammonBoard({
     // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins (с fallback на дефолтную)
     const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl || '/skins/default-checkers-white.svg'
     expectedCount++
-    // Используем прямой путь для /skins/, как в инвентаре
-    const whiteCheckersUrl = whiteCheckersTextureUrl.startsWith('/skins/') ? whiteCheckersTextureUrl : getImageUrl(whiteCheckersTextureUrl) || whiteCheckersTextureUrl
+    // Используем прямой путь - картинки грузятся напрямую
+    const whiteCheckersUrl = whiteCheckersTextureUrl
     
     loadImage(whiteCheckersUrl, whiteCheckersUrl.endsWith('.svg'))
       .then((img) => {
@@ -234,8 +234,8 @@ export default function BackgammonBoard({
     // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins (с fallback на дефолтную)
     const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl || '/skins/default-checkers-black.svg'
     expectedCount++
-    // Используем прямой путь для /skins/, как в инвентаре
-    const blackCheckersUrl = blackCheckersTextureUrl.startsWith('/skins/') ? blackCheckersTextureUrl : getImageUrl(blackCheckersTextureUrl) || blackCheckersTextureUrl
+    // Используем прямой путь - картинки грузятся напрямую
+    const blackCheckersUrl = blackCheckersTextureUrl
     
     loadImage(blackCheckersUrl, blackCheckersUrl.endsWith('.svg'))
       .then((img) => {

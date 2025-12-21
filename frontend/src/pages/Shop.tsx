@@ -4,7 +4,7 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Icon from '../components/Icon'
-import { apiClient, getImageUrl } from '../api/client'
+import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
 import './Shop.css'
@@ -201,35 +201,21 @@ export default function Shop() {
             </div>
           </div>
           <div className="shop-skin-image">
-            {(() => {
-              // По умолчанию используем текстуру как превью, imageUrl - это опциональное переопределение
-              let previewUrl: string | undefined = skin.imageUrl
-              if (!previewUrl) {
-                if (skin.type === 'board' && skin.boardTextureUrl) {
-                  previewUrl = skin.boardTextureUrl
-                } else if (skin.type === 'dice' && skin.diceTextureUrl) {
-                  previewUrl = skin.diceTextureUrl
-                } else if (skin.type === 'checkers') {
-                  previewUrl = skin.whiteCheckersTextureUrl || skin.blackCheckersTextureUrl || skin.checkersTextureUrl
-                }
-              }
-              
-              return previewUrl ? (
-                <img
-                  src={getImageUrl(previewUrl) || ''}
-                  alt={skin.name}
-                  className="shop-skin-img"
-                  onError={(e) => {
-                    console.error('Failed to load skin image:', previewUrl, 'Resolved URL:', getImageUrl(previewUrl || ''))
-                    e.currentTarget.style.display = 'none'
-                    const placeholder = e.currentTarget.nextElementSibling as HTMLElement
-                    if (placeholder && placeholder.classList.contains('shop-skin-placeholder')) {
-                      placeholder.style.display = 'flex'
-                    }
-                  }}
-                />
-              ) : null
-            })()}
+            {skin.imageUrl ? (
+              <img
+                src={skin.imageUrl}
+                alt={skin.name}
+                className="shop-skin-img"
+                onError={(e) => {
+                  console.error('Failed to load skin image:', skin.imageUrl)
+                  e.currentTarget.style.display = 'none'
+                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement
+                  if (placeholder && placeholder.classList.contains('shop-skin-placeholder')) {
+                    placeholder.style.display = 'flex'
+                  }
+                }}
+              />
+            ) : null}
             <div className="shop-skin-placeholder" style={{ 
               display: (skin.imageUrl || 
                 (skin.type === 'board' && skin.boardTextureUrl) ||
