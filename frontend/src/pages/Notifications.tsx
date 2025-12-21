@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
+import { apiClient } from '../api/client'
 
 interface Notification {
   id: string
@@ -13,20 +14,43 @@ interface Notification {
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Загружаем уведомления (пока заглушка)
-    setNotifications([
-      {
-        id: '1',
-        title: 'Добро пожаловать!',
-        message: 'Вы успешно зарегистрированы в игре НАРДИСТ',
-        type: 'success',
-        createdAt: new Date().toISOString(),
-        read: false,
-      },
-    ])
+    loadNotifications()
   }, [])
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true)
+      const response = await apiClient.get('/notifications')
+      setNotifications(response.data || [])
+    } catch (error) {
+      console.error('Ошибка при загрузке уведомлений:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await apiClient.put(`/notifications/${notificationId}/read`)
+      setNotifications(prev =>
+        prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
+      )
+    } catch (error) {
+      console.error('Ошибка при отметке уведомления:', error)
+    }
+  }
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await apiClient.post('/notifications/mark-all-read')
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    } catch (error) {
+      console.error('Ошибка при отметке всех уведомлений:', error)
+    }
+  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -55,12 +79,37 @@ export default function Notifications() {
     }
   }
 
+  const unreadCount = notifications.filter(n => !n.read).length
+
   return (
     <div className="app-container">
-      <PageHeader title="Уведомления" />
+      <PageHeader title="Уведомления">
+        {unreadCount > 0 && (
+          <button
+            onClick={handleMarkAllAsRead}
+            style={{
+              padding: '8px 16px',
+              background: 'var(--color-primary)',
+              color: 'var(--color-text-on-primary)',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            Отметить все как прочитанные
+          </button>
+        )}
+      </PageHeader>
       
       <div style={{ padding: '20px' }}>
-        {notifications.length === 0 ? (
+        {loading ? (
+          <Card>
+            <div style={{ textAlign: 'center', color: '#aaaaaa' }}>
+              Загрузка...
+            </div>
+          </Card>
+        ) : notifications.length === 0 ? (
           <Card>
             <div style={{ textAlign: 'center', color: '#aaaaaa' }}>
               Нет уведомлений
@@ -71,6 +120,7 @@ export default function Notifications() {
             {notifications.map((notification) => (
               <Card
                 key={notification.id}
+                onClick={() => !notification.read && handleMarkAsRead(notification.id)}
                 style={{
                   marginBottom: '12px',
                   opacity: notification.read ? 0.7 : 1,
@@ -80,6 +130,7 @@ export default function Notifications() {
                     notification.type === 'error' ? '#ff3333' :
                     '#00aaff'
                   }`,
+                  cursor: notification.read ? 'default' : 'pointer',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -87,7 +138,14 @@ export default function Notifications() {
                     {getNotificationIcon(notification.type)}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div className="card-title">{notification.title}</div>
+                    <div className="card-title">
+                      {notification.title}
+                      {!notification.read && (
+                        <span style={{ marginLeft: '8px', fontSize: '10px', color: '#ff3333' }}>
+                          ●
+                        </span>
+                      )}
+                    </div>
                     <div className="card-subtitle" style={{ marginTop: '4px' }}>
                       {notification.message}
                     </div>

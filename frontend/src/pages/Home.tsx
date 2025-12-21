@@ -60,12 +60,11 @@ export default function Home() {
 
   const checkNotifications = async () => {
     try {
-      // Пока нет endpoint для уведомлений, просто заглушка
-      // const response = await apiClient.get('/notifications/unread-count')
-      // setHasNotifications((response.data?.count || 0) > 0)
-      setHasNotifications(false)
+      const response = await apiClient.get('/notifications/unread-count')
+      setHasNotifications((response.data?.count || 0) > 0)
     } catch (error) {
       // Игнорируем ошибки
+      setHasNotifications(false)
     }
   }
 
