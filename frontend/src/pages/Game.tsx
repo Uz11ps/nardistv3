@@ -187,6 +187,16 @@ export default function Game() {
       const isPlayer1 = user?.id === player1Id
       const mySkins = isPlayer1 ? player1Skins : player2Skins
       
+      console.log('🎮 Game - Loaded player skins:', {
+        player1Skins,
+        player2Skins,
+        mySkins,
+        isPlayer1,
+        player1Id,
+        player2Id,
+        userId: user?.id,
+      })
+      
       setPlayerSkins({
         player1: player1Skins || {},
         player2: player2Skins || {},

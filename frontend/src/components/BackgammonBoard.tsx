@@ -92,6 +92,16 @@ export default function BackgammonBoard({
   // - Белые шашки: из player1Skins (player1 всегда играет белыми)
   // - Черные шашки: из player2Skins (player2 всегда играет черными)
   useEffect(() => {
+    console.log('🎨 Loading skins textures:', {
+      mySkins,
+      player1Skins,
+      player2Skins,
+      boardTexture: mySkins?.board?.boardTextureUrl,
+      diceTexture: mySkins?.dice?.diceTextureUrl,
+      whiteCheckersTexture: player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl,
+      blackCheckersTexture: player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl,
+    })
+    
     const textures: {
       board?: HTMLImageElement
       dice?: HTMLImageElement
@@ -111,23 +121,32 @@ export default function BackgammonBoard({
     // 1. Загружаем текстуру ДОСКИ из mySkins (с fallback на дефолтную)
     const boardTextureUrl = mySkins?.board?.boardTextureUrl || '/skins/default-board.svg'
     expectedCount++
-    const boardUrl = getImageUrl(boardTextureUrl)
+    // Используем прямой путь для /skins/, как в инвентаре
+    const boardUrl = boardTextureUrl.startsWith('/skins/') ? boardTextureUrl : getImageUrl(boardTextureUrl) || boardTextureUrl
     const boardImg = new Image()
-    boardImg.crossOrigin = 'anonymous'
+    // Не используем crossOrigin для локальных файлов /skins/
+    if (!boardUrl.startsWith('/skins/')) {
+      boardImg.crossOrigin = 'anonymous'
+    }
     boardImg.onload = () => {
+      console.log('✅ Board texture loaded:', boardUrl)
       textures.board = boardImg
       checkAndDraw()
     }
     boardImg.onerror = () => {
+      console.error('Failed to load board texture:', boardUrl, 'Original:', boardTextureUrl)
       // Если не загрузилась кастомная, пробуем дефолтную
       if (boardTextureUrl !== '/skins/default-board.svg') {
         const defaultBoardImg = new Image()
-        defaultBoardImg.crossOrigin = 'anonymous'
+        // Не используем crossOrigin для локальных файлов /skins/
         defaultBoardImg.onload = () => {
           textures.board = defaultBoardImg
           checkAndDraw()
         }
-        defaultBoardImg.onerror = () => checkAndDraw()
+        defaultBoardImg.onerror = () => {
+          console.error('Failed to load default board texture')
+          checkAndDraw()
+        }
         defaultBoardImg.src = '/skins/default-board.svg'
       } else {
         checkAndDraw()
@@ -142,23 +161,32 @@ export default function BackgammonBoard({
     // 2. Загружаем текстуру КУБИКОВ из mySkins (с fallback на дефолтную)
     const diceTextureUrl = mySkins?.dice?.diceTextureUrl || '/skins/default-dice.svg'
     expectedCount++
-    const diceUrl = getImageUrl(diceTextureUrl)
+    // Используем прямой путь для /skins/, как в инвентаре
+    const diceUrl = diceTextureUrl.startsWith('/skins/') ? diceTextureUrl : getImageUrl(diceTextureUrl) || diceTextureUrl
     const diceImg = new Image()
-    diceImg.crossOrigin = 'anonymous'
+    // Не используем crossOrigin для локальных файлов /skins/
+    if (!diceUrl.startsWith('/skins/')) {
+      diceImg.crossOrigin = 'anonymous'
+    }
     diceImg.onload = () => {
+      console.log('✅ Dice texture loaded:', diceUrl)
       textures.dice = diceImg
       checkAndDraw()
     }
     diceImg.onerror = () => {
+      console.error('Failed to load dice texture:', diceUrl, 'Original:', diceTextureUrl)
       // Если не загрузилась кастомная, пробуем дефолтную
       if (diceTextureUrl !== '/skins/default-dice.svg') {
         const defaultDiceImg = new Image()
-        defaultDiceImg.crossOrigin = 'anonymous'
+        // Не используем crossOrigin для локальных файлов /skins/
         defaultDiceImg.onload = () => {
           textures.dice = defaultDiceImg
           checkAndDraw()
         }
-        defaultDiceImg.onerror = () => checkAndDraw()
+        defaultDiceImg.onerror = () => {
+          console.error('Failed to load default dice texture')
+          checkAndDraw()
+        }
         defaultDiceImg.src = '/skins/default-dice.svg'
       } else {
         checkAndDraw()
@@ -173,23 +201,32 @@ export default function BackgammonBoard({
     // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins (с fallback на дефолтную)
     const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl || '/skins/default-checkers-white.svg'
     expectedCount++
-    const whiteCheckersUrl = getImageUrl(whiteCheckersTextureUrl)
+    // Используем прямой путь для /skins/, как в инвентаре
+    const whiteCheckersUrl = whiteCheckersTextureUrl.startsWith('/skins/') ? whiteCheckersTextureUrl : getImageUrl(whiteCheckersTextureUrl) || whiteCheckersTextureUrl
     const whiteCheckersImg = new Image()
-    whiteCheckersImg.crossOrigin = 'anonymous'
+    // Не используем crossOrigin для локальных файлов /skins/
+    if (!whiteCheckersUrl.startsWith('/skins/')) {
+      whiteCheckersImg.crossOrigin = 'anonymous'
+    }
     whiteCheckersImg.onload = () => {
+      console.log('✅ White checkers texture loaded:', whiteCheckersUrl)
       textures.whiteCheckers = whiteCheckersImg
       checkAndDraw()
     }
     whiteCheckersImg.onerror = () => {
+      console.error('Failed to load white checkers texture:', whiteCheckersUrl, 'Original:', whiteCheckersTextureUrl)
       // Если не загрузилась кастомная, пробуем дефолтную
       if (whiteCheckersTextureUrl !== '/skins/default-checkers-white.svg') {
         const defaultWhiteCheckersImg = new Image()
-        defaultWhiteCheckersImg.crossOrigin = 'anonymous'
+        // Не используем crossOrigin для локальных файлов /skins/
         defaultWhiteCheckersImg.onload = () => {
           textures.whiteCheckers = defaultWhiteCheckersImg
           checkAndDraw()
         }
-        defaultWhiteCheckersImg.onerror = () => checkAndDraw()
+        defaultWhiteCheckersImg.onerror = () => {
+          console.error('Failed to load default white checkers texture')
+          checkAndDraw()
+        }
         defaultWhiteCheckersImg.src = '/skins/default-checkers-white.svg'
       } else {
         checkAndDraw()
@@ -204,23 +241,32 @@ export default function BackgammonBoard({
     // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins (с fallback на дефолтную)
     const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl || '/skins/default-checkers-black.svg'
     expectedCount++
-    const blackCheckersUrl = getImageUrl(blackCheckersTextureUrl)
+    // Используем прямой путь для /skins/, как в инвентаре
+    const blackCheckersUrl = blackCheckersTextureUrl.startsWith('/skins/') ? blackCheckersTextureUrl : getImageUrl(blackCheckersTextureUrl) || blackCheckersTextureUrl
     const blackCheckersImg = new Image()
-    blackCheckersImg.crossOrigin = 'anonymous'
+    // Не используем crossOrigin для локальных файлов /skins/
+    if (!blackCheckersUrl.startsWith('/skins/')) {
+      blackCheckersImg.crossOrigin = 'anonymous'
+    }
     blackCheckersImg.onload = () => {
+      console.log('✅ Black checkers texture loaded:', blackCheckersUrl)
       textures.blackCheckers = blackCheckersImg
       checkAndDraw()
     }
     blackCheckersImg.onerror = () => {
+      console.error('Failed to load black checkers texture:', blackCheckersUrl, 'Original:', blackCheckersTextureUrl)
       // Если не загрузилась кастомная, пробуем дефолтную
       if (blackCheckersTextureUrl !== '/skins/default-checkers-black.svg') {
         const defaultBlackCheckersImg = new Image()
-        defaultBlackCheckersImg.crossOrigin = 'anonymous'
+        // Не используем crossOrigin для локальных файлов /skins/
         defaultBlackCheckersImg.onload = () => {
           textures.blackCheckers = defaultBlackCheckersImg
           checkAndDraw()
         }
-        defaultBlackCheckersImg.onerror = () => checkAndDraw()
+        defaultBlackCheckersImg.onerror = () => {
+          console.error('Failed to load default black checkers texture')
+          checkAndDraw()
+        }
         defaultBlackCheckersImg.src = '/skins/default-checkers-black.svg'
       } else {
         checkAndDraw()
