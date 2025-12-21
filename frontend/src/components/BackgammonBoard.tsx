@@ -555,74 +555,75 @@ export default function BackgammonBoard({
 
         // Подсветка выбранной точки
         if (selectedPoint === i && isMyTurn && canMove) {
-        ctx.beginPath()
-        if (isTop) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        } else {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-          ctx.lineTo(x + pointWidth, y)
+          ctx.beginPath()
+          if (isTop) {
+            ctx.moveTo(x, y)
+            ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+            ctx.lineTo(x + pointWidth, y)
+          } else {
+            ctx.moveTo(x, y)
+            ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+            ctx.lineTo(x + pointWidth, y)
+          }
+          ctx.closePath()
+          
+          // Подсветка выбранной точки синим
+          ctx.fillStyle = 'rgba(0, 100, 255, 0.3)'
+          ctx.fill()
+          
+          ctx.strokeStyle = 'rgba(0, 100, 255, 0.8)'
+          ctx.lineWidth = 3
+          ctx.stroke()
         }
-        ctx.closePath()
-        
-        // Подсветка выбранной точки синим
-        ctx.fillStyle = 'rgba(0, 100, 255, 0.3)'
-        ctx.fill()
-        
-        ctx.strokeStyle = 'rgba(0, 100, 255, 0.8)'
-        ctx.lineWidth = 3
-        ctx.stroke()
-      }
 
-      // Подсветка возможных ходов (когда точка выбрана или перетаскивается) - рисуем поверх всего
-      const isHighlighted = highlightedPoints.has(i) && isMyTurn && canMove && 
-        ((selectedPoint !== null && selectedPoint !== i) || (dragging && dragFromPoint !== null && dragFromPoint !== i))
-      if (isHighlighted) {
-        ctx.beginPath()
-        if (isTop) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        } else {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-          ctx.lineTo(x + pointWidth, y)
+        // Подсветка возможных ходов (когда точка выбрана или перетаскивается) - рисуем поверх всего
+        const isHighlighted = highlightedPoints.has(i) && isMyTurn && canMove && 
+          ((selectedPoint !== null && selectedPoint !== i) || (dragging && dragFromPoint !== null && dragFromPoint !== i))
+        if (isHighlighted) {
+          ctx.beginPath()
+          if (isTop) {
+            ctx.moveTo(x, y)
+            ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+            ctx.lineTo(x + pointWidth, y)
+          } else {
+            ctx.moveTo(x, y)
+            ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+            ctx.lineTo(x + pointWidth, y)
+          }
+          ctx.closePath()
+          
+          // Более яркая подсветка для лучшей видимости
+          // Если это точка под курсором при перетаскивании, делаем еще ярче
+          const isDragTarget = dragging && dragHoverPoint === i
+          ctx.fillStyle = isDragTarget ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.6)'
+          ctx.fill()
+          
+          ctx.strokeStyle = 'rgba(0, 255, 0, 1.0)'
+          ctx.lineWidth = isDragTarget ? 5 : 4
+          ctx.stroke()
         }
-        ctx.closePath()
-        
-        // Более яркая подсветка для лучшей видимости
-        // Если это точка под курсором при перетаскивании, делаем еще ярче
-        const isDragTarget = dragging && dragHoverPoint === i
-        ctx.fillStyle = isDragTarget ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.6)'
-        ctx.fill()
-        
-        ctx.strokeStyle = 'rgba(0, 255, 0, 1.0)'
-        ctx.lineWidth = isDragTarget ? 5 : 4
-        ctx.stroke()
-      }
 
-      // Подсветка при наведении (если точка не выбрана)
-      if (hoverPoint === i && selectedPoint === null && isMyTurn && canMove) {
-        ctx.beginPath()
-        if (isTop) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        } else {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-          ctx.lineTo(x + pointWidth, y)
+        // Подсветка при наведении (если точка не выбрана)
+        if (hoverPoint === i && selectedPoint === null && isMyTurn && canMove) {
+          ctx.beginPath()
+          if (isTop) {
+            ctx.moveTo(x, y)
+            ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+            ctx.lineTo(x + pointWidth, y)
+          } else {
+            ctx.moveTo(x, y)
+            ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+            ctx.lineTo(x + pointWidth, y)
+          }
+          ctx.closePath()
+          
+          ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'
+          ctx.fill()
+          
+          ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)'
+          ctx.lineWidth = 3
+          ctx.stroke()
         }
-        ctx.closePath()
-        
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'
-        ctx.fill()
-        
-        ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)'
-        ctx.lineWidth = 3
-        ctx.stroke()
       }
     }
 
