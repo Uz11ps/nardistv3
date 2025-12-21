@@ -42,7 +42,16 @@ export class Skin {
   weight: number; // Вес скина для лимита силы
 
   @Column({ nullable: true })
-  imageUrl: string; // URL изображения скина
+  imageUrl: string; // URL превью изображения скина для магазина
+
+  @Column({ nullable: true })
+  boardTextureUrl: string; // URL файла текстуры доски (для типа 'board')
+
+  @Column({ nullable: true })
+  diceTextureUrl: string; // URL файла текстуры кубиков (для типа 'dice')
+
+  @Column({ nullable: true })
+  checkersTextureUrl: string; // URL файла текстуры шашек (для типа 'checkers')
 
   @Column({ type: 'int', nullable: true })
   price: number; // Цена в NAR-coin (если null - бесплатный)

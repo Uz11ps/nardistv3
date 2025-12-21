@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UnauthorizedException, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UnauthorizedException, UploadedFile, UploadedFiles, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -256,7 +256,7 @@ export class AdminController {
   @Post('skins')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
-    FileInterceptor('image', {
+    FilesInterceptor('files', 4, { // До 4 файлов: preview, boardTexture, diceTexture, checkersTexture
       storage: diskStorage({
         destination: (req, file, cb) => {
           // Используем абсолютный путь для Docker
@@ -269,32 +269,53 @@ export class AdminController {
         },
         filename: (req, file, cb) => {
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, `skin-${uniqueSuffix}${extname(file.originalname)}`);
+          const fieldName = file.fieldname || 'skin';
+          cb(null, `${fieldName}-${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+        // Разрешаем изображения и другие файлы (для текстур могут быть разные форматы)
+        if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp|svg|json)$/) || file.fieldname) {
           cb(null, true);
         } else {
-          cb(new Error('Только изображения разрешены'), false);
+          cb(new Error('Неподдерживаемый тип файла'), false);
         }
       },
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB для текстур
     }),
   )
   async createSkin(
     @CurrentUser() user: any,
     @Body() body: any,
-    @UploadedFile() file?: { filename: string; originalname: string; mimetype: string; size: number },
+    @UploadedFiles() files?: Array<{ fieldname: string; filename: string; originalname: string; mimetype: string; size: number }>,
   ) {
     if (!user.isAdmin) {
       throw new UnauthorizedException('Недостаточно прав');
     }
     
-    // При multipart/form-data все значения приходят как строки, нужно их распарсить
-    const imageUrl = file ? `/uploads/skins/${file.filename}` : body.imageUrl;
-    
     const skinType = body.type || 'board';
+    
+    // Обрабатываем загруженные файлы
+    let imageUrl = body.imageUrl || null;
+    let boardTextureUrl = null;
+    let diceTextureUrl = null;
+    let checkersTextureUrl = null;
+    
+    if (files && files.length > 0) {
+      for (const file of files) {
+        const fileUrl = `/uploads/skins/${file.filename}`;
+        // Определяем тип файла по fieldname
+        if (file.fieldname === 'preview' || file.fieldname === 'image') {
+          imageUrl = fileUrl;
+        } else if (file.fieldname === 'boardTexture' && skinType === 'board') {
+          boardTextureUrl = fileUrl;
+        } else if (file.fieldname === 'diceTexture' && skinType === 'dice') {
+          diceTextureUrl = fileUrl;
+        } else if (file.fieldname === 'checkersTexture' && skinType === 'checkers') {
+          checkersTextureUrl = fileUrl;
+        }
+      }
+    }
     
     // В зависимости от типа скина заполняем соответствующие конфиги
     let boardConfig = null;
@@ -323,6 +344,9 @@ export class AdminController {
       price: body.price ? parseFloat(body.price) : null,
       rarity: body.rarity || 'common',
       imageUrl,
+      boardTextureUrl,
+      diceTextureUrl,
+      checkersTextureUrl,
     };
     
     return this.adminService.createSkin(skinData);

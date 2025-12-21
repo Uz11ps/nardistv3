@@ -409,6 +409,9 @@ export class AdminService {
     isPremium?: boolean;
     weight?: number;
     imageUrl?: string;
+    boardTextureUrl?: string;
+    diceTextureUrl?: string;
+    checkersTextureUrl?: string;
     price?: number;
     rarity?: string;
   }) {
@@ -424,6 +427,9 @@ export class AdminService {
       isPremium: data.isPremium || false,
       weight: data.weight || 1,
       imageUrl: data.imageUrl || null,
+      boardTextureUrl: data.boardTextureUrl || null,
+      diceTextureUrl: data.diceTextureUrl || null,
+      checkersTextureUrl: data.checkersTextureUrl || null,
       price: data.price || null,
       rarity: data.rarity || 'common',
     });
@@ -443,6 +449,9 @@ export class AdminService {
     isPremium: boolean;
     weight: number;
     imageUrl: string;
+    boardTextureUrl: string;
+    diceTextureUrl: string;
+    checkersTextureUrl: string;
     price: number;
     rarity: string;
   }>) {

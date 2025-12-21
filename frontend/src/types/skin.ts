@@ -4,7 +4,10 @@ export interface Skin {
   description?: string
   type: string // 'board' | 'dice' | 'checkers'
   theme: string
-  imageUrl?: string
+  imageUrl?: string // Превью для магазина
+  boardTextureUrl?: string // URL файла текстуры доски (для типа 'board')
+  diceTextureUrl?: string // URL файла текстуры кубиков (для типа 'dice')
+  checkersTextureUrl?: string // URL файла текстуры шашек (для типа 'checkers')
   price?: number
   rarity: string
   weight: number
