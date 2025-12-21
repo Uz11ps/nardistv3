@@ -11,7 +11,7 @@ import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    GamesModule,
+    forwardRef(() => GamesModule),
     RedisModule,
     RatingsModule,
     UsersModule,
