@@ -7,12 +7,14 @@ import { GamesModule } from '../games/games.module';
 import { RedisModule } from '../config/redis.module';
 import { RatingsModule } from '../ratings/ratings.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     GamesModule,
     RedisModule,
     RatingsModule,
+    UsersModule,
     forwardRef(() => SubscriptionModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],

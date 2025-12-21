@@ -8,12 +8,14 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { UseGuards } from '@nestjs/common';
+import { UseGuards, Logger } from '@nestjs/common';
 import { MatchmakingService } from './matchmaking.service';
 import { GamesService } from '../games/games.service';
+import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { GameMode } from '../games/game.entity';
+import axios from 'axios';
 
 @WebSocketGateway({
   cors: {
@@ -25,11 +27,13 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   @WebSocketServer()
   server: Server;
 
+  private readonly logger = new Logger(MatchmakingGateway.name);
   private matchmakingIntervals = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private matchmakingService: MatchmakingService,
     private gamesService: GamesService,
+    private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
@@ -47,6 +51,9 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
       });
 
       client.data.userId = payload.sub;
+      
+      // Присоединяем пользователя к комнате для отправки событий
+      await client.join(`user:${payload.sub}`);
     } catch (error) {
       client.disconnect();
     }
@@ -78,8 +85,13 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
         
         const game = await this.gamesService.create(userId, opponentId, data.mode, 'vs_player' as any);
         
+        // Отправляем события обоим игрокам
         client.emit('match_found', { gameId: game.id, opponentId });
         this.server.to(`user:${opponentId}`).emit('match_found', { gameId: game.id, opponentId: userId });
+        
+        // Отправляем уведомления в Telegram
+        await this.sendTelegramNotification(userId, `🎮 Найден соперник! Игра #${game.id.substring(0, 8)}`);
+        await this.sendTelegramNotification(opponentId, `🎮 Найден соперник! Игра #${game.id.substring(0, 8)}`);
       }
     }, 2000);
 
@@ -113,8 +125,16 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
     @MessageBody() data: { mode: GameMode; timeLimit: number },
   ) {
     const userId = client.data.userId;
-    const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit);
-    client.emit('table_created', { gameId });
+    try {
+      const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit);
+      client.emit('table_created', { gameId });
+      
+      // Отправляем уведомление в Telegram
+      await this.sendTelegramNotification(userId, `🪑 Стол создан! ID игры: #${gameId.substring(0, 8)}`);
+    } catch (error) {
+      this.logger.error(`Ошибка при создании стола: ${error.message}`);
+      client.emit('error', { message: error.message || 'Ошибка при создании стола' });
+    }
   }
 
   @SubscribeMessage('join_table')
@@ -123,9 +143,42 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
     try {
       await this.matchmakingService.joinTable(data.gameId, userId);
       const game = await this.gamesService.findOne(data.gameId);
-      this.server.to(`table:${data.gameId}`).emit('table_joined', { gameId: data.gameId, game });
+      
+      // Отправляем событие клиенту
+      client.emit('table_joined', { gameId: data.gameId, game });
+      
+      // Отправляем уведомления в Telegram обоим игрокам
+      if (game.player1Id && game.player1Id !== userId) {
+        await this.sendTelegramNotification(game.player1Id, `✅ Игрок присоединился к столу! Игра #${data.gameId.substring(0, 8)}`);
+      }
+      await this.sendTelegramNotification(userId, `✅ Вы присоединились к столу! Игра #${data.gameId.substring(0, 8)}`);
     } catch (error) {
+      this.logger.error(`Ошибка при присоединении к столу: ${error.message}`);
       client.emit('error', { message: error.message });
+    }
+  }
+
+  private async sendTelegramNotification(userId: string, message: string): Promise<void> {
+    try {
+      const user = await this.usersService.findOne(userId);
+      if (!user || !user.telegramId || user.isGuest) {
+        // Пропускаем уведомления для гостей или пользователей без telegramId
+        return;
+      }
+
+      const botToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+      if (!botToken) {
+        this.logger.warn('TELEGRAM_BOT_TOKEN не настроен, уведомление не отправлено');
+        return;
+      }
+
+      await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        chat_id: user.telegramId,
+        text: message,
+      });
+    } catch (error) {
+      // Логируем ошибку, но не прерываем выполнение
+      this.logger.warn(`Не удалось отправить уведомление в Telegram пользователю ${userId}: ${error.message}`);
     }
   }
 }

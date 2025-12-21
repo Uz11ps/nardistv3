@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { apiClient } from '../api/client'
-import { getSocket } from '../api/websocket'
+import { getMatchmakingSocket } from '../api/websocket'
 import './CreateTable.css'
 
 export default function CreateTable() {
@@ -15,6 +15,26 @@ export default function CreateTable() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    const socket = getMatchmakingSocket()
+    if (!socket) return
+
+    socket.on('table_created', (data: any) => {
+      setLoading(false)
+      navigate(`/game/${data.gameId}`)
+    })
+
+    socket.on('error', (error: any) => {
+      alert(error.message || 'Ошибка при создании стола')
+      setLoading(false)
+    })
+
+    return () => {
+      socket.off('table_created')
+      socket.off('error')
+    }
+  }, [navigate])
+
   const handleCreateTable = async () => {
     if (access === 'private' && !password.trim()) {
       alert('Введите пароль для приватного стола')
@@ -23,34 +43,17 @@ export default function CreateTable() {
 
     try {
       setLoading(true)
-      const socket = getSocket()
-      if (socket) {
-        socket.emit('create_table', {
-          mode,
-          timeLimit: 60,
-          stake,
-          isPrivate: access === 'private',
-          password: access === 'private' ? password : undefined,
-        })
-
-        socket.once('table_created', (data: any) => {
-          navigate(`/game/${data.gameId}`)
-        })
-
-        socket.once('error', (error: any) => {
-          alert(error.message || 'Ошибка при создании стола')
-          setLoading(false)
-        })
-      } else {
-        // Fallback на REST API если нужно
-        const response = await apiClient.post('/games/tables', {
-          mode,
-          stake,
-          isPrivate: access === 'private',
-          password: access === 'private' ? password : undefined,
-        })
-        navigate(`/game/${response.data.id}`)
+      const socket = getMatchmakingSocket()
+      if (!socket) {
+        alert('WebSocket не подключен. Перезагрузите страницу.')
+        setLoading(false)
+        return
       }
+
+      socket.emit('create_table', {
+        mode,
+        timeLimit: 60,
+      })
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при создании стола')
       setLoading(false)

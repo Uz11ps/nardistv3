@@ -5,7 +5,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
-import { getSocket } from '../api/websocket'
+import { getMatchmakingSocket } from '../api/websocket'
 import './GameTables.css'
 
 interface GameTable {
@@ -25,7 +25,7 @@ export default function GameTables() {
 
   useEffect(() => {
     loadTables()
-    const socket = getSocket()
+    const socket = getMatchmakingSocket()
     if (socket) {
       socket.emit('get_open_tables', { mode: 'long' })
       socket.on('open_tables', (data: any) => {
@@ -55,13 +55,20 @@ export default function GameTables() {
 
   const handleJoinTable = async (tableId: string) => {
     try {
-      const socket = getSocket()
-      if (socket) {
-        socket.emit('join_table', { gameId: tableId })
-        socket.once('table_joined', () => {
-          navigate(`/game/${tableId}`)
-        })
+      const socket = getMatchmakingSocket()
+      if (!socket) {
+        alert('WebSocket не подключен. Перезагрузите страницу.')
+        return
       }
+
+      socket.emit('join_table', { gameId: tableId })
+      socket.once('table_joined', (data: any) => {
+        navigate(`/game/${tableId}`)
+      })
+
+      socket.once('error', (error: any) => {
+        alert(error.message || 'Не удалось присоединиться к столу')
+      })
     } catch (error) {
       console.error('Failed to join table:', error)
       alert('Не удалось присоединиться к столу')

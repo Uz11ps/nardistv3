@@ -47,7 +47,25 @@ export class MatchmakingService {
     const entryStr = await this.redis.get(`queue:user:${userId}`);
     if (entryStr) {
       const entry: QueueEntry = JSON.parse(entryStr);
-      await this.redis.zrem(`queue:${entry.mode}`, JSON.stringify(entry));
+      
+      // Получаем все записи из очереди и удаляем нужную по userId
+      const queueKey = `queue:${entry.mode}`;
+      const allEntries = await this.redis.zrange(queueKey, 0, -1);
+      
+      for (const candidateStr of allEntries) {
+        try {
+          const candidate: QueueEntry = JSON.parse(candidateStr);
+          if (candidate.userId === userId) {
+            // Удаляем по точному совпадению строки
+            await this.redis.zrem(queueKey, candidateStr);
+            break;
+          }
+        } catch (error) {
+          // Пропускаем некорректные записи
+          continue;
+        }
+      }
+      
       await this.redis.del(`queue:user:${userId}`);
     }
   }
@@ -63,25 +81,34 @@ export class MatchmakingService {
     const minRating = userEntry.rating - ratingRange;
     const maxRating = userEntry.rating + ratingRange;
 
-    const candidates = await this.redis.zrangebyscore(
-      `queue:${mode}`,
-      minRating,
-      maxRating,
-      'LIMIT',
-      0,
-      10,
-    );
+    // Получаем больше кандидатов через zrange (по score с учетом премиум)
+    // Премиум пользователи будут выше в списке из-за большего score
+    const allCandidates = await this.redis.zrange(`queue:${mode}`, 0, 50, 'REV');
+    
+    // Фильтруем по реальному рейтингу (не по score)
+    const candidatesInRange: QueueEntry[] = [];
+    for (const candidateStr of allCandidates) {
+      try {
+        const candidate: QueueEntry = JSON.parse(candidateStr);
+        // Проверяем реальный рейтинг, а не score
+        if (candidate.userId !== userId && 
+            candidate.mode === mode &&
+            candidate.rating >= minRating && 
+            candidate.rating <= maxRating) {
+          candidatesInRange.push(candidate);
+        }
+      } catch (error) {
+        // Пропускаем некорректные записи
+        continue;
+      }
+    }
 
     // Премиум пользователи имеют приоритет - проверяем их первыми
-    const premiumCandidates = candidates.filter(c => {
-      const entry: QueueEntry = JSON.parse(c);
-      return entry.isPremium === true;
-    });
+    const premiumCandidates = candidatesInRange.filter(c => c.isPremium === true);
+    const candidatesToCheck = premiumCandidates.length > 0 ? premiumCandidates : candidatesInRange;
 
-    const candidatesToCheck = premiumCandidates.length > 0 ? premiumCandidates : candidates;
-
-    for (const candidateStr of candidatesToCheck) {
-      const candidate: QueueEntry = JSON.parse(candidateStr);
+    // Берем первого подходящего кандидата
+    for (const candidate of candidatesToCheck) {
       if (candidate.userId !== userId) {
         await this.leaveQueue(userId);
         await this.leaveQueue(candidate.userId);
@@ -129,6 +156,10 @@ export class MatchmakingService {
             mode: table.mode,
             timeLimit: table.timeLimit,
             createdAt: table.createdAt,
+            stake: Number(game.stake) || 0,
+            playerCount: game.player2Id ? 2 : 1,
+            maxPlayers: 2,
+            status: game.status === 'waiting' ? 'waiting' : 'in_progress',
           });
         }
       }

@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { apiClient } from '../api/client'
-import { getSocket } from '../api/websocket'
+import { getMatchmakingSocket } from '../api/websocket'
 import './GameSearch.css'
 
 export default function GameSearch() {
@@ -18,38 +18,48 @@ export default function GameSearch() {
   const [stake, setStake] = useState<0 | 100 | 500 | 1000>(0)
 
   useEffect(() => {
-    const socket = getSocket()
+    const socket = getMatchmakingSocket()
     if (!socket) return
 
-    socket.on('matchmaking:found', (data: any) => {
+    socket.on('match_found', (data: any) => {
       setSearching(false)
       navigate(`/game/${data.gameId}`)
     })
 
+    socket.on('searching', () => {
+      setSearching(true)
+    })
+
+    socket.on('search_cancelled', () => {
+      setSearching(false)
+    })
+
     return () => {
-      socket.off('matchmaking:found')
+      socket.off('match_found')
+      socket.off('searching')
+      socket.off('search_cancelled')
     }
   }, [navigate])
 
   const handleStartSearch = () => {
-    const socket = getSocket()
-    if (!socket) return
+    const socket = getMatchmakingSocket()
+    if (!socket) {
+      alert('WebSocket не подключен. Перезагрузите страницу.')
+      return
+    }
 
     setSearching(true)
-    socket.emit('matchmaking:join', {
+    socket.emit('find_match', {
       mode,
-      format,
-      timeLimit,
-      stake,
     })
   }
 
   const handleCancelSearch = () => {
-    const socket = getSocket()
+    const socket = getMatchmakingSocket()
     if (!socket) return
 
     setSearching(false)
-    socket.emit('matchmaking:leave')
+    socket.emit('cancel_search')
   }
 
   return (
