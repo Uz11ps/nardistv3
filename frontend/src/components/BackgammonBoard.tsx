@@ -65,13 +65,26 @@ export default function BackgammonBoard({
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const animationFrameRef = useRef<number>()
 
-  // Определяем, кто я (player1 или player2) для визуального отображения
+  // Определяем, кто я (player1 или player2) для отзеркаливания доски
   const isPlayer1 = myPlayerId === player1Id
   const myPlayerIndex = isPlayer1 ? 0 : 1
+  const shouldMirror = !isPlayer1 // Если я player2, отзеркаливаем доску
+
+  // Функции для преобразования индексов точек при отзеркаливании
+  // Отзеркаливание: mirroredIndex = 23 - originalIndex
+  const mirrorPointIndex = (index: number): number => {
+    if (index < 0 || index >= 24) return index // Бар и другие специальные индексы не трогаем
+    return 23 - index
+  }
+
+  const unmirrorPointIndex = (index: number): number => {
+    if (index < 0 || index >= 24) return index
+    return 23 - index
+  }
 
   // gameState.points - это массив чисел, где положительное число = белые шашки (player1), отрицательное = черные (player2)
   const pointsRaw = gameState?.points || []
-  const points: number[] = Array.isArray(pointsRaw)
+  let points: number[] = Array.isArray(pointsRaw)
     ? pointsRaw.map((p: any) => {
         // Если это число, возвращаем как есть
         if (typeof p === 'number') {
@@ -91,9 +104,27 @@ export default function BackgammonBoard({
         return 0
       })
     : []
+
+  // Отзеркаливаем доску для player2, чтобы его шашки были внизу
+  if (shouldMirror) {
+    // Инвертируем массив точек и меняем знаки (белые становятся черными и наоборот)
+    const mirroredPoints: number[] = new Array(24)
+    for (let i = 0; i < 24; i++) {
+      const mirroredIndex = mirrorPointIndex(i)
+      mirroredPoints[i] = -points[mirroredIndex] // Меняем знак и берем из отзеркаленной позиции
+    }
+    points = mirroredPoints
+  }
   
-  const bar = gameState?.bar || (Array.isArray(gameState?.bar) ? { white: gameState.bar[0] || 0, black: gameState.bar[1] || 0 } : { white: 0, black: 0 })
-  const bearOff = gameState?.borneOff || gameState?.bearOff || (Array.isArray(gameState?.borneOff) ? { white: gameState.borneOff[0] || 0, black: gameState.borneOff[1] || 0 } : { white: 0, black: 0 })
+  // Отзеркаливаем bar и bearOff для player2
+  let bar = gameState?.bar || (Array.isArray(gameState?.bar) ? { white: gameState.bar[0] || 0, black: gameState.bar[1] || 0 } : { white: 0, black: 0 })
+  let bearOff = gameState?.borneOff || gameState?.bearOff || (Array.isArray(gameState?.borneOff) ? { white: gameState.borneOff[0] || 0, black: gameState.borneOff[1] || 0 } : { white: 0, black: 0 })
+  
+  if (shouldMirror) {
+    // Меняем местами white и black для player2
+    bar = { white: bar.black, black: bar.white }
+    bearOff = { white: bearOff.black, black: bearOff.white }
+  }
 
   // Нормализуем формат кубиков
   const diceArray: number[] = dice
@@ -122,11 +153,16 @@ export default function BackgammonBoard({
           })
           
           const uniqueMoves = Array.from(movesSet).map((key) => {
-            const [from, to, die] = key.split('-').map(Number)
+            let [from, to, die] = key.split('-').map(Number)
+            // Преобразуем индексы для отображения, если доска отзеркалена
+            if (shouldMirror) {
+              from = from === -1 ? -1 : mirrorPointIndex(from) // Бар остается -1
+              to = to === -1 ? -1 : mirrorPointIndex(to)
+            }
             return { from, to, die }
           })
           
-          console.log('📋 Уникальные ходы:', uniqueMoves)
+          console.log('📋 Уникальные ходы (после отзеркаливания):', uniqueMoves)
           setPossibleMoves(uniqueMoves)
         })
         .catch((error) => {
@@ -144,18 +180,22 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (gameId && selectedPoint !== null && diceArray.length > 0 && isMyTurn && canMove) {
       console.log(`🔄 Загружаем возможные ходы с точки ${selectedPoint} для игры`, gameId)
+      // Преобразуем индекс точки обратно для запроса к серверу
+      const originalPointIndex = shouldMirror ? unmirrorPointIndex(selectedPoint) : selectedPoint
+      
       apiClient
-        .get(`/games/${gameId}/possible-moves/${selectedPoint}`)
+        .get(`/games/${gameId}/possible-moves/${originalPointIndex}`)
         .then((response: any) => {
           const data = response.data || {}
           const movesFromPoint = data.movesFromPoint || []
-          console.log(`✅ Получены возможные ходы с точки ${selectedPoint}:`, movesFromPoint)
+          console.log(`✅ Получены возможные ходы с точки ${originalPointIndex} (отображение: ${selectedPoint}):`, movesFromPoint)
           
-          // Подсвечиваем точки, куда можно сделать ход
+          // Подсвечиваем точки, куда можно сделать ход (преобразуем индексы для отображения)
           const highlights = new Set<number>()
           movesFromPoint.forEach((move: any) => {
             if (move.to >= 0 && move.to < 24) {
-              highlights.add(move.to)
+              const displayIndex = shouldMirror ? mirrorPointIndex(move.to) : move.to
+              highlights.add(displayIndex)
             }
           })
           setHighlightedPoints(highlights)
@@ -314,7 +354,8 @@ export default function BackgammonBoard({
           ? (playerSkins?.checkers || opponentSkins?.checkers)
           : (opponentSkins?.checkers || playerSkins?.checkers)
         
-        let checkerColor = pointValue > 0 ? '#FFFFFF' : '#1a1a1a'
+        // Цвет шашек: после отзеркаливания знаки инвертированы
+        let checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
         if (checkerSkin?.checkersConfig?.color) {
           checkerColor = checkerSkin.checkersConfig.color
         }
@@ -785,16 +826,18 @@ export default function BackgammonBoard({
 
     if (selectedPoint === null) {
       // Выбираем точку или бар
-      const hasBarCheckers = (myPlayerIndex === 0 && bar.white > 0) || (myPlayerIndex === 1 && bar.black > 0)
+      // После отзеркаливания: если я player2, мои шашки теперь положительные (были отрицательные)
+      const myPlayerIndexMirrored = shouldMirror ? (myPlayerIndex === 0 ? 1 : 0) : myPlayerIndex
+      const hasBarCheckers = (myPlayerIndexMirrored === 0 && bar.white > 0) || (myPlayerIndexMirrored === 1 && bar.black > 0)
       
       // Проверяем клик по бару (обрабатывается отдельно, но для простоты считаем что бар = -1)
       // Сначала пробуем выбрать точку с шашкой
       if (clickedPoint >= 0 && clickedPoint < 24) {
         const pointValue = points[clickedPoint] || 0
         if (pointValue !== 0) {
-          // Определяем, мои ли это шашки: player1 = положительные, player2 = отрицательные
-          const checkerCount = myPlayerIndex === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
-          const isMyChecker = myPlayerIndex === 0 ? pointValue > 0 : pointValue < 0
+          // После отзеркаливания: если я player2, мои шашки стали положительными
+          const checkerCount = myPlayerIndexMirrored === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
+          const isMyChecker = myPlayerIndexMirrored === 0 ? pointValue > 0 : pointValue < 0
           if (isMyChecker && checkerCount > 0) {
             // Проверяем, есть ли возможные ходы с этой точки
             const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
@@ -836,7 +879,11 @@ export default function BackgammonBoard({
         
         if (validMove) {
           console.log('✅ Ход валиден, отправляем на сервер')
-          onMove(selectedPoint, clickedPoint, validMove.die)
+          // Преобразуем индексы обратно для отправки на сервер
+          const originalFrom = shouldMirror ? unmirrorPointIndex(selectedPoint) : selectedPoint
+          const originalTo = shouldMirror ? unmirrorPointIndex(clickedPoint) : clickedPoint
+          console.log(`🔄 Преобразование индексов: ${selectedPoint}->${originalFrom}, ${clickedPoint}->${originalTo}`)
+          onMove(originalFrom, originalTo, validMove.die)
           setSelectedPoint(null)
           setHighlightedPoints(new Set())
         } else {
@@ -907,19 +954,20 @@ export default function BackgammonBoard({
           fontSize: '14px',
           color: '#fff'
         }}>
-          <div style={{ fontWeight: 'bold', color: isPlayer1 ? '#fff' : '#888' }}>
-            {player1Name || 'Игрок 1'}
+          {/* Верхний игрок (противник) */}
+          <div style={{ fontWeight: 'bold', color: shouldMirror ? '#888' : '#fff' }}>
+            {shouldMirror ? (player1Name || 'Игрок 1') : (player2Name || 'Игрок 2')}
             <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
-              ⬜
+              {shouldMirror ? '⬜' : '⬛'}
             </span>
-            {isPlayer1 && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#4CAF50' }}>(Вы)</span>}
           </div>
-          <div style={{ fontWeight: 'bold', color: !isPlayer1 ? '#fff' : '#888' }}>
-            {player2Name || 'Игрок 2'}
+          {/* Нижний игрок (я) */}
+          <div style={{ fontWeight: 'bold', color: shouldMirror ? '#fff' : '#888' }}>
+            {shouldMirror ? (player2Name || 'Игрок 2') : (player1Name || 'Игрок 1')}
             <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
-              ⬛
+              {shouldMirror ? '⬛' : '⬜'}
             </span>
-            {!isPlayer1 && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#4CAF50' }}>(Вы)</span>}
+            <span style={{ marginLeft: '8px', fontSize: '10px', color: '#4CAF50' }}>(Вы)</span>
           </div>
         </div>
       )}
