@@ -5,6 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -24,14 +25,14 @@ async function bootstrap() {
     }
   });
 
-  // Настройка статической отдачи файлов (ДО установки глобального префикса)
-  // Используем полный путь /api/uploads/ чтобы обойти глобальный префикс
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/api/uploads/',
-  });
-
-  // Устанавливаем глобальный префикс для всех роутов (ПОСЛЕ статики)
+  // Устанавливаем глобальный префикс для всех роутов
   app.setGlobalPrefix('api');
+
+  // Настройка статической отдачи файлов напрямую через express
+  // Используем express.static для полного контроля над путем
+  // Файлы будут доступны по /api/uploads/...
+  const uploadsPath = join(__dirname, '..', 'uploads');
+  app.use('/api/uploads', express.static(uploadsPath));
 
   app.useGlobalPipes(
     new ValidationPipe({
