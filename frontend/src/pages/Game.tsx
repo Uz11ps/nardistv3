@@ -430,7 +430,8 @@ export default function Game() {
       return
     }
 
-    // Если игра в статусе waiting и это бот-игра - начинаем игру (бросаем кубики)
+    // Игры с ИИ теперь сразу создаются со статусом in_progress, этап waiting пропускается
+    // Эта проверка больше не нужна, но оставляем для совместимости
     if (gameStatus === 'waiting' && isBotGame) {
       console.log('🎲 Начинаем игру - бросаем кубики')
       try {
@@ -637,8 +638,8 @@ export default function Game() {
         </div>
       )}
 
-      {/* Кнопка подтверждения / броска кубиков для бот-игр или игр в процессе */}
-      {((gameStatus === 'waiting' && (isBotGame || gameInfo?.type !== 'vs_player')) || (gameStatus === 'in_progress' && isMyTurn)) && (
+      {/* Кнопка броска кубиков для игр в процессе */}
+      {(gameStatus === 'in_progress' && isMyTurn) && (
         <div className="game-confirm-section">
           <Button 
             variant="primary" 

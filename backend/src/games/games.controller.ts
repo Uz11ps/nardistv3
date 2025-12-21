@@ -35,8 +35,17 @@ export class GamesController {
 
   @Post('create-bot')
   @UseGuards(JwtAuthGuard)
-  async createBotGame(@CurrentUser() user: any) {
-    return this.gamesService.createBotGame(user.id);
+  async createBotGame(@CurrentUser() user: any, @Body() body?: { mode?: string }) {
+    const mode = body?.mode === 'short' ? 'short' : 'long';
+    return this.gamesService.createBotGame(user.id, mode as any);
+  }
+
+  @Post('create-ai')
+  @UseGuards(JwtAuthGuard)
+  async createAIGame(@CurrentUser() user: any, @Body() body?: { mode?: string }) {
+    // Отдельный endpoint для игры с ИИ (алиас для create-bot)
+    const mode = body?.mode === 'short' ? 'short' : 'long';
+    return this.gamesService.createBotGame(user.id, mode as any);
   }
 
   @Get(':id/possible-moves')

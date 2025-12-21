@@ -708,8 +708,61 @@ export class GamesService {
     return game;
   }
 
-  async createBotGame(playerId: string): Promise<Game> {
-    return this.create(playerId, null, GameMode.LONG, GameType.VS_BOT);
+  async createBotGame(playerId: string, mode?: GameMode): Promise<Game> {
+    // Для игр с ИИ игра начинается сразу, без этапа ожидания
+    const gameMode = mode || GameMode.LONG;
+    
+    // Проверяем, не находится ли игрок уже в активной игре
+    const player1ActiveGames = await this.gamesRepository.find({
+      where: [
+        { player1Id, status: GameStatus.WAITING },
+        { player1Id, status: GameStatus.IN_PROGRESS },
+        { player2Id: player1Id, status: GameStatus.WAITING },
+        { player2Id: player1Id, status: GameStatus.IN_PROGRESS },
+      ],
+    });
+    // Фильтруем только действительно активные игры (исключаем игры с ботом)
+    const trulyActivePlayer1Games = player1ActiveGames.filter(game => 
+      (game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS) &&
+      game.type !== GameType.VS_BOT
+    );
+    if (trulyActivePlayer1Games.length > 0) {
+      throw new BadRequestException('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
+    }
+
+    // Проверка энергии для игр с ботом не требуется (бот-игры не тратят энергию)
+    // Проверка жизней для игр с ботом не требуется
+
+    const rngSeed = crypto.randomBytes(32).toString('hex');
+    const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
+
+    const engine = gameMode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
+    const initialState = engine.createInitialState();
+
+    // Игра с ИИ сразу начинается (IN_PROGRESS)
+    const game = this.gamesRepository.create({
+      player1Id,
+      player2Id: null, // Бот не имеет player2Id
+      mode: gameMode,
+      type: GameType.VS_BOT,
+      stake: 0, // Игры с ботом без ставок
+      status: GameStatus.IN_PROGRESS, // Сразу начинаем игру
+      gameState: initialState,
+      rngSeed,
+      rngHash,
+      currentPlayer: 0, // Игрок начинает первым
+      moveTimeLimit: 60000,
+      lastMoveAt: new Date(),
+    });
+
+    const savedGame = await this.gamesRepository.save(game);
+
+    // Сразу бросаем кубики для игрока
+    const dice = await this.rollDice(savedGame.id, player1Id);
+    
+    this.logger.log(`🤖 Создана игра с ИИ: gameId=${savedGame.id}, playerId=${player1Id}, mode=${gameMode}, dice=[${dice.join(', ')}]`);
+
+    return savedGame;
   }
 
   async getGameState(gameId: string): Promise<any> {
