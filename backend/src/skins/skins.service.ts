@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject, forwardRef, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Skin } from './skin.entity';
@@ -7,7 +7,9 @@ import { ProgressService } from '../progress/progress.service';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
-export class SkinsService {
+export class SkinsService implements OnModuleInit {
+  private readonly logger = new Logger(SkinsService.name);
+
   constructor(
     @InjectRepository(Skin)
     private skinsRepository: Repository<Skin>,
@@ -18,11 +20,74 @@ export class SkinsService {
     private progressService: ProgressService,
   ) {}
 
-  // Убрано: инициализация скинов теперь только через админку
-  // Если нужно создать дефолтные скины, используйте админ-панель
+  // Инициализация дефолтных скинов при первом запуске
+  async onModuleInit() {
+    await this.initializeDefaultSkins();
+  }
+
+  async initializeDefaultSkins(): Promise<void> {
+    try {
+      // Проверяем, есть ли уже дефолтные скины
+      const existingDefaultSkins = await this.skinsRepository.find({
+        where: { isDefault: true },
+      });
+
+      if (existingDefaultSkins.length === 0) {
+        // Создаем дефолтные скины
+        const defaultSkins = [
+          {
+            name: 'Классическая доска',
+            description: 'Классическая доска для нардов',
+            type: 'board',
+            theme: 'classic',
+            isDefault: true,
+            isPremium: false,
+            weight: 1,
+            price: null, // Бесплатный
+            rarity: 'common',
+            boardTextureUrl: '/skins/default-board.svg',
+          },
+          {
+            name: 'Классические кубики',
+            description: 'Классические кубики для нардов',
+            type: 'dice',
+            theme: 'classic',
+            isDefault: true,
+            isPremium: false,
+            weight: 1,
+            price: null, // Бесплатный
+            rarity: 'common',
+            diceTextureUrl: '/skins/default-dice.svg',
+          },
+          {
+            name: 'Классические шашки',
+            description: 'Классические шашки для нардов',
+            type: 'checkers',
+            theme: 'classic',
+            isDefault: true,
+            isPremium: false,
+            weight: 1,
+            price: null, // Бесплатный
+            rarity: 'common',
+            checkersTextureUrl: '/skins/default-checkers.svg',
+          },
+        ];
+
+        for (const skinData of defaultSkins) {
+          const skin = this.skinsRepository.create(skinData);
+          await this.skinsRepository.save(skin);
+          this.logger.log(`✅ Создан дефолтный скин: ${skinData.name} (${skinData.type})`);
+        }
+      }
+    } catch (error) {
+      this.logger.error('Ошибка при инициализации дефолтных скинов:', error);
+    }
+  }
 
   async getAllSkins(): Promise<Skin[]> {
-    return this.skinsRepository.find();
+    return this.skinsRepository.find({
+      order: { isDefault: 'DESC', createdAt: 'ASC' },
+    });
   }
 
   async getUserSkins(userId: string): Promise<Skin[]> {

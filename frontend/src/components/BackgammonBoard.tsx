@@ -369,6 +369,10 @@ export default function BackgammonBoard({
     const pointHeight = boardHeight / 2
     const barWidth = boardWidth * 0.12
     const barHeight = boardHeight * 0.3
+    
+    // Центральная линия (бар) - центрируем без padding
+    const barX = (boardWidth - barWidth) / 2
+    const barY = (boardHeight - barHeight) / 2
 
     // Очистка
     ctx.clearRect(0, 0, width, height)
@@ -384,6 +388,18 @@ export default function BackgammonBoard({
       // (текстура загрузится и перерисует доску)
       ctx.fillStyle = '#8B4513'
       ctx.fillRect(0, 0, width, height)
+      
+      // Рисуем рамку доски
+      ctx.strokeStyle = '#654321'
+      ctx.lineWidth = 4
+      ctx.strokeRect(0, 0, boardWidth, boardHeight)
+      
+      // Фон бара
+      ctx.fillStyle = '#654321'
+      ctx.fillRect(barX, barY, barWidth, barHeight)
+      ctx.strokeStyle = '#8B4513'
+      ctx.lineWidth = 2
+      ctx.strokeRect(barX, barY, barWidth, barHeight)
     }
 
     // Рисуем точки (треугольники) только если нет текстуры доски

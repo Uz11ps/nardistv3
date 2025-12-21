@@ -38,8 +38,28 @@ export default function Inventory() {
   const loadInventory = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get('/skins/my')
-      setSkins(response.data || [])
+      // Загружаем как купленные скины, так и дефолтные скины
+      const [mySkinsResponse, allSkinsResponse] = await Promise.all([
+        apiClient.get('/skins/my'),
+        apiClient.get('/skins'),
+      ])
+      
+      const mySkins = mySkinsResponse.data || []
+      const allSkins = allSkinsResponse.data || []
+      
+      // Получаем ID купленных скинов
+      const ownedSkinIds = new Set(mySkins.map((s: Skin) => s.id))
+      
+      // Добавляем дефолтные скины (они доступны всем бесплатно)
+      const defaultSkins = allSkins.filter((s: Skin) => s.isDefault)
+      
+      // Объединяем купленные и дефолтные скины, избегая дубликатов
+      const allAvailableSkins = [
+        ...mySkins,
+        ...defaultSkins.filter((s: Skin) => !ownedSkinIds.has(s.id)),
+      ]
+      
+      setSkins(allAvailableSkins)
     } catch (error) {
       console.error('Failed to load inventory:', error)
     } finally {
