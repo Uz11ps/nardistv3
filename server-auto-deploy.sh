@@ -112,7 +112,7 @@ deploy() {
     docker-compose up -d --build --force-recreate --no-deps backend frontend nginx || {
         # Если не получилось, пробуем без --no-deps
         log "${YELLOW}⚠️ Повторная попытка без --no-deps...${NC}"
-        docker-compose up -d --build --force-recreate
+    docker-compose up -d --build --force-recreate
     }
     
     # Ожидание запуска
