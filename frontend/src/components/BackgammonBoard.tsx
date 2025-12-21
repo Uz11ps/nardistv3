@@ -80,15 +80,25 @@ export default function BackgammonBoard({
   const [loadedTextures, setLoadedTextures] = useState<{
     board?: HTMLImageElement
     dice?: HTMLImageElement
-    checkers?: HTMLImageElement
+    whiteCheckers?: HTMLImageElement
+    blackCheckers?: HTMLImageElement
+    opponentWhiteCheckers?: HTMLImageElement
+    opponentBlackCheckers?: HTMLImageElement
   }>({})
   
   // Загружаем текстуры скинов (включая дефолтные)
   useEffect(() => {
-    console.log('Loading textures for playerSkins:', playerSkins)
-    const textures: { board?: HTMLImageElement; dice?: HTMLImageElement; checkers?: HTMLImageElement } = {}
+    console.log('Loading textures for playerSkins:', playerSkins, 'opponentSkins:', opponentSkins)
+    const textures: {
+      board?: HTMLImageElement
+      dice?: HTMLImageElement
+      whiteCheckers?: HTMLImageElement
+      blackCheckers?: HTMLImageElement
+      opponentWhiteCheckers?: HTMLImageElement
+      opponentBlackCheckers?: HTMLImageElement
+    } = {}
     let loadedCount = 0
-    const totalTextures = 3
+    const totalTextures = 6 // доска, кубики, белые шашки игрока, черные шашки игрока, белые шашки соперника, черные шашки соперника
     
     const checkAndDraw = () => {
       loadedCount++
@@ -98,13 +108,13 @@ export default function BackgammonBoard({
       }
     }
     
-    // Загружаем текстуру доски (или дефолтную)
+    // Загружаем текстуру доски ИГРОКА (или дефолтную)
     const boardTextureUrl = playerSkins?.board?.boardTextureUrl
     const boardUrl = boardTextureUrl 
       ? getImageUrl(boardTextureUrl) 
       : '/skins/default-board.svg' // Дефолтная SVG доска
     
-    console.log('Loading board texture:', boardUrl)
+    console.log('Loading board texture:', boardUrl, 'from boardTextureUrl:', boardTextureUrl)
     const boardImg = new Image()
     boardImg.onload = () => {
       console.log('Board texture loaded successfully')
@@ -136,25 +146,82 @@ export default function BackgammonBoard({
     }
     diceImg.src = diceUrl || ''
     
-    // Загружаем текстуру шашек (или дефолтную)
-    const checkersTextureUrl = playerSkins?.checkers?.checkersTextureUrl
-    const checkersUrl = checkersTextureUrl 
-      ? getImageUrl(checkersTextureUrl) 
+    // Загружаем текстуру БЕЛЫХ шашек ИГРОКА (или дефолтную)
+    const whiteCheckersTextureUrl = playerSkins?.checkers?.whiteCheckersTextureUrl || playerSkins?.checkers?.checkersTextureUrl
+    const whiteCheckersUrl = whiteCheckersTextureUrl 
+      ? getImageUrl(whiteCheckersTextureUrl) 
       : '/skins/default-checkers.svg' // Дефолтная SVG шашка
     
-    console.log('Loading checkers texture:', checkersUrl)
-    const checkersImg = new Image()
-    checkersImg.onload = () => {
-      console.log('Checkers texture loaded successfully')
-      textures.checkers = checkersImg
+    console.log('Loading white checkers texture:', whiteCheckersUrl)
+    const whiteCheckersImg = new Image()
+    whiteCheckersImg.onload = () => {
+      console.log('White checkers texture loaded successfully')
+      textures.whiteCheckers = whiteCheckersImg
       checkAndDraw()
     }
-    checkersImg.onerror = (err) => {
-      console.error('Failed to load checkers texture:', checkersUrl, err)
+    whiteCheckersImg.onerror = (err) => {
+      console.error('Failed to load white checkers texture:', whiteCheckersUrl, err)
       checkAndDraw()
     }
-    checkersImg.src = checkersUrl || ''
-  }, [playerSkins])
+    whiteCheckersImg.src = whiteCheckersUrl || ''
+    
+    // Загружаем текстуру ЧЕРНЫХ шашек ИГРОКА (или дефолтную)
+    const blackCheckersTextureUrl = playerSkins?.checkers?.blackCheckersTextureUrl || playerSkins?.checkers?.checkersTextureUrl
+    const blackCheckersUrl = blackCheckersTextureUrl 
+      ? getImageUrl(blackCheckersTextureUrl) 
+      : '/skins/default-checkers.svg' // Дефолтная SVG шашка
+    
+    console.log('Loading black checkers texture:', blackCheckersUrl)
+    const blackCheckersImg = new Image()
+    blackCheckersImg.onload = () => {
+      console.log('Black checkers texture loaded successfully')
+      textures.blackCheckers = blackCheckersImg
+      checkAndDraw()
+    }
+    blackCheckersImg.onerror = (err) => {
+      console.error('Failed to load black checkers texture:', blackCheckersUrl, err)
+      checkAndDraw()
+    }
+    blackCheckersImg.src = blackCheckersUrl || ''
+    
+    // Загружаем текстуру БЕЛЫХ шашек СОПЕРНИКА (или дефолтную)
+    const opponentWhiteCheckersTextureUrl = opponentSkins?.checkers?.whiteCheckersTextureUrl || opponentSkins?.checkers?.checkersTextureUrl
+    const opponentWhiteCheckersUrl = opponentWhiteCheckersTextureUrl 
+      ? getImageUrl(opponentWhiteCheckersTextureUrl) 
+      : '/skins/default-checkers.svg'
+    
+    console.log('Loading opponent white checkers texture:', opponentWhiteCheckersUrl)
+    const opponentWhiteCheckersImg = new Image()
+    opponentWhiteCheckersImg.onload = () => {
+      console.log('Opponent white checkers texture loaded successfully')
+      textures.opponentWhiteCheckers = opponentWhiteCheckersImg
+      checkAndDraw()
+    }
+    opponentWhiteCheckersImg.onerror = (err) => {
+      console.error('Failed to load opponent white checkers texture:', opponentWhiteCheckersUrl, err)
+      checkAndDraw()
+    }
+    opponentWhiteCheckersImg.src = opponentWhiteCheckersUrl || ''
+    
+    // Загружаем текстуру ЧЕРНЫХ шашек СОПЕРНИКА (или дефолтную)
+    const opponentBlackCheckersTextureUrl = opponentSkins?.checkers?.blackCheckersTextureUrl || opponentSkins?.checkers?.checkersTextureUrl
+    const opponentBlackCheckersUrl = opponentBlackCheckersTextureUrl 
+      ? getImageUrl(opponentBlackCheckersTextureUrl) 
+      : '/skins/default-checkers.svg'
+    
+    console.log('Loading opponent black checkers texture:', opponentBlackCheckersUrl)
+    const opponentBlackCheckersImg = new Image()
+    opponentBlackCheckersImg.onload = () => {
+      console.log('Opponent black checkers texture loaded successfully')
+      textures.opponentBlackCheckers = opponentBlackCheckersImg
+      checkAndDraw()
+    }
+    opponentBlackCheckersImg.onerror = (err) => {
+      console.error('Failed to load opponent black checkers texture:', opponentBlackCheckersUrl, err)
+      checkAndDraw()
+    }
+    opponentBlackCheckersImg.src = opponentBlackCheckersUrl || ''
+  }, [playerSkins, opponentSkins])
 
   // Определяем, кто я (player1 или player2) для отзеркаливания доски
   const isPlayer1 = myPlayerId === player1Id
@@ -512,13 +579,17 @@ export default function BackgammonBoard({
           ctx.shadowOffsetY = 2
 
           // Круглая фишка - используем текстуру если есть
-          if (loadedTextures.checkers) {
+          const checkerTexture = isPlayer1Checker 
+            ? (checkerColor === '#FFFFFF' ? loadedTextures.whiteCheckers : loadedTextures.blackCheckers)
+            : (checkerColor === '#FFFFFF' ? loadedTextures.opponentWhiteCheckers : loadedTextures.opponentBlackCheckers)
+          
+          if (checkerTexture) {
             // Используем текстуру шашек
             ctx.beginPath()
             ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
             ctx.save()
             ctx.clip()
-            ctx.drawImage(loadedTextures.checkers, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
+            ctx.drawImage(checkerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
             ctx.restore()
           } else {
             // Градиент для круглой фишки (дефолтный)
@@ -546,7 +617,7 @@ export default function BackgammonBoard({
           ctx.stroke()
 
           // Блик на фишке (только если нет текстуры)
-          if (!loadedTextures.checkers) {
+          if (!checkerTexture) {
             ctx.beginPath()
             ctx.arc(-4, -4, 4, 0, Math.PI * 2)
             ctx.fillStyle = checkerColor === '#FFFFFF' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'
@@ -666,11 +737,21 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка
-        ctx.beginPath()
-        ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
-        ctx.fillStyle = '#FFFFFF'
-        ctx.fill()
+        // Круглая шашка - используем текстуру если есть
+        const whiteCheckerTexture = isPlayer1 ? loadedTextures.whiteCheckers : loadedTextures.opponentWhiteCheckers
+        if (whiteCheckerTexture) {
+          ctx.beginPath()
+          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
+          ctx.save()
+          ctx.clip()
+          ctx.drawImage(whiteCheckerTexture, checkerX - 12, checkerY - 12, 24, 24)
+          ctx.restore()
+        } else {
+          ctx.beginPath()
+          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
+          ctx.fillStyle = '#FFFFFF'
+          ctx.fill()
+        }
         ctx.strokeStyle = '#1a1a1a'
         ctx.lineWidth = 2
         ctx.stroke()
@@ -695,11 +776,21 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка
-        ctx.beginPath()
-        ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
-        ctx.fillStyle = '#1a1a1a'
-        ctx.fill()
+        // Круглая шашка - используем текстуру если есть
+        const blackCheckerTexture = !isPlayer1 ? loadedTextures.blackCheckers : loadedTextures.opponentBlackCheckers
+        if (blackCheckerTexture) {
+          ctx.beginPath()
+          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
+          ctx.save()
+          ctx.clip()
+          ctx.drawImage(blackCheckerTexture, checkerX - 12, checkerY - 12, 24, 24)
+          ctx.restore()
+        } else {
+          ctx.beginPath()
+          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
+          ctx.fillStyle = '#1a1a1a'
+          ctx.fill()
+        }
         ctx.strokeStyle = '#FFFFFF'
         ctx.lineWidth = 2
         ctx.stroke()

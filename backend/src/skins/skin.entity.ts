@@ -51,7 +51,13 @@ export class Skin {
   diceTextureUrl: string; // URL файла текстуры кубиков (для типа 'dice')
 
   @Column({ nullable: true })
-  checkersTextureUrl: string; // URL файла текстуры шашек (для типа 'checkers')
+  checkersTextureUrl: string; // URL файла текстуры шашек (для типа 'checkers') - устаревшее, используйте whiteCheckersTextureUrl и blackCheckersTextureUrl
+  
+  @Column({ nullable: true })
+  whiteCheckersTextureUrl: string; // URL файла текстуры белых шашек (для типа 'checkers')
+  
+  @Column({ nullable: true })
+  blackCheckersTextureUrl: string; // URL файла текстуры черных шашек (для типа 'checkers')
 
   @Column({ type: 'int', nullable: true })
   price: number; // Цена в NAR-coin (если null - бесплатный)

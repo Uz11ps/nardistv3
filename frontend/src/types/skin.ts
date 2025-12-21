@@ -7,7 +7,9 @@ export interface Skin {
   imageUrl?: string // Превью для магазина
   boardTextureUrl?: string // URL файла текстуры доски (для типа 'board')
   diceTextureUrl?: string // URL файла текстуры кубиков (для типа 'dice')
-  checkersTextureUrl?: string // URL файла текстуры шашек (для типа 'checkers')
+  checkersTextureUrl?: string // URL файла текстуры шашек (для типа 'checkers') - устаревшее
+  whiteCheckersTextureUrl?: string // URL файла текстуры белых шашек (для типа 'checkers')
+  blackCheckersTextureUrl?: string // URL файла текстуры черных шашек (для типа 'checkers')
   price?: number
   rarity: string
   weight: number
