@@ -288,9 +288,10 @@ export default function BackgammonBoard({
     
     const width = containerWidth
     const height = containerHeight
-    const boardPadding = 20
-    const boardWidth = width - boardPadding * 2
-    const boardHeight = height - boardPadding * 2
+    // Убираем padding для правильного центрирования
+    const boardPadding = 0
+    const boardWidth = width
+    const boardHeight = height
     const pointWidth = boardWidth / 12
     const pointHeight = boardHeight / 2
     const barWidth = boardWidth * 0.12
@@ -307,14 +308,14 @@ export default function BackgammonBoard({
     ctx.fillStyle = boardGradient
     ctx.fillRect(0, 0, width, height)
 
-    // Рамка доски
+    // Рамка доски - без padding
     ctx.strokeStyle = '#654321'
     ctx.lineWidth = 4
-    ctx.strokeRect(boardPadding, boardPadding, boardWidth, boardHeight)
+    ctx.strokeRect(0, 0, boardWidth, boardHeight)
 
-    // Центральная линия (бар)
-    const barX = boardPadding + (boardWidth - barWidth) / 2
-    const barY = boardPadding + (boardHeight - barHeight) / 2
+    // Центральная линия (бар) - центрируем без padding
+    const barX = (boardWidth - barWidth) / 2
+    const barY = (boardHeight - barHeight) / 2
     
     // Фон бара
     ctx.fillStyle = '#654321'
@@ -328,21 +329,18 @@ export default function BackgammonBoard({
       const pointNum = POINT_NUMBERS[i]
       const isTop = i < 12
       
-      // Позиция точки
+      // Позиция точки - без padding для правильного центрирования
       let x: number
       if (i < 12) {
         // Верхний ряд (справа налево)
-        x = boardPadding + (11 - i) * pointWidth
+        x = (11 - i) * pointWidth
       } else {
         // Нижний ряд (слева направо)
-        x = boardPadding + (i - 12) * pointWidth
+        x = (i - 12) * pointWidth
       }
 
       // Позиция точки: для верхних - сверху, для нижних - снизу (прижаты к краю доски)
-      // Для верхних точек: y = boardPadding (верхний край доски), треугольник рисуется вниз
-      // Для нижних точек: y = boardPadding + boardHeight (нижний край доски), треугольник рисуется вверх от этой точки
-      // Это означает что нижний край треугольника (основание) будет на y = boardPadding + boardHeight
-      const y = isTop ? boardPadding : boardPadding + boardHeight
+      const y = isTop ? 0 : boardHeight
 
       // Цвет точки (чередование)
       const isLight = (Math.floor(i / 6) + i) % 2 === 0
@@ -380,20 +378,13 @@ export default function BackgammonBoard({
       ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
       ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)
 
-      // Фишки на точке - используем скин если есть
+      // Фишки на точке - простая отрисовка без скинов
       const pointValue = points[i] || 0
       const checkerCount = Math.abs(pointValue)
       if (checkerCount > 0) {
         const isPlayer1Checker = pointValue > 0
-        const checkerSkin = isPlayer1Checker 
-          ? (playerSkins?.checkers || opponentSkins?.checkers)
-          : (opponentSkins?.checkers || playerSkins?.checkers)
-        
-        // Цвет шашек: после отзеркаливания знаки инвертированы
-        let checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
-        if (checkerSkin?.checkersConfig?.color) {
-          checkerColor = checkerSkin.checkersConfig.color
-        }
+        // Простые цвета: белые для player1, черные для player2
+        const checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
         const checkerRadius = 14
         const maxStack = 5
         const stackSpacing = 4
@@ -810,9 +801,10 @@ export default function BackgammonBoard({
     const rect = canvas.getBoundingClientRect()
     const width = rect.width
     const height = rect.height
-    const boardPadding = 20
-    const boardWidth = width - boardPadding * 2
-    const boardHeight = height - boardPadding * 2
+    // Убираем padding для правильного центрирования
+    const boardPadding = 0
+    const boardWidth = width
+    const boardHeight = height
     const pointWidth = boardWidth / 12
     const pointHeight = boardHeight / 2
 
@@ -821,14 +813,13 @@ export default function BackgammonBoard({
       let pointX: number
       
       if (i < 12) {
-        pointX = boardPadding + (11 - i) * pointWidth
+        pointX = (11 - i) * pointWidth
       } else {
-        pointX = boardPadding + (i - 12) * pointWidth
+        pointX = (i - 12) * pointWidth
       }
 
       // Для нижних точек прижимаем к низу доски
-      // boardHeight = height - boardPadding * 2, поэтому нижний край = boardPadding + boardHeight
-      const pointY = isTop ? boardPadding : boardPadding + boardHeight
+      const pointY = isTop ? 0 : boardHeight
 
       // Проверяем клик в пределах треугольника
       const relativeX = x - pointX
