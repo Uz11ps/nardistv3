@@ -81,6 +81,20 @@ export default function Game() {
       loadPlayerSkins(gameInfo.player1Id, gameInfo.player2Id)
     }
   }, [gameInfo?.player1Id, gameInfo?.player2Id])
+  
+  // Логируем изменения playerSkins для отладки
+  useEffect(() => {
+    console.log('🔄 playerSkins state changed:', {
+      player1: playerSkins.player1,
+      player2: playerSkins.player2,
+      mySkins: playerSkins.mySkins,
+      player1Board: (playerSkins.player1 as any)?.board,
+      player1Dice: (playerSkins.player1 as any)?.dice,
+      player1Checkers: (playerSkins.player1 as any)?.checkers,
+      mySkinsBoard: (playerSkins.mySkins as any)?.board,
+      mySkinsDice: (playerSkins.mySkins as any)?.dice,
+    })
+  }, [playerSkins])
 
   const loadGame = async () => {
     try {
@@ -134,48 +148,77 @@ export default function Game() {
 
   const loadPlayerSkins = async (player1Id: string, player2Id: string) => {
     try {
-      console.log('📦 Starting to load skins for:', { player1Id, player2Id, myUserId: user?.id })
+      console.log('📦 ========== LOADING PLAYER SKINS ==========')
+      console.log('📦 player1Id:', player1Id, 'player2Id:', player2Id, 'myUserId:', user?.id)
       
       // Загружаем выбранные скины для player1
       let player1Skins = {}
-      try {
-        console.log('📥 Fetching player1 skins from:', `/skins/user/${player1Id}/selected`)
-        const player1SkinsRes = await apiClient.get(`/skins/user/${player1Id}/selected`)
-        player1Skins = player1SkinsRes.data || {}
-        console.log('✅ Player1 skins loaded:', player1Skins)
-      } catch (err) {
-        console.warn('⚠️ Could not load player1 skins:', err)
-        // Пробуем загрузить через дефолтный endpoint
+      if (user?.id === player1Id) {
+        // Если это текущий пользователь, используем /skins/selected (как в Shop/Inventory)
+        console.log('📥 Loading player1 skins (current user) from /skins/selected')
         try {
-          const fallbackRes = await apiClient.get('/skins/selected').catch(() => ({ data: {} }))
-          if (user?.id === player1Id) {
+          const player1SkinsRes = await apiClient.get('/skins/selected')
+          player1Skins = player1SkinsRes.data || {}
+          console.log('✅ Player1 skins loaded from /skins/selected:', player1Skins)
+        } catch (err: any) {
+          console.error('❌ Failed to load player1 skins from /skins/selected:', err.response?.data || err.message)
+          // Fallback на user endpoint
+          try {
+            console.log('📥 Fallback: loading player1 skins from /skins/user/${player1Id}/selected')
+            const fallbackRes = await apiClient.get(`/skins/user/${player1Id}/selected`)
             player1Skins = fallbackRes.data || {}
-            console.log('✅ Player1 skins loaded via fallback:', player1Skins)
+            console.log('✅ Player1 skins loaded from fallback:', player1Skins)
+          } catch (fallbackErr: any) {
+            console.error('❌ Fallback also failed:', fallbackErr.response?.data || fallbackErr.message)
+            player1Skins = {}
           }
-        } catch (fallbackErr) {
-          console.warn('⚠️ Fallback also failed:', fallbackErr)
+        }
+      } else {
+        // Для другого игрока используем user endpoint
+        console.log('📥 Loading player1 skins (other user) from /skins/user/${player1Id}/selected')
+        try {
+          const player1SkinsRes = await apiClient.get(`/skins/user/${player1Id}/selected`)
+          player1Skins = player1SkinsRes.data || {}
+          console.log('✅ Player1 skins loaded:', player1Skins)
+        } catch (err: any) {
+          console.error('❌ Failed to load player1 skins:', err.response?.data || err.message)
+          player1Skins = {}
         }
       }
       
       // Загружаем выбранные скины для player2 (если есть)
       let player2Skins = {}
       if (player2Id) {
-        try {
-          console.log('📥 Fetching player2 skins from:', `/skins/user/${player2Id}/selected`)
-          const player2SkinsRes = await apiClient.get(`/skins/user/${player2Id}/selected`)
-          player2Skins = player2SkinsRes.data || {}
-          console.log('✅ Player2 skins loaded:', player2Skins)
-        } catch (err) {
-          console.warn('⚠️ Could not load player2 skins:', err)
-          // Пробуем загрузить через дефолтный endpoint
+        if (user?.id === player2Id) {
+          // Если это текущий пользователь, используем /skins/selected (как в Shop/Inventory)
+          console.log('📥 Loading player2 skins (current user) from /skins/selected')
           try {
-            const fallbackRes = await apiClient.get('/skins/selected').catch(() => ({ data: {} }))
-            if (user?.id === player2Id) {
+            const player2SkinsRes = await apiClient.get('/skins/selected')
+            player2Skins = player2SkinsRes.data || {}
+            console.log('✅ Player2 skins loaded from /skins/selected:', player2Skins)
+          } catch (err: any) {
+            console.error('❌ Failed to load player2 skins from /skins/selected:', err.response?.data || err.message)
+            // Fallback на user endpoint
+            try {
+              console.log('📥 Fallback: loading player2 skins from /skins/user/${player2Id}/selected')
+              const fallbackRes = await apiClient.get(`/skins/user/${player2Id}/selected`)
               player2Skins = fallbackRes.data || {}
-              console.log('✅ Player2 skins loaded via fallback:', player2Skins)
+              console.log('✅ Player2 skins loaded from fallback:', player2Skins)
+            } catch (fallbackErr: any) {
+              console.error('❌ Fallback also failed:', fallbackErr.response?.data || fallbackErr.message)
+              player2Skins = {}
             }
-          } catch (fallbackErr) {
-            console.warn('⚠️ Fallback also failed:', fallbackErr)
+          }
+        } else {
+          // Для другого игрока используем user endpoint
+          console.log('📥 Loading player2 skins (other user) from /skins/user/${player2Id}/selected')
+          try {
+            const player2SkinsRes = await apiClient.get(`/skins/user/${player2Id}/selected`)
+            player2Skins = player2SkinsRes.data || {}
+            console.log('✅ Player2 skins loaded:', player2Skins)
+          } catch (err: any) {
+            console.error('❌ Failed to load player2 skins:', err.response?.data || err.message)
+            player2Skins = {}
           }
         }
       }
@@ -184,18 +227,37 @@ export default function Game() {
       const isPlayer1 = user?.id === player1Id
       const mySkins = isPlayer1 ? player1Skins : player2Skins
       
-      console.log('🎨 Setting skins state:', {
-        player1: player1Skins,
-        player2: player2Skins,
-        mySkins: mySkins,
-        isPlayer1
-      })
+      console.log('🎨 ========== FINAL SKINS STATE ==========')
+      console.log('🎨 isPlayer1:', isPlayer1)
+      console.log('🎨 player1Skins:', player1Skins)
+      console.log('🎨 player1Skins.board:', (player1Skins as any)?.board)
+      console.log('🎨 player1Skins.board?.boardTextureUrl:', (player1Skins as any)?.board?.boardTextureUrl)
+      console.log('🎨 player1Skins.dice:', (player1Skins as any)?.dice)
+      console.log('🎨 player1Skins.checkers:', (player1Skins as any)?.checkers)
+      console.log('🎨 player2Skins:', player2Skins)
+      console.log('🎨 mySkins:', mySkins)
+      console.log('🎨 mySkins.board:', (mySkins as any)?.board)
+      console.log('🎨 mySkins.board?.boardTextureUrl:', (mySkins as any)?.board?.boardTextureUrl)
+      console.log('🎨 mySkins.dice:', (mySkins as any)?.dice)
+      
+      // ВАЖНО: Проверяем, что скины действительно загрузились
+      if (!player1Skins || Object.keys(player1Skins).length === 0) {
+        console.error('❌ CRITICAL: player1Skins is empty! API should return default skins.')
+      }
+      if (!player2Skins || Object.keys(player2Skins).length === 0) {
+        console.error('❌ CRITICAL: player2Skins is empty! API should return default skins.')
+      }
+      if (!mySkins || Object.keys(mySkins).length === 0) {
+        console.error('❌ CRITICAL: mySkins is empty! API should return default skins.')
+      }
       
       setPlayerSkins({
-        player1: player1Skins,  // Скины player1 (играет белыми)
-        player2: player2Skins,  // Скины player2 (играет черными)
-        mySkins: mySkins,        // Скины текущего пользователя (для доски)
+        player1: player1Skins || {},  // Скины player1 (играет белыми)
+        player2: player2Skins || {},  // Скины player2 (играет черными)
+        mySkins: mySkins || {},        // Скины текущего пользователя (для доски)
       })
+      
+      console.log('✅ Skins state set successfully')
       
       console.log('✅ FINAL Loaded skins:', { 
         player1Id,
@@ -206,6 +268,22 @@ export default function Game() {
         player2Skins: JSON.stringify(player2Skins, null, 2),
         mySkins: JSON.stringify(mySkins, null, 2)
       })
+      
+      // Детальная проверка структуры данных
+      console.log('🔍 DETAILED SKIN STRUCTURE CHECK:')
+      console.log('  - player1Skins:', player1Skins)
+      console.log('  - player1Skins.board:', (player1Skins as any)?.board)
+      console.log('  - player1Skins.board?.boardTextureUrl:', (player1Skins as any)?.board?.boardTextureUrl)
+      console.log('  - player1Skins.dice:', (player1Skins as any)?.dice)
+      console.log('  - player1Skins.dice?.diceTextureUrl:', (player1Skins as any)?.dice?.diceTextureUrl)
+      console.log('  - player1Skins.checkers:', (player1Skins as any)?.checkers)
+      console.log('  - player1Skins.checkers?.whiteCheckersTextureUrl:', (player1Skins as any)?.checkers?.whiteCheckersTextureUrl)
+      console.log('  - player1Skins.checkers?.blackCheckersTextureUrl:', (player1Skins as any)?.checkers?.blackCheckersTextureUrl)
+      console.log('  - mySkins:', mySkins)
+      console.log('  - mySkins.board:', (mySkins as any)?.board)
+      console.log('  - mySkins.board?.boardTextureUrl:', (mySkins as any)?.board?.boardTextureUrl)
+      console.log('  - mySkins.dice:', (mySkins as any)?.dice)
+      console.log('  - mySkins.dice?.diceTextureUrl:', (mySkins as any)?.dice?.diceTextureUrl)
     } catch (error) {
       console.error('❌ Failed to load player skins:', error)
     }

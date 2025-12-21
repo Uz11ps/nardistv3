@@ -93,9 +93,13 @@ export default function BackgammonBoard({
   // - Черные шашки: из player2Skins (player2 всегда играет черными)
   useEffect(() => {
     console.log('🔄 ========== LOADING TEXTURES ==========')
-    console.log('🔄 player1Skins:', JSON.stringify(player1Skins, null, 2))
-    console.log('🔄 player2Skins:', JSON.stringify(player2Skins, null, 2))
-    console.log('🔄 mySkins:', JSON.stringify(mySkins, null, 2))
+    console.log('🔄 player1Skins:', player1Skins)
+    console.log('🔄 player2Skins:', player2Skins)
+    console.log('🔄 mySkins:', mySkins)
+    console.log('🔄 player1Skins.board:', player1Skins?.board)
+    console.log('🔄 player1Skins.board?.boardTextureUrl:', player1Skins?.board?.boardTextureUrl)
+    console.log('🔄 mySkins.board:', mySkins?.board)
+    console.log('🔄 mySkins.board?.boardTextureUrl:', mySkins?.board?.boardTextureUrl)
     
     const textures: {
       board?: HTMLImageElement
