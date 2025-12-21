@@ -40,6 +40,11 @@ export const getImageUrl = (imageUrl?: string | null): string | undefined => {
     return imageUrl
   }
   
+  // Если путь начинается с /skins/, возвращаем как есть (файлы из public/skins/)
+  if (imageUrl.startsWith('/skins/')) {
+    return imageUrl
+  }
+  
   // Если путь уже содержит /api/uploads/, убираем /api (для старых записей в БД)
   if (imageUrl.startsWith('/api/uploads/')) {
     return imageUrl.replace('/api/uploads/', '/uploads/')

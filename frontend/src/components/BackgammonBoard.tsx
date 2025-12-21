@@ -121,20 +121,36 @@ export default function BackgammonBoard({
     expectedCount++ // Всегда считаем, даже если нет текстуры
     if (boardTextureUrl) {
       const boardUrl = getImageUrl(boardTextureUrl)
-      console.log('🎨 Loading board texture:', boardUrl, 'from:', boardTextureUrl, 'mySkins.board:', mySkins?.board)
+      console.log('🎨 Loading board texture:', {
+        originalUrl: boardTextureUrl,
+        processedUrl: boardUrl,
+        mySkinsBoard: mySkins?.board,
+        fullMySkins: mySkins
+      })
       const boardImg = new Image()
+      boardImg.crossOrigin = 'anonymous' // Для CORS если нужно
       boardImg.onload = () => {
-        console.log('✅ Board texture loaded')
+        console.log('✅ Board texture loaded successfully:', boardUrl)
         textures.board = boardImg
         checkAndDraw()
       }
       boardImg.onerror = (err) => {
-        console.error('❌ Failed to load board texture:', boardUrl, err)
+        console.error('❌ Failed to load board texture:', {
+          url: boardUrl,
+          originalUrl: boardTextureUrl,
+          error: err,
+          imageSrc: boardImg.src
+        })
         checkAndDraw()
       }
-      boardImg.src = boardUrl || ''
+      if (boardUrl) {
+        boardImg.src = boardUrl
+      } else {
+        console.error('❌ boardUrl is undefined!')
+        checkAndDraw()
+      }
     } else {
-      console.warn('⚠️ No board texture URL in mySkins.board. mySkins:', mySkins)
+      console.warn('⚠️ No board texture URL in mySkins.board. Full mySkins:', JSON.stringify(mySkins, null, 2))
       checkAndDraw()
     }
     
@@ -144,20 +160,34 @@ export default function BackgammonBoard({
     expectedCount++
     if (diceTextureUrl) {
       const diceUrl = getImageUrl(diceTextureUrl)
-      console.log('🎲 Loading dice texture:', diceUrl, 'mySkins.dice:', mySkins?.dice)
+      console.log('🎲 Loading dice texture:', {
+        originalUrl: diceTextureUrl,
+        processedUrl: diceUrl,
+        mySkinsDice: mySkins?.dice
+      })
       const diceImg = new Image()
+      diceImg.crossOrigin = 'anonymous'
       diceImg.onload = () => {
-        console.log('✅ Dice texture loaded')
+        console.log('✅ Dice texture loaded successfully:', diceUrl)
         textures.dice = diceImg
         checkAndDraw()
       }
       diceImg.onerror = (err) => {
-        console.error('❌ Failed to load dice texture:', diceUrl, err)
+        console.error('❌ Failed to load dice texture:', {
+          url: diceUrl,
+          originalUrl: diceTextureUrl,
+          error: err
+        })
         checkAndDraw()
       }
-      diceImg.src = diceUrl || ''
+      if (diceUrl) {
+        diceImg.src = diceUrl
+      } else {
+        console.error('❌ diceUrl is undefined!')
+        checkAndDraw()
+      }
     } else {
-      console.warn('⚠️ No dice texture URL in mySkins.dice. mySkins:', mySkins)
+      console.warn('⚠️ No dice texture URL in mySkins.dice. Full mySkins:', JSON.stringify(mySkins, null, 2))
       checkAndDraw()
     }
     
@@ -167,20 +197,35 @@ export default function BackgammonBoard({
     expectedCount++
     if (whiteCheckersTextureUrl) {
       const whiteCheckersUrl = getImageUrl(whiteCheckersTextureUrl)
-      console.log('⚪ Loading white checkers texture:', whiteCheckersUrl, 'from player1Skins.checkers:', player1Skins?.checkers)
+      console.log('⚪ Loading white checkers texture:', {
+        originalUrl: whiteCheckersTextureUrl,
+        processedUrl: whiteCheckersUrl,
+        player1SkinsCheckers: player1Skins?.checkers,
+        fullPlayer1Skins: player1Skins
+      })
       const whiteCheckersImg = new Image()
+      whiteCheckersImg.crossOrigin = 'anonymous'
       whiteCheckersImg.onload = () => {
-        console.log('✅ White checkers texture loaded')
+        console.log('✅ White checkers texture loaded successfully:', whiteCheckersUrl)
         textures.whiteCheckers = whiteCheckersImg
         checkAndDraw()
       }
       whiteCheckersImg.onerror = (err) => {
-        console.error('❌ Failed to load white checkers texture:', whiteCheckersUrl, err)
+        console.error('❌ Failed to load white checkers texture:', {
+          url: whiteCheckersUrl,
+          originalUrl: whiteCheckersTextureUrl,
+          error: err
+        })
         checkAndDraw()
       }
-      whiteCheckersImg.src = whiteCheckersUrl || ''
+      if (whiteCheckersUrl) {
+        whiteCheckersImg.src = whiteCheckersUrl
+      } else {
+        console.error('❌ whiteCheckersUrl is undefined!')
+        checkAndDraw()
+      }
     } else {
-      console.warn('⚠️ No white checkers texture URL in player1Skins.checkers. player1Skins:', player1Skins)
+      console.warn('⚠️ No white checkers texture URL in player1Skins.checkers. Full player1Skins:', JSON.stringify(player1Skins, null, 2))
       checkAndDraw()
     }
     
@@ -190,20 +235,35 @@ export default function BackgammonBoard({
     expectedCount++
     if (blackCheckersTextureUrl) {
       const blackCheckersUrl = getImageUrl(blackCheckersTextureUrl)
-      console.log('⚫ Loading black checkers texture:', blackCheckersUrl, 'from player2Skins.checkers:', player2Skins?.checkers)
+      console.log('⚫ Loading black checkers texture:', {
+        originalUrl: blackCheckersTextureUrl,
+        processedUrl: blackCheckersUrl,
+        player2SkinsCheckers: player2Skins?.checkers,
+        fullPlayer2Skins: player2Skins
+      })
       const blackCheckersImg = new Image()
+      blackCheckersImg.crossOrigin = 'anonymous'
       blackCheckersImg.onload = () => {
-        console.log('✅ Black checkers texture loaded')
+        console.log('✅ Black checkers texture loaded successfully:', blackCheckersUrl)
         textures.blackCheckers = blackCheckersImg
         checkAndDraw()
       }
       blackCheckersImg.onerror = (err) => {
-        console.error('❌ Failed to load black checkers texture:', blackCheckersUrl, err)
+        console.error('❌ Failed to load black checkers texture:', {
+          url: blackCheckersUrl,
+          originalUrl: blackCheckersTextureUrl,
+          error: err
+        })
         checkAndDraw()
       }
-      blackCheckersImg.src = blackCheckersUrl || ''
+      if (blackCheckersUrl) {
+        blackCheckersImg.src = blackCheckersUrl
+      } else {
+        console.error('❌ blackCheckersUrl is undefined!')
+        checkAndDraw()
+      }
     } else {
-      console.warn('⚠️ No black checkers texture URL in player2Skins.checkers. player2Skins:', player2Skins)
+      console.warn('⚠️ No black checkers texture URL in player2Skins.checkers. Full player2Skins:', JSON.stringify(player2Skins, null, 2))
       checkAndDraw()
     }
     
