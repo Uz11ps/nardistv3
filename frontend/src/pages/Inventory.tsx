@@ -167,7 +167,7 @@ export default function Inventory() {
                     <div className="inventory-item-content">
                       <div className="inventory-item-image">
                         {(() => {
-                          // Определяем URL для превью: сначала imageUrl, потом textureUrl в зависимости от типа
+                          // По умолчанию используем текстуру как превью, imageUrl - это опциональное переопределение
                           let previewUrl: string | undefined = skin.imageUrl
                           if (!previewUrl) {
                             if (skin.type === 'board' && skin.boardTextureUrl) {
