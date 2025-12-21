@@ -210,6 +210,7 @@ export class GamesService {
 
     for (const move of moves) {
       console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+      console.log(`  Текущее состояние: movesFromHead=${currentState.movesFromHead || 0}, dice=[${currentState.dice?.join(', ') || 'none'}]`);
       const isValid = engine.validateMove(currentState, move.from, move.to, move.die);
       console.log(`  Результат валидации: ${isValid ? '✅ валиден' : '❌ невалиден'}`);
       

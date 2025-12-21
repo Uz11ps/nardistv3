@@ -153,6 +153,8 @@ export class LongBackgammonEngine {
     const movedThisTurn = state.movesFromHead || 0;
     const wasFirstTurn = (currentHeadCheckers + movedThisTurn) === 15;
     
+    console.log(`🔍 checkHeadRule: from=${from}, headIndex=${headIndex}, currentHeadCheckers=${currentHeadCheckers}, movedThisTurn=${movedThisTurn}, wasFirstTurn=${wasFirstTurn}, dice=[${dice.join(', ')}]`);
+    
     // Check if doubles are rolled
     // Doubles can be: [x, x] (2 dice) or [x, x, x, x] (4 dice after expansion)
     const isDoubles = (dice.length === 2 && dice[0] === dice[1]) || 
@@ -161,12 +163,16 @@ export class LongBackgammonEngine {
     // If first move and doubles, allow up to 2 checkers from head
     if (wasFirstTurn && isDoubles) {
       // Allow up to 2 checkers from head on first move with doubles
-      return movedThisTurn < 2;
+      const result = movedThisTurn < 2;
+      console.log(`  ✅ First turn with doubles: allow up to 2, result=${result}`);
+      return result;
     }
     
     // Otherwise, only 1 checker per complete turn from head
     // This means: if we've already moved 1 checker from head in this turn, we cannot move another
-    return movedThisTurn === 0;
+    const result = movedThisTurn === 0;
+    console.log(`  ${result ? '✅' : '❌'} Regular turn: movedThisTurn=${movedThisTurn}, result=${result}`);
+    return result;
   }
 
   /**
