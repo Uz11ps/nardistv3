@@ -83,7 +83,7 @@ export default function BackgammonBoard({
     checkers?: HTMLImageElement
   }>({})
   
-  // Загружаем текстуры скинов
+  // Загружаем текстуры скинов (включая дефолтные)
   useEffect(() => {
     console.log('Loading textures for playerSkins:', playerSkins)
     const textures: { board?: HTMLImageElement; dice?: HTMLImageElement; checkers?: HTMLImageElement } = {}
@@ -98,62 +98,62 @@ export default function BackgammonBoard({
       }
     }
     
-    // Загружаем текстуру доски
-    if (playerSkins?.board?.boardTextureUrl) {
-      console.log('Loading board texture:', playerSkins.board.boardTextureUrl)
-      const img = new Image()
-      img.onload = () => {
-        console.log('Board texture loaded successfully')
-        textures.board = img
-        checkAndDraw()
-      }
-      img.onerror = (err) => {
-        console.error('Failed to load board texture:', playerSkins.board.boardTextureUrl, err)
-        checkAndDraw()
-      }
-      img.src = getImageUrl(playerSkins.board.boardTextureUrl) || ''
-    } else {
-      console.log('No board texture URL found in playerSkins.board:', playerSkins?.board)
-      checkAndDraw()
-    }
+    // Загружаем текстуру доски (или дефолтную)
+    const boardTextureUrl = playerSkins?.board?.boardTextureUrl
+    const boardUrl = boardTextureUrl 
+      ? getImageUrl(boardTextureUrl) 
+      : '/skins/default-board.svg' // Дефолтная SVG доска
     
-    // Загружаем текстуру кубиков
-    if (playerSkins?.dice?.diceTextureUrl) {
-      console.log('Loading dice texture:', playerSkins.dice.diceTextureUrl)
-      const img = new Image()
-      img.onload = () => {
-        console.log('Dice texture loaded successfully')
-        textures.dice = img
-        checkAndDraw()
-      }
-      img.onerror = (err) => {
-        console.error('Failed to load dice texture:', playerSkins.dice.diceTextureUrl, err)
-        checkAndDraw()
-      }
-      img.src = getImageUrl(playerSkins.dice.diceTextureUrl) || ''
-    } else {
-      console.log('No dice texture URL found in playerSkins.dice:', playerSkins?.dice)
+    console.log('Loading board texture:', boardUrl)
+    const boardImg = new Image()
+    boardImg.onload = () => {
+      console.log('Board texture loaded successfully')
+      textures.board = boardImg
       checkAndDraw()
     }
+    boardImg.onerror = (err) => {
+      console.error('Failed to load board texture:', boardUrl, err)
+      checkAndDraw()
+    }
+    boardImg.src = boardUrl || ''
     
-    // Загружаем текстуру шашек
-    if (playerSkins?.checkers?.checkersTextureUrl) {
-      console.log('Loading checkers texture:', playerSkins.checkers.checkersTextureUrl)
-      const img = new Image()
-      img.onload = () => {
-        console.log('Checkers texture loaded successfully')
-        textures.checkers = img
-        checkAndDraw()
-      }
-      img.onerror = (err) => {
-        console.error('Failed to load checkers texture:', playerSkins.checkers.checkersTextureUrl, err)
-        checkAndDraw()
-      }
-      img.src = getImageUrl(playerSkins.checkers.checkersTextureUrl) || ''
-    } else {
-      console.log('No checkers texture URL found in playerSkins.checkers:', playerSkins?.checkers)
+    // Загружаем текстуру кубиков (или дефолтную)
+    const diceTextureUrl = playerSkins?.dice?.diceTextureUrl
+    const diceUrl = diceTextureUrl 
+      ? getImageUrl(diceTextureUrl) 
+      : '/skins/default-dice.svg' // Дефолтная SVG кубик
+    
+    console.log('Loading dice texture:', diceUrl)
+    const diceImg = new Image()
+    diceImg.onload = () => {
+      console.log('Dice texture loaded successfully')
+      textures.dice = diceImg
       checkAndDraw()
     }
+    diceImg.onerror = (err) => {
+      console.error('Failed to load dice texture:', diceUrl, err)
+      checkAndDraw()
+    }
+    diceImg.src = diceUrl || ''
+    
+    // Загружаем текстуру шашек (или дефолтную)
+    const checkersTextureUrl = playerSkins?.checkers?.checkersTextureUrl
+    const checkersUrl = checkersTextureUrl 
+      ? getImageUrl(checkersTextureUrl) 
+      : '/skins/default-checkers.svg' // Дефолтная SVG шашка
+    
+    console.log('Loading checkers texture:', checkersUrl)
+    const checkersImg = new Image()
+    checkersImg.onload = () => {
+      console.log('Checkers texture loaded successfully')
+      textures.checkers = checkersImg
+      checkAndDraw()
+    }
+    checkersImg.onerror = (err) => {
+      console.error('Failed to load checkers texture:', checkersUrl, err)
+      checkAndDraw()
+    }
+    checkersImg.src = checkersUrl || ''
   }, [playerSkins])
 
   // Определяем, кто я (player1 или player2) для отзеркаливания доски
@@ -373,77 +373,73 @@ export default function BackgammonBoard({
     // Очистка
     ctx.clearRect(0, 0, width, height)
 
-    // Фон доски - используем текстуру если есть, иначе градиент
+    // Фон доски - ВСЕГДА используем текстуру (дефолтную или кастомную)
+    // Текстура должна содержать всю доску целиком (фон, рамку, бар, точки)
     if (loadedTextures.board) {
+      // Рисуем текстуру доски - она уже содержит все элементы
       ctx.drawImage(loadedTextures.board, 0, 0, width, height)
+      // НЕ рисуем дефолтные элементы поверх текстуры
     } else {
-      // Фон доски (темное дерево) - дефолтный градиент
-      const boardGradient = ctx.createLinearGradient(0, 0, width, height)
-      boardGradient.addColorStop(0, '#8B4513')
-      boardGradient.addColorStop(0.5, '#A0522D')
-      boardGradient.addColorStop(1, '#8B4513')
-      ctx.fillStyle = boardGradient
+      // Fallback: если текстура еще не загрузилась, показываем пустой фон
+      // (текстура загрузится и перерисует доску)
+      ctx.fillStyle = '#8B4513'
       ctx.fillRect(0, 0, width, height)
     }
 
-    // Рамка доски - без padding
-    ctx.strokeStyle = '#654321'
-    ctx.lineWidth = 4
-    ctx.strokeRect(0, 0, boardWidth, boardHeight)
+    // Рисуем точки (треугольники) только если нет текстуры доски
+    // (текстура уже содержит точки)
+    if (!loadedTextures.board) {
+      for (let i = 0; i < 24; i++) {
+        const pointNum = POINT_NUMBERS[i]
+        const isTop = i < 12
+        
+        // Позиция точки
+        let x: number
+        if (i < 12) {
+          x = (11 - i) * pointWidth
+        } else {
+          x = (i - 12) * pointWidth
+        }
+        const y = isTop ? 0 : boardHeight
 
-    // Центральная линия (бар) - центрируем без padding
-    const barX = (boardWidth - barWidth) / 2
-    const barY = (boardHeight - barHeight) / 2
+        // Цвет точки (чередование)
+        const isLight = (Math.floor(i / 6) + i) % 2 === 0
+        ctx.fillStyle = isLight ? '#DEB887' : '#CD853F'
+        
+        // Рисуем треугольник точки
+        ctx.beginPath()
+        if (isTop) {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        } else {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        }
+        ctx.closePath()
+        ctx.fill()
+        
+        // Обводка треугольника
+        ctx.strokeStyle = '#654321'
+        ctx.lineWidth = 2
+        ctx.stroke()
+      }
+    }
     
-    // Фон бара
-    ctx.fillStyle = '#654321'
-    ctx.fillRect(barX, barY, barWidth, barHeight)
-    ctx.strokeStyle = '#8B4513'
-    ctx.lineWidth = 2
-    ctx.strokeRect(barX, barY, barWidth, barHeight)
-
-    // Рисуем точки (треугольники)
+    // Номера точек и шашки рисуем всегда поверх текстуры
     for (let i = 0; i < 24; i++) {
       const pointNum = POINT_NUMBERS[i]
       const isTop = i < 12
       
-      // Позиция точки - без padding для правильного центрирования
+      // Позиция точки
       let x: number
       if (i < 12) {
-        // Верхний ряд (справа налево)
         x = (11 - i) * pointWidth
       } else {
-        // Нижний ряд (слева направо)
         x = (i - 12) * pointWidth
       }
-
-      // Позиция точки: для верхних - сверху, для нижних - снизу (прижаты к краю доски)
       const y = isTop ? 0 : boardHeight
-
-      // Цвет точки (чередование)
-      const isLight = (Math.floor(i / 6) + i) % 2 === 0
-      ctx.fillStyle = isLight ? '#DEB887' : '#CD853F'
-      
-      // Рисуем треугольник точки
-      ctx.beginPath()
-      if (isTop) {
-        // Верхние треугольники - рисуются вниз
-        ctx.moveTo(x, y)
-        ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-        ctx.lineTo(x + pointWidth, y)
-      } else {
-        // Нижние треугольники - рисуются вверх (прижаты к низу доски)
-        ctx.moveTo(x, y)
-        ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-        ctx.lineTo(x + pointWidth, y)
-      }
-      ctx.closePath()
-      ctx.fill()
-      
-      // Обводка треугольника
-      ctx.strokeStyle = '#654321'
-      ctx.lineWidth = 2
-      ctx.stroke()
 
       // Номер точки - показываем всегда для удобства
       ctx.fillStyle = '#FFFFFF'
@@ -451,7 +447,6 @@ export default function BackgammonBoard({
       ctx.textAlign = 'center'
       ctx.strokeStyle = '#654321'
       ctx.lineWidth = 2
-      // Для верхних точек номер внизу треугольника, для нижних - вверху
       const numY = isTop ? y + pointHeight - 5 : y - pointHeight + 15
       ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
       ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)

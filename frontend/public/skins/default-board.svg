@@ -1,0 +1,75 @@
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="boardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B4513;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#A0522D;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B4513;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Фон доски -->
+  <rect width="800" height="400" fill="url(#boardGradient)"/>
+  
+  <!-- Рамка -->
+  <rect x="0" y="0" width="800" height="400" fill="none" stroke="#654321" stroke-width="4"/>
+  
+  <!-- Центральный бар -->
+  <rect x="352" y="140" width="96" height="120" fill="#654321" stroke="#8B4513" stroke-width="2"/>
+  
+  <!-- Точки (треугольники) - верхний ряд -->
+  <g id="top-points">
+    <!-- Точка 24 -->
+    <polygon points="0,0 33.33,200 66.66,0" fill="#DEB887"/>
+    <!-- Точка 23 -->
+    <polygon points="66.66,0 100,200 133.33,0" fill="#CD853F"/>
+    <!-- Точка 22 -->
+    <polygon points="133.33,0 166.66,200 200,0" fill="#DEB887"/>
+    <!-- Точка 21 -->
+    <polygon points="200,0 233.33,200 266.66,0" fill="#CD853F"/>
+    <!-- Точка 20 -->
+    <polygon points="266.66,0 300,200 333.33,0" fill="#DEB887"/>
+    <!-- Точка 19 -->
+    <polygon points="333.33,0 366.66,200 400,0" fill="#CD853F"/>
+    <!-- Точка 18 -->
+    <polygon points="466.66,0 500,200 533.33,0" fill="#DEB887"/>
+    <!-- Точка 17 -->
+    <polygon points="533.33,0 566.66,200 600,0" fill="#CD853F"/>
+    <!-- Точка 16 -->
+    <polygon points="600,0 633.33,200 666.66,0" fill="#DEB887"/>
+    <!-- Точка 15 -->
+    <polygon points="666.66,0 700,200 733.33,0" fill="#CD853F"/>
+    <!-- Точка 14 -->
+    <polygon points="733.33,0 766.66,200 800,0" fill="#DEB887"/>
+    <!-- Точка 13 -->
+    <polygon points="400,0 433.33,200 466.66,0" fill="#CD853F"/>
+  </g>
+  
+  <!-- Точки (треугольники) - нижний ряд -->
+  <g id="bottom-points">
+    <!-- Точка 12 -->
+    <polygon points="0,400 33.33,200 66.66,400" fill="#CD853F"/>
+    <!-- Точка 11 -->
+    <polygon points="66.66,400 100,200 133.33,400" fill="#DEB887"/>
+    <!-- Точка 10 -->
+    <polygon points="133.33,400 166.66,200 200,400" fill="#CD853F"/>
+    <!-- Точка 9 -->
+    <polygon points="200,400 233.33,200 266.66,400" fill="#DEB887"/>
+    <!-- Точка 8 -->
+    <polygon points="266.66,400 300,200 333.33,400" fill="#CD853F"/>
+    <!-- Точка 7 -->
+    <polygon points="333.33,400 366.66,200 400,400" fill="#DEB887"/>
+    <!-- Точка 6 -->
+    <polygon points="466.66,400 500,200 533.33,400" fill="#CD853F"/>
+    <!-- Точка 5 -->
+    <polygon points="533.33,400 566.66,200 600,400" fill="#DEB887"/>
+    <!-- Точка 4 -->
+    <polygon points="600,400 633.33,200 666.66,400" fill="#CD853F"/>
+    <!-- Точка 3 -->
+    <polygon points="666.66,400 700,200 733.33,400" fill="#DEB887"/>
+    <!-- Точка 2 -->
+    <polygon points="733.33,400 766.66,200 800,400" fill="#CD853F"/>
+    <!-- Точка 1 -->
+    <polygon points="400,400 433.33,200 466.66,400" fill="#DEB887"/>
+  </g>
+</svg>
+
