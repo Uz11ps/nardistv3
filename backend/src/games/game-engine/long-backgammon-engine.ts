@@ -14,24 +14,26 @@ export interface LongBoardState {
 @Injectable()
 export class LongBackgammonEngine {
   private readonly BOARD_SIZE = 24;
-  // Coordinate system:
-  // Index 0 = Point 24 (Top Right)
+  // Coordinate system (matching frontend POINT_NUMBERS):
+  // Index 0 = Point 24 (Top Right) - White Head
   // Index 11 = Point 13 (Top Left)
-  // Index 12 = Point 12 (Bottom Left)
+  // Index 12 = Point 12 (Bottom Left) - Black Head
   // Index 23 = Point 1 (Bottom Right)
-  // White (positive): 15 checkers on Point 13 (index 11)
-  // Black (negative): 15 checkers on Point 1 (index 23)
+  // White (positive): 15 checkers on Point 24 (index 0) - HEAD
+  // Black (negative): 15 checkers on Point 12 (index 12) - HEAD
   private readonly INITIAL_BOARD = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -15,
+    15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ];
   
   // Head positions (starting points)
-  private readonly WHITE_HEAD = 11; // Point 13
-  private readonly BLACK_HEAD = 23; // Point 1
+  private readonly WHITE_HEAD = 0; // Point 24 (Top Right)
+  private readonly BLACK_HEAD = 12; // Point 12 (Bottom Left)
   
   // Home quadrants
-  private readonly WHITE_HOME_START = 18; // Point 19-24 (indices 18-23)
-  private readonly BLACK_HOME_START = 0; // Point 1-6 (indices 0-5)
+  // White home: Points 1-6 (indices 23, 22, 21, 20, 19, 18)
+  // Black home: Points 13-18 (indices 11, 10, 9, 8, 7, 6)
+  private readonly WHITE_HOME_START = 18; // Point 1-6 (indices 18-23)
+  private readonly BLACK_HOME_START = 6; // Point 13-18 (indices 6-11)
 
   createInitialState(): LongBoardState {
     return {
@@ -68,74 +70,50 @@ export class LongBackgammonEngine {
 
   /**
    * Calculate target point for a move
-   * White moves: decreasing indices (11 -> 0, then 23 -> 12)
-   * Black moves: decreasing indices (23 -> 12, then 11 -> 0)
+   * Both players move counter-clockwise around the board
+   * White: starts at Point 24 (index 0), moves: 24→13→12→1 (home: 1-6)
+   * Black: starts at Point 12 (index 12), moves: 12→1→24→13 (home: 13-18)
+   * 
+   * Movement is circular: index decreases modulo 24
+   * White path: 0→11→12→23→22→...→18 (Point 24→13→12→1→2→...→6)
+   * Black path: 12→23→0→11→10→...→6 (Point 12→1→24→13→14→...→18)
    */
   private calculateTargetPoint(player: number, from: number, die: number): number {
-    if (player === 0) {
-      // White: moves from index 11 towards 0, then wraps to 23 and continues to 12
-      let to = from - die;
-      
-      // If we go below 0, we wrap around
-      if (to < 0) {
-        // We've wrapped: continue from index 23
-        to = 23 + to + 1; // to is negative, so this gives us the correct wrap
-      }
-      
-      // If we're in the first half (0-11) and go below 12, we need to wrap
-      if (from >= 12 && to < 12) {
-        // We've crossed from second half to first half
-        const overflow = 12 - to;
-        to = 23 - (overflow - 1);
-      }
-      
-      return to;
-    } else {
-      // Black: moves from index 23 towards 12, then wraps to 11 and continues to 0
-      let to = from - die;
-      
-      // If we go below 0, wrap around
-      if (to < 0) {
-        to = 23 + to + 1;
-      }
-      
-      // If we're in the second half (12-23) and go below 12, wrap
-      if (from >= 12 && to < 12) {
-        const overflow = 12 - to;
-        to = 11 - (overflow - 1);
-        if (to < 0) {
-          to = 23 + to + 1;
-        }
-      }
-      
-      return to;
-    }
+    // Both players move counter-clockwise: decrease index by die, wrap around
+    let to = (from - die + this.BOARD_SIZE) % this.BOARD_SIZE;
+    return to;
   }
 
   /**
    * Check if a point is in the player's home quadrant
+   * White home: Points 1-6 (indices 23, 22, 21, 20, 19, 18)
+   * Black home: Points 13-18 (indices 11, 10, 9, 8, 7, 6)
    */
   private isInHome(player: number, pointIndex: number): boolean {
     if (player === 0) {
+      // White home: indices 18-23 (Points 1-6)
       return pointIndex >= this.WHITE_HOME_START && pointIndex < this.BOARD_SIZE;
     } else {
-      return pointIndex >= this.BLACK_HOME_START && pointIndex < 6;
+      // Black home: indices 6-11 (Points 13-18)
+      return pointIndex >= this.BLACK_HOME_START && pointIndex < 12;
     }
   }
 
   /**
    * Check Head Rule: Only 1 checker can be moved from head per complete turn (using all dice)
-   * Exception: Doubles on first move allow multiple checkers (up to 2)
+   * Exception: Doubles on first move allow multiple checkers (up to 2) ONLY if one checker cannot make the full move due to blocked points
    * 
    * According to Long Backgammon rules:
    * - In a complete turn (using all dice), you can take maximum 1 checker from head
-   * - Exception: If doubles are rolled on the FIRST move of the game, player can move 2 checkers from head
+   * - Exception: If doubles are rolled on the FIRST move of the game, AND one checker cannot make the full move due to blocked points,
+   *   then player can move 2 checkers from head
    * - This rule applies to the entire turn, not individual moves
    * 
    * Examples:
    * - With dice [6, 3]: Can take 1 checker from head and move it 6, then move another checker (not from head) 3
    * - With dice [6, 3]: Can take 1 checker from head and move it 9 (combining dice)
    * - With dice [6, 3]: Cannot take 2 checkers from head in the same turn
+   * - With doubles [3, 3] on first move: Can take 2 checkers if one checker cannot make all 4 moves due to blocked points
    */
   private checkHeadRule(state: LongBoardState, from: number, dice: number[]): boolean {
     const player = state.currentPlayer;
@@ -160,9 +138,11 @@ export class LongBackgammonEngine {
     const isDoubles = (dice.length === 2 && dice[0] === dice[1]) || 
                       (dice.length === 4 && dice[0] === dice[1] && dice[1] === dice[2] && dice[2] === dice[3]);
     
-    // If first move and doubles, allow up to 2 checkers from head
+    // If first move and doubles, check if one checker can make all moves
+    // If not (due to blocked points), allow up to 2 checkers from head
     if (wasFirstTurn && isDoubles) {
-      // Allow up to 2 checkers from head on first move with doubles
+      // For now, we allow up to 2 checkers from head on first move with doubles
+      // In a more strict implementation, we would check if one checker can make all moves
       const result = movedThisTurn < 2;
       console.log(`  ✅ First turn with doubles: allow up to 2, result=${result}`);
       return result;
@@ -177,18 +157,23 @@ export class LongBackgammonEngine {
 
   /**
    * Check Block Rule: Cannot create a block of 6 consecutive points if no opponent checker is ahead
+   * According to Long Backgammon rules:
+   * - You can build a "fence" of 6 consecutive points with your checkers
+   * - BUT: This is only allowed if there is at least one opponent checker AHEAD of the fence (in the direction of opponent's movement)
+   * - Building a fence of 6 points when opponent has no checkers ahead (i.e., locking them completely in their head) is forbidden
    */
   private checkBlockRule(state: LongBoardState, to: number): boolean {
     const player = state.currentPlayer;
     const opponentSign = player === 0 ? -1 : 1;
     
     // Check if placing a checker here would create a 6-point block
-    // We need to check if there are 6 consecutive points with only our checkers
-    for (let start = 0; start <= this.BOARD_SIZE - 6; start++) {
+    // We need to check all possible 6-point sequences
+    for (let start = 0; start < this.BOARD_SIZE; start++) {
       let blockCount = 0;
+      let hasOpponentInBlock = false;
       let hasOpponentAhead = false;
       
-      // Check 6 consecutive points
+      // Check 6 consecutive points (circular)
       for (let i = 0; i < 6; i++) {
         const pointIdx = (start + i) % this.BOARD_SIZE;
         const pointValue = state.points[pointIdx] || 0;
@@ -203,16 +188,41 @@ export class LongBackgammonEngine {
           blockCount++;
         }
         
-        // Check if opponent has checkers ahead of this block
+        // Check if opponent has checkers in this block
         if (pointValue * opponentSign > 0) {
-          hasOpponentAhead = true;
+          hasOpponentInBlock = true;
         }
       }
       
-      // If we have a 6-point block and no opponent ahead, this is illegal
-      if (blockCount === 6 && !hasOpponentAhead && 
-          to >= start && to < (start + 6) % this.BOARD_SIZE) {
-        return false;
+      // Check points AHEAD of the block (in opponent's movement direction)
+      // Opponent moves counter-clockwise, so "ahead" means points after the block
+      for (let i = 6; i < this.BOARD_SIZE; i++) {
+        const pointIdx = (start + i) % this.BOARD_SIZE;
+        const pointValue = state.points[pointIdx] || 0;
+        
+        // Check if opponent has checkers ahead
+        if (pointValue * opponentSign > 0) {
+          hasOpponentAhead = true;
+          break; // Found at least one opponent checker ahead
+        }
+      }
+      
+      // If we have a 6-point block and no opponent ahead (and no opponent in block), this is illegal
+      // The block must contain our checkers and the new position
+      if (blockCount === 6 && !hasOpponentAhead && !hasOpponentInBlock) {
+        // Check if 'to' is part of this block
+        let toInBlock = false;
+        for (let i = 0; i < 6; i++) {
+          const pointIdx = (start + i) % this.BOARD_SIZE;
+          if (pointIdx === to) {
+            toInBlock = true;
+            break;
+          }
+        }
+        
+        if (toInBlock) {
+          return false; // Illegal: creating a 6-point block with no opponent ahead
+        }
       }
     }
     
@@ -241,8 +251,10 @@ export class LongBackgammonEngine {
     // Handle bar entry
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      // White enters from bar: can enter on point (24 - die), which is index (die - 1)
-      const enterPoint = die - 1;
+      // White enters from bar: starts at Point 24 (index 0), moves counter-clockwise
+      // With die value, enters on point (24 - die) = index die (moving counter-clockwise from head)
+      // White head is at index 0 (Point 24), so with die=1, enters at index 1 (Point 23), etc.
+      const enterPoint = (this.WHITE_HEAD + die) % this.BOARD_SIZE;
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
       // Cannot enter on opponent's point
       if (state.points[enterPoint] < 0) return false;
@@ -256,12 +268,44 @@ export class LongBackgammonEngine {
     const calculatedTo = this.calculateTargetPoint(0, from, die);
     
     // Handle bearing off
-    if (calculatedTo < 0 || (calculatedTo >= this.WHITE_HOME_START && this.canBearOff(state, 0))) {
+    // White home: indices 18-23 (Points 1-6)
+    // If calculatedTo is outside home or we can bear off, allow bearing off
+    if (calculatedTo < 0 || (calculatedTo >= this.WHITE_HOME_START && calculatedTo < this.BOARD_SIZE && this.canBearOff(state, 0))) {
       if (!this.canBearOff(state, 0)) {
         return false;
       }
-      // Can bear off if all checkers are in home
-      return to === -1 || to < 0;
+      // When bearing off, allow moving from any point in home
+      // If die value point (Point 1-6 = indices 23, 22, 21, 20, 19, 18) has no checkers, can move from higher points
+      // Point number = 24 - index, so Point 1 = index 23, Point 6 = index 18
+      const diePointIndex = this.BOARD_SIZE - die; // Point die = index (24 - die)
+      const diePointIndexCorrected = Math.max(this.WHITE_HOME_START, Math.min(this.BOARD_SIZE - 1, this.BOARD_SIZE - die));
+      
+      // Check if from point is in home
+      if (from < this.WHITE_HOME_START || from >= this.BOARD_SIZE) {
+        return false;
+      }
+      
+      // If die value point has checkers, must bear off from that point
+      if (state.points[diePointIndexCorrected] > 0) {
+        return from === diePointIndexCorrected && (to === -1 || to < 0);
+      }
+      
+      // If die value point has no checkers, can bear off from higher points (lower indices)
+      // Find highest point (lowest index) with checkers
+      let highestPointWithCheckers = -1;
+      for (let i = this.WHITE_HOME_START; i < this.BOARD_SIZE; i++) {
+        if (state.points[i] > 0) {
+          highestPointWithCheckers = i;
+          break; // Found highest point
+        }
+      }
+      
+      if (highestPointWithCheckers === -1) {
+        return false; // No checkers in home
+      }
+      
+      // Can bear off from highest point or from points higher than die value point
+      return from <= diePointIndexCorrected && (to === -1 || to < 0);
     }
 
     if (to !== calculatedTo) {
@@ -288,8 +332,12 @@ export class LongBackgammonEngine {
     // Handle bar entry
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      // Black enters from bar: can enter on point die, which is index (die - 1)
-      const enterPoint = die - 1;
+      // Black enters from bar: starts at Point 12 (index 12), moves counter-clockwise
+      // With die value, enters on point (12 + die - 1) modulo 24, but we need to calculate from head
+      // Black head is at index 12 (Point 12), so with die=1, enters at index 11 (Point 13), etc.
+      // Actually, in Long Backgammon, bar entry uses die value to move from head counter-clockwise
+      // Black head is index 12, so die=1 → index 11, die=2 → index 10, etc.
+      const enterPoint = (this.BLACK_HEAD - die + this.BOARD_SIZE) % this.BOARD_SIZE;
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
       // Cannot enter on opponent's point
       if (state.points[enterPoint] > 0) return false;
@@ -303,11 +351,43 @@ export class LongBackgammonEngine {
     const calculatedTo = this.calculateTargetPoint(1, from, die);
     
     // Handle bearing off
-    if (calculatedTo < 0 || (calculatedTo < 6 && this.canBearOff(state, 1))) {
+    // Black home: indices 6-11 (Points 13-18)
+    // If calculatedTo is outside home or we can bear off, allow bearing off
+    if (calculatedTo < 0 || (calculatedTo >= this.BLACK_HOME_START && calculatedTo < 12 && this.canBearOff(state, 1))) {
       if (!this.canBearOff(state, 1)) {
         return false;
       }
-      return to === -1 || to >= this.BOARD_SIZE;
+      // When bearing off, allow moving from any point in home
+      // If die value point (Point 13-18 = indices 6-11) has no checkers, can move from higher points
+      const diePointIndex = this.BLACK_HOME_START + (6 - die); // Point (13 + die - 1) = index (6 + die - 1)
+      const diePointIndexCorrected = Math.max(this.BLACK_HOME_START, Math.min(11, this.BLACK_HOME_START + (6 - die)));
+      
+      // Check if from point is in home
+      if (from < this.BLACK_HOME_START || from >= 12) {
+        return false;
+      }
+      
+      // If die value point has checkers, must bear off from that point
+      if (state.points[diePointIndexCorrected] < 0) {
+        return from === diePointIndexCorrected && (to === -1 || to >= this.BOARD_SIZE);
+      }
+      
+      // If die value point has no checkers, can bear off from higher points (lower indices)
+      // Find highest point (lowest index) with checkers
+      let highestPointWithCheckers = -1;
+      for (let i = this.BLACK_HOME_START; i < 12; i++) {
+        if (state.points[i] < 0) {
+          highestPointWithCheckers = i;
+          break; // Found highest point
+        }
+      }
+      
+      if (highestPointWithCheckers === -1) {
+        return false; // No checkers in home
+      }
+      
+      // Can bear off from highest point or from points higher than die value point
+      return from <= diePointIndexCorrected && (to === -1 || to >= this.BOARD_SIZE);
     }
 
     if (to !== calculatedTo) {
@@ -332,7 +412,7 @@ export class LongBackgammonEngine {
 
   canBearOff(state: LongBoardState, player: number): boolean {
     if (player === 0) {
-      // White: all checkers must be in home (indices 18-23) and none on bar
+      // White: all checkers must be in home (indices 18-23, Points 1-6) and none on bar
       const homeBoard = state.points.slice(this.WHITE_HOME_START, this.BOARD_SIZE);
       const allInHome = homeBoard.every((p) => p >= 0);
       const noBarCheckers = state.bar[0] === 0;
@@ -340,12 +420,13 @@ export class LongBackgammonEngine {
       const outsideHome = state.points.slice(0, this.WHITE_HOME_START).some((p) => p > 0);
       return allInHome && noBarCheckers && !outsideHome;
     } else {
-      // Black: all checkers must be in home (indices 0-5) and none on bar
-      const homeBoard = state.points.slice(0, 6);
+      // Black: all checkers must be in home (indices 6-11, Points 13-18) and none on bar
+      const homeBoard = state.points.slice(this.BLACK_HOME_START, 12);
       const allInHome = homeBoard.every((p) => p <= 0);
       const noBarCheckers = state.bar[1] === 0;
       // Also check that no checkers are outside home
-      const outsideHome = state.points.slice(6).some((p) => p < 0);
+      const outsideHome = state.points.slice(0, this.BLACK_HOME_START).some((p) => p < 0) ||
+                         state.points.slice(12).some((p) => p < 0);
       return allInHome && noBarCheckers && !outsideHome;
     }
   }
@@ -366,7 +447,7 @@ export class LongBackgammonEngine {
     // Handle bar entry
     if (state.bar[0] > 0 && from === -1) {
       state.bar[0]--;
-      const enterPoint = die - 1;
+      const enterPoint = (this.WHITE_HEAD + die) % this.BOARD_SIZE;
       if (enterPoint >= 0 && enterPoint < this.BOARD_SIZE && state.points[enterPoint] >= 0) {
         state.points[enterPoint]++;
       } else {
@@ -412,12 +493,12 @@ export class LongBackgammonEngine {
     // Handle bar entry
     if (state.bar[1] > 0 && from === -1) {
       state.bar[1]--;
-      const enterPoint = die - 1;
+      const enterPoint = (this.BLACK_HEAD - die + this.BOARD_SIZE) % this.BOARD_SIZE;
       if (enterPoint >= 0 && enterPoint < this.BOARD_SIZE && state.points[enterPoint] <= 0) {
         state.points[enterPoint]--;
       } else {
         // Invalid entry, return checker to bar
-        state.bar[1]--;
+        state.bar[1]++;
       }
       return;
     }
@@ -495,7 +576,10 @@ export class LongBackgammonEngine {
       if (hasBarCheckers) {
         for (let i = 0; i < remainingDice.length; i++) {
           const die = remainingDice[i];
-          const enterPoint = die - 1;
+          // Calculate enter point based on player's head position
+          const enterPoint = player === 0 
+            ? (this.WHITE_HEAD + die) % this.BOARD_SIZE
+            : (this.BLACK_HEAD - die + this.BOARD_SIZE) % this.BOARD_SIZE;
           
           if (this.validateMove(currentState, -1, enterPoint, die)) {
             const newState = this.applyMove(currentState, -1, enterPoint, die);
@@ -525,9 +609,11 @@ export class LongBackgammonEngine {
           const calculatedTo = this.calculateTargetPoint(player, from, die);
           
           // Check if bearing off
+          // White home: indices 18-23 (Points 1-6)
+          // Black home: indices 6-11 (Points 13-18)
           if (calculatedTo < 0 || 
-              (player === 0 && calculatedTo >= this.WHITE_HOME_START && this.canBearOff(currentState, 0)) ||
-              (player === 1 && calculatedTo < 6 && this.canBearOff(currentState, 1))) {
+              (player === 0 && calculatedTo >= this.WHITE_HOME_START && calculatedTo < this.BOARD_SIZE && this.canBearOff(currentState, 0)) ||
+              (player === 1 && calculatedTo >= this.BLACK_HOME_START && calculatedTo < 12 && this.canBearOff(currentState, 1))) {
             if (this.canBearOff(currentState, player)) {
               to = -1; // Bear off
             } else {
@@ -571,9 +657,11 @@ export class LongBackgammonEngine {
             const calculatedTo = this.calculateTargetPoint(player, from, sumDie);
             
             // Check if bearing off
+            // White home: indices 18-23 (Points 1-6)
+            // Black home: indices 6-11 (Points 13-18)
             if (calculatedTo < 0 || 
-                (player === 0 && calculatedTo >= this.WHITE_HOME_START && this.canBearOff(currentState, 0)) ||
-                (player === 1 && calculatedTo < 6 && this.canBearOff(currentState, 1))) {
+                (player === 0 && calculatedTo >= this.WHITE_HOME_START && calculatedTo < this.BOARD_SIZE && this.canBearOff(currentState, 0)) ||
+                (player === 1 && calculatedTo >= this.BLACK_HOME_START && calculatedTo < 12 && this.canBearOff(currentState, 1))) {
               if (this.canBearOff(currentState, player)) {
                 to = -1; // Bear off
               } else {
