@@ -31,20 +31,23 @@ export class SkinsService {
       where: { userId },
       relations: ['skin'],
     });
-    const userSkinIds = userSkins.map((us) => us.skin?.id).filter(Boolean);
     
     // Получаем все default скины - они всегда доступны
     const defaultSkins = await this.skinsRepository.find({
       where: { isDefault: true },
     });
     
-    // Объединяем: default скины + скины пользователя (исключая дубликаты)
+    // Создаем Set с ID default скинов для быстрой проверки
+    const defaultSkinIds = new Set(defaultSkins.map(s => s.id));
+    
+    // Объединяем: default скины + скины пользователя (исключая дубликаты и default скины)
     const allSkins: Skin[] = [...defaultSkins];
     
     for (const userSkin of userSkins) {
-      if (userSkin.skin && !userSkinIds.includes(userSkin.skin.id)) {
-        // Проверяем что это не default скин (чтобы не дублировать)
-        if (!userSkin.skin.isDefault) {
+      if (userSkin.skin && !defaultSkinIds.has(userSkin.skin.id)) {
+        // Проверяем, что этот скин еще не добавлен в allSkins
+        const alreadyAdded = allSkins.some(s => s.id === userSkin.skin.id);
+        if (!alreadyAdded) {
           allSkins.push(userSkin.skin);
         }
       }

@@ -134,11 +134,25 @@ export default function Shop() {
       if (!skin || !skin.price) return
 
       await apiClient.post('/skins/purchase', { skinId })
-      alert(`Скин "${skin.name}" успешно куплен!`)
+      
+      // Немедленно добавляем скин в ownedSkins для мгновенного обновления UI
+      setOwnedSkins(prev => [...prev, skinId])
+      
+      // Обновляем баланс пользователя
+      if (user) {
+        const userResponse = await apiClient.get('/users/me')
+        useAuthStore.setState({ user: userResponse.data })
+      }
+      
+      // Перезагружаем список скинов для синхронизации с сервером
       await loadSkins()
+      
+      alert(`Скин "${skin.name}" успешно куплен!`)
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при покупке скина')
       console.error('Purchase failed:', error)
+      // В случае ошибки перезагружаем скины, чтобы вернуть корректное состояние
+      await loadSkins()
     } finally {
       setProcessingSkinId(null)
     }
