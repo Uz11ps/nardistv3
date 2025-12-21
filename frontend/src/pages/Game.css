@@ -113,6 +113,16 @@
   align-items: center;
   justify-content: center;
   min-height: 0; /* Позволяет flex-элементу сжиматься */
+  width: 100%;
+  height: 100%;
+}
+
+/* Обеспечиваем горизонтальную ориентацию доски */
+.board-wrapper .backgammon-board-container {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 /* Горизонтальная ориентация для игры */

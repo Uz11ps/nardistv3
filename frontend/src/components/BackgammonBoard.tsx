@@ -256,13 +256,25 @@ export default function BackgammonBoard({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Используем фиксированный размер canvas для четкости отрисовки
-    // Размер будет адаптивным через CSS
+    // Используем адаптивный размер canvas с сохранением пропорций
     const container = canvas.parentElement
     if (!container) return
     
-    const containerWidth = container.clientWidth
-    const containerHeight = container.clientHeight
+    // Получаем размеры контейнера
+    let containerWidth = container.clientWidth
+    let containerHeight = container.clientHeight
+    
+    // Обеспечиваем горизонтальную ориентацию (ширина должна быть больше высоты)
+    // Если высота больше ширины, ограничиваем высоту
+    if (containerHeight > containerWidth * 0.5) {
+      containerHeight = containerWidth * 0.5 // Соотношение 2:1
+    }
+    
+    // Если контейнер слишком маленький, устанавливаем минимальные размеры
+    if (containerWidth < 400) {
+      containerWidth = 400
+      containerHeight = 200
+    }
     
     // Устанавливаем размер canvas с учетом devicePixelRatio для четкости
     const dpr = window.devicePixelRatio || 1

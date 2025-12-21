@@ -1,13 +1,16 @@
 .backgammon-board-container {
   position: relative;
   width: 100%;
-  max-width: 1200px;
-  aspect-ratio: 2 / 1; /* Горизонтальная ориентация: ширина в 2 раза больше высоты */
+  max-width: 100%;
+  height: 100%;
+  min-height: 300px;
   margin: 0 auto;
   background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible; /* Убираем hidden, чтобы доска не обрезалась */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
 }
 
 .backgammon-board {
@@ -16,27 +19,7 @@
   display: block;
   cursor: pointer;
   transition: transform 0.2s;
-}
-
-/* Адаптивность для мобильных устройств */
-@media (max-width: 768px) {
-  .backgammon-board-container {
-    max-width: 100%;
-    aspect-ratio: 16 / 9; /* Более широкий формат для мобильных */
-  }
-}
-
-@media (max-width: 480px) {
-  .backgammon-board-container {
-    aspect-ratio: 2 / 1; /* Возвращаем стандартное соотношение для очень маленьких экранов */
-  }
-}
-
-/* Для очень больших экранов */
-@media (min-width: 1400px) {
-  .backgammon-board-container {
-    max-width: 1400px;
-  }
+  object-fit: contain; /* Сохраняем пропорции */
 }
 
 .backgammon-board:hover {
