@@ -1,8 +1,9 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, Logger } from '@nestjs/common';
 import { GamesService } from '../games/games.service';
 import { GameMode, GameType, GameStatus } from '../games/game.entity';
 import { RatingsService } from '../ratings/ratings.service';
 import { SubscriptionService } from '../subscription/subscription.service';
+import { UsersService } from '../users/users.service';
 import Redis from 'ioredis';
 
 interface QueueEntry {
@@ -17,12 +18,16 @@ interface QueueEntry {
 
 @Injectable()
 export class MatchmakingService {
+  private readonly logger = new Logger(MatchmakingService.name);
+
   constructor(
     private gamesService: GamesService,
     private ratingsService: RatingsService,
     @Inject('REDIS_CLIENT') private redis: Redis,
     @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
+    @Inject(forwardRef(() => UsersService))
+    private usersService: UsersService,
   ) {}
 
   /**
