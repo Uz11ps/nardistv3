@@ -32,7 +32,7 @@ export default function Game() {
   const [player1Timer, setPlayer1Timer] = useState<number>(0)
   const [player2Timer, setPlayer2Timer] = useState<number>(0)
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
-  const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any }>({ player1: null, player2: null })
+  const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
   const [player2Ready, setPlayer2Ready] = useState<boolean>(false)
   const [myReady, setMyReady] = useState<boolean>(false)
@@ -125,41 +125,47 @@ export default function Game() {
 
   const loadPlayerSkins = async (player1Id: string, player2Id: string) => {
     try {
-      // Загружаем выбранные скины для текущего игрока
-      const mySkinsRes = await apiClient.get('/skins/selected').catch(() => ({ data: {} }))
-      const mySkins = mySkinsRes.data || {}
+      // Загружаем выбранные скины для player1
+      let player1Skins = {}
+      try {
+        const player1SkinsRes = await apiClient.get(`/skins/user/${player1Id}/selected`).catch(() => ({ data: {} }))
+        player1Skins = player1SkinsRes.data || {}
+      } catch (err) {
+        console.warn('Could not load player1 skins:', err)
+      }
       
-      // Для соперника загружаем его выбранные скины (если есть player2Id)
-      let opponentSkins = {}
-      if (player2Id && user?.id !== player2Id) {
+      // Загружаем выбранные скины для player2 (если есть)
+      let player2Skins = {}
+      if (player2Id) {
         try {
-          const opponentSkinsRes = await apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} }))
-          opponentSkins = opponentSkinsRes.data || {}
+          const player2SkinsRes = await apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} }))
+          player2Skins = player2SkinsRes.data || {}
         } catch (err) {
-          console.warn('Could not load opponent skins:', err)
+          console.warn('Could not load player2 skins:', err)
         }
       }
       
-      // Определяем, кто является player1 и player2
+      // Определяем скины текущего пользователя (для доски и кубиков)
       const isPlayer1 = user?.id === player1Id
+      const mySkins = isPlayer1 ? player1Skins : player2Skins
       
       setPlayerSkins({
-        player1: isPlayer1 ? mySkins : opponentSkins,
-        player2: isPlayer1 ? opponentSkins : mySkins,
+        player1: player1Skins,  // Скины player1 (играет белыми)
+        player2: player2Skins,  // Скины player2 (играет черными)
+        mySkins: mySkins,        // Скины текущего пользователя (для доски)
       })
       
-      console.log('Loaded skins:', { 
-        mySkins, 
-        opponentSkins, 
-        isPlayer1, 
-        player1Id, 
-        player2Id, 
+      console.log('✅ Loaded skins:', { 
+        player1Id,
+        player2Id,
         userId: user?.id,
-        player1Skins: isPlayer1 ? mySkins : opponentSkins,
-        player2Skins: isPlayer1 ? opponentSkins : mySkins
+        isPlayer1,
+        player1Skins,
+        player2Skins,
+        mySkins
       })
     } catch (error) {
-      console.error('Failed to load player skins:', error)
+      console.error('❌ Failed to load player skins:', error)
     }
   }
 
@@ -720,8 +726,9 @@ export default function Game() {
       {gameStatus === 'in_progress' || gameStatus === 'finished' ? (
         <div className="board-wrapper">
           <BackgammonBoard
-            playerSkins={isPlayer1 ? playerSkins.player1 : playerSkins.player2}
-            opponentSkins={isPlayer1 ? playerSkins.player2 : playerSkins.player1}
+            player1Skins={playerSkins.player1}
+            player2Skins={playerSkins.player2}
+            mySkins={playerSkins.mySkins}
             gameState={gameState}
             currentPlayer={gameState.currentPlayer}
             dice={gameState.dice ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2]) : null}
