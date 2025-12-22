@@ -13,7 +13,7 @@ import { BirthdayService } from './birthday.service';
     TypeOrmModule.forFeature([User]), 
     forwardRef(() => ProgressModule),
     ScheduleModule.forRoot(),
-    NotificationsModule,
+    forwardRef(() => NotificationsModule),
   ],
   controllers: [UsersController],
   providers: [UsersService, BirthdayService],
