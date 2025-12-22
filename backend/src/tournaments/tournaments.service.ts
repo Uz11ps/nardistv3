@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Tournament, TournamentFormat, TournamentStatus } from './tournament.entity';
 import { TournamentMatch, MatchStatus } from './tournament-match.entity';
 import { GamesService } from '../games/games.service';
 import { GameMode, GameType } from '../games/game.entity';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class TournamentsService {

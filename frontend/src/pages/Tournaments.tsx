@@ -87,9 +87,14 @@ export default function Tournaments() {
                 <div className="tournament-detail">
                   Призовой фонд: {tournament.prizePool.toLocaleString()} NAR
                 </div>
-                {activeTab === 'active' && tournament.currentRound && tournament.totalRounds && (
+                {activeTab === 'active' && tournament.status === 'in_progress' && tournament.currentRound && tournament.totalRounds && (
                   <div className="tournament-detail">
                     Раунд {tournament.currentRound} из {tournament.totalRounds} • Осталось {tournament.timeRemaining || '5:24'}
+                  </div>
+                )}
+                {activeTab === 'active' && tournament.status === 'registration' && tournament.registrationEnd && (
+                  <div className="tournament-detail">
+                    Регистрация до: {new Date(tournament.registrationEnd).toLocaleString()}
                   </div>
                 )}
               </div>

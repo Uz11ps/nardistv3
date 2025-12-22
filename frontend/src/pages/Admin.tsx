@@ -991,10 +991,11 @@ export default function Admin() {
                   onChange={(e) => setTournamentFilters({ ...tournamentFilters, status: e.target.value })}
                 >
                   <option value="">Все статусы</option>
-                  <option value="UPCOMING">Предстоящий</option>
-                  <option value="REGISTRATION">Регистрация</option>
-                  <option value="IN_PROGRESS">В процессе</option>
-                  <option value="FINISHED">Завершен</option>
+                  <option value="upcoming">Предстоящий</option>
+                  <option value="registration">Регистрация</option>
+                  <option value="in_progress">В процессе</option>
+                  <option value="finished">Завершен</option>
+                  <option value="cancelled">Отменен</option>
                 </select>
               </div>
               <div className="admin-table-container">
@@ -1006,7 +1007,12 @@ export default function Admin() {
                       <th>Формат</th>
                       <th>Статус</th>
                       <th>Участников</th>
+                      <th>Взнос</th>
+                      <th>Призовой фонд</th>
+                      <th>Начало регистрации</th>
+                      <th>Окончание регистрации</th>
                       <th>Дата начала</th>
+                      <th>Действия</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1014,19 +1020,141 @@ export default function Admin() {
                       if (tournamentFilters.search && !t.name.toLowerCase().includes(tournamentFilters.search.toLowerCase())) return false
                       if (tournamentFilters.status && t.status !== tournamentFilters.status) return false
                       return true
-                    }).map((t) => (
-                    <tr key={t.id}>
-                      <td>{t.name}</td>
-                      <td>{t.mode === 'short' ? 'Короткие' : 'Длинные'}</td>
-                      <td>{t.format === 'bracket' ? 'Олимпийская' : 'Круговой'}</td>
-                      <td><span className="badge">{t.status}</span></td>
-                      <td>{t.currentParticipants || 0} / {t.maxParticipants}</td>
-                      <td>{new Date(t.startDate).toLocaleString()}</td>
-                    </tr>
-                  ))}
+                    }).map((t) => {
+                      const entryFee = typeof t.entryFee === 'string' ? Number(t.entryFee) : (t.entryFee || 0)
+                      const prizePool = entryFee * (t.currentParticipants || 0)
+                      return (
+                        <tr key={t.id}>
+                          <td>{t.name}</td>
+                          <td>{t.mode === 'short' ? 'Короткие' : 'Длинные'}</td>
+                          <td>{t.format === 'bracket' ? 'Олимпийская' : 'Круговой'}</td>
+                          <td><span className="badge">{t.status}</span></td>
+                          <td>{t.currentParticipants || 0} / {t.maxParticipants}</td>
+                          <td>{entryFee} NAR</td>
+                          <td>{prizePool.toLocaleString()} NAR</td>
+                          <td>{t.registrationStart ? new Date(t.registrationStart).toLocaleString() : '-'}</td>
+                          <td>{t.registrationEnd ? new Date(t.registrationEnd).toLocaleString() : '-'}</td>
+                          <td>{t.startDate ? new Date(t.startDate).toLocaleString() : '-'}</td>
+                          <td>
+                            <button onClick={() => setSelectedTournament(t)} style={{ marginRight: '8px' }}>Редактировать</button>
+                            <button onClick={async () => {
+                              if (confirm('Удалить турнир?')) {
+                                try {
+                                  await apiClient.delete(`/admin/tournaments/${t.id}`)
+                                  alert('Турнир удален')
+                                  loadStats()
+                                } catch (error: any) {
+                                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                                }
+                              }
+                            }}>Удалить</button>
+                          </td>
+                        </tr>
+                      )
+                    })}
                 </tbody>
               </table>
             </div>
+            
+            {selectedTournament && (
+              <div className="admin-modal-overlay" onClick={() => setSelectedTournament(null)}>
+                <div className="admin-modal-content" onClick={(e) => e.stopPropagation()}>
+                  <h4>Редактировать турнир: {selectedTournament.name}</h4>
+                  <div className="form-group">
+                    <label>Название</label>
+                    <input
+                      type="text"
+                      value={selectedTournament.name}
+                      onChange={(e) => setSelectedTournament({ ...selectedTournament, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Режим</label>
+                    <select
+                      value={selectedTournament.mode}
+                      onChange={(e) => setSelectedTournament({ ...selectedTournament, mode: e.target.value })}
+                    >
+                      <option value="short">Короткие нарды</option>
+                      <option value="long">Длинные нарды</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Формат</label>
+                    <select
+                      value={selectedTournament.format}
+                      onChange={(e) => setSelectedTournament({ ...selectedTournament, format: e.target.value })}
+                    >
+                      <option value="bracket">Олимпийская система</option>
+                      <option value="round_robin">Круговой</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Статус</label>
+                    <select
+                      value={selectedTournament.status}
+                      onChange={(e) => setSelectedTournament({ ...selectedTournament, status: e.target.value })}
+                    >
+                      <option value="upcoming">Предстоящий</option>
+                      <option value="registration">Регистрация</option>
+                      <option value="in_progress">В процессе</option>
+                      <option value="finished">Завершен</option>
+                      <option value="cancelled">Отменен</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Макс. участников</label>
+                    <input
+                      type="number"
+                      value={selectedTournament.maxParticipants}
+                      onChange={(e) => setSelectedTournament({ ...selectedTournament, maxParticipants: parseInt(e.target.value) })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Взнос (NAR)</label>
+                    <input
+                      type="number"
+                      value={typeof selectedTournament.entryFee === 'string' ? Number(selectedTournament.entryFee) : (selectedTournament.entryFee || 0)}
+                      onChange={(e) => setSelectedTournament({ ...selectedTournament, entryFee: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Начало регистрации</label>
+                    <input
+                      type="datetime-local"
+                      value={selectedTournament.registrationStart ? new Date(selectedTournament.registrationStart).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => setSelectedTournament({ ...selectedTournament, registrationStart: new Date(e.target.value).toISOString() })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Окончание регистрации</label>
+                    <input
+                      type="datetime-local"
+                      value={selectedTournament.registrationEnd ? new Date(selectedTournament.registrationEnd).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => setSelectedTournament({ ...selectedTournament, registrationEnd: new Date(e.target.value).toISOString() })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Дата начала</label>
+                    <input
+                      type="datetime-local"
+                      value={selectedTournament.startDate ? new Date(selectedTournament.startDate).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => setSelectedTournament({ ...selectedTournament, startDate: new Date(e.target.value).toISOString() })}
+                    />
+                  </div>
+                  <button onClick={async () => {
+                    try {
+                      await apiClient.put(`/admin/tournaments/${selectedTournament.id}`, selectedTournament)
+                      alert('Турнир обновлен')
+                      setSelectedTournament(null)
+                      loadStats()
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}>Сохранить</button>
+                  <button onClick={() => setSelectedTournament(null)}>Отмена</button>
+                </div>
+              </div>
+            )}
             </div>
           </div>
         )}
