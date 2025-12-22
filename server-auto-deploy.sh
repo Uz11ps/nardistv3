@@ -80,11 +80,10 @@ deploy() {
     
     # Принудительное удаление контейнеров по имени (на случай конфликтов)
     # Удаляем даже если их нет (игнорируем ошибки)
+    # НЕ удаляем postgres и redis чтобы сохранить данные!
     docker rm -f nardi_backend 2>/dev/null || true
     docker rm -f nardi_frontend 2>/dev/null || true
     docker rm -f nardi_nginx 2>/dev/null || true
-    docker rm -f nardi_postgres 2>/dev/null || true
-    docker rm -f nardi_redis 2>/dev/null || true
     
     # Очистка кеша docker-compose (может быть проблема в кеше)
     docker-compose rm -f 2>/dev/null || true
@@ -93,6 +92,7 @@ deploy() {
     docker network prune -f 2>/dev/null || true
     
     # Проверяем и удаляем все контейнеры с такими именами (даже если они "мертвые")
+    # НЕ удаляем postgres и redis чтобы сохранить данные!
     for name in nardi_backend nardi_frontend nardi_nginx; do
         # Ищем контейнеры по имени (включая остановленные)
         CONTAINER_ID=$(docker ps -aq --filter "name=^${name}$" 2>/dev/null | head -1)
@@ -108,12 +108,8 @@ deploy() {
     # Пересборка и запуск
     log "${YELLOW}🔨 Пересборка и запуск контейнеров...${NC}"
     # Используем --force-recreate чтобы пересоздать контейнеры даже если они не изменились
-    # И --no-deps чтобы не пересоздавать зависимости (postgres, redis)
-    docker-compose up -d --build --force-recreate --no-deps backend frontend nginx || {
-        # Если не получилось, пробуем без --no-deps
-        log "${YELLOW}⚠️ Повторная попытка без --no-deps...${NC}"
+    # Запускаем все сервисы включая postgres и redis
     docker-compose up -d --build --force-recreate
-    }
     
     # Ожидание запуска
     log "${YELLOW}⏳ Ожидание запуска сервисов (15 секунд)...${NC}"
