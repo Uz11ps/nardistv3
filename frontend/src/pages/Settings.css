@@ -33,32 +33,37 @@
 }
 
 .settings-toggle {
-  width: 44px;
-  height: 24px;
-  border-radius: 12px;
-  background: #3a3a3a;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #3a3a3a;
+  background: transparent;
   position: relative;
-  transition: background 0.2s;
+  transition: all 0.2s;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .settings-toggle.active {
-  background: #C93C3D;
+  background: #3a3a3a;
+  border-color: #3a3a3a;
 }
 
 .settings-toggle-dot {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 20px;
-  height: 20px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: #FFF;
-  transition: transform 0.2s;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.settings-toggle:not(.active) .settings-toggle-dot {
-  transform: translateX(-20px);
+.settings-toggle.active .settings-toggle-dot {
+  opacity: 1;
 }
 
 .settings-item-value {

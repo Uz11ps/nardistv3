@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import PageHeader from '../components/PageHeader'
+import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import { apiClient } from '../api/client'
+import './Notifications.css'
 
 interface Notification {
   id: string
@@ -60,9 +61,9 @@ export default function Notifications() {
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-    if (minutes < 60) return `${minutes} мин. назад`
-    if (hours < 24) return `${hours} ч. назад`
-    if (days < 7) return `${days} дн. назад`
+    if (minutes < 60) return `${minutes} минут назад`
+    if (hours < 24) return `${hours} часа назад`
+    if (days < 7) return `${days} дней назад`
     return date.toLocaleDateString('ru-RU')
   }
 
@@ -79,82 +80,58 @@ export default function Notifications() {
     }
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const [filter, setFilter] = useState<'all' | 'games' | 'system'>('all')
 
-  const markAllButton = unreadCount > 0 ? (
-    <button
-      onClick={handleMarkAllAsRead}
-      style={{
-        padding: '8px 16px',
-        background: 'var(--color-primary)',
-        color: 'var(--color-text-on-primary)',
-        border: 'none',
-        borderRadius: 'var(--radius-md)',
-        cursor: 'pointer',
-        fontSize: '14px',
-      }}
-    >
-      Отметить все
-    </button>
-  ) : undefined
+  const filteredNotifications = notifications.filter(n => {
+    if (filter === 'all') return true
+    if (filter === 'games') return n.type === 'success' || n.type === 'error'
+    if (filter === 'system') return n.type === 'info' || n.type === 'warning'
+    return true
+  })
+
+  const tabs = [
+    { id: 'all', label: 'Все', active: filter === 'all', onClick: () => setFilter('all') },
+    { id: 'games', label: 'Игры', active: filter === 'games', onClick: () => setFilter('games') },
+    { id: 'system', label: 'Система', active: filter === 'system', onClick: () => setFilter('system') },
+  ]
 
   return (
-    <div className="app-container">
-      <PageHeader 
-        title="Уведомления"
-        rightAction={markAllButton}
-      />
-      
-      <div style={{ padding: '20px' }}>
+    <PageLayout 
+      title="Уведомления" 
+      subtitle="Здесь хранятся все ваши уведомления"
+      showBack={true}
+      tabs={tabs}
+    >
+      <div className="notifications-content">
         {loading ? (
           <Card>
-            <div style={{ textAlign: 'center', color: '#aaaaaa' }}>
-              Загрузка...
-            </div>
+            <div className="notifications-loading">Загрузка...</div>
           </Card>
-        ) : notifications.length === 0 ? (
+        ) : filteredNotifications.length === 0 ? (
           <Card>
-            <div style={{ textAlign: 'center', color: '#aaaaaa' }}>
-              Нет уведомлений
-            </div>
+            <div className="notifications-empty">Нет уведомлений</div>
           </Card>
         ) : (
-          <div>
-            {notifications.map((notification) => (
+          <div className="notifications-list">
+            {filteredNotifications.map((notification) => (
               <Card
                 key={notification.id}
+                className="notifications-item"
                 onClick={() => !notification.read && handleMarkAsRead(notification.id)}
                 style={{
-                  marginBottom: '12px',
                   opacity: notification.read ? 0.7 : 1,
-                  borderLeft: `4px solid ${
-                    notification.type === 'success' ? '#00ff00' :
-                    notification.type === 'warning' ? '#ffaa00' :
-                    notification.type === 'error' ? '#ff3333' :
-                    '#00aaff'
-                  }`,
                   cursor: notification.read ? 'default' : 'pointer',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ fontSize: '24px' }}>
-                    {getNotificationIcon(notification.type)}
+                <div className="notifications-item-content">
+                  <div className="notifications-item-title">
+                    {notification.title}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div className="card-title">
-                      {notification.title}
-                      {!notification.read && (
-                        <span style={{ marginLeft: '8px', fontSize: '10px', color: '#ff3333' }}>
-                          ●
-                        </span>
-                      )}
-                    </div>
-                    <div className="card-subtitle" style={{ marginTop: '4px' }}>
-                      {notification.message}
-                    </div>
-                    <div className="card-subtitle" style={{ marginTop: '8px', fontSize: '12px' }}>
-                      {formatDate(notification.createdAt)}
-                    </div>
+                  <div className="notifications-item-message">
+                    {notification.message}
+                  </div>
+                  <div className="notifications-item-time">
+                    {formatDate(notification.createdAt)}
                   </div>
                 </div>
               </Card>
@@ -162,6 +139,6 @@ export default function Notifications() {
           </div>
         )}
       </div>
-    </div>
+    </PageLayout>
   )
 }

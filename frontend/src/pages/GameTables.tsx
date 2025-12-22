@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
+import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import { getMatchmakingSocket } from '../api/websocket'
 import './GameTables.css'
@@ -132,9 +131,7 @@ export default function GameTables() {
   }
 
   return (
-    <div className="app-container page-transition">
-      <PageHeader title="Список столов" />
-      
+    <PageLayout title="Список столов" showBack={true}>
       <div className="game-tables-content">
         {loading ? (
           <Card>
@@ -158,7 +155,7 @@ export default function GameTables() {
                 <div className="game-table-header">
                   <div className="game-table-title">Стол №{tableNumber}</div>
                   <div className="game-table-stake">
-                    <Icon name="coin" size={16} style={{ color: 'var(--color-gold)' }} />
+                    <img src="/img/narcoin.png" alt="coin" className="game-table-stake-icon" />
                     <span>{table.stake.toLocaleString()} NAR</span>
                   </div>
                 </div>
@@ -206,7 +203,7 @@ export default function GameTables() {
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   )
 }
 

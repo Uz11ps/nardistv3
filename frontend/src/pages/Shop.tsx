@@ -295,7 +295,7 @@ export default function Shop() {
                       </Button>
                     </div>
                     <div className="shop-nar-coin-icon">
-                      <Icon name="coin" size={80} style={{ filter: 'drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))' }} />
+                      <img src="/img/narcoin.png" alt="coin" className="shop-nar-coin-icon-img" />
                     </div>
                   </div>
                 </Card>

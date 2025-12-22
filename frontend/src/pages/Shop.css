@@ -47,7 +47,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .shop-nar-coin-icon-img {
@@ -88,7 +88,7 @@
 }
 
 .shop-buy-btn {
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-radius: 8px;
   background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
   box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
@@ -99,9 +99,8 @@
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  margin-top: 12px;
   width: auto;
-  min-width: 100px;
+  align-self: flex-start;
 }
 
 .shop-buy-btn:hover:not(:disabled) {

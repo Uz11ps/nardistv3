@@ -1,20 +1,15 @@
 /* Notifications Page Styles */
 
-.notifications-loading {
+.notifications-content {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
+  flex-direction: column;
+  gap: 12px;
 }
 
+.notifications-loading,
 .notifications-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
+  text-align: center;
+  padding: 40px 20px;
   color: #B6B6B6;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
@@ -27,10 +22,6 @@
 }
 
 .notifications-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
   padding: 16px;
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
   border-radius: 12px;
@@ -38,16 +29,15 @@
 }
 
 .notifications-item-content {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .notifications-item-title {
   color: #FFF;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.3;
 }
@@ -65,7 +55,6 @@
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 12px;
   font-weight: 400;
-  white-space: nowrap;
-  flex-shrink: 0;
+  margin-top: 4px;
 }
 
