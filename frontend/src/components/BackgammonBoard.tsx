@@ -23,9 +23,9 @@ interface BackgammonBoardProps {
   isMyTurn: boolean
   gameId?: string
   gameMode?: 'short' | 'long'
-  player1Skins?: { board?: any; dice?: any; checkers?: any }  // Скины player1 (белые шашки)
-  player2Skins?: { board?: any; dice?: any; checkers?: any }  // Скины player2 (черные шашки)
-  mySkins?: { board?: any; dice?: any; checkers?: any }       // Скины текущего пользователя (для доски и кубиков)
+  player1Skins?: { board?: any; dice?: any; checkers?: any }  // Скины player1: доска слева, кубики player1, белые шашки
+  player2Skins?: { board?: any; dice?: any; checkers?: any }  // Скины player2: доска справа, кубики player2, черные шашки
+  mySkins?: { board?: any; dice?: any; checkers?: any }       // Устаревшее, не используется
   diceAnimating?: boolean
   myPlayerId?: string
   player1Id?: string
@@ -54,7 +54,7 @@ export default function BackgammonBoard({
   gameMode = 'long', // По умолчанию длинные нарды
   player1Skins,
   player2Skins,
-  mySkins,
+  mySkins, // Устаревшее, не используется
   diceAnimating = false,
   myPlayerId,
   player1Id,
@@ -79,32 +79,37 @@ export default function BackgammonBoard({
   const [dragHoverPoint, setDragHoverPoint] = useState<number | null>(null)
   
   // Загруженные текстуры скинов
+  // НОВАЯ ЛОГИКА: каждый игрок использует свои скины
+  // - Доска: левая сторона (player1) = board скин player1, правая сторона (player2) = board скин player2
+  // - Кубики: кубики player1 = dice скин player1, кубики player2 = dice скин player2
+  // - Шашки: белые (player1) = checkers скин player1, черные (player2) = checkers скин player2
   const [loadedTextures, setLoadedTextures] = useState<{
-    board?: HTMLImageElement
-    dice?: HTMLImageElement
-    whiteCheckers?: HTMLImageElement  // Для player1 (белые шашки)
-    blackCheckers?: HTMLImageElement  // Для player2 (черные шашки)
+    player1Board?: HTMLImageElement  // Доска для player1 (левая сторона)
+    player2Board?: HTMLImageElement  // Доска для player2 (правая сторона)
+    player1Dice?: HTMLImageElement   // Кубики для player1
+    player2Dice?: HTMLImageElement   // Кубики для player2
+    whiteCheckers?: HTMLImageElement // Белые шашки (player1)
+    blackCheckers?: HTMLImageElement // Черные шашки (player2)
   }>({})
   
-  // Загружаем текстуры скинов
-  // ЛОГИКА: 
-  // - Доска и кубики: из mySkins (скины текущего пользователя)
-  // - Белые шашки: из player1Skins (player1 всегда играет белыми)
-  // - Черные шашки: из player2Skins (player2 всегда играет черными)
+  // Загружаем текстуры скинов для каждого игрока отдельно
   useEffect(() => {
-    console.log('🎨 Loading skins textures:', {
-      mySkins,
+    console.log('🎨 Loading player skins textures:', {
       player1Skins,
       player2Skins,
-      boardTexture: mySkins?.board?.boardTextureUrl,
-      diceTexture: mySkins?.dice?.diceTextureUrl,
+      player1BoardTexture: player1Skins?.board?.boardTextureUrl,
+      player2BoardTexture: player2Skins?.board?.boardTextureUrl,
+      player1DiceTexture: player1Skins?.dice?.diceTextureUrl,
+      player2DiceTexture: player2Skins?.dice?.diceTextureUrl,
       whiteCheckersTexture: player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl,
       blackCheckersTexture: player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl,
     })
     
     const textures: {
-      board?: HTMLImageElement
-      dice?: HTMLImageElement
+      player1Board?: HTMLImageElement
+      player2Board?: HTMLImageElement
+      player1Dice?: HTMLImageElement
+      player2Dice?: HTMLImageElement
       whiteCheckers?: HTMLImageElement
       blackCheckers?: HTMLImageElement
     } = {}
@@ -133,43 +138,79 @@ export default function BackgammonBoard({
       })
     }
     
-    // 1. Загружаем текстуру ДОСКИ из mySkins
-    const boardTextureUrl = mySkins?.board?.boardTextureUrl
+    // 1. Загружаем текстуру ДОСКИ для player1 (левая сторона)
+    const player1BoardTextureUrl = player1Skins?.board?.boardTextureUrl
     expectedCount++
-    if (boardTextureUrl) {
-      loadImage(boardTextureUrl)
+    if (player1BoardTextureUrl) {
+      loadImage(player1BoardTextureUrl)
         .then((img) => {
-          console.log('✅ Board texture loaded:', boardTextureUrl)
-          textures.board = img
+          console.log('✅ Player1 board texture loaded:', player1BoardTextureUrl)
+          textures.player1Board = img
           checkAndDraw()
         })
         .catch(() => {
-          console.error('Failed to load board texture:', boardTextureUrl)
+          console.error('Failed to load player1 board texture:', player1BoardTextureUrl)
           checkAndDraw()
         })
     } else {
       checkAndDraw()
     }
     
-    // 2. Загружаем текстуру КУБИКОВ из mySkins
-    const diceTextureUrl = mySkins?.dice?.diceTextureUrl
+    // 2. Загружаем текстуру ДОСКИ для player2 (правая сторона)
+    const player2BoardTextureUrl = player2Skins?.board?.boardTextureUrl
     expectedCount++
-    if (diceTextureUrl) {
-      loadImage(diceTextureUrl)
+    if (player2BoardTextureUrl) {
+      loadImage(player2BoardTextureUrl)
         .then((img) => {
-          console.log('✅ Dice texture loaded:', diceTextureUrl)
-          textures.dice = img
+          console.log('✅ Player2 board texture loaded:', player2BoardTextureUrl)
+          textures.player2Board = img
           checkAndDraw()
         })
         .catch(() => {
-          console.error('Failed to load dice texture:', diceTextureUrl)
+          console.error('Failed to load player2 board texture:', player2BoardTextureUrl)
           checkAndDraw()
         })
     } else {
       checkAndDraw()
     }
     
-    // 3. Загружаем текстуру БЕЛЫХ шашек из player1Skins
+    // 3. Загружаем текстуру КУБИКОВ для player1
+    const player1DiceTextureUrl = player1Skins?.dice?.diceTextureUrl
+    expectedCount++
+    if (player1DiceTextureUrl) {
+      loadImage(player1DiceTextureUrl)
+        .then((img) => {
+          console.log('✅ Player1 dice texture loaded:', player1DiceTextureUrl)
+          textures.player1Dice = img
+          checkAndDraw()
+        })
+        .catch(() => {
+          console.error('Failed to load player1 dice texture:', player1DiceTextureUrl)
+          checkAndDraw()
+        })
+    } else {
+      checkAndDraw()
+    }
+    
+    // 4. Загружаем текстуру КУБИКОВ для player2
+    const player2DiceTextureUrl = player2Skins?.dice?.diceTextureUrl
+    expectedCount++
+    if (player2DiceTextureUrl) {
+      loadImage(player2DiceTextureUrl)
+        .then((img) => {
+          console.log('✅ Player2 dice texture loaded:', player2DiceTextureUrl)
+          textures.player2Dice = img
+          checkAndDraw()
+        })
+        .catch(() => {
+          console.error('Failed to load player2 dice texture:', player2DiceTextureUrl)
+          checkAndDraw()
+        })
+    } else {
+      checkAndDraw()
+    }
+    
+    // 5. Загружаем текстуру БЕЛЫХ шашек из player1Skins
     const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl
     expectedCount++
     if (whiteCheckersTextureUrl) {
@@ -187,7 +228,7 @@ export default function BackgammonBoard({
       checkAndDraw()
     }
     
-    // 4. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins
+    // 6. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins
     const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl
     expectedCount++
     if (blackCheckersTextureUrl) {
@@ -204,7 +245,7 @@ export default function BackgammonBoard({
     } else {
       checkAndDraw()
     }
-  }, [player1Skins, player2Skins, mySkins])
+  }, [player1Skins, player2Skins])
 
   // Определяем, кто я (player1 или player2) для отзеркаливания доски
   const isPlayer1 = myPlayerId === player1Id
@@ -427,15 +468,44 @@ export default function BackgammonBoard({
     // Очистка
     ctx.clearRect(0, 0, width, height)
 
-    // Фон доски - используем текстуру (кастомную или дефолтную)
-    if (loadedTextures.board) {
-      // Рисуем текстуру доски - она должна содержать всю доску целиком
-      ctx.drawImage(loadedTextures.board, 0, 0, width, height)
+    // Фон доски - разделяем на две части: левая (player1) и правая (player2)
+    const boardCenterX = width / 2
+    const barLeftX = barX
+    const barRightX = barX + barWidth
+    
+    // Левая сторона доски (player1) - от 0 до центра бара
+    if (loadedTextures.player1Board) {
+      // Рисуем текстуру доски player1 только на левой половине
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(0, 0, barLeftX, height)
+      ctx.clip()
+      ctx.drawImage(loadedTextures.player1Board, 0, 0, width, height)
+      ctx.restore()
     } else {
       // Если текстура еще не загрузилась, рисуем простой фон
       ctx.fillStyle = '#8B4513'
-      ctx.fillRect(0, 0, width, height)
+      ctx.fillRect(0, 0, barLeftX, height)
     }
+    
+    // Правая сторона доски (player2) - от правого края бара до конца
+    if (loadedTextures.player2Board) {
+      // Рисуем текстуру доски player2 только на правой половине
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(barRightX, 0, width - barRightX, height)
+      ctx.clip()
+      ctx.drawImage(loadedTextures.player2Board, 0, 0, width, height)
+      ctx.restore()
+    } else {
+      // Если текстура еще не загрузилась, рисуем простой фон
+      ctx.fillStyle = '#654321'
+      ctx.fillRect(barRightX, 0, width - barRightX, height)
+    }
+    
+    // Центральная часть (бар) - нейтральный цвет
+    ctx.fillStyle = '#4a4a4a'
+    ctx.fillRect(barLeftX, 0, barWidth, height)
     
     // Номера точек и шашки рисуем всегда
     for (let i = 0; i < 24; i++) {
@@ -746,22 +816,25 @@ export default function BackgammonBoard({
     }
 
     // Кубики с улучшенной анимацией
+    // Определяем, какой игрок бросает кубики (currentPlayer: 0 = player1, 1 = player2)
     if (dice || diceRolling) {
       const diceAreaX = boardPadding + 20
       const diceAreaY = height - 100
       const diceSize = 40
       const diceSpacing = 50
+      const isPlayer1Turn = currentPlayer === 0
+      const diceTexture = isPlayer1Turn ? loadedTextures.player1Dice : loadedTextures.player2Dice
 
       if (diceRolling) {
         // Анимация броска кубиков
         const roll1 = Math.floor(Math.random() * 6) + 1
         const roll2 = Math.floor(Math.random() * 6) + 1
-        drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true, false)
-        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true, false)
+        drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true, false, diceTexture)
+        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true, false, diceTexture)
       } else if (diceArray.length > 0) {
         // Отрисовка кубиков из массива
         diceArray.forEach((die, index) => {
-          drawDice(ctx, diceAreaX + index * diceSpacing, diceAreaY, die, diceSize, false, false)
+          drawDice(ctx, diceAreaX + index * diceSpacing, diceAreaY, die, diceSize, false, false, diceTexture)
         })
       }
     }
@@ -824,10 +897,11 @@ export default function BackgammonBoard({
     value: number,
     size: number,
     rolling: boolean,
-    dropping: boolean
+    dropping: boolean,
+    diceTexture?: HTMLImageElement
   ) => {
-    // Кубик - используем текстуру или дефолтное отображение
-    if (!loadedTextures.dice) {
+    // Кубик - используем текстуру игрока или дефолтное отображение
+    if (!diceTexture) {
       // Если текстура еще не загрузилась, рисуем простой кубик
       ctx.fillStyle = '#FFFFFF'
       ctx.fillRect(x, y, size, size)
@@ -885,8 +959,35 @@ export default function BackgammonBoard({
     ctx.shadowOffsetX = 3
     ctx.shadowOffsetY = 3
     
-    // Рисуем текстуру кубика
-    ctx.drawImage(loadedTextures.dice, drawX, drawY, size, size)
+    // Рисуем текстуру кубика (используем переданную текстуру игрока)
+    if (diceTexture) {
+      ctx.drawImage(diceTexture, drawX, drawY, size, size)
+    } else {
+      // Если текстура не передана, рисуем дефолтный кубик
+      ctx.fillStyle = '#FFFFFF'
+      ctx.fillRect(drawX, drawY, size, size)
+      ctx.strokeStyle = '#1a1a1a'
+      ctx.lineWidth = 2
+      ctx.strokeRect(drawX, drawY, size, size)
+      
+      // Рисуем точки на кубике
+      ctx.fillStyle = '#1a1a1a'
+      const dotSize = size / 6
+      const dotPositions: { [key: number]: Array<[number, number]> } = {
+        1: [[size / 2, size / 2]],
+        2: [[size / 4, size / 4], [3 * size / 4, 3 * size / 4]],
+        3: [[size / 4, size / 4], [size / 2, size / 2], [3 * size / 4, 3 * size / 4]],
+        4: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
+        5: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 2, size / 2], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
+        6: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 4, size / 2], [3 * size / 4, size / 2], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
+      }
+      const dots = dotPositions[value] || []
+      dots.forEach(([dx, dy]) => {
+        ctx.beginPath()
+        ctx.arc(drawX + dx, drawY + dy, dotSize, 0, Math.PI * 2)
+        ctx.fill()
+      })
+    }
     
     // Обводка кубика
     ctx.strokeStyle = '#1a1a1a'

@@ -14,6 +14,7 @@ import { RatingsModule } from '../ratings/ratings.module';
 import { UsersModule } from '../users/users.module';
 import { BotModule } from '../bot/bot.module';
 import { MatchmakingModule } from '../matchmaking/matchmaking.module';
+import { SkinsModule } from '../skins/skins.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { MatchmakingModule } from '../matchmaking/matchmaking.module';
     forwardRef(() => UsersModule),
     forwardRef(() => BotModule),
     forwardRef(() => MatchmakingModule),
+    forwardRef(() => SkinsModule),
   ],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway, BackgammonEngine, LongBackgammonEngine],

@@ -9,6 +9,7 @@ import { ProgressService } from '../progress/progress.service';
 import { RatingsService } from '../ratings/ratings.service';
 import { UsersService } from '../users/users.service';
 import { BotService } from '../bot/bot.service';
+import { SkinsService } from '../skins/skins.service';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -30,6 +31,8 @@ export class GamesService {
     private usersService: UsersService,
     @Inject(forwardRef(() => BotService))
     private botService: BotService,
+    @Inject(forwardRef(() => SkinsService))
+    private skinsService: SkinsService,
   ) {}
 
   async create(
@@ -136,6 +139,27 @@ export class GamesService {
     const engine = mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     const initialState = engine.createInitialState();
 
+    // Загружаем выбранные скины игроков
+    const player1Skins = await this.skinsService.getSelectedSkin(player1Id);
+    const player2Skins = player2Id ? await this.skinsService.getSelectedSkin(player2Id) : null;
+
+    // Сохраняем ID скинов в skinData
+    const skinData: any = {
+      player1: {
+        board: player1Skins.board?.id,
+        dice: player1Skins.dice?.id,
+        checkers: player1Skins.checkers?.id,
+      },
+    };
+
+    if (player2Skins) {
+      skinData.player2 = {
+        board: player2Skins.board?.id,
+        dice: player2Skins.dice?.id,
+        checkers: player2Skins.checkers?.id,
+      };
+    }
+
     const game = this.gamesRepository.create({
       player1Id,
       player2Id,
@@ -148,6 +172,7 @@ export class GamesService {
       rngHash,
       currentPlayer: 0,
       moveTimeLimit: moveTimeLimit,
+      skinData,
     });
 
     return this.gamesRepository.save(game);
@@ -162,6 +187,89 @@ export class GamesService {
       throw new NotFoundException('Игра не найдена');
     }
     return game;
+  }
+
+  async getGameSkins(gameId: string): Promise<any> {
+    const game = await this.findOne(gameId);
+    
+    if (!game.skinData) {
+      // Если скины не сохранены, загружаем текущие выбранные скины игроков
+      const player1Skins = await this.skinsService.getSelectedSkin(game.player1Id);
+      const player2Skins = game.player2Id ? await this.skinsService.getSelectedSkin(game.player2Id) : null;
+      
+      return {
+        player1: {
+          board: player1Skins.board,
+          dice: player1Skins.dice,
+          checkers: player1Skins.checkers,
+        },
+        player2: player2Skins ? {
+          board: player2Skins.board,
+          dice: player2Skins.dice,
+          checkers: player2Skins.checkers,
+        } : null,
+      };
+    }
+
+    // Загружаем полные данные скинов по ID через SkinsService
+    const result: any = {
+      player1: {},
+      player2: null,
+    };
+
+    // Вспомогательная функция для загрузки скина по ID
+    const loadSkinById = async (skinId: string) => {
+      if (!skinId) return null;
+      try {
+        const allSkins = await this.skinsService.getAllSkins();
+        return allSkins.find(s => s.id === skinId) || null;
+      } catch {
+        return null;
+      }
+    };
+
+    if (game.skinData.player1) {
+      if (game.skinData.player1.board) {
+        result.player1.board = await loadSkinById(game.skinData.player1.board);
+      }
+      if (game.skinData.player1.dice) {
+        result.player1.dice = await loadSkinById(game.skinData.player1.dice);
+      }
+      if (game.skinData.player1.checkers) {
+        result.player1.checkers = await loadSkinById(game.skinData.player1.checkers);
+      }
+    }
+
+    if (game.skinData.player2) {
+      result.player2 = {};
+      if (game.skinData.player2.board) {
+        result.player2.board = await loadSkinById(game.skinData.player2.board);
+      }
+      if (game.skinData.player2.dice) {
+        result.player2.dice = await loadSkinById(game.skinData.player2.dice);
+      }
+      if (game.skinData.player2.checkers) {
+        result.player2.checkers = await loadSkinById(game.skinData.player2.checkers);
+      }
+    }
+
+    // Если скины не найдены, используем дефолтные
+    const defaultSkins = await this.skinsService.getAllSkins();
+    const defaultBoard = defaultSkins.find(s => s.type === 'board' && s.isDefault);
+    const defaultDice = defaultSkins.find(s => s.type === 'dice' && s.isDefault);
+    const defaultCheckers = defaultSkins.find(s => s.type === 'checkers' && s.isDefault);
+
+    if (!result.player1.board) result.player1.board = defaultBoard;
+    if (!result.player1.dice) result.player1.dice = defaultDice;
+    if (!result.player1.checkers) result.player1.checkers = defaultCheckers;
+
+    if (result.player2) {
+      if (!result.player2.board) result.player2.board = defaultBoard;
+      if (!result.player2.dice) result.player2.dice = defaultDice;
+      if (!result.player2.checkers) result.player2.checkers = defaultCheckers;
+    }
+
+    return result;
   }
 
   /**

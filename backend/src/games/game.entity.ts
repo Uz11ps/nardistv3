@@ -96,7 +96,7 @@ export class Game {
   winnerId: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  skinData: any;
+  skinData: any; // { player1: { board, dice, checkers }, player2: { board, dice, checkers } }
 
   @Column({ type: 'bigint', default: 0 })
   stake: number; // Ставка в NAR-coin (0 = игра без ставок)
