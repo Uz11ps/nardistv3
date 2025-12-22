@@ -18,16 +18,16 @@ export class TournamentsController {
     return this.tournamentsService.findAll(status, userId);
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.tournamentsService.findOne(id);
-  }
-
   @Post(':id/register')
   @UseGuards(JwtAuthGuard)
   async register(@Param('id') id: string, @CurrentUser() user: any) {
     await this.tournamentsService.register(id, user.id);
     return { message: 'Регистрация успешна' };
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.tournamentsService.findOne(id);
   }
 }
 

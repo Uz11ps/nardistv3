@@ -14,6 +14,8 @@ export class TournamentsService {
     @InjectRepository(TournamentMatch)
     private matchesRepository: Repository<TournamentMatch>,
     private gamesService: GamesService,
+    @Inject(forwardRef(() => UsersService))
+    private usersService: UsersService,
   ) {}
 
   async create(tournamentData: Partial<Tournament>): Promise<Tournament> {
@@ -148,6 +150,20 @@ export class TournamentsService {
 
     if (existingMatch) {
       throw new BadRequestException('Вы уже зарегистрированы');
+    }
+
+    // Списываем взнос, если он есть
+    if (tournament.entryFee > 0) {
+      const user = await this.usersService.findOne(userId);
+      const userBalance = Number(user.narCoin || 0);
+      const entryFee = Number(tournament.entryFee);
+      
+      if (userBalance < entryFee) {
+        throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${entryFee}, доступно: ${userBalance}`);
+      }
+      
+      user.narCoin = BigInt(userBalance - entryFee);
+      await this.usersService['usersRepository'].save(user);
     }
 
     // Создаем запись в matches для регистрации (пока без второго игрока)
