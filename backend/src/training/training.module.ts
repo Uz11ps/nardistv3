@@ -17,7 +17,7 @@ import { LongBackgammonEngine } from '../games/game-engine/long-backgammon-engin
   imports: [
     TypeOrmModule.forFeature([TrainingPosition, UserTrainingProgress, TrainingTask, UserTaskProgress]),
     forwardRef(() => SubscriptionModule),
-    GamesModule,
+    forwardRef(() => GamesModule),
     UsersModule,
     ProgressModule,
   ],

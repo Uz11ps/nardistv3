@@ -632,6 +632,7 @@ export class AdminService {
     isActive: boolean;
     baseIncomePerDay: number;
     metadata: any;
+    requiredLevel: number;
   }>) {
     const district = await this.districtConfigsRepository.findOne({ where: { id } });
     if (!district) {
@@ -707,6 +708,8 @@ export class AdminService {
     price?: number;
     rarity?: string;
     maxDurability?: number;
+    xpBonusPercent?: number;
+    moneyBonusPercent?: number;
   }) {
     const skin = this.skinsRepository.create({
       name: data.name,

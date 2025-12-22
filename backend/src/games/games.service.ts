@@ -39,6 +39,8 @@ export class GamesService {
     private skinsService: SkinsService,
     @Inject(forwardRef(() => QuestsService))
     private questsService: QuestsService,
+    @Inject(forwardRef(() => TrainingService))
+    private trainingService: TrainingService,
   ) {}
 
   async create(

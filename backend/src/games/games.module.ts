@@ -16,6 +16,7 @@ import { BotModule } from '../bot/bot.module';
 import { MatchmakingModule } from '../matchmaking/matchmaking.module';
 import { SkinsModule } from '../skins/skins.module';
 import { QuestsModule } from '../quests/quests.module';
+import { TrainingModule } from '../training/training.module';
 
 @Module({
   imports: [
