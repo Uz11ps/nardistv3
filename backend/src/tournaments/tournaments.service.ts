@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Tournament, TournamentFormat, TournamentStatus } from './tournament.entity';
 import { TournamentMatch, MatchStatus } from './tournament-match.entity';
 import { GamesService } from '../games/games.service';
@@ -53,7 +53,8 @@ export class TournamentsService {
       if (statuses.length === 1) {
         where.status = statuses[0] as TournamentStatus;
       } else {
-        where.status = statuses as TournamentStatus[];
+        // Используем In() для фильтрации по нескольким статусам
+        where.status = In(statuses as TournamentStatus[]);
       }
     }
     
