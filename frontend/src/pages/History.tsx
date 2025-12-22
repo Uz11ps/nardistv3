@@ -365,7 +365,7 @@ export default function History() {
               <div style={{ marginTop: '20px' }}>
                 <div className="card-title" style={{ marginBottom: '12px' }}>Ошибки:</div>
                 {analysisData.errors.slice(0, 10).map((error: any, idx: number) => (
-                  <Card key={idx} style={{ marginBottom: '8px', padding: '12px' }}>
+                  <div key={idx} className="history-error-card" style={{ marginBottom: '8px', padding: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div className="card-title" style={{ fontSize: '14px' }}>
@@ -391,7 +391,7 @@ export default function History() {
                         {error.errorType === 'blunder' ? 'Грубая' : error.errorType === 'mistake' ? 'Ошибка' : 'Неточность'}
                       </span>
                     </div>
-                  </Card>
+                  </div>
                 ))}
               </div>
             )}
@@ -400,17 +400,21 @@ export default function History() {
               <div style={{ marginTop: '20px' }}>
                 <div className="card-title" style={{ marginBottom: '12px' }}>Рекомендации:</div>
                 {analysisData.recommendations.map((rec: string, idx: number) => (
-                  <Card key={idx} style={{ marginBottom: '8px', padding: '12px' }}>
+                  <div key={idx} className="history-recommendation-card" style={{ marginBottom: '8px', padding: '12px' }}>
                     <div className="card-subtitle">• {rec}</div>
-                  </Card>
+                  </div>
                 ))}
               </div>
             )}
             
             <div className="modal-actions" style={{ marginTop: '24px' }}>
-              <Button fullWidth variant="secondary" onClick={() => setAnalysisData(null)}>
+              <button 
+                className="history-modal-close-btn"
+                onClick={() => setAnalysisData(null)}
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#3a3a3a', color: '#FFF', border: 'none', cursor: 'pointer', fontFamily: '"SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: '16px', fontWeight: 600 }}
+              >
                 Закрыть
-              </Button>
+              </button>
             </div>
           </div>
         </div>
