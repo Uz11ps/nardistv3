@@ -47,17 +47,6 @@ export default function City() {
       ])
       setDistricts(districtsRes.data || [])
       setUserClan(clanRes.data || { clan: null, member: null })
-      
-      // Мок-данные для разработки
-      if (!districtsRes.data || districtsRes.data.length === 0) {
-        setDistricts([
-          { id: '1', name: 'Центральный', owner: 'Нардисты Юга', status: 'stable', incomePerDay: 1200, level: 3 },
-          { id: '2', name: 'Восточный порт', owner: null, status: 'free', incomePerDay: 0, level: 1 },
-          { id: '3', name: 'Старый квартал', owner: 'Dice Fam', status: 'vulnerable', incomePerDay: 800, level: 2, vulnerabilityPercent: 8 },
-          { id: '4', name: 'Спальный', owner: null, status: 'free', incomePerDay: 0, level: 1 },
-          { id: '5', name: 'Пригород', owner: null, status: 'free', incomePerDay: 0, level: 1 },
-        ])
-      }
     } catch (error) {
       console.error('Failed to load city data:', error)
     } finally {

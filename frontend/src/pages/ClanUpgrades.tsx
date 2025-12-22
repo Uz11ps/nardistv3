@@ -45,16 +45,6 @@ export default function ClanUpgrades() {
       ])
       setClan(clanResponse.data)
       setUpgrades(upgradesResponse.data)
-      
-      // Мок-данные для разработки
-      if (!upgradesResponse.data) {
-        setUpgrades({
-          level: { current: 3, max: 10, cost: 5000 },
-          districtStrength: { current: 2, max: 10, cost: 3000 },
-          economy: { current: 6, max: 10, cost: 2000 },
-          fort: { current: 10, max: 10, cost: 0 },
-        })
-      }
     } catch (error) {
       console.error('Failed to load upgrades data:', error)
     } finally {

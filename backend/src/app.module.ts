@@ -31,6 +31,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { UploadModule } from './upload/upload.module';
 import { PaymentModule } from './payment/payment.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AchievementsModule } from './achievements/achievements.module';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     UploadModule,
     PaymentModule,
     NotificationsModule,
+    AchievementsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

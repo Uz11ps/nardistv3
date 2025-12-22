@@ -35,41 +35,6 @@ export default function Tournaments() {
       const status = activeTab === 'active' ? 'in_progress,registration' : 'upcoming'
       const response = await apiClient.get(`/tournaments?status=${status}`).catch(() => ({ data: [] }))
       setTournaments(response.data || [])
-      
-      // Мок-данные для разработки
-      if (!response.data || response.data.length === 0) {
-        setTournaments([
-          {
-            id: '1',
-            name: 'Кубок нардистов #11',
-            mode: 'long',
-            format: 'bracket',
-            status: 'in_progress',
-            maxParticipants: 64,
-            currentParticipants: 34,
-            entryFee: 150,
-            prizePool: 4800,
-            startDate: new Date().toISOString(),
-            registered: true,
-            currentRound: 2,
-            totalRounds: 6,
-            timeRemaining: '5:24',
-          },
-          {
-            id: '2',
-            name: 'Кубок нардистов #12',
-            mode: 'long',
-            format: 'bracket',
-            status: 'upcoming',
-            maxParticipants: 64,
-            currentParticipants: 34,
-            entryFee: 150,
-            prizePool: 8800,
-            startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            registered: false,
-          },
-        ])
-      }
     } catch (error) {
       console.error('Failed to load tournaments:', error)
       setTournaments([])

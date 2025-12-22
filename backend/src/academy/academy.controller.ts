@@ -31,6 +31,12 @@ export class AcademyController {
     return this.academyService.purchaseCourse(user.id, id);
   }
 
+  @Get('materials/:id')
+  @UseGuards(JwtAuthGuard)
+  async getMaterial(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.academyService.findOne(id, user?.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async findOne(@CurrentUser() user: any, @Param('id') id: string) {

@@ -62,43 +62,6 @@ export default function Academy() {
     try {
       const response = await apiClient.get(`/academy/materials/${id}`).catch(() => ({ data: null }))
       setMaterialDetail(response.data)
-      
-      // Мок-данные для разработки
-      if (!response.data) {
-        setMaterialDetail({
-          id: id,
-          title: 'Основы длинных нард',
-          author: 'Сергей Иванов',
-          price: 25,
-          purchased: true,
-          sections: [
-            {
-              id: '1',
-              title: 'Введение',
-              content: 'Нарды — это древнейшая настольная игра, сочетающая логику, интуицию и терпение. Чтобы стать настоящим нардистом, нужно научиться не просто ходить, а читать игру.',
-              icon: '🏛️',
-            },
-            {
-              id: '2',
-              title: 'Основы позиционной игры',
-              content: 'Первые ходы определяют развитие всей партии. Важно выстроить защиту и контроль пунктов, не спешить с выбросом шашек. Новички часто совершают ошибку, слишком рано открывая дом.',
-              icon: '🎯',
-            },
-            {
-              id: '3',
-              title: 'Тактика',
-              content: 'В длинных нардах главное — баланс. Если давишь слишком сильно — теряешь позиции. Если играешь в защиту — даёшь сопернику шанс на рискованную атаку.',
-              icon: '⚖️',
-            },
-            {
-              id: '4',
-              title: 'Совет профессионалов',
-              content: 'Тренируй партии с коротким таймером. Это улучшает твою реакцию и помогает быстро принимать решения.',
-              icon: '💡',
-            },
-          ],
-        })
-      }
     } catch (error) {
       console.error('Failed to load material detail:', error)
     }
@@ -118,15 +81,6 @@ export default function Academy() {
       }
     } catch (error) {
       console.error('Failed to load academy data:', error)
-      // Мок-данные для разработки
-      if (activeTab === 'courses') {
-        setCourses([
-          { id: '1', title: 'Основы длинных нард', author: 'Сергей Иванов', price: 25, purchased: true },
-          { id: '2', title: 'Стратегии и тактики', author: 'Мария Смирнова', price: 40, purchased: false },
-          { id: '3', title: 'Антипозиции в нардах', author: 'Виктор Петров', price: 65, purchased: false },
-          { id: '4', title: 'Тонкости коротких нард', author: 'Алексей Волков', price: 125, purchased: false },
-        ])
-      }
     }
   }
 

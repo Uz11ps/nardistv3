@@ -32,43 +32,6 @@ export default function Achievements() {
       setLoading(true)
       const response = await apiClient.get(`/achievements?filter=${filter}`).catch(() => ({ data: [] }))
       setAchievements(response.data || [])
-      
-      // Мок-данные для разработки (fallback)
-      if (!response.data || response.data.length === 0) {
-        setAchievements([
-          {
-            id: '1',
-            title: 'Первая победа',
-            description: 'Выиграй свою первую игру',
-            icon: '🏆',
-            progress: 1,
-            maxProgress: 1,
-            unlocked: true,
-            unlockedAt: new Date().toISOString(),
-            reward: { type: 'narCoin', amount: 100 },
-          },
-          {
-            id: '2',
-            title: 'Серия побед',
-            description: 'Выиграй 5 игр подряд',
-            icon: '🔥',
-            progress: 3,
-            maxProgress: 5,
-            unlocked: false,
-            reward: { type: 'narCoin', amount: 500 },
-          },
-          {
-            id: '3',
-            title: 'Мастер нардов',
-            description: 'Достигни 20 уровня',
-            icon: '⭐',
-            progress: 15,
-            maxProgress: 20,
-            unlocked: false,
-            reward: { type: 'xp', amount: 1000 },
-          },
-        ])
-      }
     } catch (error) {
       console.error('Failed to load achievements:', error)
     } finally {

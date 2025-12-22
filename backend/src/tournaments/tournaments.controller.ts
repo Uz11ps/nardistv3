@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Req } from '@nestjs/common';
 import { TournamentsService } from './tournaments.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -8,8 +8,14 @@ export class TournamentsController {
   constructor(private readonly tournamentsService: TournamentsService) {}
 
   @Get()
-  async findAll(@Query('status') status?: string) {
-    return this.tournamentsService.findAll(status);
+  async findAll(
+    @Query('status') status?: string,
+    @Req() req: any,
+  ) {
+    // Проверяем, есть ли авторизованный пользователь (но не требуем обязательной авторизации)
+    // JWT guard не используется, но если токен есть и валиден, user будет в req
+    const userId = req?.user?.id;
+    return this.tournamentsService.findAll(status, userId);
   }
 
   @Get(':id')

@@ -9,8 +9,16 @@ export class RatingsController {
   constructor(private readonly ratingsService: RatingsService) {}
 
   @Get('leaderboard')
-  async getLeaderboard(@Query('mode') mode: GameMode, @Query('limit') limit: string) {
-    return this.ratingsService.getLeaderboard(mode || GameMode.SHORT, limit ? parseInt(limit) : 100);
+  async getLeaderboard(
+    @Query('mode') mode: GameMode,
+    @Query('period') period?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.ratingsService.getLeaderboard(
+      mode || GameMode.SHORT,
+      period || 'all',
+      limit ? parseInt(limit) : 100,
+    );
   }
 
   @Get('leaderboard/weekly')

@@ -52,44 +52,6 @@ export default function ClanMembers() {
       const response = await apiClient.get(`/clans/${clanId}/members`).catch(() => ({ data: [] }))
       setMembers(response.data || [])
       setFilteredMembers(response.data || [])
-      
-      // Мок-данные для разработки
-      if (!response.data || response.data.length === 0) {
-        const mockMembers: ClanMember[] = [
-          {
-            id: '1',
-            role: 'leader',
-            contribution: 5200,
-            isOnline: true,
-            user: { id: '1', username: 'Алексей', nickname: 'Алексей', level: 23 },
-          },
-          {
-            id: '2',
-            role: 'officer',
-            contribution: 3200,
-            isOnline: false,
-            lastSeenAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-            user: { id: '2', username: 'Shatov', nickname: 'Shatov', level: 21 },
-          },
-          {
-            id: '3',
-            role: 'member',
-            contribution: 5200,
-            isOnline: true,
-            user: { id: '3', username: 'bot', nickname: 'bot', level: 20 },
-          },
-          {
-            id: '4',
-            role: 'member',
-            contribution: 1200,
-            isOnline: false,
-            lastSeenAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            user: { id: '4', username: 'uz1ps', nickname: 'uz1ps', level: 27 },
-          },
-        ]
-        setMembers(mockMembers)
-        setFilteredMembers(mockMembers)
-      }
     } catch (error) {
       console.error('Failed to load members:', error)
     } finally {

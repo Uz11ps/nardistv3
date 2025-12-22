@@ -68,13 +68,38 @@ export class RatingsService {
     return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
   }
 
-  async getLeaderboard(mode: GameMode, limit: number = 100): Promise<Rating[]> {
-    return this.ratingsRepository.find({
-      where: { mode },
-      order: { elo: 'DESC' },
-      take: limit,
-      relations: ['user'],
-    });
+  async getLeaderboard(mode: GameMode, period: string = 'all', limit: number = 100): Promise<any[]> {
+    let query = this.ratingsRepository
+      .createQueryBuilder('rating')
+      .where('rating.mode = :mode', { mode })
+      .leftJoinAndSelect('rating.user', 'user')
+      .orderBy('rating.elo', 'DESC')
+      .take(limit);
+
+    if (period === 'weekly') {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      query = query.andWhere('rating.updatedAt >= :weekAgo', { weekAgo });
+    } else if (period === 'monthly') {
+      const monthAgo = new Date();
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      query = query.andWhere('rating.updatedAt >= :monthAgo', { monthAgo });
+    }
+
+    const ratings = await query.getMany();
+
+    // Форматируем ответ для фронтенда
+    return ratings.map((rating, index) => ({
+      rank: index + 1,
+      user: rating.user ? {
+        id: rating.user.id,
+        username: rating.user.username,
+        level: rating.user.level || 1,
+        rating: rating.elo,
+      } : null,
+      wins: rating.wins || 0,
+      losses: rating.losses || 0,
+    }));
   }
 
   async getWeeklyLeaderboard(mode: GameMode, limit: number = 100): Promise<Rating[]> {

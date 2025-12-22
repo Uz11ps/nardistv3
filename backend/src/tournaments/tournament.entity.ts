@@ -62,6 +62,9 @@ export class Tournament {
   @Column({ type: 'int', default: 0 })
   currentParticipants: number;
 
+  @Column({ type: 'bigint', default: 0 })
+  entryFee: number; // Взнос в NAR-coin
+
   @Column({ type: 'timestamp' })
   registrationStart: Date;
 

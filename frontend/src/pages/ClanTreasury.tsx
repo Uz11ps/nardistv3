@@ -44,22 +44,6 @@ export default function ClanTreasury() {
       ])
       setClan(clanResponse.data)
       setTransactions(transactionsResponse.data || [])
-      
-      // Мок-данные для разработки
-      if (!clanResponse.data) {
-        setClan({
-          id: clanId || '1',
-          treasury: 12540,
-          weeklyIncome: 3200,
-        })
-        setTransactions([
-          { id: '1', type: 'contribution', amount: 250, description: 'Внес вклад', createdAt: new Date().toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
-          { id: '2', type: 'upgrade', amount: -650, description: 'Улучшение', createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
-          { id: '3', type: 'contribution', amount: 250, description: 'Внес вклад', createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
-          { id: '4', type: 'upgrade', amount: -1250, description: 'Улучшение', createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
-          { id: '5', type: 'contribution', amount: 250, description: 'Внес вклад', createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
-        ])
-      }
     } catch (error) {
       console.error('Failed to load treasury data:', error)
     } finally {

@@ -45,7 +45,7 @@ export class TournamentsService {
     }
   }
 
-  async findAll(status?: string): Promise<Tournament[]> {
+  async findAll(status?: string, userId?: string): Promise<any[]> {
     let where: any = {};
     
     if (status) {
@@ -60,15 +60,59 @@ export class TournamentsService {
     const tournaments = await this.tournamentsRepository.find({
       where,
       order: { startDate: 'ASC' },
+      relations: ['matches'],
     });
 
-    // Добавляем информацию о регистрации пользователя (требует userId из контекста)
-    return tournaments.map(t => ({
-      ...t,
-      entryFee: 150, // Заглушка, должна браться из настроек турнира
-      prizePool: t.currentParticipants * 150, // Заглушка
-      registered: false, // Требует проверки через userId
-    }));
+    // Проверяем регистрацию пользователя и вычисляем призовой фонд
+    const result = [];
+    for (const tournament of tournaments) {
+      let registered = false;
+      if (userId) {
+        // Проверяем регистрацию через отдельный запрос к matches
+        const userMatch = await this.matchesRepository.findOne({
+          where: [
+            { tournamentId: tournament.id, player1Id: userId },
+            { tournamentId: tournament.id, player2Id: userId },
+          ],
+        });
+        registered = !!userMatch;
+      }
+
+      // Вычисляем призовой фонд: взнос * количество участников
+      const entryFee = Number(tournament.entryFee || 0);
+      const prizePool = entryFee * tournament.currentParticipants;
+
+      // Вычисляем текущий раунд и общее количество раундов (для bracket формата)
+      let currentRound = 0;
+      let totalRounds = 0;
+      if (tournament.format === TournamentFormat.BRACKET && tournament.matches) {
+        const rounds = new Set(tournament.matches.map(m => m.round));
+        totalRounds = Math.ceil(Math.log2(tournament.maxParticipants));
+        currentRound = Math.max(...Array.from(rounds), 0) + 1;
+      }
+
+      result.push({
+        id: tournament.id,
+        name: tournament.name,
+        description: tournament.description,
+        mode: tournament.mode,
+        format: tournament.format,
+        status: tournament.status,
+        maxParticipants: tournament.maxParticipants,
+        currentParticipants: tournament.currentParticipants,
+        entryFee: entryFee,
+        prizePool: prizePool,
+        startDate: tournament.startDate,
+        endDate: tournament.endDate,
+        registrationStart: tournament.registrationStart,
+        registrationEnd: tournament.registrationEnd,
+        registered: registered,
+        currentRound: currentRound > 0 ? currentRound : undefined,
+        totalRounds: totalRounds > 0 ? totalRounds : undefined,
+      });
+    }
+
+    return result;
   }
 
   async findOne(id: string): Promise<Tournament> {
@@ -93,13 +137,27 @@ export class TournamentsService {
       throw new BadRequestException('Турнир заполнен');
     }
 
+    // Проверяем регистрацию через matches (player1Id или player2Id)
     const existingMatch = await this.matchesRepository.findOne({
-      where: { tournamentId, player1Id: userId },
+      where: [
+        { tournamentId, player1Id: userId },
+        { tournamentId, player2Id: userId },
+      ],
     });
 
     if (existingMatch) {
       throw new BadRequestException('Вы уже зарегистрированы');
     }
+
+    // Создаем запись в matches для регистрации (пока без второго игрока)
+    await this.matchesRepository.save({
+      tournamentId,
+      player1Id: userId,
+      player2Id: null,
+      round: 0,
+      matchNumber: tournament.currentParticipants,
+      status: MatchStatus.SCHEDULED,
+    });
 
     tournament.currentParticipants++;
     await this.tournamentsRepository.save(tournament);

@@ -32,15 +32,6 @@ export default function Leaderboard() {
       setLoading(true)
       const response = await apiClient.get(`/ratings/leaderboard?mode=${mode}&period=${filter}`).catch(() => ({ data: [] }))
       setLeaderboard(response.data || [])
-      
-      // Мок-данные для разработки (fallback)
-      if (!response.data || response.data.length === 0) {
-        setLeaderboard([
-          { rank: 1, user: { id: '1', username: 'player1', level: 25, rating: 1850 }, wins: 150, losses: 30 },
-          { rank: 2, user: { id: '2', username: 'player2', level: 22, rating: 1800 }, wins: 140, losses: 40 },
-          { rank: 3, user: { id: '3', username: 'player3', level: 20, rating: 1750 }, wins: 130, losses: 50 },
-        ])
-      }
     } catch (error) {
       console.error('Failed to load leaderboard:', error)
     } finally {

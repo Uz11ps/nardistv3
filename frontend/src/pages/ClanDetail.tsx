@@ -37,20 +37,6 @@ export default function ClanDetail() {
       setLoading(true)
       const response = await apiClient.get(`/clans/${clanId}`).catch(() => ({ data: null }))
       setClan(response.data)
-      
-      // Мок-данные для разработки
-      if (!response.data) {
-        setClan({
-          id: clanId || '1',
-          name: 'Нардисты Юга',
-          level: 3,
-          memberCount: 42,
-          maxMembers: 50,
-          treasury: 12540,
-          ownedDistricts: ['district_2'],
-          leaderId: '1',
-        })
-      }
     } catch (error) {
       console.error('Failed to load clan:', error)
     } finally {

@@ -47,15 +47,6 @@ export default function ClanSearch() {
       const type = typeMap[activeTab] || ''
       const response = await apiClient.get(`/clans?type=${type}&search=${searchQuery}`).catch(() => ({ data: [] }))
       setClans(response.data || [])
-      
-      // Мок-данные для разработки
-      if (!response.data || response.data.length === 0) {
-        setClans([
-          { id: '1', name: 'Нардисты Юга', level: 3, memberCount: 42, maxMembers: 50, treasury: 12540 },
-          { id: '2', name: 'Backgammon Family', level: 2, memberCount: 27, maxMembers: 50, treasury: 1540 },
-          { id: '3', name: 'Нардисты', level: 23, memberCount: 123, maxMembers: 150, treasury: 62540 },
-        ])
-      }
     } catch (error) {
       console.error('Failed to load clans:', error)
     } finally {

@@ -54,33 +54,6 @@ export default function Quests() {
         const response = await apiClient.get(`/quests/${activeTab}`).catch(() => ({ data: { quests: [], resetTime: '' } }))
         setQuests(response.data.quests || [])
         setResetTime(response.data.resetTime || '')
-        
-        // Мок-данные для разработки
-        if (!response.data.quests || response.data.quests.length === 0) {
-          if (activeTab === 'daily') {
-            setQuests([
-              { id: '1', name: 'Сыграть 1 матч', description: '', rewardNarCoin: 100, rewardXP: 50, progress: 1, target: 1, completed: true, claimed: false },
-              { id: '2', name: 'Сыграть 3 матча', description: '', rewardNarCoin: 150, rewardXP: 50, progress: 1, target: 3, completed: false, claimed: false },
-              { id: '3', name: 'Потратить 100 NAR', description: '', rewardNarCoin: 75, rewardXP: 50, progress: 0, target: 100, completed: false, claimed: false },
-              { id: '4', name: 'Зайти в игру', description: '', rewardNarCoin: 50, rewardXP: 50, progress: 1, target: 1, completed: true, claimed: false },
-            ])
-            setResetTime('23ч 45м')
-          } else if (activeTab === 'weekly') {
-            setQuests([
-              { id: '5', name: 'Выиграть 10 матчей', description: '', rewardNarCoin: 900, rewardXP: 350, progress: 6, target: 10, completed: false, claimed: false },
-              { id: '2', name: 'Сыграть 3 матча', description: '', rewardNarCoin: 150, rewardXP: 50, progress: 1, target: 3, completed: false, claimed: false },
-              { id: '3', name: 'Потратить 100 NAR', description: '', rewardNarCoin: 75, rewardXP: 50, progress: 38, target: 100, completed: false, claimed: false },
-              { id: '4', name: 'Зайти в игру', description: '', rewardNarCoin: 50, rewardXP: 50, progress: 1, target: 1, completed: true, claimed: false },
-            ])
-            setResetTime('6д 11ч')
-          } else {
-            setQuests([
-              { id: '6', name: 'Сделай первый ход', description: '', rewardNarCoin: 200, rewardXP: 0, progress: 1, target: 1, completed: true, claimed: true },
-              { id: '7', name: 'Достигни 20 уровня', description: 'Откроется: Академия, Город', rewardNarCoin: 0, rewardXP: 0, progress: 1, target: 20, completed: false, claimed: false },
-            ])
-            setResetTime('6д 11ч')
-          }
-        }
       }
     } catch (error) {
       console.error('Failed to load quests:', error)
