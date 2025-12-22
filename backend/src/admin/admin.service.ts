@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
@@ -76,6 +76,7 @@ export class AdminService implements OnModuleInit {
     private notificationTemplatesRepository: Repository<NotificationTemplate>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
+    @Inject(forwardRef(() => AcademyService))
     private academyService: AcademyService,
     private skinsService: SkinsService,
     private gamesService: GamesService,
