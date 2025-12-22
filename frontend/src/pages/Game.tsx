@@ -652,7 +652,7 @@ export default function Game() {
   return (
     <div className="app-container game-container page-transition">
       <PageHeader 
-        title={`Стол ${tableNumber} • ${getGameModeName(gameMode)}${stake > 0 ? ` - ${stake} NAR` : ''}`}
+        title={`Table ${tableNumber} - ${getGameModeName(gameMode)}${stake > 0 ? ` - ${stake} NAR` : ''}`}
         onBack={handleBack}
       />
       
@@ -692,9 +692,9 @@ export default function Game() {
             ) : (
               <Icon name="user" size={48} />
             )}
-          </div>
-          <div className={`game-player-timer ${!isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
-            {formatTime(player2Timer)}
+            <div className={`game-player-timer ${!isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
+              {formatTime(player2Timer)}
+            </div>
           </div>
           {opponentPlayer?.country && (
             <Icon name={`flag-${opponentPlayer.country.toLowerCase()}`} size={16} />

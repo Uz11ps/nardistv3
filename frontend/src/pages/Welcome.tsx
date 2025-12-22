@@ -62,7 +62,7 @@ export default function Welcome() {
             margin: 0,
           }}
         >
-          Добро пожаловать в мир нард
+          Добро пожаловать в мир нард...
         </p>
       </div>
 
