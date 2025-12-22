@@ -157,6 +157,66 @@ export default function Admin() {
     }
   }
 
+  const loadCityRewards = async () => {
+    try {
+      const response = await apiClient.get('/admin/city/rewards')
+      setCityRewards(response.data)
+    } catch (error) {
+      console.error('Failed to load city rewards:', error)
+    }
+  }
+
+  const loadDistricts = async () => {
+    try {
+      const response = await apiClient.get('/admin/districts')
+      setDistricts(response.data || [])
+    } catch (error) {
+      console.error('Failed to load districts:', error)
+    }
+  }
+
+  const handleCreateDistrict = async () => {
+    try {
+      await apiClient.post('/admin/districts', newDistrict)
+      alert('Территория создана!')
+      setNewDistrict({
+        code: '',
+        name: '',
+        description: '',
+        order: districts.length + 1,
+        isActive: true,
+        baseIncomePerDay: 0,
+      })
+      loadDistricts()
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+    }
+  }
+
+  const handleUpdateDistrict = async (id: string, data: any) => {
+    try {
+      await apiClient.put(`/admin/districts/${id}`, data)
+      alert('Территория обновлена!')
+      loadDistricts()
+      setSelectedDistrict(null)
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+    }
+  }
+
+  const handleDeleteDistrict = async (id: string) => {
+    if (!confirm('Вы уверены, что хотите удалить эту территорию?')) {
+      return
+    }
+    try {
+      await apiClient.delete(`/admin/districts/${id}`)
+      alert('Территория удалена!')
+      loadDistricts()
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+    }
+  }
+
   const sendNotification = async () => {
     try {
       await apiClient.post('/admin/notifications', {
