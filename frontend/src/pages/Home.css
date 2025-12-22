@@ -1,16 +1,14 @@
 /* Home Page Styles */
 
-.home-container {
+.app-container {
   position: relative;
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
-  background: #1a1a1a url('/img/App2.png') no-repeat center center;
-  background-size: cover;
-  background-attachment: fixed;
 }
 
-.home-background {
+.app-container::before {
+  content: '';
   position: fixed;
   top: 0;
   left: 0;
@@ -23,12 +21,9 @@
   z-index: 0;
 }
 
-.home-content-wrapper {
+.app-container > * {
   position: relative;
   z-index: 1;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 /* Header */
@@ -167,10 +162,7 @@
   width: 20px;
   height: 20px;
   object-fit: contain;
-}
-
-.home-energy-icon {
-  /* Красная иконка молнии - используется готовое изображение */
+  flex-shrink: 0;
 }
 
 /* Menu */
@@ -225,8 +217,8 @@
 }
 
 .home-menu-icon {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   flex-shrink: 0;
 }

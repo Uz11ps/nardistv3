@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import Card from '../components/Card'
-import Button from '../components/Button'
-import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './Home.css'
 
@@ -73,12 +70,12 @@ export default function Home() {
   }
 
   const menuItems = [
-    { icon: 'dice', iconColor: '#ff3333', title: 'Играть', path: '/game/modes' },
-    { icon: 'trophy', iconColor: '#ffd700', title: 'Турниры', path: '/tournaments' },
-    { icon: 'user', iconColor: '#aaaaaa', title: 'Профиль', path: '/profile' },
-    { icon: 'academy', iconColor: '#aaaaaa', title: 'Курсы', path: '/academy' },
-    { icon: 'city', iconColor: '#ffd700', title: 'Город', path: '/city' },
-    { icon: 'shield', iconColor: '#ffd700', title: 'Кланы', path: '/clans', disabled: (user?.level || 0) < 20 },
+    { icon: '/img/зарик.png', iconColor: '#ff3333', title: 'Играть', path: '/game/modes' },
+    { icon: '/img/кубок.png', iconColor: '#ffd700', title: 'Турниры', path: '/tournaments' },
+    { icon: '/img/челувек.png', iconColor: '#aaaaaa', title: 'Профиль', path: '/profile' },
+    { icon: '/img/шляпа.png', iconColor: '#aaaaaa', title: 'Курсы', path: '/academy' },
+    { icon: '/img/город.png', iconColor: '#ffd700', title: 'Город', path: '/city' },
+    { icon: '/img/кланы.png', iconColor: '#ffd700', title: 'Кланы', path: '/clans', disabled: (user?.level || 0) < 20 },
   ]
 
   return (
@@ -108,11 +105,11 @@ export default function Home() {
         </div>
         <div className="home-header-right">
           <div className="home-currency">
-            <Icon name="coin" size={20} style={{ color: '#ffd700' }} />
+            <img src="/img/narcoin.png" alt="coin" className="home-currency-icon" />
             <span>{stats.narCoin.toLocaleString()}</span>
           </div>
           <div className="home-energy">
-            <span style={{ color: '#ff3333', fontSize: '20px', marginRight: '4px' }}>⚡</span>
+            <img src="/img/молния.png" alt="energy" className="home-energy-icon" />
             <span>{stats.energy}/{stats.maxEnergy}</span>
           </div>
         </div>
@@ -134,12 +131,13 @@ export default function Home() {
                 }}
               >
                 <div className="home-menu-item-content">
-                  <Icon 
-                    name={item.icon} 
-                    size={24} 
+                  <img 
+                    src={item.icon} 
+                    alt={item.title}
+                    className="home-menu-icon"
                     style={{ 
-                      color: isDisabled ? '#666666' : item.iconColor,
-                      flexShrink: 0 
+                      opacity: isDisabled ? 0.5 : 1,
+                      filter: isDisabled ? 'grayscale(100%)' : 'none'
                     }} 
                   />
                   <span className="home-menu-item-title">{item.title}</span>
