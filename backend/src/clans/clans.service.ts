@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Clan } from './clan.entity';
@@ -8,9 +8,12 @@ import { UsersService } from '../users/users.service';
 import { DistrictConfig } from '../city/district-config.entity';
 import { Building } from '../city/building.entity';
 import { CityService } from '../city/city.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ClansService {
+  private readonly logger = new Logger(ClansService.name);
+
   constructor(
     @InjectRepository(Clan)
     private clansRepository: Repository<Clan>,
@@ -25,6 +28,7 @@ export class ClansService {
     private usersService: UsersService,
     @Inject(forwardRef(() => CityService))
     private cityService: CityService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async create(userId: string, name: string, description?: string): Promise<Clan> {
@@ -141,7 +145,7 @@ export class ClansService {
     }
 
     if (member.role === ClanRole.LEADER) {
-      throw new BadRequestException('Лидер не может покинуть клан');
+      throw new BadRequestException('Лидер не может покинуть клан. Используйте функцию "Распустить клан"');
     }
 
     await this.membersRepository.remove(member);
@@ -149,6 +153,76 @@ export class ClansService {
     const clan = member.clan;
     clan.memberCount--;
     await this.clansRepository.save(clan);
+  }
+
+  async disband(userId: string, clanId: string): Promise<void> {
+    const clan = await this.clansRepository.findOne({
+      where: { id: clanId },
+    });
+
+    if (!clan) {
+      throw new NotFoundException('Клан не найден');
+    }
+
+    // Проверяем, что пользователь является лидером
+    if (clan.leaderId !== userId) {
+      throw new BadRequestException('Только лидер может распустить клан');
+    }
+
+    // Получаем всех участников клана
+    const members = await this.membersRepository.find({
+      where: { clanId },
+    });
+
+    this.logger.log(`🗑️ Распускание клана ${clan.name} (${clanId}). Участников: ${members.length}`);
+
+    // Освобождаем все захваченные территории
+    if (clan.ownedDistricts && clan.ownedDistricts.length > 0) {
+      try {
+        // Находим все здания, захваченные этим кланом
+        const capturedBuildings = await this.buildingsRepository.find({
+          where: { capturedByClanId: clanId },
+        });
+
+        // Освобождаем все здания
+        for (const building of capturedBuildings) {
+          building.capturedByClanId = null;
+          building.capturedAt = null;
+          await this.buildingsRepository.save(building);
+        }
+
+        this.logger.log(`✅ Освобождено ${capturedBuildings.length} захваченных территорий`);
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при освобождении территорий: ${error.message}`, error.stack);
+      }
+    }
+
+    // Отправляем уведомления всем участникам
+    const notificationMessage = `Клан "${clan.name}" был распущен лидером. Вы больше не состоите в клане.`;
+    
+    for (const member of members) {
+      try {
+        await this.notificationsService.createNotification(
+          member.userId,
+          'Клан распущен',
+          notificationMessage,
+          'clan_disbanded',
+        );
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при отправке уведомления участнику ${member.userId}: ${error.message}`);
+      }
+    }
+
+    // Удаляем всех участников
+    await this.membersRepository.delete({ clanId });
+
+    // Удаляем все транзакции казны
+    await this.transactionsRepository.delete({ clanId });
+
+    // Удаляем клан
+    await this.clansRepository.remove(clan);
+
+    this.logger.log(`✅ Клан ${clan.name} успешно распущен. Удалено участников: ${members.length}`);
   }
 
   async getMembers(clanId: string): Promise<ClanMember[]> {

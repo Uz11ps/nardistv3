@@ -68,6 +68,8 @@ export default function ClanManage() {
     }
   }
 
+  const isLeader = member?.role === 'leader' || clan?.leaderId === user?.id
+
   const handleLeave = async () => {
     if (!confirm('Вы уверены, что хотите покинуть клан?')) {
       return
@@ -76,9 +78,27 @@ export default function ClanManage() {
     try {
       await apiClient.post(`/clans/${clanId}/leave`)
       alert('Вы покинули клан')
-      navigate('/clans')
+      navigate('/', { replace: true })
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при выходе из клана')
+    }
+  }
+
+  const handleDisband = async () => {
+    if (!confirm('Вы уверены, что хотите распустить клан? Все участники потеряют клан, и клан будет удален навсегда.')) {
+      return
+    }
+
+    if (!confirm('Это действие необратимо! Вы действительно хотите распустить клан?')) {
+      return
+    }
+
+    try {
+      await apiClient.post(`/clans/${clanId}/disband`)
+      alert('Клан распущен')
+      navigate('/', { replace: true })
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при распускании клана')
     }
   }
 
@@ -141,9 +161,15 @@ export default function ClanManage() {
           <button className="clan-manage-button" onClick={() => navigate('/city')}>
             Районы
           </button>
-          <button className="clan-manage-button clan-manage-button-leave" onClick={handleLeave}>
-            Покинуть клан
-          </button>
+          {isLeader ? (
+            <button className="clan-manage-button clan-manage-button-disband" onClick={handleDisband}>
+              Распустить клан
+            </button>
+          ) : (
+            <button className="clan-manage-button clan-manage-button-leave" onClick={handleLeave}>
+              Покинуть клан
+            </button>
+          )}
         </div>
       </div>
     </PageLayout>

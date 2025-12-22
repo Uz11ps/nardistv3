@@ -9,12 +9,14 @@ import { DistrictConfig } from '../city/district-config.entity';
 import { Building } from '../city/building.entity';
 import { UsersModule } from '../users/users.module';
 import { CityModule } from '../city/city.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Clan, ClanMember, ClanTreasuryTransaction, DistrictConfig, Building]),
     UsersModule,
     forwardRef(() => CityModule),
+    NotificationsModule,
   ],
   controllers: [ClansController],
   providers: [ClansService],
