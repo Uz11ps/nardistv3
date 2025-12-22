@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
@@ -317,7 +316,9 @@ export default function Shop() {
                   <div className="shop-subscription-price">от 199 руб.</div>
                 </div>
                 <div className="shop-subscription-icon">
-                  <Icon name="crown" size={80} style={{ color: '#ffd700' }} />
+                  <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#ffd700"/>
+                  </svg>
                 </div>
               </div>
             </Card>
