@@ -138,7 +138,7 @@ export default function Admin() {
 
   const loadStats = async () => {
     try {
-      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, districtsRes, policiesRes] = await Promise.all([
+      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, districtsRes, policiesRes, templatesRes] = await Promise.all([
         apiClient.get('/admin/stats'),
         apiClient.get('/admin/users'),
         apiClient.get('/admin/games'),
@@ -150,6 +150,7 @@ export default function Admin() {
         apiClient.get('/admin/clans').catch(() => ({ data: [] })),
         apiClient.get('/admin/districts').catch(() => ({ data: [] })),
         apiClient.get('/policy/admin/all').catch(() => ({ data: [] })),
+        apiClient.get('/admin/notification-templates').catch(() => ({ data: [] })),
       ])
       setStats(statsRes.data)
       setUsers(usersRes.data)
