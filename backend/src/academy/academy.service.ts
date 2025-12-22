@@ -270,8 +270,7 @@ export class AcademyService {
     // Создаем курс - по умолчанию не верифицирован
     const course = this.articlesRepository.create({
       title: courseData.title,
-      content: courseData.content,
-      description: courseData.description,
+      content: courseData.content || courseData.description || '',
       author: user.nickname || user.username || user.telegramId?.toString() || 'Пользователь',
       authorId: userId,
       type: 'course',
@@ -279,7 +278,7 @@ export class AcademyService {
       price: courseData.price,
       isVerified: false, // Требует верификации администратором
     });
-    return this.articlesRepository.save(course);
+    return await this.articlesRepository.save(course);
   }
 
   async verifyCourse(courseId: string, verifiedBy: string): Promise<Article> {

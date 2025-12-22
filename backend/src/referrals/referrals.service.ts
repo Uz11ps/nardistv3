@@ -103,8 +103,10 @@ export class ReferralsService {
     const currentBalance = Number(referrer.narCoin || 0);
     await this.usersService.update(referrer.id, {
       narCoin: currentBalance + totalBonus,
-      totalReferralEarnings: BigInt(Number(referrer.totalReferralEarnings || 0) + totalBonus),
     });
+    // Обновляем totalReferralEarnings напрямую через репозиторий
+    referrer.totalReferralEarnings = BigInt(Number(referrer.totalReferralEarnings || 0) + totalBonus);
+    await this.usersService['usersRepository'].save(referrer);
 
     // Сохраняем запись о доходе
     const earning = this.referralEarningsRepository.create({

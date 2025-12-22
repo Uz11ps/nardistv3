@@ -1238,13 +1238,13 @@ export class AdminService implements OnModuleInit {
     // Заменяем переменные в шаблоне
     const message = this.replaceTemplateVariables(template.message, {
       username: user.nickname || user.firstName || user.username || 'Игрок',
-      level: user.level || 1,
+      level: (user.level || 1).toString(),
       days: daysInactive.toString(),
     });
 
     const title = this.replaceTemplateVariables(template.title, {
       username: user.nickname || user.firstName || user.username || 'Игрок',
-      level: user.level || 1,
+      level: (user.level || 1).toString(),
       days: daysInactive.toString(),
     });
 
@@ -1299,7 +1299,7 @@ export class AdminService implements OnModuleInit {
       author: course.author,
       authorId: course.authorId,
       price: Number(course.price || 0),
-      description: course.description,
+      description: course.content?.substring(0, 200) || '', // Используем content как description
       createdAt: course.createdAt,
     }));
   }

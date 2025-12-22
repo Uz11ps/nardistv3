@@ -95,7 +95,9 @@ export class SubscriptionService {
     }
 
     // Активируем автобилд
-    await this.usersService.update(userId, { hasCityAutobuild: true });
+    const user = await this.usersService.findOne(userId);
+    user.hasCityAutobuild = true;
+    await this.usersService['usersRepository'].save(user);
   }
 
   /**

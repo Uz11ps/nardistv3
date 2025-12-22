@@ -320,7 +320,7 @@ export class CityService {
   private async processAutobuild(userId: string, districtsData: any[]): Promise<void> {
     try {
       const user = await this.usersService.findOne(userId);
-      const userBalance = Number(user.narCoin);
+      let userBalance = Number(user.narCoin);
 
       for (const district of districtsData) {
         // Если у пользователя уже есть постройка в этом районе, пропускаем
