@@ -380,12 +380,11 @@ export class AdminService {
   }
 
   async getCityRewards() {
-    const configs = await this.buildingConfigsRepository.find({
-      order: [
-        { district: 'ASC' },
-        { type: 'ASC' },
-      ],
-    });
+    const configs = await this.buildingConfigsRepository
+      .createQueryBuilder('config')
+      .orderBy('config.district', 'ASC')
+      .addOrderBy('config.type', 'ASC')
+      .getMany();
 
     return {
       buildings: configs.map(c => ({
@@ -720,7 +719,19 @@ export class AdminService {
     startDate: Date;
     endDate: Date;
   }) {
-    const quest = this.questsRepository.create(data);
+    const quest = this.questsRepository.create({
+      name: data.name,
+      description: data.description,
+      type: data.type,
+      target: data.target,
+      targetValue: data.targetValue,
+      rewardNarCoin: data.rewardNarCoin.toString(), // Преобразуем в строку для bigint
+      rewardXP: data.rewardXP,
+      rewardSkin: data.rewardSkin,
+      isPremium: data.isPremium,
+      startDate: data.startDate,
+      endDate: data.endDate,
+    });
     return this.questsRepository.save(quest);
   }
 
