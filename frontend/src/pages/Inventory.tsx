@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
+import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
-import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import './Inventory.css'
 
@@ -34,6 +33,7 @@ export default function Inventory() {
   const [selectedSkinIds, setSelectedSkinIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [selectingSkinId, setSelectingSkinId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'board' | 'checkers' | 'dice'>('board')
 
   useEffect(() => {
     loadInventory()
@@ -43,7 +43,6 @@ export default function Inventory() {
   const loadInventory = async () => {
     try {
       setLoading(true)
-      // Загружаем как купленные скины, так и дефолтные скины
       const [mySkinsResponse, allSkinsResponse] = await Promise.all([
         apiClient.get('/skins/my'),
         apiClient.get('/skins'),
@@ -52,13 +51,9 @@ export default function Inventory() {
       const mySkins = mySkinsResponse.data || []
       const allSkins = allSkinsResponse.data || []
       
-      // Получаем ID купленных скинов
       const ownedSkinIds = new Set(mySkins.map((s: Skin) => s.id))
-      
-      // Добавляем дефолтные скины (они доступны всем бесплатно)
       const defaultSkins = allSkins.filter((s: Skin) => s.isDefault)
       
-      // Объединяем купленные и дефолтные скины, избегая дубликатов
       const allAvailableSkins = [
         ...mySkins,
         ...defaultSkins.filter((s: Skin) => !ownedSkinIds.has(s.id)),
@@ -89,7 +84,7 @@ export default function Inventory() {
   }
 
   const handleSelectSkin = async (skinId: string) => {
-    if (selectingSkinId !== null) return // Защита от повторных запросов
+    if (selectingSkinId !== null) return
     
     try {
       setSelectingSkinId(skinId)
@@ -105,51 +100,91 @@ export default function Inventory() {
 
   const getRarityName = (rarity: string) => {
     const rarityNames: { [key: string]: string } = {
-      common: 'Обычный',
-      rare: 'Редкий',
-      epic: 'Эпический',
-      legendary: 'Легендарный',
+      common: 'Обычная',
+      rare: 'Редкая',
+      epic: 'Эпическая',
+      legendary: 'Легендарная',
     }
     return rarityNames[rarity] || rarity
   }
 
-  const getTypeName = (type: string) => {
-    const typeNames: { [key: string]: string } = {
-      board: 'Доска',
-      dice: 'Кости',
-      checkers: 'Шашки',
+  const getFilteredSkins = () => {
+    return skins.filter(s => {
+      if (activeTab === 'board') return s.type === 'board'
+      if (activeTab === 'checkers') return s.type === 'checkers'
+      if (activeTab === 'dice') return s.type === 'dice'
+      return false
+    })
+  }
+
+  const tabs = [
+    { id: 'board', label: 'Доски', active: activeTab === 'board', onClick: () => setActiveTab('board') },
+    { id: 'checkers', label: 'Шашки', active: activeTab === 'checkers', onClick: () => setActiveTab('checkers') },
+    { id: 'dice', label: 'Кубики', active: activeTab === 'dice', onClick: () => setActiveTab('dice') },
+  ]
+
+  const renderSkinCard = (skin: Skin) => {
+    const isSelected = selectedSkinIds.has(skin.id)
+    // Используем изображение доски по умолчанию для досок без imageUrl
+    const getImageUrl = () => {
+      if (skin.imageUrl) return skin.imageUrl
+      if (skin.type === 'board') return '/img/3a87c78273c1488e736bcebbfc6ea74f1dc383a7.png'
+      return null
     }
-    return typeNames[type] || type
-  }
 
-  const getRarityBadgeClass = (rarity: string) => {
-    return `inventory-rarity-badge inventory-rarity-${rarity}`
-  }
+    const imageUrl = getImageUrl()
 
-  // Группируем скины по типу
-  const groupedSkins = {
-    board: skins.filter(s => s.type === 'board'),
-    dice: skins.filter(s => s.type === 'dice'),
-    checkers: skins.filter(s => s.type === 'checkers'),
+    return (
+      <Card key={skin.id} className="inventory-item">
+        <div className="inventory-item-content">
+          <div className="inventory-item-image-container">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={skin.name}
+                className="inventory-item-image"
+                onError={(e) => {
+                  console.error('Failed to load skin image:', imageUrl)
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+            ) : (
+              <div className="inventory-item-image-placeholder">
+                <div style={{ fontSize: '48px' }}>🎲</div>
+              </div>
+            )}
+          </div>
+          <div className="inventory-item-info">
+            <div className="inventory-item-name">{skin.name}</div>
+            <div className="inventory-item-rarity">{getRarityName(skin.rarity)}</div>
+          </div>
+          <button
+            className={`inventory-item-button ${isSelected ? 'equipped' : 'wear'}`}
+            onClick={() => !isSelected && handleSelectSkin(skin.id)}
+            disabled={selectingSkinId === skin.id || selectingSkinId !== null || isSelected}
+          >
+            {isSelected ? 'Экипировано' : selectingSkinId === skin.id ? 'Надевание...' : 'Надеть'}
+          </button>
+        </div>
+      </Card>
+    )
   }
 
   return (
-    <div className="app-container">
-      <PageHeader title="Инвентарь" />
-      
+    <PageLayout title="Инвентарь" showBack={true} tabs={tabs}>
       <div className="inventory-content">
         {loading ? (
           <Card>
             <div className="inventory-empty">Загрузка...</div>
           </Card>
-        ) : skins.length === 0 ? (
+        ) : getFilteredSkins().length === 0 ? (
           <Card>
             <div className="inventory-empty">
               Инвентарь пуст. Купите скины в магазине!
             </div>
             <div style={{ marginTop: '16px', textAlign: 'center' }}>
               <button 
-                className="btn btn-primary"
+                className="inventory-item-button wear"
                 onClick={() => navigate('/shop')}
               >
                 Перейти в магазин
@@ -158,177 +193,10 @@ export default function Inventory() {
           </Card>
         ) : (
           <div className="inventory-list">
-            {/* Доски */}
-            {groupedSkins.board.length > 0 && (
-              <div className="inventory-section">
-                <div className="inventory-section-title">Доски</div>
-                {groupedSkins.board.map((skin) => (
-                  <Card key={skin.id} className="inventory-item">
-                    <div className="inventory-item-content">
-                      <div className="inventory-item-image">
-                        {skin.imageUrl ? (
-                          <img
-                            src={skin.imageUrl}
-                            alt={skin.name}
-                            className="inventory-image"
-                            onError={(e) => {
-                              console.error('Failed to load skin image:', skin.imageUrl)
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        ) : (
-                          <Icon name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} size={48} />
-                        )}
-                        {selectedSkinIds.has(skin.id) && (
-                          <div className="inventory-item-selected">
-                            <Icon name="check" size={16} />
-                          </div>
-                        )}
-                      </div>
-                      <div className="inventory-item-info">
-                        <div className="inventory-item-header">
-                          <div className="inventory-item-name">{skin.name}</div>
-                          <span className={getRarityBadgeClass(skin.rarity)}>
-                            {getRarityName(skin.rarity)}
-                          </span>
-                        </div>
-                        <div className="inventory-item-meta">
-                          <span className="inventory-item-type">{getTypeName(skin.type)}</span>
-                          <span className="inventory-item-weight">Вес: {skin.weight}</span>
-                        </div>
-                        {skin.description && (
-                          <div className="inventory-item-description">{skin.description}</div>
-                        )}
-                      </div>
-                      {!selectedSkinIds.has(skin.id) && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleSelectSkin(skin.id)}
-                          disabled={selectingSkinId === skin.id || selectingSkinId !== null}
-                        >
-                          {selectingSkinId === skin.id ? 'Выбор...' : 'Выбрать'}
-                        </button>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {/* Кости */}
-            {groupedSkins.dice.length > 0 && (
-              <div className="inventory-section">
-                <div className="inventory-section-title">Кости</div>
-                {groupedSkins.dice.map((skin) => (
-                  <Card key={skin.id} className="inventory-item">
-                    <div className="inventory-item-content">
-                      <div className="inventory-item-image">
-                        {skin.imageUrl ? (
-                          <img
-                            src={skin.imageUrl}
-                            alt={skin.name}
-                            className="inventory-image"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        ) : (
-                          <Icon name="dice" size={48} />
-                        )}
-                        {selectedSkinIds.has(skin.id) && (
-                          <div className="inventory-item-selected">
-                            <Icon name="check" size={16} />
-                          </div>
-                        )}
-                      </div>
-                      <div className="inventory-item-info">
-                        <div className="inventory-item-header">
-                          <div className="inventory-item-name">{skin.name}</div>
-                          <span className={getRarityBadgeClass(skin.rarity)}>
-                            {getRarityName(skin.rarity)}
-                          </span>
-                        </div>
-                        <div className="inventory-item-meta">
-                          <span className="inventory-item-type">{getTypeName(skin.type)}</span>
-                          <span className="inventory-item-weight">Вес: {skin.weight}</span>
-                        </div>
-                        {skin.description && (
-                          <div className="inventory-item-description">{skin.description}</div>
-                        )}
-                      </div>
-                      {!selectedSkinIds.has(skin.id) && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleSelectSkin(skin.id)}
-                          disabled={selectingSkinId === skin.id || selectingSkinId !== null}
-                        >
-                          {selectingSkinId === skin.id ? 'Выбор...' : 'Выбрать'}
-                        </button>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {/* Шашки */}
-            {groupedSkins.checkers.length > 0 && (
-              <div className="inventory-section">
-                <div className="inventory-section-title">Шашки</div>
-                {groupedSkins.checkers.map((skin) => (
-                  <Card key={skin.id} className="inventory-item">
-                    <div className="inventory-item-content">
-                      <div className="inventory-item-image">
-                        {skin.imageUrl ? (
-                          <img
-                            src={skin.imageUrl}
-                            alt={skin.name}
-                            className="inventory-image"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        ) : (
-                          <Icon name="target" size={48} />
-                        )}
-                        {selectedSkinIds.has(skin.id) && (
-                          <div className="inventory-item-selected">
-                            <Icon name="check" size={16} />
-                          </div>
-                        )}
-                      </div>
-                      <div className="inventory-item-info">
-                        <div className="inventory-item-header">
-                          <div className="inventory-item-name">{skin.name}</div>
-                          <span className={getRarityBadgeClass(skin.rarity)}>
-                            {getRarityName(skin.rarity)}
-                          </span>
-                        </div>
-                        <div className="inventory-item-meta">
-                          <span className="inventory-item-type">{getTypeName(skin.type)}</span>
-                          <span className="inventory-item-weight">Вес: {skin.weight}</span>
-                        </div>
-                        {skin.description && (
-                          <div className="inventory-item-description">{skin.description}</div>
-                        )}
-                      </div>
-                      {!selectedSkinIds.has(skin.id) && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleSelectSkin(skin.id)}
-                          disabled={selectingSkinId === skin.id || selectingSkinId !== null}
-                        >
-                          {selectingSkinId === skin.id ? 'Выбор...' : 'Выбрать'}
-                        </button>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
+            {getFilteredSkins().map((skin) => renderSkinCard(skin))}
           </div>
         )}
       </div>
-    </div>
+    </PageLayout>
   )
 }
