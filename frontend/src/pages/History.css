@@ -234,3 +234,19 @@
   }
 }
 
+.history-error-card,
+.history-recommendation-card {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+}
+
+.history-modal-close-btn {
+  transition: all 0.2s;
+}
+
+.history-modal-close-btn:hover {
+  background: #4a4a4a !important;
+  transform: scale(1.02);
+}
+
