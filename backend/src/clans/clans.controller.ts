@@ -55,6 +55,13 @@ export class ClansController {
     return { message: 'Вы покинули клан' };
   }
 
+  @Post(':id/disband')
+  @UseGuards(JwtAuthGuard)
+  async disband(@CurrentUser() user: any, @Param('id') id: string) {
+    await this.clansService.disband(user.id, id);
+    return { message: 'Клан распущен' };
+  }
+
   @Post(':id/contribute')
   @UseGuards(JwtAuthGuard)
   async contribute(

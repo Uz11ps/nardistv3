@@ -103,6 +103,7 @@ export class CityService {
         await this.questsService.updateProgress(userId, QuestTarget.COLLECT_INCOME, 1);
       } catch (error) {
         // Логируем ошибку, но не прерываем процесс
+        // Используем console.error, так как Logger может быть не доступен в CityService
         console.error('Ошибка при обновлении квестов collect_income:', error);
       }
       

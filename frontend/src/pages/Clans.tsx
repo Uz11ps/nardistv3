@@ -24,7 +24,11 @@ export default function Clans() {
       const response = await apiClient.get('/clans/my')
       if (response.data?.clan) {
         // У пользователя есть федерация - перенаправляем на панель управления
-        navigate(`/clans/${response.data.clan.id}/manage`)
+        // Но только если мы не на странице /clans (чтобы избежать циклов)
+        const currentPath = window.location.pathname
+        if (currentPath === '/clans' || currentPath.startsWith('/clans/')) {
+          navigate(`/clans/${response.data.clan.id}/manage`, { replace: true })
+        }
         return
       }
     } catch (error) {

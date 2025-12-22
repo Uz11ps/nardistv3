@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +10,8 @@ import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class QuestsService {
+  private readonly logger = new Logger(QuestsService.name);
+
   constructor(
     @InjectRepository(Quest)
     private questsRepository: Repository<Quest>,
@@ -153,41 +155,77 @@ export class QuestsService {
   }
 
   async updateProgress(userId: string, target: QuestTarget | string, amount: number = 1): Promise<void> {
-    const now = new Date();
-    const quests = await this.questsRepository
-      .createQueryBuilder('quest')
-      .where('quest.target = :target', { target })
-      .andWhere('quest.startDate <= :now', { now })
-      .andWhere('quest.endDate >= :now', { now })
-      .andWhere('(quest.type = :daily OR quest.type = :weekly OR quest.type = :special)', {
-        daily: QuestType.DAILY,
-        weekly: QuestType.WEEKLY,
-        special: QuestType.SPECIAL,
-      })
-      .getMany();
+    try {
+      // Преобразуем enum в строку для сравнения
+      // QuestTarget enum значения это строки: 'play_matches', 'win_streak', etc.
+      let targetValue: string;
+      if (typeof target === 'string') {
+        targetValue = target;
+      } else {
+        // Для enum TypeScript со строковыми значениями используем прямое значение
+        // QuestTarget.PLAY_MATCHES === 'play_matches'
+        targetValue = target as string;
+      }
+      
+      this.logger.log(`📋 Обновление прогресса квестов: userId=${userId}, target=${targetValue}, amount=${amount}`);
+      
+      const now = new Date();
+      
+      // Ищем активные квесты с указанной целью
+      const quests = await this.questsRepository
+        .createQueryBuilder('quest')
+        .where('quest.target = :target', { target: targetValue })
+        .andWhere('quest.startDate <= :now', { now })
+        .andWhere('quest.endDate >= :now', { now })
+        .andWhere('(quest.type = :daily OR quest.type = :weekly OR quest.type = :special)', {
+          daily: QuestType.DAILY,
+          weekly: QuestType.WEEKLY,
+          special: QuestType.SPECIAL,
+        })
+        .getMany();
 
-    for (const quest of quests) {
-      let progress = await this.progressRepository.findOne({
-        where: { userId, questId: quest.id },
-      });
+      this.logger.log(`📋 Найдено активных квестов с target=${targetValue}: ${quests.length}`);
 
-      if (!progress) {
-        progress = this.progressRepository.create({
-          userId,
-          questId: quest.id,
-          progress: 0,
-          completed: false,
-          claimed: false,
+      if (quests.length === 0) {
+        this.logger.warn(`⚠️ Не найдено активных квестов для target=${targetValue}`);
+        return;
+      }
+
+      for (const quest of quests) {
+        let progress = await this.progressRepository.findOne({
+          where: { userId, questId: quest.id },
         });
-      }
 
-      if (!progress.completed) {
-        progress.progress += amount;
-        if (progress.progress >= quest.targetValue) {
-          progress.completed = true;
+        if (!progress) {
+          progress = this.progressRepository.create({
+            userId,
+            questId: quest.id,
+            progress: 0,
+            completed: false,
+            claimed: false,
+          });
+          this.logger.log(`📋 Создан новый прогресс для квеста ${quest.id} (${quest.name})`);
         }
-        await this.progressRepository.save(progress);
+
+        if (!progress.completed) {
+          const oldProgress = progress.progress;
+          progress.progress += amount;
+          
+          if (progress.progress >= quest.targetValue) {
+            progress.completed = true;
+            this.logger.log(`✅ Квест ${quest.id} (${quest.name}) выполнен! Прогресс: ${oldProgress} -> ${progress.progress}/${quest.targetValue}`);
+          } else {
+            this.logger.log(`📈 Прогресс квеста ${quest.id} (${quest.name}): ${oldProgress} -> ${progress.progress}/${quest.targetValue}`);
+          }
+          
+          await this.progressRepository.save(progress);
+        } else {
+          this.logger.log(`⏭️ Квест ${quest.id} (${quest.name}) уже выполнен, пропускаем`);
+        }
       }
+    } catch (error) {
+      this.logger.error(`❌ Ошибка при обновлении прогресса квестов: ${error.message}`, error.stack);
+      throw error;
     }
   }
 
