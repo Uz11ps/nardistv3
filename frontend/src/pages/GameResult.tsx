@@ -10,8 +10,8 @@ export default function GameResult() {
   const location = useLocation()
   
   // Получаем результат из state навигации или параметров
-  const gameResult = location.state || { result: 'win', score: { player1: 5, player2: 2 } }
-  const { result, score } = gameResult
+  const gameResult = location.state || { result: 'win', score: { player1: 5, player2: 2 }, stake: 0 }
+  const { result, score, stake = 0 } = gameResult
 
   useEffect(() => {
     // Если нет gameId и результата, перенаправляем на главную
@@ -58,9 +58,21 @@ export default function GameResult() {
           {isWinner && (
             <div style={{ marginTop: '16px', padding: '12px', background: '#3a3a3a', borderRadius: '8px' }}>
               <div style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '4px' }}>Награды:</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ color: '#ff3333', fontWeight: 600 }}>🔥 +100 XP</span>
+                {stake > 0 && (
+                  <span className="gold" style={{ fontWeight: 600 }}>
+                    💰 +{Math.floor(stake * 2 * 0.95)} NAR (ставка с комиссией 5%)
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+          {!isWinner && !isDraw && (
+            <div style={{ marginTop: '16px', padding: '12px', background: '#3a3a3a', borderRadius: '8px' }}>
+              <div style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '4px' }}>Награды:</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="gold" style={{ fontWeight: 600 }}>💰 +50 NAR</span>
-                <span style={{ color: '#ff3333', fontWeight: 600 }}>🔥 +25 XP</span>
+                <span style={{ color: '#ff3333', fontWeight: 600 }}>🔥 +50 XP</span>
               </div>
             </div>
           )}

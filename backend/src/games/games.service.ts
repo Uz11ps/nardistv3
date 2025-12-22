@@ -10,6 +10,7 @@ import { RatingsService } from '../ratings/ratings.service';
 import { UsersService } from '../users/users.service';
 import { BotService } from '../bot/bot.service';
 import { SkinsService } from '../skins/skins.service';
+import { QuestsService } from '../quests/quests.service';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -33,6 +34,8 @@ export class GamesService {
     private botService: BotService,
     @Inject(forwardRef(() => SkinsService))
     private skinsService: SkinsService,
+    @Inject(forwardRef(() => QuestsService))
+    private questsService: QuestsService,
   ) {}
 
   async create(
@@ -703,39 +706,56 @@ export class GamesService {
       }
     }
 
-    // Обработка ставок - победитель получает обе ставки (с учетом комиссии)
+    // Обработка ставок - победитель получает обе ставки (с учетом комиссии 10%)
     if (game.stake > 0 && game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
       try {
         const stake = Number(game.stake);
         const totalPot = stake * 2;
-        const baseCommission = Math.floor(totalPot * 0.05); // 5% комиссия
+        const commission = Math.floor(totalPot * 0.05); // 5% комиссия
         
         // Применяем снижение комиссии через экономику
         const winnerUser = await this.usersService.findOne(game.winnerId);
         const economyLevel = winnerUser.enhancement === 'economy' ? 1 : 0; // TODO: получить уровень экономики
-        const finalCommission = this.progressService.calculateFeeWithEconomy(baseCommission, economyLevel);
+        const finalCommission = this.progressService.calculateFeeWithEconomy(commission, economyLevel);
         const winnerReward = totalPot - finalCommission;
 
         const winnerBalance = Number(winnerUser.narCoin);
         const newWinnerBalance = winnerBalance + winnerReward;
         await this.usersService.update(game.winnerId, { narCoin: newWinnerBalance });
-        this.logger.log(`💰 Награда начислена победителю ${game.winnerId}: +${winnerReward} NAR (было ${winnerBalance}, стало ${newWinnerBalance})`);
+        this.logger.log(`💰 Награда начислена победителю ${game.winnerId}: +${winnerReward} NAR (было ${winnerBalance}, стало ${newWinnerBalance}), комиссия: ${finalCommission} NAR`);
       } catch (error) {
         this.logger.error(`❌ Ошибка при начислении ставки: ${error.message}`, error.stack);
       }
     }
 
     // Начисление опыта: победителю больше, проигравшему меньше
+    // Проигравший НЕ получает NAR, только победитель получает ставку (если есть)
     if (game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
       try {
-        const WINNER_XP = 50; // Опыт за победу
-        const LOSER_XP = 25; // Опыт за участие (проигрыш)
+        const WINNER_XP = 100; // XP за победу
+        const LOSER_XP = 50; // XP за участие
         
         await this.progressService.addXP(game.winnerId, WINNER_XP);
         await this.progressService.addXP(loserId, LOSER_XP);
-        this.logger.log(`⭐ Опыт начислен: победитель ${game.winnerId} +${WINNER_XP} XP, проигравший ${loserId} +${LOSER_XP} XP`);
+        this.logger.log(`⭐ XP начислен: победитель ${game.winnerId} +${WINNER_XP} XP, проигравший ${loserId} +${LOSER_XP} XP`);
       } catch (error) {
-        this.logger.error(`❌ Ошибка при начислении опыта: ${error.message}`, error.stack);
+        this.logger.error(`❌ Ошибка при начислении XP: ${error.message}`, error.stack);
+      }
+    }
+    
+    // Обновление квестов при завершении игры
+    if (game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
+      try {
+        // Обновляем квесты для обоих игроков
+        await this.questsService.updateProgress(game.winnerId, 'play_matches', 1);
+        await this.questsService.updateProgress(loserId, 'play_matches', 1);
+        
+        // Обновляем квесты на серию побед для победителя
+        await this.questsService.updateProgress(game.winnerId, 'win_streak', 1);
+        
+        this.logger.log(`📋 Квесты обновлены для игроков ${game.winnerId} и ${loserId}`);
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при обновлении квестов: ${error.message}`, error.stack);
       }
     }
 

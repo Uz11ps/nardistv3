@@ -7,8 +7,37 @@ import { GameType } from '../games/game.entity';
 
 @Injectable()
 export class ProgressService {
-  private readonly XP_PER_LEVEL = 1000;
   private readonly MAX_LEVEL = 50;
+  
+  /**
+   * Вычисляет требуемый XP для перехода с уровня (level-1) на level
+   * Формула: 1->2 = 200 XP, дальше *1.25 до 50 уровня
+   * Округляется до круглых чисел (кратных 10)
+   */
+  private getXPRequiredForLevel(level: number): number {
+    if (level <= 1) return 0;
+    if (level === 2) return 200;
+    // Для уровней 3-50: предыдущий переход * 1.25, округляем до кратных 10
+    let xp = 200;
+    for (let i = 3; i <= level; i++) {
+      xp = Math.floor(xp * 1.25);
+      // Округляем до кратных 10
+      xp = Math.round(xp / 10) * 10;
+    }
+    return xp;
+  }
+  
+  /**
+   * Вычисляет общий XP для уровня (сумма всех переходов до этого уровня)
+   */
+  private getTotalXPForLevel(level: number): number {
+    if (level <= 1) return 0;
+    let totalXP = 0;
+    for (let i = 2; i <= level; i++) {
+      totalXP += this.getXPRequiredForLevel(i);
+    }
+    return totalXP;
+  }
   private readonly ENERGY_RESTORE_INTERVAL = 30 * 60 * 1000; // 30 минут
   private readonly ENERGY_RESTORE_AMOUNT = 10; // 10 энергии за восстановление
   private readonly LIFE_RESTORE_INTERVAL = 4 * 60 * 60 * 1000; // 4 часа
@@ -25,16 +54,31 @@ export class ProgressService {
 
   async addXP(userId: string, amount: number): Promise<void> {
     const user = await this.usersService.findOne(userId);
-    const newXP = Number(user.xp) + amount;
-    const newLevel = Math.min(
-      Math.floor(newXP / this.XP_PER_LEVEL) + 1,
-      this.MAX_LEVEL,
-    );
-
-    user.xp = BigInt(newXP);
-    if (newLevel > user.level) {
-      user.level = newLevel;
+    if (user.level >= this.MAX_LEVEL) {
+      return; // Максимальный уровень достигнут
     }
+    
+    // Текущий XP = сумма всех XP до текущего уровня
+    let currentXP = this.getTotalXPForLevel(user.level);
+    
+    // Добавляем полученный XP
+    currentXP += amount;
+    
+    // Вычисляем новый уровень
+    let newLevel = user.level;
+    while (newLevel < this.MAX_LEVEL) {
+      const xpForNextLevel = this.getTotalXPForLevel(newLevel + 1);
+      if (currentXP >= xpForNextLevel) {
+        newLevel++;
+      } else {
+        break;
+      }
+    }
+    
+    // Обновляем уровень и XP
+    user.level = newLevel;
+    user.xp = BigInt(currentXP);
+    
     await this.usersService['usersRepository'].save(user);
   }
 
