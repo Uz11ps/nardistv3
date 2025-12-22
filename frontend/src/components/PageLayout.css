@@ -86,6 +86,12 @@
   padding: 0 16px;
   border-bottom: none;
   margin-bottom: 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.page-layout-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .page-layout-tab {
@@ -100,12 +106,28 @@
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.page-layout-tab:hover {
+  color: #FFF;
 }
 
 .page-layout-tab.active {
   color: #FFF;
-  border-bottom-color: #C93C3D;
   font-weight: 500;
+}
+
+.page-layout-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #C93C3D;
 }
 
 /* Body */
