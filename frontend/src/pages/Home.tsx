@@ -71,7 +71,7 @@ export default function Home() {
 
   const menuItems = [
     { icon: '/img/зарик.png', iconColor: '#ff3333', title: 'Играть', path: '/game/modes' },
-    { icon: '/img/кубок.png', iconColor: '#ffd700', title: 'Турниры', path: '/tournaments' },
+    { icon: '/img/bc2f47f8e19b304a17797792349ca52f3fc27ad6.png', iconColor: '#ffd700', title: 'Турниры', path: '/tournaments' },
     { icon: '/img/челувек.png', iconColor: '#aaaaaa', title: 'Профиль', path: '/profile' },
     { icon: '/img/шляпа.png', iconColor: '#aaaaaa', title: 'Курсы', path: '/academy' },
     { icon: '/img/город.png', iconColor: '#ffd700', title: 'Город', path: '/city' },
