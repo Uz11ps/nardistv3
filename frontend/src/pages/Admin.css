@@ -953,3 +953,112 @@
     flex-direction: column;
   }
 }
+
+/* ============================================
+   ПОЛИТИКА
+   ============================================ */
+
+.admin-policy {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.policy-section {
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 12px;
+  padding: 24px;
+  transition: all 0.2s;
+}
+
+.policy-section:hover {
+  border-color: #4a4a4a;
+}
+
+.policy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.policy-header h4 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.policy-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.policy-textarea {
+  width: 100%;
+  min-height: 400px;
+  padding: 16px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  transition: all 0.2s;
+}
+
+.policy-textarea:focus {
+  outline: none;
+  border-color: #ff3333;
+  box-shadow: 0 0 0 3px rgba(255, 51, 51, 0.1);
+}
+
+.policy-preview {
+  padding: 20px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #cccccc;
+  font-size: 14px;
+  line-height: 1.8;
+  min-height: 200px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.policy-preview p {
+  margin: 0 0 12px 0;
+}
+
+.policy-preview p:last-child {
+  margin-bottom: 0;
+}
+
+.policy-empty {
+  color: #888888;
+  font-style: italic;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+@media (max-width: 768px) {
+  .policy-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .policy-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .policy-actions .btn {
+    width: 100%;
+  }
+}

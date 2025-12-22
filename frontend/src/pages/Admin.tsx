@@ -32,11 +32,14 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy'>('stats')
   const [tournaments, setTournaments] = useState<any[]>([])
   const [articles, setArticles] = useState<any[]>([])
   const [cityRewards, setCityRewards] = useState<any>(null)
   const [districts, setDistricts] = useState<any[]>([])
+  const [policies, setPolicies] = useState<{ privacy?: string; agreement?: string }>({})
+  const [editingPolicy, setEditingPolicy] = useState<'privacy' | 'agreement' | null>(null)
+  const [policyContent, setPolicyContent] = useState('')
   const [selectedDistrict, setSelectedDistrict] = useState<any>(null)
   const [newDistrict, setNewDistrict] = useState({
     code: '',
@@ -131,7 +134,7 @@ export default function Admin() {
 
   const loadStats = async () => {
     try {
-      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, districtsRes] = await Promise.all([
+      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, districtsRes, policiesRes] = await Promise.all([
         apiClient.get('/admin/stats'),
         apiClient.get('/admin/users'),
         apiClient.get('/admin/games'),
@@ -154,8 +157,55 @@ export default function Admin() {
       setQuests(questsRes.data || [])
       setClans(clansRes.data || [])
       setDistricts(districtsRes.data || [])
+      
+      // Загружаем политики
+      const policiesData: { privacy?: string; agreement?: string } = {}
+      if (policiesRes.data && Array.isArray(policiesRes.data)) {
+        policiesRes.data.forEach((p: any) => {
+          if (p.type === 'privacy') policiesData.privacy = p.content
+          if (p.type === 'agreement') policiesData.agreement = p.content
+        })
+      }
+      setPolicies(policiesData)
     } catch (error) {
       console.error('Ошибка загрузки данных:', error)
+    }
+  }
+
+  const loadPolicies = async () => {
+    try {
+      const response = await apiClient.get('/policy/admin/all').catch(() => ({ data: [] }))
+      const policiesData: { privacy?: string; agreement?: string } = {}
+      if (response.data && Array.isArray(response.data)) {
+        response.data.forEach((p: any) => {
+          if (p.type === 'privacy') policiesData.privacy = p.content
+          if (p.type === 'agreement') policiesData.agreement = p.content
+        })
+      }
+      setPolicies(policiesData)
+    } catch (error) {
+      console.error('Failed to load policies:', error)
+    }
+  }
+
+  const handleEditPolicy = (type: 'privacy' | 'agreement') => {
+    setEditingPolicy(type)
+    setPolicyContent(policies[type] || '')
+  }
+
+  const handleSavePolicy = async () => {
+    if (!editingPolicy) return
+    try {
+      await apiClient.post('/policy', {
+        type: editingPolicy,
+        content: policyContent
+      })
+      alert('Политика сохранена')
+      setEditingPolicy(null)
+      setPolicyContent('')
+      loadPolicies()
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.response?.data?.message || error.message))
     }
   }
 
@@ -341,6 +391,15 @@ export default function Admin() {
           onClick={() => setActiveTab('clans')}
         >
           Кланы
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'policy' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('policy')
+            loadPolicies()
+          }}
+        >
+          Политика
         </button>
       </div>
 
@@ -2059,6 +2118,92 @@ export default function Admin() {
                   )}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'policy' && (
+          <div className="admin-policy">
+            <h3>Управление политиками</h3>
+            
+            <div className="policy-section">
+              <div className="policy-header">
+                <h4>Политика конфиденциальности</h4>
+                {editingPolicy !== 'privacy' ? (
+                  <button className="btn btn-primary" onClick={() => handleEditPolicy('privacy')}>
+                    Редактировать
+                  </button>
+                ) : (
+                  <div className="policy-actions">
+                    <button className="btn btn-primary" onClick={handleSavePolicy}>
+                      Сохранить
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => {
+                      setEditingPolicy(null)
+                      setPolicyContent('')
+                    }}>
+                      Отмена
+                    </button>
+                  </div>
+                )}
+              </div>
+              {editingPolicy === 'privacy' ? (
+                <textarea
+                  className="policy-textarea"
+                  value={policyContent}
+                  onChange={(e) => setPolicyContent(e.target.value)}
+                  rows={20}
+                  placeholder="Введите текст политики конфиденциальности..."
+                />
+              ) : (
+                <div className="policy-preview">
+                  {policies.privacy ? (
+                    <div dangerouslySetInnerHTML={{ __html: policies.privacy.replace(/\n/g, '<br />') }} />
+                  ) : (
+                    <p className="policy-empty">Политика конфиденциальности еще не создана</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="policy-section">
+              <div className="policy-header">
+                <h4>Политика соглашения</h4>
+                {editingPolicy !== 'agreement' ? (
+                  <button className="btn btn-primary" onClick={() => handleEditPolicy('agreement')}>
+                    Редактировать
+                  </button>
+                ) : (
+                  <div className="policy-actions">
+                    <button className="btn btn-primary" onClick={handleSavePolicy}>
+                      Сохранить
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => {
+                      setEditingPolicy(null)
+                      setPolicyContent('')
+                    }}>
+                      Отмена
+                    </button>
+                  </div>
+                )}
+              </div>
+              {editingPolicy === 'agreement' ? (
+                <textarea
+                  className="policy-textarea"
+                  value={policyContent}
+                  onChange={(e) => setPolicyContent(e.target.value)}
+                  rows={20}
+                  placeholder="Введите текст политики соглашения..."
+                />
+              ) : (
+                <div className="policy-preview">
+                  {policies.agreement ? (
+                    <div dangerouslySetInnerHTML={{ __html: policies.agreement.replace(/\n/g, '<br />') }} />
+                  ) : (
+                    <p className="policy-empty">Политика соглашения еще не создана</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

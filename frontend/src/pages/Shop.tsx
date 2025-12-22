@@ -343,7 +343,7 @@ export default function Shop() {
                   <div className="shop-subscription-title">Премиум доступ</div>
                   <button
                     className="shop-subscription-buy-btn"
-                    onClick={() => navigate('/subscription')}
+                    onClick={() => handleBuySubscription('premium', 199)}
                   >
                     Купить
                   </button>
