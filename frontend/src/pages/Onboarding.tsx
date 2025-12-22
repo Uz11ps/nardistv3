@@ -22,6 +22,14 @@ export default function Onboarding() {
         const currentUser = useAuthStore.getState().user
         
         if (currentUser) {
+          // Если это мок-гость, пропускаем онбординг и переходим на главную
+          if (currentUser.isGuest) {
+            console.log('✅ Мок-гость обнаружен, пропускаем онбординг')
+            navigate('/')
+            setLoading(false)
+            return
+          }
+          
           // Проверяем статус онбординга
           try {
             const response = await apiClient.get('/onboarding/status')
@@ -45,8 +53,14 @@ export default function Onboarding() {
               // Нужно заполнить профиль
               setCurrentStep('profile')
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error('Failed to load onboarding status:', error)
+            // Если ошибка сети и это мок-гость, пропускаем онбординг
+            if (currentUser.isGuest && (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error'))) {
+              console.log('✅ Мок-гость, пропускаем онбординг из-за недоступности сервера')
+              navigate('/')
+              return
+            }
             // Если ошибка, показываем welcome
             setCurrentStep('welcome')
           }
@@ -73,11 +87,25 @@ export default function Onboarding() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#1a1a1a',
+          background: 'url(/img/App2.png) no-repeat center center fixed',
+          backgroundSize: 'cover',
+          backgroundColor: '#1a1a1a',
           color: '#ffffff',
+          position: 'relative',
         }}
       >
-        Загрузка...
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(26, 26, 26, 0.7)',
+            zIndex: 0,
+          }}
+        />
+        <div style={{ position: 'relative', zIndex: 1 }}>Загрузка...</div>
       </div>
     )
   }

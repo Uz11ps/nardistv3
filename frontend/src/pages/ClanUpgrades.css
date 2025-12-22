@@ -1,93 +1,109 @@
 /* Clan Upgrades Page Styles */
 
-.clan-upgrades-content {
-  padding: var(--spacing-5);
-}
-
-.clan-upgrades-subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-5);
-  text-align: center;
-}
-
-.clan-upgrades-loading {
-  padding: var(--spacing-8);
-  text-align: center;
-  color: var(--color-text-secondary);
+.clan-upgrades-loading,
+.clan-upgrades-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
 }
 
 .clan-upgrades-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-4);
+  gap: 12px;
 }
 
-.clan-upgrade-card {
-  padding: var(--spacing-4);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.clan-upgrade-content {
+.clan-upgrade-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-4);
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
 .clan-upgrade-icon {
-  flex-shrink: 0;
   width: 48px;
   height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .clan-upgrade-info {
   flex: 1;
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .clan-upgrade-title {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-1);
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .clan-upgrade-description {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-1);
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .clan-upgrade-level {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  margin-top: 4px;
 }
 
-.clan-upgrade-btn {
-  flex-shrink: 0;
-  min-width: 100px;
-  padding: var(--spacing-2) var(--spacing-4);
+.clan-upgrade-button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.clan-upgrade-button:not(.max-level) {
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  color: #FFF;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+}
+
+.clan-upgrade-button:not(.max-level):hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+}
+
+.clan-upgrade-button.max-level {
+  background: #3a3a3a;
+  color: #FFF;
+  cursor: default;
+}
+
+.clan-upgrade-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .clan-upgrades-footer {
+  margin-top: 24px;
   text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  padding: var(--spacing-4);
-}
-
-@media (max-width: 480px) {
-  .clan-upgrades-content {
-    padding: var(--spacing-4);
-  }
-
-  .clan-upgrade-card {
-    padding: var(--spacing-3);
-  }
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
 }

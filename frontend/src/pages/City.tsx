@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import PageHeader from '../components/PageHeader'
-import Card from '../components/Card'
-import Button from '../components/Button'
-import Icon from '../components/Icon'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './City.css'
 
@@ -50,6 +47,17 @@ export default function City() {
       ])
       setDistricts(districtsRes.data || [])
       setUserClan(clanRes.data || { clan: null, member: null })
+      
+      // Мок-данные для разработки
+      if (!districtsRes.data || districtsRes.data.length === 0) {
+        setDistricts([
+          { id: '1', name: 'Центральный', owner: 'Нардисты Юга', status: 'stable', incomePerDay: 1200, level: 3 },
+          { id: '2', name: 'Восточный порт', owner: null, status: 'free', incomePerDay: 0, level: 1 },
+          { id: '3', name: 'Старый квартал', owner: 'Dice Fam', status: 'vulnerable', incomePerDay: 800, level: 2, vulnerabilityPercent: 8 },
+          { id: '4', name: 'Спальный', owner: null, status: 'free', incomePerDay: 0, level: 1 },
+          { id: '5', name: 'Пригород', owner: null, status: 'free', incomePerDay: 0, level: 1 },
+        ])
+      }
     } catch (error) {
       console.error('Failed to load city data:', error)
     } finally {
@@ -75,75 +83,64 @@ export default function City() {
   // Если уровень меньше 20
   if ((user?.level || 0) < 20) {
     return (
-      <div className="app-container page-transition">
-        <PageHeader title="Город недоступен" />
+      <PageLayout title="Город недоступен" showBack={true}>
         <div className="city-unavailable">
-          <Icon name="city" className="city-unavailable-icon" />
-          <div className="city-unavailable-title">Город недоступен</div>
-          <div className="city-unavailable-text">
-            Город и районы открываются с 20 уровня. Здесь ты можешь строить предприятия и управлять территорией клана
-          </div>
-          <Button onClick={() => navigate('/')} fullWidth>
+          <img src="/img/город.png" alt="City" className="city-unavailable-icon" />
+          <h2 className="city-unavailable-title">Город недоступен</h2>
+          <p className="city-unavailable-text">
+            Город и районы открываются с 20 уровня.
+            <br />
+            Здесь ты можешь строить предприятия и управлять территорией клана
+          </p>
+          <button className="city-play-button" onClick={() => navigate('/')}>
             Играть
-          </Button>
+          </button>
         </div>
-      </div>
+      </PageLayout>
     )
   }
 
   if (loading) {
     return (
-      <div className="app-container page-transition">
-        <PageHeader title="Районы города" />
-        <div className="city-districts-list">
-          <Card>
-            <div style={{ textAlign: 'center', padding: '20px', color: '#aaaaaa' }}>
-              Загрузка...
-            </div>
-          </Card>
-        </div>
-      </div>
+      <PageLayout title="Районы города" showBack={true}>
+        <div className="city-loading">Загрузка...</div>
+      </PageLayout>
     )
   }
 
   // Если пользователь не в клане
   if (!userClan?.clan) {
     return (
-      <div className="app-container page-transition">
-        <PageHeader title="Город недоступен" />
+      <PageLayout title="Город недоступен" showBack={true}>
         <div className="city-unavailable">
-          <Icon name="city" className="city-unavailable-icon" />
-          <div className="city-unavailable-title">Город недоступен</div>
-          <div className="city-unavailable-text">
+          <img src="/img/город.png" alt="City" className="city-unavailable-icon" />
+          <h2 className="city-unavailable-title">Город недоступен</h2>
+          <p className="city-unavailable-text">
             Вступи в клан, чтобы открыть доступ к районам
-          </div>
-          <Button onClick={() => navigate('/clans/search')} fullWidth>
+          </p>
+          <button className="city-find-clan-button" onClick={() => navigate('/clans/search')}>
             Найти клан
-          </Button>
+          </button>
         </div>
-      </div>
+      </PageLayout>
     )
   }
 
   // Список районов
   return (
-    <div className="app-container page-transition">
-      <PageHeader title="Районы города" />
-      
+    <PageLayout title="Районы города" showBack={true}>
       <div className="city-districts-list">
         {districts.map((district) => (
-          <Card key={district.id} className="district-card">
-            <div className="district-icon">
-              <Icon name="shield" size={32} />
-            </div>
-            <div className="district-info">
-              <div className="district-name">{district.name}</div>
-              <div className="district-details">
+          <div key={district.id} className="city-district-card">
+            <img src="/img/кланы.png" alt="District" className="city-district-icon" />
+            <div className="city-district-info">
+              <div className="city-district-name">{district.name}</div>
+              <div className="city-district-owner">
                 Владелец: {district.owner || '-'}
               </div>
-              <div className="district-status">
+              <div className="city-district-status">
                 <span
-                  className={`district-status-dot ${
+                  className={`city-district-status-dot ${
                     district.status === 'stable'
                       ? 'stable'
                       : district.status === 'vulnerable'
@@ -151,7 +148,7 @@ export default function City() {
                       : 'free'
                   }`}
                 />
-                <span className="district-status-text">
+                <span className="city-district-status-text">
                   {district.status === 'stable'
                     ? 'стабильно'
                     : district.status === 'vulnerable'
@@ -159,32 +156,31 @@ export default function City() {
                     : 'свободен'}
                 </span>
               </div>
-              {district.incomePerDay > 0 && (
-                <div className="district-income gold">
-                  {district.incomePerDay.toLocaleString()} NAR/день
-                </div>
-              )}
             </div>
-            <div className="district-actions">
+            <div className="city-district-actions">
               {district.status === 'free' ? (
                 <button
-                  className="district-action-btn capture"
+                  className="city-district-button city-district-button-capture"
                   onClick={() => handleCaptureDistrict(district.id)}
                 >
                   Захватить
                 </button>
+              ) : district.status === 'stable' ? (
+                <div className="city-district-income">
+                  {district.incomePerDay.toLocaleString()} NAR / день
+                </div>
               ) : (
                 <button
-                  className="district-action-btn details"
+                  className="city-district-button city-district-button-details"
                   onClick={() => handleDistrictDetails(district.id)}
                 >
                   Подробнее
                 </button>
               )}
             </div>
-          </Card>
+          </div>
         ))}
       </div>
-    </div>
+    </PageLayout>
   )
 }

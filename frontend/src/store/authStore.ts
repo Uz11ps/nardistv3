@@ -115,6 +115,43 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ token: access_token, user })
     } catch (error: any) {
       console.error('❌ Ошибка гостевого входа:', error)
+      
+      // Проверяем тип ошибки
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('CONNECTION_REFUSED')) {
+        // В режиме разработки создаем мок-данные для гостя
+        if (import.meta.env.DEV) {
+          console.warn('⚠️ Сервер недоступен. Используем мок-данные для разработки...')
+          const mockGuestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          const mockUser: User = {
+            id: mockGuestId,
+            username: `Гость_${Math.random().toString(36).substr(2, 6)}`,
+            firstName: 'Гость',
+            lastName: '',
+            level: 1,
+            xp: 0,
+            narCoin: 0,
+            isGuest: true,
+          }
+          const mockToken = `mock_token_${mockGuestId}`
+          
+          localStorage.setItem('token', mockToken)
+          set({ token: mockToken, user: mockUser })
+          console.log('✅ Мок-гость создан:', mockUser)
+          return
+        }
+        
+        const networkError = new Error('Сервер недоступен. Убедитесь что бэкенд запущен или проверьте подключение к интернету.')
+        ;(networkError as any).code = 'NETWORK_ERROR'
+        ;(networkError as any).originalError = error
+        throw networkError
+      }
+      
+      if (error.response?.status === 500) {
+        const serverError = new Error('Ошибка сервера. Попробуйте позже.')
+        ;(serverError as any).code = 'SERVER_ERROR'
+        throw serverError
+      }
+      
       throw error
     }
   },

@@ -1,0 +1,136 @@
+/* Leaderboard Page Styles */
+
+.leaderboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.leaderboard-mode-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.leaderboard-mode-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.leaderboard-mode-btn:hover {
+  background: #4a4a4a;
+}
+
+.leaderboard-mode-btn.active {
+  background: #2a2a2a;
+  border-color: #FFF;
+}
+
+.leaderboard-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.leaderboard-item {
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.leaderboard-item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.leaderboard-rank {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.leaderboard-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #3a3a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.leaderboard-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.leaderboard-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+.leaderboard-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.leaderboard-name {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.leaderboard-details {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.leaderboard-stats {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.leaderboard-crown {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+

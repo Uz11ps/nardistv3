@@ -1,8 +1,6 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
-import Card from '../components/Card'
-import Button from '../components/Button'
+import PageLayout from '../components/PageLayout'
 import BackgammonBoard from '../components/BackgammonBoard'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
@@ -246,10 +244,8 @@ export default function History() {
   }
 
   return (
-    <div className="app-container">
-      <PageHeader title="История игр" />
-      
-      <div style={{ padding: '20px' }}>
+    <PageLayout title="История игр" showBack={true}>
+      <div className="history-content">
         {/* Фильтры */}
         <div className="history-filters">
           <div className="filter-group">
@@ -310,14 +306,12 @@ export default function History() {
         {/* Список игр */}
         <div className="games-list">
           {games.length === 0 ? (
-            <Card>
-              <div style={{ textAlign: 'center', color: '#aaaaaa' }}>
-                Нет сыгранных игр
-              </div>
-            </Card>
+            <div className="history-empty">
+              Нет сыгранных игр
+            </div>
           ) : (
             games.map((game) => (
-              <Card key={game.id} className="game-history-card">
+              <div key={game.id} className="game-history-card">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div className={`result-badge ${game.result}`}>
                     {game.result === 'win' ? '✓' : game.result === 'loss' ? '✗' : '='}
@@ -337,21 +331,21 @@ export default function History() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <Button variant="secondary" onClick={() => handleReplay(game)}>
+                    <button className="history-action-btn history-action-btn-replay" onClick={() => handleReplay(game)}>
                       Реплей
-                    </Button>
+                    </button>
                     {hasPremium && (
-                      <Button 
-                        variant="primary" 
+                      <button 
+                        className="history-action-btn history-action-btn-analyze"
                         onClick={() => handleAnalyze(game.id)}
                         disabled={loadingAnalysis}
                       >
                         Анализ
-                      </Button>
+                      </button>
                     )}
                   </div>
                 </div>
-              </Card>
+              </div>
             ))
           )}
         </div>
@@ -585,6 +579,8 @@ export default function History() {
             )}
           </div>
         </div>
-      )}    </div>
+      )}
+      </div>
+    </PageLayout>
   )
 }

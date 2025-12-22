@@ -1,7 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
-import Card from '../components/Card'
-import Icon from '../components/Icon'
+import PageLayout from '../components/PageLayout'
 import './GameModes.css'
 
 interface GameMode {
@@ -36,39 +34,30 @@ export default function GameModes() {
   ]
 
   return (
-    <div className="app-container">
-      <PageHeader title="Выбор режима" />
-      
-      <div className="game-modes-content">
-        <div className="game-modes-subtitle">
-          Тренируйся, играй онлайн или выбери свободный стол
-        </div>
-
-        <div className="game-modes-list">
-          {gameModes.map((mode) => (
-            <Card
-              key={mode.id}
-              onClick={() => navigate(mode.path)}
-              className="game-mode-card"
-            >
-              <div className="game-mode-content">
-                <div className="game-mode-icon">
-                  <Icon name="shield" size={32} style={{ color: '#ffd700' }} />
-                </div>
-                <div className="game-mode-info">
-                  <div className="game-mode-title">{mode.name}</div>
-                  <div className="game-mode-description">{mode.description}</div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        <div className="game-modes-footer">
-          Игры дают опыт, NAR-coin и рейтинг
-        </div>
+    <PageLayout
+      title="Выбор режима"
+      subtitle="Тренируйся, играй онлайн или выбери свободный стол"
+      showBack={true}
+    >
+      <div className="game-modes-list">
+        {gameModes.map((mode) => (
+          <div
+            key={mode.id}
+            className="game-mode-card"
+            onClick={() => navigate(mode.path)}
+          >
+            <img src="/img/кланы.png" alt="Mode" className="game-mode-icon" />
+            <div className="game-mode-info">
+              <div className="game-mode-title">{mode.name}</div>
+              <div className="game-mode-description">{mode.description}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
-    </div>
+      <div className="game-modes-footer">
+        Игры дают опыт, NAR-coin и рейтинг
+      </div>
+    </PageLayout>
   )
 }

@@ -67,3 +67,4 @@ echo "  1. Проверьте Nginx: systemctl status nginx"
 echo "  2. Проверьте конфигурацию: nginx -t"
 echo "  3. Проверьте проксирование на порт 3000"
 
+

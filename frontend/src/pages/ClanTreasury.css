@@ -1,162 +1,137 @@
 /* Clan Treasury Page Styles */
 
-.clan-treasury-content {
-  padding: var(--spacing-5);
-}
-
-.clan-treasury-subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-5);
-  text-align: center;
-}
-
 .clan-treasury-loading {
-  padding: var(--spacing-8);
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
-.clan-treasury-balance-card {
-  padding: var(--spacing-6);
-  margin-bottom: var(--spacing-5);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-}
-
-.clan-treasury-balance-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-4);
-}
-
-.clan-treasury-icon {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 60vh;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
 }
 
-.clan-treasury-balance-info {
-  text-align: center;
+.clan-treasury-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.clan-treasury-balance {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+}
+
+.clan-treasury-coin-icon {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
 }
 
 .clan-treasury-balance-amount {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  margin-bottom: var(--spacing-2);
+  color: #FFD700;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-.clan-treasury-balance-amount.gold,
-.clan-treasury-income.gold {
-  color: var(--color-gold);
-}
-
-.clan-treasury-income {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+.clan-treasury-weekly-income {
+  color: #FFD700;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .clan-treasury-operations {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
+  gap: 16px;
 }
 
 .clan-treasury-operations-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-2);
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
 }
 
-.clan-treasury-empty {
-  text-align: center;
-  color: var(--color-text-secondary);
-  padding: var(--spacing-6);
-}
-
-.clan-treasury-transactions {
+.clan-treasury-operations-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-3);
+  gap: 12px;
 }
 
-.clan-treasury-transaction {
-  padding: var(--spacing-3);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.clan-treasury-transaction-content {
+.clan-treasury-operation-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: 12px;
 }
 
-.clan-treasury-transaction-icon {
-  flex-shrink: 0;
+.clan-treasury-operation-icon {
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.clan-treasury-transaction-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.clan-treasury-transaction-name {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-1);
-}
-
-.clan-treasury-transaction-description {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-.clan-treasury-transaction-amount {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  border-radius: 50%;
+  object-fit: cover;
   flex-shrink: 0;
 }
 
-.clan-treasury-transaction-amount.positive {
-  color: var(--color-success);
+.clan-treasury-operation-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.clan-treasury-transaction-amount.negative {
-  color: var(--color-error);
+.clan-treasury-operation-name {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
 }
 
-.clan-treasury-view-all-btn {
+.clan-treasury-operation-description {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.clan-treasury-operation-amount {
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.clan-treasury-operation-amount.positive {
+  color: #4CAF50;
+}
+
+.clan-treasury-operation-amount.negative {
+  color: #F44336;
+}
+
+.clan-treasury-view-all-button {
   width: 100%;
-  padding: var(--spacing-3);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  border-radius: var(--radius-md);
+  height: 44px;
+  border-radius: 8px;
+  background: #3a3a3a;
+  border: none;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.clan-treasury-view-all-btn:hover {
-  background: var(--color-background-secondary);
-  border-color: var(--color-primary);
-}
-
-@media (max-width: 480px) {
-  .clan-treasury-content {
-    padding: var(--spacing-4);
-  }
-
-  .clan-treasury-balance-amount {
-    font-size: var(--font-size-2xl);
-  }
+.clan-treasury-view-all-button:hover {
+  background: #4a4a4a;
 }

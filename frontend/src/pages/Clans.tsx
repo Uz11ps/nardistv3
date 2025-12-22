@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import PageHeader from '../components/PageHeader'
-import Button from '../components/Button'
-import Icon from '../components/Icon'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './Clans.css'
 
@@ -43,85 +41,57 @@ export default function Clans() {
 
   if ((user?.level || 0) < 20) {
     return (
-      <div className="app-container">
-        <PageHeader title="Кланы" />
-        <div className="clans-locked">
-          <Icon name="shield" size={64} />
-          <div className="clans-locked-title">Кланы недоступны</div>
-          <div className="clans-locked-subtitle">
+      <PageLayout title="Кланы" showBack={true}>
+        <div className="clans-unavailable">
+          <img src="/img/кланы.png" alt="Clans" className="clans-unavailable-icon" />
+          <h2 className="clans-unavailable-title">Кланы недоступны</h2>
+          <p className="clans-unavailable-text">
             Кланы открываются с 20 уровня, прокачайся, играй в турнирах и зарабатывай очки
-          </div>
-          <Button onClick={() => navigate('/')}>Играть</Button>
+          </p>
+          <button className="clans-play-button" onClick={() => navigate('/')}>
+            Играть
+          </button>
         </div>
-      </div>
+      </PageLayout>
     )
   }
 
   if (loading) {
     return (
-      <div className="app-container">
-        <PageHeader title="Кланы" />
-        <div className="clans-locked">Загрузка...</div>
-      </div>
+      <PageLayout title="Кланы" showBack={true}>
+        <div className="clans-loading">Загрузка...</div>
+      </PageLayout>
     )
   }
 
-  const handleCreateClan = async () => {
-    try {
-      setLoading(true)
-      // Переход на страницу создания клана
-      navigate('/clans/create')
-    } catch (error) {
-      console.error('Failed to navigate:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleFindClan = async () => {
-    navigate('/clans/search')
-  }
-
   return (
-    <div className="app-container">
-      <PageHeader title="Кланы" />
-      
+    <PageLayout title="Кланы" showBack={true}>
       <div className="clans-content">
         {/* Профиль пользователя */}
         <div className="clans-profile">
           <div className="clans-avatar-container">
-            <div className="avatar avatar-large">
+            <div className="clans-avatar">
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.username} />
               ) : (
-                <Icon name="user" size={64} />
+                <img src="/img/челувек.png" alt="User" className="clans-avatar-placeholder" />
               )}
             </div>
           </div>
-          <div className="clans-username">{user?.nickname || user?.username || 'Игрок'}</div>
+          <div className="clans-username">{user?.nickname || user?.firstName || user?.username || 'Игрок'}</div>
           <div className="clans-level">Уровень {user.level || 1}</div>
         </div>
 
         {/* Кнопки действий */}
         <div className="clans-actions">
-          <Button
-            variant="primary"
-            className="clans-action-btn clans-action-create"
-            onClick={handleCreateClan}
-            disabled={loading}
-          >
+          <button className="clans-action-button clans-action-create" onClick={() => navigate('/clans/create')}>
             Создать клан
-          </Button>
-          <Button
-            variant="secondary"
-            className="clans-action-btn clans-action-find"
-            onClick={handleFindClan}
-            disabled={loading}
-          >
+          </button>
+          <button className="clans-action-button clans-action-find" onClick={() => navigate('/clans/search')}>
             Найти клан
-          </Button>
+          </button>
         </div>
       </div>
-    </div>
+    </PageLayout>
   )
 }

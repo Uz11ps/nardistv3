@@ -1,10 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import PageHeader from '../components/PageHeader'
-import Card from '../components/Card'
-import Button from '../components/Button'
-import Icon from '../components/Icon'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './ClanUpgrades.css'
 
@@ -43,11 +40,21 @@ export default function ClanUpgrades() {
     try {
       setLoading(true)
       const [clanResponse, upgradesResponse] = await Promise.all([
-        apiClient.get(`/clans/${clanId}`),
-        apiClient.get(`/clans/${clanId}/upgrades`),
+        apiClient.get(`/clans/${clanId}`).catch(() => ({ data: null })),
+        apiClient.get(`/clans/${clanId}/upgrades`).catch(() => ({ data: null })),
       ])
       setClan(clanResponse.data)
       setUpgrades(upgradesResponse.data)
+      
+      // Мок-данные для разработки
+      if (!upgradesResponse.data) {
+        setUpgrades({
+          level: { current: 3, max: 10, cost: 5000 },
+          districtStrength: { current: 2, max: 10, cost: 3000 },
+          economy: { current: 6, max: 10, cost: 2000 },
+          fort: { current: 10, max: 10, cost: 0 },
+        })
+      }
     } catch (error) {
       console.error('Failed to load upgrades data:', error)
     } finally {
@@ -91,65 +98,60 @@ export default function ClanUpgrades() {
 
   if (loading) {
     return (
-      <div className="app-container">
-        <PageHeader title="Улучшения" />
-        <div className="clan-upgrades-loading">Загрузка...</div>      </div>
+      <PageLayout title="Улучшения" showBack={true}>
+        <div className="clan-upgrades-loading">Загрузка...</div>
+      </PageLayout>
     )
   }
 
   if (!clan || !upgrades) {
-    return null
+    return (
+      <PageLayout title="Улучшения" showBack={true}>
+        <div className="clan-upgrades-empty">Данные не найдены</div>
+      </PageLayout>
+    )
   }
 
   const isLeader = user?.id === clan.leaderId
 
   return (
-    <div className="app-container">
-      <PageHeader title="Улучшения" />
-      
-      <div className="clan-upgrades-content">
-        <div className="clan-upgrades-subtitle">
-          Используй средства из казны, чтоб усиливать влияние и бонусы клана
-        </div>
-
-        <div className="clan-upgrades-list">
-          {upgradeConfig.map((config) => {
-            const upgrade = upgrades[config.key]
-            const isMaxLevel = upgrade.current >= upgrade.max
-            const canUpgrade = isLeader && !isMaxLevel && upgrade.cost > 0
-
-            return (
-              <Card key={config.key} className="clan-upgrade-card">
-                <div className="clan-upgrade-content">
-                  <div className="clan-upgrade-icon">
-                    <Icon name="shield" size={32} style={{ color: '#ffd700' }} />
-                  </div>
-                  <div className="clan-upgrade-info">
-                    <div className="clan-upgrade-title">{config.title}</div>
-                    <div className="clan-upgrade-description">{config.description}</div>
-                    <div className="clan-upgrade-level">
-                      Текущий уровень: {upgrade.current}/{upgrade.max}
-                    </div>
-                  </div>
-                  <Button
-                    variant={canUpgrade ? 'primary' : 'secondary'}
-                    className="clan-upgrade-btn"
-                    onClick={() => canUpgrade && handleUpgrade(config.key)}
-                    disabled={!canUpgrade}
-                  >
-                    Улучшить
-                  </Button>
+    <PageLayout
+      title="Улучшения"
+      subtitle="Используй средства из казны, чтоб усиливать влияние и бонусы клана"
+      showBack={true}
+    >
+      <div className="clan-upgrades-list">
+        {upgradeConfig.map((config) => {
+          const upgrade = upgrades[config.key]
+          const isMaxLevel = upgrade.current >= upgrade.max
+          
+          return (
+            <div key={config.key} className="clan-upgrade-item">
+              <img src="/img/кланы.png" alt="Upgrade" className="clan-upgrade-icon" />
+              <div className="clan-upgrade-info">
+                <div className="clan-upgrade-title">{config.title}</div>
+                <div className="clan-upgrade-description">{config.description}</div>
+                <div className="clan-upgrade-level">
+                  Текущий уровень: {upgrade.current}/{upgrade.max}
                 </div>
-              </Card>
-            )
-          })}
-        </div>
+              </div>
+              <button
+                className={`clan-upgrade-button ${isMaxLevel ? 'max-level' : ''}`}
+                onClick={() => !isMaxLevel && handleUpgrade(config.key)}
+                disabled={isMaxLevel || !isLeader}
+              >
+                Улучшить
+              </button>
+            </div>
+          )
+        })}
+      </div>
 
-        {!isLeader && (
-          <div className="clan-upgrades-footer">
-            Только глава клана может управлять улучшениями
-          </div>
-        )}
-      </div>    </div>
+      {!isLeader && (
+        <div className="clan-upgrades-footer">
+          Только глава клана может управлять улучшениями
+        </div>
+      )}
+    </PageLayout>
   )
 }

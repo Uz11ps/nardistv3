@@ -1,9 +1,6 @@
 ﻿import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
-import Card from '../components/Card'
-import Button from '../components/Button'
-import Icon from '../components/Icon'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './ClanTreasury.css'
 
@@ -42,11 +39,27 @@ export default function ClanTreasury() {
     try {
       setLoading(true)
       const [clanResponse, transactionsResponse] = await Promise.all([
-        apiClient.get(`/clans/${clanId}`),
-        apiClient.get(`/clans/${clanId}/treasury/transactions?limit=5`),
+        apiClient.get(`/clans/${clanId}`).catch(() => ({ data: null })),
+        apiClient.get(`/clans/${clanId}/treasury/transactions?limit=5`).catch(() => ({ data: [] })),
       ])
       setClan(clanResponse.data)
       setTransactions(transactionsResponse.data || [])
+      
+      // Мок-данные для разработки
+      if (!clanResponse.data) {
+        setClan({
+          id: clanId || '1',
+          treasury: 12540,
+          weeklyIncome: 3200,
+        })
+        setTransactions([
+          { id: '1', type: 'contribution', amount: 250, description: 'Внес вклад', createdAt: new Date().toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
+          { id: '2', type: 'upgrade', amount: -650, description: 'Улучшение', createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
+          { id: '3', type: 'contribution', amount: 250, description: 'Внес вклад', createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
+          { id: '4', type: 'upgrade', amount: -1250, description: 'Улучшение', createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
+          { id: '5', type: 'contribution', amount: 250, description: 'Внес вклад', createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), user: { id: '1', username: 'Алексей', nickname: 'Алексей' } },
+        ])
+      }
     } catch (error) {
       console.error('Failed to load treasury data:', error)
     } finally {
@@ -67,17 +80,17 @@ export default function ClanTreasury() {
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-    if (minutes < 60) return `${minutes} мин. назад`
-    if (hours < 24) return `${hours} ч. назад`
-    if (days < 7) return `${days} дн. назад`
+    if (minutes < 60) return `${minutes} минут назад`
+    if (hours < 24) return `${hours} часа назад`
+    if (days < 7) return `${days} дней назад`
     return date.toLocaleDateString('ru-RU')
   }
 
   if (loading) {
     return (
-      <div className="app-container">
-        <PageHeader title="Казна клана" />
-        <div className="clan-treasury-loading">Загрузка...</div>      </div>
+      <PageLayout title="Казна клана" showBack={true}>
+        <div className="clan-treasury-loading">Загрузка...</div>
+      </PageLayout>
     )
   }
 
@@ -89,72 +102,47 @@ export default function ClanTreasury() {
   const weeklyIncome = typeof clan.weeklyIncome === 'string' ? parseInt(clan.weeklyIncome) : clan.weeklyIncome
 
   return (
-    <div className="app-container">
-      <PageHeader title="Казна клана" />
-      
+    <PageLayout
+      title="Казна клана"
+      subtitle="Общий фонд клана. Средства поступают из налогов и вкладов участников"
+      showBack={true}
+    >
       <div className="clan-treasury-content">
-        <div className="clan-treasury-subtitle">
-          Общий фонд клана. Средства поступают из налогов и вкладов участников
-        </div>
-
         {/* Валюта клана */}
-        <Card className="clan-treasury-balance-card">
-          <div className="clan-treasury-balance-content">
-            <div className="clan-treasury-icon">
-              <Icon name="coin" size={80} style={{ filter: 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.6))' }} />
-            </div>
-            <div className="clan-treasury-balance-info">
-              <div className="clan-treasury-balance-amount gold">{treasury.toLocaleString()} NAR</div>
-              <div className="clan-treasury-income gold">
-                +{weeklyIncome.toLocaleString()} NAR /неделя поступления
-              </div>
-            </div>
+        <div className="clan-treasury-balance">
+          <img src="/img/narcoin.png" alt="NAR" className="clan-treasury-coin-icon" />
+          <div className="clan-treasury-balance-amount">{treasury.toLocaleString()} NAR</div>
+          <div className="clan-treasury-weekly-income">
+            +{weeklyIncome.toLocaleString()} NAR / неделя (поступления)
           </div>
-        </Card>
+        </div>
 
         {/* Последние операции */}
         <div className="clan-treasury-operations">
           <div className="clan-treasury-operations-title">Последние операции</div>
-          {transactions.length === 0 ? (
-            <Card>
-              <div className="clan-treasury-empty">Нет операций</div>
-            </Card>
-          ) : (
-            <div className="clan-treasury-transactions">
-              {transactions.map((transaction) => {
-                const amount = typeof transaction.amount === 'string' ? parseInt(transaction.amount) : transaction.amount
-                const isPositive = amount > 0
-                const userName = transaction.user?.nickname || transaction.user?.username || 'Неизвестно'
-
-                return (
-                  <Card key={transaction.id} className="clan-treasury-transaction">
-                    <div className="clan-treasury-transaction-content">
-                      <div className="clan-treasury-transaction-icon">
-                        <Icon name="user" size={24} />
-                      </div>
-                      <div className="clan-treasury-transaction-info">
-                        <div className="clan-treasury-transaction-name">{userName}</div>
-                        <div className="clan-treasury-transaction-description">{transaction.description}</div>
-                      </div>
-                      <div className={`clan-treasury-transaction-amount ${isPositive ? 'positive' : 'negative'}`}>
-                        {isPositive ? '+' : '-'}{formatAmount(amount)} NAR
-                      </div>
-                    </div>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-          <Button
-            variant="secondary"
-            className="clan-treasury-view-all-btn"
-            onClick={() => {
-              // TODO: переход на страницу всех операций
-            }}
-          >
-            Посмотреть всё
-          </Button>
+          <div className="clan-treasury-operations-list">
+            {transactions.map((transaction) => {
+              const amount = typeof transaction.amount === 'string' ? parseInt(transaction.amount) : transaction.amount
+              const isPositive = amount > 0
+              const userName = transaction.user?.nickname || transaction.user?.username || 'Алексей'
+              
+              return (
+                <div key={transaction.id} className="clan-treasury-operation-item">
+                  <img src="/img/челувек.png" alt="User" className="clan-treasury-operation-icon" />
+                  <div className="clan-treasury-operation-info">
+                    <div className="clan-treasury-operation-name">{userName}</div>
+                    <div className="clan-treasury-operation-description">{transaction.description}</div>
+                  </div>
+                  <div className={`clan-treasury-operation-amount ${isPositive ? 'positive' : 'negative'}`}>
+                    {isPositive ? '+' : ''}{formatAmount(transaction.amount)} NAR
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <button className="clan-treasury-view-all-button">Посмотреть всё</button>
         </div>
-      </div>    </div>
+      </div>
+    </PageLayout>
   )
 }

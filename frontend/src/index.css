@@ -21,13 +21,29 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #1a1a1a;
+  background: #1a1a1a url('/img/App2.png') no-repeat center center fixed;
+  background-size: cover;
+  background-color: #1a1a1a;
   color: #ffffff;
   min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(26, 26, 26, 0.7);
+  z-index: -1;
+  pointer-events: none;
 }
 
 #root {
   min-height: 100vh;
+  position: relative;
 }
 
 button {
@@ -44,7 +60,7 @@ input, textarea, select {
 
 /* Темная тема */
 .app-container {
-  background: linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 100%);
+  background: linear-gradient(180deg, rgba(26, 26, 26, 0.85) 0%, rgba(42, 42, 42, 0.85) 100%);
   min-height: 100vh;
   animation: fadeIn 0.25s ease-out;
   position: relative;

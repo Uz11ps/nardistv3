@@ -1,122 +1,268 @@
 /* Home Page Styles */
 
+.home-container {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  background: #1a1a1a url('/img/App2.png') no-repeat center center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+.home-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #1a1a1a url('/img/App2.png') no-repeat center center;
+  background-size: cover;
+  background-attachment: fixed;
+  transform: rotate(180deg);
+  z-index: 0;
+}
+
+.home-content-wrapper {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
 .home-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: var(--spacing-4) var(--spacing-5);
-  background: var(--color-background);
-  border-bottom: 1px solid var(--color-border);
+  padding: 20px 16px;
+  padding-top: 60px; /* Отступ сверху для статус-бара */
+  position: relative;
 }
 
 .home-header-left {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: 12px;
   flex: 1;
+  width: 100%;
 }
 
-.avatar-container {
+.home-avatar-container {
   position: relative;
 }
 
-.avatar-notification-badge {
+.home-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #B6B6B6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-avatar img,
+.home-avatar-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #B6B6B6;
+}
+
+.home-avatar-placeholder img {
+  width: 60%;
+  height: 60%;
+  opacity: 0.5;
+}
+
+.home-avatar-notification {
   position: absolute;
   top: 0;
   right: 0;
-  width: 12px;
-  height: 12px;
-  background: var(--color-primary);
-  border: 2px solid var(--color-background-secondary);
+  width: 16px;
+  height: 16px;
+  background: #C93C3D;
+  border: 2px solid #0B0C0E;
   border-radius: 50%;
+  z-index: 2;
 }
 
 .home-user-info {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
+  gap: 4px;
+  align-items: center;
+  width: 100%;
 }
 
 .home-username {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  line-height: var(--line-height-tight);
+  color: #FFF;
+  text-align: center;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 32px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .home-level {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: #B6B6B6;
+  text-align: center;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: -0.4px;
 }
 
 .home-header-right {
+  position: absolute;
+  top: 60px;
+  right: 16px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: var(--spacing-2);
+  gap: 8px;
 }
 
 .home-currency,
 .home-energy {
   display: flex;
   align-items: center;
-  gap: var(--spacing-1);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  gap: 6px;
+  text-align: right;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: -0.4px;
 }
 
-.home-content {
-  padding: var(--spacing-5);
+.home-currency {
+  color: #FFF;
 }
 
+.home-energy {
+  color: #B6B6B6;
+}
+
+.home-currency-icon,
+.home-energy-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.home-energy-icon {
+  /* Красная иконка молнии - используется готовое изображение */
+}
+
+/* Menu */
 .home-menu {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: 12px;
+  padding: 0 16px;
+  padding-bottom: 40px;
+  margin-top: 40px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .home-menu-item {
-  padding: var(--spacing-4);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition: var(--transition-base);
-}
-
-.home-menu-item:hover {
-  border-color: var(--color-primary);
-  background: var(--color-background-secondary);
-}
-
-.home-menu-item-content {
+  border-radius: 12px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
   display: flex;
+  height: 70px;
+  min-width: 50px;
+  padding: 15px 12px;
+  justify-content: flex-start;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: 10px;
+  align-self: stretch;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.home-menu-item-title {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
+.home-menu-item:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.home-menu-item:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.home-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.home-menu-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.home-menu-text {
+  color: #FFF;
+  text-align: center;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 27px;
+  font-style: normal;
+  font-weight: 540;
+  line-height: 22px;
+  letter-spacing: -0.4px;
   flex: 1;
+  text-align: left;
 }
 
-.home-menu-item-disabled {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
+.home-menu-disabled {
+  color: #666;
+  font-size: 14px;
   margin-left: auto;
 }
 
 @media (max-width: 480px) {
   .home-header {
-    padding: var(--spacing-3) var(--spacing-4);
+    padding: 16px;
+    padding-top: 50px;
   }
 
   .home-username {
-    font-size: var(--font-size-lg);
+    font-size: 28px;
+  }
+
+  .home-menu {
+    padding: 0 12px;
   }
 
   .home-menu-item {
-    padding: var(--spacing-3);
+    height: 65px;
+    padding: 12px 10px;
+  }
+
+  .home-menu-text {
+    font-size: 24px;
   }
 }

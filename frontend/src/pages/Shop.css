@@ -1,85 +1,39 @@
 /* Shop Page Styles */
 
 .shop-content {
-  padding: var(--spacing-5);
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 140px);
-  flex: 1;
+  gap: 16px;
 }
 
-/* Листабельные вкладки */
-.shop-tabs-container {
-  margin-bottom: var(--spacing-4);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.shop-tabs-container::-webkit-scrollbar {
-  display: none;
-}
-
-.shop-tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--color-border);
-  min-width: max-content;
-}
-
-.shop-tab {
-  padding: var(--spacing-3) var(--spacing-4);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-  white-space: nowrap;
-  position: relative;
-}
-
-.shop-tab:hover {
-  color: var(--color-text-primary);
-}
-
-.shop-tab.active {
-  color: var(--color-text-primary);
-  border-bottom-color: var(--color-primary);
-}
+/* Tabs are handled by PageLayout */
 
 .shop-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-bottom: var(--spacing-4);
-  -webkit-overflow-scrolling: touch;
+  gap: 12px;
 }
 
 .shop-empty {
   text-align: center;
-  color: var(--color-text-secondary);
-  padding: var(--spacing-6);
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  padding: 40px 20px;
 }
 
 /* NAR-coin карточки */
 .shop-nar-coin-card {
   padding: 16px;
-  background: var(--color-background-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-base);
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .shop-nar-coin-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
 .shop-nar-coin-content {
@@ -96,17 +50,27 @@
   gap: 8px;
 }
 
+.shop-nar-coin-icon-img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
+}
+
 .shop-nar-coin-amount {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 24px;
-  font-weight: 700;
-  color: var(--color-text-primary);
+  font-weight: 600;
   line-height: 1.2;
 }
 
 .shop-nar-coin-price {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
+  font-weight: 400;
+  margin-top: 4px;
 }
 
 .shop-nar-coin-icon {
@@ -124,41 +88,78 @@
 }
 
 .shop-buy-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  border: 0.1px solid #C93C3D;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
   margin-top: 12px;
-  width: 100%;
-  max-width: 120px;
+  width: auto;
+  min-width: 100px;
+}
+
+.shop-buy-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+}
+
+.shop-buy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Подписка */
 .shop-subscription-card {
-  padding: var(--spacing-6);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding: 24px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
 .shop-subscription-content {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--spacing-4);
-  text-align: center;
+  justify-content: space-between;
+  gap: 24px;
 }
 
-.shop-subscription-info {
+.shop-subscription-left {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-2);
+  gap: 16px;
 }
 
 .shop-subscription-title {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.shop-subscription-buy-btn {
+  align-self: flex-start;
+  width: auto;
+  max-width: none;
+  padding: 12px 24px;
+}
+
+.shop-subscription-price {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
 }
 
 .shop-subscription-icon {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -166,18 +167,24 @@
   height: 120px;
 }
 
+.shop-subscription-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 /* Скины */
 .shop-skin-card {
   padding: 16px;
-  background: var(--color-background-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-base);
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .shop-skin-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
 .shop-skin-content {
@@ -193,24 +200,26 @@
 }
 
 .shop-skin-name {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-text-primary);
   line-height: 1.3;
 }
 
 .shop-skin-rarity {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-secondary);
   text-transform: capitalize;
 }
 
 .shop-skin-image {
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: var(--radius-md);
-  background: var(--color-background);
+  border-radius: 8px;
+  background: #2a2a2a;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -230,25 +239,33 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-background);
+  background: #2a2a2a;
 }
 
-.shop-skin-price-overlay {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  padding: 6px 12px;
-  border-radius: var(--radius-md);
+.shop-skin-placeholder-icon {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+.shop-skin-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.shop-skin-price {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-primary);
 }
 
 .shop-skin-actions {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .shop-rarity-badge {
@@ -276,16 +293,17 @@
 }
 
 .shop-buy-btn-purchased {
-  background: var(--color-background-secondary);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
+  background: #3a3a3a;
+  color: #FFF;
+  border: none;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .shop-buy-btn-purchased:hover {
-  background: var(--color-background);
-  border-color: var(--color-border);
+  background: #3a3a3a;
   transform: none;
+  box-shadow: none;
 }
 
 /* Скины - контейнер с фильтрами */
@@ -299,11 +317,11 @@
 /* Фильтры для скинов */
 .shop-skin-filters {
   display: flex;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-4);
-  padding: var(--spacing-2);
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-md);
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 8px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -313,35 +331,39 @@
 }
 
 .shop-skin-filter {
-  padding: var(--spacing-2) var(--spacing-4);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  padding: 8px 16px;
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  border-radius: 20px;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: var(--transition-base);
+  transition: all 0.2s;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .shop-skin-filter:hover {
-  border-color: var(--color-primary);
-  color: var(--color-text-primary);
+  border-color: #C93C3D;
+  color: #FFF;
 }
 
 .shop-skin-filter.active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #ffffff;
+  background: #2a2a2a;
+  border-color: #FFF;
+  color: #FFF;
 }
 
 /* Заголовок группы скинов */
 .shop-skin-group-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 8px;
   margin-top: var(--spacing-4);
   margin-bottom: var(--spacing-3);
   padding-left: var(--spacing-2);

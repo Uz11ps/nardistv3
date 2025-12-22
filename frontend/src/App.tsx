@@ -88,6 +88,12 @@ function App() {
 
   useEffect(() => {
     if (token && initialized) {
+      const { user } = useAuthStore.getState()
+      // Пропускаем подключение WebSocket для мок-гостей (сервер недоступен)
+      if (user?.isGuest) {
+        console.log('⚠️ Мок-гость обнаружен, пропускаем подключение WebSocket')
+        return
+      }
       try {
         connectWebSocket(token)
       } catch (error) {

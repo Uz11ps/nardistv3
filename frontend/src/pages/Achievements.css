@@ -1,0 +1,120 @@
+/* Achievements Page Styles */
+
+.achievements-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+}
+
+.achievements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.achievement-card {
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.achievement-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.achievement-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.achievement-icon.unlocked {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+}
+
+.achievement-icon.locked {
+  background: #3a3a3a;
+}
+
+.achievement-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.achievement-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.achievement-description {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.achievement-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.achievement-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.achievement-progress-value {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.achievement-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #3a3a3a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.achievement-progress-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.achievement-reward {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.achievement-status {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+

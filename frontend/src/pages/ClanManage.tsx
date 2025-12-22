@@ -1,9 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import PageHeader from '../components/PageHeader'
-import Button from '../components/Button'
-import Icon from '../components/Icon'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './ClanManage.css'
 
@@ -50,11 +48,24 @@ export default function ClanManage() {
   const loadClan = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get(`/clans/${clanId}`)
+      const response = await apiClient.get(`/clans/${clanId}`).catch(() => ({ data: null }))
       setClan(response.data)
+      
+      // Мок-данные для разработки
+      if (!response.data) {
+        setClan({
+          id: clanId || '1',
+          name: 'Нардисты Юга',
+          level: 3,
+          memberCount: 43,
+          maxMembers: 50,
+          treasury: 12540,
+          ownedDistricts: ['district_2'],
+          leaderId: '1',
+        })
+      }
     } catch (error) {
       console.error('Failed to load clan:', error)
-      navigate('/clans')
     } finally {
       setLoading(false)
     }
@@ -62,7 +73,7 @@ export default function ClanManage() {
 
   const loadMembership = async () => {
     try {
-      const response = await apiClient.get('/clans/my')
+      const response = await apiClient.get('/clans/my').catch(() => ({ data: null }))
       if (response.data?.member) {
         setMember(response.data.member)
       }
@@ -85,10 +96,6 @@ export default function ClanManage() {
     }
   }
 
-  const handleNavigate = (path: string) => {
-    navigate(`/clans/${clanId}${path}`)
-  }
-
   const getDistrictName = (district: string) => {
     const districtNames: { [key: string]: string } = {
       district_1: 'Район 1',
@@ -104,36 +111,26 @@ export default function ClanManage() {
 
   if (loading) {
     return (
-      <div className="app-container">
-        <PageHeader title="Управление кланом" />
-        <div className="clan-manage-loading">Загрузка...</div>      </div>
+      <PageLayout title="Клан" showBack={true}>
+        <div className="clan-manage-loading">Загрузка...</div>
+      </PageLayout>
     )
   }
 
   if (!clan) {
-    return null
+    return (
+      <PageLayout title="Клан" showBack={true}>
+        <div className="clan-manage-empty">Клан не найден</div>
+      </PageLayout>
+    )
   }
 
-  const districtText = clan.ownedDistricts && clan.ownedDistricts.length > 0
-    ? `Владеет, ${getDistrictName(clan.ownedDistricts[0])}`
-    : 'Нет районов'
-
-  const memberText = clan.memberCount === 1 
-    ? 'участник' 
-    : clan.memberCount < 5 
-      ? 'участника' 
-      : 'участников'
-
-  const isLeader = user?.id === clan.leaderId
-
   return (
-    <div className="app-container">
-      <PageHeader title="Управление кланом" />
-      
+    <PageLayout title="" showBack={true}>
       <div className="clan-manage-content">
         {/* Эмблема клана */}
         <div className="clan-manage-emblem">
-          <Icon name="shield" size={80} style={{ color: '#ffd700' }} />
+          <img src="/img/кланы.png" alt="Clan" className="clan-manage-emblem-icon" />
         </div>
 
         {/* Название клана */}
@@ -141,53 +138,28 @@ export default function ClanManage() {
 
         {/* Информация о клане */}
         <div className="clan-manage-info">
-          Уровень {clan.level} - {clan.memberCount} {memberText} - {districtText}
+          Уровень {clan.level} · {clan.memberCount} участника{clan.ownedDistricts && clan.ownedDistricts.length > 0 && ` · Владеет, ${getDistrictName(clan.ownedDistricts[0])}`}
         </div>
 
         {/* Кнопки управления */}
-        <div className="clan-manage-actions">
-          <Button
-            variant="secondary"
-            className="clan-manage-action-btn"
-            onClick={() => handleNavigate('/treasury')}
-          >
+        <div className="clan-manage-buttons">
+          <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/treasury`)}>
             Казна
-          </Button>
-          {isLeader && (
-            <Button
-              variant="secondary"
-              className="clan-manage-action-btn"
-              onClick={() => handleNavigate('/upgrades')}
-            >
-              Улучшить клан
-            </Button>
-          )}
-          <Button
-            variant="secondary"
-            className="clan-manage-action-btn"
-            onClick={() => navigate(`/clans/${clanId}/members`)}
-          >
+          </button>
+          <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/upgrades`)}>
+            Улучшить клан
+          </button>
+          <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/members`)}>
             Участники
-          </Button>
-          <Button
-            variant="secondary"
-            className="clan-manage-action-btn"
-            onClick={() => handleNavigate('/districts')}
-          >
+          </button>
+          <button className="clan-manage-button" onClick={() => navigate('/city')}>
             Районы
-          </Button>
-        </div>
-
-        {/* Кнопка выхода */}
-        <div className="clan-manage-leave">
-          <Button
-            variant="primary"
-            className="clan-manage-leave-btn"
-            onClick={handleLeave}
-          >
+          </button>
+          <button className="clan-manage-button clan-manage-button-leave" onClick={handleLeave}>
             Покинуть клан
-          </Button>
+          </button>
         </div>
-      </div>    </div>
+      </div>
+    </PageLayout>
   )
 }

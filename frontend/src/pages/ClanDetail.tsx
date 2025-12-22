@@ -1,9 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import PageHeader from '../components/PageHeader'
-import Button from '../components/Button'
-import Icon from '../components/Icon'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './ClanDetail.css'
 
@@ -37,11 +35,24 @@ export default function ClanDetail() {
   const loadClan = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get(`/clans/${clanId}`)
+      const response = await apiClient.get(`/clans/${clanId}`).catch(() => ({ data: null }))
       setClan(response.data)
+      
+      // Мок-данные для разработки
+      if (!response.data) {
+        setClan({
+          id: clanId || '1',
+          name: 'Нардисты Юга',
+          level: 3,
+          memberCount: 42,
+          maxMembers: 50,
+          treasury: 12540,
+          ownedDistricts: ['district_2'],
+          leaderId: '1',
+        })
+      }
     } catch (error) {
       console.error('Failed to load clan:', error)
-      navigate('/clans/search')
     } finally {
       setLoading(false)
     }
@@ -49,7 +60,7 @@ export default function ClanDetail() {
 
   const checkMembership = async () => {
     try {
-      const response = await apiClient.get('/clans/my')
+      const response = await apiClient.get('/clans/my').catch(() => ({ data: null }))
       if (response.data?.clan?.id === clanId) {
         setIsMember(true)
       }
@@ -83,34 +94,26 @@ export default function ClanDetail() {
 
   if (loading) {
     return (
-      <div className="app-container">
-        <PageHeader title="Клан" />
-        <div className="clan-detail-loading">Загрузка...</div>      </div>
+      <PageLayout title="Клан" showBack={true}>
+        <div className="clan-detail-loading">Загрузка...</div>
+      </PageLayout>
     )
   }
 
   if (!clan) {
-    return null
+    return (
+      <PageLayout title="Клан" showBack={true}>
+        <div className="clan-detail-empty">Клан не найден</div>
+      </PageLayout>
+    )
   }
 
-  const districtText = clan.ownedDistricts && clan.ownedDistricts.length > 0
-    ? `Владеет, ${getDistrictName(clan.ownedDistricts[0])}`
-    : 'Нет районов'
-
-  const memberText = clan.memberCount === 1 
-    ? 'участник' 
-    : clan.memberCount < 5 
-      ? 'участника' 
-      : 'участников'
-
   return (
-    <div className="app-container">
-      <PageHeader title="Клан" />
-      
+    <PageLayout title="" showBack={true}>
       <div className="clan-detail-content">
         {/* Эмблема клана */}
         <div className="clan-detail-emblem">
-          <Icon name="shield" size={80} style={{ color: '#ffd700' }} />
+          <img src="/img/кланы.png" alt="Clan" className="clan-detail-emblem-icon" />
         </div>
 
         {/* Название клана */}
@@ -118,37 +121,16 @@ export default function ClanDetail() {
 
         {/* Информация о клане */}
         <div className="clan-detail-info">
-          Уровень {clan.level} - {clan.memberCount} {memberText} - {districtText}
+          Уровень {clan.level} · {clan.memberCount} участника{clan.ownedDistricts && clan.ownedDistricts.length > 0 && ` · Владеет, ${getDistrictName(clan.ownedDistricts[0])}`}
         </div>
 
-        {clan.description && (
-          <div className="clan-detail-description">{clan.description}</div>
-        )}
-
-        {/* Кнопка действия */}
+        {/* Кнопка вступления */}
         {!isMember && (
-          <div className="clan-detail-action">
-            <Button
-              variant="primary"
-              className="clan-detail-join-btn"
-              onClick={handleJoin}
-            >
-              Вступить в клан
-            </Button>
-          </div>
+          <button className="clan-detail-join-button" onClick={handleJoin}>
+            Вступить в клан
+          </button>
         )}
-
-        {isMember && (
-          <div className="clan-detail-action">
-            <Button
-              variant="primary"
-              className="clan-detail-join-btn"
-              onClick={() => navigate(`/clans/${clanId}/manage`)}
-            >
-              Управление кланом
-            </Button>
-          </div>
-        )}
-      </div>    </div>
+      </div>
+    </PageLayout>
   )
 }

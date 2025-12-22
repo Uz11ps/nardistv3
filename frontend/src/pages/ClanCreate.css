@@ -1,31 +1,44 @@
 /* Clan Create Page Styles */
 
 .clan-create-content {
-  padding: var(--spacing-6) var(--spacing-5);
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
+  gap: 24px;
+  padding: 40px 20px;
 }
 
 .clan-create-emblem {
-  margin-bottom: var(--spacing-5);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 120px;
+  height: 120px;
+}
+
+.clan-create-emblem-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .clan-create-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-2);
+  color: #FFF;
+  text-align: center;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .clan-create-subtitle {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-6);
+  color: #B6B6B6;
+  text-align: center;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
+  max-width: 300px;
 }
 
 .clan-create-form {
@@ -33,70 +46,83 @@
   max-width: 400px;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
+  gap: 20px;
 }
 
 .clan-create-form-group {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
-  text-align: left;
+  gap: 8px;
 }
 
 .clan-create-label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
 }
 
 .clan-create-input,
 .clan-create-textarea {
   width: 100%;
-  padding: var(--spacing-3) var(--spacing-4);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-family: var(--font-family);
-  resize: vertical;
-}
-
-.clan-create-input:focus,
-.clan-create-textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(255, 51, 51, 0.1);
+  padding: 12px;
+  border-radius: 8px;
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
 }
 
 .clan-create-input::placeholder,
 .clan-create-textarea::placeholder {
-  color: var(--color-text-disabled);
+  color: #B6B6B6;
 }
 
-.clan-create-submit-btn {
+.clan-create-input:focus,
+.clan-create-textarea:focus {
+  border-color: #C93C3D;
+  outline: none;
+}
+
+.clan-create-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.clan-create-submit-button {
   width: 100%;
-  padding: var(--spacing-4);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  border-radius: var(--radius-md);
-  margin-top: var(--spacing-2);
+  height: 52px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
+  border: 0.1px solid #C93C3D;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 8px;
+}
+
+.clan-create-submit-button:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
+}
+
+.clan-create-submit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .clan-create-footer {
-  margin-top: var(--spacing-6);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  color: #B6B6B6;
   text-align: center;
-  max-width: 400px;
-}
-
-@media (max-width: 480px) {
-  .clan-create-content {
-    padding: var(--spacing-5) var(--spacing-4);
-  }
-
-  .clan-create-title {
-    font-size: var(--font-size-xl);
-  }
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  max-width: 300px;
 }

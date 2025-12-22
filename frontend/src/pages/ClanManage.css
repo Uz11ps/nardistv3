@@ -1,89 +1,90 @@
 /* Clan Manage Page Styles */
 
-.clan-manage-content {
-  padding: var(--spacing-6) var(--spacing-5);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.clan-manage-loading {
-  padding: var(--spacing-8);
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
-.clan-manage-emblem {
-  margin-bottom: var(--spacing-5);
+.clan-manage-loading,
+.clan-manage-empty {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 60vh;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+}
+
+.clan-manage-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px;
+}
+
+.clan-manage-emblem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+}
+
+.clan-manage-emblem-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .clan-manage-name {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-2);
+  color: #FFF;
+  text-align: center;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .clan-manage-info {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-6);
+  color: #B6B6B6;
+  text-align: center;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
-.clan-manage-actions {
-  width: 100%;
-  max-width: 320px;
+.clan-manage-buttons {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-6);
-}
-
-.clan-manage-action-btn {
+  gap: 12px;
   width: 100%;
-  padding: var(--spacing-4);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
+  max-width: 400px;
+  margin-top: 24px;
 }
 
-.clan-manage-action-btn:hover {
-  background: var(--color-background-secondary);
-  border-color: var(--color-primary);
-}
-
-.clan-manage-leave {
+.clan-manage-button {
   width: 100%;
-  max-width: 320px;
+  height: 52px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  border: none;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.clan-manage-leave-btn {
-  width: 100%;
-  padding: var(--spacing-4);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: var(--color-text-primary);
+.clan-manage-button:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
-.clan-manage-leave-btn:hover {
-  background: var(--color-primary-hover);
+.clan-manage-button-leave {
+  background: linear-gradient(180deg, #3a1a1a 2.86%, #1a0a0a 100%);
+  color: #FFF;
 }
 
-@media (max-width: 480px) {
-  .clan-manage-content {
-    padding: var(--spacing-5) var(--spacing-4);
-  }
-
-  .clan-manage-name {
-    font-size: var(--font-size-xl);
-  }
+.clan-manage-button-leave:hover {
+  background: linear-gradient(180deg, #4a2a2a 2.86%, #2a1a1a 100%);
 }

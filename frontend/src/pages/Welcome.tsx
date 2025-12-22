@@ -1,92 +1,177 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import Button from '../components/Button'
 
 export default function Welcome() {
   const navigate = useNavigate()
-  const { user, login } = useAuthStore()
+  const { user, login, loginAsGuest } = useAuthStore()
 
   return (
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 100%)',
+        background: 'url(/img/App2.png) no-repeat center center fixed',
+        backgroundSize: 'cover',
+        backgroundColor: '#1a1a1a',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px',
         textAlign: 'center',
+        position: 'relative',
       }}
     >
-      <div style={{ marginBottom: '40px' }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(26, 26, 26, 0.7)',
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      />
+      <div style={{ marginBottom: '40px', position: 'relative', zIndex: 1 }}>
         <h1
           style={{
+            color: '#FFF',
+            textAlign: 'center',
+            fontFamily: '"SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
             fontSize: '48px',
-            fontWeight: 700,
-            color: '#ffffff',
+            fontStyle: 'normal',
+            fontWeight: 1000,
+            lineHeight: '22px',
+            letterSpacing: '-0.4px',
             marginBottom: '16px',
-            textShadow: '0 4px 12px rgba(255, 51, 51, 0.3)',
           }}
         >
           НАРДИСТ
         </h1>
         <p
           style={{
-            fontSize: '18px',
-            color: '#aaaaaa',
+            color: '#FFF',
+            textAlign: 'center',
+            fontFamily: '"SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            fontSize: '24px',
+            fontStyle: 'normal',
+            fontWeight: 274,
+            lineHeight: 'normal',
             maxWidth: '400px',
-            lineHeight: '1.6',
+            margin: 0,
           }}
         >
           Добро пожаловать в мир нард
         </p>
       </div>
 
-      <Button
-        variant="primary"
-        onClick={async () => {
-          if (user) {
-            navigate('/onboarding/profile')
-          } else {
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <button
+          onClick={async () => {
+            if (user) {
+              navigate('/onboarding/profile')
+              return
+            }
+
             try {
+              // Сначала пытаемся войти через Telegram
               await login()
               navigate('/onboarding/profile')
             } catch (error: any) {
-              console.error('Ошибка авторизации:', error)
-              console.error('Детали ошибки:', {
-                message: error.message,
-                code: error.code,
-                response: error.response?.data,
-              })
-              
-              let errorMessage = 'Ошибка авторизации. '
+              // Если Telegram не доступен, входим как гость
               if (error.code === 'NO_INIT_DATA') {
-                errorMessage += 'Убедитесь что вы открыли приложение через Telegram бота.\n\n' +
-                  'Проверьте:\n' +
-                  '1. Открыли приложение через кнопку бота в Telegram\n' +
-                  '2. Домен nardist.site привязан к боту через @BotFather\n' +
-                  '3. Используете HTTPS (не HTTP)'
-              } else if (error.response?.status === 401) {
-                errorMessage += error.response?.data?.message || 'Неверные данные авторизации'
+                try {
+                  console.log('🌐 Telegram не доступен, выполняем гостевой вход...')
+                  await loginAsGuest()
+                  // Проверяем, создан ли мок-гость (isGuest)
+                  const currentUser = useAuthStore.getState().user
+                  if (currentUser?.isGuest) {
+                    // Мок-гость создан, переходим на главную (онбординг пропускается)
+                    console.log('✅ Мок-гость создан, переходим на главную страницу')
+                    navigate('/')
+                  } else {
+                    // Обычный гость, проходим онбординг
+                    navigate('/onboarding/profile')
+                  }
+                } catch (guestError: any) {
+                  console.error('Ошибка гостевого входа:', guestError)
+                  
+                  // Если это ошибка сети и мы в режиме разработки, мок-гость уже создан
+                  if (guestError.code === 'NETWORK_ERROR' && import.meta.env.DEV) {
+                    const currentUser = useAuthStore.getState().user
+                    if (currentUser?.isGuest) {
+                      console.log('✅ Мок-гость создан несмотря на ошибку, переходим на главную')
+                      navigate('/')
+                      return
+                    }
+                  }
+                  
+                  let errorMessage = 'Не удалось войти как гость. '
+                  if (guestError.code === 'NETWORK_ERROR') {
+                    errorMessage += 'Сервер недоступен. Убедитесь что бэкенд запущен или проверьте подключение к интернету.'
+                  } else if (guestError.code === 'SERVER_ERROR') {
+                    errorMessage += 'Ошибка сервера. Попробуйте позже.'
+                  } else {
+                    errorMessage += guestError.message || 'Неизвестная ошибка'
+                  }
+                  
+                  alert(errorMessage)
+                }
               } else {
-                errorMessage += error.message || 'Неизвестная ошибка'
+                // Другие ошибки авторизации
+                console.error('Ошибка авторизации:', error)
+                console.error('Детали ошибки:', {
+                  message: error.message,
+                  code: error.code,
+                  response: error.response?.data,
+                })
+                
+                let errorMessage = 'Ошибка авторизации. '
+                if (error.response?.status === 401) {
+                  errorMessage += error.response?.data?.message || 'Неверные данные авторизации'
+                } else {
+                  errorMessage += error.message || 'Неизвестная ошибка'
+                }
+                
+                alert(errorMessage)
               }
-              
-              alert(errorMessage)
             }
-          }
-        }}
-        style={{
-          padding: '16px 48px',
-          fontSize: '18px',
-          fontWeight: 600,
-          borderRadius: '12px',
-          minWidth: '200px',
-        }}
-      >
-        Начать
-      </Button>
+          }}
+          style={{
+            display: 'flex',
+            width: '313px',
+            height: '52px',
+            minWidth: '50px',
+            padding: '15px 12px',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '10px',
+            borderRadius: '12px',
+            border: '0.1px solid #C93C3D',
+            background: 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
+            boxShadow: '0 6px 16px 0 rgba(0, 0, 0, 0.25), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset',
+            color: '#FFF',
+            fontFamily: '"SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            fontSize: '18px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            borderStyle: 'solid',
+            outline: 'none',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.02)'
+            e.currentTarget.style.boxShadow = '0 8px 20px 0 rgba(0, 0, 0, 0.35), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.boxShadow = '0 6px 16px 0 rgba(0, 0, 0, 0.25), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset'
+          }}
+        >
+          Начать
+        </button>
+      </div>
     </div>
   )
 }

@@ -19,3 +19,4 @@ END $$;
 -- Создаем индекс для быстрого поиска гостевых пользователей (опционально)
 CREATE INDEX IF NOT EXISTS idx_users_is_guest ON users("isGuest") WHERE "isGuest" = true;
 
+

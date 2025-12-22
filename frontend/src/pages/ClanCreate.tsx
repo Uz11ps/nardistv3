@@ -1,8 +1,6 @@
 ﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
-import Button from '../components/Button'
-import Icon from '../components/Icon'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './ClanCreate.css'
 
@@ -36,13 +34,11 @@ export default function ClanCreate() {
   }
 
   return (
-    <div className="app-container">
-      <PageHeader title="Создать клан" />
-      
+    <PageLayout title="" showBack={true}>
       <div className="clan-create-content">
         {/* Эмблема клана */}
         <div className="clan-create-emblem">
-          <Icon name="shield" size={80} style={{ color: '#ffd700' }} />
+          <img src="/img/кланы.png" alt="Clan" className="clan-create-emblem-icon" />
         </div>
 
         {/* Заголовок */}
@@ -78,19 +74,19 @@ export default function ClanCreate() {
             />
           </div>
 
-          <Button
+          <button
             type="submit"
-            variant="primary"
-            className="clan-create-submit-btn"
+            className="clan-create-submit-button"
             disabled={loading}
           >
-            Создать клан
-          </Button>
+            {loading ? 'Создание...' : 'Создать клан'}
+          </button>
         </form>
 
         <div className="clan-create-footer">
           После создания клана ты сможешь приглашать участников и улучшать район
         </div>
-      </div>    </div>
+      </div>
+    </PageLayout>
   )
 }

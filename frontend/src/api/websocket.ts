@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client'
 
-// Для production используем wss://, для dev - ws://
-const WS_URL = import.meta.env.VITE_WS_URL || (import.meta.env.PROD ? `wss://${window.location.host}` : 'ws://localhost:3000')
+// Для production используем wss://, для dev - wss://nardist.site (если локальный бэкенд не запущен)
+const WS_URL = import.meta.env.VITE_WS_URL || (import.meta.env.PROD ? `wss://${window.location.host}` : 'wss://nardist.site')
 
 let gamesSocket: Socket | null = null
 let matchmakingSocket: Socket | null = null

@@ -1,158 +1,135 @@
 /* Inventory Page Styles */
 
-.inventory-content {
-  padding: var(--spacing-5);
+.inventory-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
 }
 
 .inventory-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
   text-align: center;
-  color: var(--color-text-secondary);
-  padding: var(--spacing-6);
 }
 
 .inventory-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-5);
-}
-
-.inventory-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
-}
-
-.inventory-section-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-2);
+  gap: 12px;
 }
 
 .inventory-item {
-  padding: var(--spacing-4);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.inventory-item-image-container {
+  width: 100%;
+  height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inventory-item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.inventory-item-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a2a2a;
+}
+
+.inventory-item-image-icon {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  opacity: 0.7;
 }
 
 .inventory-item-content {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-4);
-}
-
-.inventory-item-image {
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius-md);
-  background: var(--color-background-tertiary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.inventory-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.inventory-item-selected {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-primary);
-}
-
-.inventory-item-info {
-  flex: 1;
-  display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
-  min-width: 0;
+  gap: 12px;
 }
 
 .inventory-item-header {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .inventory-item-name {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  flex: 1;
 }
 
-.inventory-rarity-badge {
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
+.inventory-item-rarity {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
-.inventory-rarity-common {
-  background: var(--color-text-disabled);
-  color: var(--color-text-primary);
+.inventory-item-button {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
 }
 
-.inventory-rarity-rare {
-  background: var(--color-info);
-  color: var(--color-text-primary);
+.inventory-item-button.equipped {
+  background: #3a3a3a;
+  color: #FFF;
+  cursor: default;
 }
 
-.inventory-rarity-epic {
-  background: #6f42c1;
-  color: var(--color-text-primary);
+.inventory-item-button.wear {
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  color: #FFF;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
 }
 
-.inventory-rarity-legendary {
-  background: linear-gradient(135deg, var(--color-gold) 0%, #ff8800 100%);
-  color: #000;
+.inventory-item-button.wear:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
 }
 
-.inventory-item-meta {
-  display: flex;
-  gap: var(--spacing-3);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.inventory-item-type,
-.inventory-item-weight {
-  color: var(--color-text-secondary);
-}
-
-.inventory-item-description {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-1);
-}
-
-@media (max-width: 480px) {
-  .inventory-content {
-    padding: var(--spacing-4);
-  }
-
-  .inventory-item {
-    padding: var(--spacing-3);
-  }
-
-  .inventory-item-image {
-    width: 64px;
-    height: 64px;
-  }
+.inventory-item-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

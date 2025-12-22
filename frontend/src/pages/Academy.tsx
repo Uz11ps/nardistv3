@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import PageHeader from '../components/PageHeader'
-import Card from '../components/Card'
-import Button from '../components/Button'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
+import './Academy.css'
 
 interface Course {
   id: string
@@ -23,18 +22,87 @@ interface Article {
   purchased: boolean
 }
 
+interface MaterialSection {
+  id: string
+  title: string
+  content: string
+  icon?: string
+}
+
+interface MaterialDetail extends Course {
+  sections?: MaterialSection[]
+}
+
 export default function Academy() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { materialId } = useParams<{ materialId?: string }>()
   const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'courses' | 'articles' | 'materials'>('courses')
   const [courses, setCourses] = useState<Course[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [myMaterials, setMyMaterials] = useState<Course[]>([])
   const [showPurchaseModal, setShowPurchaseModal] = useState<Course | null>(null)
+  const [publishForm, setPublishForm] = useState({ title: '', description: '', type: 'article' as 'article' | 'course', price: 25, content: '' })
+  const [publishing, setPublishing] = useState(false)
+  const [materialDetail, setMaterialDetail] = useState<MaterialDetail | null>(null)
+  
+  const isPublishPage = location.pathname === '/academy/publish'
+  const isMaterialPage = !!materialId
 
   useEffect(() => {
-    loadData()
-  }, [activeTab])
+    if (isMaterialPage && materialId) {
+      loadMaterialDetail(materialId)
+    } else {
+      loadData()
+    }
+  }, [activeTab, materialId, isMaterialPage])
+  
+  const loadMaterialDetail = async (id: string) => {
+    try {
+      const response = await apiClient.get(`/academy/materials/${id}`).catch(() => ({ data: null }))
+      setMaterialDetail(response.data)
+      
+      // Мок-данные для разработки
+      if (!response.data) {
+        setMaterialDetail({
+          id: id,
+          title: 'Основы длинных нард',
+          author: 'Сергей Иванов',
+          price: 25,
+          purchased: true,
+          sections: [
+            {
+              id: '1',
+              title: 'Введение',
+              content: 'Нарды — это древнейшая настольная игра, сочетающая логику, интуицию и терпение. Чтобы стать настоящим нардистом, нужно научиться не просто ходить, а читать игру.',
+              icon: '🏛️',
+            },
+            {
+              id: '2',
+              title: 'Основы позиционной игры',
+              content: 'Первые ходы определяют развитие всей партии. Важно выстроить защиту и контроль пунктов, не спешить с выбросом шашек. Новички часто совершают ошибку, слишком рано открывая дом.',
+              icon: '🎯',
+            },
+            {
+              id: '3',
+              title: 'Тактика',
+              content: 'В длинных нардах главное — баланс. Если давишь слишком сильно — теряешь позиции. Если играешь в защиту — даёшь сопернику шанс на рискованную атаку.',
+              icon: '⚖️',
+            },
+            {
+              id: '4',
+              title: 'Совет профессионалов',
+              content: 'Тренируй партии с коротким таймером. Это улучшает твою реакцию и помогает быстро принимать решения.',
+              icon: '💡',
+            },
+          ],
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load material detail:', error)
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -50,6 +118,15 @@ export default function Academy() {
       }
     } catch (error) {
       console.error('Failed to load academy data:', error)
+      // Мок-данные для разработки
+      if (activeTab === 'courses') {
+        setCourses([
+          { id: '1', title: 'Основы длинных нард', author: 'Сергей Иванов', price: 25, purchased: true },
+          { id: '2', title: 'Стратегии и тактики', author: 'Мария Смирнова', price: 40, purchased: false },
+          { id: '3', title: 'Антипозиции в нардах', author: 'Виктор Петров', price: 65, purchased: false },
+          { id: '4', title: 'Тонкости коротких нард', author: 'Алексей Волков', price: 125, purchased: false },
+        ])
+      }
     }
   }
 
@@ -69,183 +146,273 @@ export default function Academy() {
 
   const canPublish = user?.isAdmin === true
 
+  const handlePublish = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!publishForm.title.trim()) {
+      alert('Введите название материала')
+      return
+    }
+    try {
+      setPublishing(true)
+      await apiClient.post('/academy/publish', publishForm)
+      alert('Материал успешно опубликован!')
+      navigate('/academy')
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при публикации')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   if ((user?.level || 0) < 20) {
     return (
-      <div className="app-container">
-        <PageHeader title="Академия" />
-        <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '64px', marginBottom: '24px' }}>🎓</div>
-          <div className="card-title" style={{ marginBottom: '12px' }}>
-            Курсы недоступны
-          </div>
-          <div className="card-subtitle" style={{ marginBottom: '32px' }}>
-            Город и районы открываются с 20 уровня. Здесь ты можешь читать, и писать статьи и
-            курсы.
-          </div>
-          <Button onClick={() => navigate('/')}>Играть</Button>
+      <PageLayout title="Академия" showBack={true}>
+        <div className="academy-unavailable">
+          <img src="/img/шляпа.png" alt="Academy" className="academy-unavailable-icon" />
+          <h2 className="academy-unavailable-title">Курсы недоступны</h2>
+          <p className="academy-unavailable-text">
+            Город и районы открываются с 20 уровня.
+            <br />
+            Здесь ты можешь читать, и писать статьи и курсы.
+          </p>
+          <button className="academy-play-button" onClick={() => navigate('/')}>
+            Играть
+          </button>
         </div>
-      </div>
+      </PageLayout>
+    )
+  }
+
+  // Страница просмотра материала
+  if (isMaterialPage && materialDetail) {
+    const titleParts = materialDetail.title.split(' ')
+    const mainTitle = titleParts[0] || 'Основы'
+    const subtitle = titleParts.slice(1).join(' ') || 'Длинных нард'
+    
+    return (
+      <PageLayout title={mainTitle} subtitle={subtitle} showBack={true}>
+        <div className="academy-material-author">{materialDetail.author}</div>
+        <div className="academy-material-sections">
+          {materialDetail.sections?.map((section) => (
+            <div key={section.id} className="academy-material-section">
+              <div className="academy-material-section-header">
+                {section.icon && <span className="academy-material-section-icon">{section.icon}</span>}
+                <h3 className="academy-material-section-title">{section.title}</h3>
+              </div>
+              <p className="academy-material-section-content">{section.content}</p>
+            </div>
+          ))}
+        </div>
+      </PageLayout>
+    )
+  }
+
+  // Страница публикации
+  if (isPublishPage) {
+    return (
+      <PageLayout title="" showBack={true}>
+        <form className="academy-publish-form" onSubmit={handlePublish}>
+          <div className="academy-publish-field">
+            <label className="academy-publish-label">Название материала:</label>
+            <input
+              type="text"
+              className="academy-publish-input"
+              placeholder="Введите название..."
+              value={publishForm.title}
+              onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="academy-publish-field">
+            <label className="academy-publish-label">Краткое описание:</label>
+            <input
+              type="text"
+              className="academy-publish-input"
+              placeholder="Описание материала"
+              value={publishForm.description}
+              onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
+            />
+          </div>
+
+          <div className="academy-publish-field">
+            <label className="academy-publish-label">Тип</label>
+            <div className="academy-publish-type-buttons">
+              <button
+                type="button"
+                className={`academy-publish-type-button ${publishForm.type === 'article' ? 'active' : ''}`}
+                onClick={() => setPublishForm({ ...publishForm, type: 'article' })}
+              >
+                Статья
+              </button>
+              <button
+                type="button"
+                className={`academy-publish-type-button ${publishForm.type === 'course' ? 'active' : ''}`}
+                onClick={() => setPublishForm({ ...publishForm, type: 'course' })}
+              >
+                Курс
+              </button>
+            </div>
+          </div>
+
+          <div className="academy-publish-field">
+            <label className="academy-publish-label">Стоимость</label>
+            <input
+              type="number"
+              className="academy-publish-input"
+              placeholder="25 NAR"
+              value={publishForm.price}
+              onChange={(e) => setPublishForm({ ...publishForm, price: parseInt(e.target.value) || 0 })}
+              min="0"
+            />
+          </div>
+
+          <div className="academy-publish-field">
+            <label className="academy-publish-label">Контент</label>
+            <textarea
+              className="academy-publish-textarea"
+              placeholder="Вставьте текст"
+              value={publishForm.content}
+              onChange={(e) => setPublishForm({ ...publishForm, content: e.target.value })}
+              rows={8}
+            />
+          </div>
+
+          <button type="submit" className="academy-publish-submit-button" disabled={publishing}>
+            {publishing ? 'Публикация...' : 'Опубликовать'}
+          </button>
+        </form>
+      </PageLayout>
     )
   }
 
   return (
-    <div className="app-container">
-      <PageHeader title="Академия" />
-      
-      <div style={{ padding: '20px' }}>
-        <div className="card-subtitle" style={{ marginBottom: '16px', textAlign: 'center' }}>
-          Повышай мастерство в нардах. Все материалы доступны к покупке
-        </div>
-
-        {/* Вкладки */}
-        <div className="tabs">
-          <button
-            className={`tab ${activeTab === 'courses' ? 'active' : ''}`}
-            onClick={() => setActiveTab('courses')}
-          >
-            Курсы
-          </button>
-          <button
-            className={`tab ${activeTab === 'articles' ? 'active' : ''}`}
-            onClick={() => setActiveTab('articles')}
-          >
-            Статьи
-          </button>
-          <button
-            className={`tab ${activeTab === 'materials' ? 'active' : ''}`}
-            onClick={() => setActiveTab('materials')}
-          >
-            Мои материалы
-          </button>
-        </div>
-
-        {/* Курсы */}
-        {activeTab === 'courses' && (
-          <div>
-            {courses.map((course) => (
-              <Card key={course.id} style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ fontSize: '32px' }}>🎓</div>
-                  <div style={{ flex: 1 }}>
-                    <div className="card-title">{course.title}</div>
-                    <div className="card-subtitle">{course.author}</div>
-                    {course.purchased && (
-                      <div style={{ fontSize: '12px', color: '#4a4a4a', marginTop: '4px' }}>
-                        Куплено
-                      </div>
-                    )}
-                  </div>
+    <PageLayout
+      title="Академия"
+      subtitle="Повышай мастерство в нардах. Все материалы доступны к покупке"
+      tabs={[
+        { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
+        { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
+        { id: 'materials', label: 'Мои материалы', active: activeTab === 'materials', onClick: () => setActiveTab('materials') },
+      ]}
+    >
+      {/* Курсы */}
+      {activeTab === 'courses' && (
+        <div className="academy-list">
+          {courses.map((course) => (
+            <div key={course.id} className="academy-card">
+              <img src="/img/шляпа.png" alt="Course" className="academy-card-icon" />
+              <div className="academy-card-content">
+                <div className="academy-card-header">
+                  <h3 className="academy-card-title">{course.title}</h3>
                   {course.purchased ? (
-                    <Button variant="secondary" onClick={() => handleOpen(course)}>
-                      Открыть
-                    </Button>
+                    <span className="academy-card-status">Куплено</span>
                   ) : (
-                    <div style={{ textAlign: 'right' }}>
-                      <div className="gold" style={{ marginBottom: '8px' }}>
-                        {course.price} NAR
-                      </div>
-                      <Button onClick={() => setShowPurchaseModal(course)}>Купить</Button>
-                    </div>
+                    <span className="academy-card-price">{course.price} NAR</span>
                   )}
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
+                <p className="academy-card-author">{course.author}</p>
+              </div>
+              {course.purchased ? (
+                <button className="academy-card-button academy-card-button-open" onClick={() => handleOpen(course)}>
+                  Открыть
+                </button>
+              ) : (
+                <button className="academy-card-button academy-card-button-buy" onClick={() => setShowPurchaseModal(course)}>
+                  Купить
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
-        {/* Статьи */}
-        {activeTab === 'articles' && (
-          <div>
-            {articles.map((article) => (
-              <Card key={article.id} style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ fontSize: '32px' }}>📄</div>
-                  <div style={{ flex: 1 }}>
-                    <div className="card-title">{article.title}</div>
-                    <div className="card-subtitle">{article.author}</div>
-                  </div>
+      {/* Статьи */}
+      {activeTab === 'articles' && (
+        <div className="academy-list">
+          {articles.map((article) => (
+            <div key={article.id} className="academy-card">
+              <img src="/img/шляпа.png" alt="Article" className="academy-card-icon" />
+              <div className="academy-card-content">
+                <div className="academy-card-header">
+                  <h3 className="academy-card-title">{article.title}</h3>
                   {article.purchased ? (
-                    <Button variant="secondary" onClick={() => handleOpen(article)}>
-                      Открыть
-                    </Button>
+                    <span className="academy-card-status">Куплено</span>
                   ) : (
-                    <div style={{ textAlign: 'right' }}>
-                      <div className="gold" style={{ marginBottom: '8px' }}>
-                        {article.price} NAR
-                      </div>
-                      <Button onClick={() => handlePurchase(article as Course)}>Купить</Button>
-                    </div>
+                    <span className="academy-card-price">{article.price} NAR</span>
                   )}
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
+                <p className="academy-card-author">{article.author}</p>
+              </div>
+              {article.purchased ? (
+                <button className="academy-card-button academy-card-button-open" onClick={() => handleOpen(article)}>
+                  Открыть
+                </button>
+              ) : (
+                <button className="academy-card-button academy-card-button-buy" onClick={() => handlePurchase(article as Course)}>
+                  Купить
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
-        {/* Мои материалы */}
-        {activeTab === 'materials' && (
-          <div>
-            {myMaterials.map((material) => (
-              <Card key={material.id} style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ fontSize: '32px' }}>🎓</div>
-                  <div style={{ flex: 1 }}>
-                    <div className="card-title">{material.title}</div>
-                    <div className="card-subtitle">{material.author}</div>
-                    <div style={{ fontSize: '12px', color: '#4a4a4a', marginTop: '4px' }}>
-                      Куплено
-                    </div>
-                  </div>
-                  <Button variant="secondary" onClick={() => handleOpen(material)}>
-                    Открыть
-                  </Button>
+      {/* Мои материалы */}
+      {activeTab === 'materials' && (
+        <div className="academy-list">
+          {myMaterials.map((material) => (
+            <div key={material.id} className="academy-card">
+              <img src="/img/шляпа.png" alt="Material" className="academy-card-icon" />
+              <div className="academy-card-content">
+                <div className="academy-card-header">
+                  <h3 className="academy-card-title">{material.title}</h3>
+                  <span className="academy-card-status">Куплено</span>
                 </div>
-              </Card>
-            ))}
-            {canPublish && (
-              <Button
-                fullWidth
-                onClick={() => navigate('/academy/publish')}
-                style={{ marginTop: '24px' }}
-              >
-                Опубликовать свое
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+                <p className="academy-card-author">{material.author}</p>
+              </div>
+              <button className="academy-card-button academy-card-button-open" onClick={() => handleOpen(material)}>
+                Открыть
+              </button>
+            </div>
+          ))}
+          {canPublish && (
+            <button className="academy-publish-button" onClick={() => navigate('/academy/publish')}>
+              Опубликовать свое
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Модальное окно покупки */}
       {showPurchaseModal && (
-        <div className="modal-overlay" onClick={() => setShowPurchaseModal(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">Купить курс</div>
-            <div className="modal-description">
+        <div className="academy-modal-overlay" onClick={() => setShowPurchaseModal(null)}>
+          <div className="academy-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="academy-modal-title">Купить курс</h3>
+            <p className="academy-modal-description">
               {showPurchaseModal.title} за {showPurchaseModal.price} NAR?
-            </div>
-            <div className="card-subtitle" style={{ marginBottom: '24px' }}>
+            </p>
+            <p className="academy-modal-balance">
               Баланс: {Number(user?.narCoin || 0).toLocaleString()} NAR
-            </div>
-            <div className="modal-actions">
-              <Button
-                fullWidth
+            </p>
+            <div className="academy-modal-actions">
+              <button
+                className="academy-modal-button academy-modal-button-primary"
                 onClick={() => handlePurchase(showPurchaseModal)}
                 disabled={Number(user?.narCoin || 0) < showPurchaseModal.price}
-                variant={Number(user?.narCoin || 0) < showPurchaseModal.price ? 'secondary' : 'primary'}
               >
                 Да
-              </Button>
-              <Button
-                fullWidth
-                variant="secondary"
+              </button>
+              <button
+                className="academy-modal-button academy-modal-button-secondary"
                 onClick={() => setShowPurchaseModal(null)}
               >
                 Нет
-              </Button>
+              </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </PageLayout>
   )
 }
