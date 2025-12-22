@@ -15,6 +15,8 @@ interface Tournament {
   entryFee: number
   prizePool: number
   startDate: string
+  registrationStart?: string
+  registrationEnd?: string
   registered: boolean
   currentRound?: number
   totalRounds?: number
