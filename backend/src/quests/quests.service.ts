@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
 import { Quest, QuestType, QuestTarget } from './quest.entity';
 import { QuestProgress } from './quest-progress.entity';
 import { ProgressService } from '../progress/progress.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class QuestsService {
@@ -13,6 +16,8 @@ export class QuestsService {
     @InjectRepository(QuestProgress)
     private progressRepository: Repository<QuestProgress>,
     private progressService: ProgressService,
+    private configService: ConfigService,
+    private usersService: UsersService,
   ) {}
 
   async getActiveQuests(userId: string): Promise<any[]> {
@@ -102,6 +107,7 @@ export class QuestsService {
         completed: progress.completed,
         claimed: progress.claimed || false,
         isPremium: quest.isPremium || false,
+        channelUsername: quest.channelUsername || null,
       });
     }
 
@@ -182,6 +188,56 @@ export class QuestsService {
         }
         await this.progressRepository.save(progress);
       }
+    }
+  }
+
+  async checkChannelSubscription(userId: string, questId: string): Promise<boolean> {
+    const quest = await this.questsRepository.findOne({ where: { id: questId } });
+    if (!quest || quest.target !== QuestTarget.SUBSCRIBE_CHANNEL || !quest.channelUsername) {
+      throw new Error('Задание не найдено или не является заданием на подписку');
+    }
+
+    const user = await this.usersService.findOne(userId);
+    if (!user || !user.telegramId) {
+      return false;
+    }
+
+    const botToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    if (!botToken) {
+      throw new Error('TELEGRAM_BOT_TOKEN не настроен');
+    }
+
+    try {
+      // Убираем @ если есть
+      const channelUsername = quest.channelUsername.replace('@', '');
+      
+      // Проверяем подписку через Telegram Bot API
+      const response = await axios.get(
+        `https://api.telegram.org/bot${botToken}/getChatMember`,
+        {
+          params: {
+            chat_id: `@${channelUsername}`,
+            user_id: user.telegramId,
+          },
+        }
+      );
+
+      const status = response.data?.result?.status;
+      // Статусы: 'member', 'administrator', 'creator' означают подписку
+      const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
+
+      if (isSubscribed) {
+        // Обновляем прогресс задания
+        await this.updateProgress(userId, QuestTarget.SUBSCRIBE_CHANNEL, quest.targetValue);
+      }
+
+      return isSubscribed;
+    } catch (error: any) {
+      // Если пользователь не подписан, API вернет ошибку
+      if (error.response?.status === 400) {
+        return false;
+      }
+      throw error;
     }
   }
 }

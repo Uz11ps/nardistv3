@@ -34,8 +34,8 @@ export class ClansService {
     }
 
     const user = await this.usersService.findOne(userId);
-    if (user.level < 20) {
-      throw new BadRequestException('Кланы доступны с 20 уровня');
+    if (user.level < 10) {
+      throw new BadRequestException('Федерации доступны с 10 уровня');
     }
 
     const clan = this.clansRepository.create({
@@ -100,8 +100,8 @@ export class ClansService {
 
   async join(userId: string, clanId: string): Promise<void> {
     const user = await this.usersService.findOne(userId);
-    if (user.level < 20) {
-      throw new BadRequestException('Кланы доступны с 20 уровня');
+    if (user.level < 10) {
+      throw new BadRequestException('Федерации доступны с 10 уровня');
     }
 
     const existingMember = await this.membersRepository.findOne({

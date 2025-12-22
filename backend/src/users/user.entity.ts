@@ -99,6 +99,18 @@ export class User {
   @Column({ default: false })
   starterKitClaimed: boolean; // Забрал ли стартовый набор
 
+  @Column({ type: 'date', nullable: true })
+  birthday: Date; // День рождения пользователя
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastBirthdayGift: Date; // Дата последнего подарка на день рождения
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastLogin: Date; // Дата последнего входа
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastInactiveNotification: Date; // Дата последнего уведомления о неактивности
+
   @CreateDateColumn()
   createdAt: Date;
 

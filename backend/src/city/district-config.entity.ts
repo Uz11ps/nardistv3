@@ -34,6 +34,9 @@ export class DistrictConfig {
   @Column({ type: 'jsonb', nullable: true })
   metadata: any; // Дополнительные данные (цвет, иконка и т.д.)
 
+  @Column({ type: 'int', default: 1 })
+  requiredLevel: number; // Минимальный уровень для появления района
+
   @CreateDateColumn()
   createdAt: Date;
 

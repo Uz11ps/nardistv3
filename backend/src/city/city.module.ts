@@ -8,6 +8,7 @@ import { DistrictConfig } from './district-config.entity';
 import { UsersModule } from '../users/users.module';
 import { ClansModule } from '../clans/clans.module';
 import { QuestsModule } from '../quests/quests.module';
+import { TrainingModule } from '../training/training.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { QuestsModule } from '../quests/quests.module';
     UsersModule,
     forwardRef(() => ClansModule),
     QuestsModule,
+    forwardRef(() => TrainingModule),
   ],
   controllers: [CityController],
   providers: [CityService],

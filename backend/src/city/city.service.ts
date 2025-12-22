@@ -7,6 +7,8 @@ import { DistrictConfig } from './district-config.entity';
 import { UsersService } from '../users/users.service';
 import { ClansService } from '../clans/clans.service';
 import { QuestsService } from '../quests/quests.service';
+import { TrainingService } from '../training/training.service';
+import { TaskType } from '../training/training-task.entity';
 import { QuestTarget } from '../quests/quest.entity';
 
 @Injectable()
@@ -25,6 +27,8 @@ export class CityService {
     @Inject(forwardRef(() => ClansService))
     private clansService: ClansService,
     private questsService: QuestsService,
+    @Inject(forwardRef(() => TrainingService))
+    private trainingService: TrainingService,
   ) {}
 
   async getCity(userId: string): Promise<Building[]> {
@@ -101,9 +105,57 @@ export class CityService {
         // Логируем ошибку, но не прерываем процесс
         console.error('Ошибка при обновлении квестов collect_income:', error);
       }
+      
+      // Обновляем задания обучения на сбор дохода
+      try {
+        await this.trainingService.updateTaskProgress(userId, TaskType.COLLECT_INCOME, 1);
+      } catch (error) {
+        console.error('Ошибка при обновлении заданий обучения collect_income:', error);
+      }
     }
 
     return playerIncome;
+  }
+
+  async autoCollectAllIncome(userId: string, paymentMethod: 'nar' | 'ton'): Promise<{ totalIncome: number; cost: number }> {
+    const buildings = await this.getCity(userId);
+    const user = await this.usersService.findOne(userId);
+    
+    if (!user) {
+      throw new BadRequestException('Пользователь не найден');
+    }
+
+    // Стоимость автоматического сбора
+    const costNar = 100000;
+    const costTon = 50; // 50 TON (примерно $50)
+
+    // Проверяем баланс в зависимости от метода оплаты
+    if (paymentMethod === 'nar') {
+      const userNarCoin = typeof user.narCoin === 'bigint' ? Number(user.narCoin) : (user.narCoin || 0);
+      if (userNarCoin < costNar) {
+        throw new BadRequestException(`Недостаточно NAR. Требуется: ${costNar}, у вас: ${userNarCoin}`);
+      }
+      // Списываем NAR
+      user.narCoin = BigInt(userNarCoin - costNar);
+      await this.usersService['usersRepository'].save(user);
+    } else if (paymentMethod === 'ton') {
+      // Здесь должна быть логика проверки TON баланса и списания
+      // Пока просто проверяем наличие метода оплаты
+      throw new BadRequestException('Оплата через TON пока не реализована');
+    }
+
+    // Собираем доход со всех зданий
+    let totalIncome = 0;
+    const now = new Date();
+
+    for (const building of buildings) {
+      if (building.accumulatedIncome && BigInt(building.accumulatedIncome) > 0) {
+        const income = await this.collectIncome(userId, building.id);
+        totalIncome += income;
+      }
+    }
+
+    return { totalIncome, cost: paymentMethod === 'nar' ? costNar : costTon };
   }
 
   private async getDistrictConfig(district: District): Promise<{ incomePerHour: number; maxAccumulation: number }> {
@@ -169,6 +221,13 @@ export class CityService {
   }
 
   async getDistricts(userId?: string): Promise<any[]> {
+    // Получаем уровень пользователя
+    let userLevel = 1;
+    if (userId) {
+      const user = await this.usersService.findOne(userId);
+      userLevel = user?.level || 1;
+    }
+    
     // Получаем активные территории из БД
     const districtConfigs = await this.districtConfigsRepository.find({
       where: { isActive: true },
@@ -188,6 +247,8 @@ export class CityService {
     const districtsData = await Promise.all(
       districtConfigs.map(async (districtConfig) => {
         const districtCode = districtConfig.code as District;
+        const requiredLevel = districtConfig.requiredLevel || 1;
+        const isUnlocked = userLevel >= requiredLevel;
         
         // Находим предприятия в этом районе
         const districtBuildings = await this.buildingsRepository.find({
@@ -211,6 +272,8 @@ export class CityService {
           order: districtConfig.order,
           baseIncomePerDay: Number(districtConfig.baseIncomePerDay),
           metadata: districtConfig.metadata,
+          requiredLevel,
+          isUnlocked,
           userBuilding: userBuilding ? {
             id: userBuilding.id,
             type: userBuilding.type,
@@ -275,6 +338,22 @@ export class CityService {
   }
 
   async purchaseBuilding(userId: string, district: District, type: BuildingType): Promise<Building> {
+    // Проверяем уровень пользователя
+    const user = await this.usersService.findOne(userId);
+    const userLevel = user?.level || 1;
+    
+    // Получаем конфигурацию района
+    const districtConfig = await this.districtConfigsRepository.findOne({
+      where: { code: district },
+    });
+    
+    if (districtConfig) {
+      const requiredLevel = districtConfig.requiredLevel || 1;
+      if (userLevel < requiredLevel) {
+        throw new BadRequestException(`Для покупки в этом районе требуется уровень ${requiredLevel}. Ваш уровень: ${userLevel}`);
+      }
+    }
+    
     // Проверяем, не купил ли уже игрок предприятие в этом районе
     const existingBuilding = await this.buildingsRepository.findOne({
       where: { userId, district },
@@ -294,7 +373,6 @@ export class CityService {
     }
 
     const purchasePrice = Number(config.basePrice);
-    const user = await this.usersService.findOne(userId);
 
     if (Number(user.narCoin) < purchasePrice) {
       throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${purchasePrice}`);

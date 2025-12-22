@@ -41,6 +41,16 @@ export class CityController {
     return { income };
   }
 
+  @Post('auto-collect')
+  @UseGuards(JwtAuthGuard)
+  async autoCollectAllIncome(
+    @CurrentUser() user: any,
+    @Body() body: { paymentMethod: 'nar' | 'ton' },
+  ) {
+    const result = await this.cityService.autoCollectAllIncome(user.id, body.paymentMethod || 'nar');
+    return result;
+  }
+
   @Post('buildings/:buildingId/capture')
   @UseGuards(JwtAuthGuard)
   async captureTerritory(@CurrentUser() user: any, @Param('buildingId') buildingId: string) {

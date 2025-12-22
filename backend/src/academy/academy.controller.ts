@@ -52,6 +52,38 @@ export class AcademyController {
     return this.academyService.create({ ...articleData, author: user.username });
   }
 
+  @Post('slots/purchase')
+  @UseGuards(JwtAuthGuard)
+  async purchaseSlot(@CurrentUser() user: any, @Body('price') price?: number) {
+    return this.academyService.purchaseArticleSlot(user.id, price);
+  }
+
+  @Get('slots')
+  @UseGuards(JwtAuthGuard)
+  async getUserSlots(@CurrentUser() user: any) {
+    return this.academyService.getUserSlots(user.id);
+  }
+
+  @Post('slots/:slotId/create')
+  @UseGuards(JwtAuthGuard)
+  async createUserArticle(
+    @CurrentUser() user: any,
+    @Param('slotId') slotId: string,
+    @Body() articleData: { title: string; content: string; telegraphData?: any },
+  ) {
+    return this.academyService.createUserArticle(user.id, slotId, articleData);
+  }
+
+  @Put('my-articles/:id')
+  @UseGuards(JwtAuthGuard)
+  async updateUserArticle(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() articleData: { title?: string; content?: string; telegraphData?: any },
+  ) {
+    return this.academyService.updateUserArticle(user.id, id, articleData);
+  }
+
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   async update(@CurrentUser() user: any, @Param('id') id: string, @Body() articleData: any) {

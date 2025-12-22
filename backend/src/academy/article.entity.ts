@@ -16,10 +16,16 @@ export class Article {
   title: string;
 
   @Column({ type: 'text' })
-  content: string;
+  content: string; // HTML контент статьи (как в телеграфф)
+
+  @Column({ type: 'jsonb', nullable: true })
+  telegraphData: any; // Данные в формате телеграфф (nodes)
 
   @Column({ nullable: true })
   author: string;
+
+  @Column({ nullable: true })
+  authorId: string; // ID пользователя-автора (если статья создана пользователем)
 
   @Column({ default: 'article' })
   type: string; // 'article' | 'course'

@@ -306,7 +306,7 @@ export class AdminService {
     }
   }
 
-  async sendNotification(data: { userId?: string; message: string; all?: boolean }) {
+  async sendNotification(data: { userId?: string; message: string; all?: boolean; imageUrl?: string }) {
     const botToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
     const title = 'Уведомление от администратора';
     const message = data.message;
@@ -327,6 +327,7 @@ export class AdminService {
         message,
         type,
         userIds,
+        data.imageUrl,
       );
 
       // Отправляем через Telegram (если настроен)
@@ -359,7 +360,7 @@ export class AdminService {
       }
 
       // Сохраняем уведомление в БД
-      await this.notificationsService.createNotification(user.id, title, message, type);
+      await this.notificationsService.createNotification(user.id, title, message, type, data.imageUrl);
 
       // Отправляем через Telegram (если настроен)
       if (botToken) {
@@ -594,6 +595,7 @@ export class AdminService {
   }
 
   async createDistrict(data: {
+    requiredLevel?: number;
     code: string;
     name: string;
     description?: string;
@@ -616,6 +618,7 @@ export class AdminService {
       isActive: data.isActive !== undefined ? data.isActive : true,
       baseIncomePerDay: (data.baseIncomePerDay || 0).toString(),
       metadata: data.metadata || null,
+      requiredLevel: data.requiredLevel || 1,
     });
 
     return this.districtConfigsRepository.save(district);
@@ -646,6 +649,7 @@ export class AdminService {
     Object.assign(district, {
       ...data,
       baseIncomePerDay: data.baseIncomePerDay !== undefined ? data.baseIncomePerDay.toString() : district.baseIncomePerDay,
+      requiredLevel: data.requiredLevel !== undefined ? data.requiredLevel : district.requiredLevel,
     });
 
     return this.districtConfigsRepository.save(district);
@@ -702,6 +706,7 @@ export class AdminService {
     blackCheckersTextureUrl?: string;
     price?: number;
     rarity?: string;
+    maxDurability?: number;
   }) {
     const skin = this.skinsRepository.create({
       name: data.name,
@@ -722,6 +727,9 @@ export class AdminService {
       blackCheckersTextureUrl: data.blackCheckersTextureUrl || null,
       price: data.price || null,
       rarity: data.rarity || 'common',
+      maxDurability: data.maxDurability || 100,
+      xpBonusPercent: data.xpBonusPercent || 0,
+      moneyBonusPercent: data.moneyBonusPercent || 0,
     });
 
     return this.skinsRepository.save(skin);

@@ -18,5 +18,12 @@ export class QuestsController {
   async claimQuest(@CurrentUser() user: any, @Param('id') id: string) {
     return this.questsService.claimQuest(user.id, id);
   }
+
+  @Post(':id/check-subscription')
+  @UseGuards(JwtAuthGuard)
+  async checkChannelSubscription(@CurrentUser() user: any, @Param('id') id: string) {
+    const isSubscribed = await this.questsService.checkChannelSubscription(user.id, id);
+    return { subscribed: isSubscribed };
+  }
 }
 

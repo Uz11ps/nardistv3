@@ -28,5 +28,18 @@ export class TrainingController {
   ) {
     return this.trainingService.checkSolution(user.id, id, move);
   }
+
+  @Get('tasks')
+  @UseGuards(JwtAuthGuard)
+  async getTasks(@CurrentUser() user: any) {
+    return this.trainingService.getTasks(user.id);
+  }
+
+  @Post('tasks/:id/claim')
+  @UseGuards(JwtAuthGuard)
+  async claimTaskReward(@CurrentUser() user: any, @Param('id') id: string) {
+    await this.trainingService.claimTaskReward(user.id, id);
+    return { message: 'Награда получена' };
+  }
 }
 

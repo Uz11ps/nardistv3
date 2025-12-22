@@ -28,5 +28,8 @@ export class UserSkin {
 
   @Column({ default: false })
   isSelected: boolean;
+
+  @Column({ type: 'int', nullable: true })
+  currentDurability: number; // Текущая прочность скина (null = полная прочность)
 }
 

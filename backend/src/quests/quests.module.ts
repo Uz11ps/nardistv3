@@ -5,9 +5,10 @@ import { QuestsController } from './quests.controller';
 import { Quest } from './quest.entity';
 import { QuestProgress } from './quest-progress.entity';
 import { ProgressModule } from '../progress/progress.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Quest, QuestProgress]), ProgressModule],
+  imports: [TypeOrmModule.forFeature([Quest, QuestProgress]), ProgressModule, UsersModule],
   controllers: [QuestsController],
   providers: [QuestsService],
   exports: [QuestsService],

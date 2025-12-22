@@ -32,5 +32,9 @@ export class UpdateUserDto {
   @IsBoolean()
   @IsOptional()
   isGuest?: boolean;
+
+  @IsString()
+  @IsOptional()
+  birthday?: string; // Дата в формате YYYY-MM-DD
 }
 

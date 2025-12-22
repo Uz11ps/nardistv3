@@ -15,6 +15,7 @@ export class NotificationsService {
     title: string,
     message: string,
     type: 'info' | 'success' | 'warning' | 'error' = 'info',
+    imageUrl?: string,
   ): Promise<Notification> {
     const notification = this.notificationsRepository.create({
       userId,
@@ -22,6 +23,7 @@ export class NotificationsService {
       message,
       type,
       read: false,
+      imageUrl: imageUrl || null,
     });
     return this.notificationsRepository.save(notification);
   }
@@ -65,6 +67,7 @@ export class NotificationsService {
     message: string,
     type: 'info' | 'success' | 'warning' | 'error' = 'info',
     userIds: string[],
+    imageUrl?: string,
   ): Promise<Notification[]> {
     const notifications = userIds.map((userId) =>
       this.notificationsRepository.create({
@@ -73,6 +76,7 @@ export class NotificationsService {
         message,
         type,
         read: false,
+        imageUrl: imageUrl || null,
       }),
     );
 

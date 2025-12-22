@@ -54,6 +54,12 @@ export class UsersService {
       delete (updateUserDto as any).narCoin;
     }
     
+    // Конвертируем birthday в Date если он есть
+    if (updateUserDto.birthday) {
+      (user as any).birthday = new Date(updateUserDto.birthday);
+      delete (updateUserDto as any).birthday;
+    }
+    
     Object.assign(user, updateUserDto);
     return this.usersRepository.save(user);
   }

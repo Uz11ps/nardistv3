@@ -37,6 +37,7 @@ import { QuestsModule } from '../quests/quests.module';
     forwardRef(() => MatchmakingModule),
     forwardRef(() => SkinsModule),
     forwardRef(() => QuestsModule),
+    forwardRef(() => TrainingModule),
   ],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway, BackgammonEngine, LongBackgammonEngine],

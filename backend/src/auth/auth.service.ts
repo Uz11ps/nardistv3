@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
+import { BirthdayService } from '../users/birthday.service';
 
 @Injectable()
 export class AuthService {
@@ -11,6 +12,8 @@ export class AuthService {
     private jwtService: JwtService,
     private usersService: UsersService,
     private configService: ConfigService,
+    @Inject(forwardRef(() => BirthdayService))
+    private birthdayService: BirthdayService,
   ) {}
 
   async verifyTelegramInitData(initData: string): Promise<any> {
@@ -130,7 +133,15 @@ export class AuthService {
         firstName: telegramUser.first_name || user.firstName,
         lastName: telegramUser.last_name || user.lastName,
         avatarUrl: telegramUser.photo_url || user.avatarUrl,
+        lastLogin: new Date(), // Обновляем время последнего входа
       });
+      
+      // Проверяем день рождения при логине
+      try {
+        await this.birthdayService.checkUserBirthday(user.id);
+      } catch (error) {
+        console.error('Ошибка при проверке дня рождения:', error);
+      }
     }
 
     const payload = {

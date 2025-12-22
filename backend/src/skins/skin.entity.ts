@@ -65,6 +65,15 @@ export class Skin {
   @Column({ default: 'common' })
   rarity: string; // Редкость: common, rare, epic, legendary
 
+  @Column({ type: 'int', default: 100 })
+  maxDurability: number; // Максимальная прочность скина (количество игр)
+
+  @Column({ type: 'int', default: 0 })
+  xpBonusPercent: number; // Бонус к опыту в процентах (например, 10 = +10%)
+
+  @Column({ type: 'int', default: 0 })
+  moneyBonusPercent: number; // Бонус к деньгам в процентах (например, 10 = +10%)
+
   @CreateDateColumn()
   createdAt: Date;
 

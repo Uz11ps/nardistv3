@@ -3,9 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TrainingPosition } from './training-position.entity';
 import { UserTrainingProgress } from './user-training-progress.entity';
+import { TrainingTask, TaskType } from './training-task.entity';
+import { UserTaskProgress } from './user-task-progress.entity';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { BackgammonEngine } from '../games/game-engine/backgammon-engine';
 import { LongBackgammonEngine } from '../games/game-engine/long-backgammon-engine';
+import { UsersService } from '../users/users.service';
+import { ProgressService } from '../progress/progress.service';
 
 @Injectable()
 export class TrainingService {
@@ -14,10 +18,16 @@ export class TrainingService {
     private positionsRepository: Repository<TrainingPosition>,
     @InjectRepository(UserTrainingProgress)
     private progressRepository: Repository<UserTrainingProgress>,
+    @InjectRepository(TrainingTask)
+    private tasksRepository: Repository<TrainingTask>,
+    @InjectRepository(UserTaskProgress)
+    private taskProgressRepository: Repository<UserTaskProgress>,
     @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
     private backgammonEngine: BackgammonEngine,
     private longBackgammonEngine: LongBackgammonEngine,
+    private usersService: UsersService,
+    private progressService: ProgressService,
   ) {}
 
   /**
@@ -170,6 +180,102 @@ export class TrainingService {
           ? 'Ход валиден, но есть более сильное решение.'
           : 'Недопустимый ход. Попробуйте еще раз.',
     };
+  }
+
+  async getTasks(userId: string): Promise<any[]> {
+    const tasks = await this.tasksRepository.find({
+      order: { order: 'ASC' },
+    });
+
+    const result = [];
+    for (const task of tasks) {
+      let progress = await this.taskProgressRepository.findOne({
+        where: { userId, taskId: task.id },
+      });
+
+      if (!progress) {
+        progress = this.taskProgressRepository.create({
+          userId,
+          taskId: task.id,
+          progress: 0,
+          completed: false,
+          claimed: false,
+        });
+        progress = await this.taskProgressRepository.save(progress);
+      }
+
+      result.push({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        type: task.type,
+        targetValue: task.targetValue,
+        rewardNarCoin: Number(task.rewardNarCoin),
+        rewardXP: task.rewardXP,
+        progress: progress.progress,
+        completed: progress.completed,
+        claimed: progress.claimed,
+        isPremium: task.isPremium,
+      });
+    }
+
+    return result;
+  }
+
+  async updateTaskProgress(userId: string, taskType: TaskType, amount: number = 1): Promise<void> {
+    const tasks = await this.tasksRepository.find({
+      where: { type: taskType },
+    });
+
+    for (const task of tasks) {
+      let progress = await this.taskProgressRepository.findOne({
+        where: { userId, taskId: task.id },
+      });
+
+      if (!progress) {
+        progress = this.taskProgressRepository.create({
+          userId,
+          taskId: task.id,
+          progress: 0,
+          completed: false,
+          claimed: false,
+        });
+      }
+
+      if (!progress.completed) {
+        progress.progress += amount;
+        if (progress.progress >= task.targetValue) {
+          progress.completed = true;
+          progress.completedAt = new Date();
+        }
+        await this.taskProgressRepository.save(progress);
+      }
+    }
+  }
+
+  async claimTaskReward(userId: string, taskId: string): Promise<void> {
+    const progress = await this.taskProgressRepository.findOne({
+      where: { userId, taskId },
+      relations: ['task'],
+    });
+
+    if (!progress || !progress.completed || progress.claimed) {
+      throw new ForbiddenException('Задание не может быть получено');
+    }
+
+    const task = progress.task;
+    
+    // Начисляем награды
+    if (task.rewardNarCoin && Number(task.rewardNarCoin) > 0) {
+      await this.progressService.addNarCoin(userId, Number(task.rewardNarCoin));
+    }
+    
+    if (task.rewardXP > 0) {
+      await this.progressService.addXP(userId, task.rewardXP);
+    }
+
+    progress.claimed = true;
+    await this.taskProgressRepository.save(progress);
   }
 }
 

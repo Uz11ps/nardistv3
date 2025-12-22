@@ -18,6 +18,7 @@ export enum QuestTarget {
   WIN_STREAK = 'win_streak',
   COLLECT_INCOME = 'collect_income',
   TOURNAMENT = 'tournament',
+  SUBSCRIBE_CHANNEL = 'subscribe_channel',
 }
 
 @Entity('quests')
@@ -55,6 +56,9 @@ export class Quest {
 
   @Column({ type: 'jsonb', nullable: true })
   rewardSkin: any;
+
+  @Column({ nullable: true })
+  channelUsername: string; // Username канала для подписки (например, @channelname)
 
   @Column({ default: false })
   isPremium: boolean; // Только для премиум пользователей

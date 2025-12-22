@@ -36,6 +36,9 @@ export class Notification {
   @Column({ default: false })
   read: boolean;
 
+  @Column({ nullable: true })
+  imageUrl: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

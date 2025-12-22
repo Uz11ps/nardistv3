@@ -12,6 +12,8 @@ import { BotService } from '../bot/bot.service';
 import { SkinsService } from '../skins/skins.service';
 import { QuestsService } from '../quests/quests.service';
 import { QuestTarget } from '../quests/quest.entity';
+import { TrainingService } from '../training/training.service';
+import { TaskType } from '../training/training-task.entity';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -592,6 +594,35 @@ export class GamesService {
       const winner = engine.getWinner(currentState);
       updatedGame.status = GameStatus.FINISHED;
       updatedGame.winnerId = winner === 0 ? updatedGame.player1Id : updatedGame.player2Id;
+      
+      // Уменьшаем износ скинов после завершения игры
+      try {
+        if (updatedGame.skinData?.player1) {
+          if (updatedGame.skinData.player1.board) {
+            await this.skinsService.decreaseSkinDurability(updatedGame.player1Id, updatedGame.skinData.player1.board);
+          }
+          if (updatedGame.skinData.player1.dice) {
+            await this.skinsService.decreaseSkinDurability(updatedGame.player1Id, updatedGame.skinData.player1.dice);
+          }
+          if (updatedGame.skinData.player1.checkers) {
+            await this.skinsService.decreaseSkinDurability(updatedGame.player1Id, updatedGame.skinData.player1.checkers);
+          }
+        }
+        if (updatedGame.skinData?.player2 && updatedGame.player2Id) {
+          if (updatedGame.skinData.player2.board) {
+            await this.skinsService.decreaseSkinDurability(updatedGame.player2Id, updatedGame.skinData.player2.board);
+          }
+          if (updatedGame.skinData.player2.dice) {
+            await this.skinsService.decreaseSkinDurability(updatedGame.player2Id, updatedGame.skinData.player2.dice);
+          }
+          if (updatedGame.skinData.player2.checkers) {
+            await this.skinsService.decreaseSkinDurability(updatedGame.player2Id, updatedGame.skinData.player2.checkers);
+          }
+        }
+      } catch (error) {
+        this.logger.error('Ошибка при уменьшении износа скинов:', error);
+      }
+      
       if (winner === 0) {
         updatedGame.player1Score = 1;
       } else {
@@ -720,10 +751,15 @@ export class GamesService {
         const finalCommission = this.progressService.calculateFeeWithEconomy(commission, economyLevel);
         const winnerReward = totalPot - finalCommission;
 
+        // Получаем бонусы от скинов для денег
+        const winnerBonuses = await this.skinsService.getSkinBonuses(game.winnerId);
+        const moneyBonus = Math.floor(winnerReward * (winnerBonuses.moneyBonusPercent / 100));
+        const finalWinnerReward = winnerReward + moneyBonus;
+        
         const winnerBalance = Number(winnerUser.narCoin);
-        const newWinnerBalance = winnerBalance + winnerReward;
+        const newWinnerBalance = winnerBalance + finalWinnerReward;
         await this.usersService.update(game.winnerId, { narCoin: newWinnerBalance });
-        this.logger.log(`💰 Награда начислена победителю ${game.winnerId}: +${winnerReward} NAR (было ${winnerBalance}, стало ${newWinnerBalance}), комиссия: ${finalCommission} NAR`);
+        this.logger.log(`💰 Награда начислена победителю ${game.winnerId}: +${finalWinnerReward} NAR (базовая: ${winnerReward}, бонус: ${moneyBonus} (${winnerBonuses.moneyBonusPercent}%)), было ${winnerBalance}, стало ${newWinnerBalance}, комиссия: ${finalCommission} NAR`);
       } catch (error) {
         this.logger.error(`❌ Ошибка при начислении ставки: ${error.message}`, error.stack);
       }
@@ -736,9 +772,28 @@ export class GamesService {
         const WINNER_XP = 100; // XP за победу
         const LOSER_XP = 50; // XP за участие
         
-        await this.progressService.addXP(game.winnerId, WINNER_XP);
-        await this.progressService.addXP(loserId, LOSER_XP);
-        this.logger.log(`⭐ XP начислен: победитель ${game.winnerId} +${WINNER_XP} XP, проигравший ${loserId} +${LOSER_XP} XP`);
+        // Получаем бонусы от скинов
+        const winnerBonuses = await this.skinsService.getSkinBonuses(game.winnerId);
+        const loserBonuses = await this.skinsService.getSkinBonuses(loserId);
+        
+        // Применяем бонусы к XP
+        const winnerXP = Math.floor(WINNER_XP * (1 + winnerBonuses.xpBonusPercent / 100));
+        const loserXP = Math.floor(LOSER_XP * (1 + loserBonuses.xpBonusPercent / 100));
+        
+        await this.progressService.addXP(game.winnerId, winnerXP);
+        await this.progressService.addXP(loserId, loserXP);
+        this.logger.log(`⭐ XP начислен: победитель ${game.winnerId} +${winnerXP} XP (бонус: ${winnerBonuses.xpBonusPercent}%), проигравший ${loserId} +${loserXP} XP (бонус: ${loserBonuses.xpBonusPercent}%)`);
+        
+        // Обновляем прогресс заданий обучения
+        try {
+          await this.trainingService.updateTaskProgress(game.winnerId, TaskType.PLAY_GAME, 1);
+          await this.trainingService.updateTaskProgress(game.winnerId, TaskType.WIN_GAME, 1);
+          if (loserId) {
+            await this.trainingService.updateTaskProgress(loserId, TaskType.PLAY_GAME, 1);
+          }
+        } catch (error) {
+          this.logger.error(`❌ Ошибка при обновлении заданий обучения: ${error.message}`);
+        }
       } catch (error) {
         this.logger.error(`❌ Ошибка при начислении XP: ${error.message}`, error.stack);
       }

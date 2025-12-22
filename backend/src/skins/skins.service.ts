@@ -130,6 +130,48 @@ export class SkinsService implements OnModuleInit {
     });
   }
 
+  async getSkinBonuses(userId: string): Promise<{ xpBonusPercent: number; moneyBonusPercent: number }> {
+    // Получаем выбранные скины пользователя
+    const selectedSkins = await this.userSkinsRepository.find({
+      where: { userId, isSelected: true },
+      relations: ['skin'],
+    });
+
+    let totalXpBonus = 0;
+    let totalMoneyBonus = 0;
+
+    for (const userSkin of selectedSkins) {
+      if (userSkin.skin) {
+        // Проверяем, что скин не изношен
+        const maxDurability = userSkin.skin.maxDurability || 100;
+        const currentDurability = userSkin.currentDurability ?? maxDurability;
+        
+        if (currentDurability > 0) {
+          totalXpBonus += userSkin.skin.xpBonusPercent || 0;
+          totalMoneyBonus += userSkin.skin.moneyBonusPercent || 0;
+        }
+      }
+    }
+
+    // Также проверяем дефолтные скины, если они выбраны
+    const allSkins = await this.skinsRepository.find({
+      where: { isDefault: true },
+    });
+
+    // Если у пользователя нет выбранных скинов, используем дефолтные
+    if (selectedSkins.length === 0) {
+      for (const skin of allSkins) {
+        totalXpBonus += skin.xpBonusPercent || 0;
+        totalMoneyBonus += skin.moneyBonusPercent || 0;
+      }
+    }
+
+    return {
+      xpBonusPercent: totalXpBonus,
+      moneyBonusPercent: totalMoneyBonus,
+    };
+  }
+
   async getUserSkins(userId: string): Promise<Skin[]> {
     // Получаем все скины пользователя из user_skins
     const userSkins = await this.userSkinsRepository.find({
@@ -182,6 +224,31 @@ export class SkinsService implements OnModuleInit {
         isSelected: false,
       });
       await this.userSkinsRepository.save(userSkin);
+    }
+  }
+
+  async decreaseSkinDurability(userId: string, skinId: string): Promise<void> {
+    const userSkin = await this.userSkinsRepository.findOne({
+      where: { userId, skinId },
+      relations: ['skin'],
+    });
+
+    if (!userSkin || !userSkin.skin) {
+      return;
+    }
+
+    const maxDurability = userSkin.skin.maxDurability || 100;
+    const currentDurability = userSkin.currentDurability ?? maxDurability;
+
+    if (currentDurability > 0) {
+      userSkin.currentDurability = currentDurability - 1;
+      await this.userSkinsRepository.save(userSkin);
+
+      // Если износ достиг нуля, снимаем скины с выбора
+      if (userSkin.currentDurability === 0 && userSkin.isSelected) {
+        userSkin.isSelected = false;
+        await this.userSkinsRepository.save(userSkin);
+      }
     }
   }
 
