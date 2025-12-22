@@ -18,7 +18,7 @@ interface NarCoinPackage {
 export default function Shop() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'skins'>('coin')
+  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'skins' | 'cubes'>('coin')
   const [skinFilter, setSkinFilter] = useState<'all' | 'board' | 'dice' | 'checkers'>('all')
   const [narCoinPackages, setNarCoinPackages] = useState<NarCoinPackage[]>([])
   const [allSkins, setAllSkins] = useState<Skin[]>([])
@@ -31,7 +31,7 @@ export default function Shop() {
   useEffect(() => {
     if (activeTab === 'coin') {
       loadNarCoinPackages()
-    } else if (activeTab === 'skins') {
+    } else if (activeTab === 'skins' || activeTab === 'cubes') {
       loadSkins()
     }
   }, [activeTab])
@@ -264,12 +264,8 @@ export default function Shop() {
     { id: 'coin', label: 'NAR-coin', active: activeTab === 'coin', onClick: () => setActiveTab('coin') },
     { id: 'subscription', label: 'Подписка', active: activeTab === 'subscription', onClick: () => setActiveTab('subscription') },
     { id: 'skins', label: 'Доски', active: activeTab === 'skins', onClick: () => setActiveTab('skins') },
+    { id: 'cubes', label: 'Куби', active: activeTab === 'cubes', onClick: () => setActiveTab('cubes') },
   ]
-
-  // Изменяем название вкладки "Скины" на "Доски" для соответствия дизайну
-  if (activeTab === 'skins') {
-    tabs[2].label = 'Доски'
-  }
 
   return (
     <PageLayout title="Магазин" showBack={true} tabs={tabs}>
@@ -401,6 +397,36 @@ export default function Shop() {
                 </Card>
               ) : (
                 getFilteredSkins().map((skin) => renderSkinCard(skin))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Куби */}
+        {activeTab === 'cubes' && (
+          <div className="shop-skins-content">
+            {/* Фильтры по типам скинов - показываем только куби */}
+            <div className="shop-skin-filters">
+              <button
+                className={`shop-skin-filter ${skinFilter === 'dice' ? 'active' : ''}`}
+                onClick={() => setSkinFilter('dice')}
+              >
+                Все куби
+              </button>
+            </div>
+
+            {/* Отображение кубиков */}
+            <div className="shop-list">
+              {loading ? (
+                <Card>
+                  <div className="shop-empty">Загрузка...</div>
+                </Card>
+              ) : getSkinsByType('dice').length === 0 ? (
+                <Card>
+                  <div className="shop-empty">Нет доступных кубиков</div>
+                </Card>
+              ) : (
+                getSkinsByType('dice').map((skin) => renderSkinCard(skin))
               )}
             </div>
           </div>
