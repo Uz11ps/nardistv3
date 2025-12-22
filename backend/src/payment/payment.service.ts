@@ -1,11 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { UsersService } from '../users/users.service';
+import { SubscriptionService } from '../subscription/subscription.service';
+import { SubscriptionPlan } from '../subscription/subscription.entity';
 
 export interface TonPaymentRequest {
   userId: string;
   amount: number; // в TON
   description: string;
+  type?: 'subscription' | 'nar_coin' | 'skin';
   returnUrl?: string;
 }
 
@@ -19,8 +23,15 @@ export interface TonPaymentResponse {
 export class PaymentService {
   private readonly TON_API_URL = 'https://pay.tg';
   private readonly BOT_TOKEN: string;
+  private readonly TON_TO_NAR_RATE = 1000; // 1 TON = 1000 NAR
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @Inject(forwardRef(() => UsersService))
+    private usersService: UsersService,
+    @Inject(forwardRef(() => SubscriptionService))
+    private subscriptionService: SubscriptionService,
+  ) {
     this.BOT_TOKEN = this.configService.get<string>('TELEGRAM_BOT_TOKEN') || '';
   }
 
@@ -55,6 +66,7 @@ export class PaymentService {
           suggested_tip_amounts: [],
           provider_data: JSON.stringify({
             userId: request.userId,
+            type: request.type || 'nar_coin',
           }),
         },
       );
@@ -93,18 +105,46 @@ export class PaymentService {
       const userId = payload.userId;
       const amount = payload.amount;
 
-      // Здесь можно добавить логику начисления NAR-coin или подписки
       console.log(`Платеж подтвержден: userId=${userId}, amount=${amount}`);
     }
 
     if (update.message?.successful_payment) {
       // Платеж успешно завершен
       const payload = JSON.parse(update.message.successful_payment.invoice_payload || '{}');
-      const userId = payload.userId;
-      const amount = update.message.successful_payment.total_amount / 100; // Конвертируем из копеек
+      const providerData = JSON.parse(update.message.successful_payment.provider_data || '{}');
+      const userId = payload.userId || providerData.userId;
+      const type = payload.type || providerData.type || 'nar_coin';
+      const amount = update.message.successful_payment.total_amount / 100; // Конвертируем из копеек (Stars)
+      
+      // Конвертируем Stars в TON (1 Star = 1 TON примерно)
+      const tonAmount = amount;
+      const narAmount = tonAmount * this.TON_TO_NAR_RATE;
 
-      // Начисляем подписку или NAR-coin
-      console.log(`Платеж завершен: userId=${userId}, amount=${amount} Stars`);
+      try {
+        if (type === 'subscription') {
+          // Определяем план подписки по сумме
+          let plan: SubscriptionPlan;
+          if (tonAmount >= 22) {
+            plan = SubscriptionPlan.MONTH_12;
+          } else if (tonAmount >= 7) {
+            plan = SubscriptionPlan.MONTH_3;
+          } else {
+            plan = SubscriptionPlan.MONTH_1;
+          }
+          
+          await this.subscriptionService.createSubscription(userId, plan);
+          console.log(`Подписка активирована: userId=${userId}, plan=${plan}`);
+        } else {
+          // Начисляем NAR-coin
+          const user = await this.usersService.findOne(userId);
+          const currentBalance = Number(user.narCoin || 0);
+          await this.usersService.update(userId, { narCoin: currentBalance + narAmount });
+          console.log(`NAR-coin начислены: userId=${userId}, amount=${narAmount} NAR (${tonAmount} TON)`);
+        }
+      } catch (error) {
+        console.error(`Ошибка обработки платежа: userId=${userId}`, error);
+        throw error;
+      }
     }
   }
 }

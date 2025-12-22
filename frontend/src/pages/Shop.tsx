@@ -116,6 +116,26 @@ export default function Shop() {
     })
   }
 
+  const handleBuySubscription = async (plan: string, price: number) => {
+    try {
+      // Создаем платеж через TON для подписки
+      const response = await apiClient.post('/payment/ton/create', { 
+        amount: price, 
+        description: `Подписка ${plan}`,
+        type: 'subscription'
+      })
+      
+      if (response.data.paymentUrl) {
+        // Открываем страницу оплаты
+        window.open(response.data.paymentUrl, '_blank')
+        alert('Откройте ссылку для оплаты. После оплаты подписка будет активирована автоматически.')
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при создании платежа')
+      console.error('Subscription purchase failed:', error)
+    }
+  }
+
   const handleBuyNarCoin = async (amount: number, price: number) => {
     if (buyingNarCoinAmount !== null) return // Защита от повторных запросов
     

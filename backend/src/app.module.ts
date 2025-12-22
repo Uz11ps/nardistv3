@@ -32,6 +32,7 @@ import { UploadModule } from './upload/upload.module';
 import { PaymentModule } from './payment/payment.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AchievementsModule } from './achievements/achievements.module';
+import { PolicyModule } from './policy/policy.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { AchievementsModule } from './achievements/achievements.module';
     PaymentModule,
     NotificationsModule,
     AchievementsModule,
+    PolicyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

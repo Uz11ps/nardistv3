@@ -162,6 +162,33 @@ export class AdminController {
     return this.adminService.sendNotification(body);
   }
 
+  @Delete('notifications/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteNotification(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteNotification(id);
+  }
+
+  @Delete('notifications/user/:userId')
+  @UseGuards(JwtAuthGuard)
+  async deleteUserNotifications(@CurrentUser() user: any, @Param('userId') userId: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteUserNotifications(userId);
+  }
+
+  @Delete('notifications/all')
+  @UseGuards(JwtAuthGuard)
+  async deleteAllNotifications(@CurrentUser() user: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteAllNotifications();
+  }
+
   @Post('games/create')
   @UseGuards(JwtAuthGuard)
   async createGame(@CurrentUser() user: any, @Body() body: { player1Id: string; player2Id?: string; mode: string; type: string }) {

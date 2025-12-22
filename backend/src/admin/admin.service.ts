@@ -379,6 +379,36 @@ export class AdminService {
     throw new Error('Укажите userId или установите all=true');
   }
 
+  async deleteNotification(notificationId: string) {
+    try {
+      await this.notificationsRepository.delete({ id: notificationId });
+      return { message: 'Уведомление удалено', notificationId };
+    } catch (error) {
+      this.logger.error(`Error deleting notification ${notificationId}:`, error);
+      throw new BadRequestException(`Ошибка при удалении уведомления: ${error.message}`);
+    }
+  }
+
+  async deleteUserNotifications(userId: string) {
+    try {
+      await this.notificationsRepository.delete({ userId });
+      return { message: 'Все уведомления пользователя удалены', userId };
+    } catch (error) {
+      this.logger.error(`Error deleting notifications for user ${userId}:`, error);
+      throw new BadRequestException(`Ошибка при удалении уведомлений: ${error.message}`);
+    }
+  }
+
+  async deleteAllNotifications() {
+    try {
+      const result = await this.notificationsRepository.delete({});
+      return { message: 'Все уведомления удалены', deletedCount: result.affected || 0 };
+    } catch (error) {
+      this.logger.error('Error deleting all notifications:', error);
+      throw new BadRequestException(`Ошибка при удалении всех уведомлений: ${error.message}`);
+    }
+  }
+
   async createGame(data: { player1Id: string; player2Id?: string; mode: string; type: string }) {
     try {
       // Проверяем существование игроков

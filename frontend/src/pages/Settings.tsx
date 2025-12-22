@@ -75,11 +75,11 @@ export default function Settings() {
   }
 
   const handlePrivacyPolicy = () => {
-    window.open('https://nardist.site/privacy', '_blank')
+    navigate('/policy/privacy')
   }
 
   const handleAgreementPolicy = () => {
-    window.open('https://nardist.site/agreement', '_blank')
+    navigate('/policy/agreement')
   }
 
   return (

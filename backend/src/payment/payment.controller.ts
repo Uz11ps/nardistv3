@@ -17,6 +17,7 @@ export class PaymentController {
       userId: user.id,
       amount: body.amount,
       description: body.description || `Оплата: ${body.type}`,
+      type: body.type,
     };
 
     return this.paymentService.createTonPayment(request);

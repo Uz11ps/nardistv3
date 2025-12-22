@@ -189,6 +189,72 @@
   object-fit: contain;
 }
 
+.shop-subscription-description {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.shop-subscription-plans {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.shop-subscription-plan-btn {
+  position: relative;
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.shop-subscription-plan-btn:hover {
+  border-color: #C93C3D;
+  transform: translateY(-2px);
+}
+
+.shop-subscription-plan-popular {
+  border-color: #C93C3D;
+  border-width: 2px;
+}
+
+.shop-subscription-plan-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  border-radius: 4px;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.shop-subscription-plan-name {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.shop-subscription-plan-price {
+  color: #ffd700;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+
 /* Скины */
 .shop-skin-card {
   padding: 16px;

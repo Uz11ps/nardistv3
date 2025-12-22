@@ -142,6 +142,7 @@ export default function Admin() {
         apiClient.get('/admin/quests').catch(() => ({ data: [] })),
         apiClient.get('/admin/clans').catch(() => ({ data: [] })),
         apiClient.get('/admin/districts').catch(() => ({ data: [] })),
+        apiClient.get('/policy/admin/all').catch(() => ({ data: [] })),
       ])
       setStats(statsRes.data)
       setUsers(usersRes.data)
@@ -803,6 +804,58 @@ export default function Admin() {
                 )}
               </div>
               <button onClick={sendNotification}>Отправить</button>
+            </div>
+            
+            <div className="notification-management" style={{ marginTop: '32px' }}>
+              <h3>Управление уведомлениями</h3>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={async () => {
+                    if (confirm('Удалить все уведомления? Это действие необратимо!')) {
+                      try {
+                        await apiClient.delete('/admin/notifications/all')
+                        alert('Все уведомления удалены')
+                      } catch (error: any) {
+                        alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                      }
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#e74c3c',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Удалить все уведомления
+                </button>
+                {notificationUserId && (
+                  <button
+                    onClick={async () => {
+                      if (confirm(`Удалить все уведомления пользователя ${notificationUserId}?`)) {
+                        try {
+                          await apiClient.delete(`/admin/notifications/user/${notificationUserId}`)
+                          alert('Уведомления пользователя удалены')
+                        } catch (error: any) {
+                          alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                        }
+                      }
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#e67e22',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Удалить уведомления пользователя
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
