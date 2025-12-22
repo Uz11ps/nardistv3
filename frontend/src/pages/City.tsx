@@ -46,8 +46,6 @@ export default function City() {
   const [districts, setDistricts] = useState<District[]>([])
   const [userClan, setUserClan] = useState<UserClan | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
-  const [captureableBuildings, setCaptureableBuildings] = useState<any[]>([])
 
   useEffect(() => {
     loadCityData()
@@ -99,29 +97,6 @@ export default function City() {
     }
   }
 
-  const handleCaptureTerritory = async (buildingId: string) => {
-    if (!userClan?.clan) {
-      alert('Вы должны состоять в клане для захвата территорий')
-      return
-    }
-
-    if (!userClan.member || (userClan.member.role !== 'leader' && userClan.member.role !== 'officer')) {
-      alert('Только лидер и офицеры могут захватывать территории')
-      return
-    }
-
-    if (!confirm('Захватить эту территорию? Клан получит 10% от дохода игрока.')) {
-      return
-    }
-
-    try {
-      await apiClient.post(`/city/buildings/${buildingId}/capture`)
-      alert('Территория успешно захвачена!')
-      loadCityData()
-    } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при захвате территории')
-    }
-  }
 
   const getBuildingTypeName = (type: string): string => {
     const names: Record<string, string> = {
@@ -147,12 +122,6 @@ export default function City() {
   return (
     <PageLayout title="Город" showBack={true}>
       <div className="city-container">
-        {userClan?.clan && (
-          <div className="city-clan-info">
-            <div>Ваш клан: {userClan.clan.name}</div>
-            <small>Клан может захватить только одну территорию раз в 3 дня</small>
-          </div>
-        )}
         <div className="city-districts-list">
           {districts.map((district) => (
             <div key={district.id} className="city-district-card">
@@ -227,56 +196,6 @@ export default function City() {
                 </div>
               )}
 
-              {/* Показываем другие предприятия в районе для захвата (только для кланов) */}
-              {userClan?.clan && (
-                <div className="city-capture-section">
-                  <button
-                    className="city-button city-button-toggle"
-                    onClick={async () => {
-                      if (selectedDistrict === district.id) {
-                        setSelectedDistrict(null)
-                        setCaptureableBuildings([])
-                      } else {
-                        setSelectedDistrict(district.id)
-                        try {
-                          const response = await apiClient.get(`/city/captureable?district=${district.id}`)
-                          setCaptureableBuildings(response.data || [])
-                        } catch (error) {
-                          console.error('Failed to load captureable buildings:', error)
-                          setCaptureableBuildings([])
-                        }
-                      }
-                    }}
-                  >
-                    {selectedDistrict === district.id ? 'Скрыть' : 'Показать'} предприятия для захвата
-                  </button>
-                  {selectedDistrict === district.id && captureableBuildings.length > 0 && (
-                    <div className="city-captureable-list">
-                      {captureableBuildings.map((building) => (
-                        <div key={building.id} className="city-captureable-item">
-                          <div className="city-captureable-info">
-                            <div>{getBuildingTypeName(building.type)} (Ур. {building.level})</div>
-                            <div>Доход: {building.incomePerHour} NAR/час</div>
-                            {building.capturedByClanId && (
-                              <small>Уже захвачено другим кланом</small>
-                            )}
-                          </div>
-                          <button
-                            className="city-button city-button-capture"
-                            onClick={() => handleCaptureTerritory(building.id)}
-                            disabled={!!building.capturedByClanId}
-                          >
-                            Захватить
-                          </button>
-                        </div>
-                      ))}
-                      {captureableBuildings.length === 0 && (
-                        <div className="city-no-captureable">Нет доступных предприятий для захвата</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           ))}
         </div>

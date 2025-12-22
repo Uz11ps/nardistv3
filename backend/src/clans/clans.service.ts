@@ -6,6 +6,8 @@ import { ClanMember, ClanRole } from './clan-member.entity';
 import { ClanTreasuryTransaction, TreasuryTransactionType } from './clan-treasury-transaction.entity';
 import { UsersService } from '../users/users.service';
 import { DistrictConfig } from '../city/district-config.entity';
+import { Building } from '../city/building.entity';
+import { CityService } from '../city/city.service';
 
 @Injectable()
 export class ClansService {
@@ -18,7 +20,11 @@ export class ClansService {
     private transactionsRepository: Repository<ClanTreasuryTransaction>,
     @InjectRepository(DistrictConfig)
     private districtConfigsRepository: Repository<DistrictConfig>,
+    @InjectRepository(Building)
+    private buildingsRepository: Repository<Building>,
     private usersService: UsersService,
+    @Inject(forwardRef(() => CityService))
+    private cityService: CityService,
   ) {}
 
   async create(userId: string, name: string, description?: string): Promise<Clan> {
@@ -343,6 +349,84 @@ export class ClansService {
         metadata: config?.metadata || null,
       };
     });
+  }
+
+  async getAvailableTerritoriesForCapture(clanId: string): Promise<any[]> {
+    const clan = await this.findOne(clanId);
+    
+    // Получаем все активные территории
+    const allDistricts = await this.districtConfigsRepository.find({
+      where: { isActive: true },
+      order: { order: 'ASC' },
+    });
+
+    // Получаем все предприятия
+    const allBuildings = await this.buildingsRepository.find();
+
+    // Для каждой территории находим предприятия, которые можно захватить
+    const result = [];
+    for (const district of allDistricts) {
+      const districtBuildings = allBuildings.filter(b => b.district === district.code);
+      
+      // Фильтруем: исключаем предприятия, которые уже захвачены этим кланом
+      const captureableBuildings = districtBuildings.filter(b => {
+        // Исключаем уже захваченные этим кланом
+        if (b.capturedByClanId === clanId) {
+          return false;
+        }
+        return true;
+      });
+
+      if (captureableBuildings.length > 0) {
+        result.push({
+          district: {
+            code: district.code,
+            name: district.name,
+            description: district.description,
+            order: district.order,
+          },
+          buildings: captureableBuildings.map(b => ({
+            id: b.id,
+            type: b.type,
+            level: b.level,
+            incomePerHour: Number(b.incomePerHour),
+            ownerId: b.userId,
+            capturedByClanId: b.capturedByClanId,
+            capturedAt: b.capturedAt,
+          })),
+          totalIncome: captureableBuildings.reduce((sum, b) => sum + Number(b.incomePerHour), 0),
+        });
+      }
+    }
+
+    return result;
+  }
+
+  async canClanCaptureTerritory(clanId: string): Promise<{ canCapture: boolean; reason?: string; cooldownRemaining?: number }> {
+    const clan = await this.findOne(clanId);
+    
+    if (!clan.lastTerritoryCaptureAt) {
+      return { canCapture: true };
+    }
+
+    const daysSinceLastCapture = (Date.now() - new Date(clan.lastTerritoryCaptureAt).getTime()) / (1000 * 60 * 60 * 24);
+    const CAPTURE_COOLDOWN_DAYS = 3;
+    
+    if (daysSinceLastCapture < CAPTURE_COOLDOWN_DAYS) {
+      const remainingDays = Math.ceil(CAPTURE_COOLDOWN_DAYS - daysSinceLastCapture);
+      return {
+        canCapture: false,
+        reason: 'cooldown',
+        cooldownRemaining: remainingDays,
+      };
+    }
+
+    return { canCapture: true };
+  }
+
+  async captureTerritoryForClan(userId: string, clanId: string, buildingId: string): Promise<void> {
+    // Используем CityService для захвата
+    await this.cityService.captureTerritory(userId, buildingId);
   }
 }
 
