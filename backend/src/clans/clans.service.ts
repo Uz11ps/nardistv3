@@ -186,8 +186,8 @@ export class ClansService {
       throw new BadRequestException('Недостаточно NAR-coin');
     }
 
-    user.narCoin = BigInt(user.narCoin || 0) - BigInt(amount);
-    await this.usersService['usersRepository'].save(user);
+    const newBalance = Number(user.narCoin || 0) - amount;
+    await this.usersService.update(userId, { narCoin: newBalance });
 
     member.contribution = (BigInt(member.contribution || 0) + BigInt(amount)).toString();
     await this.membersRepository.save(member);

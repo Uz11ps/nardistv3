@@ -27,6 +27,9 @@ import axios from 'axios';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Rating } from '../ratings/rating.entity';
+import { Notification } from '../notifications/notification.entity';
+import { UserMaterial } from '../academy/user-material.entity';
 
 @Injectable()
 export class AdminService {
@@ -59,6 +62,12 @@ export class AdminService {
     private buildingConfigsRepository: Repository<BuildingConfig>,
     @InjectRepository(DistrictConfig)
     private districtConfigsRepository: Repository<DistrictConfig>,
+    @InjectRepository(Rating)
+    private ratingsRepository: Repository<Rating>,
+    @InjectRepository(Notification)
+    private notificationsRepository: Repository<Notification>,
+    @InjectRepository(UserMaterial)
+    private userMaterialsRepository: Repository<UserMaterial>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
     private academyService: AcademyService,
@@ -215,50 +224,86 @@ export class AdminService {
   }
 
   async deleteUser(userId: string) {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new Error('Пользователь не найден');
-    }
+    try {
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
+      }
 
-    // Нельзя удалить админа
-    if (user.isAdmin) {
-      throw new Error('Нельзя удалить администратора');
-    }
+      // Нельзя удалить админа
+      if (user.isAdmin) {
+        throw new BadRequestException('Нельзя удалить администратора');
+      }
 
-    // Удаляем все связанные данные пользователя
-    // Удаляем игры, где пользователь был игроком (каскадное удаление через БД)
-    const userGames = await this.gamesRepository.find({
-      where: [
-        { player1Id: userId },
-        { player2Id: userId },
-      ],
-      select: ['id'],
-    });
-    
-    if (userGames.length > 0) {
-      const gameIds = userGames.map(g => g.id);
-      // Удаляем ходы через QueryBuilder
-      await this.movesRepository
-        .createQueryBuilder()
-        .delete()
-        .where('gameId IN (:...gameIds)', { gameIds })
-        .execute();
+      // Удаляем все связанные данные пользователя
+      // Удаляем игры, где пользователь был игроком (каскадное удаление через БД)
+      const userGames = await this.gamesRepository.find({
+        where: [
+          { player1Id: userId },
+          { player2Id: userId },
+        ],
+        select: ['id'],
+      });
       
-      // Удаляем игры
-      await this.gamesRepository
-        .createQueryBuilder()
-        .delete()
-        .where('id IN (:...gameIds)', { gameIds })
-        .execute();
+      if (userGames.length > 0) {
+        const gameIds = userGames.map(g => g.id);
+        // Удаляем ходы через QueryBuilder
+        await this.movesRepository
+          .createQueryBuilder()
+          .delete()
+          .where('gameId IN (:...gameIds)', { gameIds })
+          .execute();
+        
+        // Удаляем игры
+        await this.gamesRepository
+          .createQueryBuilder()
+          .delete()
+          .where('id IN (:...gameIds)', { gameIds })
+          .execute();
+      }
+
+      // Удаляем рейтинги пользователя
+      try {
+        await this.ratingsRepository.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete ratings for user ${userId}:`, error);
+      }
+
+      // Удаляем уведомления пользователя
+      try {
+        await this.notificationsRepository.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete notifications for user ${userId}:`, error);
+      }
+
+      // Удаляем материалы пользователя
+      try {
+        await this.userMaterialsRepository.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete user materials for user ${userId}:`, error);
+      }
+
+      // Удаляем скины пользователя
+      try {
+        await this.userSkinsRepository.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete user skins for user ${userId}:`, error);
+      }
+
+      // Удаляем членство в кланах
+      await this.clanMembersRepository.delete({ userId });
+
+      // Удаляем самого пользователя
+      await this.usersRepository.remove(user);
+      
+      return { message: 'Пользователь удален', userId };
+    } catch (error) {
+      this.logger.error(`Error deleting user ${userId}:`, error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при удалении пользователя: ${error.message}`);
     }
-
-    // Удаляем членство в кланах
-    await this.clanMembersRepository.delete({ userId });
-
-    // Удаляем самого пользователя
-    await this.usersRepository.remove(user);
-    
-    return { message: 'Пользователь удален', userId };
   }
 
   async sendNotification(data: { userId?: string; message: string; all?: boolean }) {
@@ -335,12 +380,33 @@ export class AdminService {
   }
 
   async createGame(data: { player1Id: string; player2Id?: string; mode: string; type: string }) {
-    return this.gamesService.create(
-      data.player1Id,
-      data.player2Id || null,
-      data.mode as GameMode,
-      data.type as GameType,
-    );
+    try {
+      // Проверяем существование игроков
+      const player1 = await this.usersService.findOne(data.player1Id);
+      if (!player1) {
+        throw new NotFoundException('Игрок 1 не найден');
+      }
+
+      if (data.player2Id) {
+        const player2 = await this.usersService.findOne(data.player2Id);
+        if (!player2) {
+          throw new NotFoundException('Игрок 2 не найден');
+        }
+      }
+
+      return this.gamesService.create(
+        data.player1Id,
+        data.player2Id || null,
+        data.mode as GameMode,
+        data.type as GameType,
+      );
+    } catch (error) {
+      this.logger.error(`Error creating game:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при создании игры: ${error.message}`);
+    }
   }
 
   async createTournament(data: any) {
@@ -897,12 +963,17 @@ export class AdminService {
 
   // Расширенные функции управления пользователями
   async updateUserBalance(userId: string, narCoin: number, xp?: number) {
-    const user = await this.usersService.findOne(userId);
-    const updateData: any = { narCoin };
-    if (xp !== undefined) {
-      updateData.xp = xp;
+    try {
+      const user = await this.usersService.findOne(userId);
+      const updateData: any = { narCoin: BigInt(narCoin) };
+      if (xp !== undefined) {
+        updateData.xp = BigInt(xp);
+      }
+      return this.usersService.update(userId, updateData);
+    } catch (error) {
+      this.logger.error(`Error updating balance for user ${userId}:`, error);
+      throw new BadRequestException(`Ошибка при обновлении баланса: ${error.message}`);
     }
-    return this.usersService.update(userId, updateData);
   }
 
   async setUserLevel(userId: string, level: number) {

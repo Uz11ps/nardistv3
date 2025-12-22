@@ -166,8 +166,7 @@ export class TournamentsService {
         throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${entryFee}, доступно: ${userBalance}`);
       }
       
-      user.narCoin = BigInt(userBalance - entryFee);
-      await this.usersService['usersRepository'].save(user);
+      await this.usersService.update(userId, { narCoin: userBalance - entryFee });
     }
 
     // Создаем запись в matches для регистрации (пока без второго игрока)

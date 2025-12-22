@@ -27,10 +27,13 @@ import { ClanMember } from '../clans/clan-member.entity';
 import { Subscription } from '../subscription/subscription.entity';
 import { BuildingConfig } from '../city/building-config.entity';
 import { DistrictConfig } from '../city/district-config.entity';
+import { Rating } from '../ratings/rating.entity';
+import { Notification } from '../notifications/notification.entity';
+import { UserMaterial } from '../academy/user-material.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, Subscription, BuildingConfig, DistrictConfig]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, Subscription, BuildingConfig, DistrictConfig, Rating, Notification, UserMaterial]),
     AuthModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

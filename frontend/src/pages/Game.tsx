@@ -320,10 +320,17 @@ export default function Game() {
       setDiceAnimating(true)
       setTimeout(() => {
         setDiceAnimating(false)
+        // Обновляем кубики после анимации
+        if (data.dice && Array.isArray(data.dice) && data.dice.length >= 2) {
+          const formattedDice = { die1: data.dice[0], die2: data.dice[1] }
+          setGameState(prev => ({
+            ...prev,
+            dice: formattedDice
+          }))
+        }
+        // Перезагружаем игру чтобы получить актуальное состояние
+        loadGame()
       }, 1000) // Анимация длится 1 секунду
-      // Обновляем кубики, но также перезагружаем игру чтобы получить актуальное состояние
-      // Это важно, так как после хода бота может измениться currentPlayer
-      loadGame()
     })
 
     // Слушаем обновления таймера с бэкенда

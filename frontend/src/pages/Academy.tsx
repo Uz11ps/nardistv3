@@ -87,9 +87,12 @@ export default function Academy() {
   const handlePurchase = async (course: Course) => {
     try {
       await apiClient.post(`/academy/courses/${course.id}/purchase`)
+      alert('Курс успешно куплен!')
       setShowPurchaseModal(null)
       loadData()
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Ошибка при покупке курса'
+      alert(errorMessage)
       console.error('Failed to purchase course:', error)
     }
   }
