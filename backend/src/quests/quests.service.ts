@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Quest, QuestType } from './quest.entity';
+import { Quest, QuestType, QuestTarget } from './quest.entity';
 import { QuestProgress } from './quest-progress.entity';
 import { ProgressService } from '../progress/progress.service';
 
