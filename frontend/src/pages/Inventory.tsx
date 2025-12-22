@@ -125,19 +125,26 @@ export default function Inventory() {
 
   const renderSkinCard = (skin: Skin) => {
     const isSelected = selectedSkinIds.has(skin.id)
-    const defaultBoardImage = '/img/3a87c78273c1488e736bcebbfc6ea74f1dc383a7.png'
+    // Используем изображение доски по умолчанию для досок без imageUrl
+    const getImageUrl = () => {
+      if (skin.imageUrl) return skin.imageUrl
+      if (skin.type === 'board') return '/img/3a87c78273c1488e736bcebbfc6ea74f1dc383a7.png'
+      return null
+    }
+
+    const imageUrl = getImageUrl()
 
     return (
       <Card key={skin.id} className="inventory-item">
         <div className="inventory-item-content">
           <div className="inventory-item-image-container">
-            {skin.imageUrl || (skin.type === 'board' && defaultBoardImage) ? (
+            {imageUrl ? (
               <img
-                src={skin.imageUrl || defaultBoardImage}
+                src={imageUrl}
                 alt={skin.name}
                 className="inventory-item-image"
                 onError={(e) => {
-                  console.error('Failed to load skin image:', skin.imageUrl)
+                  console.error('Failed to load skin image:', imageUrl)
                   e.currentTarget.style.display = 'none'
                 }}
               />
