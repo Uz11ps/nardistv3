@@ -206,7 +206,7 @@ export class ClansService {
           member.userId,
           'Клан распущен',
           notificationMessage,
-          'clan_disbanded',
+          'warning',
         );
       } catch (error) {
         this.logger.error(`❌ Ошибка при отправке уведомления участнику ${member.userId}: ${error.message}`);
