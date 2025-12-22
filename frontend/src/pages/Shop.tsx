@@ -17,7 +17,7 @@ interface NarCoinPackage {
 export default function Shop() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'skins' | 'cubes'>('coin')
+  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'skins'>('coin')
   const [skinFilter, setSkinFilter] = useState<'all' | 'board' | 'dice' | 'checkers'>('all')
   const [narCoinPackages, setNarCoinPackages] = useState<NarCoinPackage[]>([])
   const [allSkins, setAllSkins] = useState<Skin[]>([])
@@ -30,7 +30,7 @@ export default function Shop() {
   useEffect(() => {
     if (activeTab === 'coin') {
       loadNarCoinPackages()
-    } else if (activeTab === 'skins' || activeTab === 'cubes') {
+    } else if (activeTab === 'skins') {
       loadSkins()
     }
   }, [activeTab])
@@ -91,14 +91,29 @@ export default function Shop() {
   }
 
   const getFilteredSkins = () => {
+    // Фильтруем классические скины (по theme === 'classic' или isDefault === true)
+    const filtered = allSkins.filter((s: Skin) => {
+      // Исключаем классические скины
+      if (s.theme === 'classic' || s.isDefault) {
+        return false
+      }
+      return true
+    })
+    
     if (skinFilter === 'all') {
-      return allSkins
+      return filtered
     }
-    return allSkins.filter((s: Skin) => s.type === skinFilter)
+    return filtered.filter((s: Skin) => s.type === skinFilter)
   }
 
   const getSkinsByType = (type: string) => {
-    return allSkins.filter((s: Skin) => s.type === type)
+    // Фильтруем классические скины
+    return allSkins.filter((s: Skin) => {
+      if (s.theme === 'classic' || s.isDefault) {
+        return false
+      }
+      return s.type === type
+    })
   }
 
   const handleBuyNarCoin = async (amount: number, price: number) => {
@@ -260,7 +275,6 @@ export default function Shop() {
     { id: 'coin', label: 'NAR-coin', active: activeTab === 'coin', onClick: () => setActiveTab('coin') },
     { id: 'subscription', label: 'Подписка', active: activeTab === 'subscription', onClick: () => setActiveTab('subscription') },
     { id: 'skins', label: 'Доски', active: activeTab === 'skins', onClick: () => setActiveTab('skins') },
-    { id: 'cubes', label: 'Куби', active: activeTab === 'cubes', onClick: () => setActiveTab('cubes') },
   ]
 
   return (
@@ -400,35 +414,6 @@ export default function Shop() {
           </div>
         )}
 
-        {/* Куби */}
-        {activeTab === 'cubes' && (
-          <div className="shop-skins-content">
-            {/* Фильтры по типам скинов - показываем только куби */}
-            <div className="shop-skin-filters">
-              <button
-                className={`shop-skin-filter ${skinFilter === 'dice' ? 'active' : ''}`}
-                onClick={() => setSkinFilter('dice')}
-              >
-                Все куби
-              </button>
-            </div>
-
-            {/* Отображение кубиков */}
-            <div className="shop-list">
-              {loading ? (
-                <Card>
-                  <div className="shop-empty">Загрузка...</div>
-                </Card>
-              ) : getSkinsByType('dice').length === 0 ? (
-                <Card>
-                  <div className="shop-empty">Нет доступных кубиков</div>
-                </Card>
-              ) : (
-                getSkinsByType('dice').map((skin) => renderSkinCard(skin))
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </PageLayout>
   )

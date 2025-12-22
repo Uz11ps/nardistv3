@@ -7,6 +7,7 @@ import { TournamentMatch } from './tournament-match.entity';
 import { GamesModule } from '../games/games.module';
 import { RatingsModule } from '../ratings/ratings.module';
 import { UsersModule } from '../users/users.module';
+import { QuestsModule } from '../quests/quests.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { UsersModule } from '../users/users.module';
     GamesModule,
     RatingsModule,
     UsersModule,
+    QuestsModule,
   ],
   controllers: [TournamentsController],
   providers: [TournamentsService],

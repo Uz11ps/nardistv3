@@ -6,6 +6,8 @@ import { BuildingConfig } from './building-config.entity';
 import { DistrictConfig } from './district-config.entity';
 import { UsersService } from '../users/users.service';
 import { ClansService } from '../clans/clans.service';
+import { QuestsService } from '../quests/quests.service';
+import { QuestTarget } from '../quests/quest.entity';
 
 @Injectable()
 export class CityService {
@@ -22,6 +24,7 @@ export class CityService {
     private usersService: UsersService,
     @Inject(forwardRef(() => ClansService))
     private clansService: ClansService,
+    private questsService: QuestsService,
   ) {}
 
   async getCity(userId: string): Promise<Building[]> {
@@ -90,6 +93,14 @@ export class CityService {
       const user = await this.usersService.findOne(userId);
       user.narCoin = BigInt(user.narCoin || 0) + BigInt(playerIncome);
       await this.usersService['usersRepository'].save(user);
+      
+      // Обновляем квесты на сбор дохода
+      try {
+        await this.questsService.updateProgress(userId, QuestTarget.COLLECT_INCOME, 1);
+      } catch (error) {
+        // Логируем ошибку, но не прерываем процесс
+        console.error('Ошибка при обновлении квестов collect_income:', error);
+      }
     }
 
     return playerIncome;

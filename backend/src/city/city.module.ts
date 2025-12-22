@@ -7,12 +7,14 @@ import { BuildingConfig } from './building-config.entity';
 import { DistrictConfig } from './district-config.entity';
 import { UsersModule } from '../users/users.module';
 import { ClansModule } from '../clans/clans.module';
+import { QuestsModule } from '../quests/quests.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Building, BuildingConfig, DistrictConfig]),
     UsersModule,
     forwardRef(() => ClansModule),
+    QuestsModule,
   ],
   controllers: [CityController],
   providers: [CityService],

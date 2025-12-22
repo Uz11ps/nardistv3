@@ -146,7 +146,7 @@ export class QuestsService {
     await this.progressRepository.save(progress);
   }
 
-  async updateProgress(userId: string, target: string, amount: number = 1): Promise<void> {
+  async updateProgress(userId: string, target: QuestTarget | string, amount: number = 1): Promise<void> {
     const now = new Date();
     const quests = await this.questsRepository
       .createQueryBuilder('quest')

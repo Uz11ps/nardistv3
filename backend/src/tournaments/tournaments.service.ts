@@ -6,6 +6,8 @@ import { TournamentMatch, MatchStatus } from './tournament-match.entity';
 import { GamesService } from '../games/games.service';
 import { GameMode, GameType } from '../games/game.entity';
 import { UsersService } from '../users/users.service';
+import { QuestsService } from '../quests/quests.service';
+import { QuestTarget } from '../quests/quest.entity';
 
 @Injectable()
 export class TournamentsService {
@@ -17,6 +19,7 @@ export class TournamentsService {
     private gamesService: GamesService,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
+    private questsService: QuestsService,
   ) {}
 
   async create(tournamentData: Partial<Tournament>): Promise<Tournament> {
@@ -179,6 +182,14 @@ export class TournamentsService {
 
     tournament.currentParticipants++;
     await this.tournamentsRepository.save(tournament);
+    
+    // Обновляем квесты на участие в турнире
+    try {
+      await this.questsService.updateProgress(userId, QuestTarget.TOURNAMENT, 1);
+    } catch (error) {
+      // Логируем ошибку, но не прерываем процесс
+      console.error('Ошибка при обновлении квестов tournament:', error);
+    }
   }
 
   async startTournament(tournamentId: string): Promise<void> {

@@ -11,6 +11,7 @@ import { UsersService } from '../users/users.service';
 import { BotService } from '../bot/bot.service';
 import { SkinsService } from '../skins/skins.service';
 import { QuestsService } from '../quests/quests.service';
+import { QuestTarget } from '../quests/quest.entity';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -744,16 +745,25 @@ export class GamesService {
     }
     
     // Обновление квестов при завершении игры
-    if (game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
+    if (game.winnerId) {
       try {
-        // Обновляем квесты для обоих игроков
-        await this.questsService.updateProgress(game.winnerId, 'play_matches', 1);
-        await this.questsService.updateProgress(loserId, 'play_matches', 1);
-        
-        // Обновляем квесты на серию побед для победителя
-        await this.questsService.updateProgress(game.winnerId, 'win_streak', 1);
-        
-        this.logger.log(`📋 Квесты обновлены для игроков ${game.winnerId} и ${loserId}`);
+        // Для игр с игроками обновляем квесты для обоих
+        if (game.type === GameType.VS_PLAYER && loserId) {
+          await this.questsService.updateProgress(game.winnerId, QuestTarget.PLAY_MATCHES, 1);
+          await this.questsService.updateProgress(loserId, QuestTarget.PLAY_MATCHES, 1);
+          // Обновляем квесты на серию побед для победителя
+          await this.questsService.updateProgress(game.winnerId, QuestTarget.WIN_STREAK, 1);
+          this.logger.log(`📋 Квесты обновлены для игроков ${game.winnerId} и ${loserId}`);
+        }
+        // Для игр с ботом обновляем квесты только для игрока
+        else if (game.type === GameType.VS_BOT) {
+          await this.questsService.updateProgress(game.winnerId, QuestTarget.PLAY_MATCHES, 1);
+          // Если игрок победил бота, засчитываем серию побед
+          if (game.winnerId === game.player1Id) {
+            await this.questsService.updateProgress(game.winnerId, QuestTarget.WIN_STREAK, 1);
+          }
+          this.logger.log(`📋 Квесты обновлены для игрока ${game.winnerId} (игра с ботом)`);
+        }
       } catch (error) {
         this.logger.error(`❌ Ошибка при обновлении квестов: ${error.message}`, error.stack);
       }
