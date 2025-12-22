@@ -222,10 +222,7 @@ export default function Shop() {
                 (skin.type === 'dice' && skin.diceTextureUrl) ||
                 (skin.type === 'checkers' && (skin.whiteCheckersTextureUrl || skin.blackCheckersTextureUrl || skin.checkersTextureUrl))) ? 'none' : 'flex' 
             }}>
-              <Icon 
-                name={skin.type === 'board' ? 'board' : skin.type === 'dice' ? 'dice' : 'target'} 
-                size={48} 
-              />
+              <div style={{ fontSize: '48px' }}>🎲</div>
             </div>
             {!isOwned && skin.price && (
               <div className="shop-skin-price-overlay">
