@@ -25,7 +25,7 @@ export class AchievementsService {
 
     // Получаем прогресс пользователя для каждого достижения
     const result = [];
-    for (const achievement of filteredAchievements) {
+    for (const achievement of allAchievements) {
       let userAchievement = await this.userAchievementsRepository.findOne({
         where: { userId, achievementId: achievement.id },
       });

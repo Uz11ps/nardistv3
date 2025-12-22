@@ -9,8 +9,8 @@ export class TournamentsController {
 
   @Get()
   async findAll(
-    @Query('status') status?: string,
     @Req() req: any,
+    @Query('status') status?: string,
   ) {
     // Проверяем, есть ли авторизованный пользователь (но не требуем обязательной авторизации)
     // JWT guard не используется, но если токен есть и валиден, user будет в req
