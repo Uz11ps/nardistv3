@@ -1,18 +1,17 @@
 .create-table-content {
-  padding: 16px;
-}
-
-.create-table-subtitle {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  text-align: center;
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .create-table-card {
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .create-table-field {
@@ -25,9 +24,10 @@
 
 .create-table-label {
   font-size: 14px;
-  color: var(--color-text-primary);
+  color: #FFF;
   margin-bottom: 12px;
   font-weight: 500;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .stake-buttons {
@@ -38,14 +38,15 @@
 
 .stake-btn {
   padding: 12px;
-  background: var(--color-background);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: #3a3a3a;
+  color: #FFF;
+  border: 1px solid #4a4a4a;
+  border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all 0.2s;
   font-weight: 500;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .stake-btn:hover {
@@ -54,10 +55,10 @@
 }
 
 .stake-btn.active {
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-primary);
+  background: #3a3a3a;
+  color: #FFF;
+  border-color: #FFF;
+  border-width: 2px;
 }
 
 .stake-prize-info {
@@ -86,14 +87,15 @@
 .toggle-btn {
   flex: 1;
   padding: 12px;
-  background: var(--color-background);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: #3a3a3a;
+  color: #FFF;
+  border: 1px solid #4a4a4a;
+  border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all 0.2s;
   font-weight: 500;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .toggle-btn:hover {
@@ -102,10 +104,9 @@
 }
 
 .toggle-btn.active {
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-primary);
+  background: #3a3a3a;
+  color: #FFF;
+  border-color: #FFF;
   border-width: 2px;
 }
 
@@ -121,10 +122,11 @@
   gap: 12px;
   cursor: pointer;
   font-size: 14px;
-  color: var(--color-text-primary);
+  color: #FFF;
   padding: 8px;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-base);
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .radio-option:hover {
@@ -146,12 +148,14 @@
   width: 100%;
   margin-top: 12px;
   padding: 12px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-primary);
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  border-radius: 8px;
+  color: #FFF;
   font-size: 14px;
-  transition: all var(--transition-base);
+  transition: all 0.2s;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  outline: none;
 }
 
 .create-table-password:focus {
@@ -161,6 +165,29 @@
 }
 
 .create-table-submit-btn {
-  margin-top: 24px;
+  width: 100%;
+  height: 52px;
+  padding: 15px 12px;
+  border-radius: 12px;
+  border: 0.1px solid #C93C3D;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.create-table-submit-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.create-table-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
+import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Icon from '../components/Icon'
@@ -260,34 +260,20 @@ export default function Shop() {
     )
   }
 
+  const tabs = [
+    { id: 'coin', label: 'NAR-coin', active: activeTab === 'coin', onClick: () => setActiveTab('coin') },
+    { id: 'subscription', label: 'Подписка', active: activeTab === 'subscription', onClick: () => setActiveTab('subscription') },
+    { id: 'skins', label: 'Доски', active: activeTab === 'skins', onClick: () => setActiveTab('skins') },
+  ]
+
+  // Изменяем название вкладки "Скины" на "Доски" для соответствия дизайну
+  if (activeTab === 'skins') {
+    tabs[2].label = 'Доски'
+  }
+
   return (
-    <div className="app-container">
-      <PageHeader title="Магазин" />
-      
+    <PageLayout title="Магазин" showBack={true} tabs={tabs}>
       <div className="shop-content">
-        {/* Листабельные вкладки */}
-        <div className="shop-tabs-container">
-          <div className="shop-tabs">
-            <button
-              className={`shop-tab ${activeTab === 'coin' ? 'active' : ''}`}
-              onClick={() => setActiveTab('coin')}
-            >
-              NAR-coin
-            </button>
-            <button
-              className={`shop-tab ${activeTab === 'subscription' ? 'active' : ''}`}
-              onClick={() => setActiveTab('subscription')}
-            >
-              Подписка
-            </button>
-            <button
-              className={`shop-tab ${activeTab === 'skins' ? 'active' : ''}`}
-              onClick={() => setActiveTab('skins')}
-            >
-              Скины
-            </button>
-          </div>
-        </div>
 
         {/* NAR-coin */}
         {activeTab === 'coin' && (
@@ -329,17 +315,17 @@ export default function Shop() {
               <div className="shop-subscription-content">
                 <div className="shop-subscription-info">
                   <div className="shop-subscription-title">Премиум доступ</div>
+                  <button
+                    className="shop-subscription-buy-btn"
+                    onClick={() => navigate('/subscription')}
+                  >
+                    Купить
+                  </button>
+                  <div className="shop-subscription-price">от 199 руб.</div>
                 </div>
                 <div className="shop-subscription-icon">
                   <Icon name="crown" size={80} style={{ color: '#ffd700' }} />
                 </div>
-                <Button
-                  variant="primary"
-                  className="shop-buy-btn"
-                  onClick={() => navigate('/subscription')}
-                >
-                  Купить
-                </Button>
               </div>
             </Card>
           </div>
@@ -420,6 +406,6 @@ export default function Shop() {
           </div>
         )}
       </div>
-    </div>
+    </PageLayout>
   )
 }

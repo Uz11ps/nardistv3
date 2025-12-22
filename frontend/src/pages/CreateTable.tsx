@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
-import Card from '../components/Card'
-import Button from '../components/Button'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import { getMatchmakingSocket } from '../api/websocket'
 import './CreateTable.css'
@@ -89,13 +87,9 @@ export default function CreateTable() {
   }
 
   return (
-    <div className="app-container page-transition">
-      <PageHeader title="Создать стол" />
-      
+    <PageLayout title="Создать стол" subtitle="Подбор по рейтингу и режиму" showBack={true}>
       <div className="create-table-content">
-        <div className="create-table-subtitle">Подбор по рейтингу и режиму</div>
-
-        <Card className="create-table-card">
+        <div className="create-table-card">
           {/* Ставка */}
           <div className="create-table-field">
             <div className="create-table-label">Ставка:</div>
@@ -193,18 +187,16 @@ export default function CreateTable() {
             )}
           </div>
 
-          <Button
-            variant="primary"
-            fullWidth
+          <button
             onClick={handleCreateTable}
             disabled={loading}
             className="create-table-submit-btn"
           >
             {loading ? 'Создание...' : 'Создать стол'}
-          </Button>
-        </Card>
+          </button>
+        </div>
       </div>
-    </div>
+    </PageLayout>
   )
 }
 

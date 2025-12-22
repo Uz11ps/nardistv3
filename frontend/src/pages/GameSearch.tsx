@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import PageHeader from '../components/PageHeader'
-import Card from '../components/Card'
-import Button from '../components/Button'
+import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import { getMatchmakingSocket } from '../api/websocket'
 import './GameSearch.css'
@@ -65,13 +63,9 @@ export default function GameSearch() {
   }
 
   return (
-    <div className="app-container page-transition">
-      <PageHeader title="Поиск" />
-      
+    <PageLayout title="Поиск" subtitle="Подбор по рейтингу и режиму" showBack={true}>
       <div className="game-search-content">
-        <div className="game-search-subtitle">Подбор по рейтингу и режиму</div>
-
-        <Card className="game-search-card">
+        <div className="game-search-card">
           {/* Режим */}
           <div className="game-search-field">
             <div className="game-search-label">Режим:</div>
@@ -153,21 +147,21 @@ export default function GameSearch() {
 
           {/* Кнопка поиска */}
           {!searching && (
-            <Button fullWidth onClick={handleStartSearch} className="game-search-start-btn">
+            <button onClick={handleStartSearch} className="game-search-start-btn">
               Начать поиск
-            </Button>
+            </button>
           )}
-        </Card>
+        </div>
 
         {searching && (
           <div className="game-search-searching">
             <div className="searching-text">Подбираем противника по рейтингу и ставке...</div>
-            <Button variant="secondary" fullWidth onClick={handleCancelSearch}>
+            <button className="game-search-cancel-btn" onClick={handleCancelSearch}>
               Отменить поиск
-            </Button>
+            </button>
           </div>
         )}
       </div>
-    </div>
+    </PageLayout>
   )
 }

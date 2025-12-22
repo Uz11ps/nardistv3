@@ -86,14 +86,19 @@ export default function Home() {
       {/* Хедер с профилем */}
       <div className="home-header">
         <div className="home-header-left">
-          <div className="avatar-container">
-            <div className="avatar avatar-large" onClick={() => navigate('/profile')}>
+          <div className="home-avatar-container">
+            <div className="home-avatar" onClick={() => navigate('/profile')}>
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt={user.username} />
               ) : (
-                <Icon name="user" size={48} />
+                <div className="home-avatar-placeholder">
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#B6B6B6"/>
+                    <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="#B6B6B6"/>
+                  </svg>
+                </div>
               )}
-              {hasNotifications && <div className="avatar-notification-badge" />}
+              {hasNotifications && <div className="home-avatar-notification" />}
             </div>
           </div>
           <div className="home-user-info">
@@ -104,11 +109,11 @@ export default function Home() {
         <div className="home-header-right">
           <div className="home-currency">
             <Icon name="coin" size={20} style={{ color: '#ffd700' }} />
-            <span className="gold">{stats.narCoin.toLocaleString()}</span>
+            <span>{stats.narCoin.toLocaleString()}</span>
           </div>
           <div className="home-energy">
             <span style={{ color: '#ff3333', fontSize: '20px', marginRight: '4px' }}>⚡</span>
-            <span style={{ color: '#ff3333' }}>#{stats.energy}/{stats.maxEnergy}</span>
+            <span>{stats.energy}/{stats.maxEnergy}</span>
           </div>
         </div>
       </div>
@@ -119,7 +124,7 @@ export default function Home() {
           {menuItems.map((item) => {
             const isDisabled = item.disabled
             return (
-              <Card
+              <div
                 key={item.path}
                 onClick={() => !isDisabled && navigate(item.path)}
                 className="home-menu-item"
@@ -142,7 +147,7 @@ export default function Home() {
                     <span className="home-menu-item-disabled">(с 20 уровня)</span>
                   )}
                 </div>
-              </Card>
+              </div>
             )
           })}
         </div>
