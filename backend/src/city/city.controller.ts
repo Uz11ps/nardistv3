@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, UseGuards, Body, Query } from '@nestjs/common';
 import { CityService } from './city.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -16,7 +16,16 @@ export class CityController {
   @Get('districts')
   @UseGuards(JwtAuthGuard)
   async getDistricts(@CurrentUser() user: any) {
-    return this.cityService.getDistricts();
+    return this.cityService.getDistricts(user.id);
+  }
+
+  @Post('buildings/purchase')
+  @UseGuards(JwtAuthGuard)
+  async purchaseBuilding(
+    @CurrentUser() user: any,
+    @Body() body: { district: string; type: string },
+  ) {
+    return this.cityService.purchaseBuilding(user.id, body.district as any, body.type as any);
   }
 
   @Get('buildings')
@@ -32,16 +41,26 @@ export class CityController {
     return { income };
   }
 
-  @Post('districts/:districtId/capture')
+  @Post('buildings/:buildingId/capture')
   @UseGuards(JwtAuthGuard)
-  async captureDistrict(@CurrentUser() user: any, @Param('districtId') districtId: string) {
-    return this.cityService.captureDistrict(user.id, districtId);
+  async captureTerritory(@CurrentUser() user: any, @Param('buildingId') buildingId: string) {
+    await this.cityService.captureTerritory(user.id, buildingId);
+    return { message: 'Территория успешно захвачена' };
   }
 
   @Post('upgrade/:buildingId')
   @UseGuards(JwtAuthGuard)
   async upgradeBuilding(@CurrentUser() user: any, @Param('buildingId') buildingId: string) {
     return this.cityService.upgradeBuilding(user.id, buildingId);
+  }
+
+  @Get('captureable')
+  @UseGuards(JwtAuthGuard)
+  async getCaptureableBuildings(
+    @CurrentUser() user: any,
+    @Query('district') district?: string,
+  ) {
+    return this.cityService.getCaptureableBuildings(user.id, district as any);
   }
 }
 

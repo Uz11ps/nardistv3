@@ -87,5 +87,11 @@ export class ClansController {
   async getUpgrades(@Param('id') id: string) {
     return this.clansService.getClanUpgrades(id);
   }
+
+  @Get(':id/territories')
+  @UseGuards(JwtAuthGuard)
+  async getClanTerritories(@Param('id') id: string) {
+    return this.clansService.getClanTerritories(id);
+  }
 }
 

@@ -243,6 +243,52 @@ export class AdminController {
     return this.adminService.updateCityRewards(body);
   }
 
+  // CRUD для территорий
+  @Get('districts')
+  @UseGuards(JwtAuthGuard)
+  async getAllDistricts(@CurrentUser() user: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getAllDistricts();
+  }
+
+  @Get('districts/:id')
+  @UseGuards(JwtAuthGuard)
+  async getDistrict(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getDistrict(id);
+  }
+
+  @Post('districts')
+  @UseGuards(JwtAuthGuard)
+  async createDistrict(@CurrentUser() user: any, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.createDistrict(body);
+  }
+
+  @Put('districts/:id')
+  @UseGuards(JwtAuthGuard)
+  async updateDistrict(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateDistrict(id, body);
+  }
+
+  @Delete('districts/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteDistrict(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteDistrict(id);
+  }
+
   // CRUD для скинов
   @Get('skins')
   @UseGuards(JwtAuthGuard)

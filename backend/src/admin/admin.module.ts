@@ -25,10 +25,12 @@ import { Quest } from '../quests/quest.entity';
 import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
 import { Subscription } from '../subscription/subscription.entity';
+import { BuildingConfig } from '../city/building-config.entity';
+import { DistrictConfig } from '../city/district-config.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, Subscription]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, Subscription, BuildingConfig, DistrictConfig]),
     AuthModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -61,6 +61,9 @@ export class Clan {
   @Column({ type: 'jsonb', nullable: true })
   ownedDistricts: District[];
 
+  @Column({ type: 'timestamp', nullable: true })
+  lastTerritoryCaptureAt: Date; // Последний захват территории (ограничение: раз в 3 дня)
+
   @Column()
   leaderId: string;
 

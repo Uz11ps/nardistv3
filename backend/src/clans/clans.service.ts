@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Clan } from './clan.entity';
 import { ClanMember, ClanRole } from './clan-member.entity';
 import { ClanTreasuryTransaction, TreasuryTransactionType } from './clan-treasury-transaction.entity';
 import { UsersService } from '../users/users.service';
+import { DistrictConfig } from '../city/district-config.entity';
 
 @Injectable()
 export class ClansService {
@@ -15,6 +16,8 @@ export class ClansService {
     private membersRepository: Repository<ClanMember>,
     @InjectRepository(ClanTreasuryTransaction)
     private transactionsRepository: Repository<ClanTreasuryTransaction>,
+    @InjectRepository(DistrictConfig)
+    private districtConfigsRepository: Repository<DistrictConfig>,
     private usersService: UsersService,
   ) {}
 
@@ -312,6 +315,34 @@ export class ClansService {
         cost: clan.fortLevel >= 10 ? 0 : (clan.fortLevel + 1) * 1200,
       },
     };
+  }
+
+  async getClanTerritories(clanId: string): Promise<any[]> {
+    const clan = await this.findOne(clanId);
+    
+    if (!clan.ownedDistricts || clan.ownedDistricts.length === 0) {
+      return [];
+    }
+
+    // Получаем конфигурации территорий из БД
+    const districtConfigs = await this.districtConfigsRepository.find({
+      where: {
+        code: In(clan.ownedDistricts),
+        isActive: true,
+      },
+    });
+
+    // Маппим коды территорий на конфигурации
+    return clan.ownedDistricts.map((districtCode) => {
+      const config = districtConfigs.find(c => c.code === districtCode);
+      return {
+        code: districtCode,
+        name: config?.name || districtCode,
+        description: config?.description || null,
+        baseIncomePerDay: config ? Number(config.baseIncomePerDay) : 0,
+        metadata: config?.metadata || null,
+      };
+    });
   }
 }
 

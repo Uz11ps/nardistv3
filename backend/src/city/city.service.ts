@@ -1,17 +1,24 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Building, District, BuildingType } from './building.entity';
+import { BuildingConfig } from './building-config.entity';
+import { DistrictConfig } from './district-config.entity';
 import { UsersService } from '../users/users.service';
 import { ClansService } from '../clans/clans.service';
 
 @Injectable()
 export class CityService {
   private readonly INCOME_CAP = 10000;
+  private readonly CAPTURE_COOLDOWN_DAYS = 3; // Клан может захватить территорию раз в 3 дня
 
   constructor(
     @InjectRepository(Building)
     private buildingsRepository: Repository<Building>,
+    @InjectRepository(BuildingConfig)
+    private buildingConfigsRepository: Repository<BuildingConfig>,
+    @InjectRepository(DistrictConfig)
+    private districtConfigsRepository: Repository<DistrictConfig>,
     private usersService: UsersService,
     @Inject(forwardRef(() => ClansService))
     private clansService: ClansService,
@@ -27,17 +34,15 @@ export class CityService {
     });
 
     if (!building) {
-      throw new Error('Здание не найдено');
+      throw new BadRequestException('Здание не найдено');
     }
 
     const now = new Date();
     const lastCollected = building.lastCollectedAt || building.createdAt;
     const hoursPassed = Math.max(0, (now.getTime() - lastCollected.getTime()) / (1000 * 60 * 60));
     
-    // Получаем настройки района из админки (или используем дефолтные)
-    const districtConfig = await this.getDistrictConfig(building.district);
-    const incomePerHour = Number(building.incomePerHour || districtConfig.incomePerHour);
-    const maxAccumulation = districtConfig.maxAccumulation || this.INCOME_CAP;
+    const incomePerHour = Number(building.incomePerHour || 0);
+    const maxAccumulation = Number(building.maxAccumulation || this.INCOME_CAP);
     
     const accumulated = Number(building.accumulatedIncome || 0);
     
@@ -45,23 +50,49 @@ export class CityService {
     const calculatedIncome = Math.floor(incomePerHour * hoursPassed);
     
     // Доход не может превысить максимальное накопление
-    const income = Math.min(calculatedIncome, maxAccumulation - accumulated);
+    const totalIncome = Math.min(calculatedIncome, maxAccumulation - accumulated);
     
-    if (income <= 0) {
+    if (totalIncome <= 0) {
       return 0;
     }
 
+    // Если предприятие захвачено кланом, применяем разделение дохода
+    let playerIncome = totalIncome;
+    let clanIncome = 0;
+    let platformFee = 0;
+
+    if (building.capturedByClanId) {
+      // 50% игроку, 10% клану, 40% комиссия платформе
+      playerIncome = Math.floor(totalIncome * 0.5);
+      clanIncome = Math.floor(totalIncome * 0.1);
+      platformFee = totalIncome - playerIncome - clanIncome; // Остаток идет в комиссию
+      
+      // Начисляем клану
+      if (clanIncome > 0) {
+        const clan = await this.clansService.findOne(building.capturedByClanId);
+        if (clan) {
+          clan.treasury = (BigInt(clan.treasury || 0) + BigInt(clanIncome)).toString();
+          await this.clansService['clansRepository'].save(clan);
+        }
+      }
+    } else {
+      // Если не захвачено, игрок получает 100%
+      playerIncome = totalIncome;
+    }
+
     // Обновляем накопленный доход
-    building.accumulatedIncome = (BigInt(building.accumulatedIncome || 0) + BigInt(income)).toString();
+    building.accumulatedIncome = (BigInt(building.accumulatedIncome || 0) + BigInt(totalIncome)).toString();
     building.lastCollectedAt = now;
     await this.buildingsRepository.save(building);
 
     // Начисляем пользователю
-    const user = await this.usersService.findOne(userId);
-    user.narCoin = BigInt(user.narCoin || 0) + BigInt(income);
-    await this.usersService['usersRepository'].save(user);
+    if (playerIncome > 0) {
+      const user = await this.usersService.findOne(userId);
+      user.narCoin = BigInt(user.narCoin || 0) + BigInt(playerIncome);
+      await this.usersService['usersRepository'].save(user);
+    }
 
-    return income;
+    return playerIncome;
   }
 
   private async getDistrictConfig(district: District): Promise<{ incomePerHour: number; maxAccumulation: number }> {
@@ -85,62 +116,108 @@ export class CityService {
     });
 
     if (!building) {
-      throw new Error('Здание не найдено');
+      throw new BadRequestException('Здание не найдено');
     }
 
-    const upgradeCost = building.level * 1000;
+    // Получаем конфигурацию для расчета стоимости улучшения
+    const config = await this.buildingConfigsRepository.findOne({
+      where: { district: building.district, type: building.type },
+    });
+
+    if (!config) {
+      throw new BadRequestException('Конфигурация не найдена');
+    }
+
+    // Проверяем максимальный уровень
+    if (building.level >= config.maxLevel) {
+      throw new BadRequestException('Достигнут максимальный уровень');
+    }
+
+    // Вычисляем стоимость улучшения
+    const upgradeCosts = config.upgradeCosts || {};
+    const upgradeCost = upgradeCosts[building.level] || (building.level * 1000);
+
     const user = await this.usersService.findOne(userId);
 
     if (Number(user.narCoin) < upgradeCost) {
-      throw new Error('Недостаточно NAR-coin');
+      throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${upgradeCost}`);
     }
 
+    // Списываем средства
     user.narCoin = BigInt(user.narCoin || 0) - BigInt(upgradeCost);
     await this.usersService['usersRepository'].save(user);
 
+    // Улучшаем предприятие
     building.level++;
+    // Увеличиваем доход на 20% за уровень
     building.incomePerHour = (BigInt(building.incomePerHour || 0) * BigInt(120) / BigInt(100)).toString();
+    // Увеличиваем максимальное накопление на 20%
+    building.maxAccumulation = (BigInt(building.maxAccumulation || 0) * BigInt(120) / BigInt(100)).toString();
+    
     return this.buildingsRepository.save(building);
   }
 
-  async getDistricts(): Promise<any[]> {
-    const districts = Object.values(District);
+  async getDistricts(userId?: string): Promise<any[]> {
+    // Получаем активные территории из БД
+    const districtConfigs = await this.districtConfigsRepository.find({
+      where: { isActive: true },
+      order: { order: 'ASC' },
+    });
     
-    // Получаем все кланы с их районами
-    const clans = await this.clansService.findAll({});
+    // Получаем конфигурации предприятий для каждого района
+    const configs = await this.buildingConfigsRepository.find();
+    
+    // Получаем предприятия пользователя
+    const userBuildings = userId ? await this.buildingsRepository.find({ where: { userId } }) : [];
+    
+    // Получаем все захваченные предприятия
+    const allBuildings = await this.buildingsRepository.find();
+    const capturedBuildings = allBuildings.filter(b => b.capturedByClanId !== null);
     
     const districtsData = await Promise.all(
-      districts.map(async (district, index) => {
-        // Находим клан, который владеет этим районом
-        const ownerClan = clans.find((clan) => 
-          clan.ownedDistricts && clan.ownedDistricts.includes(district)
-        );
+      districtConfigs.map(async (districtConfig) => {
+        const districtCode = districtConfig.code as District;
         
-        // Определяем статус и владельца
-        let owner: string | null = null;
-        let status: 'free' | 'stable' | 'vulnerable' = 'free';
-        let vulnerabilityPercent = 0;
+        // Находим предприятия в этом районе
+        const districtBuildings = await this.buildingsRepository.find({
+          where: { district: districtCode },
+        });
         
-        if (ownerClan) {
-          owner = ownerClan.name;
-          // Если форт клана высокий, район стабилен
-          if (ownerClan.fortLevel >= 5) {
-            status = 'stable';
-          } else {
-            // Иначе район уязвим (процент уязвимости зависит от уровня форта)
-            status = 'vulnerable';
-            vulnerabilityPercent = Math.max(0, 10 - ownerClan.fortLevel);
-          }
-        }
+        // Находим предприятия пользователя в этом районе
+        const userBuilding = userBuildings.find(b => b.district === districtCode);
+        
+        // Находим захваченные предприятия в этом районе
+        const capturedInDistrict = capturedBuildings.filter(b => b.district === districtCode);
+        
+        // Получаем конфигурации для этого района
+        const districtConfigsForBuildings = configs.filter(c => c.district === districtCode);
         
         return {
-          id: district,
-          name: this.getDistrictName(district),
-          owner,
-          status,
-          incomePerDay: (index + 1) * 200,
-          level: 1,
-          vulnerabilityPercent,
+          id: districtCode,
+          code: districtConfig.code,
+          name: districtConfig.name,
+          description: districtConfig.description,
+          order: districtConfig.order,
+          baseIncomePerDay: Number(districtConfig.baseIncomePerDay),
+          metadata: districtConfig.metadata,
+          userBuilding: userBuilding ? {
+            id: userBuilding.id,
+            type: userBuilding.type,
+            level: userBuilding.level,
+            incomePerHour: Number(userBuilding.incomePerHour),
+            accumulatedIncome: Number(userBuilding.accumulatedIncome),
+            maxAccumulation: Number(userBuilding.maxAccumulation),
+            capturedByClanId: userBuilding.capturedByClanId,
+            capturedAt: userBuilding.capturedAt,
+          } : null,
+          availableBuildings: districtConfigsForBuildings.map(c => ({
+            type: c.type,
+            name: this.getBuildingTypeName(c.type),
+            price: Number(c.basePrice),
+            incomePerHour: Number(c.baseIncomePerHour),
+            maxAccumulation: Number(c.maxAccumulation),
+          })),
+          capturedCount: capturedInDistrict.length,
         };
       })
     );
@@ -152,16 +229,90 @@ export class CityService {
     return this.buildingsRepository.find({ where: { userId } });
   }
 
-  async captureDistrict(userId: string, districtId: string): Promise<void> {
-    const user = await this.usersService.findOne(userId);
-    if (user.level < 20) {
-      throw new Error('Кланы доступны с 20 уровня');
+  async getCaptureableBuildings(userId: string, district?: District): Promise<any[]> {
+    // Получаем все предприятия, которые можно захватить (не принадлежат текущему пользователю)
+    const where: any = {};
+    if (district) {
+      where.district = district;
+    }
+    
+    const allBuildings = await this.buildingsRepository.find({ where });
+    
+    // Фильтруем: исключаем предприятия текущего пользователя и уже захваченные этим кланом
+    const userClan = await this.clansService.getUserClan(userId);
+    const clanId = userClan?.clan?.id;
+
+    return allBuildings
+      .filter(b => {
+        // Исключаем свои предприятия
+        if (b.userId === userId) return false;
+        
+        // Если уже захвачено этим кланом, не показываем
+        if (b.capturedByClanId === clanId) return false;
+        
+        return true;
+      })
+      .map(b => ({
+        id: b.id,
+        district: b.district,
+        type: b.type,
+        level: b.level,
+        incomePerHour: Number(b.incomePerHour),
+        capturedByClanId: b.capturedByClanId,
+        ownerId: b.userId,
+      }));
+  }
+
+  async purchaseBuilding(userId: string, district: District, type: BuildingType): Promise<Building> {
+    // Проверяем, не купил ли уже игрок предприятие в этом районе
+    const existingBuilding = await this.buildingsRepository.findOne({
+      where: { userId, district },
+    });
+
+    if (existingBuilding) {
+      throw new BadRequestException('Вы уже владеете предприятием в этом районе');
     }
 
+    // Получаем конфигурацию предприятия
+    const config = await this.buildingConfigsRepository.findOne({
+      where: { district, type },
+    });
+
+    if (!config) {
+      throw new BadRequestException('Конфигурация предприятия не найдена');
+    }
+
+    const purchasePrice = Number(config.basePrice);
+    const user = await this.usersService.findOne(userId);
+
+    if (Number(user.narCoin) < purchasePrice) {
+      throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${purchasePrice}`);
+    }
+
+    // Списываем средства
+    user.narCoin = BigInt(user.narCoin || 0) - BigInt(purchasePrice);
+    await this.usersService['usersRepository'].save(user);
+
+    // Создаем предприятие
+    const building = this.buildingsRepository.create({
+      userId,
+      district,
+      type,
+      level: 1,
+      incomePerHour: config.baseIncomePerHour,
+      maxAccumulation: config.maxAccumulation,
+      purchasePrice: config.basePrice,
+      accumulatedIncome: '0',
+    });
+
+    return this.buildingsRepository.save(building);
+  }
+
+  async captureTerritory(userId: string, buildingId: string): Promise<void> {
     // Проверяем что пользователь состоит в клане
     const userClan = await this.clansService.getUserClan(userId);
     if (!userClan || !userClan.clan) {
-      throw new Error('Вы должны состоять в клане для захвата районов');
+      throw new BadRequestException('Вы должны состоять в клане для захвата территорий');
     }
 
     const clan = await this.clansService.findOne(userClan.clan.id);
@@ -169,62 +320,44 @@ export class CityService {
     // Проверяем права (только лидер или офицер)
     const member = userClan.member;
     if (!member || (member.role !== 'leader' && member.role !== 'officer')) {
-      throw new Error('Только лидер и офицеры могут захватывать районы');
+      throw new BadRequestException('Только лидер и офицеры могут захватывать территории');
     }
 
-    // Проверяем что район существует
-    const district = districtId as District;
-    if (!Object.values(District).includes(district)) {
-      throw new Error('Неверный район');
-    }
-
-    // Проверяем что клан может захватить район (уровень клана, казна и т.д.)
-    if (clan.level < 1) {
-      throw new Error('Клан должен быть хотя бы 1 уровня');
-    }
-
-    const captureCost = 1000; // Стоимость захвата
-    if (Number(clan.treasury || 0) < captureCost) {
-      throw new Error('Недостаточно средств в казне клана');
-    }
-
-    // Проверяем не занят ли район другим кланом
-    const allClans = await this.clansService.findAll({});
-    const ownerClan = allClans.find((c) => 
-      c.ownedDistricts && c.ownedDistricts.includes(district)
-    );
-
-    if (ownerClan && ownerClan.id === clan.id) {
-      throw new Error('Ваш клан уже владеет этим районом');
-    }
-
-    // Если район занят другим кланом, проверяем уязвимость
-    if (ownerClan) {
-      // Район можно захватить только если форт клана-владельца < 5
-      if (ownerClan.fortLevel >= 5) {
-        throw new Error('Район защищен сильным фортом и не может быть захвачен');
+    // Проверяем ограничение - клан может захватить только одну территорию раз в 3 дня
+    if (clan.lastTerritoryCaptureAt) {
+      const daysSinceLastCapture = (Date.now() - new Date(clan.lastTerritoryCaptureAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceLastCapture < this.CAPTURE_COOLDOWN_DAYS) {
+        const remainingDays = Math.ceil(this.CAPTURE_COOLDOWN_DAYS - daysSinceLastCapture);
+        throw new BadRequestException(`Клан может захватить территорию только раз в ${this.CAPTURE_COOLDOWN_DAYS} дня. Осталось: ${remainingDays} дн.`);
       }
     }
 
-    // Захватываем район
-    if (!clan.ownedDistricts) {
-      clan.ownedDistricts = [];
-    }
-    
-    // Убираем район у предыдущего владельца
-    if (ownerClan) {
-      ownerClan.ownedDistricts = ownerClan.ownedDistricts.filter(d => d !== district);
-      await this.clansService['clansRepository'].save(ownerClan);
+    // Получаем предприятие
+    const building = await this.buildingsRepository.findOne({
+      where: { id: buildingId },
+    });
+
+    if (!building) {
+      throw new BadRequestException('Предприятие не найдено');
     }
 
-    // Добавляем район новому владельцу
-    if (!clan.ownedDistricts.includes(district)) {
-      clan.ownedDistricts.push(district);
+    // Нельзя захватить свое же предприятие
+    if (building.userId === userId) {
+      throw new BadRequestException('Нельзя захватить свое предприятие');
     }
 
-    // Списываем стоимость захвата
-    clan.treasury = (BigInt(clan.treasury || 0) - BigInt(captureCost)).toString();
-    
+    // Проверяем, не захвачено ли уже другим кланом
+    if (building.capturedByClanId && building.capturedByClanId === clan.id) {
+      throw new BadRequestException('Ваш клан уже владеет этой территорией');
+    }
+
+    // Захватываем территорию
+    building.capturedByClanId = clan.id;
+    building.capturedAt = new Date();
+    await this.buildingsRepository.save(building);
+
+    // Обновляем время последнего захвата клана
+    clan.lastTerritoryCaptureAt = new Date();
     await this.clansService['clansRepository'].save(clan);
   }
 
@@ -239,6 +372,19 @@ export class CityService {
       [District.DISTRICT_7]: 'Деловой',
     };
     return names[district] || district;
+  }
+
+  private getBuildingTypeName(type: BuildingType): string {
+    const names: Record<BuildingType, string> = {
+      [BuildingType.CLUB]: 'Клуб',
+      [BuildingType.WORKSHOP]: 'Мастерская',
+      [BuildingType.FACTORY]: 'Фабрика',
+      [BuildingType.SCHOOL]: 'Школа',
+      [BuildingType.MARKET]: 'Рынок',
+      [BuildingType.ACADEMY]: 'Академия',
+      [BuildingType.TEMPLE]: 'Храм',
+    };
+    return names[type] || type;
   }
 
   async initializeCity(userId: string): Promise<void> {

@@ -36,6 +36,16 @@ export default function Admin() {
   const [tournaments, setTournaments] = useState<any[]>([])
   const [articles, setArticles] = useState<any[]>([])
   const [cityRewards, setCityRewards] = useState<any>(null)
+  const [districts, setDistricts] = useState<any[]>([])
+  const [selectedDistrict, setSelectedDistrict] = useState<any>(null)
+  const [newDistrict, setNewDistrict] = useState({
+    code: '',
+    name: '',
+    description: '',
+    order: 1,
+    isActive: true,
+    baseIncomePerDay: 0,
+  })
   const [skins, setSkins] = useState<any[]>([])
   const [selectedGame, setSelectedGame] = useState<any>(null)
   const [gameReplay, setGameReplay] = useState<any>(null)
@@ -67,7 +77,16 @@ export default function Admin() {
   
   // Формы создания
   const [newGame, setNewGame] = useState({ player1Id: '', player2Id: '', mode: 'short', type: 'vs_player' })
-  const [newTournament, setNewTournament] = useState({ name: '', mode: 'short', format: 'bracket', startDate: '', maxParticipants: 16, entryFee: 0 })
+  const [newTournament, setNewTournament] = useState({ 
+    name: '', 
+    mode: 'short', 
+    format: 'bracket', 
+    startDate: '', 
+    registrationStart: '',
+    registrationEnd: '',
+    maxParticipants: 16, 
+    entryFee: 0 
+  })
   const [newArticle, setNewArticle] = useState({ title: '', content: '', type: 'article', isPaid: false, price: 0 })
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
@@ -111,7 +130,7 @@ export default function Admin() {
 
   const loadStats = async () => {
     try {
-      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes] = await Promise.all([
+      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, districtsRes] = await Promise.all([
         apiClient.get('/admin/stats'),
         apiClient.get('/admin/users'),
         apiClient.get('/admin/games'),
@@ -121,6 +140,7 @@ export default function Admin() {
         apiClient.get('/admin/skins').catch(() => ({ data: [] })),
         apiClient.get('/admin/quests').catch(() => ({ data: [] })),
         apiClient.get('/admin/clans').catch(() => ({ data: [] })),
+        apiClient.get('/admin/districts').catch(() => ({ data: [] })),
       ])
       setStats(statsRes.data)
       setUsers(usersRes.data)
@@ -131,6 +151,7 @@ export default function Admin() {
       setSkins(skinsRes.data || [])
       setQuests(questsRes.data || [])
       setClans(clansRes.data || [])
+      setDistricts(districtsRes.data || [])
     } catch (error) {
       console.error('Ошибка загрузки данных:', error)
     }
@@ -816,11 +837,30 @@ export default function Admin() {
                 </select>
               </div>
               <div className="form-group">
-                <label>Дата начала</label>
+                <label>Дата начала регистрации</label>
+                <input
+                  type="datetime-local"
+                  value={newTournament.registrationStart}
+                  onChange={(e) => setNewTournament({ ...newTournament, registrationStart: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Дата окончания регистрации</label>
+                <input
+                  type="datetime-local"
+                  value={newTournament.registrationEnd}
+                  onChange={(e) => setNewTournament({ ...newTournament, registrationEnd: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Дата начала турнира</label>
                 <input
                   type="datetime-local"
                   value={newTournament.startDate}
                   onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
+                  required
                 />
               </div>
               <div className="form-group">
@@ -830,6 +870,7 @@ export default function Admin() {
                   value={newTournament.maxParticipants}
                   onChange={(e) => setNewTournament({ ...newTournament, maxParticipants: parseInt(e.target.value) })}
                   min="2"
+                  required
                 />
               </div>
               <div className="form-group">
@@ -843,13 +884,29 @@ export default function Admin() {
               </div>
               <button onClick={async () => {
                 try {
+                  if (!newTournament.registrationStart || !newTournament.registrationEnd || !newTournament.startDate) {
+                    alert('Заполните все даты!')
+                    return
+                  }
+                  
                   await apiClient.post('/admin/tournaments/create', {
                     ...newTournament,
-                    startDate: newTournament.startDate ? new Date(newTournament.startDate).toISOString() : new Date().toISOString(),
+                    registrationStart: new Date(newTournament.registrationStart).toISOString(),
+                    registrationEnd: new Date(newTournament.registrationEnd).toISOString(),
+                    startDate: new Date(newTournament.startDate).toISOString(),
                     status: 'registration',
                   })
                   alert('Турнир создан!')
-                  setNewTournament({ name: '', mode: 'short', format: 'bracket', startDate: '', maxParticipants: 16, entryFee: 0 })
+                  setNewTournament({ 
+                    name: '', 
+                    mode: 'short', 
+                    format: 'bracket', 
+                    startDate: '', 
+                    registrationStart: '',
+                    registrationEnd: '',
+                    maxParticipants: 16, 
+                    entryFee: 0 
+                  })
                   loadStats()
                 } catch (error: any) {
                   alert('Ошибка: ' + (error.response?.data?.message || error.message))
@@ -1763,60 +1820,442 @@ export default function Admin() {
           </div>
         )}
 
-        {activeTab === 'city' && cityRewards && (
+        {activeTab === 'city' && (
           <div className="admin-city">
-            <h3>Настройка наград города</h3>
-            <div className="city-rewards">
-              {cityRewards.districts?.map((district: any) => (
-                <div key={district.id} className="district-card">
-                  <h4>{district.name}</h4>
-                  <div className="form-group">
-                    <label>Доход в час (NAR)</label>
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+              <button
+                onClick={() => {
+                  loadCityRewards()
+                  loadDistricts()
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: '#4a90e2',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                Обновить данные
+              </button>
+            </div>
+
+            {/* Управление территориями */}
+            <div style={{ marginBottom: '32px' }}>
+              <h3>Управление территориями</h3>
+              
+              {/* Форма создания новой территории */}
+              <div style={{
+                background: '#2a2a2a',
+                padding: '16px',
+                borderRadius: '8px',
+                marginBottom: '16px',
+              }}>
+                <h4 style={{ marginTop: 0, color: '#fff' }}>Создать новую территорию</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Код территории</label>
                     <input
-                      type="number"
-                      value={district.incomePerHour}
-                      onChange={(e) => {
-                        const updated = {
-                          ...cityRewards,
-                          districts: cityRewards.districts.map((d: any) =>
-                            d.id === district.id
-                              ? { ...d, incomePerHour: parseInt(e.target.value) }
-                              : d
-                          ),
-                        }
-                        setCityRewards(updated)
+                      type="text"
+                      value={newDistrict.code}
+                      onChange={(e) => setNewDistrict({ ...newDistrict, code: e.target.value })}
+                      placeholder="district_8"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
                       }}
                     />
                   </div>
-                  <div className="form-group">
-                    <label>Максимальное накопление (NAR)</label>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название</label>
                     <input
-                      type="number"
-                      value={district.maxAccumulation}
-                      onChange={(e) => {
-                        const updated = {
-                          ...cityRewards,
-                          districts: cityRewards.districts.map((d: any) =>
-                            d.id === district.id
-                              ? { ...d, maxAccumulation: parseInt(e.target.value) }
-                              : d
-                          ),
-                        }
-                        setCityRewards(updated)
+                      type="text"
+                      value={newDistrict.name}
+                      onChange={(e) => setNewDistrict({ ...newDistrict, name: e.target.value })}
+                      placeholder="Название территории"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
                       }}
                     />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Описание</label>
+                    <input
+                      type="text"
+                      value={newDistrict.description}
+                      onChange={(e) => setNewDistrict({ ...newDistrict, description: e.target.value })}
+                      placeholder="Описание"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Порядок</label>
+                    <input
+                      type="number"
+                      value={newDistrict.order}
+                      onChange={(e) => setNewDistrict({ ...newDistrict, order: parseInt(e.target.value) || 1 })}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовый доход в день (для кланов)</label>
+                    <input
+                      type="number"
+                      value={newDistrict.baseIncomePerDay}
+                      onChange={(e) => setNewDistrict({ ...newDistrict, baseIncomePerDay: parseInt(e.target.value) || 0 })}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={newDistrict.isActive}
+                      onChange={(e) => setNewDistrict({ ...newDistrict, isActive: e.target.checked })}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <label style={{ color: '#ccc', cursor: 'pointer' }}>Активна</label>
                   </div>
                 </div>
-              ))}
-              <button onClick={async () => {
-                try {
-                  await apiClient.put('/admin/city/rewards', cityRewards)
-                  alert('Настройки сохранены!')
-                } catch (error: any) {
-                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                }
-              }}>Сохранить изменения</button>
+                <button
+                  onClick={handleCreateDistrict}
+                  style={{
+                    marginTop: '12px',
+                    padding: '8px 16px',
+                    background: '#4a90e2',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Создать территорию
+                </button>
+              </div>
+
+              {/* Список территорий */}
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {districts.map((district) => (
+                  <div
+                    key={district.id}
+                    style={{
+                      background: '#2a2a2a',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
+                        <h4 style={{ margin: 0, color: '#fff' }}>{district.name}</h4>
+                        <span style={{
+                          padding: '2px 8px',
+                          background: district.isActive ? '#4a90e2' : '#666',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          color: '#fff',
+                        }}>
+                          {district.isActive ? 'Активна' : 'Неактивна'}
+                        </span>
+                      </div>
+                      <div style={{ color: '#999', fontSize: '14px' }}>
+                        <div>Код: {district.code}</div>
+                        <div>Порядок: {district.order}</div>
+                        <div>Доход в день: {Number(district.baseIncomePerDay).toLocaleString()} NAR</div>
+                        {district.description && <div>Описание: {district.description}</div>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => setSelectedDistrict(district)}
+                        style={{
+                          padding: '6px 12px',
+                          background: '#4a90e2',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Редактировать
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDistrict(district.id)}
+                        style={{
+                          padding: '6px 12px',
+                          background: '#e24a4a',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Модальное окно редактирования */}
+              {selectedDistrict && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10000,
+                  }}
+                  onClick={() => setSelectedDistrict(null)}
+                >
+                  <div
+                    style={{
+                      background: '#2a2a2a',
+                      padding: '24px',
+                      borderRadius: '8px',
+                      maxWidth: '500px',
+                      width: '90%',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 style={{ marginTop: 0, color: '#fff' }}>Редактировать территорию</h3>
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Код территории</label>
+                        <input
+                          type="text"
+                          value={selectedDistrict.code}
+                          onChange={(e) => setSelectedDistrict({ ...selectedDistrict, code: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: '#1a1a1a',
+                            border: '1px solid #444',
+                            borderRadius: '4px',
+                            color: '#fff',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название</label>
+                        <input
+                          type="text"
+                          value={selectedDistrict.name}
+                          onChange={(e) => setSelectedDistrict({ ...selectedDistrict, name: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: '#1a1a1a',
+                            border: '1px solid #444',
+                            borderRadius: '4px',
+                            color: '#fff',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Описание</label>
+                        <input
+                          type="text"
+                          value={selectedDistrict.description || ''}
+                          onChange={(e) => setSelectedDistrict({ ...selectedDistrict, description: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: '#1a1a1a',
+                            border: '1px solid #444',
+                            borderRadius: '4px',
+                            color: '#fff',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Порядок</label>
+                        <input
+                          type="number"
+                          value={selectedDistrict.order}
+                          onChange={(e) => setSelectedDistrict({ ...selectedDistrict, order: parseInt(e.target.value) || 1 })}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: '#1a1a1a',
+                            border: '1px solid #444',
+                            borderRadius: '4px',
+                            color: '#fff',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовый доход в день</label>
+                        <input
+                          type="number"
+                          value={Number(selectedDistrict.baseIncomePerDay)}
+                          onChange={(e) => setSelectedDistrict({ ...selectedDistrict, baseIncomePerDay: parseInt(e.target.value) || 0 })}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: '#1a1a1a',
+                            border: '1px solid #444',
+                            borderRadius: '4px',
+                            color: '#fff',
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedDistrict.isActive}
+                          onChange={(e) => setSelectedDistrict({ ...selectedDistrict, isActive: e.target.checked })}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <label style={{ color: '#ccc', cursor: 'pointer' }}>Активна</label>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                      <button
+                        onClick={() => handleUpdateDistrict(selectedDistrict.id, selectedDistrict)}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#4a90e2',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Сохранить
+                      </button>
+                      <button
+                        onClick={() => setSelectedDistrict(null)}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#666',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Настройка наград города (предприятия) */}
+            {cityRewards && (
+              <div>
+                <h3>Настройка предприятий</h3>
+                <div className="city-rewards">
+                  {cityRewards.buildings?.map((building: any) => (
+                    <div key={building.id} className="district-card">
+                      <h4>{building.type} - {building.district}</h4>
+                      <div className="form-group">
+                        <label>Базовая цена</label>
+                        <input
+                          type="number"
+                          value={building.basePrice}
+                          onChange={(e) => {
+                            const updated = {
+                              ...cityRewards,
+                              buildings: cityRewards.buildings.map((b: any) =>
+                                b.id === building.id
+                                  ? { ...b, basePrice: parseInt(e.target.value) }
+                                  : b
+                              ),
+                            }
+                            setCityRewards(updated)
+                          }}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Доход в час (NAR)</label>
+                        <input
+                          type="number"
+                          value={building.baseIncomePerHour}
+                          onChange={(e) => {
+                            const updated = {
+                              ...cityRewards,
+                              buildings: cityRewards.buildings.map((b: any) =>
+                                b.id === building.id
+                                  ? { ...b, baseIncomePerHour: parseInt(e.target.value) }
+                                  : b
+                              ),
+                            }
+                            setCityRewards(updated)
+                          }}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Максимальное накопление (NAR)</label>
+                        <input
+                          type="number"
+                          value={building.maxAccumulation}
+                          onChange={(e) => {
+                            const updated = {
+                              ...cityRewards,
+                              buildings: cityRewards.buildings.map((b: any) =>
+                                b.id === building.id
+                                  ? { ...b, maxAccumulation: parseInt(e.target.value) }
+                                  : b
+                              ),
+                            }
+                            setCityRewards(updated)
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={async () => {
+                    try {
+                      await apiClient.put('/admin/city/rewards', cityRewards)
+                      alert('Настройки сохранены!')
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}>Сохранить изменения</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

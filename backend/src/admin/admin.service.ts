@@ -20,6 +20,8 @@ import { UserSkin } from '../skins/user-skin.entity';
 import { Quest, QuestType, QuestTarget } from '../quests/quest.entity';
 import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
+import { BuildingConfig } from '../city/building-config.entity';
+import { DistrictConfig } from '../city/district-config.entity';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { unlink } from 'fs/promises';
@@ -53,6 +55,10 @@ export class AdminService {
     private clanMembersRepository: Repository<ClanMember>,
     @InjectRepository(Subscription)
     private subscriptionsRepository: Repository<Subscription>,
+    @InjectRepository(BuildingConfig)
+    private buildingConfigsRepository: Repository<BuildingConfig>,
+    @InjectRepository(DistrictConfig)
+    private districtConfigsRepository: Repository<DistrictConfig>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
     private academyService: AcademyService,
@@ -374,25 +380,154 @@ export class AdminService {
   }
 
   async getCityRewards() {
-    // Получаем настройки наград города (можно хранить в БД или конфиге)
-    // Пока возвращаем дефолтные значения
-    return {
-      districts: [
-        { id: 1, name: 'Клуб', incomePerHour: 10, maxAccumulation: 240 },
-        { id: 2, name: 'Мастерская', incomePerHour: 15, maxAccumulation: 360 },
-        { id: 3, name: 'Фабрика', incomePerHour: 20, maxAccumulation: 480 },
-        { id: 4, name: 'Школа', incomePerHour: 25, maxAccumulation: 600 },
-        { id: 5, name: 'Университет', incomePerHour: 30, maxAccumulation: 720 },
-        { id: 6, name: 'Банк', incomePerHour: 40, maxAccumulation: 960 },
-        { id: 7, name: 'Дворец', incomePerHour: 50, maxAccumulation: 1200 },
+    const configs = await this.buildingConfigsRepository.find({
+      order: [
+        { district: 'ASC' },
+        { type: 'ASC' },
       ],
+    });
+
+    return {
+      buildings: configs.map(c => ({
+        id: c.id,
+        district: c.district,
+        type: c.type,
+        basePrice: Number(c.basePrice),
+        baseIncomePerHour: Number(c.baseIncomePerHour),
+        maxAccumulation: Number(c.maxAccumulation),
+        maxLevel: c.maxLevel,
+        upgradeCosts: c.upgradeCosts,
+      })),
     };
   }
 
   async updateCityRewards(data: any) {
-    // Сохраняем настройки наград (можно в БД или конфиг)
-    // Пока просто возвращаем обновленные данные
-    return data;
+    if (data.buildings && Array.isArray(data.buildings)) {
+      for (const buildingData of data.buildings) {
+        if (buildingData.id) {
+          // Обновляем существующую конфигурацию
+          const config = await this.buildingConfigsRepository.findOne({ where: { id: buildingData.id } });
+          if (config) {
+            Object.assign(config, {
+              basePrice: buildingData.basePrice?.toString() || config.basePrice,
+              baseIncomePerHour: buildingData.baseIncomePerHour?.toString() || config.baseIncomePerHour,
+              maxAccumulation: buildingData.maxAccumulation?.toString() || config.maxAccumulation,
+              maxLevel: buildingData.maxLevel || config.maxLevel,
+              upgradeCosts: buildingData.upgradeCosts || config.upgradeCosts,
+            });
+            await this.buildingConfigsRepository.save(config);
+          }
+        } else {
+          // Создаем новую конфигурацию
+          const config = this.buildingConfigsRepository.create({
+            district: buildingData.district,
+            type: buildingData.type,
+            basePrice: buildingData.basePrice?.toString() || '0',
+            baseIncomePerHour: buildingData.baseIncomePerHour?.toString() || '0',
+            maxAccumulation: buildingData.maxAccumulation?.toString() || '0',
+            maxLevel: buildingData.maxLevel || 10,
+            upgradeCosts: buildingData.upgradeCosts || {},
+          });
+          await this.buildingConfigsRepository.save(config);
+        }
+      }
+    }
+
+    return this.getCityRewards();
+  }
+
+  // CRUD для территорий (районов)
+  async getAllDistricts() {
+    return this.districtConfigsRepository.find({
+      order: { order: 'ASC' },
+    });
+  }
+
+  async getDistrict(id: string) {
+    const district = await this.districtConfigsRepository.findOne({ where: { id } });
+    if (!district) {
+      throw new NotFoundException('Территория не найдена');
+    }
+    return district;
+  }
+
+  async createDistrict(data: {
+    code: string;
+    name: string;
+    description?: string;
+    order?: number;
+    isActive?: boolean;
+    baseIncomePerDay?: number;
+    metadata?: any;
+  }) {
+    // Проверяем уникальность кода
+    const existing = await this.districtConfigsRepository.findOne({ where: { code: data.code } });
+    if (existing) {
+      throw new BadRequestException(`Территория с кодом "${data.code}" уже существует`);
+    }
+
+    const district = this.districtConfigsRepository.create({
+      code: data.code,
+      name: data.name,
+      description: data.description || null,
+      order: data.order || 1,
+      isActive: data.isActive !== undefined ? data.isActive : true,
+      baseIncomePerDay: (data.baseIncomePerDay || 0).toString(),
+      metadata: data.metadata || null,
+    });
+
+    return this.districtConfigsRepository.save(district);
+  }
+
+  async updateDistrict(id: string, data: Partial<{
+    code: string;
+    name: string;
+    description: string;
+    order: number;
+    isActive: boolean;
+    baseIncomePerDay: number;
+    metadata: any;
+  }>) {
+    const district = await this.districtConfigsRepository.findOne({ where: { id } });
+    if (!district) {
+      throw new NotFoundException('Территория не найдена');
+    }
+
+    // Если меняется код, проверяем уникальность
+    if (data.code && data.code !== district.code) {
+      const existing = await this.districtConfigsRepository.findOne({ where: { code: data.code } });
+      if (existing) {
+        throw new BadRequestException(`Территория с кодом "${data.code}" уже существует`);
+      }
+    }
+
+    Object.assign(district, {
+      ...data,
+      baseIncomePerDay: data.baseIncomePerDay !== undefined ? data.baseIncomePerDay.toString() : district.baseIncomePerDay,
+    });
+
+    return this.districtConfigsRepository.save(district);
+  }
+
+  async deleteDistrict(id: string) {
+    const district = await this.districtConfigsRepository.findOne({ where: { id } });
+    if (!district) {
+      throw new NotFoundException('Территория не найдена');
+    }
+
+    // Проверяем, нет ли связанных предприятий
+    const { Building } = await import('../city/building.entity');
+    const buildingsRepository = this.usersRepository.manager.getRepository(Building);
+    const buildingsCount = await buildingsRepository.count({
+      where: { district: district.code as any },
+    });
+
+    if (buildingsCount > 0) {
+      throw new BadRequestException(`Невозможно удалить территорию: есть ${buildingsCount} связанных предприятий`);
+    }
+
+    await this.districtConfigsRepository.remove(district);
+    return { message: 'Территория удалена' };
   }
 
   // CRUD для скинов
@@ -544,9 +679,20 @@ export class AdminService {
 
   // CRUD для квестов
   async getAllQuests() {
-    return this.questsRepository.find({
-      order: { createdAt: 'DESC' },
-    });
+    try {
+      const quests = await this.questsRepository.find({
+        order: { createdAt: 'DESC' },
+      });
+      
+      // Преобразуем bigint в числа для корректной сериализации JSON
+      return quests.map(quest => ({
+        ...quest,
+        rewardNarCoin: quest.rewardNarCoin ? (typeof quest.rewardNarCoin === 'string' ? Number(quest.rewardNarCoin) : Number(quest.rewardNarCoin)) : 0,
+      }));
+    } catch (error) {
+      this.logger.error(`Ошибка при получении квестов: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async getQuest(id: string) {
@@ -554,7 +700,11 @@ export class AdminService {
     if (!quest) {
       throw new Error('Квест не найден');
     }
-    return quest;
+    // Преобразуем bigint в число для корректной сериализации JSON
+    return {
+      ...quest,
+      rewardNarCoin: quest.rewardNarCoin ? (typeof quest.rewardNarCoin === 'string' ? Number(quest.rewardNarCoin) : Number(quest.rewardNarCoin)) : 0,
+    };
   }
 
   async createQuest(data: {
@@ -591,7 +741,14 @@ export class AdminService {
     if (!quest) {
       throw new Error('Квест не найден');
     }
-    Object.assign(quest, data);
+    
+    // Преобразуем rewardNarCoin в строку если он передан
+    const updateData: any = { ...data };
+    if (updateData.rewardNarCoin !== undefined) {
+      updateData.rewardNarCoin = updateData.rewardNarCoin.toString();
+    }
+    
+    Object.assign(quest, updateData);
     return this.questsRepository.save(quest);
   }
 

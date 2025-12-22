@@ -56,6 +56,19 @@ export class Building {
   @Column({ type: 'timestamp', nullable: true })
   lastCollectedAt: Date;
 
+  // Захват кланом
+  @Column({ nullable: true })
+  capturedByClanId: string; // ID клана, который захватил это предприятие
+
+  @Column({ type: 'timestamp', nullable: true })
+  capturedAt: Date; // Дата захвата
+
+  @Column({ type: 'bigint', default: 0 })
+  purchasePrice: string; // Цена покупки предприятия
+
+  @Column({ type: 'bigint', default: 0 })
+  maxAccumulation: string; // Максимальное накопление дохода
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 }

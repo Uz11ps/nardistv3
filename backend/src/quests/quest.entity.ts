@@ -47,8 +47,8 @@ export class Quest {
   @Column({ type: 'int' })
   targetValue: number;
 
-  @Column({ type: 'bigint', default: 0 })
-  rewardNarCoin: number;
+  @Column({ type: 'bigint', default: '0' })
+  rewardNarCoin: string;
 
   @Column({ type: 'int', default: 0 })
   rewardXP: number;
