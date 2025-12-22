@@ -189,6 +189,33 @@ export class AdminController {
     return this.adminService.getAllTournaments();
   }
 
+  @Get('tournaments/:id')
+  @UseGuards(JwtAuthGuard)
+  async getTournament(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getTournament(id);
+  }
+
+  @Put('tournaments/:id')
+  @UseGuards(JwtAuthGuard)
+  async updateTournament(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateTournament(id, body);
+  }
+
+  @Delete('tournaments/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteTournament(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteTournament(id);
+  }
+
   @Post('academy/create')
   @UseGuards(JwtAuthGuard)
   async createArticle(@CurrentUser() user: any, @Body() body: any) {

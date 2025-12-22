@@ -67,6 +67,7 @@ export default function Admin() {
   const [clans, setClans] = useState<any[]>([])
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [selectedSkin, setSelectedSkin] = useState<any>(null)
+  const [selectedTournament, setSelectedTournament] = useState<any>(null)
   
   // Фильтры
   const [userFilters, setUserFilters] = useState({ search: '', status: '', level: '' })

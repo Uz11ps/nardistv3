@@ -357,10 +357,57 @@ export class AdminService {
   }
 
   async getAllTournaments() {
-    return this.tournamentsRepository.find({
+    const tournaments = await this.tournamentsRepository.find({
       order: { createdAt: 'DESC' },
       relations: ['matches'],
     });
+    
+    // Преобразуем bigint в числа для корректной сериализации JSON
+    return tournaments.map(t => ({
+      ...t,
+      entryFee: t.entryFee ? (typeof t.entryFee === 'string' ? Number(t.entryFee) : Number(t.entryFee)) : 0,
+    }));
+  }
+
+  async getTournament(id: string) {
+    const tournament = await this.tournamentsRepository.findOne({
+      where: { id },
+      relations: ['matches'],
+    });
+    
+    if (!tournament) {
+      throw new NotFoundException('Турнир не найден');
+    }
+    
+    return {
+      ...tournament,
+      entryFee: tournament.entryFee ? (typeof tournament.entryFee === 'string' ? Number(tournament.entryFee) : Number(tournament.entryFee)) : 0,
+    };
+  }
+
+  async updateTournament(id: string, data: Partial<Tournament>) {
+    const tournament = await this.tournamentsRepository.findOne({ where: { id } });
+    if (!tournament) {
+      throw new NotFoundException('Турнир не найден');
+    }
+    
+    // Преобразуем entryFee обратно в bigint если пришло как number
+    if (data.entryFee !== undefined && typeof data.entryFee === 'number') {
+      (data as any).entryFee = data.entryFee.toString();
+    }
+    
+    Object.assign(tournament, data);
+    return this.tournamentsRepository.save(tournament);
+  }
+
+  async deleteTournament(id: string) {
+    const tournament = await this.tournamentsRepository.findOne({ where: { id } });
+    if (!tournament) {
+      throw new NotFoundException('Турнир не найден');
+    }
+    
+    await this.tournamentsRepository.remove(tournament);
+    return { message: 'Турнир удален' };
   }
 
   async createArticle(data: any) {
