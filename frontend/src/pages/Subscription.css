@@ -148,3 +148,90 @@
   max-width: 100%;
 }
 
+/* Автобилд города */
+.subscription-autobuild-card {
+  margin-top: 24px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 2px solid rgba(255, 215, 0, 0.2);
+}
+
+.subscription-autobuild-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.subscription-autobuild-icon {
+  font-size: 40px;
+  flex-shrink: 0;
+}
+
+.subscription-autobuild-info {
+  flex: 1;
+}
+
+.subscription-autobuild-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.subscription-autobuild-description {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.subscription-autobuild-activated {
+  padding: 12px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: var(--radius-md);
+  color: #4CAF50;
+  font-weight: 600;
+  text-align: center;
+  font-size: 16px;
+}
+
+.subscription-autobuild-purchase {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subscription-autobuild-payment-methods {
+  display: flex;
+  gap: 8px;
+}
+
+.subscription-autobuild-payment-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-background);
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.subscription-autobuild-payment-btn:hover {
+  border-color: var(--color-gold);
+  background: rgba(255, 215, 0, 0.05);
+}
+
+.subscription-autobuild-payment-btn.active {
+  border-color: var(--color-gold);
+  background: rgba(255, 215, 0, 0.1);
+  color: var(--color-gold);
+}
+
+.subscription-autobuild-buy-btn {
+  max-width: 100%;
+}
+

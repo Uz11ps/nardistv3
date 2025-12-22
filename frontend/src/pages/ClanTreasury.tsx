@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './ClanTreasury.css'
@@ -25,9 +26,13 @@ interface Clan {
 
 export default function ClanTreasury() {
   const { clanId } = useParams<{ clanId: string }>()
+  const { user } = useAuthStore()
   const [clan, setClan] = useState<Clan | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [showContributeModal, setShowContributeModal] = useState(false)
+  const [contributeAmount, setContributeAmount] = useState('')
+  const [contributing, setContributing] = useState(false)
 
   useEffect(() => {
     if (clanId) {
@@ -70,6 +75,46 @@ export default function ClanTreasury() {
     return date.toLocaleDateString('ru-RU')
   }
 
+  const handleContribute = async () => {
+    const amount = parseInt(contributeAmount)
+    if (!amount || amount <= 0) {
+      alert('Введите корректную сумму')
+      return
+    }
+
+    const userBalance = Number(user?.narCoin || 0)
+    if (userBalance < amount) {
+      alert(`Недостаточно NAR-coin. У вас: ${userBalance}`)
+      return
+    }
+
+    try {
+      setContributing(true)
+      await apiClient.post(`/clans/${clanId}/contribute`, { amount })
+      alert('Вклад успешно внесен!')
+      setShowContributeModal(false)
+      setContributeAmount('')
+      await loadData()
+      // Обновляем данные пользователя
+      const userResponse = await apiClient.get('/users/me')
+      useAuthStore.setState({ user: userResponse.data })
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при внесении вклада')
+      console.error('Failed to contribute:', error)
+    } finally {
+      setContributing(false)
+    }
+  }
+
+  const quickContribute = (amount: number) => {
+    const userBalance = Number(user?.narCoin || 0)
+    if (userBalance < amount) {
+      alert(`Недостаточно NAR-coin. У вас: ${userBalance}`)
+      return
+    }
+    setContributeAmount(amount.toString())
+  }
+
   if (loading) {
     return (
       <PageLayout title="Казна клана" showBack={true}>
@@ -99,6 +144,12 @@ export default function ClanTreasury() {
           <div className="clan-treasury-weekly-income">
             +{weeklyIncome.toLocaleString()} NAR / неделя (поступления)
           </div>
+          <button 
+            className="clan-treasury-contribute-button"
+            onClick={() => setShowContributeModal(true)}
+          >
+            Вложиться
+          </button>
         </div>
 
         {/* Последние операции */}
@@ -127,6 +178,80 @@ export default function ClanTreasury() {
           <button className="clan-treasury-view-all-button">Посмотреть всё</button>
         </div>
       </div>
+
+      {/* Модальное окно вложения */}
+      {showContributeModal && (
+        <div className="clan-treasury-modal-overlay" onClick={() => setShowContributeModal(false)}>
+          <div className="clan-treasury-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="clan-treasury-modal-header">
+              <h2 className="clan-treasury-modal-title">Вложиться в казну</h2>
+              <button 
+                className="clan-treasury-modal-close"
+                onClick={() => setShowContributeModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="clan-treasury-modal-content">
+              <div className="clan-treasury-modal-balance">
+                Ваш баланс: {Number(user?.narCoin || 0).toLocaleString()} NAR
+              </div>
+              <div className="clan-treasury-modal-quick-amounts">
+                <button 
+                  className="clan-treasury-quick-amount-btn"
+                  onClick={() => quickContribute(100)}
+                >
+                  100 NAR
+                </button>
+                <button 
+                  className="clan-treasury-quick-amount-btn"
+                  onClick={() => quickContribute(500)}
+                >
+                  500 NAR
+                </button>
+                <button 
+                  className="clan-treasury-quick-amount-btn"
+                  onClick={() => quickContribute(1000)}
+                >
+                  1,000 NAR
+                </button>
+                <button 
+                  className="clan-treasury-quick-amount-btn"
+                  onClick={() => quickContribute(5000)}
+                >
+                  5,000 NAR
+                </button>
+              </div>
+              <div className="clan-treasury-modal-input-group">
+                <label className="clan-treasury-modal-label">Сумма вложения:</label>
+                <input
+                  type="number"
+                  className="clan-treasury-modal-input"
+                  placeholder="Введите сумму"
+                  value={contributeAmount}
+                  onChange={(e) => setContributeAmount(e.target.value)}
+                  min="1"
+                />
+              </div>
+            </div>
+            <div className="clan-treasury-modal-footer">
+              <button 
+                className="clan-treasury-modal-cancel"
+                onClick={() => setShowContributeModal(false)}
+              >
+                Отмена
+              </button>
+              <button 
+                className="clan-treasury-modal-submit"
+                onClick={handleContribute}
+                disabled={contributing || !contributeAmount || parseInt(contributeAmount) <= 0}
+              >
+                {contributing ? 'Вложение...' : 'Вложиться'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   )
 }

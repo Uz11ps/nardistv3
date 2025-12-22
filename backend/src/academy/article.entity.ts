@@ -42,6 +42,15 @@ export class Article {
   @Column({ default: 0 })
   views: number;
 
+  @Column({ default: false })
+  isVerified: boolean; // Верифицирован ли курс администратором/модератором
+
+  @Column({ nullable: true })
+  verifiedBy: string; // ID администратора/модератора, который верифицировал
+
+  @Column({ type: 'timestamp', nullable: true })
+  verifiedAt: Date; // Дата верификации
+
   @CreateDateColumn()
   createdAt: Date;
 

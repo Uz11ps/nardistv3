@@ -38,6 +38,8 @@ export default function Admin() {
   const [cityRewards, setCityRewards] = useState<any>(null)
   const [districts, setDistricts] = useState<any[]>([])
   const [policies, setPolicies] = useState<{ privacy?: string; agreement?: string }>({})
+  const [notificationTemplates, setNotificationTemplates] = useState<any[]>([])
+  const [editingTemplate, setEditingTemplate] = useState<any>(null)
   const [editingPolicy, setEditingPolicy] = useState<'privacy' | 'agreement' | null>(null)
   const [policyContent, setPolicyContent] = useState('')
   const [selectedDistrict, setSelectedDistrict] = useState<any>(null)
@@ -159,6 +161,7 @@ export default function Admin() {
       setQuests(questsRes.data || [])
       setClans(clansRes.data || [])
       setDistricts(districtsRes.data || [])
+      setNotificationTemplates(templatesRes.data || [])
       
       // Загружаем политики
       const policiesData: { privacy?: string; agreement?: string } = {}
@@ -761,6 +764,46 @@ export default function Admin() {
                     </button>
                     <button className="btn btn-secondary" onClick={() => setSelectedUser(null)}>Отмена</button>
                   </div>
+                  <div className="edit-form-section">
+                    <h4>Настройки реферальной программы</h4>
+                    <div className="form-group">
+                      <label>Процент от доната реферала (%):</label>
+                      <input
+                        type="number"
+                        id="edit-referral-percent"
+                        min="0"
+                        max="100"
+                        defaultValue={selectedUser.referralPercent || 5}
+                        style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Базовый бонус (NAR):</label>
+                      <input
+                        type="number"
+                        id="edit-referral-base-bonus"
+                        min="0"
+                        defaultValue={Number(selectedUser.referralBaseBonus || 100)}
+                        style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                      />
+                    </div>
+                    <button className="btn btn-primary"
+                      onClick={async () => {
+                        try {
+                          const referralPercent = parseInt((document.getElementById('edit-referral-percent') as HTMLInputElement).value)
+                          const referralBaseBonus = parseInt((document.getElementById('edit-referral-base-bonus') as HTMLInputElement).value)
+                          await apiClient.put(`/admin/users/${selectedUser.id}/referral-settings`, { referralPercent, referralBaseBonus })
+                          alert('Настройки реферальной программы обновлены')
+                          loadStats()
+                          setSelectedUser(null)
+                        } catch (err: any) {
+                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                        }
+                      }}
+                    >
+                      Сохранить настройки рефералов
+                    </button>
+                  </div>
               </div>
             )}
           </div>
@@ -958,6 +1001,195 @@ export default function Admin() {
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Управление шаблонами уведомлений Telegram */}
+            <div className="notification-templates" style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid #3a3a3a' }}>
+              <h3>Шаблоны уведомлений Telegram</h3>
+              <p style={{ color: '#999', fontSize: '14px', marginBottom: '20px' }}>
+                Редактируйте шаблоны автоматических уведомлений. Используйте переменные: {'{username}'}, {'{level}'}, {'{days}'}
+              </p>
+              
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {notificationTemplates.map((template) => (
+                  <div
+                    key={template.id}
+                    style={{
+                      background: '#2a2a2a',
+                      padding: '20px',
+                      borderRadius: '8px',
+                      border: editingTemplate?.id === template.id ? '2px solid #4a90e2' : '1px solid #3a3a3a',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div>
+                        <h4 style={{ margin: 0, color: '#fff' }}>{template.title || template.type}</h4>
+                        <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                          Тип: {template.type} | Порог: {template.daysThreshold ? `${template.daysThreshold} дней` : 'N/A'}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{
+                          padding: '4px 12px',
+                          background: template.isActive ? '#4a90e2' : '#666',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          color: '#fff',
+                        }}>
+                          {template.isActive ? 'Активен' : 'Неактивен'}
+                        </span>
+                        <button
+                          onClick={() => setEditingTemplate(template)}
+                          style={{
+                            padding: '6px 12px',
+                            background: '#4a90e2',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                          }}
+                        >
+                          Редактировать
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ color: '#ccc', fontSize: '14px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <strong>Заголовок:</strong> {template.title}
+                      </div>
+                      <div>
+                        <strong>Сообщение:</strong> {template.message}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {editingTemplate && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                  }}
+                  onClick={() => setEditingTemplate(null)}
+                >
+                  <div
+                    style={{
+                      background: '#1a1a1a',
+                      padding: '24px',
+                      borderRadius: '12px',
+                      width: '90%',
+                      maxWidth: '600px',
+                      border: '1px solid #3a3a3a',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 style={{ marginTop: 0, color: '#fff' }}>Редактировать шаблон</h3>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: '#ccc' }}>Заголовок:</label>
+                      <input
+                        type="text"
+                        value={editingTemplate.title}
+                        onChange={(e) => setEditingTemplate({ ...editingTemplate, title: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          background: '#2a2a2a',
+                          border: '1px solid #3a3a3a',
+                          borderRadius: '6px',
+                          color: '#fff',
+                          fontSize: '14px',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: '#ccc' }}>
+                        Сообщение (используйте {'{username}'}, {'{level}'}, {'{days}'}):
+                      </label>
+                      <textarea
+                        value={editingTemplate.message}
+                        onChange={(e) => setEditingTemplate({ ...editingTemplate, message: e.target.value })}
+                        rows={6}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          background: '#2a2a2a',
+                          border: '1px solid #3a3a3a',
+                          borderRadius: '6px',
+                          color: '#fff',
+                          fontSize: '14px',
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ccc' }}>
+                        <input
+                          type="checkbox"
+                          checked={editingTemplate.isActive}
+                          onChange={(e) => setEditingTemplate({ ...editingTemplate, isActive: e.target.checked })}
+                        />
+                        Активен
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => setEditingTemplate(null)}
+                        style={{
+                          padding: '10px 20px',
+                          background: '#3a3a3a',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Отмена
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await apiClient.put(`/admin/notification-templates/${editingTemplate.type}`, {
+                              title: editingTemplate.title,
+                              message: editingTemplate.message,
+                              isActive: editingTemplate.isActive,
+                            })
+                            alert('Шаблон успешно обновлен!')
+                            setEditingTemplate(null)
+                            const response = await apiClient.get('/admin/notification-templates')
+                            setNotificationTemplates(response.data || [])
+                          } catch (error: any) {
+                            alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                          }
+                        }}
+                        style={{
+                          padding: '10px 20px',
+                          background: '#4a90e2',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Сохранить
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1849,6 +2081,7 @@ export default function Admin() {
                     <th>Тип</th>
                     <th>Цель</th>
                     <th>Целевое значение</th>
+                    <th>Канал</th>
                     <th>Награда NAR</th>
                     <th>Награда XP</th>
                     <th>Премиум</th>
@@ -1871,6 +2104,7 @@ export default function Admin() {
                       </td>
                       <td>{quest.target}</td>
                       <td>{quest.targetValue}</td>
+                      <td>{quest.channelUsername || '-'}</td>
                       <td>{Number(quest.rewardNarCoin || 0).toLocaleString()}</td>
                       <td>{quest.rewardXP || 0}</td>
                       <td>{quest.isPremium ? 'Да' : 'Нет'}</td>
@@ -1920,12 +2154,25 @@ export default function Admin() {
                 </div>
                 <div className="form-group">
                   <label>Цель:</label>
-                  <select id="quest-target">
+                  <select 
+                    id="quest-target"
+                    onChange={(e) => {
+                      const channelGroup = document.getElementById('quest-channel-group')
+                      if (channelGroup) {
+                        channelGroup.style.display = e.target.value === 'subscribe_channel' ? 'block' : 'none'
+                      }
+                    }}
+                  >
                     <option value="play_matches">Играть матчи</option>
                     <option value="win_streak">Серия побед</option>
                     <option value="collect_income">Собрать доход</option>
                     <option value="tournament">Турнир</option>
+                    <option value="subscribe_channel">Подписка на канал</option>
                   </select>
+                </div>
+                <div className="form-group" id="quest-channel-group" style={{ display: 'none' }}>
+                  <label>Username канала (например, @channelname):</label>
+                  <input type="text" placeholder="@channelname" id="quest-channel-username" />
                 </div>
                 <div className="form-group">
                   <label>Целевое значение:</label>
@@ -1954,18 +2201,30 @@ export default function Admin() {
                 </div>
                 <button onClick={async () => {
                   try {
-                    await apiClient.post('/admin/quests', {
+                    const target = (document.getElementById('quest-target') as HTMLSelectElement).value
+                    const questData: any = {
                       name: (document.getElementById('quest-name') as HTMLInputElement).value,
                       description: (document.getElementById('quest-description') as HTMLTextAreaElement).value,
                       type: (document.getElementById('quest-type') as HTMLSelectElement).value,
-                      target: (document.getElementById('quest-target') as HTMLSelectElement).value,
+                      target: target,
                       targetValue: parseInt((document.getElementById('quest-target-value') as HTMLInputElement).value),
                       rewardNarCoin: parseInt((document.getElementById('quest-reward-nar') as HTMLInputElement).value || '0'),
                       rewardXP: parseInt((document.getElementById('quest-reward-xp') as HTMLInputElement).value || '0'),
                       isPremium: (document.getElementById('quest-premium') as HTMLInputElement).checked,
                       startDate: (document.getElementById('quest-start-date') as HTMLInputElement).value,
                       endDate: (document.getElementById('quest-end-date') as HTMLInputElement).value,
-                    })
+                    }
+                    
+                    // Если цель - подписка на канал, добавляем channelUsername
+                    if (target === 'subscribe_channel') {
+                      questData.channelUsername = (document.getElementById('quest-channel-username') as HTMLInputElement).value
+                      if (!questData.channelUsername) {
+                        alert('Введите username канала для задания на подписку')
+                        return
+                      }
+                    }
+                    
+                    await apiClient.post('/admin/quests', questData)
                     alert('Квест создан!')
                     loadStats()
                   } catch (error: any) {

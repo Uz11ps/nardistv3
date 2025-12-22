@@ -265,8 +265,25 @@ export class QuestsService {
       const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
 
       if (isSubscribed) {
-        // Обновляем прогресс задания
-        await this.updateProgress(userId, QuestTarget.SUBSCRIBE_CHANNEL, quest.targetValue);
+        // Обновляем прогресс задания - устанавливаем в targetValue для завершения
+        const progress = await this.progressRepository.findOne({
+          where: { userId, questId: quest.id },
+        });
+
+        if (!progress) {
+          const newProgress = this.progressRepository.create({
+            userId,
+            questId: quest.id,
+            progress: quest.targetValue,
+            completed: true,
+            claimed: false,
+          });
+          await this.progressRepository.save(newProgress);
+        } else if (!progress.completed) {
+          progress.progress = quest.targetValue;
+          progress.completed = true;
+          await this.progressRepository.save(progress);
+        }
       }
 
       return isSubscribed;

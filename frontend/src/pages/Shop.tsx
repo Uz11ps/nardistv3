@@ -165,7 +165,7 @@ export default function Shop() {
     try {
       setProcessingSkinId(skinId)
       const skin = allSkins.find((s) => s.id === skinId)
-      if (!skin || !skin.price) return
+      if (!skin) return
 
       await apiClient.post('/skins/purchase', { skinId })
       

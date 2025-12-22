@@ -53,13 +53,17 @@ const subscriptionFeatures = [
 
 export default function Subscription() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, updateUser } = useAuthStore()
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>(defaultPlans)
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan['id']>('month_3')
   const [loading, setLoading] = useState(false)
+  const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
+  const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
+  const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
 
   useEffect(() => {
     loadPlans()
+    loadCityAutobuildStatus()
   }, [])
 
   const loadPlans = async () => {
@@ -76,6 +80,15 @@ export default function Subscription() {
     }
   }
 
+  const loadCityAutobuildStatus = async () => {
+    try {
+      const response = await apiClient.get('/subscription/city-autobuild/status')
+      setHasCityAutobuild(response.data?.hasAutobuild || false)
+    } catch (error) {
+      console.error('Failed to load city autobuild status:', error)
+    }
+  }
+
   const handleSubscribe = async () => {
     try {
       setLoading(true)
@@ -84,13 +97,30 @@ export default function Subscription() {
       alert('Подписка успешно оформлена!')
       // Обновляем данные пользователя
       const userResponse = await apiClient.get('/users/me')
-      useAuthStore.setState({ user: userResponse.data })
+      updateUser(userResponse.data)
       navigate('/')
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при оформлении подписки')
       console.error('Failed to subscribe:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePurchaseCityAutobuild = async () => {
+    try {
+      setPurchasingAutobuild(true)
+      await apiClient.post('/subscription/city-autobuild/purchase', { paymentMethod: autobuildPaymentMethod })
+      alert('Автобилд города успешно активирован!')
+      await loadCityAutobuildStatus()
+      // Обновляем данные пользователя
+      const userResponse = await apiClient.get('/users/me')
+      updateUser(userResponse.data)
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при покупке автобилда города')
+      console.error('Failed to purchase city autobuild:', error)
+    } finally {
+      setPurchasingAutobuild(false)
     }
   }
 
@@ -154,6 +184,50 @@ export default function Subscription() {
         >
           {loading ? 'Оформление...' : 'Оформить подписку'}
         </Button>
+
+        {/* Автобилд города */}
+        <Card className="subscription-autobuild-card">
+          <div className="subscription-autobuild-header">
+            <div className="subscription-autobuild-icon">🏗️</div>
+            <div className="subscription-autobuild-info">
+              <div className="subscription-autobuild-title">Автобилд города</div>
+              <div className="subscription-autobuild-description">
+                Автоматическая покупка построек при наличии средств
+              </div>
+            </div>
+          </div>
+          {hasCityAutobuild ? (
+            <div className="subscription-autobuild-activated">
+              ✅ Активировано
+            </div>
+          ) : (
+            <div className="subscription-autobuild-purchase">
+              <div className="subscription-autobuild-payment-methods">
+                <button
+                  className={`subscription-autobuild-payment-btn ${autobuildPaymentMethod === 'usd' ? 'active' : ''}`}
+                  onClick={() => setAutobuildPaymentMethod('usd')}
+                >
+                  $50 USD
+                </button>
+                <button
+                  className={`subscription-autobuild-payment-btn ${autobuildPaymentMethod === 'nar' ? 'active' : ''}`}
+                  onClick={() => setAutobuildPaymentMethod('nar')}
+                >
+                  10,000 NAR
+                </button>
+              </div>
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={handlePurchaseCityAutobuild}
+                disabled={purchasingAutobuild}
+                className="subscription-autobuild-buy-btn"
+              >
+                {purchasingAutobuild ? 'Покупка...' : 'Купить навсегда'}
+              </Button>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   )

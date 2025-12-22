@@ -204,6 +204,58 @@ export class SkinsService implements OnModuleInit {
   }
 
   /**
+   * Получает скины пользователя с информацией об износе
+   */
+  async getUserSkinsWithDurability(userId: string): Promise<any[]> {
+    // Получаем все скины пользователя из user_skins
+    const userSkins = await this.userSkinsRepository.find({
+      where: { userId },
+      relations: ['skin'],
+    });
+    
+    // Получаем все default скины - они всегда доступны
+    const defaultSkins = await this.skinsRepository.find({
+      where: { isDefault: true },
+    });
+    
+    // Создаем Map для быстрого доступа к информации об износе
+    const durabilityMap = new Map<string, number>();
+    for (const userSkin of userSkins) {
+      if (userSkin.skin) {
+        const maxDurability = userSkin.skin.maxDurability || 100;
+        const currentDurability = userSkin.currentDurability ?? maxDurability;
+        durabilityMap.set(userSkin.skin.id, currentDurability);
+      }
+    }
+    
+    // Создаем Set с ID default скинов для быстрой проверки
+    const defaultSkinIds = new Set(defaultSkins.map(s => s.id));
+    
+    // Объединяем: default скины + скины пользователя (исключая дубликаты и default скины)
+    const allSkins: any[] = defaultSkins.map(skin => ({
+      ...skin,
+      currentDurability: durabilityMap.get(skin.id) ?? (skin.maxDurability || 100),
+    }));
+    
+    for (const userSkin of userSkins) {
+      if (userSkin.skin && !defaultSkinIds.has(userSkin.skin.id)) {
+        // Проверяем, что этот скин еще не добавлен в allSkins
+        const alreadyAdded = allSkins.some(s => s.id === userSkin.skin.id);
+        if (!alreadyAdded) {
+          const maxDurability = userSkin.skin.maxDurability || 100;
+          const currentDurability = userSkin.currentDurability ?? maxDurability;
+          allSkins.push({
+            ...userSkin.skin,
+            currentDurability,
+          });
+        }
+      }
+    }
+    
+    return allSkins;
+  }
+
+  /**
    * Добавить скин пользователю (без автоматического выбора)
    */
   async addSkinToUser(userId: string, skinId: string): Promise<void> {
@@ -375,25 +427,107 @@ export class SkinsService implements OnModuleInit {
       throw new BadRequestException('Скин уже куплен');
     }
 
-    // Проверяем цену
-    if (!skin.price || skin.price <= 0) {
-      throw new BadRequestException('Скин бесплатный, покупка не требуется');
+    // Проверяем цену - если скин бесплатный, просто выдаем его
+    const price = skin.price ? Number(skin.price) : 0;
+    
+    if (price > 0) {
+      // Платный скин - проверяем баланс и списываем средства
+      const user = await this.usersService.findOne(userId);
+      const userBalance = Number(user.narCoin);
+
+      if (userBalance < price) {
+        throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${price}, у вас: ${userBalance}`);
+      }
+
+      // Списываем средства
+      const newBalance = userBalance - price;
+      await this.usersService.update(userId, { narCoin: newBalance });
     }
-
-    const user = await this.usersService.findOne(userId);
-    const userBalance = Number(user.narCoin);
-    const price = Number(skin.price);
-
-    if (userBalance < price) {
-      throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${price}, у вас: ${userBalance}`);
-    }
-
-    // Списываем средства
-    const newBalance = userBalance - price;
-    await this.usersService.update(userId, { narCoin: newBalance });
+    // Если скин бесплатный (price === 0 или price === null), просто выдаем его без списания
 
     // Добавляем скин пользователю
     await this.addSkinToUser(userId, skinId);
+  }
+
+  /**
+   * Вычисляет стоимость ремонта скина
+   * @param userId ID пользователя
+   * @param skinId ID скина
+   * @returns Стоимость ремонта в NAR-coin
+   */
+  async calculateRepairCost(userId: string, skinId: string): Promise<number> {
+    const userSkin = await this.userSkinsRepository.findOne({
+      where: { userId, skinId },
+      relations: ['skin'],
+    });
+
+    if (!userSkin || !userSkin.skin) {
+      throw new BadRequestException('Скин не найден');
+    }
+
+    const skin = userSkin.skin;
+    const maxDurability = skin.maxDurability || 100;
+    const currentDurability = userSkin.currentDurability ?? maxDurability;
+    const skinPrice = skin.price ? Number(skin.price) : 0;
+
+    // Если скин бесплатный или полностью исправен, ремонт не требуется
+    if (skinPrice === 0 || currentDurability >= maxDurability) {
+      return 0;
+    }
+
+    // Вычисляем потерянную прочность
+    const lostDurability = maxDurability - currentDurability;
+    
+    // Формула: 75% от цены скина * (потерянная прочность / максимальная прочность)
+    const repairCost = Math.floor(skinPrice * 0.75 * (lostDurability / maxDurability));
+
+    return repairCost;
+  }
+
+  /**
+   * Ремонтирует скин пользователя
+   * @param userId ID пользователя
+   * @param skinId ID скина
+   */
+  async repairSkin(userId: string, skinId: string): Promise<void> {
+    const userSkin = await this.userSkinsRepository.findOne({
+      where: { userId, skinId },
+      relations: ['skin'],
+    });
+
+    if (!userSkin || !userSkin.skin) {
+      throw new BadRequestException('Скин не найден');
+    }
+
+    const skin = userSkin.skin;
+    const maxDurability = skin.maxDurability || 100;
+    const currentDurability = userSkin.currentDurability ?? maxDurability;
+
+    // Если скин полностью исправен, ремонт не требуется
+    if (currentDurability >= maxDurability) {
+      throw new BadRequestException('Скин не требует ремонта');
+    }
+
+    // Вычисляем стоимость ремонта
+    const repairCost = await this.calculateRepairCost(userId, skinId);
+
+    if (repairCost > 0) {
+      // Проверяем баланс пользователя
+      const user = await this.usersService.findOne(userId);
+      const userBalance = Number(user.narCoin);
+
+      if (userBalance < repairCost) {
+        throw new BadRequestException(`Недостаточно NAR-coin для ремонта. Требуется: ${repairCost}, у вас: ${userBalance}`);
+      }
+
+      // Списываем средства
+      const newBalance = userBalance - repairCost;
+      await this.usersService.update(userId, { narCoin: newBalance });
+    }
+
+    // Восстанавливаем прочность до максимума
+    userSkin.currentDurability = maxDurability;
+    await this.userSkinsRepository.save(userSkin);
   }
 }
 

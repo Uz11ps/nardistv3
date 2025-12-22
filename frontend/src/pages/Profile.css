@@ -167,3 +167,288 @@
   font-size: 16px;
   font-weight: 400;
 }
+
+/* Кнопка редактирования */
+.profile-edit-button {
+  background: none;
+  border: none;
+  color: #FFF;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.profile-edit-button:hover {
+  transform: scale(1.1);
+}
+
+/* Модальное окно редактирования */
+.profile-edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.profile-edit-modal {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.profile-edit-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-edit-modal-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.profile-edit-modal-close {
+  background: none;
+  border: none;
+  color: #FFF;
+  font-size: 32px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.profile-edit-modal-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-edit-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-edit-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #3a3a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.profile-edit-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-edit-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3a3a3a;
+}
+
+.profile-edit-avatar-icon {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+.profile-edit-use-telegram-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.profile-edit-use-telegram-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.profile-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-edit-label {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.profile-edit-input {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.profile-edit-input:focus {
+  border-color: #C93C3D;
+}
+
+.profile-edit-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.profile-edit-country-wrapper {
+  position: relative;
+}
+
+.profile-edit-country-button {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.2s;
+}
+
+.profile-edit-country-button:hover {
+  border-color: #C93C3D;
+}
+
+.profile-edit-country-arrow {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.profile-edit-country-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: #1C1D21;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.profile-edit-country-option {
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.profile-edit-country-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.profile-edit-country-option:first-child {
+  border-radius: 8px 8px 0 0;
+}
+
+.profile-edit-country-option:last-child {
+  border-radius: 0 0 8px 8px;
+}
+
+.profile-edit-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-edit-cancel-btn,
+.profile-edit-save-btn {
+  flex: 1;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: none;
+}
+
+.profile-edit-cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFF;
+}
+
+.profile-edit-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.profile-edit-save-btn {
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  color: #FFF;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+}
+
+.profile-edit-save-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+}
+
+.profile-edit-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -5,6 +5,7 @@ import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { BirthdayService } from '../users/birthday.service';
+import { ReferralsService } from '../referrals/referrals.service';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +15,8 @@ export class AuthService {
     private configService: ConfigService,
     @Inject(forwardRef(() => BirthdayService))
     private birthdayService: BirthdayService,
+    @Inject(forwardRef(() => ReferralsService))
+    private referralsService: ReferralsService,
   ) {}
 
   async verifyTelegramInitData(initData: string): Promise<any> {
@@ -85,10 +88,19 @@ export class AuthService {
       const userData = JSON.parse(userParam);
       const authDate = parseInt(urlParams.get('auth_date') || '0');
       const now = Math.floor(Date.now() / 1000);
+      
+      // Извлекаем реферальный код из start_param (если пользователь открыл через ссылку бота)
+      const startParam = urlParams.get('start_param');
+      if (startParam) {
+        userData.start_param = startParam;
+      }
 
       console.log('✅ Hash проверен успешно');
       console.log('👤 Данные пользователя:', { id: userData.id, username: userData.username });
       console.log('📅 auth_date:', authDate, 'текущее время:', now, 'разница:', now - authDate, 'секунд');
+      if (startParam) {
+        console.log('🔗 Реферальный код из start_param:', startParam);
+      }
 
       // Проверяем что данные не устарели (не старше 24 часов)
       if (now - authDate > 86400) {
@@ -109,6 +121,9 @@ export class AuthService {
   async login(initData: string) {
     const telegramUser = await this.verifyTelegramInitData(initData);
     
+    // Извлекаем реферальный код из start_param (если пользователь открыл через ссылку бота)
+    const referralCode = (telegramUser as any).start_param;
+    
     let user = await this.usersService.findByTelegramId(telegramUser.id.toString());
     const isNewUser = !user;
     
@@ -127,6 +142,16 @@ export class AuthService {
       user.onboardingCompleted = false;
       user.profileSetupCompleted = false;
       user.starterKitClaimed = false;
+      
+      // Если есть реферальный код, применяем его
+      if (referralCode && !user.referredBy) {
+        try {
+          await this.referralsService.useReferralCode(user.id, referralCode);
+        } catch (error) {
+          console.error('Ошибка при применении реферального кода:', error);
+          // Не прерываем процесс логина, если реферальный код неверный
+        }
+      }
     } else {
       user = await this.usersService.updateTelegramData(user.id, {
         username: telegramUser.username || user.username,

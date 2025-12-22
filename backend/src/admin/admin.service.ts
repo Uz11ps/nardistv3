@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
@@ -30,9 +30,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { Rating } from '../ratings/rating.entity';
 import { Notification } from '../notifications/notification.entity';
 import { UserMaterial } from '../academy/user-material.entity';
+import { NotificationTemplate, NotificationTemplateType } from './notification-template.entity';
+import { SystemSettings } from './system-settings.entity';
 
 @Injectable()
-export class AdminService {
+export class AdminService implements OnModuleInit {
   private readonly logger = new Logger(AdminService.name);
 
   constructor(
@@ -68,6 +70,10 @@ export class AdminService {
     private notificationsRepository: Repository<Notification>,
     @InjectRepository(UserMaterial)
     private userMaterialsRepository: Repository<UserMaterial>,
+    @InjectRepository(SystemSettings)
+    private systemSettingsRepository: Repository<SystemSettings>,
+    @InjectRepository(NotificationTemplate)
+    private notificationTemplatesRepository: Repository<NotificationTemplate>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
     private academyService: AcademyService,
@@ -581,9 +587,15 @@ export class AdminService {
 
   // CRUD для территорий (районов)
   async getAllDistricts() {
-    return this.districtConfigsRepository.find({
+    const districts = await this.districtConfigsRepository.find({
       order: { order: 'ASC' },
     });
+    
+    // Преобразуем bigint в числа для корректной сериализации JSON
+    return districts.map(d => ({
+      ...d,
+      baseIncomePerDay: d.baseIncomePerDay ? (typeof d.baseIncomePerDay === 'string' ? Number(d.baseIncomePerDay) : Number(d.baseIncomePerDay)) : 0,
+    }));
   }
 
   async getDistrict(id: string) {
@@ -591,7 +603,12 @@ export class AdminService {
     if (!district) {
       throw new NotFoundException('Территория не найдена');
     }
-    return district;
+    
+    // Преобразуем bigint в число для корректной сериализации JSON
+    return {
+      ...district,
+      baseIncomePerDay: district.baseIncomePerDay ? (typeof district.baseIncomePerDay === 'string' ? Number(district.baseIncomePerDay) : Number(district.baseIncomePerDay)) : 0,
+    };
   }
 
   async createDistrict(data: {
@@ -621,7 +638,13 @@ export class AdminService {
       requiredLevel: data.requiredLevel || 1,
     });
 
-    return this.districtConfigsRepository.save(district);
+    const savedDistrict = await this.districtConfigsRepository.save(district);
+    
+    // Преобразуем bigint в число для корректной сериализации JSON
+    return {
+      ...savedDistrict,
+      baseIncomePerDay: savedDistrict.baseIncomePerDay ? (typeof savedDistrict.baseIncomePerDay === 'string' ? Number(savedDistrict.baseIncomePerDay) : Number(savedDistrict.baseIncomePerDay)) : 0,
+    };
   }
 
   async updateDistrict(id: string, data: Partial<{
@@ -653,7 +676,13 @@ export class AdminService {
       requiredLevel: data.requiredLevel !== undefined ? data.requiredLevel : district.requiredLevel,
     });
 
-    return this.districtConfigsRepository.save(district);
+    const savedDistrict = await this.districtConfigsRepository.save(district);
+    
+    // Преобразуем bigint в число для корректной сериализации JSON
+    return {
+      ...savedDistrict,
+      baseIncomePerDay: savedDistrict.baseIncomePerDay ? (typeof savedDistrict.baseIncomePerDay === 'string' ? Number(savedDistrict.baseIncomePerDay) : Number(savedDistrict.baseIncomePerDay)) : 0,
+    };
   }
 
   async deleteDistrict(id: string) {
@@ -1017,6 +1046,26 @@ export class AdminService {
     }
   }
 
+  async updateUserReferralSettings(userId: string, settings: { referralPercent?: number; referralBaseBonus?: number }) {
+    try {
+      const user = await this.usersService.findOne(userId);
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
+      }
+      const updateData: any = {};
+      if (settings.referralPercent !== undefined) {
+        updateData.referralPercent = settings.referralPercent;
+      }
+      if (settings.referralBaseBonus !== undefined) {
+        updateData.referralBaseBonus = BigInt(settings.referralBaseBonus);
+      }
+      return this.usersService.update(userId, updateData);
+    } catch (error) {
+      this.logger.error(`Error updating referral settings for user ${userId}:`, error);
+      throw new BadRequestException(`Ошибка при обновлении настроек реферальной программы: ${error.message}`);
+    }
+  }
+
   async setUserLevel(userId: string, level: number) {
     const user = await this.usersService.findOne(userId);
     user.level = level;
@@ -1086,6 +1135,194 @@ export class AdminService {
     }
 
     return this.subscriptionService.createSubscription(userId, subscriptionPlan);
+  }
+
+  // Методы для работы с настройками системы
+  async getSystemSetting(key: string, defaultValue: string = ''): Promise<string> {
+    const setting = await this.systemSettingsRepository.findOne({ where: { key } });
+    return setting ? setting.value : defaultValue;
+  }
+
+  async setSystemSetting(key: string, value: string, description?: string): Promise<SystemSettings> {
+    let setting = await this.systemSettingsRepository.findOne({ where: { key } });
+    if (setting) {
+      setting.value = value;
+      if (description) {
+        setting.description = description;
+      }
+    } else {
+      setting = this.systemSettingsRepository.create({ key, value, description });
+    }
+    return this.systemSettingsRepository.save(setting);
+  }
+
+  async getAllSystemSettings(): Promise<SystemSettings[]> {
+    return this.systemSettingsRepository.find({ order: { key: 'ASC' } });
+  }
+
+  // CRUD для шаблонов уведомлений Telegram
+  async getAllNotificationTemplates(): Promise<NotificationTemplate[]> {
+    return this.notificationTemplatesRepository.find({
+      order: { type: 'ASC' },
+    });
+  }
+
+  async getNotificationTemplate(type: NotificationTemplateType): Promise<NotificationTemplate | null> {
+    return this.notificationTemplatesRepository.findOne({ where: { type } });
+  }
+
+  async createNotificationTemplate(data: {
+    type: NotificationTemplateType;
+    title: string;
+    message: string;
+    isActive?: boolean;
+    daysThreshold?: number;
+  }): Promise<NotificationTemplate> {
+    const existing = await this.notificationTemplatesRepository.findOne({ where: { type: data.type } });
+    if (existing) {
+      throw new BadRequestException(`Шаблон с типом "${data.type}" уже существует`);
+    }
+
+    const template = this.notificationTemplatesRepository.create({
+      type: data.type,
+      title: data.title,
+      message: data.message,
+      isActive: data.isActive !== undefined ? data.isActive : true,
+      daysThreshold: data.daysThreshold || null,
+    });
+
+    return this.notificationTemplatesRepository.save(template);
+  }
+
+  async updateNotificationTemplate(type: NotificationTemplateType, data: {
+    title?: string;
+    message?: string;
+    isActive?: boolean;
+    daysThreshold?: number;
+  }): Promise<NotificationTemplate> {
+    const template = await this.notificationTemplatesRepository.findOne({ where: { type } });
+    if (!template) {
+      throw new NotFoundException('Шаблон не найден');
+    }
+
+    if (data.title !== undefined) template.title = data.title;
+    if (data.message !== undefined) template.message = data.message;
+    if (data.isActive !== undefined) template.isActive = data.isActive;
+    if (data.daysThreshold !== undefined) template.daysThreshold = data.daysThreshold;
+
+    return this.notificationTemplatesRepository.save(template);
+  }
+
+  /**
+   * Отправка уведомления о неактивности пользователя через Telegram
+   */
+  async sendInactiveUserNotification(userId: string): Promise<void> {
+    const user = await this.usersService.findOne(userId);
+    if (!user || !user.telegramId || user.isGuest || user.isBanned) {
+      return;
+    }
+
+    // Получаем шаблон уведомления о неактивности
+    const template = await this.getNotificationTemplate(NotificationTemplateType.INACTIVE_USER);
+    if (!template || !template.isActive) {
+      // Если шаблон не найден или неактивен, используем дефолтный
+      const defaultMessage = '👋 Мы скучаем! Заходи в игру, чтобы не пропустить новые события и награды!';
+      await this.sendTelegramMessage(user.telegramId, defaultMessage);
+      return;
+    }
+
+    // Вычисляем количество дней неактивности
+    const lastLogin = user.lastLogin || user.createdAt;
+    const daysInactive = Math.floor((new Date().getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Заменяем переменные в шаблоне
+    const message = this.replaceTemplateVariables(template.message, {
+      username: user.nickname || user.firstName || user.username || 'Игрок',
+      level: user.level || 1,
+      days: daysInactive.toString(),
+    });
+
+    const title = this.replaceTemplateVariables(template.title, {
+      username: user.nickname || user.firstName || user.username || 'Игрок',
+      level: user.level || 1,
+      days: daysInactive.toString(),
+    });
+
+    // Отправляем через Telegram
+    await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
+
+    // Обновляем дату последнего уведомления
+    user.lastInactiveNotification = new Date();
+    await this.usersRepository.save(user);
+  }
+
+  /**
+   * Заменяет переменные в шаблоне сообщения
+   */
+  private replaceTemplateVariables(template: string, variables: Record<string, string>): string {
+    let result = template;
+    for (const [key, value] of Object.entries(variables)) {
+      result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+    }
+    return result;
+  }
+
+  /**
+   * Отправка сообщения через Telegram Bot API
+   */
+  private async sendTelegramMessage(telegramId: string, message: string): Promise<void> {
+    const botToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    if (!botToken) {
+      this.logger.warn('TELEGRAM_BOT_TOKEN не настроен, уведомление не отправлено');
+      return;
+    }
+
+    try {
+      await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        chat_id: telegramId,
+        text: message,
+        parse_mode: 'HTML',
+      });
+    } catch (error: any) {
+      this.logger.warn(`Не удалось отправить уведомление в Telegram пользователю ${telegramId}: ${error.message}`);
+    }
+  }
+
+  async getPendingCourses(): Promise<any[]> {
+    const courses = await this.articlesRepository.find({
+      where: { type: 'course', isVerified: false },
+      order: { createdAt: 'DESC' },
+    });
+    return courses.map((course) => ({
+      id: course.id,
+      title: course.title,
+      author: course.author,
+      authorId: course.authorId,
+      price: Number(course.price || 0),
+      description: course.description,
+      createdAt: course.createdAt,
+    }));
+  }
+
+  /**
+   * Инициализация: создаем дефолтные шаблоны, если их нет
+   */
+  async onModuleInit() {
+    try {
+      const existingTemplate = await this.getNotificationTemplate(NotificationTemplateType.INACTIVE_USER);
+      if (!existingTemplate) {
+        await this.createNotificationTemplate({
+          type: NotificationTemplateType.INACTIVE_USER,
+          title: '👋 Мы скучаем!',
+          message: 'Привет, {username}! Ты не заходил в игру уже {days} дней. Заходи, чтобы не пропустить новые события и награды!',
+          isActive: true,
+          daysThreshold: 30,
+        });
+        this.logger.log('Создан дефолтный шаблон уведомления о неактивности');
+      }
+    } catch (error) {
+      this.logger.error('Ошибка при инициализации шаблонов уведомлений:', error);
+    }
   }
 }
 

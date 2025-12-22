@@ -29,5 +29,19 @@ export class SubscriptionController {
   async purchase(@CurrentUser() user: any, @Body() body: { plan: SubscriptionPlan }) {
     return this.subscriptionService.createSubscription(user.id, body.plan);
   }
+
+  @Get('city-autobuild/status')
+  @UseGuards(JwtAuthGuard)
+  async getCityAutobuildStatus(@CurrentUser() user: any) {
+    const hasAutobuild = await this.subscriptionService.hasCityAutobuild(user.id);
+    return { hasAutobuild };
+  }
+
+  @Post('city-autobuild/purchase')
+  @UseGuards(JwtAuthGuard)
+  async purchaseCityAutobuild(@CurrentUser() user: any, @Body() body: { paymentMethod: 'usd' | 'nar' }) {
+    await this.subscriptionService.purchaseCityAutobuild(user.id, body.paymentMethod);
+    return { message: 'Автобилд города успешно активирован' };
+  }
 }
 

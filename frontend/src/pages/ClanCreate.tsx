@@ -1,11 +1,13 @@
 ﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './ClanCreate.css'
 
 export default function ClanCreate() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const [form, setForm] = useState({ name: '', description: '' })
   const [loading, setLoading] = useState(false)
 
@@ -33,8 +35,25 @@ export default function ClanCreate() {
     }
   }
 
+  if ((user?.level || 0) < 10) {
+    return (
+      <PageLayout title="Создание федерации" showBack={true}>
+        <div className="clans-unavailable">
+          <img src="/img/кланы.png" alt="Federations" className="clans-unavailable-icon" />
+          <h2 className="clans-unavailable-title">Создание федерации недоступно</h2>
+          <p className="clans-unavailable-text">
+            Федерации открываются с 10 уровня. Прокачайся, играй в турнирах и зарабатывай очки!
+          </p>
+          <button className="clans-play-button" onClick={() => navigate('/')}>
+            Играть
+          </button>
+        </div>
+      </PageLayout>
+    )
+  }
+
   return (
-    <PageLayout title="" showBack={true}>
+    <PageLayout title="Создание федерации" showBack={true}>
       <div className="clan-create-content">
         {/* Эмблема клана */}
         <div className="clan-create-emblem">

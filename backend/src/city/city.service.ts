@@ -32,6 +32,12 @@ export class CityService {
   ) {}
 
   async getCity(userId: string): Promise<Building[]> {
+    // Проверяем уровень пользователя
+    const user = await this.usersService.findOne(userId);
+    const userLevel = user?.level || 0;
+    if (userLevel < 5) {
+      throw new BadRequestException('Город доступен с 5 уровня');
+    }
     return this.buildingsRepository.find({ where: { userId } });
   }
 
@@ -222,11 +228,14 @@ export class CityService {
   }
 
   async getDistricts(userId?: string): Promise<any[]> {
-    // Получаем уровень пользователя
-    let userLevel = 1;
-    if (userId) {
-      const user = await this.usersService.findOne(userId);
-      userLevel = user?.level || 1;
+    // Проверяем уровень для доступа к городу
+    if (!userId) {
+      throw new BadRequestException('Требуется авторизация');
+    }
+    const user = await this.usersService.findOne(userId);
+    const userLevel = user?.level || 0;
+    if (userLevel < 5) {
+      throw new BadRequestException('Город доступен с 5 уровня');
     }
     
     // Получаем активные территории из БД
@@ -297,7 +306,57 @@ export class CityService {
       })
     );
     
+    // Если у пользователя включен автобилд, пытаемся автоматически купить доступные постройки
+    if (user.hasCityAutobuild) {
+      await this.processAutobuild(userId, districtsData);
+    }
+    
     return districtsData;
+  }
+
+  /**
+   * Автоматическая покупка построек при включенном автобилде
+   */
+  private async processAutobuild(userId: string, districtsData: any[]): Promise<void> {
+    try {
+      const user = await this.usersService.findOne(userId);
+      const userBalance = Number(user.narCoin);
+
+      for (const district of districtsData) {
+        // Если у пользователя уже есть постройка в этом районе, пропускаем
+        if (district.userBuilding) {
+          continue;
+        }
+
+        // Если район не разблокирован, пропускаем
+        if (!district.isUnlocked) {
+          continue;
+        }
+
+        // Находим самую дешевую доступную постройку в районе
+        if (district.availableBuildings && district.availableBuildings.length > 0) {
+          const cheapestBuilding = district.availableBuildings.reduce((cheapest, current) => {
+            return current.price < cheapest.price ? current : cheapest;
+          });
+
+          // Если у пользователя достаточно средств, покупаем автоматически
+          if (userBalance >= cheapestBuilding.price) {
+            try {
+              await this.purchaseBuilding(userId, district.code as District, cheapestBuilding.type as BuildingType);
+              // Обновляем баланс для следующей итерации
+              const updatedUser = await this.usersService.findOne(userId);
+              userBalance = Number(updatedUser.narCoin);
+            } catch (error) {
+              // Игнорируем ошибки при автобилде (например, если постройка уже куплена)
+              console.error(`Autobuild failed for district ${district.code}:`, error);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in processAutobuild:', error);
+      // Не выбрасываем ошибку, чтобы не ломать основной функционал
+    }
   }
 
   async getUserBuildings(userId: string): Promise<Building[]> {

@@ -43,6 +43,16 @@ export class User {
   @Column({ nullable: true })
   referredBy: string;
 
+  // Индивидуальные настройки реферальной программы
+  @Column({ type: 'int', default: 5 })
+  referralPercent: number; // Процент от доната реферала (по умолчанию 5%)
+
+  @Column({ type: 'bigint', default: 100 })
+  referralBaseBonus: bigint; // Базовый бонус за реферала (по умолчанию 100 NAR)
+
+  @Column({ type: 'bigint', default: 0 })
+  totalReferralEarnings: bigint; // Общий доход от рефералов
+
   @Column({ default: 0 })
   level: number;
 
@@ -110,6 +120,9 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true })
   lastInactiveNotification: Date; // Дата последнего уведомления о неактивности
+
+  @Column({ default: false })
+  hasCityAutobuild: boolean; // Автобилд города (покупка навсегда)
 
   @CreateDateColumn()
   createdAt: Date;

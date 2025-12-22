@@ -8,9 +8,10 @@ interface PageLayoutProps {
   children: ReactNode
   showBack?: boolean
   tabs?: Array<{ id: string; label: string; active?: boolean; onClick?: () => void }>
+  rightAction?: ReactNode
 }
 
-export default function PageLayout({ title, subtitle, children, showBack = true, tabs }: PageLayoutProps) {
+export default function PageLayout({ title, subtitle, children, showBack = true, tabs, rightAction }: PageLayoutProps) {
   const navigate = useNavigate()
 
   return (
@@ -28,6 +29,11 @@ export default function PageLayout({ title, subtitle, children, showBack = true,
             <h1 className="page-layout-title">{title}</h1>
             {subtitle && <p className="page-layout-subtitle">{subtitle}</p>}
           </div>
+          {rightAction && (
+            <div className="page-layout-right-action">
+              {rightAction}
+            </div>
+          )}
         </div>
 
         {/* Tabs */}

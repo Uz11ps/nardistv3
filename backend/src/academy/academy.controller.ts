@@ -74,6 +74,16 @@ export class AcademyController {
     return this.academyService.createUserArticle(user.id, slotId, articleData);
   }
 
+  @Post('courses/create')
+  @UseGuards(JwtAuthGuard)
+  async createUserCourse(
+    @CurrentUser() user: any,
+    @Body() courseData: { title: string; description?: string; content: string; price: number },
+  ) {
+    const course = await this.academyService.createUserCourse(user.id, courseData);
+    return { message: 'Курс создан и отправлен на верификацию', course };
+  }
+
   @Put('my-articles/:id')
   @UseGuards(JwtAuthGuard)
   async updateUserArticle(

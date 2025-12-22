@@ -7,9 +7,16 @@ import './Profile.css'
 
 export default function Profile() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, updateUser } = useAuthStore()
   const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1 })
   const [hasPremium, setHasPremium] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editFormData, setEditFormData] = useState({
+    nickname: '',
+    country: '',
+    avatarUrl: '',
+  })
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -31,16 +38,98 @@ export default function Profile() {
     }
   }
 
+  const [countries] = useState([
+    'Россия',
+    'Украина',
+    'Беларусь',
+    'Казахстан',
+    'Узбекистан',
+    'Азербайджан',
+    'Армения',
+    'Грузия',
+    'Молдова',
+    'Кыргызстан',
+    'Таджикистан',
+    'Туркменистан',
+    'Другая',
+  ])
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false)
+
+  useEffect(() => {
+    if (user && showEditModal) {
+      setEditFormData({
+        nickname: user.nickname || user.username || '',
+        country: user.country || 'Россия',
+        avatarUrl: user.avatarUrl || '',
+      })
+    }
+  }, [user, showEditModal])
+
+  const handleOpenEdit = () => {
+    if ((user?.level || 0) < 5) {
+      alert('Редактирование профиля доступно с 5 уровня')
+      return
+    }
+    setShowEditModal(true)
+  }
+
+  const handleCloseEdit = () => {
+    setShowEditModal(false)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!editFormData.nickname.trim()) {
+      alert('Введите никнейм')
+      return
+    }
+
+    try {
+      setLoading(true)
+      const response = await apiClient.put('/users/me', {
+        nickname: editFormData.nickname,
+        country: editFormData.country,
+        avatarUrl: editFormData.avatarUrl,
+      })
+      
+      // Обновляем пользователя в store
+      if (response.data) {
+        updateUser(response.data)
+      }
+      
+      setShowEditModal(false)
+    } catch (error: any) {
+      console.error('Failed to update profile:', error)
+      alert(error.response?.data?.message || 'Ошибка обновления профиля')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUseTelegramPhoto = () => {
+    if (user?.avatarUrl) {
+      setEditFormData({ ...editFormData, avatarUrl: user.avatarUrl })
+    }
+  }
+
   const menuItems = [
     { icon: '/img/c86058c8dc0c93af3b43acd129cee0eae6877c3e.png', title: 'Магазин', path: '/shop' },
     { icon: '/img/инв.png', title: 'Инвентарь', path: '/inventory' },
     { icon: '/img/зарик.png', title: 'Квесты', path: '/quests' },
     { icon: '/img/увед.png', title: 'Уведомления', path: '/notifications' },
+    { icon: '/img/челувек.png', title: 'Рефералы', path: '/referrals' },
     { icon: '/img/settings.png', title: 'Настройки', path: '/settings' },
   ]
 
   return (
-    <PageLayout title="Профиль" showBack={true}>
+    <PageLayout 
+      title="Профиль" 
+      showBack={true}
+      rightAction={
+        <button className="profile-edit-button" onClick={handleOpenEdit}>
+          ✏️
+        </button>
+      }
+    >
       <div className="profile-content">
         {/* Профиль пользователя */}
         <div className="profile-header">
@@ -95,6 +184,103 @@ export default function Profile() {
           ))}
         </div>
       </div>
+
+      {/* Модальное окно редактирования профиля */}
+      {showEditModal && (
+        <div className="profile-edit-modal-overlay" onClick={handleCloseEdit}>
+          <div className="profile-edit-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-edit-modal-header">
+              <h2 className="profile-edit-modal-title">Редактировать профиль</h2>
+              <button className="profile-edit-modal-close" onClick={handleCloseEdit}>×</button>
+            </div>
+            
+            <div className="profile-edit-modal-content">
+              {/* Аватарка */}
+              <div className="profile-edit-avatar-section">
+                <div className="profile-edit-avatar">
+                  {editFormData.avatarUrl ? (
+                    <img src={editFormData.avatarUrl} alt="Avatar" className="profile-edit-avatar-img" />
+                  ) : (
+                    <div className="profile-edit-avatar-placeholder">
+                      <img src="/img/челувек.png" alt="User" className="profile-edit-avatar-icon" />
+                    </div>
+                  )}
+                </div>
+                <button className="profile-edit-use-telegram-btn" onClick={handleUseTelegramPhoto}>
+                  Использовать фото из Telegram
+                </button>
+              </div>
+
+              {/* Никнейм */}
+              <div className="profile-edit-field">
+                <label className="profile-edit-label">Никнейм</label>
+                <input
+                  type="text"
+                  className="profile-edit-input"
+                  value={editFormData.nickname}
+                  onChange={(e) => setEditFormData({ ...editFormData, nickname: e.target.value })}
+                  placeholder="Введите никнейм"
+                />
+              </div>
+
+              {/* Страна */}
+              <div className="profile-edit-field">
+                <label className="profile-edit-label">Страна</label>
+                <div className="profile-edit-country-wrapper">
+                  <button
+                    className="profile-edit-country-button"
+                    onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                  >
+                    {editFormData.country || 'Выберите страну'}
+                    <span className="profile-edit-country-arrow">▼</span>
+                  </button>
+                  {showCountryDropdown && (
+                    <div className="profile-edit-country-dropdown">
+                      {countries.map((country) => (
+                        <button
+                          key={country}
+                          className="profile-edit-country-option"
+                          onClick={() => {
+                            setEditFormData({ ...editFormData, country })
+                            setShowCountryDropdown(false)
+                          }}
+                        >
+                          {country}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* URL аватарки */}
+              <div className="profile-edit-field">
+                <label className="profile-edit-label">URL аватарки (опционально)</label>
+                <input
+                  type="text"
+                  className="profile-edit-input"
+                  value={editFormData.avatarUrl}
+                  onChange={(e) => setEditFormData({ ...editFormData, avatarUrl: e.target.value })}
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div className="profile-edit-modal-footer">
+              <button className="profile-edit-cancel-btn" onClick={handleCloseEdit}>
+                Отмена
+              </button>
+              <button 
+                className="profile-edit-save-btn" 
+                onClick={handleSaveProfile}
+                disabled={loading}
+              >
+                {loading ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   )
 }

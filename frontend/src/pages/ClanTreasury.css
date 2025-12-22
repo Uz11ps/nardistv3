@@ -135,3 +135,203 @@
 .clan-treasury-view-all-button:hover {
   background: #4a4a4a;
 }
+
+/* Кнопка вложения */
+.clan-treasury-contribute-button {
+  width: 100%;
+  max-width: 300px;
+  height: 44px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  border: 0.1px solid #C93C3D;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 16px;
+}
+
+.clan-treasury-contribute-button:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+}
+
+/* Модальное окно вложения */
+.clan-treasury-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.clan-treasury-modal {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.clan-treasury-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.clan-treasury-modal-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.clan-treasury-modal-close {
+  background: none;
+  border: none;
+  color: #B6B6B6;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.clan-treasury-modal-close:hover {
+  color: #FFF;
+}
+
+.clan-treasury-modal-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.clan-treasury-modal-balance {
+  color: #FFD700;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.clan-treasury-modal-quick-amounts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.clan-treasury-quick-amount-btn {
+  height: 44px;
+  border-radius: 8px;
+  background: #3a3a3a;
+  border: 2px solid transparent;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clan-treasury-quick-amount-btn:hover {
+  background: #4a4a4a;
+  border-color: #FFD700;
+}
+
+.clan-treasury-modal-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clan-treasury-modal-label {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.clan-treasury-modal-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #2a2a2a;
+  border: 2px solid #3a3a3a;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  transition: border-color 0.2s;
+}
+
+.clan-treasury-modal-input:focus {
+  outline: none;
+  border-color: #FFD700;
+}
+
+.clan-treasury-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.clan-treasury-modal-cancel,
+.clan-treasury-modal-submit {
+  flex: 1;
+  height: 44px;
+  border-radius: 8px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.clan-treasury-modal-cancel {
+  background: #3a3a3a;
+  color: #FFF;
+}
+
+.clan-treasury-modal-cancel:hover {
+  background: #4a4a4a;
+}
+
+.clan-treasury-modal-submit {
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  color: #FFF;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  border: 0.1px solid #C93C3D;
+}
+
+.clan-treasury-modal-submit:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+}
+
+.clan-treasury-modal-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

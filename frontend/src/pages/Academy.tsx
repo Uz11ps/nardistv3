@@ -57,6 +57,15 @@ export default function Academy() {
       loadData()
     }
   }, [activeTab, materialId, isMaterialPage])
+
+  useEffect(() => {
+    // Проверяем параметр type из URL
+    const urlParams = new URLSearchParams(location.search)
+    const typeParam = urlParams.get('type')
+    if (typeParam === 'course') {
+      setPublishForm(prev => ({ ...prev, type: 'course' }))
+    }
+  }, [location.search])
   
   const loadMaterialDetail = async (id: string) => {
     try {
@@ -111,8 +120,20 @@ export default function Academy() {
     }
     try {
       setPublishing(true)
-      await apiClient.post('/academy/publish', publishForm)
-      alert('Материал успешно опубликован!')
+      if (publishForm.type === 'course') {
+        // Создаем курс через новый endpoint
+        await apiClient.post('/academy/courses/create', {
+          title: publishForm.title,
+          description: publishForm.description,
+          content: publishForm.content,
+          price: publishForm.price,
+        })
+        alert('Курс создан и отправлен на верификацию администратором!')
+      } else {
+        // Старая логика для статей
+        await apiClient.post('/academy/publish', publishForm)
+        alert('Материал успешно опубликован!')
+      }
       navigate('/academy')
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при публикации')
@@ -281,6 +302,9 @@ export default function Academy() {
               )}
             </div>
           ))}
+          <button className="academy-publish-button" onClick={() => navigate('/academy/publish?type=course')}>
+            Написать свой курс
+          </button>
         </div>
       )}
 

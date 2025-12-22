@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import './ClanSearch.css'
@@ -18,6 +19,7 @@ interface Clan {
 export default function ClanSearch() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'active' | 'new' | 'top' | 'all'>('active')
   const [clans, setClans] = useState<Clan[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -61,6 +63,23 @@ export default function ClanSearch() {
   const formatTreasury = (treasury: number | string) => {
     const amount = typeof treasury === 'string' ? parseInt(treasury) : treasury
     return amount.toLocaleString()
+  }
+
+  if ((user?.level || 0) < 10) {
+    return (
+      <PageLayout title="Поиск клана" showBack={true}>
+        <div className="clans-unavailable">
+          <img src="/img/кланы.png" alt="Federations" className="clans-unavailable-icon" />
+          <h2 className="clans-unavailable-title">Федерации недоступны</h2>
+          <p className="clans-unavailable-text">
+            Федерации открываются с 10 уровня. Прокачайся, играй в турнирах и зарабатывай очки!
+          </p>
+          <button className="clans-play-button" onClick={() => navigate('/')}>
+            Играть
+          </button>
+        </div>
+      </PageLayout>
+    )
   }
 
   return (

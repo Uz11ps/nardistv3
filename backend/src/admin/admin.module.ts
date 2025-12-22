@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { AuthModule } from '../auth/auth.module';
@@ -30,10 +31,14 @@ import { DistrictConfig } from '../city/district-config.entity';
 import { Rating } from '../ratings/rating.entity';
 import { Notification } from '../notifications/notification.entity';
 import { UserMaterial } from '../academy/user-material.entity';
+import { SystemSettings } from './system-settings.entity';
+import { NotificationTemplate } from './notification-template.entity';
+import { InactiveUsersService } from './inactive-users.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, Subscription, BuildingConfig, DistrictConfig, Rating, Notification, UserMaterial]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, Subscription, BuildingConfig, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate]),
+    ScheduleModule.forRoot(),
     AuthModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -56,7 +61,8 @@ import { UserMaterial } from '../academy/user-material.entity';
     NotificationsModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService],
+  providers: [AdminService, InactiveUsersService],
+  exports: [AdminService],
 })
 export class AdminModule {}
 

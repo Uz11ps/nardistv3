@@ -111,6 +111,24 @@ export default function City() {
     return names[type] || type
   }
 
+  if ((user?.level || 0) < 5) {
+    return (
+      <PageLayout title="Город" showBack={true}>
+        <div className="city-unavailable">
+          <h2 className="city-unavailable-title">Город недоступен</h2>
+          <p className="city-unavailable-text">
+            Город и постройки открываются с 5 уровня.
+            <br />
+            Играйте и повышайте уровень, чтобы получить доступ!
+          </p>
+          <button className="city-play-button" onClick={() => navigate('/')}>
+            Играть
+          </button>
+        </div>
+      </PageLayout>
+    )
+  }
+
   if (loading) {
     return (
       <PageLayout title="Город" showBack={true}>

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -47,6 +47,14 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
+    
+    // Проверяем уровень для редактирования профиля (nickname, country, avatarUrl)
+    if (updateUserDto.nickname !== undefined || updateUserDto.country !== undefined || updateUserDto.avatarUrl !== undefined) {
+      const userLevel = user.level || 0;
+      if (userLevel < 5) {
+        throw new BadRequestException('Редактирование профиля доступно с 5 уровня');
+      }
+    }
     
     // Конвертируем narCoin в bigint если он есть
     if (updateUserDto.narCoin !== undefined) {

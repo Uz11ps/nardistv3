@@ -25,6 +25,8 @@ interface Skin {
   boardConfig?: any
   diceConfig?: any
   checkersConfig?: any
+  maxDurability?: number
+  currentDurability?: number
 }
 
 export default function Inventory() {
@@ -33,6 +35,8 @@ export default function Inventory() {
   const [selectedSkinIds, setSelectedSkinIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [selectingSkinId, setSelectingSkinId] = useState<string | null>(null)
+  const [repairingSkinId, setRepairingSkinId] = useState<string | null>(null)
+  const [repairCosts, setRepairCosts] = useState<Map<string, number>>(new Map())
   const [activeTab, setActiveTab] = useState<'board' | 'checkers' | 'dice'>('board')
 
   useEffect(() => {
@@ -44,7 +48,7 @@ export default function Inventory() {
     try {
       setLoading(true)
       const [mySkinsResponse, allSkinsResponse] = await Promise.all([
-        apiClient.get('/skins/my'),
+        apiClient.get('/skins/my/with-durability'),
         apiClient.get('/skins'),
       ])
       
@@ -54,12 +58,44 @@ export default function Inventory() {
       const ownedSkinIds = new Set(mySkins.map((s: Skin) => s.id))
       const defaultSkins = allSkins.filter((s: Skin) => s.isDefault)
       
+      // Добавляем информацию об износе для default скинов
+      const defaultSkinsWithDurability = defaultSkins.map((s: Skin) => {
+        const mySkin = mySkins.find((ms: Skin) => ms.id === s.id)
+        return {
+          ...s,
+          currentDurability: mySkin?.currentDurability ?? (s.maxDurability || 100),
+          maxDurability: s.maxDurability || 100,
+        }
+      })
+      
       const allAvailableSkins = [
-        ...mySkins,
-        ...defaultSkins.filter((s: Skin) => !ownedSkinIds.has(s.id)),
+        ...mySkins.map((s: Skin) => ({
+          ...s,
+          maxDurability: s.maxDurability || 100,
+          currentDurability: s.currentDurability ?? (s.maxDurability || 100),
+        })),
+        ...defaultSkinsWithDurability.filter((s: Skin) => !ownedSkinIds.has(s.id)),
       ]
       
       setSkins(allAvailableSkins)
+      
+      // Загружаем стоимость ремонта для всех скинов, которые требуют ремонта
+      const repairCostsMap = new Map<string, number>()
+      for (const skin of allAvailableSkins) {
+        if (skin.price && skin.price > 0) {
+          const maxDurability = skin.maxDurability || 100
+          const currentDurability = skin.currentDurability ?? maxDurability
+          if (currentDurability < maxDurability) {
+            try {
+              const costResponse = await apiClient.get(`/skins/${skin.id}/repair-cost`)
+              repairCostsMap.set(skin.id, costResponse.data.cost || 0)
+            } catch (error) {
+              console.error(`Failed to load repair cost for skin ${skin.id}:`, error)
+            }
+          }
+        }
+      }
+      setRepairCosts(repairCostsMap)
     } catch (error) {
       console.error('Failed to load inventory:', error)
     } finally {
@@ -98,6 +134,22 @@ export default function Inventory() {
     }
   }
 
+  const handleRepairSkin = async (skinId: string) => {
+    if (repairingSkinId !== null) return
+    
+    try {
+      setRepairingSkinId(skinId)
+      await apiClient.post(`/skins/${skinId}/repair`)
+      alert('Скин успешно отремонтирован!')
+      await loadInventory()
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при ремонте скина')
+      console.error('Failed to repair skin:', error)
+    } finally {
+      setRepairingSkinId(null)
+    }
+  }
+
   const getRarityName = (rarity: string) => {
     const rarityNames: { [key: string]: string } = {
       common: 'Обычная',
@@ -125,6 +177,12 @@ export default function Inventory() {
 
   const renderSkinCard = (skin: Skin) => {
     const isSelected = selectedSkinIds.has(skin.id)
+    const maxDurability = skin.maxDurability || 100
+    const currentDurability = skin.currentDurability ?? maxDurability
+    const durabilityPercent = Math.round((currentDurability / maxDurability) * 100)
+    const needsRepair = currentDurability < maxDurability && skin.price && skin.price > 0
+    const repairCost = repairCosts.get(skin.id) || 0
+    
     // Используем изображение доски по умолчанию для досок без imageUrl
     const getImageUrl = () => {
       if (skin.imageUrl) return skin.imageUrl
@@ -157,14 +215,38 @@ export default function Inventory() {
           <div className="inventory-item-info">
             <div className="inventory-item-name">{skin.name}</div>
             <div className="inventory-item-rarity">{getRarityName(skin.rarity)}</div>
+            {skin.price !== undefined && skin.price !== null && (
+              <div className="inventory-item-durability">
+                <div className="inventory-item-durability-label">
+                  Прочность: {currentDurability} / {maxDurability}
+                </div>
+                <div className="inventory-item-durability-bar">
+                  <div 
+                    className={`inventory-item-durability-fill ${durabilityPercent < 20 ? 'low' : durabilityPercent < 50 ? 'medium' : 'high'}`}
+                    style={{ width: `${durabilityPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
-          <button
-            className={`inventory-item-button ${isSelected ? 'equipped' : 'wear'}`}
-            onClick={() => !isSelected && handleSelectSkin(skin.id)}
-            disabled={selectingSkinId === skin.id || selectingSkinId !== null || isSelected}
-          >
-            {isSelected ? 'Экипировано' : selectingSkinId === skin.id ? 'Надевание...' : 'Надеть'}
-          </button>
+          <div className="inventory-item-actions">
+            {needsRepair && (
+              <button
+                className="inventory-item-button repair"
+                onClick={() => handleRepairSkin(skin.id)}
+                disabled={repairingSkinId === skin.id || repairingSkinId !== null}
+              >
+                {repairingSkinId === skin.id ? 'Ремонт...' : `Починить (${repairCost} NAR)`}
+              </button>
+            )}
+            <button
+              className={`inventory-item-button ${isSelected ? 'equipped' : 'wear'}`}
+              onClick={() => !isSelected && handleSelectSkin(skin.id)}
+              disabled={selectingSkinId === skin.id || selectingSkinId !== null || isSelected || currentDurability === 0}
+            >
+              {isSelected ? 'Экипировано' : selectingSkinId === skin.id ? 'Надевание...' : currentDurability === 0 ? 'Сломан' : 'Надеть'}
+            </button>
+          </div>
         </div>
       </Card>
     )

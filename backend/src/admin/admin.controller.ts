@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UnauthorizedException, UploadedFile, UploadedFiles, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UnauthorizedException, UploadedFile, UploadedFiles, UseInterceptors, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import { AdminService } from './admin.service';
+import { AcademyService } from '../academy/academy.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AdminLoginDto } from './dto/admin-login.dto';
@@ -15,6 +16,8 @@ import { extname } from 'path';
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
+    @Inject(forwardRef(() => AcademyService))
+    private readonly academyService: AcademyService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -289,6 +292,55 @@ export class AdminController {
     return this.adminService.getAllArticles();
   }
 
+  @Get('courses/pending')
+  @UseGuards(JwtAuthGuard)
+  async getPendingCourses(@CurrentUser() user: any) {
+    if (!user.isAdmin && !user.isTrainer) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getPendingCourses();
+  }
+
+  @Post('courses/:id/verify')
+  @UseGuards(JwtAuthGuard)
+  async verifyCourse(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin && !user.isTrainer) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.academyService.verifyCourse(id, user.id);
+  }
+
+  @Post('courses/:id/reject')
+  @UseGuards(JwtAuthGuard)
+  async rejectCourse(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin && !user.isTrainer) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    await this.academyService.rejectCourse(id);
+    return { message: 'Курс отклонен' };
+  }
+
+  @Get('settings')
+  @UseGuards(JwtAuthGuard)
+  async getSystemSettings(@CurrentUser() user: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getAllSystemSettings();
+  }
+
+  @Post('settings')
+  @UseGuards(JwtAuthGuard)
+  async setSystemSetting(
+    @CurrentUser() user: any,
+    @Body() body: { key: string; value: string; description?: string },
+  ) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.setSystemSetting(body.key, body.value, body.description);
+  }
+
   @Put('academy/:id')
   @UseGuards(JwtAuthGuard)
   async updateArticle(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
@@ -369,6 +421,43 @@ export class AdminController {
       throw new UnauthorizedException('Недостаточно прав');
     }
     return this.adminService.deleteDistrict(id);
+  }
+
+  // CRUD для шаблонов уведомлений Telegram
+  @Get('notification-templates')
+  @UseGuards(JwtAuthGuard)
+  async getAllNotificationTemplates(@CurrentUser() user: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getAllNotificationTemplates();
+  }
+
+  @Get('notification-templates/:type')
+  @UseGuards(JwtAuthGuard)
+  async getNotificationTemplate(@CurrentUser() user: any, @Param('type') type: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getNotificationTemplate(type as any);
+  }
+
+  @Post('notification-templates')
+  @UseGuards(JwtAuthGuard)
+  async createNotificationTemplate(@CurrentUser() user: any, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.createNotificationTemplate(body);
+  }
+
+  @Put('notification-templates/:type')
+  @UseGuards(JwtAuthGuard)
+  async updateNotificationTemplate(@CurrentUser() user: any, @Param('type') type: string, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateNotificationTemplate(type as any, body);
   }
 
   // CRUD для скинов
@@ -702,6 +791,19 @@ export class AdminController {
       throw new UnauthorizedException('Недостаточно прав');
     }
     return this.adminService.resetUserProgress(userId);
+  }
+
+  @Put('users/:id/referral-settings')
+  @UseGuards(JwtAuthGuard)
+  async updateUserReferralSettings(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: { referralPercent?: number; referralBaseBonus?: number },
+  ) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateUserReferralSettings(userId, body);
   }
 }
 

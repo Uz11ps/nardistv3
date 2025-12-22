@@ -4,6 +4,7 @@ import axios from 'axios';
 import { UsersService } from '../users/users.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { SubscriptionPlan } from '../subscription/subscription.entity';
+import { ReferralsService } from '../referrals/referrals.service';
 
 export interface TonPaymentRequest {
   userId: string;
@@ -31,6 +32,8 @@ export class PaymentService {
     private usersService: UsersService,
     @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
+    @Inject(forwardRef(() => ReferralsService))
+    private referralsService: ReferralsService,
   ) {
     this.BOT_TOKEN = this.configService.get<string>('TELEGRAM_BOT_TOKEN') || '';
   }
@@ -134,12 +137,18 @@ export class PaymentService {
           
           await this.subscriptionService.createSubscription(userId, plan);
           console.log(`Подписка активирована: userId=${userId}, plan=${plan}`);
+          
+          // Начисляем реферальный бонус (если есть реферер)
+          await this.referralsService.processReferralBonus(userId, narAmount, `Подписка ${plan}`);
         } else {
           // Начисляем NAR-coin
           const user = await this.usersService.findOne(userId);
           const currentBalance = Number(user.narCoin || 0);
           await this.usersService.update(userId, { narCoin: currentBalance + narAmount });
           console.log(`NAR-coin начислены: userId=${userId}, amount=${narAmount} NAR (${tonAmount} TON)`);
+          
+          // Начисляем реферальный бонус (если есть реферер)
+          await this.referralsService.processReferralBonus(userId, narAmount, 'Покупка NAR-coin');
         }
       } catch (error) {
         console.error(`Ошибка обработки платежа: userId=${userId}`, error);

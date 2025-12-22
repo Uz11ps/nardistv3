@@ -79,39 +79,48 @@ export default function BackgammonBoard({
   const [dragHoverPoint, setDragHoverPoint] = useState<number | null>(null)
   
   // Загруженные текстуры скинов
-  // НОВАЯ ЛОГИКА: каждый игрок использует свои скины
-  // - Доска: левая сторона (player1) = board скин player1, правая сторона (player2) = board скин player2
-  // - Кубики: кубики player1 = dice скин player1, кубики player2 = dice скин player2
-  // - Шашки: белые (player1) = checkers скин player1, черные (player2) = checkers скин player2
+  // НОВАЯ ЛОГИКА: каждый игрок видит свою сторону слева
+  // - Доска: слева = мой скин, справа = скин противника
+  // - Кубики: мои кубики = мой dice скин, кубики противника = его dice скин
+  // - Шашки: мои шашки (pointValue > 0 после отзеркаливания) = мой checkers скин
+  //          шашки противника (pointValue < 0 после отзеркаливания) = его checkers скин
   const [loadedTextures, setLoadedTextures] = useState<{
-    player1Board?: HTMLImageElement  // Доска для player1 (левая сторона)
-    player2Board?: HTMLImageElement  // Доска для player2 (правая сторона)
-    player1Dice?: HTMLImageElement   // Кубики для player1
-    player2Dice?: HTMLImageElement   // Кубики для player2
-    whiteCheckers?: HTMLImageElement // Белые шашки (player1)
-    blackCheckers?: HTMLImageElement // Черные шашки (player2)
+    player1Board?: HTMLImageElement  // Доска для левой стороны (моя сторона)
+    player2Board?: HTMLImageElement  // Доска для правой стороны (сторона противника)
+    player1Dice?: HTMLImageElement   // Мои кубики
+    player2Dice?: HTMLImageElement   // Кубики противника
+    whiteCheckers?: HTMLImageElement // Мои шашки (pointValue > 0 после отзеркаливания)
+    blackCheckers?: HTMLImageElement // Шашки противника (pointValue < 0 после отзеркаливания)
   }>({})
   
-  // Загружаем текстуры скинов для каждого игрока отдельно
+  // Определяем скины для отображения: слева всегда мой скин, справа - скин противника
+  const isPlayer1 = myPlayerId === player1Id
+  const myBoardSkin = isPlayer1 ? player1Skins?.board : player2Skins?.board
+  const opponentBoardSkin = isPlayer1 ? player2Skins?.board : player1Skins?.board
+  const myDiceSkin = isPlayer1 ? player1Skins?.dice : player2Skins?.dice
+  const opponentDiceSkin = isPlayer1 ? player2Skins?.dice : player1Skins?.dice
+  const myCheckersSkin = isPlayer1 ? player1Skins?.checkers : player2Skins?.checkers
+  const opponentCheckersSkin = isPlayer1 ? player2Skins?.checkers : player1Skins?.checkers
+  
+  // Загружаем текстуры скинов: слева мой скин, справа скин противника
   useEffect(() => {
-    console.log('🎨 Loading player skins textures:', {
-      player1Skins,
-      player2Skins,
-      player1BoardTexture: player1Skins?.board?.boardTextureUrl,
-      player2BoardTexture: player2Skins?.board?.boardTextureUrl,
-      player1DiceTexture: player1Skins?.dice?.diceTextureUrl,
-      player2DiceTexture: player2Skins?.dice?.diceTextureUrl,
-      whiteCheckersTexture: player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl,
-      blackCheckersTexture: player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl,
+    console.log('🎨 Loading skins textures (my side left, opponent side right):', {
+      isPlayer1,
+      myBoardTexture: myBoardSkin?.boardTextureUrl,
+      opponentBoardTexture: opponentBoardSkin?.boardTextureUrl,
+      myDiceTexture: myDiceSkin?.diceTextureUrl,
+      opponentDiceTexture: opponentDiceSkin?.diceTextureUrl,
+      myCheckersTexture: myCheckersSkin?.whiteCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl || (isPlayer1 ? null : myCheckersSkin?.blackCheckersTextureUrl),
+      opponentCheckersTexture: opponentCheckersSkin?.blackCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl || (isPlayer1 ? opponentCheckersSkin?.blackCheckersTextureUrl : null),
     })
     
     const textures: {
-      player1Board?: HTMLImageElement
-      player2Board?: HTMLImageElement
-      player1Dice?: HTMLImageElement
-      player2Dice?: HTMLImageElement
-      whiteCheckers?: HTMLImageElement
-      blackCheckers?: HTMLImageElement
+      leftBoard?: HTMLImageElement   // Моя сторона (слева)
+      rightBoard?: HTMLImageElement  // Сторона противника (справа)
+      myDice?: HTMLImageElement      // Мои кубики
+      opponentDice?: HTMLImageElement // Кубики противника
+      myCheckers?: HTMLImageElement   // Мои шашки
+      opponentCheckers?: HTMLImageElement // Шашки противника
     } = {}
     let loadedCount = 0
     let expectedCount = 0
@@ -119,7 +128,14 @@ export default function BackgammonBoard({
     const checkAndDraw = () => {
       loadedCount++
       if (loadedCount === expectedCount) {
-        setLoadedTextures(textures)
+        setLoadedTextures({
+          player1Board: textures.leftBoard,  // Для обратной совместимости
+          player2Board: textures.rightBoard,
+          player1Dice: textures.myDice,
+          player2Dice: textures.opponentDice,
+          whiteCheckers: isPlayer1 ? textures.myCheckers : textures.opponentCheckers,
+          blackCheckers: isPlayer1 ? textures.opponentCheckers : textures.myCheckers,
+        })
       }
     }
     
@@ -138,117 +154,122 @@ export default function BackgammonBoard({
       })
     }
     
-    // 1. Загружаем текстуру ДОСКИ для player1 (левая сторона)
-    const player1BoardTextureUrl = player1Skins?.board?.boardTextureUrl
+    // 1. Загружаем текстуру ДОСКИ для моей стороны (слева)
+    const myBoardTextureUrl = myBoardSkin?.boardTextureUrl
     expectedCount++
-    if (player1BoardTextureUrl) {
-      loadImage(player1BoardTextureUrl)
+    if (myBoardTextureUrl) {
+      loadImage(myBoardTextureUrl)
         .then((img) => {
-          console.log('✅ Player1 board texture loaded:', player1BoardTextureUrl)
-          textures.player1Board = img
+          console.log('✅ My board texture loaded (left side):', myBoardTextureUrl)
+          textures.leftBoard = img
           checkAndDraw()
         })
         .catch(() => {
-          console.error('Failed to load player1 board texture:', player1BoardTextureUrl)
+          console.error('Failed to load my board texture:', myBoardTextureUrl)
           checkAndDraw()
         })
     } else {
       checkAndDraw()
     }
     
-    // 2. Загружаем текстуру ДОСКИ для player2 (правая сторона)
-    const player2BoardTextureUrl = player2Skins?.board?.boardTextureUrl
+    // 2. Загружаем текстуру ДОСКИ для стороны противника (справа)
+    const opponentBoardTextureUrl = opponentBoardSkin?.boardTextureUrl
     expectedCount++
-    if (player2BoardTextureUrl) {
-      loadImage(player2BoardTextureUrl)
+    if (opponentBoardTextureUrl) {
+      loadImage(opponentBoardTextureUrl)
         .then((img) => {
-          console.log('✅ Player2 board texture loaded:', player2BoardTextureUrl)
-          textures.player2Board = img
+          console.log('✅ Opponent board texture loaded (right side):', opponentBoardTextureUrl)
+          textures.rightBoard = img
           checkAndDraw()
         })
         .catch(() => {
-          console.error('Failed to load player2 board texture:', player2BoardTextureUrl)
+          console.error('Failed to load opponent board texture:', opponentBoardTextureUrl)
           checkAndDraw()
         })
     } else {
       checkAndDraw()
     }
     
-    // 3. Загружаем текстуру КУБИКОВ для player1
-    const player1DiceTextureUrl = player1Skins?.dice?.diceTextureUrl
+    // 3. Загружаем текстуру КУБИКОВ для меня
+    const myDiceTextureUrl = myDiceSkin?.diceTextureUrl
     expectedCount++
-    if (player1DiceTextureUrl) {
-      loadImage(player1DiceTextureUrl)
+    if (myDiceTextureUrl) {
+      loadImage(myDiceTextureUrl)
         .then((img) => {
-          console.log('✅ Player1 dice texture loaded:', player1DiceTextureUrl)
-          textures.player1Dice = img
+          console.log('✅ My dice texture loaded:', myDiceTextureUrl)
+          textures.myDice = img
           checkAndDraw()
         })
         .catch(() => {
-          console.error('Failed to load player1 dice texture:', player1DiceTextureUrl)
+          console.error('Failed to load my dice texture:', myDiceTextureUrl)
           checkAndDraw()
         })
     } else {
       checkAndDraw()
     }
     
-    // 4. Загружаем текстуру КУБИКОВ для player2
-    const player2DiceTextureUrl = player2Skins?.dice?.diceTextureUrl
+    // 4. Загружаем текстуру КУБИКОВ для противника
+    const opponentDiceTextureUrl = opponentDiceSkin?.diceTextureUrl
     expectedCount++
-    if (player2DiceTextureUrl) {
-      loadImage(player2DiceTextureUrl)
+    if (opponentDiceTextureUrl) {
+      loadImage(opponentDiceTextureUrl)
         .then((img) => {
-          console.log('✅ Player2 dice texture loaded:', player2DiceTextureUrl)
-          textures.player2Dice = img
+          console.log('✅ Opponent dice texture loaded:', opponentDiceTextureUrl)
+          textures.opponentDice = img
           checkAndDraw()
         })
         .catch(() => {
-          console.error('Failed to load player2 dice texture:', player2DiceTextureUrl)
+          console.error('Failed to load opponent dice texture:', opponentDiceTextureUrl)
           checkAndDraw()
         })
     } else {
       checkAndDraw()
     }
     
-    // 5. Загружаем текстуру БЕЛЫХ шашек из player1Skins
-    const whiteCheckersTextureUrl = player1Skins?.checkers?.whiteCheckersTextureUrl || player1Skins?.checkers?.checkersTextureUrl
+    // 5. Загружаем текстуру МОИХ шашек
+    // Если я player1, мои шашки белые, если player2 - черные
+    const myCheckersTextureUrl = isPlayer1 
+      ? (myCheckersSkin?.whiteCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl)
+      : (myCheckersSkin?.blackCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl)
     expectedCount++
-    if (whiteCheckersTextureUrl) {
-      loadImage(whiteCheckersTextureUrl)
+    if (myCheckersTextureUrl) {
+      loadImage(myCheckersTextureUrl)
         .then((img) => {
-          console.log('✅ White checkers texture loaded:', whiteCheckersTextureUrl)
-          textures.whiteCheckers = img
+          console.log('✅ My checkers texture loaded:', myCheckersTextureUrl)
+          textures.myCheckers = img
           checkAndDraw()
         })
         .catch(() => {
-          console.error('Failed to load white checkers texture:', whiteCheckersTextureUrl)
+          console.error('Failed to load my checkers texture:', myCheckersTextureUrl)
           checkAndDraw()
         })
     } else {
       checkAndDraw()
     }
     
-    // 6. Загружаем текстуру ЧЕРНЫХ шашек из player2Skins
-    const blackCheckersTextureUrl = player2Skins?.checkers?.blackCheckersTextureUrl || player2Skins?.checkers?.checkersTextureUrl
+    // 6. Загружаем текстуру ШАШЕК ПРОТИВНИКА
+    // Если я player1, шашки противника черные, если player2 - белые
+    const opponentCheckersTextureUrl = isPlayer1
+      ? (opponentCheckersSkin?.blackCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl)
+      : (opponentCheckersSkin?.whiteCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl)
     expectedCount++
-    if (blackCheckersTextureUrl) {
-      loadImage(blackCheckersTextureUrl)
+    if (opponentCheckersTextureUrl) {
+      loadImage(opponentCheckersTextureUrl)
         .then((img) => {
-          console.log('✅ Black checkers texture loaded:', blackCheckersTextureUrl)
-          textures.blackCheckers = img
+          console.log('✅ Opponent checkers texture loaded:', opponentCheckersTextureUrl)
+          textures.opponentCheckers = img
           checkAndDraw()
         })
         .catch(() => {
-          console.error('Failed to load black checkers texture:', blackCheckersTextureUrl)
+          console.error('Failed to load opponent checkers texture:', opponentCheckersTextureUrl)
           checkAndDraw()
         })
     } else {
       checkAndDraw()
     }
-  }, [player1Skins, player2Skins])
+  }, [player1Skins, player2Skins, myPlayerId, player1Id, isPlayer1, myBoardSkin, opponentBoardSkin, myDiceSkin, opponentDiceSkin, myCheckersSkin, opponentCheckersSkin])
 
-  // Определяем, кто я (player1 или player2) для отзеркаливания доски
-  const isPlayer1 = myPlayerId === player1Id
+  // Определяем параметры для отзеркаливания доски
   const myPlayerIndex = isPlayer1 ? 0 : 1
   const shouldMirror = !isPlayer1 // Если я player2, отзеркаливаем доску
 
@@ -468,19 +489,20 @@ export default function BackgammonBoard({
     // Очистка
     ctx.clearRect(0, 0, width, height)
 
-    // Фон доски - разделяем на две части: левая (player1) и правая (player2)
+    // Фон доски - разделяем на две части: слева мой скин, справа скин противника
     const boardCenterX = width / 2
     const barLeftX = barX
     const barRightX = barX + barWidth
     
-    // Левая сторона доски (player1) - от 0 до центра бара
-    if (loadedTextures.player1Board) {
-      // Рисуем текстуру доски player1 только на левой половине
+    // Левая сторона доски (моя сторона) - от 0 до центра бара
+    const leftBoardTexture = loadedTextures.player1Board // Это теперь моя сторона
+    if (leftBoardTexture) {
+      // Рисуем текстуру доски моей стороны только на левой половине
       ctx.save()
       ctx.beginPath()
       ctx.rect(0, 0, barLeftX, height)
       ctx.clip()
-      ctx.drawImage(loadedTextures.player1Board, 0, 0, width, height)
+      ctx.drawImage(leftBoardTexture, 0, 0, width, height)
       ctx.restore()
     } else {
       // Если текстура еще не загрузилась, рисуем простой фон
@@ -488,14 +510,15 @@ export default function BackgammonBoard({
       ctx.fillRect(0, 0, barLeftX, height)
     }
     
-    // Правая сторона доски (player2) - от правого края бара до конца
-    if (loadedTextures.player2Board) {
-      // Рисуем текстуру доски player2 только на правой половине
+    // Правая сторона доски (сторона противника) - от правого края бара до конца
+    const rightBoardTexture = loadedTextures.player2Board // Это теперь сторона противника
+    if (rightBoardTexture) {
+      // Рисуем текстуру доски стороны противника только на правой половине
       ctx.save()
       ctx.beginPath()
       ctx.rect(barRightX, 0, width - barRightX, height)
       ctx.clip()
-      ctx.drawImage(loadedTextures.player2Board, 0, 0, width, height)
+      ctx.drawImage(rightBoardTexture, 0, 0, width, height)
       ctx.restore()
     } else {
       // Если текстура еще не загрузилась, рисуем простой фон
@@ -576,10 +599,11 @@ export default function BackgammonBoard({
             ctx.shadowOffsetY = 2
 
             // Круглая фишка - используем текстуру если есть
-            // Player1 играет белыми, Player2 играет черными
-            const checkerTexture = checkerColor === '#FFFFFF' 
-              ? loadedTextures.whiteCheckers   // Белые шашки = player1
-              : loadedTextures.blackCheckers   // Черные шашки = player2
+            // После отзеркаливания доски: pointValue > 0 = мои шашки, pointValue < 0 = шашки противника
+            const isMyChecker = pointValue > 0
+            const checkerTexture = isMyChecker
+              ? loadedTextures.whiteCheckers  // Мои шашки (используем текстуру моих шашек)
+              : loadedTextures.blackCheckers  // Шашки противника (используем текстуру шашек противника)
             
             // Рисуем шашку - используем текстуру или дефолтный цвет
             if (checkerTexture) {

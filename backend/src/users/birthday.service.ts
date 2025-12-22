@@ -104,36 +104,5 @@ export class BirthdayService {
     return false;
   }
 
-  // Проверяем неактивных пользователей (не заходили более 7 дней)
-  @Cron(CronExpression.EVERY_DAY_AT_2AM)
-  async checkInactiveUsers() {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    try {
-      const inactiveUsers = await this.usersRepository
-        .createQueryBuilder('user')
-        .where('user.isBanned = false')
-        .andWhere('(user.lastLogin IS NULL OR user.lastLogin < :sevenDaysAgo)', { sevenDaysAgo })
-        .andWhere('(user.lastInactiveNotification IS NULL OR user.lastInactiveNotification < :sevenDaysAgo)', { sevenDaysAgo })
-        .getMany();
-
-      for (const user of inactiveUsers) {
-        // Отправляем уведомление
-        await this.notificationsService.createNotification(
-          user.id,
-          '👋 Пора зайти!',
-          'Мы скучаем! Заходи в игру, чтобы не пропустить новые события и награды!',
-          'info',
-        );
-
-        // Обновляем дату последнего уведомления
-        user.lastInactiveNotification = new Date();
-        await this.usersRepository.save(user);
-      }
-    } catch (error) {
-      console.error('Ошибка при проверке неактивных пользователей:', error);
-    }
-  }
 }
 

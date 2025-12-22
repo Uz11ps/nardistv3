@@ -15,6 +15,7 @@ interface Quest {
   completed: boolean
   claimed: boolean
   isPremium?: boolean
+  channelUsername?: string | null
 }
 
 export default function Quests() {
@@ -24,6 +25,7 @@ export default function Quests() {
   const [resetTime, setResetTime] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [claimingQuestId, setClaimingQuestId] = useState<string | null>(null)
+  const [checkingSubscriptionId, setCheckingSubscriptionId] = useState<string | null>(null)
 
   useEffect(() => {
     loadQuests()
@@ -82,6 +84,26 @@ export default function Quests() {
     }
   }
 
+  const handleCheckSubscription = async (questId: string) => {
+    if (checkingSubscriptionId !== null) return
+    
+    try {
+      setCheckingSubscriptionId(questId)
+      const response = await apiClient.post(`/quests/${questId}/check-subscription`)
+      if (response.data.subscribed) {
+        alert('Подписка подтверждена!')
+        await loadQuests()
+      } else {
+        alert('Вы не подписаны на канал. Пожалуйста, подпишитесь и попробуйте снова.')
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при проверке подписки')
+      console.error('Failed to check subscription:', error)
+    } finally {
+      setCheckingSubscriptionId(null)
+    }
+  }
+
   const formatResetTime = (timeStr: string) => {
     return timeStr || ''
   }
@@ -125,6 +147,11 @@ export default function Quests() {
                 <div className="quest-content">
                   <div className="quest-info">
                     <div className="quest-name">{quest.name}</div>
+                    {quest.channelUsername && (
+                      <div className="quest-description" style={{ marginBottom: '8px' }}>
+                        Канал: {quest.channelUsername}
+                      </div>
+                    )}
                     <div className="quest-reward">
                       Награда: {quest.rewardNarCoin.toLocaleString('ru-RU')} NAR • {quest.rewardXP} XP
                     </div>
@@ -142,15 +169,27 @@ export default function Quests() {
                       </div>
                     </div>
                   </div>
-                  {canClaim && (
-                    <button
-                      className="quest-claim-btn"
-                      onClick={() => handleClaim(quest.id)}
-                      disabled={claimingQuestId !== null}
-                    >
-                      {claimingQuestId === quest.id ? 'Получение...' : 'Забрать'}
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {quest.channelUsername && !quest.completed && (
+                      <button
+                        className="quest-claim-btn"
+                        onClick={() => handleCheckSubscription(quest.id)}
+                        disabled={checkingSubscriptionId !== null}
+                        style={{ backgroundColor: '#4CAF50' }}
+                      >
+                        {checkingSubscriptionId === quest.id ? 'Проверка...' : 'Проверить подписку'}
+                      </button>
+                    )}
+                    {canClaim && (
+                      <button
+                        className="quest-claim-btn"
+                        onClick={() => handleClaim(quest.id)}
+                        disabled={claimingQuestId !== null}
+                      >
+                        {claimingQuestId === quest.id ? 'Получение...' : 'Забрать'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )

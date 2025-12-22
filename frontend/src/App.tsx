@@ -40,6 +40,7 @@ import ClanTreasury from './pages/ClanTreasury'
 import ClanUpgrades from './pages/ClanUpgrades'
 import ClanMembers from './pages/ClanMembers'
 import Policy from './pages/Policy'
+import Referrals from './pages/Referrals'
 
 function App() {
   const [initialized, setInitialized] = useState(false)
@@ -211,6 +212,7 @@ function App() {
               <Route path="/game/result" element={<GameResult />} />
               <Route path="/game/result/:gameId" element={<GameResult />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/referrals" element={<Referrals />} />
               <Route path="/city" element={<City />} />
               <Route path="/tournaments" element={<Tournaments />} />
               <Route path="/tournaments/:tournamentId" element={<TournamentDetail />} />

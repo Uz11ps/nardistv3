@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Article } from './article.entity';
 import { UserMaterial } from './user-material.entity';
 import { ArticleSlot } from './article-slot.entity';
 import { UsersService } from '../users/users.service';
+import { AdminService } from '../admin/admin.service';
 
 @Injectable()
 export class AcademyService {
@@ -16,6 +17,8 @@ export class AcademyService {
     @InjectRepository(ArticleSlot)
     private articleSlotsRepository: Repository<ArticleSlot>,
     private usersService: UsersService,
+    @Inject(forwardRef(() => AdminService))
+    private adminService: AdminService,
   ) {}
 
   async findAll(): Promise<Article[]> {
@@ -67,10 +70,16 @@ export class AcademyService {
   }
 
   async getCourses(userId?: string): Promise<any[]> {
+    // Показываем только верифицированные курсы или курсы администраторов
     const articles = await this.articlesRepository.find({
       where: { type: 'course' },
       order: { createdAt: 'DESC' },
     });
+
+    // Фильтруем: показываем только верифицированные курсы или курсы без authorId (от админов)
+    const visibleCourses = articles.filter(
+      (article) => article.isVerified || !article.authorId
+    );
 
     // Получаем купленные материалы пользователя, если userId передан
     const purchasedArticleIds = userId
@@ -80,7 +89,7 @@ export class AcademyService {
         })).map((um) => um.articleId)
       : [];
 
-    return articles.map((article) => ({
+    return visibleCourses.map((article) => ({
       id: article.id,
       title: article.title,
       author: article.author,
@@ -88,6 +97,7 @@ export class AcademyService {
       purchased: purchasedArticleIds.includes(article.id),
       isPaid: article.isPaid,
       views: article.views,
+      isVerified: article.isVerified,
     }));
   }
 
@@ -161,6 +171,22 @@ export class AcademyService {
     const newBalance = userBalance - price;
     await this.usersService.update(userId, { narCoin: newBalance });
 
+    // Получаем процент роялти из настроек системы
+    const royaltyPercentStr = await this.adminService.getSystemSetting('course_royalty_percent', '20');
+    const royaltyPercentValue = parseInt(royaltyPercentStr) || 20;
+
+    // Вычисляем роялти для автора курса (если курс создан игроком)
+    if (course.authorId && course.authorId !== userId) {
+      const authorRoyalty = Math.floor(price * (royaltyPercentValue / 100));
+      const author = await this.usersService.findOne(course.authorId);
+      if (author) {
+        const authorBalance = Number(author.narCoin);
+        const newAuthorBalance = authorBalance + authorRoyalty;
+        await this.usersService.update(course.authorId, { narCoin: newAuthorBalance });
+      }
+    }
+    // Остальные (100% - royaltyPercent) остаются в экономике проекта
+
     // Сохраняем покупку
     const userMaterial = this.userMaterialsRepository.create({
       userId,
@@ -233,6 +259,43 @@ export class AcademyService {
     await this.articleSlotsRepository.save(slot);
 
     return savedArticle;
+  }
+
+  async createUserCourse(
+    userId: string,
+    courseData: { title: string; description?: string; content: string; price: number },
+  ): Promise<Article> {
+    const user = await this.usersService.findOne(userId);
+
+    // Создаем курс - по умолчанию не верифицирован
+    const course = this.articlesRepository.create({
+      title: courseData.title,
+      content: courseData.content,
+      description: courseData.description,
+      author: user.nickname || user.username || user.telegramId?.toString() || 'Пользователь',
+      authorId: userId,
+      type: 'course',
+      isPaid: courseData.price > 0,
+      price: courseData.price,
+      isVerified: false, // Требует верификации администратором
+    });
+    return this.articlesRepository.save(course);
+  }
+
+  async verifyCourse(courseId: string, verifiedBy: string): Promise<Article> {
+    const course = await this.articlesRepository.findOne({ where: { id: courseId } });
+    if (!course) {
+      throw new NotFoundException('Курс не найден');
+    }
+
+    course.isVerified = true;
+    course.verifiedBy = verifiedBy;
+    course.verifiedAt = new Date();
+    return this.articlesRepository.save(course);
+  }
+
+  async rejectCourse(courseId: string): Promise<void> {
+    await this.articlesRepository.delete(courseId);
   }
 
   async updateUserArticle(

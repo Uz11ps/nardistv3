@@ -18,6 +18,12 @@ export class SkinsController {
     return this.skinsService.getUserSkins(user.id);
   }
 
+  @Get('my/with-durability')
+  @UseGuards(JwtAuthGuard)
+  async getMySkinsWithDurability(@CurrentUser() user: any) {
+    return this.skinsService.getUserSkinsWithDurability(user.id);
+  }
+
   @Get('user/:userId')
   @UseGuards(JwtAuthGuard)
   async getUserSkins(@Param('userId') userId: string) {
@@ -48,6 +54,20 @@ export class SkinsController {
   async purchaseSkin(@CurrentUser() user: any, @Body('skinId') skinId: string) {
     await this.skinsService.purchaseSkin(user.id, skinId);
     return { message: 'Скин куплен' };
+  }
+
+  @Get(':id/repair-cost')
+  @UseGuards(JwtAuthGuard)
+  async getRepairCost(@CurrentUser() user: any, @Param('id') skinId: string) {
+    const cost = await this.skinsService.calculateRepairCost(user.id, skinId);
+    return { cost };
+  }
+
+  @Post(':id/repair')
+  @UseGuards(JwtAuthGuard)
+  async repairSkin(@CurrentUser() user: any, @Param('id') skinId: string) {
+    await this.skinsService.repairSkin(user.id, skinId);
+    return { message: 'Скин отремонтирован' };
   }
 }
 
