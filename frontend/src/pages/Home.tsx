@@ -75,7 +75,7 @@ export default function Home() {
     { icon: '/img/челувек.png', iconColor: '#aaaaaa', title: 'Профиль', path: '/profile' },
     { icon: '/img/шляпа.png', iconColor: '#aaaaaa', title: 'Курсы', path: '/academy' },
     { icon: '/img/город.png', iconColor: '#ffd700', title: 'Город', path: '/city' },
-    { icon: '/img/кланы.png', iconColor: '#ffd700', title: 'Кланы', path: '/clans', disabled: (user?.level || 0) < 20 },
+    { icon: '/img/кланы.png', iconColor: '#ffd700', title: 'Федерации', path: '/clans', disabled: (user?.level || 0) < 10 },
   ]
 
   return (

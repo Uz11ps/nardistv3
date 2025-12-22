@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import apiClient, { getImageUrl } from '../api/client'
 import BackgammonBoard from '../components/BackgammonBoard'
@@ -97,6 +97,8 @@ export default function Admin() {
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationUserId, setNotificationUserId] = useState('')
   const [sendToAll, setSendToAll] = useState(false)
+  const [notificationImage, setNotificationImage] = useState<File | null>(null)
+  const notificationImageInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     checkAuth()
@@ -271,14 +273,28 @@ export default function Admin() {
 
   const sendNotification = async () => {
     try {
-      await apiClient.post('/admin/notifications', {
-        message: notificationMessage,
-        userId: sendToAll ? undefined : notificationUserId,
-        all: sendToAll,
+      const formData = new FormData()
+      formData.append('message', notificationMessage)
+      if (!sendToAll && notificationUserId) {
+        formData.append('userId', notificationUserId)
+      }
+      formData.append('all', sendToAll.toString())
+      if (notificationImage) {
+        formData.append('image', notificationImage)
+      }
+
+      await apiClient.post('/admin/notifications', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       })
       alert('Уведомление отправлено!')
       setNotificationMessage('')
       setNotificationUserId('')
+      setNotificationImage(null)
+      if (notificationImageInputRef.current) {
+        notificationImageInputRef.current.value = ''
+      }
     } catch (error: any) {
       alert('Ошибка отправки: ' + (error.response?.data?.message || error.message))
     }
@@ -390,7 +406,7 @@ export default function Admin() {
           className={`admin-tab-btn ${activeTab === 'clans' ? 'active' : ''}`}
           onClick={() => setActiveTab('clans')}
         >
-          Кланы
+          Федерации
         </button>
         <button
           className={`admin-tab-btn ${activeTab === 'policy' ? 'active' : ''}`}
@@ -844,6 +860,33 @@ export default function Admin() {
                 onChange={(e) => setNotificationMessage(e.target.value)}
                 rows={5}
               />
+              <div style={{ marginTop: '12px', marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#ccc' }}>
+                  Изображение (опционально):
+                </label>
+                <input
+                  ref={notificationImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    setNotificationImage(file || null)
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: '#1a1a1a',
+                    border: '1px solid #3a3a3a',
+                    borderRadius: '8px',
+                    color: '#fff',
+                  }}
+                />
+                {notificationImage && (
+                  <div style={{ marginTop: '8px', fontSize: '14px', color: '#aaa' }}>
+                    Выбрано: {notificationImage.name}
+                  </div>
+                )}
+              </div>
               <div className="notification-options">
                 <label>
                   <input
@@ -1936,7 +1979,7 @@ export default function Admin() {
 
         {activeTab === 'clans' && (
           <div className="admin-clans">
-            <h3>Управление кланами</h3>
+            <h3>Управление федерациями</h3>
             <div className="admin-filters">
               <input
                 type="text"
@@ -1991,9 +2034,9 @@ export default function Admin() {
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={() => {
-                              if (confirm(`Удалить клан "${clan.name}"? Это удалит клан и всех его участников!`)) {
+                              if (confirm(`Удалить федерацию "${clan.name}"? Это удалит федерацию и всех ее участников!`)) {
                                 apiClient.delete(`/admin/clans/${clan.id}`).then(() => {
-                                  alert('Клан удален')
+                                  alert('Федерация удалена')
                                   loadStats()
                                 }).catch((err) => {
                                   alert('Ошибка: ' + (err.response?.data?.message || err.message))
@@ -2012,7 +2055,7 @@ export default function Admin() {
             </div>
             {selectedUser && selectedUser.type === 'clan' && (
               <div className="edit-form">
-                <h3>Редактирование клана: {selectedUser.name}</h3>
+                <h3>Редактирование федерации: {selectedUser.name}</h3>
                 <div className="form-group">
                   <label>Уровень:</label>
                   <input
@@ -2064,7 +2107,7 @@ export default function Admin() {
                             weeklyIncome: parseInt((document.getElementById('edit-clan-income') as HTMLInputElement).value),
                             description: (document.getElementById('edit-clan-description') as HTMLTextAreaElement).value,
                           })
-                          alert('Клан обновлен')
+                          alert('Федерация обновлена')
                           loadStats()
                           setSelectedUser(null)
                         } catch (err: any) {
@@ -2078,7 +2121,7 @@ export default function Admin() {
                   </div>
                   {selectedUser.members && selectedUser.members.length > 0 && (
                     <div className="mt-3">
-                      <h4>Участники клана:</h4>
+                      <h4>Участники федерации:</h4>
                       <table>
                         <thead>
                           <tr>
@@ -2096,7 +2139,7 @@ export default function Admin() {
                                 <button
                                   className="btn btn-danger btn-sm"
                                   onClick={() => {
-                                    if (confirm('Удалить участника из клана?')) {
+                                    if (confirm('Удалить участника из федерации?')) {
                                       apiClient.delete(`/admin/clans/${selectedUser.id}/members/${member.userId}`).then(() => {
                                         alert('Участник удален')
                                         loadStats()
@@ -2309,7 +2352,7 @@ export default function Admin() {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовый доход в день (для кланов)</label>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовый доход в день (для федераций)</label>
                     <input
                       type="number"
                       value={newDistrict.baseIncomePerDay}

@@ -29,14 +29,16 @@ export default function Game() {
   const [opponent, setOpponent] = useState<any>(null)
   const [score, setScore] = useState({ player1: 0, player2: 0 })
   const [gameStatus, setGameStatus] = useState<string>('waiting')
-  const [player1Timer, setPlayer1Timer] = useState<number>(0)
-  const [player2Timer, setPlayer2Timer] = useState<number>(0)
+  const [player1Timer, setPlayer1Timer] = useState<number>(30)
+  const [player2Timer, setPlayer2Timer] = useState<number>(30)
+  const [moveTimer, setMoveTimer] = useState<number>(30) // Таймер на ход (30 секунд)
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
   const [player2Ready, setPlayer2Ready] = useState<boolean>(false)
   const [myReady, setMyReady] = useState<boolean>(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const moveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const mode = searchParams.get('mode')
   const isBotGame = mode === 'bot'
@@ -57,6 +59,9 @@ export default function Game() {
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current)
+      }
+      if (moveTimerRef.current) {
+        clearInterval(moveTimerRef.current)
       }
       const socket = getSocket()
       if (socket) {
@@ -81,6 +86,66 @@ export default function Game() {
       loadPlayerSkins(gameInfo.player1Id, gameInfo.player2Id)
     }
   }, [gameInfo?.player1Id, gameInfo?.player2Id])
+
+  // Таймер на ход (30 секунд)
+  useEffect(() => {
+    // Очищаем предыдущий таймер
+    if (moveTimerRef.current) {
+      clearInterval(moveTimerRef.current)
+      moveTimerRef.current = null
+    }
+
+    // Если это мой ход и игра идет, запускаем таймер
+    if (gameState?.canMove && gameStatus === 'in_progress' && gameState?.dice && !isBotGame) {
+      setMoveTimer(30) // Устанавливаем таймер на 30 секунд
+      
+      moveTimerRef.current = setInterval(() => {
+        setMoveTimer((prev) => {
+          if (prev <= 1) {
+            // Таймер закончился - делаем автолуз
+            handleAutoMove()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      // Не мой ход или игра не идет - сбрасываем таймер
+      setMoveTimer(30)
+    }
+
+    return () => {
+      if (moveTimerRef.current) {
+        clearInterval(moveTimerRef.current)
+        moveTimerRef.current = null
+      }
+    }
+  }, [gameState?.canMove, gameStatus, gameState?.dice, isBotGame])
+
+  // Функция автолуза
+  const handleAutoMove = async () => {
+    if (!gameId || !gameState?.canMove || !gameState?.dice) return
+
+    try {
+      // Получаем возможные ходы
+      const response = await apiClient.get(`/games/${gameId}/possible-moves`)
+      const possibleMoves = response.data?.moves || []
+      
+      if (possibleMoves.length > 0) {
+        // Берем первый доступный ход
+        const firstMove = possibleMoves[0]
+        if (firstMove.length > 0) {
+          const move = firstMove[0]
+          handleMove(move.from, move.to, move.die)
+        }
+      } else {
+        // Если нет доступных ходов, пропускаем ход (это может быть ситуация когда все ходы заблокированы)
+        console.log('⚠️ Нет доступных ходов для автолуза')
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при автолузе:', error)
+    }
+  }
   
   // playerSkins обновлены
 
@@ -239,6 +304,11 @@ export default function Game() {
       setGameStatus(newStatus)
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
       
+      // Сбрасываем таймер при смене хода
+      if (isMyTurnNow && !wasMyTurn) {
+        setMoveTimer(30)
+      }
+
       // Автоматически бросаем кубики когда начинается ход игрока и нет кубиков
       if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && !isBotGame) {
         console.log('🎲 Автоматически бросаем кубики - начался мой ход')
@@ -302,6 +372,11 @@ export default function Game() {
       setGameStatus(data.status || 'in_progress')
       console.log('🔄 Обновляем состояние игры после хода')
       
+      // Сбрасываем таймер при смене хода
+      if (isMyTurnNow && !wasMyTurn) {
+        setMoveTimer(30)
+      }
+
       // Автоматически бросаем кубики когда начинается ход игрока и нет кубиков
       if (data.status === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && !isBotGame) {
         console.log('🎲 Автоматически бросаем кубики - начался мой ход после хода соперника')
@@ -449,6 +524,9 @@ export default function Game() {
     }
 
     try {
+      // Сбрасываем таймер при выполнении хода
+      setMoveTimer(30)
+      
       // Собираем все ходы в массив (пока один ход)
       const moves = [{ from, to, die }]
       console.log('📤 Отправляем ход на сервер:', { gameId, moves })
@@ -720,12 +798,23 @@ export default function Game() {
         </div>
       )}
 
-      {/* Кнопка подтверждения хода (кубики бросаются автоматически) */}
+      {/* Таймер на ход и кнопка подтверждения */}
       {(gameStatus === 'in_progress' && isMyTurn && gameState.dice && (
         (Array.isArray(gameState.dice) && gameState.dice.length >= 2) ||
         (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
       )) && (
         <div className="game-confirm-section">
+          {moveTimer > 0 && (
+            <div className="game-move-timer" style={{ 
+              textAlign: 'center', 
+              marginBottom: '12px', 
+              fontSize: '18px', 
+              fontWeight: 'bold',
+              color: moveTimer <= 10 ? '#ff3333' : '#ffffff'
+            }}>
+              ⏱️ Время на ход: {moveTimer}с
+            </div>
+          )}
           <Button 
             variant="primary" 
             fullWidth 

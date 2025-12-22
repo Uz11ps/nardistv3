@@ -23,13 +23,13 @@ export default function Clans() {
     try {
       const response = await apiClient.get('/clans/my')
       if (response.data?.clan) {
-        // У пользователя есть клан - перенаправляем на панель управления
+        // У пользователя есть федерация - перенаправляем на панель управления
         navigate(`/clans/${response.data.clan.id}/manage`)
         return
       }
     } catch (error) {
-      // Пользователь не в клане - показываем обычный интерфейс
-      console.log('User has no clan')
+      // Пользователь не в федерации - показываем обычный интерфейс
+      console.log('User has no federation')
     } finally {
       setLoading(false)
     }
@@ -39,14 +39,14 @@ export default function Clans() {
     return null
   }
 
-  if ((user?.level || 0) < 20) {
+  if ((user?.level || 0) < 10) {
     return (
-      <PageLayout title="Кланы" showBack={true}>
+      <PageLayout title="Федерации" showBack={true}>
         <div className="clans-unavailable">
-          <img src="/img/кланы.png" alt="Clans" className="clans-unavailable-icon" />
-          <h2 className="clans-unavailable-title">Кланы недоступны</h2>
+          <img src="/img/кланы.png" alt="Federations" className="clans-unavailable-icon" />
+          <h2 className="clans-unavailable-title">Федерации недоступны</h2>
           <p className="clans-unavailable-text">
-            Кланы открываются с 20 уровня, прокачайся, играй в турнирах и зарабатывай очки
+            Федерации открываются с 10 уровня, прокачайся, играй в турнирах и зарабатывай очки
           </p>
           <button className="clans-play-button" onClick={() => navigate('/')}>
             Играть
@@ -58,14 +58,14 @@ export default function Clans() {
 
   if (loading) {
     return (
-      <PageLayout title="Кланы" showBack={true}>
+      <PageLayout title="Федерации" showBack={true}>
         <div className="clans-loading">Загрузка...</div>
       </PageLayout>
     )
   }
 
   return (
-    <PageLayout title="Кланы" showBack={true}>
+    <PageLayout title="Федерации" showBack={true}>
       <div className="clans-content">
         {/* Профиль пользователя */}
         <div className="clans-profile">
@@ -85,10 +85,10 @@ export default function Clans() {
         {/* Кнопки действий */}
         <div className="clans-actions">
           <button className="clans-action-button clans-action-create" onClick={() => navigate('/clans/create')}>
-            Создать клан
+            Создать федерацию
           </button>
           <button className="clans-action-button clans-action-find" onClick={() => navigate('/clans/search')}>
-            Найти клан
+            Найти федерацию
           </button>
         </div>
       </div>

@@ -13,7 +13,7 @@ export default function ClanCreate() {
     e.preventDefault()
     
     if (!form.name.trim()) {
-      alert('Введите название клана')
+      alert('Введите название федерации')
       return
     }
 
@@ -23,10 +23,10 @@ export default function ClanCreate() {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
       })
-      alert('Клан успешно создан!')
+      alert('Федерация успешно создана!')
       navigate(`/clans/${response.data.id}/manage`)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при создании клана')
+      alert(error.response?.data?.message || 'Ошибка при создании федерации')
       console.error('Failed to create clan:', error)
     } finally {
       setLoading(false)
@@ -42,7 +42,7 @@ export default function ClanCreate() {
         </div>
 
         {/* Заголовок */}
-        <div className="clan-create-title">Создай клан</div>
+        <div className="clan-create-title">Создай федерацию</div>
         <div className="clan-create-subtitle">
           и начни свой путь к господству в городе
         </div>
