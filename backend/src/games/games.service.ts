@@ -744,29 +744,45 @@ export class GamesService {
       }
     }
     
-    // Обновление квестов при завершении игры
-    if (game.winnerId) {
-      try {
+    // Обновление квестов при завершении игры - ВСЕГДА вызывается при завершении
+    try {
+      if (game.winnerId) {
         // Для игр с игроками обновляем квесты для обоих
         if (game.type === GameType.VS_PLAYER && loserId) {
+          this.logger.log(`📋 Обновление квестов для VS_PLAYER игры: winner=${game.winnerId}, loser=${loserId}`);
           await this.questsService.updateProgress(game.winnerId, QuestTarget.PLAY_MATCHES, 1);
           await this.questsService.updateProgress(loserId, QuestTarget.PLAY_MATCHES, 1);
           // Обновляем квесты на серию побед для победителя
           await this.questsService.updateProgress(game.winnerId, QuestTarget.WIN_STREAK, 1);
-          this.logger.log(`📋 Квесты обновлены для игроков ${game.winnerId} и ${loserId}`);
+          this.logger.log(`✅ Квесты обновлены для игроков ${game.winnerId} и ${loserId}`);
         }
         // Для игр с ботом обновляем квесты только для игрока
         else if (game.type === GameType.VS_BOT) {
-          await this.questsService.updateProgress(game.winnerId, QuestTarget.PLAY_MATCHES, 1);
+          this.logger.log(`📋 Обновление квестов для VS_BOT игры: player=${game.winnerId}`);
+          // Всегда обновляем play_matches для игрока (независимо от результата)
+          await this.questsService.updateProgress(game.player1Id, QuestTarget.PLAY_MATCHES, 1);
           // Если игрок победил бота, засчитываем серию побед
           if (game.winnerId === game.player1Id) {
             await this.questsService.updateProgress(game.winnerId, QuestTarget.WIN_STREAK, 1);
+            this.logger.log(`✅ Квесты обновлены для игрока ${game.winnerId} (победа над ботом)`);
+          } else {
+            this.logger.log(`✅ Квесты обновлены для игрока ${game.player1Id} (поражение от бота, win_streak не обновлен)`);
           }
-          this.logger.log(`📋 Квесты обновлены для игрока ${game.winnerId} (игра с ботом)`);
         }
-      } catch (error) {
-        this.logger.error(`❌ Ошибка при обновлении квестов: ${error.message}`, error.stack);
+        // Для турнирных игр тоже обновляем квесты
+        else if (game.type === GameType.TOURNAMENT && loserId) {
+          this.logger.log(`📋 Обновление квестов для TOURNAMENT игры: winner=${game.winnerId}, loser=${loserId}`);
+          await this.questsService.updateProgress(game.winnerId, QuestTarget.PLAY_MATCHES, 1);
+          await this.questsService.updateProgress(loserId, QuestTarget.PLAY_MATCHES, 1);
+          await this.questsService.updateProgress(game.winnerId, QuestTarget.WIN_STREAK, 1);
+          this.logger.log(`✅ Квесты обновлены для турнирной игры`);
+        }
+      } else {
+        this.logger.warn(`⚠️ Игра ${game.id} завершена, но нет winnerId - квесты не обновлены`);
       }
+    } catch (error) {
+      this.logger.error(`❌ Ошибка при обновлении квестов: ${error.message}`, error.stack);
+      // Не прерываем выполнение, просто логируем ошибку
     }
 
     // Обновление рейтингов (если RatingsService подключен)
