@@ -85,6 +85,8 @@ export class SubscriptionService {
       // Списываем средства
       const newBalance = userBalance - requiredNar;
       await this.usersService.update(userId, { narCoin: newBalance });
+      // Обновляем локальную переменную user после списания
+      user.narCoin = BigInt(newBalance);
     } else if (paymentMethod === 'usd') {
       // Покупка за доллары (50$)
       // TODO: Интеграция с платежной системой для обработки платежа в долларах
@@ -95,7 +97,6 @@ export class SubscriptionService {
     }
 
     // Активируем автобилд
-    const user = await this.usersService.findOne(userId);
     user.hasCityAutobuild = true;
     await this.usersService['usersRepository'].save(user);
   }
