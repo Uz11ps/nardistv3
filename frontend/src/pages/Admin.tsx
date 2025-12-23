@@ -35,6 +35,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy'>('stats')
   const [tournaments, setTournaments] = useState<any[]>([])
   const [articles, setArticles] = useState<any[]>([])
+  const [selectedArticle, setSelectedArticle] = useState<any>(null)
   const [cityRewards, setCityRewards] = useState<any>(null)
   const [districts, setDistricts] = useState<any[]>([])
   const [policies, setPolicies] = useState<{ privacy?: string; agreement?: string }>({})
@@ -93,7 +94,7 @@ export default function Admin() {
     maxParticipants: 16, 
     entryFee: 0 
   })
-  const [newArticle, setNewArticle] = useState({ title: '', content: '', type: 'article', isPaid: false, price: 0 })
+  const [newArticle, setNewArticle] = useState({ title: '', content: '', type: 'course', isPaid: false, price: 0 })
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -1550,14 +1551,19 @@ export default function Admin() {
         {activeTab === 'academy' && (
           <div className="admin-academy">
             <div className="create-form">
-              <h3>Создать материал</h3>
+              <h3>Создать курс</h3>
+              <p style={{ color: '#999', fontSize: '14px', marginBottom: '20px' }}>
+                Курсы создаются только администраторами. Для курсов можно добавить тестовые задания.
+                <br />
+                <strong>Статьи создаются игроками</strong> и проходят верификацию в разделе ниже.
+              </p>
               <div className="form-group">
-                <label>Название</label>
+                <label>Название курса</label>
                 <input
                   type="text"
                   value={newArticle.title}
                   onChange={(e) => setNewArticle({ ...newArticle, title: e.target.value })}
-                  placeholder="Название статьи/урока"
+                  placeholder="Название курса"
                 />
               </div>
               <div className="form-group">
@@ -1566,9 +1572,7 @@ export default function Admin() {
                   value={newArticle.type}
                   onChange={(e) => setNewArticle({ ...newArticle, type: e.target.value })}
                 >
-                  <option value="article">Статья</option>
-                  <option value="course">Курс</option>
-                  <option value="video">Видео</option>
+                  <option value="course">Курс (только для админов)</option>
                 </select>
               </div>
               <div className="form-group">
@@ -1605,26 +1609,36 @@ export default function Admin() {
                 try {
                   await apiClient.post('/admin/academy/create', {
                     ...newArticle,
-                    authorId: 'admin',
+                    type: 'course', // Курсы создаются только админами
+                    authorId: null, // null означает, что это курс от админа
+                    isVerified: true, // Курсы от админов сразу верифицированы
                   })
-                  alert('Материал создан!')
-                  setNewArticle({ title: '', content: '', type: 'article', isPaid: false, price: 0 })
+                  alert('Курс создан!')
+                  setNewArticle({ title: '', content: '', type: 'course', isPaid: false, price: 0 })
+                  // Перезагружаем данные
+                  const response = await apiClient.get('/admin/academy')
+                  setArticles(response.data || [])
                   loadStats()
                 } catch (error: any) {
                   alert('Ошибка: ' + (error.response?.data?.message || error.message))
                 }
-              }}>Создать материал</button>
+              }}>Создать курс</button>
             </div>
 
             <div className="articles-list">
-              <h3>Существующие материалы</h3>
+              <h3>Все материалы</h3>
+              <p style={{ color: '#999', fontSize: '14px', marginBottom: '20px' }}>
+                <strong>Курсы</strong> - создаются администраторами, сразу опубликованы. <strong>Статьи</strong> - создаются игроками, требуют верификации.
+              </p>
               <table>
                 <thead>
                   <tr>
                     <th>Название</th>
                     <th>Тип</th>
+                    <th>Автор</th>
                     <th>Платный</th>
                     <th>Цена</th>
+                    <th>Статус</th>
                     <th>Действия</th>
                   </tr>
                 </thead>
@@ -1632,21 +1646,274 @@ export default function Admin() {
                   {articles.map((a) => (
                     <tr key={a.id}>
                       <td>{a.title}</td>
-                      <td>{a.type}</td>
+                      <td>{a.type === 'course' ? 'Курс' : a.type === 'article' ? 'Статья' : a.type}</td>
+                      <td>{a.author || 'Администратор'}</td>
                       <td>{a.isPaid ? 'Да' : 'Нет'}</td>
-                      <td>{a.price || 0} NAR</td>
+                      <td>{Number(a.price || 0).toLocaleString()} NAR</td>
                       <td>
-                        <button onClick={() => {
-                          if (confirm('Удалить материал?')) {
-                            apiClient.delete(`/admin/academy/${a.id}`).then(() => loadStats())
-                          }
-                        }}>Удалить</button>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          background: a.type === 'course' 
+                            ? '#2196F3' // Курсы от админов - синий
+                            : a.isVerified 
+                              ? '#4CAF50' // Статьи верифицированные - зеленый
+                              : '#FF9800', // Статьи на проверке - оранжевый
+                          color: '#FFF',
+                        }}>
+                          {a.type === 'course' 
+                            ? '📚 Курс (от админа)' 
+                            : a.isVerified 
+                              ? '✓ Статья верифицирована' 
+                              : '⏳ Статья на проверке'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button 
+                            onClick={() => setSelectedArticle(a)}
+                            style={{
+                              padding: '4px 8px',
+                              background: '#4a90e2',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                            }}
+                          >
+                            Просмотр
+                          </button>
+                          {a.type === 'article' && a.authorId && !a.isVerified && (
+                            <button 
+                              onClick={async () => {
+                                try {
+                                  await apiClient.post(`/admin/courses/${a.id}/verify`)
+                                  alert('Статья верифицирована!')
+                                  loadStats()
+                                } catch (error: any) {
+                                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                                }
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                background: '#4CAF50',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                              }}
+                            >
+                              Верифицировать статью
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => {
+                              if (confirm('Удалить материал?')) {
+                                apiClient.delete(`/admin/academy/${a.id}`).then(() => loadStats())
+                              }
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              background: '#f44336',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+            {/* Модальное окно просмотра материала */}
+            {selectedArticle && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  padding: '20px',
+                }}
+                onClick={() => setSelectedArticle(null)}
+              >
+                <div
+                  style={{
+                    background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    maxWidth: '800px',
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    border: '1px solid #3a3a3a',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                    animation: 'fadeIn 0.3s ease-out',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h2 style={{ margin: 0, color: '#FFF', fontSize: '24px' }}>{selectedArticle.title}</h2>
+                    <button
+                      onClick={() => setSelectedArticle(null)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#FFF',
+                        fontSize: '32px',
+                        cursor: 'pointer',
+                        padding: 0,
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      background: '#3a3a3a',
+                      color: '#FFF',
+                    }}>
+                      Тип: {selectedArticle.type === 'course' ? 'Курс' : selectedArticle.type === 'article' ? 'Статья' : selectedArticle.type}
+                    </span>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      background: '#3a3a3a',
+                      color: '#FFF',
+                    }}>
+                      Автор: {selectedArticle.author || 'Администратор'}
+                    </span>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      background: selectedArticle.type === 'course' 
+                        ? '#2196F3' 
+                        : selectedArticle.isVerified 
+                          ? '#4CAF50' 
+                          : '#FF9800',
+                      color: '#FFF',
+                    }}>
+                      {selectedArticle.type === 'course' 
+                        ? '📚 Курс (от админа)' 
+                        : selectedArticle.isVerified 
+                          ? '✓ Статья верифицирована' 
+                          : '⏳ Статья на проверке'}
+                    </span>
+                    {selectedArticle.isPaid && (
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        background: '#FFD700',
+                        color: '#000',
+                      }}>
+                        Цена: {Number(selectedArticle.price || 0).toLocaleString()} NAR
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <h3 style={{ color: '#FFF', fontSize: '18px', marginBottom: '12px' }}>Содержание:</h3>
+                    <div
+                      style={{
+                        background: '#2a2a2a',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        color: '#B6B6B6',
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        maxHeight: '400px',
+                        overflowY: 'auto',
+                        border: '1px solid #3a3a3a',
+                      }}
+                    >
+                      {selectedArticle.content || 'Содержание отсутствует'}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    {selectedArticle.type === 'article' && selectedArticle.authorId && !selectedArticle.isVerified && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await apiClient.post(`/admin/courses/${selectedArticle.id}/verify`)
+                            alert('Статья верифицирована!')
+                            setSelectedArticle(null)
+                            loadStats()
+                          } catch (error: any) {
+                            alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                          }
+                        }}
+                        style={{
+                          padding: '10px 20px',
+                          background: 'linear-gradient(180deg, #4CAF50 -144.23%, #2E7D32 105.77%)',
+                          color: '#FFF',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          transition: 'transform 0.2s',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        Верифицировать статью
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setSelectedArticle(null)}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#3a3a3a',
+                        color: '#FFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        transition: 'background 0.2s',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#4a4a4a'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#3a3a3a'}
+                    >
+                      Закрыть
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -121,18 +121,26 @@ export default function Academy() {
     try {
       setPublishing(true)
       if (publishForm.type === 'course') {
-        // Создаем курс через новый endpoint
-        await apiClient.post('/academy/courses/create', {
+        // Курсы могут создавать только админы
+        if (!user?.isAdmin) {
+          alert('Курсы могут создавать только администраторы!')
+          return
+        }
+        // Создаем курс через админский endpoint
+        await apiClient.post('/admin/academy/create', {
           title: publishForm.title,
-          description: publishForm.description,
           content: publishForm.content,
+          type: 'course',
+          isPaid: publishForm.price > 0,
           price: publishForm.price,
+          authorId: null, // null означает, что это курс от админа
+          isVerified: true, // Курсы от админов сразу верифицированы
         })
-        alert('Курс создан и отправлен на верификацию администратором!')
+        alert('Курс создан!')
       } else {
-        // Старая логика для статей
+        // Статьи создают игроки - требуют верификации
         await apiClient.post('/academy/publish', publishForm)
-        alert('Материал успешно опубликован!')
+        alert('Статья отправлена на верификацию администратором!')
       }
       navigate('/academy')
     } catch (error: any) {
@@ -215,22 +223,39 @@ export default function Academy() {
 
           <div className="academy-publish-field">
             <label className="academy-publish-label">Тип</label>
-            <div className="academy-publish-type-buttons">
-              <button
-                type="button"
-                className={`academy-publish-type-button ${publishForm.type === 'article' ? 'active' : ''}`}
-                onClick={() => setPublishForm({ ...publishForm, type: 'article' })}
-              >
-                Статья
-              </button>
-              <button
-                type="button"
-                className={`academy-publish-type-button ${publishForm.type === 'course' ? 'active' : ''}`}
-                onClick={() => setPublishForm({ ...publishForm, type: 'course' })}
-              >
-                Курс
-              </button>
-            </div>
+            {user?.isAdmin ? (
+              <div className="academy-publish-type-buttons">
+                <button
+                  type="button"
+                  className={`academy-publish-type-button ${publishForm.type === 'article' ? 'active' : ''}`}
+                  onClick={() => setPublishForm({ ...publishForm, type: 'article' })}
+                >
+                  Статья
+                </button>
+                <button
+                  type="button"
+                  className={`academy-publish-type-button ${publishForm.type === 'course' ? 'active' : ''}`}
+                  onClick={() => setPublishForm({ ...publishForm, type: 'course' })}
+                >
+                  Курс (только для админов)
+                </button>
+              </div>
+            ) : (
+              <div style={{ 
+                padding: '12px', 
+                background: '#2a2a2a', 
+                borderRadius: '8px', 
+                color: '#B6B6B6',
+                fontSize: '14px'
+              }}>
+                Игроки могут создавать только <strong style={{ color: '#FFF' }}>статьи</strong>. 
+                Статьи проходят верификацию администратором перед публикацией.
+                <br />
+                <small style={{ color: '#999', fontSize: '12px' }}>
+                  Курсы создаются только администраторами в админ-панели.
+                </small>
+              </div>
+            )}
           </div>
 
           <div className="academy-publish-field">
@@ -315,9 +340,12 @@ export default function Academy() {
               )}
             </div>
           ))}
-          <button className="academy-publish-button" onClick={() => navigate('/academy/publish?type=course')}>
-            Написать свой курс
-          </button>
+          {/* Игроки не могут создавать курсы - только админы */}
+          {user?.isAdmin && (
+            <button className="academy-publish-button" onClick={() => navigate('/academy/publish?type=course')}>
+              Создать курс (только для админов)
+            </button>
+          )}
         </div>
       )}
 

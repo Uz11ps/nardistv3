@@ -515,6 +515,11 @@ export class AdminService implements OnModuleInit {
   }
 
   async createArticle(data: any) {
+    // Если это курс от админа, устанавливаем authorId в null и isVerified в true
+    if (data.type === 'course') {
+      data.authorId = null; // null означает, что это курс от админа
+      data.isVerified = true; // Курсы от админов сразу верифицированы
+    }
     return this.academyService.create(data);
   }
 
