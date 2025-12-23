@@ -238,18 +238,39 @@ export class AuthService {
   }
 
   async validateUser(payload: any) {
-    const user = await this.usersService.findOne(payload.sub);
-    if (!user) {
+    try {
+      console.log('🔍 Валидация пользователя:', { sub: payload.sub, telegramId: payload.telegramId, username: payload.username });
+      const user = await this.usersService.findOne(payload.sub);
+      if (!user) {
+        console.error('❌ Пользователь не найден при валидации:', payload.sub);
+        return null;
+      }
+      
+      console.log('✅ Пользователь найден при валидации:', { userId: user.id, username: user.username, isGuest: user.isGuest });
+      
+      // Проверяем, забанен ли пользователь
+      if (user.isBanned) {
+        const reason = user.banReason || 'Нарушение правил';
+        throw new UnauthorizedException(`Вы были забанены по причине: ${reason}`);
+      }
+      
+      return user;
+    } catch (error) {
+      console.error('❌ Ошибка при валидации пользователя:', error);
+      // Если пользователь не найден, но это гость, попробуем найти по telegramId
+      if (payload.telegramId && payload.telegramId.startsWith('guest_')) {
+        try {
+          const userByTelegramId = await this.usersService.findByTelegramId(payload.telegramId);
+          if (userByTelegramId) {
+            console.log('✅ Пользователь найден по telegramId при валидации:', { userId: userByTelegramId.id });
+            return userByTelegramId;
+          }
+        } catch (findError) {
+          console.error('❌ Ошибка при поиске пользователя по telegramId:', findError);
+        }
+      }
       return null;
     }
-    
-    // Проверяем, забанен ли пользователь
-    if (user.isBanned) {
-      const reason = user.banReason || 'Нарушение правил';
-      throw new UnauthorizedException(`Вы были забанены по причине: ${reason}`);
-    }
-    
-    return user;
   }
 }
 
