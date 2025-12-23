@@ -1331,28 +1331,29 @@ export class AdminService implements OnModuleInit {
         throw new BadRequestException('Некорректное значение NAR-coin');
       }
       
-      const updateData: any = { narCoin: BigInt(Math.max(0, narCoin)) };
+      const user = await this.usersService.findOne(userId);
+      user.narCoin = BigInt(Math.max(0, narCoin));
       
       if (xp !== undefined && xp !== null) {
-        // Конвертируем XP в число (не BigInt, чтобы usersService.update правильно обработал)
+        // Конвертируем XP в число
         const xpValue = typeof xp === 'string' ? parseInt(xp, 10) : Number(xp);
         if (isNaN(xpValue)) {
           throw new BadRequestException('Некорректное значение XP');
         }
-        // Передаем как число, чтобы usersService.update правильно определил изменение
-        updateData.xp = Math.max(0, xpValue);
+        // Обновляем XP
+        user.xp = BigInt(Math.max(0, xpValue));
+        
+        // Синхронизируем уровень на основе нового XP
+        const totalXP = Number(user.xp);
+        const correctLevel = this.getLevelFromTotalXP(totalXP);
+        user.level = Math.max(1, correctLevel);
       }
       
-      // Обновляем баланс и XP (синхронизация уровня происходит автоматически в usersService.update)
-      const updatedUser = await this.usersService.update(userId, updateData);
+      // Сохраняем изменения
+      const savedUser = await this.usersRepository.save(user);
+      this.logger.log(`✅ Обновлен баланс пользователя ${userId}: NAR=${narCoin}, XP=${xp || 'не изменен'}, Level=${savedUser.level}`);
       
-      // Убеждаемся, что уровень синхронизирован (дополнительная проверка)
-      if (xp !== undefined && xp !== null) {
-        await this.progressService.syncLevelFromXP(userId);
-        return this.usersService.findOne(userId);
-      }
-      
-      return updatedUser;
+      return savedUser;
     } catch (error) {
       this.logger.error(`Error updating balance for user ${userId}:`, error);
       throw new BadRequestException(`Ошибка при обновлении баланса: ${error.message}`);
@@ -1386,14 +1387,21 @@ export class AdminService implements OnModuleInit {
       }
       
       const user = await this.usersService.findOne(userId);
-      const finalLevel = Math.max(1, Math.min(50, Math.floor(level))); // Ограничиваем от 1 до 50
+      const finalLevel = Math.max(1, Math.min(50, Math.floor(Number(level)))); // Ограничиваем от 1 до 50
       
       // При установке уровня вручную, синхронизируем XP с уровнем
       const totalXP = this.getTotalXPForLevel(finalLevel);
+      if (isNaN(totalXP) || totalXP < 0) {
+        throw new BadRequestException(`Ошибка расчета XP для уровня ${finalLevel}`);
+      }
+      
       user.level = finalLevel;
       user.xp = BigInt(Math.max(0, totalXP));
       
-      return this.usersRepository.save(user);
+      const savedUser = await this.usersRepository.save(user);
+      this.logger.log(`✅ Установлен уровень пользователя ${userId}: Level=${finalLevel}, XP=${totalXP}`);
+      
+      return savedUser;
     } catch (error) {
       this.logger.error(`Error setting level for user ${userId}:`, error);
       throw new BadRequestException(`Ошибка при установке уровня: ${error.message}`);
