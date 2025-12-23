@@ -35,7 +35,6 @@ export default function Game() {
   const [overtimeTimer, setOvertimeTimer] = useState<number>(60) // Овертайм (1 минута)
   const [isInOvertime, setIsInOvertime] = useState<boolean>(false) // Флаг овертайма
   const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
-  const [showRulesModal, setShowRulesModal] = useState<boolean>(false) // Модальное окно правил
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
@@ -925,17 +924,6 @@ export default function Game() {
         </div>
       )}
 
-      {/* Кнопка правил */}
-      <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 1000 }}>
-        <Button 
-          variant="secondary" 
-          onClick={() => setShowRulesModal(true)}
-          style={{ padding: '8px 16px', fontSize: '14px' }}
-        >
-          📖 Правила
-        </Button>
-      </div>
-
       {/* Модальное окно выхода */}
       {showExitModal && (
         <div className="modal-overlay" onClick={handleCancelExit}>
@@ -962,39 +950,6 @@ export default function Game() {
         </div>
       )}
 
-      {/* Модальное окно правил */}
-      {showRulesModal && (
-        <div className="modal-overlay" onClick={() => setShowRulesModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <h2 style={{ marginBottom: '20px' }}>Правила игры в длинные нарды</h2>
-            <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
-              <h3 style={{ marginTop: '20px', marginBottom: '10px' }}>1. Общие положения</h3>
-              <p>Играют двое. Игра идет на специальной доске, разделенной на две половины (левую и правую). Количество шашек на доске по 15 у каждого игрока. Количество зар (кубиков) — 2. Игроки по очереди выбрасывают зары (игральные кости).</p>
-              
-              <h3 style={{ marginTop: '20px', marginBottom: '10px' }}>2. Смысл игры</h3>
-              <p>Игрок должен пройти всеми шашками полный круг (против часовой стрелки), зайти ими в «дом» и «выбросить» их раньше, чем это сделает противник. «Домом» для каждого игрока считается последняя четверть игрового поля — «дом белых» (1-6) и «дом чёрных» (13-18).</p>
-              
-              <h3 style={{ marginTop: '20px', marginBottom: '10px' }}>3. Розыгрыш</h3>
-              <p>Игрок кидает одновременно два зара (кубика). После броска игрок передвигает любую из своих шашек на число лунок, равное выпавшему числу одного из зар, а затем одну любую шашку на число лунок, равное выпавшему числу другого зара.</p>
-              <p>Если на обоих зарах выпадает одинаковое количество очков (дубль, гош, куш), тогда игрок играет так, как будто кинул 4 зары и может сделать 4 хода.</p>
-              <p>Запрещено выставлять блок (заграждение; мост) из шести шашек, если впереди этого блока нет шашки соперника.</p>
-              
-              <h3 style={{ marginTop: '20px', marginBottom: '10px' }}>4. Счёт в игре</h3>
-              <p>Положение, когда проигравший сумел выкинуть хотя бы одну шашку, называется «оин» (0-1).</p>
-              <p>Положение, когда один игрок выбросил все свои шашки, а его противник не сумел выбросить ни одной, называется «марс» (2-0).</p>
-            </div>
-            <div style={{ marginTop: '20px' }}>
-              <Button 
-                variant="primary" 
-                onClick={() => setShowRulesModal(false)}
-                fullWidth
-              >
-                Закрыть
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Доска - показываем только когда игра в процессе или завершена */}
       {gameStatus === 'in_progress' || gameStatus === 'finished' ? (
