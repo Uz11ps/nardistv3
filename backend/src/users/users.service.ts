@@ -47,11 +47,27 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
+    let xpWasUpdated = false;
     
     // Конвертируем narCoin в bigint если он есть
     if (updateUserDto.narCoin !== undefined) {
       (user as any).narCoin = BigInt(updateUserDto.narCoin);
       delete (updateUserDto as any).narCoin;
+    }
+    
+    // Конвертируем xp в bigint если он есть
+    if ((updateUserDto as any).xp !== undefined) {
+      const xpValue = (updateUserDto as any).xp;
+      if (typeof xpValue === 'bigint') {
+        (user as any).xp = xpValue;
+      } else {
+        const xpNum = typeof xpValue === 'string' ? parseInt(xpValue, 10) : Number(xpValue);
+        if (!isNaN(xpNum)) {
+          (user as any).xp = BigInt(Math.max(0, xpNum));
+        }
+      }
+      xpWasUpdated = true;
+      delete (updateUserDto as any).xp;
     }
     
     // Конвертируем birthday в Date если он есть
@@ -61,7 +77,21 @@ export class UsersService {
     }
     
     Object.assign(user, updateUserDto);
-    return this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
+    
+    // Если XP был обновлен, автоматически синхронизируем уровень
+    if (xpWasUpdated) {
+      try {
+        await this.progressService.syncLevelFromXP(id);
+        // Получаем обновленного пользователя с правильным уровнем
+        return this.findOne(id);
+      } catch (error) {
+        // Логируем ошибку, но не прерываем выполнение
+        console.error(`Ошибка синхронизации уровня для пользователя ${id}:`, error);
+      }
+    }
+    
+    return savedUser;
   }
 
   async updateProfile(id: string, updateUserDto: UpdateUserDto): Promise<User> {

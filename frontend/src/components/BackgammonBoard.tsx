@@ -409,33 +409,62 @@ export default function BackgammonBoard({
     const pointWidth = width / 12
     const pointHeight = halfHeight / 2
     
+    // Функция для отрисовки треугольной точки
+    const drawTrianglePoint = (x: number, y: number, width: number, height: number, isTop: boolean) => {
+      ctx.beginPath()
+      if (isTop) {
+        ctx.moveTo(x, y)
+        ctx.lineTo(x - width / 2, y + height)
+        ctx.lineTo(x + width / 2, y + height)
+      } else {
+        ctx.moveTo(x, y)
+        ctx.lineTo(x - width / 2, y - height)
+        ctx.lineTo(x + width / 2, y - height)
+      }
+      ctx.closePath()
+    }
+    
     points.forEach((pointValue: number, pointIndex: number) => {
       if (pointValue === 0) return
       
       // Определяем позицию точки
-      // Точки 1-12: верхний ряд (правая часть доски - противник)
-      // Точки 13-24: нижний ряд (левая часть доски - я)
+      // Точки 0-11: верхний ряд (правая часть доски)
+      // Точки 12-23: нижний ряд (левая часть доски)
       const isTopRow = pointIndex < 12
-      const pointInRow = pointIndex % 12
+      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
       
       // Определяем, моя это точка или противника
       // В нардах: положительные значения - один игрок, отрицательные - другой
       const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
       
+      // Позиционирование точек
+      // Верхний ряд: справа налево (точка 0 справа, точка 11 слева)
+      // Нижний ряд: слева направо (точка 12 слева, точка 23 справа)
       const x = isTopRow
         ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
         : pointInRow * pointWidth + pointWidth / 2
       const y = isTopRow
         ? pointHeight
-        : halfHeight + pointHeight
+        : height - pointHeight
+      
+      // Отрисовываем треугольную точку
+      const triangleWidth = pointWidth * 0.8
+      const triangleHeight = pointHeight * 0.9
+      ctx.fillStyle = isTopRow ? '#D4A574' : '#8B4513'
+      drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow)
+      ctx.fill()
+      ctx.strokeStyle = '#654321'
+      ctx.lineWidth = 1
+      ctx.stroke()
       
       const checkerCount = Math.abs(pointValue)
-      const checkerSize = Math.min(pointWidth * 0.35, pointHeight * 0.4)
+      const checkerSize = Math.min(pointWidth * 0.3, pointHeight * 0.35)
       const checkerTexture = isMyPoint ? textures.myCheckers : textures.opponentCheckers
       
-      // Отрисовываем шашки
-      const stackHeight = Math.min(checkerCount, 5) * checkerSize * 0.6
-      const startY = isTopRow ? y - stackHeight : y
+      // Отрисовываем шашки на точке
+      const stackHeight = Math.min(checkerCount, 5) * checkerSize * 0.7
+      const checkerBaseY = isTopRow ? y + triangleHeight * 0.3 : y - triangleHeight * 0.3
+      const startY = isTopRow ? checkerBaseY : checkerBaseY - stackHeight
       
       // Если перетаскиваем шашку с этой точки, не рисуем её здесь
       const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
@@ -443,8 +472,8 @@ export default function BackgammonBoard({
       
       for (let i = 0; i < checkersToDraw; i++) {
         const checkerY = isTopRow 
-          ? startY + i * checkerSize * 0.6
-          : startY + i * checkerSize * 0.6
+          ? startY + i * checkerSize * 0.7
+          : startY + i * checkerSize * 0.7
         
         if (checkerTexture) {
           ctx.save()
@@ -473,7 +502,6 @@ export default function BackgammonBoard({
       
       // Рисуем перетаскиваемую шашку
       if (isDraggingFromThisPoint && dragPosition) {
-        const checkerSize = Math.min(pointWidth * 0.35, pointHeight * 0.4)
         const dragX = dragPosition.x - dragging.offsetX
         const dragY = dragPosition.y - dragging.offsetY
         
@@ -502,22 +530,20 @@ export default function BackgammonBoard({
         ctx.restore()
       }
       
-      // Если шашек больше 5, показываем число (только количество, не номер поля)
+      // Если шашек больше 5, показываем число
       if (checkerCount > 5) {
-        ctx.fillStyle = '#FFF'
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+        ctx.fillRect(x - 20, isTopRow ? checkerBaseY - 25 : checkerBaseY + 5, 40, 20)
+        ctx.fillStyle = '#000'
         ctx.font = 'bold 14px Arial'
         ctx.textAlign = 'center'
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-        ctx.fillRect(x - 20, isTopRow ? y - stackHeight - 25 : y + stackHeight + 5, 40, 20)
-        ctx.fillStyle = '#000'
-        ctx.fillText(checkerCount.toString(), x, isTopRow ? y - stackHeight - 12 : y + stackHeight + 18)
+        ctx.fillText(checkerCount.toString(), x, isTopRow ? checkerBaseY - 12 : checkerBaseY + 18)
       }
       
       // Подсветка выбранной точки
       if (selectedPoint === pointIndex) {
         ctx.fillStyle = 'rgba(90, 127, 196, 0.4)'
-        ctx.beginPath()
-        ctx.arc(x, y, pointWidth / 2, 0, Math.PI * 2)
+        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow)
         ctx.fill()
       }
       
@@ -525,8 +551,7 @@ export default function BackgammonBoard({
       if (highlightedPoints.has(pointIndex)) {
         ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)'
         ctx.lineWidth = 3
-        ctx.beginPath()
-        ctx.arc(x, y, pointWidth / 2 + 5, 0, Math.PI * 2)
+        drawTrianglePoint(x, y, triangleWidth + 10, triangleHeight + 10, isTopRow)
         ctx.stroke()
       }
     })
@@ -537,23 +562,24 @@ export default function BackgammonBoard({
       const bar = gameState.bar
       const myBarCount = isPlayer1 ? bar.white || 0 : bar.black || 0
       const opponentBarCount = isPlayer1 ? bar.black || 0 : bar.white || 0
-      const checkerSize = Math.min(pointWidth * 0.35, pointHeight * 0.4)
+      const checkerSize = Math.min(pointWidth * 0.3, pointHeight * 0.35)
       
       // Мои шашки на баре (снизу, слева от центра)
       if (myBarCount > 0) {
+        const barStartY = height - pointHeight * 0.5
         for (let i = 0; i < myBarCount; i++) {
-          const barY = halfHeight + (i * checkerSize * 0.6) + checkerSize
+          const barY = barStartY - (i * checkerSize * 0.7)
           if (textures.myCheckers) {
             ctx.save()
             ctx.beginPath()
-            ctx.arc(barX - 20, barY, checkerSize / 2, 0, Math.PI * 2)
+            ctx.arc(barX - 30, barY, checkerSize / 2, 0, Math.PI * 2)
             ctx.clip()
-            ctx.drawImage(textures.myCheckers, barX - 20 - checkerSize / 2, barY - checkerSize / 2, checkerSize, checkerSize)
+            ctx.drawImage(textures.myCheckers, barX - 30 - checkerSize / 2, barY - checkerSize / 2, checkerSize, checkerSize)
             ctx.restore()
           } else {
             ctx.fillStyle = '#FFFFFF'
             ctx.beginPath()
-            ctx.arc(barX - 20, barY, checkerSize / 2, 0, Math.PI * 2)
+            ctx.arc(barX - 30, barY, checkerSize / 2, 0, Math.PI * 2)
             ctx.fill()
             ctx.strokeStyle = '#333'
             ctx.lineWidth = 2
@@ -564,19 +590,20 @@ export default function BackgammonBoard({
       
       // Шашки противника на баре (сверху, справа от центра)
       if (opponentBarCount > 0) {
+        const barStartY = pointHeight * 0.5
         for (let i = 0; i < opponentBarCount; i++) {
-          const barY = halfHeight - (i * checkerSize * 0.6) - checkerSize
+          const barY = barStartY + (i * checkerSize * 0.7)
           if (textures.opponentCheckers) {
             ctx.save()
             ctx.beginPath()
-            ctx.arc(barX + 20, barY, checkerSize / 2, 0, Math.PI * 2)
+            ctx.arc(barX + 30, barY, checkerSize / 2, 0, Math.PI * 2)
             ctx.clip()
-            ctx.drawImage(textures.opponentCheckers, barX + 20 - checkerSize / 2, barY - checkerSize / 2, checkerSize, checkerSize)
+            ctx.drawImage(textures.opponentCheckers, barX + 30 - checkerSize / 2, barY - checkerSize / 2, checkerSize, checkerSize)
             ctx.restore()
           } else {
             ctx.fillStyle = '#000000'
             ctx.beginPath()
-            ctx.arc(barX + 20, barY, checkerSize / 2, 0, Math.PI * 2)
+            ctx.arc(barX + 30, barY, checkerSize / 2, 0, Math.PI * 2)
             ctx.fill()
             ctx.strokeStyle = '#333'
             ctx.lineWidth = 2
@@ -647,11 +674,11 @@ export default function BackgammonBoard({
         : pointInRow * pointWidth + pointWidth / 2
       const pointY = isTopRow
         ? pointHeight
-        : halfHeight + pointHeight
+        : height - pointHeight
       
       // Проверяем, кликнули ли на шашку
       const checkerCount = Math.abs(pointValue)
-      const checkerSize = Math.min(pointWidth * 0.35, pointHeight * 0.4)
+      const checkerSize = Math.min(pointWidth * 0.3, pointHeight * 0.35)
       const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
       
       if (!isMyPoint) continue // Не можем перетаскивать чужие шашки
@@ -660,9 +687,15 @@ export default function BackgammonBoard({
       const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
       if (pointMoves.length === 0) continue
       
-      // Проверяем расстояние до шашек на этой точке
-      const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2))
-      if (distance < checkerSize / 2 + 10) {
+      // Проверяем расстояние до точки (треугольник)
+      const triangleWidth = pointWidth * 0.8
+      const triangleHeight = pointHeight * 0.9
+      const dx = Math.abs(x - pointX)
+      const dy = Math.abs(y - pointY)
+      
+      // Проверяем попадание в треугольник
+      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight
+      if (inTriangle) {
         setDragging({ pointIndex, offsetX: x - pointX, offsetY: y - pointY })
         setDragPosition({ x, y })
         setSelectedPoint(pointIndex)
@@ -712,10 +745,16 @@ export default function BackgammonBoard({
         : pointInRow * pointWidth + pointWidth / 2
       const pointY = isTopRow
         ? pointHeight
-        : halfHeight + pointHeight
+        : height - pointHeight
       
-      const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2))
-      if (distance < pointWidth / 2) {
+      // Проверяем попадание в треугольник
+      const triangleWidth = pointWidth * 0.8
+      const triangleHeight = pointHeight * 0.9
+      const dx = Math.abs(x - pointX)
+      const dy = Math.abs(y - pointY)
+      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight
+      
+      if (inTriangle) {
         targetPoint = pointIndex
         break
       }
@@ -763,10 +802,16 @@ export default function BackgammonBoard({
         : pointInRow * pointWidth + pointWidth / 2
       const pointY = isTopRow
         ? pointHeight
-        : halfHeight + pointHeight
+        : height - pointHeight
       
-      const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2))
-      if (distance < pointWidth / 2) {
+      // Проверяем попадание в треугольник
+      const triangleWidth = pointWidth * 0.8
+      const triangleHeight = pointHeight * 0.9
+      const dx = Math.abs(x - pointX)
+      const dy = Math.abs(y - pointY)
+      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight
+      
+      if (inTriangle) {
         handlePointClick(pointIndex)
       }
     })

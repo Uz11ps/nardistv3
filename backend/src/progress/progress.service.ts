@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Enhancement, EnhancementType } from './enhancement.entity';
 import { UsersService } from '../users/users.service';
+import { User } from '../users/user.entity';
 import { GameType } from '../games/game.entity';
 
 @Injectable()
@@ -55,6 +56,23 @@ export class ProgressService {
       }
     }
     return level;
+  }
+  
+  /**
+   * Синхронизирует уровень пользователя на основе его текущего XP
+   * Публичный метод для использования в других сервисах
+   */
+  async syncLevelFromXP(userId: string): Promise<User> {
+    const user = await this.usersService.findOne(userId);
+    const totalXP = Number(user.xp || 0);
+    const correctLevel = this.getLevelFromTotalXP(totalXP);
+    const finalLevel = Math.max(1, correctLevel);
+    
+    if (user.level !== finalLevel) {
+      user.level = finalLevel;
+      await this.usersService['usersRepository'].save(user);
+    }
+    return user;
   }
   private readonly ENERGY_RESTORE_INTERVAL = 30 * 60 * 1000; // 30 минут
   private readonly ENERGY_RESTORE_AMOUNT = 10; // 10 энергии за восстановление
@@ -330,15 +348,17 @@ export class ProgressService {
    * Используется для исправления рассинхронизации уровня и XP
    * Публичный метод для использования в других сервисах
    */
-  async syncLevelFromXP(userId: string): Promise<void> {
+  async syncLevelFromXP(userId: string): Promise<User> {
     const user = await this.usersService.findOne(userId);
     const totalXP = Number(user.xp || 0);
     const correctLevel = this.getLevelFromTotalXP(totalXP);
+    const finalLevel = Math.max(1, correctLevel);
     
-    if (user.level !== correctLevel) {
-      user.level = correctLevel;
+    if (user.level !== finalLevel) {
+      user.level = finalLevel;
       await this.usersService['usersRepository'].save(user);
     }
+    return user;
   }
 }
 

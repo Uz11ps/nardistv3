@@ -1326,9 +1326,16 @@ export class AdminService implements OnModuleInit {
     try {
       const user = await this.usersService.findOne(userId);
       const updateData: any = { narCoin: BigInt(narCoin) };
-      if (xp !== undefined) {
-        updateData.xp = BigInt(xp);
+      if (xp !== undefined && xp !== null) {
+        // Конвертируем XP в BigInt
+        const xpValue = typeof xp === 'string' ? parseInt(xp, 10) : xp;
+        if (isNaN(xpValue)) {
+          throw new BadRequestException('Некорректное значение XP');
+        }
+        updateData.xp = BigInt(Math.max(0, xpValue));
       }
+      
+      // Обновляем баланс и XP (синхронизация уровня происходит автоматически в usersService.update)
       return this.usersService.update(userId, updateData);
     } catch (error) {
       this.logger.error(`Error updating balance for user ${userId}:`, error);
@@ -1358,9 +1365,9 @@ export class AdminService implements OnModuleInit {
 
   async setUserLevel(userId: string, level: number) {
     const user = await this.usersService.findOne(userId);
-    user.level = level;
+    user.level = Math.max(1, level);
     // При установке уровня вручную, синхронизируем XP с уровнем
-    const totalXP = this.getTotalXPForLevel(level);
+    const totalXP = this.getTotalXPForLevel(user.level);
     user.xp = BigInt(totalXP);
     return this.usersRepository.save(user);
   }
@@ -1370,9 +1377,13 @@ export class AdminService implements OnModuleInit {
     const totalXP = Number(user.xp || 0);
     const correctLevel = this.getLevelFromTotalXP(totalXP);
     
-    if (user.level !== correctLevel) {
-      user.level = correctLevel;
+    // Убеждаемся, что уровень не меньше 1
+    const finalLevel = Math.max(1, correctLevel);
+    
+    if (user.level !== finalLevel) {
+      user.level = finalLevel;
       await this.usersRepository.save(user);
+      this.logger.log(`✅ Синхронизирован уровень пользователя ${userId}: XP=${totalXP} -> Level=${finalLevel}`);
     }
     return user;
   }
