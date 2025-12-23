@@ -11,12 +11,21 @@ export const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use((config) => {
-  // Для админ-запросов используем admin_token, иначе обычный token
-  const adminToken = localStorage.getItem('admin_token')
-  const userToken = localStorage.getItem('token')
-  const token = adminToken || userToken
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  // Проверяем, является ли это админским эндпоинтом
+  const isAdminEndpoint = config.url?.startsWith('/admin') || false
+  
+  if (isAdminEndpoint) {
+    // Для админ-запросов используем admin_token
+    const adminToken = localStorage.getItem('admin_token')
+    if (adminToken) {
+      config.headers.Authorization = `Bearer ${adminToken}`
+    }
+  } else {
+    // Для обычных запросов используем user token (НЕ admin_token!)
+    const userToken = localStorage.getItem('token')
+    if (userToken) {
+      config.headers.Authorization = `Bearer ${userToken}`
+    }
   }
   return config
 })
