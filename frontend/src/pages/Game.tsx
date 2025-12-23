@@ -1073,6 +1073,7 @@ export default function Game() {
             isMyTurn={isMyTurn}
             gameId={gameId}
             gameMode={gameInfo?.mode || 'long'}
+            pendingMoves={pendingMoves}
             diceAnimating={diceAnimating}
             myPlayerId={user?.id}
             player1Id={gameInfo?.player1Id}

@@ -345,7 +345,7 @@ export default function BackgammonBoard({
     if (!canvas) return
     
     const ctx = canvas.getContext('2d')
-    if (!ctx || !gameState) return
+    if (!ctx || !virtualGameState) return
     
     const width = canvas.width
     const height = canvas.height
@@ -368,7 +368,7 @@ export default function BackgammonBoard({
     const pointWidth = halfBoardWidth / 6
     const pointHeight = height * 0.45
     
-    const points = gameState.points || []
+    const points = virtualGameState.points || []
     
     // Функция для отрисовки треугольной точки (Классический вид)
     const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, color: string) => {
@@ -394,10 +394,10 @@ export default function BackgammonBoard({
     
     // Сначала рисуем все треугольники и их подсветку
     points.forEach((_value: number, pointIndex: number) => {
-      const { x, y, isTopRow, pointWidth, pointHeight, pointNumber } = getPointCoordinates(pointIndex, canvas)
+      const { x, y, isTopRow, pointWidth: pW, pointHeight: pH, pointNumber } = getPointCoordinates(pointIndex, canvas)
       
-      const triangleWidth = pointWidth * 0.95
-      const triangleHeight = pointHeight * 0.95
+      const triangleWidth = pW * 0.95
+      const triangleHeight = pH * 0.95
       
       const pointInRow = isTopRow ? pointIndex : pointIndex - 12
       const isLight = pointInRow % 2 === 0
@@ -407,9 +407,9 @@ export default function BackgammonBoard({
       if (hoveredPoint === pointIndex) {
         ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
         if (isTopRow) {
-          ctx.fillRect(x - pointWidth / 2, 0, pointWidth, height / 2)
+          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
         } else {
-          ctx.fillRect(x - pointWidth / 2, height / 2, pointWidth, height / 2)
+          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
         }
       }
 
@@ -424,22 +424,22 @@ export default function BackgammonBoard({
         // 3. Подсветка валидных точек назначения при перетаскивании
         ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
         if (isTopRow) {
-          ctx.fillRect(x - pointWidth / 2, 0, pointWidth, height / 2)
+          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
         } else {
-          ctx.fillRect(x - pointWidth / 2, height / 2, pointWidth, height / 2)
+          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
         }
         ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
         ctx.lineWidth = 2
-        ctx.strokeRect(x - pointWidth / 2 + 2, isTopRow ? 2 : height / 2 + 2, pointWidth - 4, height / 2 - 4)
+        ctx.strokeRect(x - pW / 2 + 2, isTopRow ? 2 : height / 2 + 2, pW - 4, height / 2 - 4)
       }
       
       // 4. Подсветка выбранной точки
       if (selectedPoint === pointIndex) {
         ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
         if (isTopRow) {
-          ctx.fillRect(x - pointWidth / 2, 0, pointWidth, height / 2)
+          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
         } else {
-          ctx.fillRect(x - pointWidth / 2, height / 2, pointWidth, height / 2)
+          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
         }
       }
       
@@ -463,11 +463,11 @@ export default function BackgammonBoard({
     points.forEach((pointValue: number, pointIndex: number) => {
       if (pointValue === 0) return
       
-      const { x, y, isTopRow, pointWidth, pointHeight } = getPointCoordinates(pointIndex, canvas)
+      const { x, y, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       const checkerCount = Math.abs(pointValue)
       const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
       
-      const checkerSize = Math.min(pointWidth * 0.85, pointHeight * 0.15) 
+      const checkerSize = Math.min(pW * 0.85, pH * 0.15) 
       const checkerBaseY = isTopRow 
         ? y + checkerSize/2 + 5 
         : y - checkerSize/2 - 5 
@@ -526,8 +526,8 @@ export default function BackgammonBoard({
     
     // Отрисовка перетаскиваемой шашки (самый верхний слой)
     if (dragging && dragPosition) {
-      const { pointWidth, pointHeight } = getPointCoordinates(dragging.pointIndex, canvas)
-      const checkerSize = Math.min(pointWidth * 0.85, pointHeight * 0.15)
+      const { pointWidth: pW, pointHeight: pH } = getPointCoordinates(dragging.pointIndex, canvas)
+      const checkerSize = Math.min(pW * 0.85, pH * 0.15)
       const dragX = dragPosition.x - dragging.offsetX
       const dragY = dragPosition.y - dragging.offsetY
       
@@ -555,8 +555,8 @@ export default function BackgammonBoard({
     }
     
     // Отрисовка бара
-    if (gameState.bar) {
-      const bar = gameState.bar
+    if (virtualGameState.bar) {
+      const bar = virtualGameState.bar
       const myBarCount = isPlayer1 ? bar.white || 0 : bar.black || 0
       const opponentBarCount = isPlayer1 ? bar.black || 0 : bar.white || 0
       const checkerSize = Math.min(pointWidth * 0.25, pointHeight * 0.3)
@@ -641,7 +641,7 @@ export default function BackgammonBoard({
         }
       }
     }
-  }, [gameState, selectedPoint, highlightedPoints, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates])
+  }, [virtualGameState, selectedPoint, highlightedPoints, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates])
   
   // Перерисовка при изменении состояния
   useEffect(() => {
