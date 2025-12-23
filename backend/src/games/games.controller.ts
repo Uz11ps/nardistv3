@@ -64,6 +64,11 @@ export class GamesController {
   @UseGuards(JwtAuthGuard)
   async createBotGame(@CurrentUser() user: any, @Body() body?: { mode?: string }) {
     try {
+      console.log('🎮 create-bot вызван:', { userId: user?.id, userType: typeof user, userKeys: user ? Object.keys(user) : 'null' });
+      if (!user || !user.id) {
+        console.error('❌ Пользователь не найден в токене:', user);
+        throw new Error('Пользователь не найден в токене');
+      }
       const mode = body?.mode === 'short' ? 'short' : 'long';
       return await this.gamesService.createBotGame(user.id, mode as any);
     } catch (error) {

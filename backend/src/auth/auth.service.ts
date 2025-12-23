@@ -188,40 +188,53 @@ export class AuthService {
   }
 
   async guestLogin() {
-    // Генерируем уникальный ID для гостя
-    const guestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Создаем гостевого пользователя
-    const createUserDto: CreateUserDto = {
-      telegramId: guestId,
-      username: `Гость_${Math.random().toString(36).substr(2, 6)}`,
-      firstName: 'Гость',
-      lastName: '',
-      languageCode: 'ru',
-      avatarUrl: '',
-    };
-    
-    const user = await this.usersService.create(createUserDto);
-    
-    // Помечаем как гостя и пропускаем онбординг
-    const updatedUser = await this.usersService.update(user.id, { 
-      isGuest: true, 
-      onboardingCompleted: true, 
-      profileSetupCompleted: true, 
-      starterKitClaimed: true 
-    });
+    try {
+      // Генерируем уникальный ID для гостя
+      const guestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      console.log('👤 Создание гостевого пользователя:', { guestId });
+      
+      // Создаем гостевого пользователя
+      const createUserDto: CreateUserDto = {
+        telegramId: guestId,
+        username: `Гость_${Math.random().toString(36).substr(2, 6)}`,
+        firstName: 'Гость',
+        lastName: '',
+        languageCode: 'ru',
+        avatarUrl: '',
+      };
+      
+      const user = await this.usersService.create(createUserDto);
+      console.log('✅ Гостевой пользователь создан:', { userId: user.id, telegramId: user.telegramId });
+      
+      // Помечаем как гостя и пропускаем онбординг
+      const updatedUser = await this.usersService.update(user.id, { 
+        isGuest: true, 
+        onboardingCompleted: true, 
+        profileSetupCompleted: true, 
+        starterKitClaimed: true 
+      });
+      
+      console.log('✅ Гостевой пользователь обновлен:', { userId: updatedUser.id, isGuest: updatedUser.isGuest });
 
-    const payload = {
-      sub: updatedUser.id,
-      telegramId: updatedUser.telegramId,
-      username: updatedUser.username,
-      isGuest: true,
-    };
+      const payload = {
+        sub: updatedUser.id,
+        telegramId: updatedUser.telegramId,
+        username: updatedUser.username,
+        isGuest: true,
+      };
 
-    return {
-      access_token: this.jwtService.sign(payload),
-      user: updatedUser,
-    };
+      const token = this.jwtService.sign(payload);
+      console.log('✅ Токен создан для гостя:', { userId: updatedUser.id, tokenLength: token.length });
+
+      return {
+        access_token: token,
+        user: updatedUser,
+      };
+    } catch (error) {
+      console.error('❌ Ошибка при создании гостевого пользователя:', error);
+      throw error;
+    }
   }
 
   async validateUser(payload: any) {

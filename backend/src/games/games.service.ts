@@ -950,10 +950,23 @@ export class GamesService {
       
       // Проверяем, что пользователь существует (для гостей это важно)
       try {
-        await this.usersService.findOne(playerId);
+        const user = await this.usersService.findOne(playerId);
+        this.logger.log(`✅ Пользователь найден: playerId=${playerId}, username=${user.username}, isGuest=${user.isGuest}`);
       } catch (error) {
         this.logger.error(`❌ Пользователь не найден при создании игры с ботом: playerId=${playerId}`, error);
-        throw new BadRequestException('Пользователь не найден');
+        // Попробуем найти пользователя по telegramId, если playerId не найден
+        try {
+          const userByTelegramId = await this.usersService.findByTelegramId(`guest_${playerId}`);
+          if (userByTelegramId) {
+            this.logger.log(`✅ Пользователь найден по telegramId: ${userByTelegramId.id}`);
+            // Используем найденный ID
+            playerId = userByTelegramId.id;
+          } else {
+            throw new BadRequestException('Пользователь не найден');
+          }
+        } catch (findError) {
+          throw new BadRequestException(`Пользователь не найден: ${error.message || 'Неизвестная ошибка'}`);
+        }
       }
       
       // Проверяем, не находится ли игрок уже в активной игре
