@@ -121,18 +121,38 @@ export default function BackgammonBoard({
   const getPointCoordinates = useCallback((pointIndex: number, canvas: HTMLCanvasElement) => {
     const width = canvas.width
     const height = canvas.height
-    const pointWidth = width / 12
+    
+    // Ширина бара в центре
+    const barWidth = width * 0.05
+    const barX = (width - barWidth) / 2
+    
+    // Доступная ширина для треугольников (с каждой стороны от бара)
+    const availableWidth = (width - barWidth) / 2
+    
+    // Ширина одного треугольника
+    const pointWidth = availableWidth / 6
     const pointHeight = height / 2
     
     const isTopRow = pointIndex < 12
     const pointInRow = isTopRow ? pointIndex : pointIndex - 12
     
-    const x = isTopRow
-      ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
-      : pointInRow * pointWidth + pointWidth / 2
+    // Для верхнего ряда: точки идут справа налево (от правого края к бару)
+    // Точка 0 у правого края, точка 11 у левого края бара
+    // Для нижнего ряда: точки идут слева направо (от левого края бара к правому краю)
+    // Точка 12 у левого края бара, точка 23 у правого края
+    
+    let x: number
+    if (isTopRow) {
+      // Верхний ряд: от правого края (точка 0) к бару (точка 11)
+      x = width - (pointInRow * pointWidth + pointWidth / 2)
+    } else {
+      // Нижний ряд: от левого края бара (точка 12) к правому краю (точка 23)
+      x = barX + barWidth + (pointInRow * pointWidth + pointWidth / 2)
+    }
+    
     const y = isTopRow
-      ? pointHeight / 2
-      : height - pointHeight / 2
+      ? 0  // Верхний ряд: начинается от верха
+      : height  // Нижний ряд: начинается от низа
     
     return { x, y, isTopRow, pointWidth, pointHeight }
   }, [])
@@ -141,7 +161,10 @@ export default function BackgammonBoard({
   const getPointAtPosition = useCallback((x: number, y: number, canvas: HTMLCanvasElement): number | null => {
     const width = canvas.width
     const height = canvas.height
-    const pointWidth = width / 12
+    const barWidth = width * 0.05
+    const barX = (width - barWidth) / 2
+    const availableWidth = (width - barWidth) / 2
+    const pointWidth = availableWidth / 6
     const pointHeight = height / 2
     
     const points = gameState?.points || []
@@ -150,12 +173,13 @@ export default function BackgammonBoard({
     for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
       const { x: pointX, y: pointY, isTopRow, pointWidth: pWidth, pointHeight: pHeight } = getPointCoordinates(pointIndex, canvas)
       
-      const triangleWidth = pWidth * 0.9
-      const triangleHeight = pHeight * 0.9
+      const triangleWidth = pWidth * 0.95
+      const triangleHeight = pHeight * 0.95
       const dx = Math.abs(x - pointX)
-      const dy = Math.abs(y - pointY)
       
       // Проверка попадания в треугольник
+      // Для верхнего ряда: y от 0 до triangleHeight
+      // Для нижнего ряда: y от height - triangleHeight до height
       const inTriangle = dx < triangleWidth / 2 && 
         (isTopRow 
           ? (y >= pointY && y <= pointY + triangleHeight)
@@ -167,12 +191,11 @@ export default function BackgammonBoard({
     }
     
     // Проверяем бар
-    const barX = width / 2
     const barYTop = pointHeight * 0.25
     const barYBottom = height - pointHeight * 0.25
-    const barWidth = pointWidth * 0.6
+    const barCheckWidth = pointWidth * 0.6
     
-    if (Math.abs(x - barX) < barWidth / 2 && y >= barYTop && y <= barYBottom) {
+    if (Math.abs(x - (barX + barWidth / 2)) < barCheckWidth / 2 && y >= barYTop && y <= barYBottom) {
       return isPlayer1 ? 24 : 25
     }
     
@@ -221,17 +244,21 @@ export default function BackgammonBoard({
     ctx.fillRect(barX, 0, barWidth, height)
     
     const points = gameState.points || []
-    const pointWidth = width / 12
+    // Доступная ширина для треугольников (с каждой стороны от бара)
+    const availableWidth = (width - barWidth) / 2
+    const pointWidth = availableWidth / 6
     const pointHeight = height / 2
     
     // Функция для отрисовки треугольной точки
     const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, color: string) => {
       ctx.beginPath()
       if (isTop) {
+        // Верхний треугольник: вершина вверху, основание внизу
         ctx.moveTo(x, y)
         ctx.lineTo(x - w / 2, y + h)
         ctx.lineTo(x + w / 2, y + h)
       } else {
+        // Нижний треугольник: вершина внизу, основание вверху
         ctx.moveTo(x, y)
         ctx.lineTo(x - w / 2, y - h)
         ctx.lineTo(x + w / 2, y - h)
@@ -248,8 +275,9 @@ export default function BackgammonBoard({
     points.forEach((pointValue: number, pointIndex: number) => {
       const { x, y, isTopRow } = getPointCoordinates(pointIndex, canvas)
       
-      const triangleWidth = pointWidth * 0.9
-      const triangleHeight = pointHeight * 0.9
+      // Треугольники занимают почти всю ширину точки, но с небольшим отступом
+      const triangleWidth = pointWidth * 0.95
+      const triangleHeight = pointHeight * 0.95
       
       // Чередование цветов треугольников (как на классической доске)
       const isLight = (pointIndex % 2 === 0 && isTopRow) || (pointIndex % 2 === 1 && !isTopRow)
