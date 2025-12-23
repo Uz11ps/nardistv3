@@ -247,61 +247,19 @@
 
 /* Карточка строения */
 .city-building-card {
-  position: relative;
-  padding: 0;
+  padding: 16px;
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
   border-radius: 12px;
   box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  min-height: 300px;
-}
-
-/* Контейнер изображения - заполняет все пространство */
-.city-building-image-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  overflow: hidden;
-}
-
-.city-building-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Заполняет все пространство */
-  object-position: center;
-  filter: brightness(0.7); /* Немного затемняем для читаемости текста */
-}
-
-/* Контент поверх изображения */
-.city-building-content {
-  position: relative;
-  z-index: 1;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-  justify-content: space-between;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.3) 0%,
-    rgba(0, 0, 0, 0) 30%,
-    rgba(0, 0, 0, 0) 70%,
-    rgba(0, 0, 0, 0.6) 100%
-  );
 }
 
 .city-building-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
+  width: 100%;
 }
 
 .city-building-icon {
@@ -317,6 +275,60 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+}
+
+.city-building-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.city-building-owner {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.city-building-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.city-building-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.city-building-status-dot.stable {
+  background: #4CAF50;
+}
+
+.city-building-status-dot.free {
+  background: #E84142;
+}
+
+.city-building-status-dot.vulnerable {
+  background: #FF9800;
+}
+
+.city-building-status-text {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.city-building-action-btn {
+  white-space: nowrap;
+  min-width: 100px;
 }
 
 .city-building-name {
@@ -342,11 +354,12 @@
 }
 
 .city-building-income {
-  color: #ffd700;
+  color: #FFF;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   font-weight: 500;
-  margin-top: 4px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .city-building-stats {
