@@ -564,6 +564,44 @@ export default function BackgammonBoard({
     return () => resizeObserver.disconnect()
   }, [drawBoard])
   
+  // Обработка двойного клика (быстрый ход)
+  const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canMove || !isMyTurn || !canvasRef.current) return
+    
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    const pointIndex = getPointAtPosition(x, y, canvas)
+    if (pointIndex === null) return
+    
+    // Ищем возможные ходы для этой точки
+    const moves = possibleMoves.filter(m => m.from === pointIndex)
+    if (moves.length === 0) return
+    
+    // Приоритет хода:
+    // 1. Если есть ход на вынос (bearing off) - делаем его
+    // 2. Если есть несколько ходов, берем тот, что использует большую кость (обычно выгоднее)
+    // 3. Иначе берем первый доступный
+    
+    let bestMove = moves.find(m => m.to === -1) // Bearing off
+    
+    if (!bestMove) {
+      // Сортируем по значению кубика (по убыванию), чтобы использовать больший кубик
+      moves.sort((a, b) => b.die - a.die)
+      bestMove = moves[0]
+    }
+    
+    if (bestMove) {
+      onMove(bestMove.from, bestMove.to, bestMove.die)
+      // Сбрасываем выделение
+      setSelectedPoint(null)
+      setDragging(null)
+      setDragPosition(null)
+    }
+  }
+
   // Обработка начала перетаскивания
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canMove || !isMyTurn || !canvasRef.current) return
@@ -712,6 +750,7 @@ export default function BackgammonBoard({
         ref={canvasRef}
         className="backgammon-board-canvas"
         onClick={handleCanvasClick}
+        onDoubleClick={handleDoubleClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
