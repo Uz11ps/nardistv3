@@ -5,6 +5,8 @@ import { Building } from './building.entity';
 import { BuildingConfig } from './building-config.entity';
 import { UsersService } from '../users/users.service';
 import { ClansService } from '../clans/clans.service';
+import { Clan } from '../clans/clan.entity';
+import { User } from '../users/user.entity';
 
 @Injectable()
 export class CityService {
@@ -13,6 +15,10 @@ export class CityService {
     private buildingsRepository: Repository<Building>,
     @InjectRepository(BuildingConfig)
     private buildingConfigsRepository: Repository<BuildingConfig>,
+    @InjectRepository(Clan)
+    private clansRepository: Repository<Clan>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
     private usersService: UsersService,
     @Inject(forwardRef(() => ClansService))
     private clansService: ClansService,
@@ -275,7 +281,7 @@ export class CityService {
     if (totalIncome > 0) {
       const currentTreasury = Number(clan.treasury || 0);
       clan.treasury = (currentTreasury + totalIncome).toString();
-      await this.clansService.update(clanId, { treasury: clan.treasury });
+      await this.clansRepository.save(clan);
     }
 
     return {
@@ -353,11 +359,8 @@ export class CityService {
     user.autobuildMinBalance = BigInt(settings.minBalance);
     user.autobuildStrategy = settings.strategy;
     user.autobuildPriorityBuilding = settings.priorityBuilding || null;
-    await this.usersService.update(userId, {
-      autobuildMinBalance: user.autobuildMinBalance,
-      autobuildStrategy: user.autobuildStrategy,
-      autobuildPriorityBuilding: user.autobuildPriorityBuilding,
-    });
+    // Сохраняем напрямую через репозиторий, так как эти поля не в UpdateUserDto
+    await this.usersRepository.save(user);
     return {
       minBalance: Number(user.autobuildMinBalance),
       strategy: user.autobuildStrategy,
