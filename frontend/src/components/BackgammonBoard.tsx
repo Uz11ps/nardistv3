@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { apiClient } from '../api/client'
 import Dice3D from './Dice3D'
 import './BackgammonBoard.css'
@@ -13,6 +13,7 @@ interface BackgammonBoardProps {
   isMyTurn: boolean
   gameId?: string
   gameMode?: 'short' | 'long'
+  pendingMoves?: Array<{ from: number; to: number; die: number }>
   player1Skins?: { board?: any; dice?: any; checkers?: any }
   player2Skins?: { board?: any; dice?: any; checkers?: any }
   mySkins?: { board?: any; dice?: any; checkers?: any }
@@ -34,6 +35,7 @@ export default function BackgammonBoard({
   isMyTurn,
   gameId,
   gameMode = 'long',
+  pendingMoves = [],
   diceAnimating = false,
   myPlayerId,
   player1Id,
@@ -51,19 +53,69 @@ export default function BackgammonBoard({
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
   
   const isPlayer1 = myPlayerId === player1Id
-  
+
+  // Виртуальное состояние доски с учетом локальных ходов (очереди)
+  const virtualGameState = useMemo(() => {
+    if (!gameState?.points) return gameState
+    
+    const points = [...gameState.points]
+    const bar = { ...(gameState.bar || { white: 0, black: 0 }) }
+    const bearOff = { ...(gameState.bearOff || { white: 0, black: 0 }) }
+    
+    pendingMoves.forEach(move => {
+      // 1. Убираем шашку из исходной точки
+      if (move.from === 24) bar.white--
+      else if (move.from === 25) bar.black--
+      else {
+        const val = points[move.from]
+        if (val > 0) points[move.from]--
+        else if (val < 0) points[move.from]++
+      }
+      
+      // 2. Добавляем в целевую точку
+      if (move.to === -1) {
+        if (isPlayer1) bearOff.white++
+        else bearOff.black++
+      } else if (move.to >= 0 && move.to < 24) {
+        const unit = isPlayer1 ? 1 : -1
+        
+        // В коротких нардах можно сбить шашку
+        if (gameMode === 'short' && points[move.to] === -unit) {
+          points[move.to] = unit
+          if (unit === 1) bar.black++
+          else bar.white++
+        } else {
+          points[move.to] += unit
+        }
+      }
+    })
+    
+    return {
+      ...gameState,
+      points,
+      bar,
+      bearOff
+    }
+  }, [gameState, pendingMoves, isPlayer1, gameMode])
+
   // Получение возможных ходов
   useEffect(() => {
     if (!gameId || !isMyTurn || !canMove || !dice) return
     
     const fetchPossibleMoves = async () => {
       try {
+        // Мы запрашиваем возможные ходы ОТ ТЕКУЩЕГО СОСТОЯНИЯ на сервере
+        // Но на фронте мы уже могли сделать часть ходов. 
+        // Поэтому нам нужно фильтровать possibleMoves, исключая те, что уже в pendingMoves
         const response = await apiClient.get(`/games/${gameId}/possible-moves`)
         const allMoves = response.data?.allMoves || []
         const movesSet = new Set<string>()
         const flatMoves: Array<{ from: number; to: number; die: number }> = []
         
         allMoves.forEach((moveSeq: Array<{ from: number; to: number; die: number }>) => {
+          // Здесь сложнее: сервер возвращает последовательности.
+          // Для простоты берем все уникальные первые ходы в последовательностях,
+          // которые еще не сделаны.
           moveSeq.forEach((move) => {
             const key = `${move.from}-${move.to}-${move.die}`
             if (!movesSet.has(key)) {
@@ -89,7 +141,7 @@ export default function BackgammonBoard({
     }
     
     fetchPossibleMoves()
-  }, [gameId, isMyTurn, canMove, dice, gameState])
+  }, [gameId, isMyTurn, canMove, dice, gameState, pendingMoves]) // Добавили pendingMoves в зависимости
   
   // Определение позиции для кубиков
   useEffect(() => {
