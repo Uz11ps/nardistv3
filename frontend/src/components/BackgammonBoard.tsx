@@ -24,9 +24,9 @@ interface BackgammonBoardProps {
   isMyTurn: boolean
   gameId?: string
   gameMode?: 'short' | 'long'
-  player1Skins?: { board?: any; dice?: any; checkers?: any }  // Скины player1: доска слева, кубики player1, белые шашки
-  player2Skins?: { board?: any; dice?: any; checkers?: any }  // Скины player2: доска справа, кубики player2, черные шашки
-  mySkins?: { board?: any; dice?: any; checkers?: any }       // Устаревшее, не используется
+  player1Skins?: { board?: any; dice?: any; checkers?: any }
+  player2Skins?: { board?: any; dice?: any; checkers?: any }
+  mySkins?: { board?: any; dice?: any; checkers?: any }
   diceAnimating?: boolean
   myPlayerId?: string
   player1Id?: string
@@ -35,12 +35,9 @@ interface BackgammonBoardProps {
   player2Name?: string
 }
 
-// Правильная нумерация точек в нардах для отображения
-// Верхний ряд: точки 24-13 (справа налево)
-// Нижний ряд: точки 12-1 (слева направо)
 const POINT_NUMBERS = [
-  24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, // Верхний ряд (справа налево) - индексы 0-11
-  12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, // Нижний ряд (слева направо) - индексы 12-23
+  24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13,
+  12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
 ]
 
 export default function BackgammonBoard({
@@ -52,10 +49,9 @@ export default function BackgammonBoard({
   canMove,
   isMyTurn,
   gameId,
-  gameMode = 'long', // По умолчанию длинные нарды
+  gameMode = 'long',
   player1Skins,
   player2Skins,
-  mySkins, // Устаревшее, не используется
   diceAnimating = false,
   myPlayerId,
   player1Id,
@@ -69,34 +65,26 @@ export default function BackgammonBoard({
   const [hoverPoint, setHoverPoint] = useState<number | null>(null)
   const [animating, setAnimating] = useState(false)
   const [diceRolling, setDiceRolling] = useState(false)
-  const [diceAnimationStart, setDiceAnimationStart] = useState<number | null>(null)
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const animationFrameRef = useRef<number>()
   const [dice3DPositions, setDice3DPositions] = useState<{ x: number; y: number; size: number; spacing: number } | null>(null)
   
-  // Состояние для drag and drop
   const [dragging, setDragging] = useState(false)
   const [dragFromPoint, setDragFromPoint] = useState<number | null>(null)
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [dragHoverPoint, setDragHoverPoint] = useState<number | null>(null)
   
-  // Загруженные текстуры скинов
-  // НОВАЯ ЛОГИКА: каждый игрок видит свою сторону слева
-  // - Доска: слева = мой скин, справа = скин противника
-  // - Кубики: мои кубики = мой dice скин, кубики противника = его dice скин
-  // - Шашки: мои шашки (pointValue > 0 после отзеркаливания) = мой checkers скин
-  //          шашки противника (pointValue < 0 после отзеркаливания) = его checkers скин
-  const [loadedTextures, setLoadedTextures] = useState<{
-    myBoard?: HTMLImageElement  // Доска для левой стороны (всегда моя сторона)
-    opponentBoard?: HTMLImageElement  // Доска для правой стороны (всегда сторона противника)
-    myDice?: { [key: number]: HTMLImageElement }   // Мои кубики - объект с текстурами для граней 1-6
-    opponentDice?: { [key: number]: HTMLImageElement }   // Кубики противника - объект с текстурами для граней 1-6
-    myCheckers?: HTMLImageElement // Мои шашки (внизу на доске)
-    opponentCheckers?: HTMLImageElement // Шашки противника (вверху на доске)
+  // Текстуры скинов
+  const [textures, setTextures] = useState<{
+    myBoard?: HTMLImageElement
+    opponentBoard?: HTMLImageElement
+    myDice?: { [face: number]: HTMLImageElement }
+    opponentDice?: { [face: number]: HTMLImageElement }
+    myCheckers?: HTMLImageElement
+    opponentCheckers?: HTMLImageElement
   }>({})
   
-  // Определяем скины для отображения: слева всегда мой скин, справа - скин противника
   const isPlayer1 = myPlayerId === player1Id
   const myBoardSkin = isPlayer1 ? player1Skins?.board : player2Skins?.board
   const opponentBoardSkin = isPlayer1 ? player2Skins?.board : player1Skins?.board
@@ -105,250 +93,136 @@ export default function BackgammonBoard({
   const myCheckersSkin = isPlayer1 ? player1Skins?.checkers : player2Skins?.checkers
   const opponentCheckersSkin = isPlayer1 ? player2Skins?.checkers : player1Skins?.checkers
   
-  // Загружаем текстуры скинов: слева мой скин, справа скин противника
+  // Загрузка текстур
   useEffect(() => {
-    console.log('🎨 Loading skins textures (my side left, opponent side right):', {
-      isPlayer1,
-      myBoardTexture: myBoardSkin?.boardTextureUrl,
-      opponentBoardTexture: opponentBoardSkin?.boardTextureUrl,
-      myDiceTexture: myDiceSkin?.diceTextureUrl,
-      opponentDiceTexture: opponentDiceSkin?.diceTextureUrl,
-      myCheckersTexture: myCheckersSkin?.whiteCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl || (isPlayer1 ? null : myCheckersSkin?.blackCheckersTextureUrl),
-      opponentCheckersTexture: opponentCheckersSkin?.blackCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl || (isPlayer1 ? opponentCheckersSkin?.blackCheckersTextureUrl : null),
-    })
-    
-    const textures: {
-      leftBoard?: HTMLImageElement   // Моя сторона (слева)
-      rightBoard?: HTMLImageElement  // Сторона противника (справа)
-      myDice?: { [key: number]: HTMLImageElement }      // Мои кубики - объект с текстурами для граней 1-6
-      opponentDice?: { [key: number]: HTMLImageElement } // Кубики противника - объект с текстурами для граней 1-6
-      myCheckers?: HTMLImageElement   // Мои шашки
-      opponentCheckers?: HTMLImageElement // Шашки противника
-    } = {}
-    let loadedCount = 0
-    let expectedCount = 0
-    
-    const checkAndDraw = () => {
-      loadedCount++
-      if (loadedCount === expectedCount) {
-        setLoadedTextures({
-          myBoard: textures.leftBoard,  // Левая сторона - всегда моя доска
-          opponentBoard: textures.rightBoard,  // Правая сторона - всегда доска оппонента
-          myDice: textures.myDice,  // Мои кубики
-          opponentDice: textures.opponentDice,  // Кубики оппонента
-          myCheckers: textures.myCheckers,  // Мои шашки (внизу)
-          opponentCheckers: textures.opponentCheckers,  // Шашки оппонента (вверху)
+    const loadTextures = async () => {
+      const loaded: typeof textures = {}
+      
+      const loadImage = (url: string): Promise<HTMLImageElement> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => resolve(img)
+          img.onerror = reject
+          img.src = url
         })
       }
-    }
-    
-    const loadImage = async (url: string) => {
-      const img = new Image()
-      return new Promise<HTMLImageElement>((resolve, reject) => {
-        img.onload = () => {
-          console.log('✅ Image loaded successfully:', url)
-          resolve(img)
-        }
-        img.onerror = (e) => {
-          console.error('❌ Image load error:', url, e)
-          reject(e)
-        }
-        img.src = url
-      })
-    }
-    
-    // 1. Загружаем текстуру ДОСКИ для моей стороны (слева)
-    const myBoardTextureUrl = myBoardSkin?.boardTextureUrl
-    expectedCount++
-    if (myBoardTextureUrl) {
-      loadImage(myBoardTextureUrl)
-        .then((img) => {
-          console.log('✅ My board texture loaded (left side):', myBoardTextureUrl)
-          textures.leftBoard = img
-          checkAndDraw()
-        })
-        .catch(() => {
-          console.error('Failed to load my board texture:', myBoardTextureUrl)
-          checkAndDraw()
-        })
-    } else {
-      checkAndDraw()
-    }
-    
-    // 2. Загружаем текстуру ДОСКИ для стороны противника (справа)
-    const opponentBoardTextureUrl = opponentBoardSkin?.boardTextureUrl
-    expectedCount++
-    if (opponentBoardTextureUrl) {
-      loadImage(opponentBoardTextureUrl)
-        .then((img) => {
-          console.log('✅ Opponent board texture loaded (right side):', opponentBoardTextureUrl)
-          textures.rightBoard = img
-          checkAndDraw()
-        })
-        .catch(() => {
-          console.error('Failed to load opponent board texture:', opponentBoardTextureUrl)
-          checkAndDraw()
-        })
-    } else {
-      checkAndDraw()
-    }
-    
-    // 3. Загружаем текстуры КУБИКОВ для меня (6 граней: 1, 2, 3, 4, 5, 6)
-    textures.myDice = {}
-    const myDiceTextureUrls = myDiceSkin?.diceTextureUrls || {}
-    const myDiceTextureUrl = myDiceSkin?.diceTextureUrl // Старый формат для обратной совместимости
-    
-    if (Object.keys(myDiceTextureUrls).length > 0) {
-      // Загружаем все 6 текстур из diceTextureUrls
-      for (let face = 1; face <= 6; face++) {
-        const textureUrl = myDiceTextureUrls[face]
-        if (textureUrl) {
-          expectedCount++
-          loadImage(textureUrl)
-            .then((img) => {
-              console.log(`✅ My dice texture loaded for face ${face}:`, textureUrl)
-              textures.myDice![face] = img
-              checkAndDraw()
-            })
-            .catch(() => {
-              console.error(`Failed to load my dice texture for face ${face}:`, textureUrl)
-              checkAndDraw()
-            })
+      
+      // 1. Моя доска (левая сторона)
+      if (myBoardSkin?.boardTextureUrl) {
+        try {
+          loaded.myBoard = await loadImage(myBoardSkin.boardTextureUrl)
+        } catch (e) {
+          console.error('Failed to load my board texture:', e)
         }
       }
-    } else if (myDiceTextureUrl) {
-      // Используем старый формат - одну текстуру для всех граней
-      expectedCount++
-      loadImage(myDiceTextureUrl)
-        .then((img) => {
-          console.log('✅ My dice texture loaded (legacy format, using for all faces):', myDiceTextureUrl)
-          // Используем одну текстуру для всех граней
-          textures.myDice = { 1: img, 2: img, 3: img, 4: img, 5: img, 6: img }
-          checkAndDraw()
-        })
-        .catch(() => {
-          console.error('Failed to load my dice texture:', myDiceTextureUrl)
-          checkAndDraw()
-        })
-    } else {
-      checkAndDraw()
-    }
-    
-    // 4. Загружаем текстуры КУБИКОВ для противника (6 граней: 1, 2, 3, 4, 5, 6)
-    textures.opponentDice = {}
-    const opponentDiceTextureUrls = opponentDiceSkin?.diceTextureUrls || {}
-    const opponentDiceTextureUrl = opponentDiceSkin?.diceTextureUrl // Старый формат для обратной совместимости
-    
-    if (Object.keys(opponentDiceTextureUrls).length > 0) {
-      // Загружаем все 6 текстур из diceTextureUrls
-      for (let face = 1; face <= 6; face++) {
-        const textureUrl = opponentDiceTextureUrls[face]
-        if (textureUrl) {
-          expectedCount++
-          loadImage(textureUrl)
-            .then((img) => {
-              console.log(`✅ Opponent dice texture loaded for face ${face}:`, textureUrl)
-              textures.opponentDice![face] = img
-              checkAndDraw()
-            })
-            .catch(() => {
-              console.error(`Failed to load opponent dice texture for face ${face}:`, textureUrl)
-              checkAndDraw()
-            })
+      
+      // 2. Доска оппонента (правая сторона)
+      if (opponentBoardSkin?.boardTextureUrl) {
+        try {
+          loaded.opponentBoard = await loadImage(opponentBoardSkin.boardTextureUrl)
+        } catch (e) {
+          console.error('Failed to load opponent board texture:', e)
         }
       }
-    } else if (opponentDiceTextureUrl) {
-      // Используем старый формат - одну текстуру для всех граней
-      expectedCount++
-      loadImage(opponentDiceTextureUrl)
-        .then((img) => {
-          console.log('✅ Opponent dice texture loaded (legacy format, using for all faces):', opponentDiceTextureUrl)
-          // Используем одну текстуру для всех граней
-          textures.opponentDice = { 1: img, 2: img, 3: img, 4: img, 5: img, 6: img }
-          checkAndDraw()
-        })
-        .catch(() => {
-          console.error('Failed to load opponent dice texture:', opponentDiceTextureUrl)
-          checkAndDraw()
-        })
-    } else {
-      checkAndDraw()
+      
+      // 3. Мои кубики (6 граней)
+      loaded.myDice = {}
+      const myDiceUrls = myDiceSkin?.diceTextureUrls || {}
+      if (Object.keys(myDiceUrls).length > 0) {
+        for (let face = 1; face <= 6; face++) {
+          if (myDiceUrls[face]) {
+            try {
+              loaded.myDice[face] = await loadImage(myDiceUrls[face])
+            } catch (e) {
+              console.error(`Failed to load my dice texture face ${face}:`, e)
+            }
+          }
+        }
+      } else if (myDiceSkin?.diceTextureUrl) {
+        // Fallback: одна текстура для всех граней
+        try {
+          const img = await loadImage(myDiceSkin.diceTextureUrl)
+          loaded.myDice = { 1: img, 2: img, 3: img, 4: img, 5: img, 6: img }
+        } catch (e) {
+          console.error('Failed to load my dice texture:', e)
+        }
+      }
+      
+      // 4. Кубики оппонента (6 граней)
+      loaded.opponentDice = {}
+      const opponentDiceUrls = opponentDiceSkin?.diceTextureUrls || {}
+      if (Object.keys(opponentDiceUrls).length > 0) {
+        for (let face = 1; face <= 6; face++) {
+          if (opponentDiceUrls[face]) {
+            try {
+              loaded.opponentDice[face] = await loadImage(opponentDiceUrls[face])
+            } catch (e) {
+              console.error(`Failed to load opponent dice texture face ${face}:`, e)
+            }
+          }
+        }
+      } else if (opponentDiceSkin?.diceTextureUrl) {
+        try {
+          const img = await loadImage(opponentDiceSkin.diceTextureUrl)
+          loaded.opponentDice = { 1: img, 2: img, 3: img, 4: img, 5: img, 6: img }
+        } catch (e) {
+          console.error('Failed to load opponent dice texture:', e)
+        }
+      }
+      
+      // 5. Мои шашки (внизу на доске)
+      const myCheckersUrl = isPlayer1
+        ? (myCheckersSkin?.whiteCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl)
+        : (myCheckersSkin?.blackCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl)
+      if (myCheckersUrl) {
+        try {
+          loaded.myCheckers = await loadImage(myCheckersUrl)
+        } catch (e) {
+          console.error('Failed to load my checkers texture:', e)
+        }
+      }
+      
+      // 6. Шашки оппонента (вверху на доске)
+      const opponentCheckersUrl = isPlayer1
+        ? (opponentCheckersSkin?.blackCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl)
+        : (opponentCheckersSkin?.whiteCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl)
+      if (opponentCheckersUrl) {
+        try {
+          loaded.opponentCheckers = await loadImage(opponentCheckersUrl)
+        } catch (e) {
+          console.error('Failed to load opponent checkers texture:', e)
+        }
+      }
+      
+      setTextures(loaded)
     }
     
-    // 5. Загружаем текстуру МОИХ шашек
-    // Если я player1, мои шашки белые, если player2 - черные
-    const myCheckersTextureUrl = isPlayer1 
-      ? (myCheckersSkin?.whiteCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl)
-      : (myCheckersSkin?.blackCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl)
-    expectedCount++
-    if (myCheckersTextureUrl) {
-      loadImage(myCheckersTextureUrl)
-        .then((img) => {
-          console.log('✅ My checkers texture loaded:', myCheckersTextureUrl)
-          textures.myCheckers = img
-          checkAndDraw()
-        })
-        .catch(() => {
-          console.error('Failed to load my checkers texture:', myCheckersTextureUrl)
-          checkAndDraw()
-        })
-    } else {
-      checkAndDraw()
-    }
-    
-    // 6. Загружаем текстуру ШАШЕК ПРОТИВНИКА
-    // Если я player1, шашки противника черные, если player2 - белые
-    const opponentCheckersTextureUrl = isPlayer1
-      ? (opponentCheckersSkin?.blackCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl)
-      : (opponentCheckersSkin?.whiteCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl)
-    expectedCount++
-    if (opponentCheckersTextureUrl) {
-      loadImage(opponentCheckersTextureUrl)
-        .then((img) => {
-          console.log('✅ Opponent checkers texture loaded:', opponentCheckersTextureUrl)
-          textures.opponentCheckers = img
-          checkAndDraw()
-        })
-        .catch(() => {
-          console.error('Failed to load opponent checkers texture:', opponentCheckersTextureUrl)
-          checkAndDraw()
-        })
-    } else {
-      checkAndDraw()
-    }
-  }, [player1Skins, player2Skins, myPlayerId, player1Id, isPlayer1, myBoardSkin, opponentBoardSkin, myDiceSkin, opponentDiceSkin, myCheckersSkin, opponentCheckersSkin])
-
-  // Определяем параметры для отзеркаливания доски
+    loadTextures()
+  }, [myBoardSkin, opponentBoardSkin, myDiceSkin, opponentDiceSkin, myCheckersSkin, opponentCheckersSkin, isPlayer1])
+  
+  const shouldMirror = !isPlayer1
   const myPlayerIndex = isPlayer1 ? 0 : 1
-  const shouldMirror = !isPlayer1 // Если я player2, отзеркаливаем доску
-
-  // Функции для преобразования индексов точек при отзеркаливании
-  // Отзеркаливание: mirroredIndex = 23 - originalIndex
+  
   const mirrorPointIndex = (index: number): number => {
-    if (index < 0 || index >= 24) return index // Бар и другие специальные индексы не трогаем
+    if (index < 0 || index >= 24) return index
     return 23 - index
   }
-
+  
   const unmirrorPointIndex = (index: number): number => {
     if (index < 0 || index >= 24) return index
     return 23 - index
   }
-
-  // gameState.points - это массив чисел, где положительное число = белые шашки (player1), отрицательное = черные (player2)
+  
+  // Обработка gameState
   const pointsRaw = gameState?.points || []
   let points: number[] = Array.isArray(pointsRaw)
     ? pointsRaw.map((p: any) => {
-        // Если это число, возвращаем как есть
-        if (typeof p === 'number') {
-          return p
-        }
-        // Если это объект Point, преобразуем в число
+        if (typeof p === 'number') return p
         if (p && typeof p === 'object') {
           if ('checkers' in p && Array.isArray(p.checkers)) {
             const count = p.checkers.length
             return p.color === 'white' ? count : -count
           }
-          // Если есть числовое значение напрямую
           if ('value' in p && typeof p.value === 'number') {
             return p.value
           }
@@ -356,47 +230,42 @@ export default function BackgammonBoard({
         return 0
       })
     : []
-
-  // Отзеркаливаем доску для player2, чтобы его шашки были внизу
+  
   if (shouldMirror) {
-    // Инвертируем массив точек и меняем знаки (белые становятся черными и наоборот)
-    const mirroredPoints: number[] = new Array(24)
+    const mirrored: number[] = new Array(24)
     for (let i = 0; i < 24; i++) {
-      const mirroredIndex = mirrorPointIndex(i)
-      mirroredPoints[i] = -points[mirroredIndex] // Меняем знак и берем из отзеркаленной позиции
+      mirrored[i] = -points[mirrorPointIndex(i)]
     }
-    points = mirroredPoints
+    points = mirrored
   }
   
-  // Отзеркаливаем bar и bearOff для player2
-  let bar = gameState?.bar || (Array.isArray(gameState?.bar) ? { white: gameState.bar[0] || 0, black: gameState.bar[1] || 0 } : { white: 0, black: 0 })
-  let bearOff = gameState?.borneOff || gameState?.bearOff || (Array.isArray(gameState?.borneOff) ? { white: gameState.borneOff[0] || 0, black: gameState.borneOff[1] || 0 } : { white: 0, black: 0 })
+  let bar = gameState?.bar || { white: 0, black: 0 }
+  let bearOff = gameState?.borneOff || gameState?.bearOff || { white: 0, black: 0 }
+  
+  if (Array.isArray(bar)) {
+    bar = { white: bar[0] || 0, black: bar[1] || 0 }
+  }
+  if (Array.isArray(bearOff)) {
+    bearOff = { white: bearOff[0] || 0, black: bearOff[1] || 0 }
+  }
   
   if (shouldMirror) {
-    // Меняем местами white и black для player2
     bar = { white: bar.black, black: bar.white }
     bearOff = { white: bearOff.black, black: bearOff.white }
   }
-
-  // Нормализуем формат кубиков
+  
   const diceArray: number[] = dice
     ? Array.isArray(dice)
       ? dice
       : [dice.die1, dice.die2]
     : []
-
-  // Загружаем возможные ходы когда доступны кубики
+  
   useEffect(() => {
     if (gameId && diceArray.length > 0 && isMyTurn && canMove) {
-      console.log('🔄 Загружаем возможные ходы для игры', gameId)
       apiClient
         .get(`/games/${gameId}/possible-moves`)
         .then((response: any) => {
-          const data = response.data || {}
-          const allMoves = data.allMoves || []
-          console.log('✅ Получены возможные ходы с бэкенда:', allMoves)
-          
-          // Извлекаем все возможные ходы из всех комбинаций
+          const allMoves = response.data?.allMoves || []
           const movesSet = new Set<string>()
           allMoves.forEach((moveSeq: any[]) => {
             moveSeq.forEach((move: any) => {
@@ -406,19 +275,17 @@ export default function BackgammonBoard({
           
           const uniqueMoves = Array.from(movesSet).map((key) => {
             let [from, to, die] = key.split('-').map(Number)
-            // Преобразуем индексы для отображения, если доска отзеркалена
             if (shouldMirror) {
-              from = from === -1 ? -1 : mirrorPointIndex(from) // Бар остается -1
+              from = from === -1 ? -1 : mirrorPointIndex(from)
               to = to === -1 ? -1 : mirrorPointIndex(to)
             }
             return { from, to, die }
           })
           
-          console.log('📋 Уникальные ходы (после отзеркаливания):', uniqueMoves)
           setPossibleMoves(uniqueMoves)
         })
         .catch((error) => {
-          console.error('❌ Ошибка загрузки возможных ходов:', error)
+          console.error('Error loading possible moves:', error)
           setPossibleMoves([])
         })
     } else {
@@ -426,22 +293,15 @@ export default function BackgammonBoard({
       setHighlightedPoints(new Set())
       setSelectedPoint(null)
     }
-  }, [gameId, diceArray.join(','), isMyTurn, canMove, gameState?.currentPlayer])
-
-  // Загружаем возможные ходы с конкретной точки при выборе точки
+  }, [gameId, diceArray.join(','), isMyTurn, canMove, gameState?.currentPlayer, shouldMirror])
+  
   useEffect(() => {
     if (gameId && selectedPoint !== null && diceArray.length > 0 && isMyTurn && canMove) {
-      console.log(`🔄 Загружаем возможные ходы с точки ${selectedPoint} для игры`, gameId)
-      // Преобразуем индекс точки обратно для запроса к серверу
       const originalPointIndex = shouldMirror ? unmirrorPointIndex(selectedPoint) : selectedPoint
       
-      // Сначала показываем подсветку из possibleMoves (быстро)
       const quickHighlights = new Set<number>()
       const filteredMoves = possibleMoves.filter((move) => {
-        if (selectedPoint === -1) {
-          return move.from === -1
-        }
-        return move.from === selectedPoint
+        return selectedPoint === -1 ? move.from === -1 : move.from === selectedPoint
       })
       filteredMoves.forEach((move) => {
         if (move.to >= 0 && move.to < 24) {
@@ -449,19 +309,13 @@ export default function BackgammonBoard({
         }
       })
       if (quickHighlights.size > 0) {
-        console.log(`⚡ Быстрая подсветка из possibleMoves:`, Array.from(quickHighlights).map(idx => `${POINT_NUMBERS[idx]}`).join(', '))
         setHighlightedPoints(quickHighlights)
       }
       
-      // Затем загружаем с сервера для точности
       apiClient
         .get(`/games/${gameId}/possible-moves/${originalPointIndex}`)
         .then((response: any) => {
-          const data = response.data || {}
-          const movesFromPoint = data.movesFromPoint || []
-          console.log(`✅ Получены возможные ходы с точки ${originalPointIndex} (отображение: ${selectedPoint}):`, movesFromPoint)
-          
-          // Подсвечиваем точки, куда можно сделать ход (преобразуем индексы для отображения)
+          const movesFromPoint = response.data?.movesFromPoint || []
           const highlights = new Set<number>()
           movesFromPoint.forEach((move: any) => {
             if (move.to >= 0 && move.to < 24) {
@@ -469,60 +323,46 @@ export default function BackgammonBoard({
               highlights.add(displayIndex)
             }
           })
-          console.log(`🎯 Обновляем подсветку с сервера:`, Array.from(highlights).map(idx => `${POINT_NUMBERS[idx]}`).join(', '))
           setHighlightedPoints(highlights)
         })
-        .catch((error) => {
-          console.error(`❌ Ошибка загрузки возможных ходов с точки ${selectedPoint}:`, error)
-          // При ошибке оставляем подсветку из possibleMoves
-        })
+        .catch(() => {})
     } else if (selectedPoint === null) {
       setHighlightedPoints(new Set())
     }
   }, [gameId, selectedPoint, diceArray.join(','), isMyTurn, canMove, shouldMirror, possibleMoves])
-
-  // Этот useEffect больше не нужен - подсветка теперь обрабатывается в основном useEffect выше
-
+  
   const drawBoard = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
+    
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-
-    // Используем адаптивный размер canvas с сохранением пропорций
+    
     const container = canvas.parentElement
     if (!container) return
     
-    // Получаем размеры контейнера
     let containerWidth = container.clientWidth
     let containerHeight = container.clientHeight
     
-    // Обеспечиваем горизонтальную ориентацию (ширина должна быть больше высоты)
-    // Если высота больше ширины, ограничиваем высоту
     if (containerHeight > containerWidth * 0.5) {
-      containerHeight = containerWidth * 0.5 // Соотношение 2:1
+      containerHeight = containerWidth * 0.5
     }
     
-    // Если контейнер слишком маленький, устанавливаем минимальные размеры
     if (containerWidth < 400) {
       containerWidth = 400
       containerHeight = 200
     }
     
-    // Устанавливаем размер canvas с учетом devicePixelRatio для четкости
     const dpr = window.devicePixelRatio || 1
     canvas.width = containerWidth * dpr
     canvas.height = containerHeight * dpr
     canvas.style.width = `${containerWidth}px`
     canvas.style.height = `${containerHeight}px`
     
-    // Масштабируем контекст для четкости
     ctx.scale(dpr, dpr)
     
     const width = containerWidth
     const height = containerHeight
-    // Убираем padding для правильного центрирования
     const boardPadding = 0
     const boardWidth = width
     const boardHeight = height
@@ -531,251 +371,203 @@ export default function BackgammonBoard({
     const barWidth = boardWidth * 0.12
     const barHeight = boardHeight * 0.3
     
-    // Центральная линия (бар) - центрируем без padding
     const barX = (boardWidth - barWidth) / 2
     const barY = (boardHeight - barHeight) / 2
-
-    // Очистка
-    ctx.clearRect(0, 0, width, height)
-
-    // Фон доски - разделяем на две части: слева мой скин, справа скин противника
-    const boardCenterX = width / 2
     const barLeftX = barX
     const barRightX = barX + barWidth
     
-    // Левая сторона доски (моя сторона) - от 0 до центра бара
-    const leftBoardTexture = loadedTextures.myBoard // Всегда моя доска слева
-    if (leftBoardTexture) {
-      // Рисуем текстуру доски моей стороны только на левой половине
-      ctx.drawImage(leftBoardTexture, 0, 0, barLeftX, height)
+    ctx.clearRect(0, 0, width, height)
+    
+    // Рисуем доски: слева моя, справа оппонента
+    if (textures.myBoard) {
+      ctx.drawImage(textures.myBoard, 0, 0, barLeftX, height)
     } else {
-      // Если текстура еще не загрузилась, рисуем простой фон
       ctx.fillStyle = '#8B4513'
       ctx.fillRect(0, 0, barLeftX, height)
     }
     
-    // Правая сторона доски (сторона противника) - от правого края бара до конца
-    const rightBoardTexture = loadedTextures.opponentBoard // Всегда доска оппонента справа
-    if (rightBoardTexture) {
-      // Рисуем текстуру доски стороны противника только на правой половине
+    if (textures.opponentBoard) {
       const rightWidth = width - barRightX
-      ctx.drawImage(rightBoardTexture, barRightX, 0, rightWidth, height)
+      ctx.drawImage(textures.opponentBoard, barRightX, 0, rightWidth, height)
     } else {
-      // Если текстура еще не загрузилась, рисуем простой фон
       ctx.fillStyle = '#654321'
       ctx.fillRect(barRightX, 0, width - barRightX, height)
     }
     
-    // Центральная часть (бар) - нейтральный цвет
+    // Центральный бар
     ctx.fillStyle = '#4a4a4a'
     ctx.fillRect(barLeftX, 0, barWidth, height)
     
-    // Номера точек и шашки рисуем всегда
+    // Рисуем точки и шашки
     for (let i = 0; i < 24; i++) {
-        const pointNum = POINT_NUMBERS[i]
-        const isTop = i < 12
+      const pointNum = POINT_NUMBERS[i]
+      const isTop = i < 12
+      
+      let x: number
+      if (i < 12) {
+        x = (11 - i) * pointWidth
+      } else {
+        x = (i - 12) * pointWidth
+      }
+      const y = isTop ? 0 : boardHeight
+      
+      // Номер точки
+      ctx.fillStyle = '#FFFFFF'
+      ctx.font = 'bold 11px Arial'
+      ctx.textAlign = 'center'
+      ctx.strokeStyle = '#654321'
+      ctx.lineWidth = 2
+      const numY = isTop ? y + pointHeight - 5 : y - pointHeight + 15
+      ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
+      ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)
+      
+      // Шашки на точке
+      const pointValue = points[i] || 0
+      const checkerCount = Math.abs(pointValue)
+      if (checkerCount > 0) {
+        const isMyChecker = pointValue > 0
+        const checkerColor = isMyChecker ? '#FFFFFF' : '#1a1a1a'
+        const checkerRadius = 14
+        const maxStack = 5
+        const stackSpacing = 4
         
-        // Позиция точки
-        let x: number
-        if (i < 12) {
-          x = (11 - i) * pointWidth
-        } else {
-          x = (i - 12) * pointWidth
-        }
-        const y = isTop ? 0 : boardHeight
-
-        // Номер точки - показываем только если есть текстура доски
-        ctx.fillStyle = '#FFFFFF'
-        ctx.font = 'bold 11px Arial'
-        ctx.textAlign = 'center'
-        ctx.strokeStyle = '#654321'
-        ctx.lineWidth = 2
-        const numY = isTop ? y + pointHeight - 5 : y - pointHeight + 15
-        ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
-        ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)
-
-        // Фишки на точке - ТОЛЬКО если есть текстура шашек
-        const pointValue = points[i] || 0
-        const checkerCount = Math.abs(pointValue)
-        if (checkerCount > 0) {
-          const isPlayer1Checker = pointValue > 0
-          // Простые цвета: белые для player1, черные для player2
-          const checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
-          const checkerRadius = 14
-          const maxStack = 5
-          const stackSpacing = 4
-
-          // Рисуем фишки
-          // Если идет перетаскивание с этой точки, не рисуем верхнюю шашку (она перетаскивается)
-          const isDraggingFromThisPoint = dragging && dragFromPoint === i
-          const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, maxStack) : Math.min(checkerCount, maxStack)
+        const isDraggingFromThisPoint = dragging && dragFromPoint === i
+        const checkersToDraw = isDraggingFromThisPoint
+          ? Math.min(checkerCount - 1, maxStack)
+          : Math.min(checkerCount, maxStack)
+        
+        for (let j = 0; j < checkersToDraw; j++) {
+          let checkerY: number
+          if (isTop) {
+            checkerY = y + (j * stackSpacing) + checkerRadius
+          } else {
+            checkerY = y - (j * stackSpacing) - checkerRadius
+          }
           
-          for (let j = 0; j < checkersToDraw; j++) {
-            let checkerY: number
-            if (isTop) {
-              // Верхние шашки должны быть в верхней части треугольника (начинаем сверху)
-              checkerY = y + (j * stackSpacing) + checkerRadius
-            } else {
-              // Нижние шашки должны быть в нижней части треугольника (начинаем снизу)
-              checkerY = y - (j * stackSpacing) - checkerRadius
-            }
-
-            const checkerX = x + pointWidth / 2
-
-            // Анимация выбранной фишки (только если не идет перетаскивание)
-            const isSelected = !isDraggingFromThisPoint && selectedPoint === i && j === checkersToDraw - 1
-            const scale = isSelected ? 1.2 : 1.0
-            const offsetX = isSelected ? Math.sin(Date.now() / 100) * 3 : 0
-            const offsetY = isSelected ? Math.cos(Date.now() / 100) * 2 : 0
-
+          const checkerX = x + pointWidth / 2
+          
+          const isSelected = !isDraggingFromThisPoint && selectedPoint === i && j === checkersToDraw - 1
+          const scale = isSelected ? 1.2 : 1.0
+          const offsetX = isSelected ? Math.sin(Date.now() / 100) * 3 : 0
+          const offsetY = isSelected ? Math.cos(Date.now() / 100) * 2 : 0
+          
+          ctx.save()
+          ctx.translate(checkerX + offsetX, checkerY + offsetY)
+          ctx.scale(scale, scale)
+          
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
+          ctx.shadowBlur = 8
+          ctx.shadowOffsetX = 2
+          ctx.shadowOffsetY = 2
+          
+          const checkerTexture = isMyChecker ? textures.myCheckers : textures.opponentCheckers
+          
+          if (checkerTexture) {
+            ctx.beginPath()
+            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
             ctx.save()
-            ctx.translate(checkerX + offsetX, checkerY + offsetY)
-            ctx.scale(scale, scale)
-
-            // Тень фишки
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
-            ctx.shadowBlur = 8
-            ctx.shadowOffsetX = 2
-            ctx.shadowOffsetY = 2
-
-            // Круглая фишка - используем текстуру если есть
-            // После отзеркаливания доски: pointValue > 0 = мои шашки, pointValue < 0 = шашки противника
-            // isTop определяет, вверху ли шашки (сторона оппонента) или внизу (моя сторона)
-            const isMyChecker = pointValue > 0
-            const checkerTexture = isMyChecker
-              ? loadedTextures.myCheckers  // Мои шашки (внизу на доске)
-              : loadedTextures.opponentCheckers  // Шашки противника (вверху на доске)
-            
-            // Рисуем шашку - используем текстуру или дефолтный цвет
-            if (checkerTexture) {
-              // Используем текстуру шашек
-              ctx.beginPath()
-              ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-              ctx.save()
-              ctx.clip()
-              ctx.drawImage(checkerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
-              ctx.restore()
-              
-              // Обводка фишки
-              ctx.beginPath()
-              ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-              ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
-              ctx.lineWidth = 2
-              ctx.stroke()
-            } else {
-              // Если текстура еще не загрузилась, рисуем простой цветной круг
-              ctx.fillStyle = checkerColor
-              ctx.beginPath()
-              ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-              ctx.fill()
-              ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
-              ctx.lineWidth = 2
-              ctx.stroke()
-            }
-
+            ctx.clip()
+            ctx.drawImage(checkerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
             ctx.restore()
-          }
-
-          // Показываем количество если больше maxStack
-          if (checkerCount > maxStack) {
-            ctx.fillStyle = '#FFFFFF'
-            ctx.font = 'bold 12px Arial'
-            ctx.textAlign = 'center'
-            // Позиция текста количества фишек: для верхних - внизу стопки, для нижних - вверху стопки
-            const countTextY = isTop 
-              ? y + maxStack * stackSpacing + checkerRadius + 15
-              : y - maxStack * stackSpacing - checkerRadius - 10
-            ctx.fillText(
-              checkerCount.toString(),
-              x + pointWidth / 2,
-              countTextY
-            )
-          }
-        }
-
-        // Подсветка выбранной точки
-        if (selectedPoint === i && isMyTurn && canMove) {
-          ctx.beginPath()
-          if (isTop) {
-            ctx.moveTo(x, y)
-            ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-            ctx.lineTo(x + pointWidth, y)
+            
+            ctx.beginPath()
+            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+            ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
+            ctx.lineWidth = 2
+            ctx.stroke()
           } else {
-            ctx.moveTo(x, y)
-            ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-            ctx.lineTo(x + pointWidth, y)
+            ctx.fillStyle = checkerColor
+            ctx.beginPath()
+            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
+            ctx.lineWidth = 2
+            ctx.stroke()
           }
-          ctx.closePath()
           
-          // Подсветка выбранной точки синим
-          ctx.fillStyle = 'rgba(0, 100, 255, 0.3)'
-          ctx.fill()
-          
-          ctx.strokeStyle = 'rgba(0, 100, 255, 0.8)'
-          ctx.lineWidth = 3
-          ctx.stroke()
+          ctx.restore()
         }
-
-        // Подсветка возможных ходов (когда точка выбрана или перетаскивается) - рисуем поверх всего
-        const isHighlighted = highlightedPoints.has(i) && isMyTurn && canMove && 
-          ((selectedPoint !== null && selectedPoint !== i) || (dragging && dragFromPoint !== null && dragFromPoint !== i))
-        if (isHighlighted) {
-          ctx.beginPath()
-          if (isTop) {
-            ctx.moveTo(x, y)
-            ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-            ctx.lineTo(x + pointWidth, y)
-          } else {
-            ctx.moveTo(x, y)
-            ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-            ctx.lineTo(x + pointWidth, y)
-          }
-          ctx.closePath()
-          
-          // Более яркая подсветка для лучшей видимости
-          // Если это точка под курсором при перетаскивании, делаем еще ярче
-          const isDragTarget = dragging && dragHoverPoint === i
-          ctx.fillStyle = isDragTarget ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.6)'
-          ctx.fill()
-          
-          ctx.strokeStyle = 'rgba(0, 255, 0, 1.0)'
-          ctx.lineWidth = isDragTarget ? 5 : 4
-          ctx.stroke()
-        }
-
-        // Подсветка при наведении (если точка не выбрана)
-        if (hoverPoint === i && selectedPoint === null && isMyTurn && canMove) {
-          ctx.beginPath()
-          if (isTop) {
-            ctx.moveTo(x, y)
-            ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-            ctx.lineTo(x + pointWidth, y)
-          } else {
-            ctx.moveTo(x, y)
-            ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-            ctx.lineTo(x + pointWidth, y)
-          }
-          ctx.closePath()
-          
-          ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'
-          ctx.fill()
-          
-          ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)'
-          ctx.lineWidth = 3
-          ctx.stroke()
+        
+        if (checkerCount > maxStack) {
+          ctx.fillStyle = '#FFFFFF'
+          ctx.font = 'bold 12px Arial'
+          ctx.textAlign = 'center'
+          const countTextY = isTop
+            ? y + maxStack * stackSpacing + checkerRadius + 15
+            : y - maxStack * stackSpacing - checkerRadius - 10
+          ctx.fillText(checkerCount.toString(), x + pointWidth / 2, countTextY)
         }
       }
-
-    // Фишки на баре (сбитые)
+      
+      // Подсветка выбранной точки
+      if (selectedPoint === i && isMyTurn && canMove) {
+        ctx.beginPath()
+        if (isTop) {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        } else {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        }
+        ctx.closePath()
+        ctx.fillStyle = 'rgba(0, 100, 255, 0.3)'
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(0, 100, 255, 0.8)'
+        ctx.lineWidth = 3
+        ctx.stroke()
+      }
+      
+      // Подсветка возможных ходов
+      const isHighlighted = highlightedPoints.has(i) && isMyTurn && canMove &&
+        ((selectedPoint !== null && selectedPoint !== i) || (dragging && dragFromPoint !== null && dragFromPoint !== i))
+      if (isHighlighted) {
+        ctx.beginPath()
+        if (isTop) {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        } else {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        }
+        ctx.closePath()
+        const isDragTarget = dragging && dragHoverPoint === i
+        ctx.fillStyle = isDragTarget ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.6)'
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(0, 255, 0, 1.0)'
+        ctx.lineWidth = isDragTarget ? 5 : 4
+        ctx.stroke()
+      }
+      
+      // Подсветка при наведении
+      if (hoverPoint === i && selectedPoint === null && isMyTurn && canMove) {
+        ctx.beginPath()
+        if (isTop) {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        } else {
+          ctx.moveTo(x, y)
+          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
+          ctx.lineTo(x + pointWidth, y)
+        }
+        ctx.closePath()
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)'
+        ctx.lineWidth = 3
+        ctx.stroke()
+      }
+    }
+    
+    // Бар
     const barCenterX = barX + barWidth / 2
     const barCenterY = barY + barHeight / 2
-
+    
     if (bar.white > 0) {
-      ctx.fillStyle = '#FFFFFF'
-      ctx.font = 'bold 14px Arial'
-      ctx.textAlign = 'center'
-      ctx.fillText('Бар', barCenterX, barCenterY - 15)
-      
       for (let i = 0; i < Math.min(bar.white, 5); i++) {
         const checkerX = barCenterX - 20 + (i % 3) * 15
         const checkerY = barCenterY - 5 + Math.floor(i / 3) * 15
@@ -786,22 +578,17 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка - белые шашки вверху (шашки оппонента, если я player1)
-        // Но для единообразия: если bar.white > 0, это шашки оппонента вверху
-        // Используем текстуру оппонента для шашек в баре сверху
-        const checkerTexture = loadedTextures.opponentCheckers
-        if (checkerTexture) {
+        if (textures.opponentCheckers) {
           ctx.beginPath()
           ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
           ctx.save()
           ctx.clip()
-          ctx.drawImage(checkerTexture, checkerX - 12, checkerY - 12, 24, 24)
+          ctx.drawImage(textures.opponentCheckers, checkerX - 12, checkerY - 12, 24, 24)
           ctx.restore()
           ctx.strokeStyle = '#1a1a1a'
           ctx.lineWidth = 2
           ctx.stroke()
         } else {
-          // Если текстура еще не загрузилась, рисуем простой белый круг
           ctx.fillStyle = '#FFFFFF'
           ctx.beginPath()
           ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
@@ -819,7 +606,7 @@ export default function BackgammonBoard({
         ctx.fillText(bar.white.toString(), barCenterX + 25, barCenterY)
       }
     }
-
+    
     if (bar.black > 0) {
       for (let i = 0; i < Math.min(bar.black, 5); i++) {
         const checkerX = barCenterX - 20 + (i % 3) * 15
@@ -831,21 +618,17 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка - черные шашки внизу (мои шашки, если я player1)
-        // Используем мою текстуру для шашек в баре снизу
-        const checkerTexture = loadedTextures.myCheckers
-        if (checkerTexture) {
+        if (textures.myCheckers) {
           ctx.beginPath()
           ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
           ctx.save()
           ctx.clip()
-          ctx.drawImage(checkerTexture, checkerX - 12, checkerY - 12, 24, 24)
+          ctx.drawImage(textures.myCheckers, checkerX - 12, checkerY - 12, 24, 24)
           ctx.restore()
           ctx.strokeStyle = '#FFFFFF'
           ctx.lineWidth = 2
           ctx.stroke()
         } else {
-          // Если текстура еще не загрузилась, рисуем простой черный круг
           ctx.fillStyle = '#1a1a1a'
           ctx.beginPath()
           ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
@@ -863,34 +646,32 @@ export default function BackgammonBoard({
         ctx.fillText(bar.black.toString(), barCenterX + 25, barCenterY + 20)
       }
     }
-
-    // Вынос (bear off)
+    
+    // Вынос
     const bearOffX = width - 30
     const bearOffYTop = boardPadding + 20
     const bearOffYBottom = boardPadding + boardHeight - 20
-
+    
     if (bearOff.white > 0) {
       ctx.fillStyle = '#FFFFFF'
       ctx.font = 'bold 14px Arial'
       ctx.textAlign = 'right'
       ctx.fillText(`Вынос: ${bearOff.white}`, bearOffX, bearOffYTop)
     }
-
+    
     if (bearOff.black > 0) {
       ctx.fillStyle = '#1a1a1a'
       ctx.font = 'bold 14px Arial'
       ctx.textAlign = 'right'
       ctx.fillText(`Вынос: ${bearOff.black}`, bearOffX, bearOffYBottom)
     }
-
-    // Кубики - если идет 3D анимация, не рисуем на canvas (3D кубики отрисовываются отдельно)
-    // Определяем, какой игрок бросает кубики (currentPlayer: 0 = player1, 1 = player2)
+    
+    // Кубики
     const diceAreaX = boardPadding + 20
     const diceAreaY = height - 100
     const diceSize = 40
     const diceSpacing = 50
     
-    // Сохраняем позиции для 3D кубиков
     if (diceAnimating || diceRolling) {
       setDice3DPositions({ x: diceAreaX, y: diceAreaY, size: diceSize, spacing: diceSpacing })
     } else {
@@ -898,11 +679,9 @@ export default function BackgammonBoard({
     }
     
     if ((dice || diceRolling) && !diceAnimating) {
-      // Используем мои кубики для отображения (кубики всегда показываются для текущего игрока)
-      const diceTextures = loadedTextures.myDice
-
+      const diceTextures = textures.myDice
+      
       if (diceRolling && !diceAnimating) {
-        // Анимация броска кубиков (2D fallback)
         const roll1 = Math.floor(Math.random() * 6) + 1
         const roll2 = Math.floor(Math.random() * 6) + 1
         const texture1 = diceTextures?.[roll1]
@@ -910,49 +689,41 @@ export default function BackgammonBoard({
         drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true, false, texture1)
         drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true, false, texture2)
       } else if (diceArray.length > 0) {
-        // Отрисовка кубиков из массива
         diceArray.forEach((die, index) => {
           const texture = diceTextures?.[die]
           drawDice(ctx, diceAreaX + index * diceSpacing, diceAreaY, die, diceSize, false, false, texture)
         })
       }
     }
-    // Рисуем перетаскиваемую шашку (круглую)
+    
+    // Перетаскиваемая шашка
     if (dragging && dragFromPoint !== null && dragPosition) {
       const pointValue = points[dragFromPoint] || 0
       const isPlayer1Checker = pointValue > 0
       const checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
       const checkerRadius = 14
-
+      
       ctx.save()
       ctx.translate(dragPosition.x, dragPosition.y)
       
-      // Тень
       ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
       ctx.shadowBlur = 12
       ctx.shadowOffsetX = 4
       ctx.shadowOffsetY = 4
-
-      // Используем мою текстуру для перетаскиваемой шашки (так как это моя шашка)
-      const draggedCheckerTexture = loadedTextures.myCheckers
       
-      // Круглая фишка - используем текстуру или дефолтный цвет
-      if (draggedCheckerTexture) {
+      if (textures.myCheckers) {
         ctx.beginPath()
         ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
         ctx.save()
         ctx.clip()
-        ctx.drawImage(draggedCheckerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
+        ctx.drawImage(textures.myCheckers, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
         ctx.restore()
-        
-        // Обводка фишки
         ctx.beginPath()
         ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
         ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
         ctx.lineWidth = 2
         ctx.stroke()
       } else {
-        // Если текстура еще не загрузилась, рисуем простой цветной круг
         ctx.fillStyle = checkerColor
         ctx.beginPath()
         ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
@@ -961,11 +732,14 @@ export default function BackgammonBoard({
         ctx.lineWidth = 2
         ctx.stroke()
       }
-
+      
       ctx.restore()
     }
-  }, [points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, diceAnimating, isMyTurn, canMove, dragging, dragFromPoint, dragPosition, loadedTextures])
-
+  }, [
+    points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, diceAnimating,
+    isMyTurn, canMove, dragging, dragFromPoint, dragPosition, textures
+  ])
+  
   const drawDice = (
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -976,16 +750,13 @@ export default function BackgammonBoard({
     dropping: boolean,
     diceTexture?: HTMLImageElement
   ) => {
-    // Кубик - используем текстуру игрока или дефолтное отображение
     if (!diceTexture) {
-      // Если текстура еще не загрузилась, рисуем простой кубик
       ctx.fillStyle = '#FFFFFF'
       ctx.fillRect(x, y, size, size)
       ctx.strokeStyle = '#1a1a1a'
       ctx.lineWidth = 2
       ctx.strokeRect(x, y, size, size)
       
-      // Рисуем точки на кубике
       ctx.fillStyle = '#1a1a1a'
       const dotSize = size / 6
       const dotPositions: { [key: number]: Array<[number, number]> } = {
@@ -1009,17 +780,6 @@ export default function BackgammonBoard({
     let drawX = x
     let drawY = y
     
-    // Анимация прилета сверху
-    if (dropping && diceAnimationStart) {
-      const elapsed = Date.now() - diceAnimationStart
-      const dropDuration = 500
-      if (elapsed < dropDuration) {
-        const progress = elapsed / dropDuration
-        drawY = y - 100 * (1 - progress) * (1 - progress)
-      }
-    }
-    
-    // Анимация вращения при броске
     if (rolling) {
       const rotation = (Date.now() / 50) % 360
       ctx.translate(drawX + size / 2, drawY + size / 2)
@@ -1029,73 +789,39 @@ export default function BackgammonBoard({
       drawY = 0
     }
     
-    // Тень кубика
     ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
     ctx.shadowBlur = 8
     ctx.shadowOffsetX = 3
     ctx.shadowOffsetY = 3
     
-    // Рисуем текстуру кубика (используем переданную текстуру игрока)
-    if (diceTexture) {
-      ctx.drawImage(diceTexture, drawX, drawY, size, size)
-    } else {
-      // Если текстура не передана, рисуем дефолтный кубик
-      ctx.fillStyle = '#FFFFFF'
-      ctx.fillRect(drawX, drawY, size, size)
-      ctx.strokeStyle = '#1a1a1a'
-      ctx.lineWidth = 2
-      ctx.strokeRect(drawX, drawY, size, size)
-      
-      // Рисуем точки на кубике
-      ctx.fillStyle = '#1a1a1a'
-      const dotSize = size / 6
-      const dotPositions: { [key: number]: Array<[number, number]> } = {
-        1: [[size / 2, size / 2]],
-        2: [[size / 4, size / 4], [3 * size / 4, 3 * size / 4]],
-        3: [[size / 4, size / 4], [size / 2, size / 2], [3 * size / 4, 3 * size / 4]],
-        4: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
-        5: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 2, size / 2], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
-        6: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 4, size / 2], [3 * size / 4, size / 2], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
-      }
-      const dots = dotPositions[value] || []
-      dots.forEach(([dx, dy]) => {
-        ctx.beginPath()
-        ctx.arc(drawX + dx, drawY + dy, dotSize, 0, Math.PI * 2)
-        ctx.fill()
-      })
-    }
+    ctx.drawImage(diceTexture, drawX, drawY, size, size)
     
-    // Обводка кубика
     ctx.strokeStyle = '#1a1a1a'
     ctx.lineWidth = 2
     ctx.strokeRect(drawX, drawY, size, size)
     
     ctx.restore()
   }
-
+  
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
+    
     const resizeCanvas = () => {
-      drawBoard() // drawBoard уже обрабатывает размер canvas с учетом devicePixelRatio
+      drawBoard()
     }
-
-    // Используем ResizeObserver для более точного отслеживания изменений размера
+    
     const container = canvas.parentElement
     if (!container) return
-
+    
     const resizeObserver = new ResizeObserver(() => {
       resizeCanvas()
     })
     
     resizeObserver.observe(container)
-    
-    // Также слушаем изменения окна для случаев, когда ResizeObserver не срабатывает
     window.addEventListener('resize', resizeCanvas)
     window.addEventListener('orientationchange', resizeCanvas)
     
-    // Первоначальная отрисовка
     resizeCanvas()
     
     return () => {
@@ -1104,7 +830,7 @@ export default function BackgammonBoard({
       window.removeEventListener('orientationchange', resizeCanvas)
     }
   }, [drawBoard])
-
+  
   useEffect(() => {
     const animate = () => {
       drawBoard()
@@ -1117,23 +843,19 @@ export default function BackgammonBoard({
       }
     }
   }, [drawBoard])
-
+  
   const getPointFromCoords = (x: number, y: number): number | null => {
     const canvas = canvasRef.current
     if (!canvas) return null
-
-    // Используем размеры canvas из стилей (CSS пиксели), а не canvas.width/height (физические пиксели)
-    // Это важно, так как координаты кликов приходят в CSS пикселях
+    
     const rect = canvas.getBoundingClientRect()
     const width = rect.width
     const height = rect.height
-    // Убираем padding для правильного центрирования
-    const boardPadding = 0
     const boardWidth = width
     const boardHeight = height
     const pointWidth = boardWidth / 12
     const pointHeight = boardHeight / 2
-
+    
     for (let i = 0; i < 24; i++) {
       const isTop = i < 12
       let pointX: number
@@ -1143,11 +865,8 @@ export default function BackgammonBoard({
       } else {
         pointX = (i - 12) * pointWidth
       }
-
-      // Для нижних точек прижимаем к низу доски
+      
       const pointY = isTop ? 0 : boardHeight
-
-      // Проверяем клик в пределах треугольника
       const relativeX = x - pointX
       const relativeY = isTop ? y - pointY : pointY - y
       
@@ -1164,91 +883,82 @@ export default function BackgammonBoard({
     }
     return null
   }
-
+  
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
     if (!canvas) return
-
+    
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-
-    // Если идет перетаскивание, обновляем позицию и проверяем, над какой точкой мы находимся
+    
     if (dragging && dragFromPoint !== null) {
       setDragPosition({ x, y })
       const hoveredPoint = getPointFromCoords(x, y)
       setDragHoverPoint(hoveredPoint)
       return
     }
-
-    // Обычное наведение
+    
     const hoveredPoint = getPointFromCoords(x, y)
     setHoverPoint(hoveredPoint)
   }
-
+  
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isMyTurn || !canMove || diceArray.length === 0) return
-
+    
     const canvas = canvasRef.current
     if (!canvas) return
-
+    
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-
+    
     const clickedPoint = getPointFromCoords(x, y)
     if (clickedPoint === null || clickedPoint < 0 || clickedPoint >= 24) return
-
-    // Проверяем, есть ли на этой точке наша шашка
+    
     const pointValue = points[clickedPoint] || 0
     const myPlayerIndexMirrored = shouldMirror ? (myPlayerIndex === 0 ? 1 : 0) : myPlayerIndex
     const checkerCount = myPlayerIndexMirrored === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
     const isMyChecker = myPlayerIndexMirrored === 0 ? pointValue > 0 : pointValue < 0
-
+    
     if (isMyChecker && checkerCount > 0) {
-      // Проверяем, есть ли возможные ходы с этой точки
       const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
       if (hasPossibleMoves) {
-        console.log(`🎯 Начинаем перетаскивание с точки ${POINT_NUMBERS[clickedPoint]} (индекс ${clickedPoint})`)
         setDragging(true)
         setDragFromPoint(clickedPoint)
         setDragPosition({ x, y })
-        setSelectedPoint(clickedPoint) // Также выбираем точку для подсветки
+        setSelectedPoint(clickedPoint)
       }
     }
   }
-
+  
   const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!dragging || dragFromPoint === null) {
-      // Если не было перетаскивания, обрабатываем как обычный клик
       handleCanvasClick(e)
       return
     }
-
+    
     const canvas = canvasRef.current
     if (!canvas) return
-
+    
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-
+    
     const dropPoint = getPointFromCoords(x, y)
     
-    // Завершаем перетаскивание
     setDragging(false)
     const fromPoint = dragFromPoint
     setDragFromPoint(null)
     setDragPosition(null)
     setDragHoverPoint(null)
-
-    // Если отпустили на валидной точке, делаем ход
+    
     if (dropPoint !== null && dropPoint >= 0 && dropPoint < 24 && highlightedPoints.has(dropPoint)) {
       const validMove = possibleMoves.find(
         move => move.from === fromPoint && move.to === dropPoint
       )
       
       if (validMove) {
-        console.log('✅ Ход валиден через drag and drop, отправляем на сервер')
         const originalFrom = shouldMirror ? unmirrorPointIndex(fromPoint) : fromPoint
         const originalTo = shouldMirror ? unmirrorPointIndex(dropPoint) : dropPoint
         onMove(originalFrom, originalTo, validMove.die)
@@ -1257,57 +967,46 @@ export default function BackgammonBoard({
         return
       }
     }
-
-    // Если не валидный ход, просто отменяем выбор
+    
     setSelectedPoint(null)
     setHighlightedPoints(new Set())
   }
-
+  
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isMyTurn || !canMove || diceArray.length === 0) return
-
+    
     const canvas = canvasRef.current
     if (!canvas) return
-
+    
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-
+    
     const clickedPoint = getPointFromCoords(x, y)
     if (clickedPoint === null) {
       setSelectedPoint(null)
       return
     }
-
+    
     if (selectedPoint === null) {
-      // Выбираем точку или бар
-      // После отзеркаливания: если я player2, мои шашки теперь положительные (были отрицательные)
       const myPlayerIndexMirrored = shouldMirror ? (myPlayerIndex === 0 ? 1 : 0) : myPlayerIndex
       const hasBarCheckers = (myPlayerIndexMirrored === 0 && bar.white > 0) || (myPlayerIndexMirrored === 1 && bar.black > 0)
       
-      // Проверяем клик по бару (обрабатывается отдельно, но для простоты считаем что бар = -1)
-      // Сначала пробуем выбрать точку с шашкой
       if (clickedPoint >= 0 && clickedPoint < 24) {
         const pointValue = points[clickedPoint] || 0
         if (pointValue !== 0) {
-          // После отзеркаливания: если я player2, мои шашки стали положительными
           const checkerCount = myPlayerIndexMirrored === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
           const isMyChecker = myPlayerIndexMirrored === 0 ? pointValue > 0 : pointValue < 0
           if (isMyChecker && checkerCount > 0) {
-            // Проверяем, есть ли возможные ходы с этой точки
             const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
-            console.log(`🎯 Клик по точке ${POINT_NUMBERS[clickedPoint]} (индекс ${clickedPoint}), есть ходы:`, hasPossibleMoves, 'Возможные ходы:', possibleMoves.filter(m => m.from === clickedPoint))
             if (hasPossibleMoves) {
               setSelectedPoint(clickedPoint)
               return
-            } else {
-              console.log('⚠️ Нет возможных ходов с этой точки')
             }
           }
         }
       }
       
-      // Если есть шашки на баре и есть возможные ходы с бара, можно выбрать бар
       if (hasBarCheckers) {
         const hasPossibleMovesFromBar = possibleMoves.some(move => move.from === -1)
         if (hasPossibleMovesFromBar) {
@@ -1316,71 +1015,46 @@ export default function BackgammonBoard({
         }
       }
     } else {
-      // Делаем ход
       if (selectedPoint !== clickedPoint && highlightedPoints.has(clickedPoint)) {
-        // Находим подходящий кубик для хода
         const validMove = possibleMoves.find(
           move => move.from === selectedPoint && move.to === clickedPoint
         )
         
-        console.log('🎲 Делаем ход:', { 
-          from: selectedPoint, 
-          fromPoint: POINT_NUMBERS[selectedPoint],
-          to: clickedPoint, 
-          toPoint: POINT_NUMBERS[clickedPoint],
-          validMove,
-          allPossibleMoves: possibleMoves.filter(m => m.from === selectedPoint)
-        })
-        
         if (validMove) {
-          console.log('✅ Ход валиден, отправляем на сервер')
-          // Преобразуем индексы обратно для отправки на сервер
           const originalFrom = shouldMirror ? unmirrorPointIndex(selectedPoint) : selectedPoint
           const originalTo = shouldMirror ? unmirrorPointIndex(clickedPoint) : clickedPoint
-          console.log(`🔄 Преобразование индексов: ${selectedPoint}->${originalFrom}, ${clickedPoint}->${originalTo}`)
           onMove(originalFrom, originalTo, validMove.die)
           setSelectedPoint(null)
           setHighlightedPoints(new Set())
-        } else {
-          console.log('❌ Ход невалиден - не найден в списке возможных ходов')
-          console.log('Доступные ходы с точки', POINT_NUMBERS[selectedPoint], ':', possibleMoves.filter(m => m.from === selectedPoint))
         }
       } else if (selectedPoint === clickedPoint) {
-        // Клик по уже выбранной точке - отменяем выбор
-        console.log('🔄 Отмена выбора точки', { selectedPoint, clickedPoint })
         setSelectedPoint(null)
         setHighlightedPoints(new Set())
       } else {
-        // Клик по другой точке, которая не подсвечена - выбираем новую точку если возможно
         const pointValue = points[clickedPoint] || 0
         const isMyChecker = currentPlayer === 0 ? pointValue > 0 : pointValue < 0
         if (isMyChecker) {
           const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
           if (hasPossibleMoves) {
-            console.log(`🔄 Выбираем новую точку ${POINT_NUMBERS[clickedPoint]} (индекс ${clickedPoint})`)
             setSelectedPoint(clickedPoint)
           } else {
-            console.log('⚠️ Нет возможных ходов с этой точки, отменяем выбор')
             setSelectedPoint(null)
             setHighlightedPoints(new Set())
           }
         } else {
-          // Клик по пустой точке или точке противника - отменяем выбор
-          console.log('🔄 Клик по пустой точке или точке противника, отменяем выбор')
           setSelectedPoint(null)
           setHighlightedPoints(new Set())
         }
       }
     }
   }
-
+  
   const handleRollDice = () => {
     if (!isMyTurn || dice) return
     
     setDiceRolling(true)
     setAnimating(true)
     
-    // Анимация броска кубиков
     const rollDuration = 1000
     const startTime = Date.now()
     
@@ -1395,11 +1069,9 @@ export default function BackgammonBoard({
       }
     }, 50)
   }
-
-  // Определяем скины для 3D кубиков - всегда используем мои кубики
-  const diceTexturesFor3D = loadedTextures.myDice
   
-  // Определяем значения кубиков для 3D анимации
+  const diceTexturesFor3D = textures.myDice
+  
   let dice1Value = 1
   let dice2Value = 1
   if (dice && typeof dice === 'object' && 'die1' in dice && 'die2' in dice) {
@@ -1412,7 +1084,6 @@ export default function BackgammonBoard({
 
   return (
     <div className="backgammon-board-container" ref={containerRef}>
-      {/* Отображение никнеймов игроков */}
       {(player1Name || player2Name) && (
         <div style={{
           display: 'flex',
@@ -1423,14 +1094,12 @@ export default function BackgammonBoard({
           fontSize: '14px',
           color: '#fff'
         }}>
-          {/* Верхний игрок (противник) */}
           <div style={{ fontWeight: 'bold', color: shouldMirror ? '#888' : '#fff' }}>
             {shouldMirror ? (player1Name || 'Игрок 1') : (player2Name || 'Игрок 2')}
             <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
               {shouldMirror ? '⬜' : '⬛'}
             </span>
           </div>
-          {/* Нижний игрок (я) */}
           <div style={{ fontWeight: 'bold', color: shouldMirror ? '#fff' : '#888' }}>
             {shouldMirror ? (player2Name || 'Игрок 2') : (player1Name || 'Игрок 1')}
             <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
@@ -1447,7 +1116,6 @@ export default function BackgammonBoard({
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => {
-          // Отменяем перетаскивание при выходе курсора за пределы canvas
           if (dragging) {
             setDragging(false)
             setDragFromPoint(null)
@@ -1460,7 +1128,6 @@ export default function BackgammonBoard({
         className="backgammon-board"
         style={{ cursor: dragging ? 'grabbing' : 'pointer' }}
       />
-      {/* 3D кубики во время анимации */}
       {diceAnimating && dice3DPositions && diceTexturesFor3D && Object.keys(diceTexturesFor3D).length > 0 && (
         <>
           <Dice3D
@@ -1470,9 +1137,7 @@ export default function BackgammonBoard({
             y={dice3DPositions.y}
             size={dice3DPositions.size}
             rolling={true}
-            onAnimationEnd={() => {
-              // Анимация завершена
-            }}
+            onAnimationEnd={() => {}}
           />
           <Dice3D
             value={dice2Value}
@@ -1481,9 +1146,7 @@ export default function BackgammonBoard({
             y={dice3DPositions.y}
             size={dice3DPositions.size}
             rolling={true}
-            onAnimationEnd={() => {
-              // Анимация завершена
-            }}
+            onAnimationEnd={() => {}}
           />
         </>
       )}
