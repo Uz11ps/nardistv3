@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { apiClient, getImageUrl } from '../api/client'
+import { apiClient } from '../api/client'
 import Dice3D from './Dice3D'
 import './BackgammonBoard.css'
 
@@ -34,9 +34,6 @@ export default function BackgammonBoard({
   isMyTurn,
   gameId,
   gameMode = 'long',
-  player1Skins,
-  player2Skins,
-  mySkins,
   diceAnimating = false,
   myPlayerId,
   player1Id,
@@ -50,286 +47,10 @@ export default function BackgammonBoard({
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
   const [dragging, setDragging] = useState<{ pointIndex: number; offsetX: number; offsetY: number } | null>(null)
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
-  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null) // Точка под курсором при перетаскивании
-  const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set()) // Валидные точки для текущего перетаскивания
-  
-  const [textures, setTextures] = useState<{
-    myBoard?: HTMLImageElement
-    opponentBoard?: HTMLImageElement
-    myDice?: { [face: number]: HTMLImageElement }
-    opponentDice?: { [face: number]: HTMLImageElement }
-    myCheckers?: HTMLImageElement
-    opponentCheckers?: HTMLImageElement
-    defaultBoard?: HTMLImageElement
-  }>({})
+  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
+  const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
   
   const isPlayer1 = myPlayerId === player1Id
-  
-  // ЛЕВАЯ ЧАСТЬ - МОИ СКИНЫ И ШАШКИ (независимо от цвета, они слева снизу)
-  // ПРАВАЯ ЧАСТЬ - ПРОТИВНИКА (справа сверху)
-  // Используем mySkins если есть, иначе определяем по isPlayer1
-  const myBoardSkin = mySkins?.board || (isPlayer1 ? player1Skins?.board : player2Skins?.board)
-  const opponentBoardSkin = isPlayer1 ? player2Skins?.board : player1Skins?.board
-  const myDiceSkin = mySkins?.dice || (isPlayer1 ? player1Skins?.dice : player2Skins?.dice)
-  const opponentDiceSkin = isPlayer1 ? player2Skins?.dice : player1Skins?.dice
-  const myCheckersSkin = mySkins?.checkers || (isPlayer1 ? player1Skins?.checkers : player2Skins?.checkers)
-  const opponentCheckersSkin = isPlayer1 ? player2Skins?.checkers : player1Skins?.checkers
-  
-  // Логирование для отладки
-  useEffect(() => {
-    console.log('🎨 BackgammonBoard - Skins debug:', {
-      isPlayer1,
-      myPlayerId,
-      player1Id,
-      player1Skins,
-      player2Skins,
-      mySkins,
-      myBoardSkin,
-      myDiceSkin,
-      myCheckersSkin,
-    })
-  }, [isPlayer1, myPlayerId, player1Id, player1Skins, player2Skins, mySkins, myBoardSkin, myDiceSkin, myCheckersSkin])
-  
-  // Загрузка текстур
-  useEffect(() => {
-    const loadTextures = async () => {
-      const loaded: typeof textures = {}
-      
-      const loadImage = (url: string): Promise<HTMLImageElement> => {
-        return new Promise((resolve, reject) => {
-          const img = new Image()
-          img.crossOrigin = 'anonymous'
-          img.onload = () => resolve(img)
-          img.onerror = reject
-          // Используем getImageUrl для правильной обработки путей /uploads/ и /skins/
-          const imageUrl = getImageUrl(url) || url
-          img.src = imageUrl.startsWith('http') ? imageUrl : `${window.location.origin}${imageUrl}`
-        })
-      }
-      
-      try {
-        console.log('🎨 Loading textures:', {
-          myBoardSkin,
-          opponentBoardSkin,
-          myDiceSkin,
-          opponentDiceSkin,
-          myCheckersSkin,
-          opponentCheckersSkin,
-        })
-        
-        // Загружаем текстуру доски (половина для каждого игрока)
-        if (myBoardSkin?.boardTextureUrl) {
-          const textureUrl = myBoardSkin.boardTextureUrl
-          const processedUrl = getImageUrl(textureUrl) || textureUrl
-          console.log('📦 Loading my board texture:', {
-            original: textureUrl,
-            processedUrl: processedUrl,
-            skinId: myBoardSkin.id,
-            skinName: myBoardSkin.name,
-            isDefault: myBoardSkin.isDefault,
-            skin: myBoardSkin,
-          })
-          loaded.myBoard = await loadImage(processedUrl).catch((e) => {
-            console.error('❌ Failed to load my board texture:', {
-              error: e,
-              originalUrl: textureUrl,
-              processedUrl: processedUrl,
-              skinId: myBoardSkin.id,
-            })
-            return undefined
-          })
-          if (loaded.myBoard) {
-            console.log('✅ Successfully loaded my board texture')
-          }
-        } else {
-          console.warn('⚠️ No myBoardSkin.boardTextureUrl found:', {
-            myBoardSkin,
-            hasBoardSkin: !!myBoardSkin,
-            boardTextureUrl: myBoardSkin?.boardTextureUrl,
-            allKeys: myBoardSkin ? Object.keys(myBoardSkin) : [],
-          })
-        }
-        if (opponentBoardSkin?.boardTextureUrl) {
-          const processedUrl = getImageUrl(opponentBoardSkin.boardTextureUrl) || opponentBoardSkin.boardTextureUrl
-          console.log('📦 Loading opponent board texture:', {
-            original: opponentBoardSkin.boardTextureUrl,
-            processedUrl: processedUrl,
-            skinId: opponentBoardSkin.id,
-            skinName: opponentBoardSkin.name,
-            isDefault: opponentBoardSkin.isDefault,
-          })
-          loaded.opponentBoard = await loadImage(processedUrl).catch((e) => {
-            console.error('❌ Failed to load opponent board texture:', {
-              error: e,
-              originalUrl: opponentBoardSkin.boardTextureUrl,
-              processedUrl: processedUrl,
-            })
-            return undefined
-          })
-        }
-        
-        // Загружаем текстуры кубиков (6 граней)
-        // Проверяем diceTextureUrls (массив) или diceTextureUrl (одна текстура)
-        if (myDiceSkin?.diceTextureUrls) {
-          const diceFaces: { [face: number]: HTMLImageElement } = {}
-          const textureUrls = typeof myDiceSkin.diceTextureUrls === 'string' 
-            ? JSON.parse(myDiceSkin.diceTextureUrls) 
-            : myDiceSkin.diceTextureUrls
-          
-          console.log('🎲 Loading my dice textures:', textureUrls)
-          
-          for (let face = 1; face <= 6; face++) {
-            if (textureUrls[face]) {
-              try {
-                const processedUrl = getImageUrl(textureUrls[face]) || textureUrls[face]
-                diceFaces[face] = await loadImage(processedUrl)
-              } catch (e) {
-                console.warn(`Failed to load dice texture ${face}:`, e)
-              }
-            }
-          }
-          if (Object.keys(diceFaces).length > 0) {
-            loaded.myDice = diceFaces
-          }
-        } else if (myDiceSkin?.diceTextureUrl) {
-          // Fallback: если есть одна текстура для всех граней
-          const processedUrl = getImageUrl(myDiceSkin.diceTextureUrl) || myDiceSkin.diceTextureUrl
-          console.log('🎲 Loading single dice texture:', processedUrl)
-          const singleTexture = await loadImage(processedUrl).catch(() => undefined)
-          if (singleTexture) {
-            loaded.myDice = {
-              1: singleTexture, 2: singleTexture, 3: singleTexture,
-              4: singleTexture, 5: singleTexture, 6: singleTexture,
-            }
-          }
-        }
-        
-        if (opponentDiceSkin?.diceTextureUrls) {
-          const diceFaces: { [face: number]: HTMLImageElement } = {}
-          const textureUrls = typeof opponentDiceSkin.diceTextureUrls === 'string' 
-            ? JSON.parse(opponentDiceSkin.diceTextureUrls) 
-            : opponentDiceSkin.diceTextureUrls
-          
-          for (let face = 1; face <= 6; face++) {
-            if (textureUrls[face]) {
-              try {
-                const processedUrl = getImageUrl(textureUrls[face]) || textureUrls[face]
-                diceFaces[face] = await loadImage(processedUrl)
-              } catch (e) {
-                console.warn(`Failed to load opponent dice texture ${face}:`, e)
-              }
-            }
-          }
-          if (Object.keys(diceFaces).length > 0) {
-            loaded.opponentDice = diceFaces
-          }
-        }
-        
-        // Загружаем текстуры шашек (белые и черные отдельно)
-        // Игрок 1 (myPlayerId === player1Id) - белые шашки
-        // Игрок 2 (opponent) - черные шашки
-        const isPlayer1 = myPlayerId === player1Id
-        
-        if (isPlayer1) {
-          // Я игрок 1 - белые шашки
-          if (myCheckersSkin?.whiteCheckersTextureUrl) {
-            console.log('♟️ Loading my white checkers texture:', myCheckersSkin.whiteCheckersTextureUrl)
-            loaded.myCheckers = await loadImage(getImageUrl(myCheckersSkin.whiteCheckersTextureUrl) || myCheckersSkin.whiteCheckersTextureUrl).catch((e) => {
-              console.error('❌ Failed to load my white checkers texture:', e)
-              return undefined
-            })
-          } else if (myCheckersSkin?.checkersTextureUrl) {
-            // Fallback на старую текстуру для обратной совместимости
-            console.log('♟️ Loading my checkers texture (fallback):', myCheckersSkin.checkersTextureUrl)
-            loaded.myCheckers = await loadImage(getImageUrl(myCheckersSkin.checkersTextureUrl) || myCheckersSkin.checkersTextureUrl).catch((e) => {
-              console.error('❌ Failed to load my checkers texture:', e)
-              return undefined
-            })
-          }
-          
-          // Противник - черные шашки
-          if (opponentCheckersSkin?.blackCheckersTextureUrl) {
-            console.log('♟️ Loading opponent black checkers texture:', opponentCheckersSkin.blackCheckersTextureUrl)
-            loaded.opponentCheckers = await loadImage(getImageUrl(opponentCheckersSkin.blackCheckersTextureUrl) || opponentCheckersSkin.blackCheckersTextureUrl).catch((e) => {
-              console.error('❌ Failed to load opponent black checkers texture:', e)
-              return undefined
-            })
-          } else if (opponentCheckersSkin?.checkersTextureUrl) {
-            // Fallback на старую текстуру для обратной совместимости
-            console.log('♟️ Loading opponent checkers texture (fallback):', opponentCheckersSkin.checkersTextureUrl)
-            loaded.opponentCheckers = await loadImage(getImageUrl(opponentCheckersSkin.checkersTextureUrl) || opponentCheckersSkin.checkersTextureUrl).catch((e) => {
-              console.error('❌ Failed to load opponent checkers texture:', e)
-              return undefined
-            })
-          }
-        } else {
-          // Я игрок 2 - черные шашки
-          if (myCheckersSkin?.blackCheckersTextureUrl) {
-            console.log('♟️ Loading my black checkers texture:', myCheckersSkin.blackCheckersTextureUrl)
-            loaded.myCheckers = await loadImage(getImageUrl(myCheckersSkin.blackCheckersTextureUrl) || myCheckersSkin.blackCheckersTextureUrl).catch((e) => {
-              console.error('❌ Failed to load my black checkers texture:', e)
-              return undefined
-            })
-          } else if (myCheckersSkin?.checkersTextureUrl) {
-            // Fallback на старую текстуру для обратной совместимости
-            console.log('♟️ Loading my checkers texture (fallback):', myCheckersSkin.checkersTextureUrl)
-            loaded.myCheckers = await loadImage(getImageUrl(myCheckersSkin.checkersTextureUrl) || myCheckersSkin.checkersTextureUrl).catch((e) => {
-              console.error('❌ Failed to load my checkers texture:', e)
-              return undefined
-            })
-          }
-          
-          // Противник - белые шашки
-          if (opponentCheckersSkin?.whiteCheckersTextureUrl) {
-            console.log('♟️ Loading opponent white checkers texture:', opponentCheckersSkin.whiteCheckersTextureUrl)
-            loaded.opponentCheckers = await loadImage(getImageUrl(opponentCheckersSkin.whiteCheckersTextureUrl) || opponentCheckersSkin.whiteCheckersTextureUrl).catch((e) => {
-              console.error('❌ Failed to load opponent white checkers texture:', e)
-              return undefined
-            })
-          } else if (opponentCheckersSkin?.checkersTextureUrl) {
-            // Fallback на старую текстуру для обратной совместимости
-            console.log('♟️ Loading opponent checkers texture (fallback):', opponentCheckersSkin.checkersTextureUrl)
-            loaded.opponentCheckers = await loadImage(getImageUrl(opponentCheckersSkin.checkersTextureUrl) || opponentCheckersSkin.checkersTextureUrl).catch((e) => {
-              console.error('❌ Failed to load opponent checkers texture:', e)
-              return undefined
-            })
-          }
-        }
-        
-        // Загружаем дефолтную доску /img/доска.jpg
-        try {
-          const defaultBoardPath = getImageUrl('/img/доска.jpg') || '/img/доска.jpg'
-          const defaultBoardImg = new Image()
-          defaultBoardImg.crossOrigin = 'anonymous'
-          const fullUrl = defaultBoardPath.startsWith('http') ? defaultBoardPath : `${window.location.origin}${defaultBoardPath}`
-          defaultBoardImg.src = fullUrl
-          loaded.defaultBoard = await new Promise<HTMLImageElement>((resolve, reject) => {
-            defaultBoardImg.onload = () => resolve(defaultBoardImg)
-            defaultBoardImg.onerror = (e) => {
-              console.error('❌ Failed to load default board image:', { path: defaultBoardPath, fullUrl, error: e })
-              reject(e)
-            }
-            // Если изображение уже загружено
-            if (defaultBoardImg.complete) {
-              resolve(defaultBoardImg)
-            }
-          }).catch(() => undefined)
-          if (loaded.defaultBoard) {
-            console.log('✅ Successfully loaded default board image:', defaultBoardPath)
-          }
-        } catch (e) {
-          console.warn('Failed to load default board image:', e)
-        }
-        
-        console.log('✅ Loaded textures:', loaded)
-        setTextures(loaded)
-      } catch (error) {
-        console.error('Ошибка загрузки текстур:', error)
-      }
-    }
-    
-    loadTextures()
-  }, [myBoardSkin, opponentBoardSkin, myDiceSkin, opponentDiceSkin, myCheckersSkin, opponentCheckersSkin])
   
   // Получение возможных ходов
   useEffect(() => {
@@ -339,7 +60,6 @@ export default function BackgammonBoard({
       try {
         const response = await apiClient.get(`/games/${gameId}/possible-moves`)
         const allMoves = response.data?.allMoves || []
-        // Преобразуем массив массивов ходов в плоский список уникальных ходов
         const movesSet = new Set<string>()
         const flatMoves: Array<{ from: number; to: number; die: number }> = []
         
@@ -371,7 +91,7 @@ export default function BackgammonBoard({
     fetchPossibleMoves()
   }, [gameId, isMyTurn, canMove, dice, gameState])
   
-  // Определение позиции для кубиков (на части доски, чей ход)
+  // Определение позиции для кубиков
   useEffect(() => {
     if (!containerRef.current) return
     
@@ -380,20 +100,15 @@ export default function BackgammonBoard({
     const width = rect.width
     const height = rect.height
     
-    // Кубики кидаются на половину доски, чей ход
-    // Если мой ход - кубики на левой половине доски (моя половина = две четверти)
-    // Если ход противника - кубики на правой половине доски (его половина = две четверти)
     const isMyTurnNow = isMyTurn && canMove
     
     if (isMyTurnNow) {
-      // Моя половина доски (левая половина = две четверти)
       setDice3DPosition({
         x: width * 0.25,
         y: height * 0.5,
         size: Math.min(width, height) * 0.08,
       })
     } else {
-      // Половина противника (правая половина = две четверти)
       setDice3DPosition({
         x: width * 0.75,
         y: height * 0.5,
@@ -401,6 +116,85 @@ export default function BackgammonBoard({
       })
     }
   }, [isMyTurn, canMove])
+  
+  // Вспомогательная функция для получения координат точки
+  const getPointCoordinates = useCallback((pointIndex: number, canvas: HTMLCanvasElement) => {
+    const width = canvas.width
+    const height = canvas.height
+    const pointWidth = width / 12
+    const pointHeight = height / 2
+    
+    const isTopRow = pointIndex < 12
+    const pointInRow = isTopRow ? pointIndex : pointIndex - 12
+    
+    const x = isTopRow
+      ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
+      : pointInRow * pointWidth + pointWidth / 2
+    const y = isTopRow
+      ? pointHeight / 2
+      : height - pointHeight / 2
+    
+    return { x, y, isTopRow, pointWidth, pointHeight }
+  }, [])
+  
+  // Функция для определения точки по координатам
+  const getPointAtPosition = useCallback((x: number, y: number, canvas: HTMLCanvasElement): number | null => {
+    const width = canvas.width
+    const height = canvas.height
+    const pointWidth = width / 12
+    const pointHeight = height / 2
+    
+    const points = gameState?.points || []
+    
+    // Проверяем все точки
+    for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+      const { x: pointX, y: pointY, isTopRow, pointWidth: pWidth, pointHeight: pHeight } = getPointCoordinates(pointIndex, canvas)
+      
+      const triangleWidth = pWidth * 0.9
+      const triangleHeight = pHeight * 0.9
+      const dx = Math.abs(x - pointX)
+      const dy = Math.abs(y - pointY)
+      
+      // Проверка попадания в треугольник
+      const inTriangle = dx < triangleWidth / 2 && 
+        (isTopRow 
+          ? (y >= pointY && y <= pointY + triangleHeight)
+          : (y <= pointY && y >= pointY - triangleHeight))
+      
+      if (inTriangle) {
+        return pointIndex
+      }
+    }
+    
+    // Проверяем бар
+    const barX = width / 2
+    const barYTop = pointHeight * 0.25
+    const barYBottom = height - pointHeight * 0.25
+    const barWidth = pointWidth * 0.6
+    
+    if (Math.abs(x - barX) < barWidth / 2 && y >= barYTop && y <= barYBottom) {
+      return isPlayer1 ? 24 : 25
+    }
+    
+    // Проверяем область выноса
+    const bearOffMargin = pointWidth * 1.5
+    
+    if (gameMode === 'long') {
+      if (isPlayer1 && x < bearOffMargin && y > height - pointHeight && y < height) {
+        return -1
+      } else if (!isPlayer1 && x > width - bearOffMargin && y > 0 && y < pointHeight) {
+        return -1
+      }
+    } else {
+      if (isPlayer1 && x > width - bearOffMargin && y > 0 && y < pointHeight) {
+        return -1
+      } else if (!isPlayer1 && x < bearOffMargin && y > height - pointHeight && y < height) {
+        return -1
+      }
+    }
+    
+    return null
+  }, [gameState, isPlayer1, gameMode, getPointCoordinates])
   
   // Отрисовка доски
   const drawBoard = useCallback(() => {
@@ -413,348 +207,231 @@ export default function BackgammonBoard({
     const width = canvas.width
     const height = canvas.height
     
-    // Сбрасываем трансформации
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, width, height)
     
-    const halfWidth = width / 2
-    const halfHeight = height / 2
-    const quarterHeight = height / 4
+    // Фон доски
+    ctx.fillStyle = '#8B4513'
+    ctx.fillRect(0, 0, width, height)
     
-    // ЛЕВАЯ ПОЛОВИНА ДОСКИ - МОЯ (две четверти: верхняя левая + нижняя левая)
-    // Рисуем всю левую половину доски
-    if (textures.myBoard) {
-      ctx.save()
-      ctx.beginPath()
-      ctx.rect(0, 0, halfWidth, height)
-      ctx.clip()
-      // Рисуем текстуру доски на всю левую половину (две четверти)
-      ctx.drawImage(textures.myBoard, 0, 0, halfWidth, height)
-      ctx.restore()
-    } else {
-      // Дефолтная текстура - используем загруженное изображение /img/доска.jpg
-      if (textures.defaultBoard) {
-        ctx.drawImage(textures.defaultBoard, 0, 0, halfWidth, height)
-      } else {
-        // Fallback на коричневую заливку если изображение не загрузилось
-        ctx.fillStyle = '#8B4513'
-        ctx.fillRect(0, 0, halfWidth, height)
-      }
-    }
+    // Центральная полоса (бар)
+    const barWidth = width * 0.05
+    const barX = (width - barWidth) / 2
+    ctx.fillStyle = '#654321'
+    ctx.fillRect(barX, 0, barWidth, height)
     
-    // ПРАВАЯ ПОЛОВИНА ДОСКИ - ПРОТИВНИКА (две четверти: верхняя правая + нижняя правая)
-    // Рисуем всю правую половину доски
-    if (textures.opponentBoard) {
-      ctx.save()
-      ctx.beginPath()
-      ctx.rect(halfWidth, 0, halfWidth, height)
-      ctx.clip()
-      // Рисуем текстуру доски на всю правую половину (две четверти)
-      ctx.drawImage(textures.opponentBoard, halfWidth, 0, halfWidth, height)
-      ctx.restore()
-    } else {
-      // Дефолтная текстура - используем загруженное изображение /img/доска.jpg
-      if (textures.defaultBoard) {
-        ctx.drawImage(textures.defaultBoard, halfWidth, 0, halfWidth, height)
-      } else {
-        // Fallback на коричневую заливку если изображение не загрузилось
-        ctx.fillStyle = '#654321'
-        ctx.fillRect(halfWidth, 0, halfWidth, height)
-      }
-    }
-    
-    // Отрисовка точек (24 точки на доске для нардов)
     const points = gameState.points || []
     const pointWidth = width / 12
-    const pointHeight = halfHeight / 2
+    const pointHeight = height / 2
     
     // Функция для отрисовки треугольной точки
-    const drawTrianglePoint = (x: number, y: number, width: number, height: number, isTop: boolean) => {
+    const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, color: string) => {
       ctx.beginPath()
       if (isTop) {
         ctx.moveTo(x, y)
-        ctx.lineTo(x - width / 2, y + height)
-        ctx.lineTo(x + width / 2, y + height)
+        ctx.lineTo(x - w / 2, y + h)
+        ctx.lineTo(x + w / 2, y + h)
       } else {
         ctx.moveTo(x, y)
-        ctx.lineTo(x - width / 2, y - height)
-        ctx.lineTo(x + width / 2, y - height)
+        ctx.lineTo(x - w / 2, y - h)
+        ctx.lineTo(x + w / 2, y - h)
       }
       ctx.closePath()
-    }
-    
-    points.forEach((pointValue: number, pointIndex: number) => {
-      if (pointValue === 0) return
-      
-      // Определяем позицию точки
-      // Точки 0-11: верхний ряд (правая часть доски)
-      // Точки 12-23: нижний ряд (левая часть доски)
-      const isTopRow = pointIndex < 12
-      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
-      
-      // Определяем, моя это точка или противника
-      // В нардах: положительные значения - один игрок, отрицательные - другой
-      const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
-      
-      // Позиционирование точек
-      // Верхний ряд: справа налево (точка 0 справа, точка 11 слева)
-      // Нижний ряд: слева направо (точка 12 слева, точка 23 справа)
-      const x = isTopRow
-        ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
-        : pointInRow * pointWidth + pointWidth / 2
-      const y = isTopRow
-        ? pointHeight
-        : height - pointHeight
-      
-      // Отрисовываем треугольную точку
-      const triangleWidth = pointWidth * 0.8
-      const triangleHeight = pointHeight * 0.9
-      ctx.fillStyle = isTopRow ? '#D4A574' : '#8B4513'
-      drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow)
+      ctx.fillStyle = color
       ctx.fill()
       ctx.strokeStyle = '#654321'
-      ctx.lineWidth = 1
+      ctx.lineWidth = 2
       ctx.stroke()
+    }
+    
+    // Отрисовка всех 24 точек
+    points.forEach((pointValue: number, pointIndex: number) => {
+      const { x, y, isTopRow } = getPointCoordinates(pointIndex, canvas)
       
-      const checkerCount = Math.abs(pointValue)
-      const checkerSize = Math.min(pointWidth * 0.3, pointHeight * 0.35)
-      const checkerTexture = isMyPoint ? textures.myCheckers : textures.opponentCheckers
+      const triangleWidth = pointWidth * 0.9
+      const triangleHeight = pointHeight * 0.9
       
-      // Отрисовываем шашки на точке
-      const stackHeight = Math.min(checkerCount, 5) * checkerSize * 0.7
-      const checkerBaseY = isTopRow ? y + triangleHeight * 0.3 : y - triangleHeight * 0.3
-      const startY = isTopRow ? checkerBaseY : checkerBaseY - stackHeight
+      // Чередование цветов треугольников (как на классической доске)
+      const isLight = (pointIndex % 2 === 0 && isTopRow) || (pointIndex % 2 === 1 && !isTopRow)
+      const triangleColor = isLight ? '#D4A574' : '#8B4513'
       
-      // Если перетаскиваем шашку с этой точки, не рисуем её здесь
-      const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
-      const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, 5) : Math.min(checkerCount, 5)
-      
-      for (let i = 0; i < checkersToDraw; i++) {
-        const checkerY = isTopRow 
-          ? startY + i * checkerSize * 0.7
-          : startY + i * checkerSize * 0.7
-        
-        if (checkerTexture) {
-          ctx.save()
-          ctx.beginPath()
-          ctx.arc(x, checkerY, checkerSize / 2, 0, Math.PI * 2)
-          ctx.clip()
-          ctx.drawImage(
-            checkerTexture,
-            x - checkerSize / 2,
-            checkerY - checkerSize / 2,
-            checkerSize,
-            checkerSize
-          )
-          ctx.restore()
-        } else {
-          // Дефолтные шашки
-          ctx.fillStyle = isMyPoint ? '#FFFFFF' : '#000000'
-          ctx.beginPath()
-          ctx.arc(x, checkerY, checkerSize / 2, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.strokeStyle = '#333'
-          ctx.lineWidth = 2
-          ctx.stroke()
-        }
-      }
-      
-      // Рисуем перетаскиваемую шашку
-      if (isDraggingFromThisPoint && dragPosition) {
-        const dragX = dragPosition.x - dragging.offsetX
-        const dragY = dragPosition.y - dragging.offsetY
-        
-        ctx.save()
-        ctx.globalAlpha = 0.8
-        ctx.beginPath()
-        ctx.arc(dragX, dragY, checkerSize / 2, 0, Math.PI * 2)
-        ctx.clip()
-        if (checkerTexture) {
-          ctx.drawImage(
-            checkerTexture,
-            dragX - checkerSize / 2,
-            dragY - checkerSize / 2,
-            checkerSize,
-            checkerSize
-          )
-        } else {
-          ctx.fillStyle = isMyPoint ? '#FFFFFF' : '#000000'
-          ctx.beginPath()
-          ctx.arc(dragX, dragY, checkerSize / 2, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.strokeStyle = '#333'
-          ctx.lineWidth = 2
-          ctx.stroke()
-        }
-        ctx.restore()
-      }
-      
-      // Если шашек больше 5, показываем число
-      if (checkerCount > 5) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-        ctx.fillRect(x - 20, isTopRow ? checkerBaseY - 25 : checkerBaseY + 5, 40, 20)
-        ctx.fillStyle = '#000'
-        ctx.font = 'bold 14px Arial'
-        ctx.textAlign = 'center'
-        ctx.fillText(checkerCount.toString(), x, isTopRow ? checkerBaseY - 12 : checkerBaseY + 18)
-      }
-      
-      // Подсветка выбранной точки
-      if (selectedPoint === pointIndex) {
-        ctx.fillStyle = 'rgba(90, 127, 196, 0.4)'
-        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow)
-        ctx.fill()
-      }
-      
-      // Подсветка возможных ходов (исходные точки)
-      if (highlightedPoints.has(pointIndex) && !dragging) {
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)'
-        ctx.lineWidth = 3
-        drawTrianglePoint(x, y, triangleWidth + 10, triangleHeight + 10, isTopRow)
+      // Подсветка возможных исходных точек (когда не перетаскиваем)
+      if (!dragging && highlightedPoints.has(pointIndex)) {
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'
+        drawTrianglePoint(x, y, triangleWidth + 8, triangleHeight + 8, isTopRow, 'rgba(0, 255, 0, 0.3)')
+        ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+        ctx.lineWidth = 4
         ctx.stroke()
       }
       
       // Подсветка валидных точек назначения при перетаскивании
       if (dragging && validTargetPoints.has(pointIndex)) {
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
-        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow)
-        ctx.fill()
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'
+        drawTrianglePoint(x, y, triangleWidth + 5, triangleHeight + 5, isTopRow, 'rgba(0, 255, 0, 0.5)')
         ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-        ctx.lineWidth = 3
-        drawTrianglePoint(x, y, triangleWidth + 5, triangleHeight + 5, isTopRow)
+        ctx.lineWidth = 4
         ctx.stroke()
       }
       
-      // Подсветка точки под курсором при перетаскивании
+      // Подсветка точки под курсором
       if (dragging && hoveredPoint === pointIndex) {
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
-        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow)
-        ctx.fill()
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.6)'
+        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, 'rgba(255, 255, 0, 0.6)')
+      }
+      
+      // Подсветка выбранной точки
+      if (selectedPoint === pointIndex) {
+        ctx.fillStyle = 'rgba(90, 127, 196, 0.5)'
+        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, 'rgba(90, 127, 196, 0.5)')
+      }
+      
+      // Рисуем треугольник точки
+      drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
+      
+      // Отрисовка шашек на точке
+      if (pointValue !== 0) {
+        const checkerCount = Math.abs(pointValue)
+        const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
+        const checkerSize = Math.min(pointWidth * 0.25, pointHeight * 0.3)
+        
+        const stackHeight = Math.min(checkerCount, 5) * checkerSize * 0.6
+        const checkerBaseY = isTopRow ? y + triangleHeight * 0.4 : y - triangleHeight * 0.4
+        const startY = isTopRow ? checkerBaseY : checkerBaseY - stackHeight
+        
+        const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
+        const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, 5) : Math.min(checkerCount, 5)
+        
+        for (let i = 0; i < checkersToDraw; i++) {
+          const checkerY = startY + i * checkerSize * 0.6
+          
+          // Простые шашки без текстур
+          ctx.fillStyle = isMyPoint ? '#FFFFFF' : '#000000'
+          ctx.beginPath()
+          ctx.arc(x, checkerY, checkerSize / 2, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.strokeStyle = '#333'
+          ctx.lineWidth = 2
+          ctx.stroke()
+        }
+        
+        // Если шашек больше 5, показываем число
+        if (checkerCount > 5) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+          ctx.fillRect(x - 18, isTopRow ? checkerBaseY - 22 : checkerBaseY + 2, 36, 18)
+          ctx.fillStyle = '#000'
+          ctx.font = 'bold 12px Arial'
+          ctx.textAlign = 'center'
+          ctx.fillText(checkerCount.toString(), x, isTopRow ? checkerBaseY - 10 : checkerBaseY + 12)
+        }
       }
     })
     
-    // Отрисовка области выноса (bear off area)
-    if (dragging && validTargetPoints.has(-1)) {
-      const bearOffMargin = pointWidth * 1.5
+    // Отрисовка перетаскиваемой шашки
+    if (dragging && dragPosition) {
+      const checkerSize = Math.min((width / 12) * 0.25, (height / 2) * 0.3)
+      const dragX = dragPosition.x - dragging.offsetX
+      const dragY = dragPosition.y - dragging.offsetY
       
-      if (gameMode === 'long') {
-        // Длинные нарды
-        if (isPlayer1) {
-          // Игрок 1 (белые): область выноса слева
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
-          ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
-          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-          ctx.lineWidth = 3
-          ctx.strokeRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
-          
-          // Подсветка если курсор над областью выноса
-          if (hoveredPoint === -1) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
-            ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
-          }
-        } else {
-          // Игрок 2 (черные): область выноса справа
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
-          ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
-          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-          ctx.lineWidth = 3
-          ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
-          
-          // Подсветка если курсор над областью выноса
-          if (hoveredPoint === -1) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
-            ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
-          }
-        }
-      } else {
-        // Короткие нарды
-        if (isPlayer1) {
-          // Игрок 1 (белые): область выноса справа
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
-          ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
-          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-          ctx.lineWidth = 3
-          ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
-          
-          // Подсветка если курсор над областью выноса
-          if (hoveredPoint === -1) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
-            ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
-          }
-        } else {
-          // Игрок 2 (черные): область выноса слева
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
-          ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
-          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-          ctx.lineWidth = 3
-          ctx.strokeRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
-          
-          // Подсветка если курсор над областью выноса
-          if (hoveredPoint === -1) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
-            ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
-          }
-        }
-      }
+      ctx.save()
+      ctx.globalAlpha = 0.9
+      ctx.fillStyle = isPlayer1 ? '#FFFFFF' : '#000000'
+      ctx.beginPath()
+      ctx.arc(dragX, dragY, checkerSize / 2, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = '#333'
+      ctx.lineWidth = 3
+      ctx.stroke()
+      ctx.restore()
     }
     
-    // Отрисовка бара (середина доски)
-    const barX = width / 2
+    // Отрисовка бара
     if (gameState.bar) {
       const bar = gameState.bar
       const myBarCount = isPlayer1 ? bar.white || 0 : bar.black || 0
       const opponentBarCount = isPlayer1 ? bar.black || 0 : bar.white || 0
-      const checkerSize = Math.min(pointWidth * 0.3, pointHeight * 0.35)
+      const checkerSize = Math.min(pointWidth * 0.25, pointHeight * 0.3)
+      const barX = width / 2
       
-      // Мои шашки на баре (снизу, слева от центра)
       if (myBarCount > 0) {
-        const barStartY = height - pointHeight * 0.5
+        const barStartY = height - pointHeight * 0.3
         for (let i = 0; i < myBarCount; i++) {
-          const barY = barStartY - (i * checkerSize * 0.7)
-          if (textures.myCheckers) {
-            ctx.save()
-            ctx.beginPath()
-            ctx.arc(barX - 30, barY, checkerSize / 2, 0, Math.PI * 2)
-            ctx.clip()
-            ctx.drawImage(textures.myCheckers, barX - 30 - checkerSize / 2, barY - checkerSize / 2, checkerSize, checkerSize)
-            ctx.restore()
-          } else {
-            ctx.fillStyle = '#FFFFFF'
-            ctx.beginPath()
-            ctx.arc(barX - 30, barY, checkerSize / 2, 0, Math.PI * 2)
-            ctx.fill()
-            ctx.strokeStyle = '#333'
-            ctx.lineWidth = 2
-            ctx.stroke()
-          }
+          const barY = barStartY - (i * checkerSize * 0.6)
+          ctx.fillStyle = '#FFFFFF'
+          ctx.beginPath()
+          ctx.arc(barX - 25, barY, checkerSize / 2, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.strokeStyle = '#333'
+          ctx.lineWidth = 2
+          ctx.stroke()
         }
       }
       
-      // Шашки противника на баре (сверху, справа от центра)
       if (opponentBarCount > 0) {
-        const barStartY = pointHeight * 0.5
+        const barStartY = pointHeight * 0.3
         for (let i = 0; i < opponentBarCount; i++) {
-          const barY = barStartY + (i * checkerSize * 0.7)
-          if (textures.opponentCheckers) {
-            ctx.save()
-            ctx.beginPath()
-            ctx.arc(barX + 30, barY, checkerSize / 2, 0, Math.PI * 2)
-            ctx.clip()
-            ctx.drawImage(textures.opponentCheckers, barX + 30 - checkerSize / 2, barY - checkerSize / 2, checkerSize, checkerSize)
-            ctx.restore()
-          } else {
-            ctx.fillStyle = '#000000'
-            ctx.beginPath()
-            ctx.arc(barX + 30, barY, checkerSize / 2, 0, Math.PI * 2)
-            ctx.fill()
-            ctx.strokeStyle = '#333'
-            ctx.lineWidth = 2
-            ctx.stroke()
+          const barY = barStartY + (i * checkerSize * 0.6)
+          ctx.fillStyle = '#000000'
+          ctx.beginPath()
+          ctx.arc(barX + 25, barY, checkerSize / 2, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.strokeStyle = '#333'
+          ctx.lineWidth = 2
+          ctx.stroke()
+        }
+      }
+    }
+    
+    // Отрисовка области выноса
+    if (dragging && validTargetPoints.has(-1)) {
+      const bearOffMargin = pointWidth * 1.5
+      
+      if (gameMode === 'long') {
+        if (isPlayer1) {
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
+          ctx.fillRect(0, height - pointHeight, bearOffMargin, pointHeight)
+          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+          ctx.lineWidth = 4
+          ctx.strokeRect(0, height - pointHeight, bearOffMargin, pointHeight)
+          if (hoveredPoint === -1) {
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)'
+            ctx.fillRect(0, height - pointHeight, bearOffMargin, pointHeight)
+          }
+        } else {
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
+          ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
+          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+          ctx.lineWidth = 4
+          ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
+          if (hoveredPoint === -1) {
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)'
+            ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
+          }
+        }
+      } else {
+        if (isPlayer1) {
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
+          ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
+          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+          ctx.lineWidth = 4
+          ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
+          if (hoveredPoint === -1) {
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)'
+            ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
+          }
+        } else {
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
+          ctx.fillRect(0, height - pointHeight, bearOffMargin, pointHeight)
+          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+          ctx.lineWidth = 4
+          ctx.strokeRect(0, height - pointHeight, bearOffMargin, pointHeight)
+          if (hoveredPoint === -1) {
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)'
+            ctx.fillRect(0, height - pointHeight, bearOffMargin, pointHeight)
           }
         }
       }
     }
-  }, [gameState, textures, selectedPoint, highlightedPoints, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints])
+  }, [gameState, selectedPoint, highlightedPoints, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates])
   
   // Перерисовка при изменении состояния
   useEffect(() => {
@@ -767,7 +444,7 @@ export default function BackgammonBoard({
     }
   }, [drawBoard])
   
-  // Обновление размера canvas при изменении размера контейнера
+  // Обновление размера canvas
   useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
       if (canvasRef.current && containerRef.current) {
@@ -786,93 +463,6 @@ export default function BackgammonBoard({
     return () => resizeObserver.disconnect()
   }, [drawBoard])
   
-  // Вспомогательная функция для определения точки по координатам
-  const getPointAtPosition = useCallback((x: number, y: number, canvas: HTMLCanvasElement): number | null => {
-    const width = canvas.width
-    const height = canvas.height
-    const halfHeight = height / 2
-    const pointWidth = width / 12
-    const pointHeight = halfHeight / 2
-    
-    const points = gameState?.points || []
-    for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
-      const isTopRow = pointIndex < 12
-      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
-      
-      const pointX = isTopRow
-        ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
-        : pointInRow * pointWidth + pointWidth / 2
-      const pointY = isTopRow
-        ? pointHeight
-        : height - pointHeight
-      
-      const triangleWidth = pointWidth * 0.8
-      const triangleHeight = pointHeight * 0.9
-      const dx = Math.abs(x - pointX)
-      const dy = Math.abs(y - pointY)
-      
-      // Улучшенная проверка попадания в треугольник
-      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight && 
-        (isTopRow ? y >= pointY && y <= pointY + triangleHeight : y <= pointY && y >= pointY - triangleHeight)
-      
-      if (inTriangle) {
-        return pointIndex
-      }
-    }
-    
-    // Проверяем бар (середина доски)
-    const barX = width / 2
-    const barYTop = pointHeight * 0.5
-    const barYBottom = height - pointHeight * 0.5
-    const barWidth = pointWidth * 0.6
-    
-    if (Math.abs(x - barX) < barWidth / 2) {
-      if (y >= barYTop && y <= barYBottom) {
-        // Бар: для игрока 1 (белые) - индекс 24, для игрока 2 (черные) - индекс 25
-        return isPlayer1 ? 24 : 25
-      }
-    }
-    
-    // Проверяем область выноса (bear off)
-    // В длинных нардах (long):
-    //   - Игрок 1 (белые): дом - точки 18-23 (нижний ряд справа), вынос влево
-    //   - Игрок 2 (черные): дом - точки 0-5 (верхний ряд справа), вынос вправо
-    // В коротких нардах (short):
-    //   - Игрок 1 (белые): дом - точки 0-5 (верхний ряд справа), вынос вправо
-    //   - Игрок 2 (черные): дом - точки 18-23 (нижний ряд справа), вынос влево
-    const bearOffMargin = pointWidth * 1.5 // Область для выноса
-    
-    if (gameMode === 'long') {
-      // Длинные нарды
-      if (isPlayer1) {
-        // Игрок 1 (белые): дом - точки 18-23 (нижний ряд справа), вынос влево
-        if (x < bearOffMargin && y > height - pointHeight * 2 && y < height) {
-          return -1 // Индекс -1 для выноса (как в бэкенде)
-        }
-      } else {
-        // Игрок 2 (черные): дом - точки 0-5 (верхний ряд справа), вынос вправо
-        if (x > width - bearOffMargin && y > 0 && y < pointHeight * 2) {
-          return -1 // Индекс -1 для выноса (как в бэкенде)
-        }
-      }
-    } else {
-      // Короткие нарды
-      if (isPlayer1) {
-        // Игрок 1 (белые): дом - точки 0-5 (верхний ряд справа), вынос вправо
-        if (x > width - bearOffMargin && y > 0 && y < pointHeight * 2) {
-          return -1 // Индекс -1 для выноса (как в бэкенде)
-        }
-      } else {
-        // Игрок 2 (черные): дом - точки 18-23 (нижний ряд справа), вынос влево
-        if (x < bearOffMargin && y > height - pointHeight * 2 && y < height) {
-          return -1 // Индекс -1 для выноса (как в бэкенде)
-        }
-      }
-    }
-    
-    return null
-  }, [gameState, isPlayer1, gameMode])
-  
   // Обработка начала перетаскивания
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canMove || !isMyTurn || !canvasRef.current) return
@@ -888,7 +478,6 @@ export default function BackgammonBoard({
     const points = gameState?.points || []
     let pointValue = 0
     
-    // Проверяем бар
     if (pointIndex === 24 || pointIndex === 25) {
       const bar = gameState?.bar || { white: 0, black: 0 }
       pointValue = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1) 
@@ -903,37 +492,20 @@ export default function BackgammonBoard({
     const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0) || 
                       (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
     
-    if (!isMyPoint) return // Не можем перетаскивать чужие шашки
+    if (!isMyPoint) return
     
-    // Проверяем, есть ли возможные ходы с этой точки
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
     if (pointMoves.length === 0) return
     
-    // Начинаем перетаскивание
-    const width = canvas.width
-    const height = canvas.height
-    const pointWidth = width / 12
-    const halfHeight = height / 2
-    const pointHeight = halfHeight / 2
-    const isTopRow = pointIndex < 12
-    const pointInRow = isTopRow ? pointIndex : pointIndex - 12
-    
-    const pointX = isTopRow
-      ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
-      : pointInRow * pointWidth + pointWidth / 2
-    const pointY = isTopRow
-      ? pointHeight
-      : height - pointHeight
+    const { x: pointX, y: pointY } = getPointCoordinates(pointIndex, canvas)
     
     setDragging({ pointIndex, offsetX: x - pointX, offsetY: y - pointY })
     setDragPosition({ x, y })
     setSelectedPoint(pointIndex)
     
-    // Устанавливаем валидные точки назначения (включая вынос -1)
     const validTargets = new Set<number>()
     pointMoves.forEach(move => {
       if (move.to !== undefined && move.to !== null) {
-        // Включаем обычные точки (0-23) и вынос (-1)
         if ((move.to >= 0 && move.to < 24) || move.to === -1) {
           validTargets.add(move.to)
         }
@@ -942,7 +514,7 @@ export default function BackgammonBoard({
     setValidTargetPoints(validTargets)
   }
   
-  // Обработка движения мыши при перетаскивании
+  // Обработка движения мыши
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current) return
     
@@ -953,12 +525,9 @@ export default function BackgammonBoard({
     
     if (dragging) {
       setDragPosition({ x, y })
-      
-      // Определяем точку под курсором
       const hovered = getPointAtPosition(x, y, canvas)
       setHoveredPoint(hovered)
     } else {
-      // При обычном движении мыши без перетаскивания сбрасываем hoveredPoint
       setHoveredPoint(null)
     }
   }
@@ -972,36 +541,22 @@ export default function BackgammonBoard({
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
     
-    // Определяем на какую точку перетащили
     const targetPoint = getPointAtPosition(x, y, canvas)
     
-    // Если перетащили на валидную точку или область выноса, делаем ход
     if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
-      // Проверяем, является ли это выносом (targetPoint === -1)
       if (targetPoint === -1) {
-        // Ищем ход на вынос (to === -1)
         const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
         if (bearOffMove) {
-          console.log('✅ Выполняем вынос шашки:', bearOffMove)
           onMove(bearOffMove.from, bearOffMove.to, bearOffMove.die)
-        } else {
-          console.warn('⚠️ Вынос не найден для точки:', dragging.pointIndex)
         }
       } else if (validTargetPoints.has(targetPoint)) {
-        // Обычный ход на точку
         const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
         if (move) {
-          console.log('✅ Выполняем ход:', move)
           onMove(move.from, move.to, move.die)
-        } else {
-          console.warn('⚠️ Ход не найден для:', { from: dragging.pointIndex, to: targetPoint })
         }
-      } else {
-        console.warn('⚠️ Недопустимый ход:', { from: dragging.pointIndex, to: targetPoint, validTargets: Array.from(validTargetPoints) })
       }
     }
     
-    // Сбрасываем состояние перетаскивания
     setDragging(null)
     setDragPosition(null)
     setSelectedPoint(null)
@@ -1009,9 +564,9 @@ export default function BackgammonBoard({
     setValidTargetPoints(new Set())
   }
   
-  // Обработка клика по точке (для совместимости)
+  // Обработка клика
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (dragging) return // Если перетаскиваем, не обрабатываем клик
+    if (dragging) return
     
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
@@ -1030,13 +585,11 @@ export default function BackgammonBoard({
     if (!canMove || !isMyTurn) return
     
     if (selectedPoint === null) {
-      // Выбираем точку для хода
       const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
       if (pointMoves.length > 0) {
         setSelectedPoint(pointIndex)
       }
     } else {
-      // Делаем ход
       const move = possibleMoves.find(m => m.from === selectedPoint && m.to === pointIndex)
       if (move) {
         onMove(move.from, move.to, move.die)
@@ -1052,9 +605,6 @@ export default function BackgammonBoard({
     ? (Array.isArray(dice) ? dice : [dice.die1, dice.die2])
     : null
   
-  // Определяем, чьи кубики показывать
-  const currentDiceTextures = isMyTurn && canMove ? textures.myDice : textures.opponentDice
-  
   return (
     <div ref={containerRef} className="backgammon-board-container">
       <canvas
@@ -1067,7 +617,7 @@ export default function BackgammonBoard({
         onMouseLeave={handleMouseUp}
       />
       
-      {/* Кубики - отображаются на части доски, чей ход */}
+      {/* Кубики */}
       {diceArray && dice3DPosition && (
         <div
           style={{
@@ -1082,7 +632,7 @@ export default function BackgammonBoard({
           <Dice3D
             values={diceArray}
             animating={diceAnimating}
-            diceTextures={currentDiceTextures}
+            diceTextures={undefined}
           />
         </div>
       )}
