@@ -70,17 +70,15 @@ export class LongBackgammonEngine {
 
   /**
    * Calculate target point for a move
-   * Both players move counter-clockwise around the board
-   * White: starts at Point 24 (index 0), moves: 24→13→12→1 (home: 1-6)
-   * Black: starts at Point 12 (index 12), moves: 12→1→24→13 (home: 13-18)
+   * Both players move counter-clockwise around the board (visually), which corresponds to INCREASING indices in our array
+   * White: starts at Index 0 (Point 24), moves: 0→1→...→23 (Point 24→23→...→1)
+   * Black: starts at Index 12 (Point 12), moves: 12→13→...→23→0→...→11 (Point 12→11→...→1→24→...→13)
    * 
-   * Movement is circular: index decreases modulo 24
-   * White path: 0→11→12→23→22→...→18 (Point 24→13→12→1→2→...→6)
-   * Black path: 12→23→0→11→10→...→6 (Point 12→1→24→13→14→...→18)
+   * Movement is circular: index increases modulo 24
    */
   private calculateTargetPoint(player: number, from: number, die: number): number {
-    // Both players move counter-clockwise: decrease index by die, wrap around
-    let to = (from - die + this.BOARD_SIZE) % this.BOARD_SIZE;
+    // Both players move by INCREASING index (decreasing Point Number)
+    let to = (from + die) % this.BOARD_SIZE;
     return to;
   }
 
