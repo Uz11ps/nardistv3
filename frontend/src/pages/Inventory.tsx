@@ -159,13 +159,23 @@ export default function Inventory() {
 
   const loadSelectedSkins = async () => {
     try {
-      const response = await apiClient.get('/skins/selected')
+      // Используем /skins/selected/explicit чтобы получить ТОЛЬКО явно выбранные скины
+      // (без fallback на дефолтные, которые backend возвращает в /skins/selected)
+      const response = await apiClient.get('/skins/selected/explicit').catch(() => {
+        // Fallback на старый endpoint если новый не существует
+        return apiClient.get('/skins/selected')
+      })
       const selected = response.data || {}
       const selectedIds = new Set<string>()
       
       if (selected.board) selectedIds.add(selected.board.id)
       if (selected.dice) selectedIds.add(selected.dice.id)
       if (selected.checkers) selectedIds.add(selected.checkers.id)
+      
+      console.log('📦 Inventory - Explicitly selected skins:', {
+        selected,
+        selectedIds: Array.from(selectedIds),
+      })
       
       setSelectedSkinIds(selectedIds)
     } catch (error) {

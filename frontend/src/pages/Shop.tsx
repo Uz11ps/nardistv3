@@ -74,7 +74,11 @@ export default function Shop() {
       const [allSkinsResponse, mySkinsResponse, selectedSkinResponse] = await Promise.all([
         apiClient.get('/skins'),
         apiClient.get('/skins/my'),
-        apiClient.get('/skins/selected'),
+        // Используем /skins/selected/explicit чтобы получить ТОЛЬКО явно выбранные скины
+        apiClient.get('/skins/selected/explicit').catch(() => {
+          // Fallback на старый endpoint если новый не существует
+          return apiClient.get('/skins/selected')
+        }),
       ])
 
       const skinsData = allSkinsResponse.data || []

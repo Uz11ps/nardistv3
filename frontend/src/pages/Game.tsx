@@ -268,30 +268,46 @@ export default function Game() {
       // Определяем, является ли player2 ботом (нет player2Id или это бот-игра)
       const isBotPlayer2 = !player2Id || isBotGame || gameInfo?.type === 'vs_bot'
       
-      // Загружаем скины: для текущего пользователя используем /skins/selected (как в Inventory)
-      // Для других игроков используем /skins/user/:userId/selected
+      // Загружаем скины: используем /skins/selected/explicit для явно выбранных скинов
+      // Если явно выбранных нет - используем дефолтные через /skins/selected (с fallback)
       // Для бота - всегда дефолтные классические скины
+      const loadPlayerSkinsWithFallback = async (userId: string, isMyId: boolean) => {
+        try {
+          // Сначала пытаемся загрузить явно выбранные скины
+          const explicitRes = await apiClient.get('/skins/selected/explicit').catch(() => ({ data: {} }))
+          const explicitSkins = explicitRes.data || {}
+          
+          // Если есть явно выбранные скины - используем их
+          if (explicitSkins.board || explicitSkins.dice || explicitSkins.checkers) {
+            console.log(`✅ Found explicitly selected skins for user ${userId}:`, explicitSkins)
+            return explicitSkins
+          }
+          
+          // Если явно выбранных нет - используем /skins/selected (с fallback на дефолтные)
+          const selectedRes = await apiClient.get(isMyId ? '/skins/selected' : `/skins/user/${userId}/selected`).catch(() => ({ data: {} }))
+          const selectedSkins = selectedRes.data || {}
+          console.log(`⚠️ No explicit selection for user ${userId}, using selected with fallback:`, selectedSkins)
+          return selectedSkins
+        } catch (error) {
+          console.error(`Failed to load skins for user ${userId}:`, error)
+          return {}
+        }
+      }
+      
       const promises = [
         myId === player1Id 
-          ? apiClient.get('/skins/selected').catch(() => ({ data: {} }))
-          : apiClient.get(`/skins/user/${player1Id}/selected`).catch(() => ({ data: {} })),
+          ? loadPlayerSkinsWithFallback(player1Id, true)
+          : loadPlayerSkinsWithFallback(player1Id, false),
         isBotPlayer2
-          ? loadDefaultSkins().then(defaultSkins => ({ data: defaultSkins }))
+          ? loadDefaultSkins().then(defaultSkins => defaultSkins)
           : (player2Id
-              ? (myId === player2Id
-                  ? apiClient.get('/skins/selected').catch(() => ({ data: {} }))
-                  : apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} })))
-              : Promise.resolve({ data: {} })),
-        // Мои скины - всегда через /skins/selected
-        myId ? apiClient.get('/skins/selected').catch(() => ({ data: {} })) : Promise.resolve({ data: {} }),
+              ? loadPlayerSkinsWithFallback(player2Id, myId === player2Id)
+              : Promise.resolve({})),
+        // Мои скины - загружаем с fallback
+        myId ? loadPlayerSkinsWithFallback(myId, true) : Promise.resolve({}),
       ]
       
-      const [player1SkinsRes, player2SkinsRes, mySkinsRes] = await Promise.all(promises)
-      
-      // БЕЗ FALLBACK - используем ТОЛЬКО то, что вернул сервер (selected скины)
-      const player1Skins = player1SkinsRes.data || {}
-      const player2Skins = player2SkinsRes.data || {}
-      const mySkins = mySkinsRes.data || {}
+      const [player1Skins, player2Skins, mySkins] = await Promise.all(promises)
       
       console.log('🎮 Game - Loaded player skins (NO FALLBACK):', {
         player1Id,

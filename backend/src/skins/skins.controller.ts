@@ -36,6 +36,13 @@ export class SkinsController {
     return this.skinsService.getSelectedSkin(user.id);
   }
 
+  @Get('selected/explicit')
+  @UseGuards(JwtAuthGuard)
+  async getExplicitlySelectedSkins(@CurrentUser() user: any) {
+    // Возвращает ТОЛЬКО явно выбранные скины (без fallback на дефолтные)
+    return this.skinsService.getExplicitlySelectedSkins(user.id);
+  }
+
   @Get('user/:userId/selected')
   @UseGuards(JwtAuthGuard)
   async getUserSelectedSkin(@Param('userId') userId: string) {

@@ -419,6 +419,34 @@ export class SkinsService implements OnModuleInit {
     return result;
   }
 
+  /**
+   * Возвращает ТОЛЬКО явно выбранные скины (без fallback на дефолтные)
+   * Используется для отображения статуса "Экипировано" в инвентаре
+   */
+  async getExplicitlySelectedSkins(userId: string): Promise<{ board?: Skin; dice?: Skin; checkers?: Skin }> {
+    const userSkins = await this.userSkinsRepository.find({
+      where: { userId, isSelected: true },
+      relations: ['skin'],
+    });
+
+    const result: { board?: Skin; dice?: Skin; checkers?: Skin } = {};
+    
+    for (const userSkin of userSkins) {
+      if (userSkin.skin) {
+        if (userSkin.skin.type === 'board' && !result.board) {
+          result.board = userSkin.skin;
+        } else if (userSkin.skin.type === 'dice' && !result.dice) {
+          result.dice = userSkin.skin;
+        } else if (userSkin.skin.type === 'checkers' && !result.checkers) {
+          result.checkers = userSkin.skin;
+        }
+      }
+    }
+
+    // БЕЗ FALLBACK - возвращаем только явно выбранные скины
+    return result;
+  }
+
   async purchaseSkin(userId: string, skinId: string): Promise<void> {
     const skin = await this.skinsRepository.findOne({ where: { id: skinId } });
     if (!skin) {
