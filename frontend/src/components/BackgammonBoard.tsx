@@ -135,38 +135,31 @@ export default function BackgammonBoard({
     
     const isTopRow = pointIndex < 12
     
-    // Система нумерации нард (согласно backend):
-    // Index 0 = Point 24 (Top Right) - White Head
+    // Система нумерации нард:
+    // Index 0 = Point 24 (Top Right)
     // Index 11 = Point 13 (Top Left)
-    // Index 12 = Point 12 (Bottom Left) - Black Head
+    // Index 12 = Point 12 (Bottom Left)
     // Index 23 = Point 1 (Bottom Right)
-    //
-    // Верхний ряд (indices 0-11): Points 24-13 (справа налево)
-    // Нижний ряд (indices 12-23): Points 12-1 (слева направо)
     
     let x: number
     let pointNumber: number
     
     if (isTopRow) {
       // Верхний ряд: Points 24-13 (справа налево)
-      // Index 0 = Point 24 (Top Right), Index 11 = Point 13 (Top Left)
       pointNumber = 24 - pointIndex
-      const pointInRow = pointIndex  // 0-11
-      // Справа налево: от правого края к бару
+      const pointInRow = pointIndex
       x = width - (pointInRow * pointWidth + pointWidth / 2)
     } else {
       // Нижний ряд: Points 12-1 (слева направо)
-      // Index 12 = Point 12 (Bottom Left), Index 23 = Point 1 (Bottom Right)
       pointNumber = 12 - (pointIndex - 12)
-      const pointInRow = pointIndex - 12  // 0-11
-      // Слева направо: от левого края бара к правому краю
+      const pointInRow = pointIndex - 12
       x = barX + barWidth + (pointInRow * pointWidth + pointWidth / 2)
     }
     
-    // Треугольники прижаты к краям доски
+    // Основания треугольников прижаты к краям доски
     const y = isTopRow
-      ? pointHeight * 0.05  // Верхний ряд: прижат к верху
-      : height - pointHeight * 0.05  // Нижний ряд: прижат к низу
+      ? 0      // Верхний край
+      : height // Нижний край
     
     return { x, y, isTopRow, pointWidth, pointHeight, pointNumber }
   }, [])
@@ -191,13 +184,13 @@ export default function BackgammonBoard({
       const triangleHeight = pHeight * 0.95
       const dx = Math.abs(x - pointX)
       
-      // Проверка попадания в треугольник (стандартное расположение нард)
-      // Для верхнего ряда: треугольник от y (вершина) до y + triangleHeight (основание)
-      // Для нижнего ряда: треугольник от y - triangleHeight (основание) до y (вершина)
+      // Проверка попадания в треугольник (стандартное расположение)
+      // Для верхнего ряда: основание у y (верх), острие у y+h
+      // Для нижнего ряда: основание у y (низ), острие у y-h
       const inTriangle = dx < triangleWidth / 2 && 
         (isTopRow 
-          ? (y >= pointY && y <= pointY + triangleHeight)
-          : (y <= pointY && y >= pointY - triangleHeight))
+          ? (y >= pointY && y <= pointY + triangleHeight) // y растет вниз
+          : (y <= pointY && y >= pointY - triangleHeight)) // y уменьшается вверх
       
       if (inTriangle) {
         return pointIndex
@@ -263,25 +256,25 @@ export default function BackgammonBoard({
     const pointWidth = availableWidth / 6
     const pointHeight = height / 2
     
-    // Функция для отрисовки треугольной точки (стандартное расположение нард)
+    // Функция для отрисовки треугольной точки (Классический вид)
     const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, color: string) => {
       ctx.beginPath()
       if (isTop) {
-        // Верхний треугольник: вершина вверху (прижата к верху доски), основание внизу
-        ctx.moveTo(x, y)  // Вершина вверху треугольника
-        ctx.lineTo(x - w / 2, y + h)  // Левая точка основания
-        ctx.lineTo(x + w / 2, y + h)  // Правая точка основания
+        // Верхний треугольник: основание вверху (y), острие вниз (y + h)
+        ctx.moveTo(x - w / 2, y)       // Левый верхний угол (основание)
+        ctx.lineTo(x + w / 2, y)       // Правый верхний угол (основание)
+        ctx.lineTo(x, y + h)           // Острие внизу
       } else {
-        // Нижний треугольник: вершина внизу (прижата к низу доски), основание вверху
-        ctx.moveTo(x, y)  // Вершина внизу треугольника
-        ctx.lineTo(x - w / 2, y - h)  // Левая точка основания
-        ctx.lineTo(x + w / 2, y - h)  // Правая точка основания
+        // Нижний треугольник: основание внизу (y), острие вверх (y - h)
+        ctx.moveTo(x - w / 2, y)       // Левый нижний угол (основание)
+        ctx.lineTo(x + w / 2, y)       // Правый нижний угол (основание)
+        ctx.lineTo(x, y - h)           // Острие вверху
       }
       ctx.closePath()
       ctx.fillStyle = color
       ctx.fill()
-      ctx.strokeStyle = '#654321'
-      ctx.lineWidth = 2
+      ctx.strokeStyle = '#5c3a21' // Более темная обводка для контраста
+      ctx.lineWidth = 1
       ctx.stroke()
     }
     
@@ -332,59 +325,74 @@ export default function BackgammonBoard({
       // Рисуем треугольник точки
       drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
       
-      // Отрисовка нумерации точек (правильная нумерация нард: 1-24)
-      ctx.fillStyle = '#FFFFFF'
-      ctx.font = 'bold 14px Arial'
+      // Отрисовка нумерации точек (1-24)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+      ctx.font = 'bold 12px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.strokeStyle = '#000000'
-      ctx.lineWidth = 2
       
+      // Номера рисуем у основания треугольников (у краев доски)
       if (isTopRow) {
-        // Нумерация над верхними треугольниками
-        ctx.strokeText(pointNumber.toString(), x, y - 20)
-        ctx.fillText(pointNumber.toString(), x, y - 20)
+        // У верхнего края
+        ctx.fillText(pointNumber.toString(), x, y + 15)
       } else {
-        // Нумерация под нижними треугольниками
-        ctx.strokeText(pointNumber.toString(), x, y + 20)
-        ctx.fillText(pointNumber.toString(), x, y + 20)
+        // У нижнего края
+        ctx.fillText(pointNumber.toString(), x, y - 15)
       }
       
       // Отрисовка шашек на точке
       if (pointValue !== 0) {
         const checkerCount = Math.abs(pointValue)
         const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
-        const checkerSize = Math.min(pointWidth * 0.25, pointHeight * 0.3)
+        // Немного уменьшаем размер шашек, чтобы влезали 5 штук
+        const checkerSize = Math.min(pointWidth * 0.9, pointHeight * 0.15) 
         
-        const stackHeight = Math.min(checkerCount, 5) * checkerSize * 0.6
-        // Шашки располагаются внутри треугольника
-        const checkerBaseY = isTopRow ? y + triangleHeight * 0.3 : y - triangleHeight * 0.3
-        const startY = isTopRow ? checkerBaseY : checkerBaseY - stackHeight
+        // Шашки начинают рисоваться от основания треугольника (от края доски) к центру
+        const checkerBaseY = isTopRow 
+          ? y + checkerSize/2 + 5 // Отступ сверху
+          : y - checkerSize/2 - 5 // Отступ снизу
+        
+        const stackHeight = Math.min(checkerCount, 5) * checkerSize
         
         const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
         const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, 5) : Math.min(checkerCount, 5)
         
         for (let i = 0; i < checkersToDraw; i++) {
-          const checkerY = startY + i * checkerSize * 0.6
+          // Смещение каждой следующей шашки к центру доски
+          const yOffset = i * checkerSize
+          const checkerY = isTopRow 
+            ? checkerBaseY + yOffset 
+            : checkerBaseY - yOffset
           
           // Простые шашки без текстур
-          ctx.fillStyle = isMyPoint ? '#FFFFFF' : '#000000'
+          ctx.fillStyle = isMyPoint ? '#E0E0E0' : '#202020' // Белые/Черные (темно-серые)
           ctx.beginPath()
-          ctx.arc(x, checkerY, checkerSize / 2, 0, Math.PI * 2)
+          ctx.arc(x, checkerY, checkerSize / 2 * 0.9, 0, Math.PI * 2)
           ctx.fill()
-          ctx.strokeStyle = '#333'
-          ctx.lineWidth = 2
+          
+          // Блик и обводка для объема
+          ctx.strokeStyle = isMyPoint ? '#999' : '#000'
+          ctx.lineWidth = 1
+          ctx.stroke()
+          
+          // Внутренний круг для детализации
+          ctx.beginPath()
+          ctx.arc(x, checkerY, checkerSize / 2 * 0.5, 0, Math.PI * 2)
+          ctx.strokeStyle = isMyPoint ? '#CCC' : '#444'
           ctx.stroke()
         }
         
-        // Если шашек больше 5, показываем число
+        // Если шашек больше 5, показываем число на последней шашке
         if (checkerCount > 5) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-          ctx.fillRect(x - 18, isTopRow ? checkerBaseY - 22 : checkerBaseY + 2, 36, 18)
-          ctx.fillStyle = '#000'
-          ctx.font = 'bold 12px Arial'
+           const lastCheckerY = isTopRow 
+            ? checkerBaseY + (4 * checkerSize)
+            : checkerBaseY - (4 * checkerSize)
+            
+          ctx.fillStyle = isMyPoint ? '#000' : '#FFF'
+          ctx.font = 'bold 10px Arial'
           ctx.textAlign = 'center'
-          ctx.fillText(checkerCount.toString(), x, isTopRow ? checkerBaseY - 10 : checkerBaseY + 12)
+          ctx.textBaseline = 'middle'
+          ctx.fillText(checkerCount.toString(), x, lastCheckerY)
         }
       }
     })
