@@ -39,5 +39,20 @@ export class CityController {
   async collectIncome(@CurrentUser() user: any, @Param('id') id: string) {
     return this.cityService.collectIncome(user.id, id);
   }
+
+  @Get('autobuild/settings')
+  @UseGuards(JwtAuthGuard)
+  async getAutobuildSettings(@CurrentUser() user: any) {
+    return this.cityService.getAutobuildSettings(user.id);
+  }
+
+  @Post('autobuild/settings')
+  @UseGuards(JwtAuthGuard)
+  async saveAutobuildSettings(
+    @CurrentUser() user: any,
+    @Body() body: { minBalance: number; strategy: string; priorityBuilding?: string | null },
+  ) {
+    return this.cityService.saveAutobuildSettings(user.id, body);
+  }
 }
 
