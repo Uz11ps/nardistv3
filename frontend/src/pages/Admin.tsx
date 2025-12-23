@@ -2171,7 +2171,25 @@ export default function Admin() {
                       />
                     </div>
                   )}
-                  <input type="file" accept="image/*" id="edit-skin-image" />
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    id="edit-skin-image"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        const reader = new FileReader()
+                        reader.onload = (event) => {
+                          const preview = document.getElementById('edit-skin-image-preview')
+                          if (preview) {
+                            preview.innerHTML = `<img src="${event.target?.result}" alt="Превью" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                          }
+                        }
+                        reader.readAsDataURL(file)
+                      }
+                    }}
+                  />
+                  <div id="edit-skin-image-preview" style={{ marginTop: '8px' }}></div>
                   <span className="field-hint">Превью для отображения в магазине и инвентаре</span>
                 </div>
                 {selectedSkin.type === 'board' && (
@@ -2189,7 +2207,25 @@ export default function Admin() {
                         />
                       </div>
                     )}
-                    <input type="file" accept="image/*" id="edit-skin-board-texture" />
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      id="edit-skin-board-texture"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          const reader = new FileReader()
+                          reader.onload = (event) => {
+                            const preview = document.getElementById('edit-skin-board-texture-preview')
+                            if (preview) {
+                              preview.innerHTML = `<img src="${event.target?.result}" alt="Текстура доски" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                            }
+                          }
+                          reader.readAsDataURL(file)
+                        }
+                      }}
+                    />
+                    <div id="edit-skin-board-texture-preview" style={{ marginTop: '8px' }}></div>
                     <span className="field-hint">Оставьте пустым, чтобы не изменять текстуру</span>
                   </div>
                 )}
@@ -2208,7 +2244,25 @@ export default function Admin() {
                         />
                       </div>
                     )}
-                    <input type="file" accept="image/*" id="edit-skin-dice-texture" />
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      id="edit-skin-dice-texture"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          const reader = new FileReader()
+                          reader.onload = (event) => {
+                            const preview = document.getElementById('edit-skin-dice-texture-preview')
+                            if (preview) {
+                              preview.innerHTML = `<img src="${event.target?.result}" alt="Текстура кубиков" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                            }
+                          }
+                          reader.readAsDataURL(file)
+                        }
+                      }}
+                    />
+                    <div id="edit-skin-dice-texture-preview" style={{ marginTop: '8px' }}></div>
                     <span className="field-hint">Оставьте пустым, чтобы не изменять текстуру</span>
                   </div>
                 )}
@@ -2227,7 +2281,25 @@ export default function Admin() {
                         />
                       </div>
                     )}
-                    <input type="file" accept="image/*" id="edit-skin-checkers-texture" />
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      id="edit-skin-checkers-texture"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          const reader = new FileReader()
+                          reader.onload = (event) => {
+                            const preview = document.getElementById('edit-skin-checkers-texture-preview')
+                            if (preview) {
+                              preview.innerHTML = `<img src="${event.target?.result}" alt="Текстура шашек" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                            }
+                          }
+                          reader.readAsDataURL(file)
+                        }
+                      }}
+                    />
+                    <div id="edit-skin-checkers-texture-preview" style={{ marginTop: '8px' }}></div>
                     <span className="field-hint">Оставьте пустым, чтобы не изменять текстуру</span>
                   </div>
                 )}
@@ -2317,11 +2389,48 @@ export default function Admin() {
               </div>
               <div className="form-group">
                 <label>Превью (для магазина):</label>
-                <input type="file" accept="image/*" id="skin-image" />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  id="skin-image"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = (event) => {
+                        const preview = document.getElementById('skin-image-preview')
+                        if (preview) {
+                          preview.innerHTML = `<img src="${event.target?.result}" alt="Превью" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                        }
+                      }
+                      reader.readAsDataURL(file)
+                    }
+                  }}
+                />
+                <div id="skin-image-preview" style={{ marginTop: '8px' }}></div>
+                <span className="field-hint">Превью для отображения в магазине и инвентаре</span>
               </div>
               <div className="form-group" id="skin-texture-group" style={{ display: 'none' }}>
                 <label id="skin-texture-label">Текстура (файл для игры):</label>
-                <input type="file" accept="image/*" id="skin-texture" />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  id="skin-texture"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = (event) => {
+                        const preview = document.getElementById('skin-texture-preview')
+                        if (preview) {
+                          preview.innerHTML = `<img src="${event.target?.result}" alt="Текстура" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                        }
+                      }
+                      reader.readAsDataURL(file)
+                    }
+                  }}
+                />
+                <div id="skin-texture-preview" style={{ marginTop: '8px' }}></div>
                 <span className="field-hint">Этот файл будет использоваться в игре</span>
               </div>
               <script dangerouslySetInnerHTML={{__html: `

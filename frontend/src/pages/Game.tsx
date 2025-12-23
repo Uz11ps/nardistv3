@@ -159,10 +159,21 @@ export default function Game() {
         ? { die1: diceData[0], die2: diceData[1] }
         : diceData || null
       
+      // Преобразуем bar и bearOff из массива в объект если нужно
+      const barRaw = game.gameState?.bar || [0, 0]
+      const bar = Array.isArray(barRaw) 
+        ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+        : barRaw
+        
+      const bearOffRaw = game.gameState?.bearOff || game.gameState?.borneOff || [0, 0]
+      const bearOff = Array.isArray(bearOffRaw)
+        ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+        : bearOffRaw
+      
       setGameState({
         points: game.gameState?.points || [],
-        bar: game.gameState?.bar || { white: 0, black: 0 },
-        bearOff: game.gameState?.bearOff || { white: 0, black: 0 },
+        bar,
+        bearOff,
         currentPlayer: game.currentPlayer || 0,
         dice: formattedDice,
         canMove: game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1,
@@ -292,10 +303,21 @@ export default function Game() {
       
       console.log('📊 Вычислено canMove:', canMove, 'currentPlayer:', data.currentPlayer, 'player1Id === myId:', data.player1Id === user?.id)
       
+      // Преобразуем bar и bearOff из массива в объект если нужно
+      const barRaw = data.gameState?.bar || [0, 0]
+      const bar = Array.isArray(barRaw) 
+        ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+        : barRaw
+        
+      const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+      const bearOff = Array.isArray(bearOffRaw)
+        ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+        : bearOffRaw
+      
       setGameState({
         points: data.gameState?.points || [],
-        bar: data.gameState?.bar || { white: 0, black: 0 },
-        bearOff: data.gameState?.bearOff || data.gameState?.borneOff || { white: 0, black: 0 },
+        bar,
+        bearOff,
         currentPlayer: data.currentPlayer || 0,
         dice: formattedDice,
         canMove: canMove,
@@ -361,10 +383,21 @@ export default function Game() {
       
       console.log('🎯 Вычислено canMove:', canMove, 'currentPlayer:', data.currentPlayer, 'player1Id === myId:', data.player1Id === user?.id)
       
+      // Преобразуем bar и bearOff из массива в объект если нужно
+      const barRaw = data.gameState?.bar || [0, 0]
+      const bar = Array.isArray(barRaw) 
+        ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+        : barRaw
+        
+      const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+      const bearOff = Array.isArray(bearOffRaw)
+        ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+        : bearOffRaw
+      
       setGameState({
         points: data.gameState?.points || [],
-        bar: data.gameState?.bar || { white: 0, black: 0 },
-        bearOff: data.gameState?.bearOff || data.gameState?.borneOff || { white: 0, black: 0 },
+        bar,
+        bearOff,
         currentPlayer: data.currentPlayer || 0,
         dice: formattedDice,
         canMove: canMove,

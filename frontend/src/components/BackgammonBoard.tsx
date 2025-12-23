@@ -498,12 +498,8 @@ export default function BackgammonBoard({
     const leftBoardTexture = loadedTextures.player1Board // Это теперь моя сторона
     if (leftBoardTexture) {
       // Рисуем текстуру доски моей стороны только на левой половине
-      ctx.save()
-      ctx.beginPath()
-      ctx.rect(0, 0, barLeftX, height)
-      ctx.clip()
-      ctx.drawImage(leftBoardTexture, 0, 0, width, height)
-      ctx.restore()
+      // Используем правильные координаты и размеры для левой половины
+      ctx.drawImage(leftBoardTexture, 0, 0, barLeftX, height)
     } else {
       // Если текстура еще не загрузилась, рисуем простой фон
       ctx.fillStyle = '#8B4513'
@@ -514,12 +510,9 @@ export default function BackgammonBoard({
     const rightBoardTexture = loadedTextures.player2Board // Это теперь сторона противника
     if (rightBoardTexture) {
       // Рисуем текстуру доски стороны противника только на правой половине
-      ctx.save()
-      ctx.beginPath()
-      ctx.rect(barRightX, 0, width - barRightX, height)
-      ctx.clip()
-      ctx.drawImage(rightBoardTexture, 0, 0, width, height)
-      ctx.restore()
+      // Используем правильные координаты и размеры для правой половины
+      const rightWidth = width - barRightX
+      ctx.drawImage(rightBoardTexture, barRightX, 0, rightWidth, height)
     } else {
       // Если текстура еще не загрузилась, рисуем простой фон
       ctx.fillStyle = '#654321'

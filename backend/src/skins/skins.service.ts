@@ -43,7 +43,8 @@ export class SkinsService implements OnModuleInit {
           weight: 1,
           price: null, // Бесплатный
           rarity: 'common',
-          boardTextureUrl: '/skins/default-board.svg',
+          imageUrl: '/skins/default-board.svg', // Превью для магазина
+          boardTextureUrl: '/skins/default-board.svg', // Текстура для игры
         },
         {
           name: 'Классические кубики',
@@ -55,7 +56,8 @@ export class SkinsService implements OnModuleInit {
           weight: 1,
           price: null, // Бесплатный
           rarity: 'common',
-          diceTextureUrl: '/skins/default-dice.svg',
+          imageUrl: '/skins/default-dice.svg', // Превью для магазина
+          diceTextureUrl: '/skins/default-dice.svg', // Текстура для игры
         },
         {
           name: 'Классические шашки',
@@ -67,8 +69,9 @@ export class SkinsService implements OnModuleInit {
           weight: 1,
           price: null, // Бесплатный
           rarity: 'common',
-          whiteCheckersTextureUrl: '/skins/default-checkers-white.svg',
-          blackCheckersTextureUrl: '/skins/default-checkers-black.svg',
+          imageUrl: '/skins/default-checkers.svg', // Превью для магазина
+          whiteCheckersTextureUrl: '/skins/default-checkers-white.svg', // Текстура для игры
+          blackCheckersTextureUrl: '/skins/default-checkers-black.svg', // Текстура для игры
           checkersTextureUrl: '/skins/default-checkers.svg', // Для обратной совместимости
         },
       ];
@@ -88,6 +91,10 @@ export class SkinsService implements OnModuleInit {
             let needsUpdate = false;
             
             // Обновляем поля, если их нет
+            if (!existingSkin.imageUrl && skinData.imageUrl) {
+              existingSkin.imageUrl = skinData.imageUrl;
+              needsUpdate = true;
+            }
             if (skinData.type === 'board' && !existingSkin.boardTextureUrl) {
               existingSkin.boardTextureUrl = skinData.boardTextureUrl;
               needsUpdate = true;
