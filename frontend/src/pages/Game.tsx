@@ -352,10 +352,22 @@ export default function Game() {
 
   const createBotGame = async () => {
     try {
+      console.log('🎮 Создание игры с ботом...')
+      const { token, user } = useAuthStore.getState()
+      console.log('🔑 Токен:', token ? `${token.substring(0, 20)}...` : 'отсутствует')
+      console.log('👤 Пользователь:', user ? { id: user.id, username: user.username, isGuest: user.isGuest } : 'отсутствует')
+      
       const response = await apiClient.post('/games/create-bot')
+      console.log('✅ Игра с ботом создана:', response.data)
       navigate(`/game/${response.data.id}`)
-    } catch (error) {
-      console.error('Failed to create bot game:', error)
+    } catch (error: any) {
+      console.error('❌ Ошибка при создании игры с ботом:', error)
+      console.error('❌ Статус ответа:', error.response?.status)
+      console.error('❌ Данные ответа:', error.response?.data)
+      console.error('❌ Заголовки запроса:', error.config?.headers)
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Неизвестная ошибка'
+      alert(`Не удалось создать игру с ботом: ${errorMessage}`)
     }
   }
 
