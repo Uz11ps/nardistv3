@@ -694,6 +694,16 @@ export default function Game() {
     })
   }
 
+  const handleUndo = () => {
+    if (pendingMoves.length > 0) {
+      setPendingMoves(prev => {
+        const newMoves = prev.slice(0, -1)
+        console.log('🔄 Ход отменен. Осталось в очереди:', newMoves.length)
+        return newMoves
+      })
+    }
+  }
+
   const handleRollDice = async () => {
     if (!gameId) return
 
@@ -1017,15 +1027,26 @@ export default function Game() {
               ⚠️ Овертайм: {overtimeTimer}с
             </div>
           )}
-          <Button 
-            variant="primary" 
-            fullWidth 
-            onClick={handleConfirm}
-            className="game-confirm-btn"
-            disabled={pendingMoves.length === 0}
-          >
-            {pendingMoves.length > 0 ? `Подтвердить ход (${pendingMoves.length})` : 'Подтвердить ход'}
-          </Button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {pendingMoves.length > 0 && (
+              <Button 
+                variant="secondary" 
+                onClick={handleUndo}
+                style={{ flex: 1 }}
+              >
+                Отменить
+              </Button>
+            )}
+            <Button 
+              variant="primary" 
+              onClick={handleConfirm}
+              className="game-confirm-btn"
+              disabled={pendingMoves.length === 0}
+              style={{ flex: 2 }}
+            >
+              {pendingMoves.length > 0 ? `Подтвердить (${pendingMoves.length})` : 'Подтвердить ход'}
+            </Button>
+          </div>
         </div>
       )}
 
