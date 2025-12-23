@@ -637,31 +637,63 @@ export default function BackgammonBoard({
     if (dragging && validTargetPoints.has(-1)) {
       const bearOffMargin = pointWidth * 1.5
       
-      if (isPlayer1) {
-        // Игрок 1 (белые): область выноса слева
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
-        ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
-        ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-        ctx.lineWidth = 3
-        ctx.strokeRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
-        
-        // Подсветка если курсор над областью выноса
-        if (hoveredPoint === -1) {
-          ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+      if (gameMode === 'long') {
+        // Длинные нарды
+        if (isPlayer1) {
+          // Игрок 1 (белые): область выноса слева
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
           ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
+          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+          ctx.lineWidth = 3
+          ctx.strokeRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
+          
+          // Подсветка если курсор над областью выноса
+          if (hoveredPoint === -1) {
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+            ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
+          }
+        } else {
+          // Игрок 2 (черные): область выноса справа
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
+          ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
+          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+          ctx.lineWidth = 3
+          ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
+          
+          // Подсветка если курсор над областью выноса
+          if (hoveredPoint === -1) {
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+            ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
+          }
         }
       } else {
-        // Игрок 2 (черные): область выноса справа
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
-        ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
-        ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-        ctx.lineWidth = 3
-        ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
-        
-        // Подсветка если курсор над областью выноса
-        if (hoveredPoint === -1) {
-          ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+        // Короткие нарды
+        if (isPlayer1) {
+          // Игрок 1 (белые): область выноса справа
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
           ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
+          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+          ctx.lineWidth = 3
+          ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
+          
+          // Подсветка если курсор над областью выноса
+          if (hoveredPoint === -1) {
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+            ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
+          }
+        } else {
+          // Игрок 2 (черные): область выноса слева
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
+          ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
+          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+          ctx.lineWidth = 3
+          ctx.strokeRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
+          
+          // Подсветка если курсор над областью выноса
+          if (hoveredPoint === -1) {
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+            ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
+          }
         }
       }
     }
@@ -802,26 +834,44 @@ export default function BackgammonBoard({
     }
     
     // Проверяем область выноса (bear off)
-    // Для игрока 1 (белые, нижний ряд): вынос влево (x < 0 или очень близко к левому краю)
-    // Для игрока 2 (черные, верхний ряд): вынос вправо (x > width или очень близко к правому краю)
+    // В длинных нардах (long):
+    //   - Игрок 1 (белые): дом - точки 18-23 (нижний ряд справа), вынос влево
+    //   - Игрок 2 (черные): дом - точки 0-5 (верхний ряд справа), вынос вправо
+    // В коротких нардах (short):
+    //   - Игрок 1 (белые): дом - точки 0-5 (верхний ряд справа), вынос вправо
+    //   - Игрок 2 (черные): дом - точки 18-23 (нижний ряд справа), вынос влево
     const bearOffMargin = pointWidth * 1.5 // Область для выноса
     
-    if (isPlayer1) {
-      // Игрок 1 (белые): дом - точки 18-23 (нижний ряд справа), вынос влево
-      // Проверяем область слева от доски
-      if (x < bearOffMargin && y > height - pointHeight * 2 && y < height) {
-        return -1 // Индекс -1 для выноса (как в бэкенде)
+    if (gameMode === 'long') {
+      // Длинные нарды
+      if (isPlayer1) {
+        // Игрок 1 (белые): дом - точки 18-23 (нижний ряд справа), вынос влево
+        if (x < bearOffMargin && y > height - pointHeight * 2 && y < height) {
+          return -1 // Индекс -1 для выноса (как в бэкенде)
+        }
+      } else {
+        // Игрок 2 (черные): дом - точки 0-5 (верхний ряд справа), вынос вправо
+        if (x > width - bearOffMargin && y > 0 && y < pointHeight * 2) {
+          return -1 // Индекс -1 для выноса (как в бэкенде)
+        }
       }
     } else {
-      // Игрок 2 (черные): дом - точки 0-5 (верхний ряд справа), вынос вправо
-      // Проверяем область справа от доски
-      if (x > width - bearOffMargin && y > 0 && y < pointHeight * 2) {
-        return -1 // Индекс -1 для выноса (как в бэкенде)
+      // Короткие нарды
+      if (isPlayer1) {
+        // Игрок 1 (белые): дом - точки 0-5 (верхний ряд справа), вынос вправо
+        if (x > width - bearOffMargin && y > 0 && y < pointHeight * 2) {
+          return -1 // Индекс -1 для выноса (как в бэкенде)
+        }
+      } else {
+        // Игрок 2 (черные): дом - точки 18-23 (нижний ряд справа), вынос влево
+        if (x < bearOffMargin && y > height - pointHeight * 2 && y < height) {
+          return -1 // Индекс -1 для выноса (как в бэкенде)
+        }
       }
     }
     
     return null
-  }, [gameState, isPlayer1])
+  }, [gameState, isPlayer1, gameMode])
   
   // Обработка начала перетаскивания
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
