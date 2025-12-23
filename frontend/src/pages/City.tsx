@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
-import { apiClient } from '../api/client'
+import { apiClient, getImageUrl } from '../api/client'
 import Button from '../components/Button'
 import Icon from '../components/Icon'
 import './City.css'
@@ -34,29 +34,57 @@ interface BuildingConfig {
 
 export default function City() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [buildings, setBuildings] = useState<Building[]>([])
   const [availableBuildings, setAvailableBuildings] = useState<BuildingConfig[]>([])
   const [collecting, setCollecting] = useState<string | null>(null)
   const [purchasing, setPurchasing] = useState<string | null>(null)
+  const [clanMode, setClanMode] = useState(false)
+  const [clanId, setClanId] = useState<string | null>(null)
+  const [clanBuildings, setClanBuildings] = useState<any[]>([])
+  const [capturing, setCapturing] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Проверяем, пришли ли мы из клана
+    const state = location.state as any
+    if (state?.clanMode && state?.clanId) {
+      setClanMode(true)
+      setClanId(state.clanId)
+    } else {
+      setClanMode(false)
+      setClanId(null)
+    }
+  }, [location])
 
   useEffect(() => {
     if (user) {
       loadData()
     }
-  }, [user])
+  }, [user, clanMode, clanId])
 
   const loadData = async () => {
     try {
       setLoading(true)
-      const [buildingsRes, availableRes] = await Promise.all([
-        apiClient.get('/city/my-buildings').catch(() => ({ data: [] })),
-        apiClient.get('/city/buildings').catch(() => ({ data: [] })),
-      ])
+      
+      if (clanMode && clanId) {
+        // Режим клана: загружаем доступные строения для захвата
+        const availableRes = await apiClient.get(`/clans/${clanId}/territories/available`).catch(() => ({ data: [] }))
+        setClanBuildings(availableRes.data || [])
+        setAvailableBuildings([]) // Не показываем личные строения
+        setBuildings([]) // Не показываем личные строения
+      } else {
+        // Обычный режим: загружаем личные строения и доступные для покупки
+        const [buildingsRes, availableRes] = await Promise.all([
+          apiClient.get('/city/my-buildings').catch(() => ({ data: [] })),
+          apiClient.get('/city/buildings').catch(() => ({ data: [] })),
+        ])
 
-      setBuildings(buildingsRes.data || [])
-      setAvailableBuildings(availableRes.data || [])
+        setBuildings(buildingsRes.data || [])
+        setAvailableBuildings(availableRes.data || [])
+        setClanBuildings([])
+      }
     } catch (error) {
       console.error('Failed to load city data:', error)
     } finally {
@@ -154,9 +182,73 @@ export default function City() {
     )
   }
 
+  const handleCaptureBuilding = async (buildingType: string) => {
+    if (!clanId) return
+    
+    try {
+      setCapturing(buildingType)
+      await apiClient.post(`/clans/${clanId}/territories/capture`, { buildingType })
+      alert('Строение успешно захвачено!')
+      await loadData()
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при захвате строения')
+      console.error('Failed to capture building:', error)
+    } finally {
+      setCapturing(null)
+    }
+  }
+
   return (
-    <PageLayout title="Город" showBack={true}>
+    <PageLayout title={clanMode ? "Районы" : "Город"} showBack={true}>
       <div className="city-content">
+        {clanMode ? (
+          <>
+            {/* Режим клана: доступные строения для захвата */}
+            <div className="city-section">
+              <h2 className="city-section-title">Доступные строения для захвата</h2>
+              <div className="city-available-buildings">
+                {clanBuildings.length === 0 ? (
+                  <div className="city-empty">Нет доступных строений для захвата</div>
+                ) : (
+                  clanBuildings.map((building: any) => (
+                    <div key={building.id || building.type} className="city-building-card">
+                      <div className="city-building-header">
+                        {building.icon && (
+                          <img
+                            src={getImageUrl(building.icon) || building.icon}
+                            alt={building.name}
+                            className="city-building-icon"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        )}
+                        <div className="city-building-info">
+                          <div className="city-building-name">{building.name}</div>
+                          <div className="city-building-stats">
+                            <div>Тип: {building.type}</div>
+                            <div>Доступно строений: {building.availableCount}</div>
+                            <div>Потенциальный доход: {building.totalPotentialIncome.toLocaleString()} NAR/час</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="city-building-actions">
+                        <Button
+                          variant="primary"
+                          onClick={() => handleCaptureBuilding(building.type)}
+                          disabled={capturing === building.type || building.availableCount === 0}
+                        >
+                          {capturing === building.type ? 'Захват...' : building.availableCount === 0 ? 'Нет доступных' : 'Захватить'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
         {/* Мои строения */}
         {buildings.length > 0 && (
           <div className="city-section">
@@ -178,9 +270,12 @@ export default function City() {
                         <div className="city-building-header">
                           {getBuildingIcon(building) && (
                             <img
-                              src={getBuildingIcon(building)}
+                              src={getBuildingIcon(building)!}
                               alt={getBuildingName(building)}
                               className="city-building-icon"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
                             />
                           )}
                           <div className="city-building-info">
@@ -240,9 +335,12 @@ export default function City() {
                   <div className="city-building-header">
                     {config.icon && (
                       <img
-                        src={config.icon}
+                        src={getImageUrl(config.icon) || config.icon}
                         alt={config.name}
                         className="city-building-icon"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
                       />
                     )}
                     <div className="city-building-info">
