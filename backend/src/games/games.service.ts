@@ -949,24 +949,53 @@ export class GamesService {
       const gameMode = mode || GameMode.LONG;
       
       // Проверяем, что пользователь существует (для гостей это важно)
+      let user;
       try {
-        const user = await this.usersService.findOne(playerId);
+        user = await this.usersService.findOne(playerId);
         this.logger.log(`✅ Пользователь найден: playerId=${playerId}, username=${user.username}, isGuest=${user.isGuest}`);
-      } catch (error) {
+      } catch (error: any) {
         this.logger.error(`❌ Пользователь не найден при создании игры с ботом: playerId=${playerId}`, error);
-        // Попробуем найти пользователя по telegramId, если playerId не найден
-        try {
-          const userByTelegramId = await this.usersService.findByTelegramId(`guest_${playerId}`);
-          if (userByTelegramId) {
-            this.logger.log(`✅ Пользователь найден по telegramId: ${userByTelegramId.id}`);
-            // Используем найденный ID
-            playerId = userByTelegramId.id;
-          } else {
-            throw new BadRequestException('Пользователь не найден');
+        this.logger.error(`❌ Ошибка детали:`, { 
+          message: error.message, 
+          code: error.code, 
+          statusCode: error.statusCode,
+          stack: error.stack 
+        });
+        
+        // Если это NotFoundException, пробуем найти пользователя другим способом
+        if (error.statusCode === 404 || error.message?.includes('не найден')) {
+          // Попробуем найти пользователя по telegramId, если playerId не найден
+          try {
+            // Для гостей telegramId может быть в формате guest_...
+            const possibleTelegramIds = [
+              `guest_${playerId}`,
+              playerId.replace(/^guest_/, ''),
+            ];
+            
+            for (const telegramId of possibleTelegramIds) {
+              const userByTelegramId = await this.usersService.findByTelegramId(telegramId);
+              if (userByTelegramId) {
+                this.logger.log(`✅ Пользователь найден по telegramId: ${telegramId} -> ${userByTelegramId.id}`);
+                playerId = userByTelegramId.id;
+                user = userByTelegramId;
+                break;
+              }
+            }
+            
+            if (!user) {
+              throw new BadRequestException(`Пользователь не найден в базе данных. PlayerId: ${playerId}`);
+            }
+          } catch (findError: any) {
+            this.logger.error(`❌ Ошибка при поиске пользователя по telegramId:`, findError);
+            throw new BadRequestException(`Пользователь не найден: ${error.message || findError.message || 'Неизвестная ошибка'}`);
           }
-        } catch (findError) {
-          throw new BadRequestException(`Пользователь не найден: ${error.message || 'Неизвестная ошибка'}`);
+        } else {
+          throw new BadRequestException(`Ошибка при поиске пользователя: ${error.message || 'Неизвестная ошибка'}`);
         }
+      }
+      
+      if (!user) {
+        throw new BadRequestException('Пользователь не найден после всех проверок');
       }
       
       // Проверяем, не находится ли игрок уже в активной игре
