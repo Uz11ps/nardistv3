@@ -22,6 +22,35 @@ export class CityAutobuildService {
   ) {}
 
   /**
+   * Автоматический сбор дохода для всех пользователей с автобилдом
+   * Запускается каждый час
+   */
+  @Cron('0 * * * *') // Каждый час в начале часа
+  async collectIncomeForAllUsers() {
+    this.logger.log('Запуск автоматического сбора дохода для всех пользователей...');
+
+    try {
+      const usersWithAutobuild = await this.usersRepository.find({
+        where: { hasCityAutobuild: true },
+      });
+
+      this.logger.log(`Найдено ${usersWithAutobuild.length} пользователей с автобилдом для сбора дохода`);
+
+      for (const user of usersWithAutobuild) {
+        try {
+          await this.collectAllIncome(user.id);
+        } catch (error) {
+          this.logger.error(`Ошибка сбора дохода для пользователя ${user.id}:`, error);
+        }
+      }
+
+      this.logger.log('Автоматический сбор дохода завершен');
+    } catch (error) {
+      this.logger.error('Ошибка при автоматическом сборе дохода:', error);
+    }
+  }
+
+  /**
    * Автоматический билд города для всех пользователей с автобилдом
    * Запускается каждые 5 минут
    */
@@ -60,12 +89,19 @@ export class CityAutobuildService {
       return;
     }
 
+    // Сначала собираем накопленный доход со всех строений
+    await this.collectAllIncome(userId);
+
     const minBalance = Number(user.autobuildMinBalance || 0);
     const strategy = user.autobuildStrategy || 'balanced';
     const priorityBuilding = user.autobuildPriorityBuilding;
 
+    // Обновляем данные пользователя после сбора дохода
+    const updatedUser = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!updatedUser) return;
+
     // Получаем текущий баланс пользователя
-    const currentBalance = Number(user.narCoin);
+    const currentBalance = Number(updatedUser.narCoin);
     const availableBalance = currentBalance - minBalance;
 
     if (availableBalance <= 0) {
@@ -79,7 +115,7 @@ export class CityAutobuildService {
       return;
     }
 
-    // Получаем все строения пользователя
+    // Получаем все строения пользователя (после обновления баланса)
     const userBuildings = await this.buildingsRepository.find({
       where: { userId },
     });
@@ -130,6 +166,51 @@ export class CityAutobuildService {
     } else if (strategy === 'priority' && priorityBuilding) {
       // Приоритетное улучшение одного строения
       await this.upgradeBuildingPriority(userId, priorityBuilding, availableBalance - spent, maxActions - actionsPerformed);
+    }
+  }
+
+  /**
+   * Автоматический сбор дохода со всех строений пользователя
+   */
+  private async collectAllIncome(userId: string): Promise<void> {
+    try {
+      const userBuildings = await this.buildingsRepository.find({
+        where: { userId },
+      });
+
+      if (userBuildings.length === 0) {
+        return;
+      }
+
+      let totalCollected = 0;
+
+      for (const building of userBuildings) {
+        try {
+          // Проверяем, есть ли накопленный доход
+          const now = new Date();
+          const lastCollection = building.lastIncomeCollection || building.createdAt;
+          const hoursPassed = (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60);
+
+          // Если прошло меньше часа, пропускаем
+          if (hoursPassed < 1) {
+            continue;
+          }
+
+          // Собираем доход через CityService
+          const result = await this.cityService.collectIncome(userId, building.id);
+          totalCollected += result.collected;
+          this.logger.debug(`Пользователь ${userId}: собрано ${result.collected} NAR со строения ${building.type}`);
+        } catch (error: any) {
+          // Игнорируем ошибки сбора (строение может быть удалено и т.д.)
+          this.logger.debug(`Не удалось собрать доход со строения ${building.id}: ${error.message}`);
+        }
+      }
+
+      if (totalCollected > 0) {
+        this.logger.log(`Пользователь ${userId}: всего собрано ${totalCollected} NAR со всех строений`);
+      }
+    } catch (error) {
+      this.logger.error(`Ошибка при сборе дохода для пользователя ${userId}:`, error);
     }
   }
 
