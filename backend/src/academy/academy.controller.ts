@@ -16,7 +16,7 @@ export class AcademyController {
   @Get('articles')
   @UseGuards(JwtAuthGuard)
   async getArticles(@CurrentUser() user: any) {
-    return this.academyService.getArticles(user?.id);
+    return this.academyService.getArticles(user?.id, user?.isAdmin || false);
   }
 
   @Get('my-materials')
@@ -49,7 +49,7 @@ export class AcademyController {
     if (!user.isAdmin) {
       throw new Error('Недостаточно прав');
     }
-    return this.academyService.create({ ...articleData, author: user.username });
+    return this.academyService.create({ ...articleData, author: user.username }, true);
   }
 
   @Post('slots/purchase')

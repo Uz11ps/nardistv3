@@ -51,8 +51,11 @@ export class AcademyService {
     return { ...article, purchased };
   }
 
-  async create(articleData: Partial<Article>): Promise<Article> {
-    const article = this.articlesRepository.create(articleData);
+  async create(articleData: Partial<Article>, isAdmin: boolean = false): Promise<Article> {
+    const article = this.articlesRepository.create({
+      ...articleData,
+      isApproved: isAdmin, // Статьи администратора автоматически одобрены
+    });
     return this.articlesRepository.save(article);
   }
 
@@ -101,9 +104,16 @@ export class AcademyService {
     }));
   }
 
-  async getArticles(userId?: string): Promise<any[]> {
+  async getArticles(userId?: string, includePending: boolean = false): Promise<any[]> {
+    const whereCondition: any = { type: 'article' };
+    
+    // Если не администратор, показываем только одобренные статьи
+    if (!includePending) {
+      whereCondition.isApproved = true;
+    }
+    
     const articles = await this.articlesRepository.find({
-      where: { type: 'article' },
+      where: whereCondition,
       order: { createdAt: 'DESC' },
     });
 
@@ -241,7 +251,7 @@ export class AcademyService {
 
     const user = await this.usersService.findOne(userId);
 
-    // Создаем статью
+    // Создаем статью (не одобренную, ждет модерации)
     const article = this.articlesRepository.create({
       title: articleData.title,
       content: articleData.content,
@@ -251,6 +261,7 @@ export class AcademyService {
       type: 'article',
       isPaid: false,
       price: 0,
+      isApproved: false, // Статья требует одобрения администратора
     });
     const savedArticle = await this.articlesRepository.save(article);
 

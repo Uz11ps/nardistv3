@@ -27,22 +27,34 @@ export class CityService {
   /**
    * Получить все доступные конфигурации строений
    */
-  async getAvailableBuildings() {
+  async getAvailableBuildings(userId?: string) {
     const configs = await this.buildingConfigsRepository.find({
       order: { type: 'ASC' },
     });
 
-    return configs.map(config => ({
-      id: config.id,
-      type: config.type,
-      name: config.name,
-      icon: config.icon,
-      image: config.image,
-      basePrice: Number(config.basePrice),
-      baseIncomePerHour: Number(config.baseIncomePerHour),
-      maxAccumulation: Number(config.maxAccumulation),
-      maxLevel: config.maxLevel,
-    }));
+    // Если передан userId, фильтруем уже купленные строения
+    let purchasedTypes: string[] = [];
+    if (userId) {
+      const userBuildings = await this.buildingsRepository.find({
+        where: { userId },
+        select: ['type'],
+      });
+      purchasedTypes = userBuildings.map(b => b.type);
+    }
+
+    return configs
+      .filter(config => !purchasedTypes.includes(config.type))
+      .map(config => ({
+        id: config.id,
+        type: config.type,
+        name: config.name,
+        icon: config.icon,
+        image: config.image,
+        basePrice: Number(config.basePrice),
+        baseIncomePerHour: Number(config.baseIncomePerHour),
+        maxAccumulation: Number(config.maxAccumulation),
+        maxLevel: config.maxLevel,
+      }));
   }
 
   /**

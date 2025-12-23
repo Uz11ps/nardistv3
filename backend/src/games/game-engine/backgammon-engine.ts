@@ -63,48 +63,104 @@ export class BackgammonEngine {
   }
 
   private validateMovePlayer1(state: BoardState, from: number, to: number, die: number): boolean {
+    // Player 1 (White) moves from point 24 to point 1 (decreasing indices)
+    
+    // If checkers on bar, must enter from bar first
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      const enterPoint = 24 - die;
+      const enterPoint = 24 - die; // Point 24-die (e.g., die=6 -> point 18)
+      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
+      // Cannot enter on opponent's point (2 or more opponent checkers)
       if (state.points[enterPoint] < -1) return false;
-      return true;
+      return to === enterPoint || to === -1;
     }
 
+    // Regular move from board
     if (from < 0 || from >= this.BOARD_SIZE) return false;
-    if (state.points[from] <= 0) return false;
+    if (state.points[from] <= 0) return false; // No checker at from point
 
     const toPoint = from - die;
+    
+    // Bearing off
     if (toPoint < 0) {
-      if (this.canBearOff(state, 0)) {
-        return true;
+      if (!this.canBearOff(state, 0)) return false;
+      // When bearing off, must bear off from exact die value point if available
+      // Otherwise can bear off from highest point
+      const diePoint = 24 - die; // Point number (1-6)
+      const diePointIndex = diePoint - 1; // Index (0-5, but we need 18-23 for white home)
+      const whiteHomeStart = 18;
+      const whiteHomeEnd = 24;
+      
+      // Check if from point is in home (indices 18-23)
+      if (from < whiteHomeStart || from >= whiteHomeEnd) return false;
+      
+      // If die value point has checkers, must bear off from that point
+      const diePointIndexInHome = whiteHomeEnd - diePoint; // Convert point to index
+      if (state.points[diePointIndexInHome] > 0) {
+        return from === diePointIndexInHome && (to < 0 || to >= this.BOARD_SIZE);
       }
-      return false;
+      
+      // Otherwise can bear off from highest point (lowest index) with checkers
+      return to < 0 || to >= this.BOARD_SIZE;
     }
 
+    // Regular move on board
+    if (toPoint < 0 || toPoint >= this.BOARD_SIZE) return false;
+    if (to !== toPoint && to !== -1) return false;
+    
+    // Cannot move to opponent's point (2 or more opponent checkers)
     if (state.points[toPoint] < -1) return false;
+    
     return true;
   }
 
   private validateMovePlayer2(state: BoardState, from: number, to: number, die: number): boolean {
+    // Player 2 (Black) moves from point 1 to point 24 (increasing indices)
+    
+    // If checkers on bar, must enter from bar first
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      const enterPoint = die - 1;
+      const enterPoint = die - 1; // Point die (e.g., die=1 -> point 1, index 0)
+      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
+      // Cannot enter on opponent's point (2 or more opponent checkers)
       if (state.points[enterPoint] > 1) return false;
-      return true;
+      return to === enterPoint || to === -1;
     }
 
+    // Regular move from board
     if (from < 0 || from >= this.BOARD_SIZE) return false;
-    if (state.points[from] >= 0) return false;
+    if (state.points[from] >= 0) return false; // No checker at from point
 
     const toPoint = from + die;
+    
+    // Bearing off
     if (toPoint >= this.BOARD_SIZE) {
-      if (this.canBearOff(state, 1)) {
-        return true;
+      if (!this.canBearOff(state, 1)) return false;
+      // When bearing off, must bear off from exact die value point if available
+      // Otherwise can bear off from highest point
+      const blackHomeStart = 0;
+      const blackHomeEnd = 6;
+      
+      // Check if from point is in home (indices 0-5)
+      if (from < blackHomeStart || from >= blackHomeEnd) return false;
+      
+      // If die value point has checkers, must bear off from that point
+      const diePointIndex = die - 1; // Point die = index (die-1)
+      if (state.points[diePointIndex] < 0) {
+        return from === diePointIndex && (to < 0 || to >= this.BOARD_SIZE);
       }
-      return false;
+      
+      // Otherwise can bear off from highest point (highest index) with checkers
+      return to < 0 || to >= this.BOARD_SIZE;
     }
 
+    // Regular move on board
+    if (toPoint < 0 || toPoint >= this.BOARD_SIZE) return false;
+    if (to !== toPoint && to !== -1) return false;
+    
+    // Cannot move to opponent's point (2 or more opponent checkers)
     if (state.points[toPoint] > 1) return false;
+    
     return true;
   }
 
@@ -133,37 +189,52 @@ export class BackgammonEngine {
   }
 
   private applyMovePlayer1(state: BoardState, from: number, to: number, die: number): void {
+    // Entering from bar
     if (state.bar[0] > 0 && from === -1) {
       state.bar[0]--;
-      const enterPoint = 24 - die;
-      if (state.points[enterPoint] === -1) {
-        state.points[enterPoint] = 1;
+      const enterPoint = 24 - die; // Point number
+      const enterPointIndex = enterPoint - 1; // Convert to index (0-23)
+      
+      // Hit opponent's single checker
+      if (state.points[enterPointIndex] === -1) {
+        state.points[enterPointIndex] = 1;
         state.bar[1]++;
       } else {
-        state.points[enterPoint]++;
+        state.points[enterPointIndex]++;
       }
       return;
     }
 
-    if (to < 0) {
-      state.points[from]--;
-      state.borneOff[0]++;
+    // Bearing off
+    if (to < 0 || to >= this.BOARD_SIZE) {
+      if (state.points[from] > 0 && this.canBearOff(state, 0)) {
+        state.points[from]--;
+        state.borneOff[0]++;
+      }
       return;
     }
 
-    state.points[from]--;
-    if (state.points[to] === -1) {
-      state.points[to] = 1;
-      state.bar[1]++;
-    } else {
-      state.points[to]++;
+    // Regular move
+    if (state.points[from] > 0) {
+      state.points[from]--;
+      
+      // Hit opponent's single checker
+      if (state.points[to] === -1) {
+        state.points[to] = 1;
+        state.bar[1]++;
+      } else {
+        state.points[to]++;
+      }
     }
   }
 
   private applyMovePlayer2(state: BoardState, from: number, to: number, die: number): void {
+    // Entering from bar
     if (state.bar[1] > 0 && from === -1) {
       state.bar[1]--;
-      const enterPoint = die - 1;
+      const enterPoint = die - 1; // Point die = index (die-1)
+      
+      // Hit opponent's single checker
       if (state.points[enterPoint] === 1) {
         state.points[enterPoint] = -1;
         state.bar[0]++;
@@ -173,18 +244,26 @@ export class BackgammonEngine {
       return;
     }
 
-    if (to >= this.BOARD_SIZE) {
-      state.points[from]++;
-      state.borneOff[1]++;
+    // Bearing off
+    if (to < 0 || to >= this.BOARD_SIZE) {
+      if (state.points[from] < 0 && this.canBearOff(state, 1)) {
+        state.points[from]++;
+        state.borneOff[1]++;
+      }
       return;
     }
 
-    state.points[from]++;
-    if (state.points[to] === 1) {
-      state.points[to] = -1;
-      state.bar[0]++;
-    } else {
-      state.points[to]--;
+    // Regular move
+    if (state.points[from] < 0) {
+      state.points[from]++;
+      
+      // Hit opponent's single checker
+      if (state.points[to] === 1) {
+        state.points[to] = -1;
+        state.bar[0]++;
+      } else {
+        state.points[to]--;
+      }
     }
   }
 
@@ -271,32 +350,49 @@ export class BackgammonEngine {
     const moves: any[] = [];
 
     if (state.currentPlayer === 0) {
+      // Player 1 (White)
       if (state.bar[0] > 0) {
-        const enterPoint = 24 - die;
-        if (this.validateMove(state, -1, enterPoint, die)) {
-          moves.push({ from: -1, to: enterPoint });
+        // Must enter from bar
+        const enterPoint = 24 - die; // Point number
+        const enterPointIndex = enterPoint - 1; // Index
+        if (this.validateMove(state, -1, enterPointIndex, die)) {
+          moves.push({ from: -1, to: enterPointIndex });
         }
       } else {
+        // Regular moves from board
         for (let from = 0; from < this.BOARD_SIZE; from++) {
           if (state.points[from] > 0) {
             const to = from - die;
-            if (this.validateMove(state, from, to, die)) {
+            // Handle bearing off
+            if (to < 0) {
+              if (this.canBearOff(state, 0) && this.validateMove(state, from, -1, die)) {
+                moves.push({ from, to: -1 });
+              }
+            } else if (this.validateMove(state, from, to, die)) {
               moves.push({ from, to });
             }
           }
         }
       }
     } else {
+      // Player 2 (Black)
       if (state.bar[1] > 0) {
-        const enterPoint = die - 1;
+        // Must enter from bar
+        const enterPoint = die - 1; // Index
         if (this.validateMove(state, -1, enterPoint, die)) {
           moves.push({ from: -1, to: enterPoint });
         }
       } else {
+        // Regular moves from board
         for (let from = 0; from < this.BOARD_SIZE; from++) {
           if (state.points[from] < 0) {
             const to = from + die;
-            if (this.validateMove(state, from, to, die)) {
+            // Handle bearing off
+            if (to >= this.BOARD_SIZE) {
+              if (this.canBearOff(state, 1) && this.validateMove(state, from, -1, die)) {
+                moves.push({ from, to: -1 });
+              }
+            } else if (this.validateMove(state, from, to, die)) {
               moves.push({ from, to });
             }
           }

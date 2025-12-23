@@ -51,6 +51,15 @@ export class Article {
   @Column({ type: 'timestamp', nullable: true })
   verifiedAt: Date; // Дата верификации
 
+  @Column({ default: false })
+  isApproved: boolean; // Одобрена ли статья администратором (для пользовательских статей)
+
+  @Column({ nullable: true })
+  approvedBy: string; // ID администратора, который одобрил статью
+
+  @Column({ type: 'timestamp', nullable: true })
+  approvedAt: Date; // Дата одобрения
+
   // Награда за прохождение курса
   @Column({ type: 'bigint', nullable: true, default: 0 })
   rewardNarCoin: number; // Награда в NAR-coin

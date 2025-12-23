@@ -1332,7 +1332,12 @@ export class AdminService implements OnModuleInit {
       }
       
       const user = await this.usersService.findOne(userId);
-      user.narCoin = BigInt(Math.max(0, narCoin));
+      if (!user) {
+        throw new BadRequestException('Пользователь не найден');
+      }
+      
+      // Обновляем баланс
+      user.narCoin = BigInt(Math.max(0, Math.floor(narCoin)));
       
       if (xp !== undefined && xp !== null) {
         // Конвертируем XP в число
@@ -1341,7 +1346,7 @@ export class AdminService implements OnModuleInit {
           throw new BadRequestException('Некорректное значение XP');
         }
         // Обновляем XP
-        user.xp = BigInt(Math.max(0, xpValue));
+        user.xp = BigInt(Math.max(0, Math.floor(xpValue)));
         
         // Синхронизируем уровень на основе нового XP
         const totalXP = Number(user.xp);
@@ -1349,11 +1354,16 @@ export class AdminService implements OnModuleInit {
         user.level = Math.max(1, correctLevel);
       }
       
-      // Сохраняем изменения
-      const savedUser = await this.usersRepository.save(user);
+      // Сохраняем изменения через usersService
+      const savedUser = await this.usersService['usersRepository'].save(user);
       this.logger.log(`✅ Обновлен баланс пользователя ${userId}: NAR=${narCoin}, XP=${xp || 'не изменен'}, Level=${savedUser.level}`);
       
-      return savedUser;
+      return {
+        id: savedUser.id,
+        narCoin: Number(savedUser.narCoin),
+        xp: Number(savedUser.xp),
+        level: savedUser.level,
+      };
     } catch (error) {
       this.logger.error(`Error updating balance for user ${userId}:`, error);
       throw new BadRequestException(`Ошибка при обновлении баланса: ${error.message}`);
