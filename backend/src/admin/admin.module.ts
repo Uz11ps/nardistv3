@@ -29,6 +29,7 @@ import { ClanMember } from '../clans/clan-member.entity';
 import { ClanTreasuryTransaction } from '../clans/clan-treasury-transaction.entity';
 import { Subscription } from '../subscription/subscription.entity';
 import { BuildingConfig } from '../city/building-config.entity';
+import { Building } from '../city/building.entity';
 import { DistrictConfig } from '../city/district-config.entity';
 import { Rating } from '../ratings/rating.entity';
 import { Notification } from '../notifications/notification.entity';
@@ -41,7 +42,7 @@ import { QuestProgress } from '../quests/quest-progress.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate]),
     ScheduleModule.forRoot(),
     AuthModule,
     JwtModule.registerAsync({

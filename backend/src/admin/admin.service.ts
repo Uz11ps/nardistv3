@@ -23,6 +23,7 @@ import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
 import { ClanTreasuryTransaction } from '../clans/clan-treasury-transaction.entity';
 import { BuildingConfig } from '../city/building-config.entity';
+import { Building } from '../city/building.entity';
 import { DistrictConfig } from '../city/district-config.entity';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
@@ -68,6 +69,8 @@ export class AdminService implements OnModuleInit {
     private subscriptionsRepository: Repository<Subscription>,
     @InjectRepository(BuildingConfig)
     private buildingConfigsRepository: Repository<BuildingConfig>,
+    @InjectRepository(Building)
+    private buildingsRepository: Repository<Building>,
     @InjectRepository(DistrictConfig)
     private districtConfigsRepository: Repository<DistrictConfig>,
     @InjectRepository(Rating)
@@ -960,19 +963,23 @@ export class AdminService implements OnModuleInit {
       throw new NotFoundException('Конфигурация строения не найдена');
     }
 
-    // Проверяем, нет ли связанных строений
-    const { Building } = await import('../city/building.entity');
-    const buildingsRepository = this.usersRepository.manager.getRepository(Building);
-    const buildingsCount = await buildingsRepository.count({
+    // Удаляем все связанные строения пользователей
+    const buildingsToDelete = await this.buildingsRepository.find({
       where: { type: config.type },
     });
 
-    if (buildingsCount > 0) {
-      throw new BadRequestException(`Невозможно удалить конфигурацию: есть ${buildingsCount} связанных строений`);
+    if (buildingsToDelete.length > 0) {
+      // Удаляем все связанные строения
+      await this.buildingsRepository.remove(buildingsToDelete);
+      this.logger.log(`Удалено ${buildingsToDelete.length} строений типа "${config.type}" у пользователей`);
     }
 
+    // Удаляем конфигурацию
     await this.buildingConfigsRepository.remove(config);
-    return { message: 'Конфигурация строения удалена' };
+    return { 
+      message: 'Конфигурация строения удалена',
+      deletedBuildings: buildingsToDelete.length 
+    };
   }
 
   // CRUD для скинов
