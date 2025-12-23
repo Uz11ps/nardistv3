@@ -9,6 +9,7 @@ import { GamesService } from '../games/games.service';
 import { QuestsService } from '../quests/quests.service';
 import { ClansService } from '../clans/clans.service';
 import { SubscriptionService } from '../subscription/subscription.service';
+import { ProgressService } from '../progress/progress.service';
 import { Subscription, SubscriptionPlan } from '../subscription/subscription.entity';
 import { User } from '../users/user.entity';
 import { Game, GameMode, GameType, GameStatus } from '../games/game.entity';
@@ -92,6 +93,8 @@ export class AdminService implements OnModuleInit {
     private questsService: QuestsService,
     private clansService: ClansService,
     private subscriptionService: SubscriptionService,
+    @Inject(forwardRef(() => ProgressService))
+    private progressService: ProgressService,
     private configService: ConfigService,
     private notificationsService: NotificationsService,
   ) {}
