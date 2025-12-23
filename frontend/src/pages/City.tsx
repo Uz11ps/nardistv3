@@ -158,7 +158,15 @@ export default function City() {
 
   const getBuildingIcon = (building: Building): string | undefined => {
     const config = availableBuildings.find(c => c.type === building.type)
-    return config?.icon ? getImageUrl(config.icon) || config.icon : undefined
+    if (config?.icon) {
+      const iconUrl = getImageUrl(config.icon) || config.icon
+      // Если это относительный путь, добавляем базовый URL
+      if (iconUrl && !iconUrl.startsWith('http') && !iconUrl.startsWith('/')) {
+        return `/${iconUrl}`
+      }
+      return iconUrl
+    }
+    return undefined
   }
 
   const getBuildingImage = (building: Building): string | undefined => {
@@ -343,24 +351,31 @@ export default function City() {
           <h2 className="city-section-title">Доступные строения</h2>
 
           <div className="city-available-buildings">
-            {availableBuildings.map((config) => {
-              const existingBuilding = buildings.find(
-                b => b.type === config.type
-              )
-
+            {availableBuildings
+              .filter((config) => {
+                // Фильтруем строения, которые уже куплены
+                return !buildings.some(b => b.type === config.type)
+              })
+              .map((config) => {
               return (
                 <div key={config.id} className="city-building-card">
                   <div className="city-building-header">
-                    {config.icon && (
-                      <img
-                        src={getImageUrl(config.icon) || config.icon}
-                        alt={config.name}
-                        className="city-building-icon"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    )}
+                    {config.icon && (() => {
+                      const iconUrl = getImageUrl(config.icon) || config.icon
+                      const finalIconUrl = iconUrl && !iconUrl.startsWith('http') && !iconUrl.startsWith('/') 
+                        ? `/${iconUrl}` 
+                        : iconUrl
+                      return (
+                        <img
+                          src={finalIconUrl}
+                          alt={config.name}
+                          className="city-building-icon"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      )
+                    })()}
                     <div className="city-building-info">
                       <div className="city-building-name">{config.name}</div>
                       <div className="city-building-owner">
@@ -376,18 +391,14 @@ export default function City() {
                         {config.baseIncomePerHour} NAR / час
                       </div>
                       <div className="city-building-actions">
-                        {existingBuilding ? (
-                          <div className="city-building-owned">Уже куплено</div>
-                        ) : (
-                          <Button
-                            variant="primary"
-                            onClick={() => handlePurchaseBuilding(config.id)}
-                            disabled={purchasing === config.id}
-                            className="city-building-action-btn"
-                          >
-                            {purchasing === config.id ? 'Покупка...' : `Купить`}
-                          </Button>
-                        )}
+                        <Button
+                          variant="primary"
+                          onClick={() => handlePurchaseBuilding(config.id)}
+                          disabled={purchasing === config.id}
+                          className="city-building-action-btn"
+                        >
+                          {purchasing === config.id ? 'Покупка...' : `Купить`}
+                        </Button>
                       </div>
                     </div>
                   </div>

@@ -150,24 +150,7 @@ export default function Academy() {
     }
   }
 
-  if ((user?.level || 0) < 20) {
-    return (
-      <PageLayout title="Академия" showBack={true}>
-        <div className="academy-unavailable">
-          <img src="/img/шляпа.png" alt="Academy" className="academy-unavailable-icon" />
-          <h2 className="academy-unavailable-title">Курсы недоступны</h2>
-          <p className="academy-unavailable-text">
-            Город и районы открываются с 20 уровня.
-            <br />
-            Здесь ты можешь читать, и писать статьи и курсы.
-          </p>
-          <button className="academy-play-button" onClick={() => navigate('/')}>
-            Играть
-          </button>
-        </div>
-      </PageLayout>
-    )
-  }
+  // Курсы всегда доступны, убрана проверка уровня
 
   // Страница просмотра материала
   if (isMaterialPage && materialDetail) {
