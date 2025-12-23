@@ -36,6 +36,7 @@ export default function BackgammonBoard({
   gameMode = 'long',
   player1Skins,
   player2Skins,
+  mySkins,
   diceAnimating = false,
   myPlayerId,
   player1Id,
