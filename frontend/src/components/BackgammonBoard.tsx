@@ -564,7 +564,6 @@ export default function BackgammonBoard({
     }
     
     // Отрисовка области выноса (Контейнеры)
-    const bearOffWidth = width * 0.06
     const leftContainerX = 0
     const rightContainerX = width - bearOffWidth
     
