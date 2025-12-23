@@ -799,6 +799,7 @@ export class AdminService implements OnModuleInit {
     imageUrl?: string;
     boardTextureUrl?: string;
     diceTextureUrl?: string;
+    diceTextureUrls?: any;
     checkersTextureUrl?: string;
     whiteCheckersTextureUrl?: string;
     blackCheckersTextureUrl?: string;
