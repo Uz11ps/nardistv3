@@ -15,6 +15,7 @@ import { QuestsModule } from '../quests/quests.module';
 import { ClansModule } from '../clans/clans.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ProgressModule } from '../progress/progress.module';
 import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
@@ -61,6 +62,7 @@ import { QuestProgress } from '../quests/quest-progress.entity';
     ClansModule,
     SubscriptionModule,
     NotificationsModule,
+    ProgressModule,
   ],
   controllers: [AdminController],
   providers: [AdminService, InactiveUsersService],

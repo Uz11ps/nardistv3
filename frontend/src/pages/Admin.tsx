@@ -2231,39 +2231,53 @@ export default function Admin() {
                 )}
                 {selectedSkin.type === 'dice' && (
                   <div className="form-group">
-                    <label>Текстура кубиков (файл для игры):</label>
-                    {selectedSkin.diceTextureUrl && (
-                      <div style={{ marginBottom: '8px' }}>
-                        <img 
-                          src={selectedSkin.diceTextureUrl} 
-                          alt="Dice texture"
-                          style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
+                    <label>Текстуры кубиков (6 файлов для игры - от 1 до 6):</label>
+                    {selectedSkin.diceTextureUrls && typeof selectedSkin.diceTextureUrls === 'object' && (
+                      <div style={{ marginBottom: '16px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                        {[1, 2, 3, 4, 5, 6].map(num => (
+                          selectedSkin.diceTextureUrls?.[num] ? (
+                            <div key={num} style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: '12px', marginBottom: '4px', color: '#aaa' }}>Кубик {num}</div>
+                              <img 
+                                src={selectedSkin.diceTextureUrls[num]} 
+                                alt={`Dice ${num}`}
+                                style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', border: '1px solid #333' }}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            </div>
+                          ) : null
+                        ))}
                       </div>
                     )}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      id="edit-skin-dice-texture"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          const reader = new FileReader()
-                          reader.onload = (event) => {
-                            const preview = document.getElementById('edit-skin-dice-texture-preview')
-                            if (preview) {
-                              preview.innerHTML = `<img src="${event.target?.result}" alt="Текстура кубиков" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
-                            }
-                          }
-                          reader.readAsDataURL(file)
-                        }
-                      }}
-                    />
-                    <div id="edit-skin-dice-texture-preview" style={{ marginTop: '8px' }}></div>
-                    <span className="field-hint">Оставьте пустым, чтобы не изменять текстуру</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                      {[1, 2, 3, 4, 5, 6].map(num => (
+                        <div key={num}>
+                          <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Кубик {num}:</label>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            id={`edit-skin-dice-texture-${num}`}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) {
+                                const reader = new FileReader()
+                                reader.onload = (event) => {
+                                  const preview = document.getElementById(`edit-skin-dice-texture-${num}-preview`)
+                                  if (preview) {
+                                    preview.innerHTML = `<img src="${event.target?.result}" alt="Кубик ${num}" style="max-width: 100px; max-height: 100px; border-radius: 8px; margin-top: 4px; border: 1px solid #333;" />`
+                                  }
+                                }
+                                reader.readAsDataURL(file)
+                              }
+                            }}
+                          />
+                          <div id={`edit-skin-dice-texture-${num}-preview`} style={{ marginTop: '4px' }}></div>
+                        </div>
+                      ))}
+                    </div>
+                    <span className="field-hint" style={{ marginTop: '8px', display: 'block' }}>Загрузите 6 изображений в порядке от 1 до 6. Оставьте пустым, чтобы не изменять текстуру</span>
                   </div>
                 )}
                 {selectedSkin.type === 'checkers' && (
@@ -2326,6 +2340,45 @@ export default function Admin() {
                         await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-image`, imageFormData, {
                           headers: { 'Content-Type': 'multipart/form-data' }
                         })
+                      }
+                      
+                      // Если есть новые текстуры, загружаем их
+                      if (selectedSkin.type === 'board') {
+                        const boardTextureInput = document.getElementById('edit-skin-board-texture') as HTMLInputElement
+                        if (boardTextureInput.files && boardTextureInput.files[0]) {
+                          const textureFormData = new FormData()
+                          textureFormData.append('boardTexture', boardTextureInput.files[0])
+                          await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-textures`, textureFormData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                          })
+                        }
+                      } else if (selectedSkin.type === 'dice') {
+                        // Загружаем все 6 файлов для кубиков
+                        const diceFiles: File[] = []
+                        for (let i = 1; i <= 6; i++) {
+                          const diceInput = document.getElementById(`edit-skin-dice-texture-${i}`) as HTMLInputElement
+                          if (diceInput.files && diceInput.files[0]) {
+                            diceFiles.push(diceInput.files[0])
+                          }
+                        }
+                        if (diceFiles.length > 0) {
+                          const textureFormData = new FormData()
+                          diceFiles.forEach((file, index) => {
+                            textureFormData.append(`diceTexture${index + 1}`, file)
+                          })
+                          await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-textures`, textureFormData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                          })
+                        }
+                      } else if (selectedSkin.type === 'checkers') {
+                        const checkersTextureInput = document.getElementById('edit-skin-checkers-texture') as HTMLInputElement
+                        if (checkersTextureInput.files && checkersTextureInput.files[0]) {
+                          const textureFormData = new FormData()
+                          textureFormData.append('checkersTexture', checkersTextureInput.files[0])
+                          await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-textures`, textureFormData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                          })
+                        }
                       }
                       
                       alert('Скин обновлен!')
@@ -2412,40 +2465,84 @@ export default function Admin() {
               </div>
               <div className="form-group" id="skin-texture-group" style={{ display: 'none' }}>
                 <label id="skin-texture-label">Текстура (файл для игры):</label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  id="skin-texture"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      const reader = new FileReader()
-                      reader.onload = (event) => {
-                        const preview = document.getElementById('skin-texture-preview')
-                        if (preview) {
-                          preview.innerHTML = `<img src="${event.target?.result}" alt="Текстура" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                <div id="skin-texture-single" style={{ display: 'none' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    id="skin-texture"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        const reader = new FileReader()
+                        reader.onload = (event) => {
+                          const preview = document.getElementById('skin-texture-preview')
+                          if (preview) {
+                            preview.innerHTML = `<img src="${event.target?.result}" alt="Текстура" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                          }
                         }
+                        reader.readAsDataURL(file)
                       }
-                      reader.readAsDataURL(file)
-                    }
-                  }}
-                />
-                <div id="skin-texture-preview" style={{ marginTop: '8px' }}></div>
-                <span className="field-hint">Этот файл будет использоваться в игре</span>
+                    }}
+                  />
+                  <div id="skin-texture-preview" style={{ marginTop: '8px' }}></div>
+                </div>
+                <div id="skin-texture-dice" style={{ display: 'none' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                    {[1, 2, 3, 4, 5, 6].map(num => (
+                      <div key={num}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Кубик {num}:</label>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          id={`skin-dice-texture-${num}`}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              const reader = new FileReader()
+                              reader.onload = (event) => {
+                                const preview = document.getElementById(`skin-dice-texture-${num}-preview`)
+                                if (preview) {
+                                  preview.innerHTML = `<img src="${event.target?.result}" alt="Кубик ${num}" style="max-width: 100px; max-height: 100px; border-radius: 8px; margin-top: 4px; border: 1px solid #333;" />`
+                                }
+                              }
+                              reader.readAsDataURL(file)
+                            }
+                          }}
+                        />
+                        <div id={`skin-dice-texture-${num}-preview`} style={{ marginTop: '4px' }}></div>
+                      </div>
+                    ))}
+                  </div>
+                  <span className="field-hint" style={{ marginTop: '8px', display: 'block' }}>Загрузите 6 изображений в порядке от 1 до 6</span>
+                </div>
+                <span className="field-hint" id="skin-texture-hint">Этот файл будет использоваться в игре</span>
               </div>
               <script dangerouslySetInnerHTML={{__html: `
                 document.getElementById('skin-type').addEventListener('change', function() {
                   const type = this.value;
                   const textureGroup = document.getElementById('skin-texture-group');
                   const textureLabel = document.getElementById('skin-texture-label');
+                  const textureSingle = document.getElementById('skin-texture-single');
+                  const textureDice = document.getElementById('skin-texture-dice');
+                  const textureHint = document.getElementById('skin-texture-hint');
+                  
                   if (type) {
                     textureGroup.style.display = 'block';
                     if (type === 'board') {
                       textureLabel.textContent = 'Текстура доски (файл для игры):';
+                      textureSingle.style.display = 'block';
+                      textureDice.style.display = 'none';
+                      textureHint.textContent = 'Этот файл будет использоваться в игре';
                     } else if (type === 'dice') {
-                      textureLabel.textContent = 'Текстура кубиков (файл для игры):';
+                      textureLabel.textContent = 'Текстуры кубиков (6 файлов для игры - от 1 до 6):';
+                      textureSingle.style.display = 'none';
+                      textureDice.style.display = 'block';
+                      textureHint.style.display = 'none';
                     } else if (type === 'checkers') {
                       textureLabel.textContent = 'Текстура шашек (файл для игры):';
+                      textureSingle.style.display = 'block';
+                      textureDice.style.display = 'none';
+                      textureHint.textContent = 'Этот файл будет использоваться в игре';
                     }
                   } else {
                     textureGroup.style.display = 'none';
@@ -2489,13 +2586,22 @@ export default function Admin() {
                 }
                 
                 // Добавляем текстуру в зависимости от типа
-                const textureInput = document.getElementById('skin-texture') as HTMLInputElement
-                if (textureInput.files && textureInput.files[0]) {
-                  if (skinType === 'board') {
+                if (skinType === 'board') {
+                  const textureInput = document.getElementById('skin-texture') as HTMLInputElement
+                  if (textureInput.files && textureInput.files[0]) {
                     formData.append('boardTexture', textureInput.files[0])
-                  } else if (skinType === 'dice') {
-                    formData.append('diceTexture', textureInput.files[0])
-                  } else if (skinType === 'checkers') {
+                  }
+                } else if (skinType === 'dice') {
+                  // Для кубиков добавляем все 6 файлов (diceTexture1-6)
+                  for (let i = 1; i <= 6; i++) {
+                    const diceInput = document.getElementById(`skin-dice-texture-${i}`) as HTMLInputElement
+                    if (diceInput.files && diceInput.files[0]) {
+                      formData.append(`diceTexture${i}`, diceInput.files[0])
+                    }
+                  }
+                } else if (skinType === 'checkers') {
+                  const textureInput = document.getElementById('skin-texture') as HTMLInputElement
+                  if (textureInput.files && textureInput.files[0]) {
                     formData.append('checkersTexture', textureInput.files[0])
                   }
                 }
@@ -2515,6 +2621,20 @@ export default function Admin() {
                   ;(document.getElementById('skin-premium') as HTMLInputElement).checked = false
                   ;(document.getElementById('skin-default') as HTMLInputElement).checked = false
                   fileInput.value = ''
+                  // Очистить поля текстур
+                  const textureInput = document.getElementById('skin-texture') as HTMLInputElement
+                  if (textureInput) textureInput.value = ''
+                  // Очистить поля кубиков (1-6)
+                  for (let i = 1; i <= 6; i++) {
+                    const diceInput = document.getElementById(`skin-dice-texture-${i}`) as HTMLInputElement
+                    if (diceInput) diceInput.value = ''
+                    const dicePreview = document.getElementById(`skin-dice-texture-${i}-preview`)
+                    if (dicePreview) dicePreview.innerHTML = ''
+                  }
+                  const texturePreview = document.getElementById('skin-texture-preview')
+                  if (texturePreview) texturePreview.innerHTML = ''
+                  const imagePreview = document.getElementById('skin-image-preview')
+                  if (imagePreview) imagePreview.innerHTML = ''
                 } catch (error: any) {
                   alert('Ошибка: ' + (error.response?.data?.message || error.message))
                 }

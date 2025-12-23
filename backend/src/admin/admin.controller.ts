@@ -527,11 +527,21 @@ export class AdminController {
       throw new BadRequestException('Превью изображение обязательно для всех типов скинов');
     }
     
-    // Для кубиков требуется 6 файлов
-    if (skinType === 'dice' && files) {
+    // Для кубиков при создании требуется 6 файлов (diceTexture1-6)
+    if (skinType === 'dice' && files && files.length > 0) {
       const diceFiles = files.filter(f => f.fieldname && f.fieldname.startsWith('diceTexture') && f.fieldname.match(/diceTexture(\d+)/));
-      if (diceFiles.length > 0 && diceFiles.length < 6) {
-        throw new BadRequestException('Для кубиков требуется загрузить все 6 файлов (diceTexture1-6)');
+      if (diceFiles.length > 0) {
+        const diceNumbers = diceFiles.map(f => {
+          const match = f.fieldname.match(/diceTexture(\d+)/);
+          return match ? parseInt(match[1]) : 0;
+        }).filter(n => n >= 1 && n <= 6).sort((a, b) => a - b);
+        
+        // Проверяем, что есть все числа от 1 до 6
+        const expectedNumbers = [1, 2, 3, 4, 5, 6];
+        const missingNumbers = expectedNumbers.filter(n => !diceNumbers.includes(n));
+        if (missingNumbers.length > 0) {
+          throw new BadRequestException(`Для кубиков требуется загрузить все 6 файлов (diceTexture1-6). Отсутствуют: diceTexture${missingNumbers.join(', diceTexture')}`);
+        }
       }
     }
     
@@ -862,6 +872,15 @@ export class AdminController {
       throw new UnauthorizedException('Недостаточно прав');
     }
     return this.adminService.setUserLevel(userId, body.level);
+  }
+
+  @Post('users/:id/sync-level')
+  @UseGuards(JwtAuthGuard)
+  async syncUserLevelFromXP(@CurrentUser() user: any, @Param('id') userId: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.syncUserLevelFromXP(userId);
   }
 
   @Put('users/:id/role')

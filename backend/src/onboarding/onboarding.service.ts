@@ -118,13 +118,12 @@ export class OnboardingService {
       }
     }
 
-    // Отмечаем что набор получен
+    // Отмечаем что набор получен - теперь пользователь считается зарегистрированным
     await this.usersService.update(userId, { starterKitClaimed: true });
 
-    // Если профиль заполнен и набор получен - онбординг завершен
-    if (user.profileSetupCompleted) {
-      await this.usersService.update(userId, { onboardingCompleted: true });
-    }
+    // После получения стартового набора пользователь считается зарегистрированным
+    // Онбординг завершен независимо от заполнения профиля
+    await this.usersService.update(userId, { onboardingCompleted: true });
 
     return {
       narCoin: starterCoinAmount,

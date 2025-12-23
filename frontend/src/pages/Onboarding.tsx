@@ -38,16 +38,13 @@ export default function Onboarding() {
             setOnboardingStatus(status)
             
             // Определяем текущий шаг
-            if (status.onboardingCompleted) {
-              // Онбординг завершен, переходим на главную
-              navigate('/')
-              return
-            } else if (status.starterKitClaimed) {
-              // Набор получен, но что-то не так
+            // Пользователь считается зарегистрированным только после получения стартового набора
+            if (status.starterKitClaimed || status.onboardingCompleted) {
+              // Стартовый набор получен - пользователь зарегистрирован, онбординг завершен
               navigate('/')
               return
             } else if (status.profileSetupCompleted) {
-              // Профиль заполнен, показываем стартовый набор
+              // Профиль заполнен, но стартовый набор еще не получен - показываем стартовый набор
               setCurrentStep('starter-kit')
             } else {
               // Нужно заполнить профиль

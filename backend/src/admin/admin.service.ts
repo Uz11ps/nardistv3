@@ -1223,7 +1223,59 @@ export class AdminService implements OnModuleInit {
   async setUserLevel(userId: string, level: number) {
     const user = await this.usersService.findOne(userId);
     user.level = level;
+    // При установке уровня вручную, синхронизируем XP с уровнем
+    const totalXP = this.getTotalXPForLevel(level);
+    user.xp = BigInt(totalXP);
     return this.usersRepository.save(user);
+  }
+
+  async syncUserLevelFromXP(userId: string) {
+    const user = await this.usersService.findOne(userId);
+    const totalXP = Number(user.xp || 0);
+    const correctLevel = this.getLevelFromTotalXP(totalXP);
+    
+    if (user.level !== correctLevel) {
+      user.level = correctLevel;
+      await this.usersRepository.save(user);
+    }
+    return user;
+  }
+
+  // Вспомогательные методы для расчета уровня (та же логика, что в ProgressService)
+  private getXPRequiredForLevel(level: number): number {
+    if (level <= 1) return 0;
+    if (level === 2) return 200;
+    let xp = 200;
+    for (let i = 3; i <= level; i++) {
+      xp = Math.floor(xp * 1.25);
+      xp = Math.round(xp / 10) * 10;
+    }
+    return xp;
+  }
+
+  private getTotalXPForLevel(level: number): number {
+    if (level <= 1) return 0;
+    let totalXP = 0;
+    for (let i = 2; i <= level; i++) {
+      totalXP += this.getXPRequiredForLevel(i);
+    }
+    return totalXP;
+  }
+
+  private getLevelFromTotalXP(totalXP: number): number {
+    const MAX_LEVEL = 50;
+    if (totalXP <= 0) return 1;
+    
+    let level = 1;
+    while (level < MAX_LEVEL) {
+      const xpForNextLevel = this.getTotalXPForLevel(level + 1);
+      if (totalXP >= xpForNextLevel) {
+        level++;
+      } else {
+        break;
+      }
+    }
+    return level;
   }
 
   async setUserRole(userId: string, isAdmin: boolean, isTrainer: boolean) {

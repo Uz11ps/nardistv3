@@ -328,6 +328,7 @@ export class ProgressService {
   /**
    * Синхронизирует уровень пользователя с его XP
    * Используется для исправления рассинхронизации уровня и XP
+   * Публичный метод для использования в других сервисах
    */
   async syncLevelFromXP(userId: string): Promise<void> {
     const user = await this.usersService.findOne(userId);

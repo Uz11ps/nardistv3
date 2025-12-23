@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { apiClient } from '../api/client'
+import Dice3D from './Dice3D'
 import './BackgammonBoard.css'
 
 interface Point {
@@ -63,6 +64,7 @@ export default function BackgammonBoard({
   player2Name,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
   const [hoverPoint, setHoverPoint] = useState<number | null>(null)
   const [animating, setAnimating] = useState(false)
@@ -71,6 +73,7 @@ export default function BackgammonBoard({
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const animationFrameRef = useRef<number>()
+  const [dice3DPositions, setDice3DPositions] = useState<{ x: number; y: number; size: number; spacing: number } | null>(null)
   
   // Состояние для drag and drop
   const [dragging, setDragging] = useState(false)
@@ -85,12 +88,12 @@ export default function BackgammonBoard({
   // - Шашки: мои шашки (pointValue > 0 после отзеркаливания) = мой checkers скин
   //          шашки противника (pointValue < 0 после отзеркаливания) = его checkers скин
   const [loadedTextures, setLoadedTextures] = useState<{
-    player1Board?: HTMLImageElement  // Доска для левой стороны (моя сторона)
-    player2Board?: HTMLImageElement  // Доска для правой стороны (сторона противника)
-    player1Dice?: { [key: number]: HTMLImageElement }   // Мои кубики - объект с текстурами для граней 1-6
-    player2Dice?: { [key: number]: HTMLImageElement }   // Кубики противника - объект с текстурами для граней 1-6
-    whiteCheckers?: HTMLImageElement // Мои шашки (pointValue > 0 после отзеркаливания)
-    blackCheckers?: HTMLImageElement // Шашки противника (pointValue < 0 после отзеркаливания)
+    myBoard?: HTMLImageElement  // Доска для левой стороны (всегда моя сторона)
+    opponentBoard?: HTMLImageElement  // Доска для правой стороны (всегда сторона противника)
+    myDice?: { [key: number]: HTMLImageElement }   // Мои кубики - объект с текстурами для граней 1-6
+    opponentDice?: { [key: number]: HTMLImageElement }   // Кубики противника - объект с текстурами для граней 1-6
+    myCheckers?: HTMLImageElement // Мои шашки (внизу на доске)
+    opponentCheckers?: HTMLImageElement // Шашки противника (вверху на доске)
   }>({})
   
   // Определяем скины для отображения: слева всегда мой скин, справа - скин противника
@@ -129,12 +132,12 @@ export default function BackgammonBoard({
       loadedCount++
       if (loadedCount === expectedCount) {
         setLoadedTextures({
-          player1Board: textures.leftBoard,  // Для обратной совместимости
-          player2Board: textures.rightBoard,
-          player1Dice: textures.myDice,
-          player2Dice: textures.opponentDice,
-          whiteCheckers: isPlayer1 ? textures.myCheckers : textures.opponentCheckers,
-          blackCheckers: isPlayer1 ? textures.opponentCheckers : textures.myCheckers,
+          myBoard: textures.leftBoard,  // Левая сторона - всегда моя доска
+          opponentBoard: textures.rightBoard,  // Правая сторона - всегда доска оппонента
+          myDice: textures.myDice,  // Мои кубики
+          opponentDice: textures.opponentDice,  // Кубики оппонента
+          myCheckers: textures.myCheckers,  // Мои шашки (внизу)
+          opponentCheckers: textures.opponentCheckers,  // Шашки оппонента (вверху)
         })
       }
     }
@@ -541,10 +544,9 @@ export default function BackgammonBoard({
     const barRightX = barX + barWidth
     
     // Левая сторона доски (моя сторона) - от 0 до центра бара
-    const leftBoardTexture = loadedTextures.player1Board // Это теперь моя сторона
+    const leftBoardTexture = loadedTextures.myBoard // Всегда моя доска слева
     if (leftBoardTexture) {
       // Рисуем текстуру доски моей стороны только на левой половине
-      // Используем правильные координаты и размеры для левой половины
       ctx.drawImage(leftBoardTexture, 0, 0, barLeftX, height)
     } else {
       // Если текстура еще не загрузилась, рисуем простой фон
@@ -553,10 +555,9 @@ export default function BackgammonBoard({
     }
     
     // Правая сторона доски (сторона противника) - от правого края бара до конца
-    const rightBoardTexture = loadedTextures.player2Board // Это теперь сторона противника
+    const rightBoardTexture = loadedTextures.opponentBoard // Всегда доска оппонента справа
     if (rightBoardTexture) {
       // Рисуем текстуру доски стороны противника только на правой половине
-      // Используем правильные координаты и размеры для правой половины
       const rightWidth = width - barRightX
       ctx.drawImage(rightBoardTexture, barRightX, 0, rightWidth, height)
     } else {
@@ -639,10 +640,11 @@ export default function BackgammonBoard({
 
             // Круглая фишка - используем текстуру если есть
             // После отзеркаливания доски: pointValue > 0 = мои шашки, pointValue < 0 = шашки противника
+            // isTop определяет, вверху ли шашки (сторона оппонента) или внизу (моя сторона)
             const isMyChecker = pointValue > 0
             const checkerTexture = isMyChecker
-              ? loadedTextures.whiteCheckers  // Мои шашки (используем текстуру моих шашек)
-              : loadedTextures.blackCheckers  // Шашки противника (используем текстуру шашек противника)
+              ? loadedTextures.myCheckers  // Мои шашки (внизу на доске)
+              : loadedTextures.opponentCheckers  // Шашки противника (вверху на доске)
             
             // Рисуем шашку - используем текстуру или дефолтный цвет
             if (checkerTexture) {
@@ -784,14 +786,16 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка - белые шашки (используем текстуру или дефолтный цвет)
-        const whiteCheckerTexture = loadedTextures.whiteCheckers
-        if (whiteCheckerTexture) {
+        // Круглая шашка - белые шашки вверху (шашки оппонента, если я player1)
+        // Но для единообразия: если bar.white > 0, это шашки оппонента вверху
+        // Используем текстуру оппонента для шашек в баре сверху
+        const checkerTexture = loadedTextures.opponentCheckers
+        if (checkerTexture) {
           ctx.beginPath()
           ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
           ctx.save()
           ctx.clip()
-          ctx.drawImage(whiteCheckerTexture, checkerX - 12, checkerY - 12, 24, 24)
+          ctx.drawImage(checkerTexture, checkerX - 12, checkerY - 12, 24, 24)
           ctx.restore()
           ctx.strokeStyle = '#1a1a1a'
           ctx.lineWidth = 2
@@ -827,14 +831,15 @@ export default function BackgammonBoard({
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
         
-        // Круглая шашка - черные шашки (используем текстуру или дефолтный цвет)
-        const blackCheckerTexture = loadedTextures.blackCheckers
-        if (blackCheckerTexture) {
+        // Круглая шашка - черные шашки внизу (мои шашки, если я player1)
+        // Используем мою текстуру для шашек в баре снизу
+        const checkerTexture = loadedTextures.myCheckers
+        if (checkerTexture) {
           ctx.beginPath()
           ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
           ctx.save()
           ctx.clip()
-          ctx.drawImage(blackCheckerTexture, checkerX - 12, checkerY - 12, 24, 24)
+          ctx.drawImage(checkerTexture, checkerX - 12, checkerY - 12, 24, 24)
           ctx.restore()
           ctx.strokeStyle = '#FFFFFF'
           ctx.lineWidth = 2
@@ -878,18 +883,26 @@ export default function BackgammonBoard({
       ctx.fillText(`Вынос: ${bearOff.black}`, bearOffX, bearOffYBottom)
     }
 
-    // Кубики с улучшенной анимацией
+    // Кубики - если идет 3D анимация, не рисуем на canvas (3D кубики отрисовываются отдельно)
     // Определяем, какой игрок бросает кубики (currentPlayer: 0 = player1, 1 = player2)
-    if (dice || diceRolling) {
-      const diceAreaX = boardPadding + 20
-      const diceAreaY = height - 100
-      const diceSize = 40
-      const diceSpacing = 50
-      const isPlayer1Turn = currentPlayer === 0
-      const diceTextures = isPlayer1Turn ? loadedTextures.player1Dice : loadedTextures.player2Dice
+    const diceAreaX = boardPadding + 20
+    const diceAreaY = height - 100
+    const diceSize = 40
+    const diceSpacing = 50
+    
+    // Сохраняем позиции для 3D кубиков
+    if (diceAnimating || diceRolling) {
+      setDice3DPositions({ x: diceAreaX, y: diceAreaY, size: diceSize, spacing: diceSpacing })
+    } else {
+      setDice3DPositions(null)
+    }
+    
+    if ((dice || diceRolling) && !diceAnimating) {
+      // Используем мои кубики для отображения (кубики всегда показываются для текущего игрока)
+      const diceTextures = loadedTextures.myDice
 
-      if (diceRolling) {
-        // Анимация броска кубиков
+      if (diceRolling && !diceAnimating) {
+        // Анимация броска кубиков (2D fallback)
         const roll1 = Math.floor(Math.random() * 6) + 1
         const roll2 = Math.floor(Math.random() * 6) + 1
         const texture1 = diceTextures?.[roll1]
@@ -920,11 +933,8 @@ export default function BackgammonBoard({
       ctx.shadowOffsetX = 4
       ctx.shadowOffsetY = 4
 
-      // Круглая фишка - используем текстуру если есть
-      // Player1 играет белыми, Player2 играет черными
-      const draggedCheckerTexture = checkerColor === '#FFFFFF'
-        ? loadedTextures.whiteCheckers   // Белые шашки = player1
-        : loadedTextures.blackCheckers   // Черные шашки = player2
+      // Используем мою текстуру для перетаскиваемой шашки (так как это моя шашка)
+      const draggedCheckerTexture = loadedTextures.myCheckers
       
       // Круглая фишка - используем текстуру или дефолтный цвет
       if (draggedCheckerTexture) {
@@ -1386,8 +1396,22 @@ export default function BackgammonBoard({
     }, 50)
   }
 
+  // Определяем скины для 3D кубиков - всегда используем мои кубики
+  const diceTexturesFor3D = loadedTextures.myDice
+  
+  // Определяем значения кубиков для 3D анимации
+  let dice1Value = 1
+  let dice2Value = 1
+  if (dice && typeof dice === 'object' && 'die1' in dice && 'die2' in dice) {
+    dice1Value = dice.die1
+    dice2Value = dice.die2
+  } else if (Array.isArray(dice) && dice.length >= 2) {
+    dice1Value = dice[0]
+    dice2Value = dice[1]
+  }
+
   return (
-    <div className="backgammon-board-container">
+    <div className="backgammon-board-container" ref={containerRef}>
       {/* Отображение никнеймов игроков */}
       {(player1Name || player2Name) && (
         <div style={{
@@ -1436,6 +1460,33 @@ export default function BackgammonBoard({
         className="backgammon-board"
         style={{ cursor: dragging ? 'grabbing' : 'pointer' }}
       />
+      {/* 3D кубики во время анимации */}
+      {diceAnimating && dice3DPositions && diceTexturesFor3D && Object.keys(diceTexturesFor3D).length > 0 && (
+        <>
+          <Dice3D
+            value={dice1Value}
+            textures={diceTexturesFor3D}
+            x={dice3DPositions.x}
+            y={dice3DPositions.y}
+            size={dice3DPositions.size}
+            rolling={true}
+            onAnimationEnd={() => {
+              // Анимация завершена
+            }}
+          />
+          <Dice3D
+            value={dice2Value}
+            textures={diceTexturesFor3D}
+            x={dice3DPositions.x + dice3DPositions.spacing}
+            y={dice3DPositions.y}
+            size={dice3DPositions.size}
+            rolling={true}
+            onAnimationEnd={() => {
+              // Анимация завершена
+            }}
+          />
+        </>
+      )}
       {selectedPoint !== null && (
         <div className="selected-point-indicator">
           Выбрана точка {POINT_NUMBERS[selectedPoint]}
