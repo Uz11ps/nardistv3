@@ -239,6 +239,57 @@ export class CityService {
     return this.buildingsRepository.save(building);
   }
 
+  /**
+   * Получить настройки автобилда пользователя
+   */
+  async getAutobuildSettings(userId: string): Promise<any> {
+    const user = await this.usersService.findOne(userId);
+    return {
+      minBalance: Number(user.autobuildMinBalance || 0),
+      strategy: user.autobuildStrategy || 'balanced',
+      priorityDistrict: user.autobuildPriorityDistrict || null,
+    };
+  }
+
+  /**
+   * Обновить настройки автобилда пользователя
+   */
+  async updateAutobuildSettings(
+    userId: string,
+    settings: { minBalance?: number; strategy?: string; priorityDistrict?: string | null },
+  ): Promise<void> {
+    const user = await this.usersService.findOne(userId);
+    
+    if (!user.hasCityAutobuild) {
+      throw new BadRequestException('У вас нет автобилда города');
+    }
+
+    const updateData: any = {};
+    
+    if (settings.minBalance !== undefined) {
+      if (settings.minBalance < 0) {
+        throw new BadRequestException('Минимальный баланс не может быть отрицательным');
+      }
+      updateData.autobuildMinBalance = BigInt(settings.minBalance);
+    }
+    
+    if (settings.strategy !== undefined) {
+      if (settings.strategy !== 'balanced' && settings.strategy !== 'priority') {
+        throw new BadRequestException('Неверная стратегия. Допустимые значения: balanced, priority');
+      }
+      updateData.autobuildStrategy = settings.strategy;
+    }
+    
+    if (settings.priorityDistrict !== undefined) {
+      if (settings.strategy === 'priority' && !settings.priorityDistrict) {
+        throw new BadRequestException('При выборе стратегии "приоритет" необходимо указать район');
+      }
+      updateData.autobuildPriorityDistrict = settings.priorityDistrict;
+    }
+
+    await this.usersService.update(userId, updateData);
+  }
+
   async getDistricts(userId?: string): Promise<any[]> {
     // Проверяем уровень для доступа к городу
     if (!userId) {
@@ -345,26 +396,110 @@ export class CityService {
     try {
       const user = await this.usersService.findOne(userId);
       let userBalance = Number(user.narCoin);
+      
+      // Получаем настройки автобилда
+      const minBalance = Number(user.autobuildMinBalance || 0);
+      const strategy = user.autobuildStrategy || 'balanced';
+      const priorityDistrict = user.autobuildPriorityDistrict || null;
 
-      for (const district of districtsData) {
-        // Если у пользователя уже есть постройка в этом районе, пропускаем
-        if (district.userBuilding) {
-          continue;
-        }
+      // Проверяем минимальный баланс
+      const availableBalance = userBalance - minBalance;
+      if (availableBalance <= 0) {
+        return; // Недостаточно средств с учетом минимального баланса
+      }
 
+      // Сортируем районы в зависимости от стратегии
+      let sortedDistricts = [...districtsData];
+      
+      if (strategy === 'priority' && priorityDistrict) {
+        // Приоритетный район идет первым
+        sortedDistricts.sort((a, b) => {
+          if (a.code === priorityDistrict) return -1;
+          if (b.code === priorityDistrict) return 1;
+          return 0;
+        });
+      } else {
+        // Стратегия "balanced" - равномерная прокачка
+        // Сортируем по уровню построек (сначала районы с более низким уровнем)
+        sortedDistricts.sort((a, b) => {
+          const levelA = a.userBuilding?.level || 0;
+          const levelB = b.userBuilding?.level || 0;
+          
+          // Если у одного района нет постройки, он приоритетнее
+          if (!a.userBuilding && b.userBuilding) return -1;
+          if (a.userBuilding && !b.userBuilding) return 1;
+          
+          // Если у обоих есть постройки, сначала тот, у кого уровень ниже
+          return levelA - levelB;
+        });
+      }
+
+      for (const district of sortedDistricts) {
         // Если район не разблокирован, пропускаем
         if (!district.isUnlocked) {
           continue;
         }
 
-        // Находим самую дешевую доступную постройку в районе
+        // Обновляем баланс перед каждой итерацией
+        const currentUser = await this.usersService.findOne(userId);
+        userBalance = Number(currentUser.narCoin);
+        
+        // Проверяем минимальный баланс перед каждой покупкой
+        if (userBalance - minBalance <= 0) {
+          break; // Прекращаем, если достигли минимального баланса
+        }
+
+        // Если у пользователя уже есть постройка в этом районе, пытаемся улучшить
+        if (district.userBuilding) {
+          try {
+            // Получаем актуальную информацию о здании
+            const building = await this.buildingsRepository.findOne({
+              where: { id: district.userBuilding.id },
+            });
+            
+            if (!building) {
+              continue;
+            }
+
+            // Получаем конфигурацию для расчета стоимости улучшения
+            const config = await this.buildingConfigsRepository.findOne({
+              where: { district: building.district, type: building.type },
+            });
+
+            if (!config || building.level >= config.maxLevel) {
+              continue; // Достигнут максимальный уровень
+            }
+
+            // Вычисляем стоимость улучшения: всегда в 1.4 раза от базовой цены покупки
+            const basePrice = Number(building.purchasePrice || config.basePrice || 0);
+            const upgradeCost = Math.floor(basePrice * 1.4);
+            const balanceAfterPurchase = userBalance - upgradeCost;
+            
+            // Проверяем, что после улучшения останется минимальный баланс
+            if (balanceAfterPurchase >= minBalance && userBalance >= upgradeCost) {
+              await this.upgradeBuilding(userId, building.id);
+              // Обновляем баланс для следующей итерации
+              const updatedUser = await this.usersService.findOne(userId);
+              userBalance = Number(updatedUser.narCoin);
+            }
+          } catch (error) {
+            // Игнорируем ошибки при автобилде
+            console.error(`Autobuild upgrade failed:`, error);
+          }
+          continue;
+        }
+
+        // Если постройки нет, ищем доступные варианты
         if (district.availableBuildings && district.availableBuildings.length > 0) {
+          // Находим самую дешевую доступную постройку в районе
           const cheapestBuilding = district.availableBuildings.reduce((cheapest, current) => {
             return current.price < cheapest.price ? current : cheapest;
           });
 
-          // Если у пользователя достаточно средств, покупаем автоматически
-          if (userBalance >= cheapestBuilding.price) {
+          const balanceAfterPurchase = userBalance - cheapestBuilding.price;
+          
+          // Проверяем минимальный баланс и достаточность средств
+          if (balanceAfterPurchase >= minBalance && userBalance >= cheapestBuilding.price) {
             try {
               await this.purchaseBuilding(userId, district.code as District, cheapestBuilding.type as BuildingType);
               // Обновляем баланс для следующей итерации

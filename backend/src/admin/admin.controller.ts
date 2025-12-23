@@ -460,6 +460,16 @@ export class AdminController {
     return this.adminService.updateNotificationTemplate(type as any, body);
   }
 
+  @Delete('notification-templates/:type')
+  @UseGuards(JwtAuthGuard)
+  async deleteNotificationTemplate(@CurrentUser() user: any, @Param('type') type: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    await this.adminService.deleteNotificationTemplate(type as any);
+    return { message: 'Шаблон удален' };
+  }
+
   // CRUD для скинов
   @Get('skins')
   @UseGuards(JwtAuthGuard)
@@ -473,7 +483,7 @@ export class AdminController {
   @Post('skins')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
-    AnyFilesInterceptor({ // Принимаем файлы с любыми именами полей: preview, boardTexture, diceTexture, checkersTexture
+    AnyFilesInterceptor({ // Принимаем файлы с любыми именами полей: preview, boardTexture, diceTexture1-6, checkersTexture
       storage: diskStorage({
         destination: (req, file, cb) => {
           // Используем абсолютный путь для Docker
@@ -512,10 +522,24 @@ export class AdminController {
     
     const skinType = body.type || 'board';
     
+    // Для всех типов скинов требуется превью
+    if (!body.imageUrl && (!files || !files.find(f => f.fieldname === 'preview' || f.fieldname === 'image'))) {
+      throw new BadRequestException('Превью изображение обязательно для всех типов скинов');
+    }
+    
+    // Для кубиков требуется 6 файлов
+    if (skinType === 'dice' && files) {
+      const diceFiles = files.filter(f => f.fieldname && f.fieldname.startsWith('diceTexture') && f.fieldname.match(/diceTexture(\d+)/));
+      if (diceFiles.length > 0 && diceFiles.length < 6) {
+        throw new BadRequestException('Для кубиков требуется загрузить все 6 файлов (diceTexture1-6)');
+      }
+    }
+    
     // Обрабатываем загруженные файлы
     let imageUrl = body.imageUrl || null;
     let boardTextureUrl = null;
     let diceTextureUrl = null;
+    let diceTextureUrls: any = null;
     let checkersTextureUrl = null;
     let whiteCheckersTextureUrl = null;
     let blackCheckersTextureUrl = null;
@@ -529,7 +553,17 @@ export class AdminController {
         } else if (file.fieldname === 'boardTexture') {
           boardTextureUrl = fileUrl;
         } else if (file.fieldname === 'diceTexture') {
-          diceTextureUrl = fileUrl;
+          diceTextureUrl = fileUrl; // Устаревшее, для обратной совместимости
+        } else if (file.fieldname && file.fieldname.startsWith('diceTexture')) {
+          // Поддержка diceTexture1, diceTexture2, diceTexture3, diceTexture4, diceTexture5, diceTexture6
+          const match = file.fieldname.match(/diceTexture(\d+)/);
+          if (match && match[1]) {
+            const diceNumber = parseInt(match[1]);
+            if (diceNumber >= 1 && diceNumber <= 6) {
+              if (!diceTextureUrls) diceTextureUrls = {};
+              diceTextureUrls[diceNumber] = fileUrl;
+            }
+          }
         } else if (file.fieldname === 'checkersTexture') {
           checkersTextureUrl = fileUrl;
         } else if (file.fieldname === 'whiteCheckersTexture') {
@@ -569,6 +603,7 @@ export class AdminController {
       imageUrl,
       boardTextureUrl,
       diceTextureUrl,
+      diceTextureUrls: diceTextureUrls || null,
       checkersTextureUrl,
       whiteCheckersTextureUrl,
       blackCheckersTextureUrl,
@@ -598,7 +633,7 @@ export class AdminController {
   @Post('skins/:id/upload-textures')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
-    FilesInterceptor('files', 3, { // preview, boardTexture/diceTexture/checkersTexture
+    AnyFilesInterceptor({ // preview, boardTexture/diceTexture1-6/checkersTexture (до 10 файлов для кубиков)
       storage: diskStorage({
         destination: (req, file, cb) => {
           const uploadsDir = join(process.cwd(), 'uploads', 'skins');
@@ -651,7 +686,17 @@ export class AdminController {
       } else if (file.fieldname === 'boardTexture' && skin.type === 'board') {
         updateData.boardTextureUrl = fileUrl;
       } else if (file.fieldname === 'diceTexture' && skin.type === 'dice') {
-        updateData.diceTextureUrl = fileUrl;
+        updateData.diceTextureUrl = fileUrl; // Устаревшее, для обратной совместимости
+      } else if (file.fieldname && file.fieldname.startsWith('diceTexture') && skin.type === 'dice') {
+        // Поддержка diceTexture1, diceTexture2, diceTexture3, diceTexture4, diceTexture5, diceTexture6
+        const match = file.fieldname.match(/diceTexture(\d+)/);
+        if (match && match[1]) {
+          const diceNumber = parseInt(match[1]);
+          if (diceNumber >= 1 && diceNumber <= 6) {
+            if (!updateData.diceTextureUrls) updateData.diceTextureUrls = skin.diceTextureUrls || {};
+            updateData.diceTextureUrls[diceNumber] = fileUrl;
+          }
+        }
       } else if (file.fieldname === 'checkersTexture' && skin.type === 'checkers') {
         updateData.checkersTextureUrl = fileUrl;
       }

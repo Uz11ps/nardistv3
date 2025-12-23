@@ -158,36 +158,37 @@ export class AcademyService {
     }
 
     const price = Number(course.price || 0);
-    if (price <= 0) {
-      throw new BadRequestException('Материал бесплатный, покупка не требуется');
-    }
-
-    if (Number(user.narCoin) < price) {
-      throw new BadRequestException('Недостаточно NAR-coin');
-    }
-
-    // Списываем средства
-    const userBalance = Number(user.narCoin);
-    const newBalance = userBalance - price;
-    await this.usersService.update(userId, { narCoin: newBalance });
-
-    // Получаем процент роялти из настроек системы
-    const royaltyPercentStr = await this.adminService.getSystemSetting('course_royalty_percent', '20');
-    const royaltyPercentValue = parseInt(royaltyPercentStr) || 20;
-
-    // Вычисляем роялти для автора курса (если курс создан игроком)
-    if (course.authorId && course.authorId !== userId) {
-      const authorRoyalty = Math.floor(price * (royaltyPercentValue / 100));
-      const author = await this.usersService.findOne(course.authorId);
-      if (author) {
-        const authorBalance = Number(author.narCoin);
-        const newAuthorBalance = authorBalance + authorRoyalty;
-        await this.usersService.update(course.authorId, { narCoin: newAuthorBalance });
+    
+    // Если материал платный, проверяем баланс и списываем средства
+    if (price > 0) {
+      if (Number(user.narCoin) < price) {
+        throw new BadRequestException('Недостаточно NAR-coin');
       }
-    }
-    // Остальные (100% - royaltyPercent) остаются в экономике проекта
 
-    // Сохраняем покупку
+      // Списываем средства
+      const userBalance = Number(user.narCoin);
+      const newBalance = userBalance - price;
+      await this.usersService.update(userId, { narCoin: newBalance });
+
+      // Получаем процент роялти из настроек системы
+      const royaltyPercentStr = await this.adminService.getSystemSetting('course_royalty_percent', '20');
+      const royaltyPercentValue = parseInt(royaltyPercentStr) || 20;
+
+      // Вычисляем роялти для автора курса (если курс создан игроком)
+      if (course.authorId && course.authorId !== userId) {
+        const authorRoyalty = Math.floor(price * (royaltyPercentValue / 100));
+        const author = await this.usersService.findOne(course.authorId);
+        if (author) {
+          const authorBalance = Number(author.narCoin);
+          const newAuthorBalance = authorBalance + authorRoyalty;
+          await this.usersService.update(course.authorId, { narCoin: newAuthorBalance });
+        }
+      }
+      // Остальные (100% - royaltyPercent) остаются в экономике проекта
+    }
+    // Если материал бесплатный (price <= 0), просто открываем доступ без списания средств
+
+    // Сохраняем покупку (или бесплатное получение)
     const userMaterial = this.userMaterialsRepository.create({
       userId,
       articleId: courseId,

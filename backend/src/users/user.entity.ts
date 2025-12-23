@@ -124,6 +124,16 @@ export class User {
   @Column({ default: false })
   hasCityAutobuild: boolean; // Автобилд города (покупка навсегда)
 
+  // Настройки автобилда
+  @Column({ type: 'bigint', default: 0 })
+  autobuildMinBalance: bigint; // Минимальный баланс, который должен оставаться
+
+  @Column({ type: 'varchar', length: 20, default: 'balanced' })
+  autobuildStrategy: string; // Стратегия: 'balanced' (равномерно) или 'priority' (приоритет одного района)
+
+  @Column({ nullable: true })
+  autobuildPriorityDistrict: string; // Приоритетный район (если strategy = 'priority')
+
   @CreateDateColumn()
   createdAt: Date;
 

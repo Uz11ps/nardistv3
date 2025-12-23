@@ -25,6 +25,7 @@ import { UserSkin } from '../skins/user-skin.entity';
 import { Quest } from '../quests/quest.entity';
 import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
+import { ClanTreasuryTransaction } from '../clans/clan-treasury-transaction.entity';
 import { Subscription } from '../subscription/subscription.entity';
 import { BuildingConfig } from '../city/building-config.entity';
 import { DistrictConfig } from '../city/district-config.entity';
@@ -37,7 +38,7 @@ import { InactiveUsersService } from './inactive-users.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, Subscription, BuildingConfig, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate]),
     ScheduleModule.forRoot(),
     AuthModule,
     JwtModule.registerAsync({

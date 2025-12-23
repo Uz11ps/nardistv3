@@ -29,6 +29,7 @@ export default function Shop() {
   const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
   const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
   const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
 
   useEffect(() => {
     if (activeTab === 'coin') {
@@ -374,12 +375,20 @@ export default function Shop() {
               <div className="shop-subscription-content">
                 <div className="shop-subscription-info">
                   <div className="shop-subscription-title">Премиум доступ</div>
-                  <button
-                    className="shop-subscription-buy-btn"
-                    onClick={() => handleBuySubscription('premium', 199)}
-                  >
-                    Купить
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      className="shop-subscription-buy-btn"
+                      onClick={() => handleBuySubscription('premium', 199)}
+                    >
+                      Купить
+                    </button>
+                    <button
+                      className="shop-subscription-details-btn"
+                      onClick={() => setShowPremiumModal(true)}
+                    >
+                      Подробнее
+                    </button>
+                  </div>
                   <div className="shop-subscription-price">от 199 руб.</div>
                 </div>
                 <div className="shop-subscription-icon">
@@ -560,6 +569,83 @@ export default function Shop() {
         )}
 
       </div>
+
+      {/* Модальное окно с преимуществами премиум подписки */}
+      {showPremiumModal && (
+        <div className="shop-premium-modal-overlay" onClick={() => setShowPremiumModal(false)}>
+          <div className="shop-premium-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="shop-premium-modal-header">
+              <h3 className="shop-premium-modal-title">Премиум подписка</h3>
+              <button 
+                className="shop-premium-modal-close"
+                onClick={() => setShowPremiumModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="shop-premium-modal-content">
+              <div className="shop-premium-modal-subtitle">
+                Для тех, кто хочет играть на уровне мастеров
+              </div>
+
+              <div className="shop-premium-modal-features">
+                <div className="shop-premium-modal-feature">
+                  <div className="shop-premium-modal-feature-icon">📜</div>
+                  <div className="shop-premium-modal-feature-info">
+                    <div className="shop-premium-modal-feature-title">История игр</div>
+                    <div className="shop-premium-modal-feature-description">Полный список твоих матчей</div>
+                  </div>
+                </div>
+
+                <div className="shop-premium-modal-feature">
+                  <div className="shop-premium-modal-feature-icon">📊</div>
+                  <div className="shop-premium-modal-feature-info">
+                    <div className="shop-premium-modal-feature-title">Анализ</div>
+                    <div className="shop-premium-modal-feature-description">Разбор ошибок и лучших ходов</div>
+                  </div>
+                </div>
+
+                <div className="shop-premium-modal-feature">
+                  <div className="shop-premium-modal-feature-icon">🎯</div>
+                  <div className="shop-premium-modal-feature-info">
+                    <div className="shop-premium-modal-feature-title">Тренажёр</div>
+                    <div className="shop-premium-modal-feature-description">Разбирай позиции и стратегии</div>
+                  </div>
+                </div>
+
+                <div className="shop-premium-modal-feature">
+                  <div className="shop-premium-modal-feature-icon">⚡</div>
+                  <div className="shop-premium-modal-feature-info">
+                    <div className="shop-premium-modal-feature-title">Приоритет</div>
+                    <div className="shop-premium-modal-feature-description">Попадай к соперникам быстрее</div>
+                  </div>
+                </div>
+
+                <div className="shop-premium-modal-feature">
+                  <div className="shop-premium-modal-feature-icon">👑</div>
+                  <div className="shop-premium-modal-feature-info">
+                    <div className="shop-premium-modal-feature-title">Премиум-значок</div>
+                    <div className="shop-premium-modal-feature-description">Отметь свой статус в таблице</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shop-premium-modal-actions">
+                <button
+                  className="shop-premium-modal-button"
+                  onClick={() => {
+                    setShowPremiumModal(false)
+                    handleBuySubscription('premium', 199)
+                  }}
+                >
+                  Оформить подписку
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   )
 }

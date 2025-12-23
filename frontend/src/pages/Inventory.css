@@ -175,3 +175,115 @@
   transform: scale(1.02);
   box-shadow: 0 4px 12px 0 rgba(255, 152, 0, 0.4);
 }
+
+/* Настройки автобилда */
+.inventory-autobuild-settings {
+  margin-bottom: 16px;
+  padding: 20px;
+}
+
+.inventory-autobuild-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.inventory-autobuild-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inventory-autobuild-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inventory-autobuild-label {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.inventory-autobuild-input,
+.inventory-autobuild-select {
+  padding: 12px 16px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.inventory-autobuild-input:focus,
+.inventory-autobuild-select:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.inventory-autobuild-hint {
+  color: #888;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.inventory-autobuild-strategy-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.inventory-autobuild-strategy-btn {
+  flex: 1;
+  padding: 12px 16px;
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  border-radius: 8px;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.inventory-autobuild-strategy-btn:hover {
+  border-color: #5a5a5a;
+  color: #FFF;
+}
+
+.inventory-autobuild-strategy-btn.active {
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  border-color: #C93C3D;
+  color: #FFF;
+}
+
+.inventory-autobuild-save-btn {
+  width: 100%;
+  padding: 12px 24px;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  border: 0.1px solid #C93C3D;
+  border-radius: 8px;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.inventory-autobuild-save-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+}
+
+.inventory-autobuild-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

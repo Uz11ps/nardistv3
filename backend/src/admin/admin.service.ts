@@ -20,6 +20,7 @@ import { UserSkin } from '../skins/user-skin.entity';
 import { Quest, QuestType, QuestTarget } from '../quests/quest.entity';
 import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
+import { ClanTreasuryTransaction } from '../clans/clan-treasury-transaction.entity';
 import { BuildingConfig } from '../city/building-config.entity';
 import { DistrictConfig } from '../city/district-config.entity';
 import { ConfigService } from '@nestjs/config';
@@ -58,6 +59,8 @@ export class AdminService implements OnModuleInit {
     private clansRepository: Repository<Clan>,
     @InjectRepository(ClanMember)
     private clanMembersRepository: Repository<ClanMember>,
+    @InjectRepository(ClanTreasuryTransaction)
+    private clanTransactionsRepository: Repository<ClanTreasuryTransaction>,
     @InjectRepository(Subscription)
     private subscriptionsRepository: Repository<Subscription>,
     @InjectRepository(BuildingConfig)
@@ -88,10 +91,11 @@ export class AdminService implements OnModuleInit {
   ) {}
 
   async getStats() {
-    const totalUsers = await this.usersRepository.count();
+    const totalUsers = await this.usersRepository.count({ where: { isGuest: false } });
     const activeUsers = await this.usersRepository
       .createQueryBuilder('user')
-      .where('user.updatedAt > :date', { date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) })
+      .where('user.isGuest = false')
+      .andWhere('user.updatedAt > :date', { date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) })
       .getCount();
     
     const totalGames = await this.gamesRepository.count();
@@ -100,22 +104,25 @@ export class AdminService implements OnModuleInit {
     
     const totalMoves = await this.movesRepository.count();
     
-    const bannedUsers = await this.usersRepository.count({ where: { isBanned: true } });
-    const adminUsers = await this.usersRepository.count({ where: { isAdmin: true } });
+    const bannedUsers = await this.usersRepository.count({ where: { isBanned: true, isGuest: false } });
+    const adminUsers = await this.usersRepository.count({ where: { isAdmin: true, isGuest: false } });
     
     const totalNarCoin = await this.usersRepository
       .createQueryBuilder('user')
+      .where('user.isGuest = false')
       .select('SUM(user.narCoin)', 'total')
       .getRawOne();
     
     const totalXp = await this.usersRepository
       .createQueryBuilder('user')
+      .where('user.isGuest = false')
       .select('SUM(user.xp)', 'total')
       .getRawOne();
 
     // Статистика по уровням
     const levelStats = await this.usersRepository
       .createQueryBuilder('user')
+      .where('user.isGuest = false')
       .select('user.level', 'level')
       .addSelect('COUNT(*)', 'count')
       .groupBy('user.level')
@@ -156,6 +163,7 @@ export class AdminService implements OnModuleInit {
 
   async getAllUsers() {
     return this.usersRepository.find({
+      where: { isGuest: false },
       order: { createdAt: 'DESC' },
     });
   }
@@ -454,18 +462,23 @@ export class AdminService implements OnModuleInit {
     try {
       // Проверяем существование игроков - поддерживаем как UUID, так и username
       let player1 = await this.usersService.findOne(data.player1Id);
+      let player1Id: string;
+      
       if (!player1) {
         // Пробуем найти по username
         const users = await this.usersRepository.find({ where: { username: data.player1Id } });
         if (users.length > 0) {
           player1 = users[0];
+          player1Id = player1.id;
         } else {
           throw new NotFoundException('Игрок 1 не найден (проверьте UUID или username)');
         }
+      } else {
+        player1Id = player1.id;
       }
 
-      let player2Id = data.player2Id;
-      if (data.player2Id) {
+      let player2Id: string | null = null;
+      if (data.player2Id && data.player2Id.trim()) {
         let player2 = await this.usersService.findOne(data.player2Id);
         if (!player2) {
           // Пробуем найти по username
@@ -482,8 +495,8 @@ export class AdminService implements OnModuleInit {
       }
 
       return this.gamesService.create(
-        player1.id,
-        player2Id || null,
+        player1Id,
+        player2Id,
         data.mode as GameMode,
         data.type as GameType,
       );
@@ -809,6 +822,7 @@ export class AdminService implements OnModuleInit {
       imageUrl: data.imageUrl || null,
       boardTextureUrl: data.boardTextureUrl || null,
       diceTextureUrl: data.diceTextureUrl || null,
+      diceTextureUrls: data.diceTextureUrls || null,
       checkersTextureUrl: data.checkersTextureUrl || null,
       whiteCheckersTextureUrl: data.whiteCheckersTextureUrl || null,
       blackCheckersTextureUrl: data.blackCheckersTextureUrl || null,
@@ -836,6 +850,7 @@ export class AdminService implements OnModuleInit {
     imageUrl: string;
     boardTextureUrl: string;
     diceTextureUrl: string;
+    diceTextureUrls: any;
     checkersTextureUrl: string;
     whiteCheckersTextureUrl: string;
     blackCheckersTextureUrl: string;
@@ -1050,20 +1065,31 @@ export class AdminService implements OnModuleInit {
   }
 
   async deleteClan(id: string) {
-    const clan = await this.clansRepository.findOne({
-      where: { id },
-      relations: ['members'],
-    });
-    if (!clan) {
-      throw new Error('Клан не найден');
+    try {
+      const clan = await this.clansRepository.findOne({
+        where: { id },
+        relations: ['members'],
+      });
+      if (!clan) {
+        throw new NotFoundException('Федерация не найдена');
+      }
+
+      // Удаляем всех членов клана
+      await this.clanMembersRepository.delete({ clanId: id });
+
+      // Удаляем все транзакции казны
+      await this.clanTransactionsRepository.delete({ clanId: id });
+
+      // Удаляем клан
+      await this.clansRepository.remove(clan);
+      return { message: 'Федерация удалена' };
+    } catch (error) {
+      this.logger.error(`Ошибка при удалении федерации ${id}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при удалении федерации: ${error.message}`);
     }
-
-    // Удаляем всех членов клана
-    await this.clanMembersRepository.delete({ clanId: id });
-
-    // Удаляем клан
-    await this.clansRepository.remove(clan);
-    return { message: 'Клан удален' };
   }
 
   async removeClanMember(clanId: string, userId: string) {
@@ -1266,6 +1292,14 @@ export class AdminService implements OnModuleInit {
     if (data.daysThreshold !== undefined) template.daysThreshold = data.daysThreshold;
 
     return this.notificationTemplatesRepository.save(template);
+  }
+
+  async deleteNotificationTemplate(type: NotificationTemplateType): Promise<void> {
+    const template = await this.notificationTemplatesRepository.findOne({ where: { type } });
+    if (!template) {
+      throw new NotFoundException('Шаблон не найден');
+    }
+    await this.notificationTemplatesRepository.remove(template);
   }
 
   /**

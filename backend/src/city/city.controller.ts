@@ -72,5 +72,21 @@ export class CityController {
   ) {
     return this.cityService.getCaptureableBuildings(user.id, district as any);
   }
+
+  @Get('autobuild/settings')
+  @UseGuards(JwtAuthGuard)
+  async getAutobuildSettings(@CurrentUser() user: any) {
+    return this.cityService.getAutobuildSettings(user.id);
+  }
+
+  @Post('autobuild/settings')
+  @UseGuards(JwtAuthGuard)
+  async updateAutobuildSettings(
+    @CurrentUser() user: any,
+    @Body() body: { minBalance?: number; strategy?: string; priorityDistrict?: string | null },
+  ) {
+    await this.cityService.updateAutobuildSettings(user.id, body);
+    return { message: 'Настройки автобилда обновлены' };
+  }
 }
 

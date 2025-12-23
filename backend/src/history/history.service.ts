@@ -161,6 +161,8 @@ export class HistoryService {
         mode: game.mode,
         type: game.type,
         status: game.status,
+        player1Id: game.player1Id,
+        player2Id: game.player2Id,
         player1: {
           id: game.player1.id,
           username: game.player1.username,

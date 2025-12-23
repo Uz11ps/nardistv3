@@ -453,6 +453,12 @@ export default function History() {
                   onRollDice={() => {}} // В реплее кубики не бросаются
                   canMove={false}
                   isMyTurn={false}
+                  gameId={selectedGame.id}
+                  gameMode={selectedGame.mode}
+                  player1Id={replayData?.game?.player1Id}
+                  player2Id={replayData?.game?.player2Id}
+                  player1Name={replayData?.game?.player1?.username || replayData?.game?.player1?.nickname}
+                  player2Name={replayData?.game?.player2?.username || replayData?.game?.player2?.nickname || 'Бот'}
                 />
               ) : (
                 <div style={{ padding: '40px', textAlign: 'center', color: '#aaaaaa' }}>

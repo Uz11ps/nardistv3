@@ -48,7 +48,10 @@ export class Skin {
   boardTextureUrl: string; // URL файла текстуры доски (для типа 'board')
 
   @Column({ nullable: true })
-  diceTextureUrl: string; // URL файла текстуры кубиков (для типа 'dice')
+  diceTextureUrl: string; // URL файла текстуры кубиков (для типа 'dice') - устаревшее, используйте diceTextureUrls
+
+  @Column({ type: 'jsonb', nullable: true })
+  diceTextureUrls: any; // JSON объект с URL для каждого кубика: { 1: 'url1', 2: 'url2', 3: 'url3', 4: 'url4', 5: 'url5', 6: 'url6' }
 
   @Column({ nullable: true })
   checkersTextureUrl: string; // URL файла текстуры шашек (для типа 'checkers') - устаревшее, используйте whiteCheckersTextureUrl и blackCheckersTextureUrl

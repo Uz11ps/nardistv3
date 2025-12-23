@@ -51,6 +51,17 @@ export class Article {
   @Column({ type: 'timestamp', nullable: true })
   verifiedAt: Date; // Дата верификации
 
+  // Награда за прохождение курса
+  @Column({ type: 'bigint', nullable: true, default: 0 })
+  rewardNarCoin: number; // Награда в NAR-coin
+
+  @Column({ type: 'int', nullable: true, default: 0 })
+  rewardXP: number; // Награда в XP
+
+  // Задание для курса (JSON описание задания, которое нужно выполнить)
+  @Column({ type: 'jsonb', nullable: true })
+  assignment: any; // Задание для прохождения курса
+
   @CreateDateColumn()
   createdAt: Date;
 

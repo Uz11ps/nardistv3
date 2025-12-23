@@ -70,26 +70,50 @@ export default function Referrals() {
   const handleShare = async () => {
     if (!stats?.referralLink) return
 
-    const shareData = {
-      title: 'Присоединяйся к Nardist!',
-      text: `Играй в нарды и зарабатывай! Используй мою реферальную ссылку: ${stats.referralLink}`,
-      url: stats.referralLink,
-    }
+    const shareText = `🎲 Присоединяйся к Nardist!\n\nИграй в нарды и зарабатывай! Используй мою реферальную ссылку:\n${stats.referralLink}`
 
     try {
-      if (navigator.share) {
-        await navigator.share(shareData)
-      } else {
-        // Fallback: копируем в буфер обмена
-        await navigator.clipboard.writeText(shareData.text)
-        alert('Ссылка скопирована в буфер обмена!')
+      // Проверяем доступность Telegram WebApp API
+      const telegramWebApp = (window as any).Telegram?.WebApp
+      
+      if (telegramWebApp) {
+        if (telegramWebApp.openTelegramLink) {
+          // Используем Telegram API для шаринга через tg://msg?text=...
+          // Это откроет диалог выбора контакта для отправки сообщения
+          const encodedText = encodeURIComponent(shareText)
+          telegramWebApp.openTelegramLink(`tg://msg?text=${encodedText}`)
+          return
+        } else if (telegramWebApp.openLink) {
+          // Альтернативный вариант: просто открываем ссылку
+          // Пользователь сможет скопировать или переслать её вручную
+          telegramWebApp.openLink(stats.referralLink)
+          return
+        }
       }
+      
+      // Fallback: используем Web Share API если доступен
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Присоединяйся к Nardist!',
+          text: shareText,
+          url: stats.referralLink,
+        })
+        return
+      }
+      
+      // Последний fallback: копируем в буфер обмена
+      await navigator.clipboard.writeText(shareText)
+      alert('Ссылка скопирована в буфер обмена!')
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         console.error('Failed to share:', error)
         // Fallback: копируем в буфер обмена
-        await navigator.clipboard.writeText(shareData.text)
-        alert('Ссылка скопирована в буфер обмена!')
+        try {
+          await navigator.clipboard.writeText(shareText)
+          alert('Ссылка скопирована в буфер обмена!')
+        } catch (copyError) {
+          console.error('Failed to copy:', copyError)
+        }
       }
     }
   }
@@ -153,24 +177,6 @@ export default function Referrals() {
               </div>
               <div className="referrals-stat-label">Общий доход</div>
             </div>
-          </div>
-        </div>
-
-        {/* Настройки реферальной программы */}
-        <div className="referrals-settings-section">
-          <h3 className="referrals-section-title">Настройки программы</h3>
-          <div className="referrals-settings-info">
-            <div className="referrals-setting-item">
-              <span className="referrals-setting-label">Процент от доната:</span>
-              <span className="referrals-setting-value">{stats.referralPercent}%</span>
-            </div>
-            <div className="referrals-setting-item">
-              <span className="referrals-setting-label">Базовый бонус:</span>
-              <span className="referrals-setting-value">{stats.referralBaseBonus.toLocaleString()} NAR</span>
-            </div>
-            <p className="referrals-settings-note">
-              Настройки можно изменить в админ-панели
-            </p>
           </div>
         </div>
 

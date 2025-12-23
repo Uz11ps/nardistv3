@@ -121,6 +121,7 @@ export class TournamentsService {
         currentParticipants: tournament.currentParticipants,
         entryFee: entryFee,
         prizePool: prizePool,
+        prizes: tournament.prizes || null,
         startDate: tournament.startDate,
         endDate: tournament.endDate,
         registrationStart: tournament.registrationStart,

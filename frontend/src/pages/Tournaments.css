@@ -99,3 +99,233 @@
 .tournament-button-registered:hover {
   background: #4a4a4a;
 }
+
+.tournament-button-details {
+  background: #3a3a3a;
+  color: #FFF;
+}
+
+.tournament-button-details:hover {
+  background: #4a4a4a;
+}
+
+/* Tournament Modal */
+.tournament-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.tournament-modal {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.tournament-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tournament-modal-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.tournament-modal-close {
+  background: none;
+  border: none;
+  color: #B6B6B6;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.tournament-modal-close:hover {
+  color: #FFF;
+}
+
+.tournament-modal-content {
+  padding: 24px;
+}
+
+.tournament-modal-section {
+  margin-bottom: 24px;
+}
+
+.tournament-modal-section:last-child {
+  margin-bottom: 0;
+}
+
+.tournament-modal-section-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.tournament-modal-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tournament-modal-info-row:last-child {
+  border-bottom: none;
+}
+
+.tournament-modal-label {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.tournament-modal-value {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.tournament-modal-prizes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tournament-modal-prize {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.tournament-modal-prize-place {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.tournament-modal-prize-value {
+  color: #FFD700;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tournament-modal-bracket {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-x: auto;
+}
+
+.tournament-modal-round {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tournament-modal-round-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.tournament-modal-match {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.tournament-modal-match-player {
+  flex: 1;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.tournament-modal-match-vs {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.tournament-modal-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.tournament-modal-button {
+  flex: 1;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.tournament-modal-button-primary {
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  color: #FFF;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+}
+
+.tournament-modal-button-primary:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+}
+
+.tournament-modal-button-secondary {
+  background: #3a3a3a;
+  color: #FFF;
+}
+
+.tournament-modal-button-secondary:hover {
+  background: #4a4a4a;
+}

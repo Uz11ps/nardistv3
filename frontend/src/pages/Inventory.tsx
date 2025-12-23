@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import { apiClient } from '../api/client'
+import { useAuthStore } from '../store/authStore'
 import './Inventory.css'
 
 interface Skin {
@@ -31,6 +32,7 @@ interface Skin {
 
 export default function Inventory() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const [skins, setSkins] = useState<Skin[]>([])
   const [selectedSkinIds, setSelectedSkinIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -38,11 +40,63 @@ export default function Inventory() {
   const [repairingSkinId, setRepairingSkinId] = useState<string | null>(null)
   const [repairCosts, setRepairCosts] = useState<Map<string, number>>(new Map())
   const [activeTab, setActiveTab] = useState<'board' | 'checkers' | 'dice'>('board')
+  const [hasAutobuild, setHasAutobuild] = useState(false)
+  const [autobuildSettings, setAutobuildSettings] = useState({
+    minBalance: 0,
+    strategy: 'balanced' as 'balanced' | 'priority',
+    priorityDistrict: null as string | null,
+  })
+  const [districts, setDistricts] = useState<Array<{ code: string; name: string }>>([])
+  const [savingSettings, setSavingSettings] = useState(false)
 
   useEffect(() => {
     loadInventory()
     loadSelectedSkins()
+    loadAutobuildStatus()
   }, [])
+
+  const loadAutobuildStatus = async () => {
+    try {
+      const [statusRes, settingsRes, districtsRes] = await Promise.all([
+        apiClient.get('/subscription/city-autobuild/status').catch(() => ({ data: { hasAutobuild: false } })),
+        apiClient.get('/city/autobuild/settings').catch(() => ({ data: { minBalance: 0, strategy: 'balanced', priorityDistrict: null } })),
+        apiClient.get('/city/districts').catch(() => ({ data: [] })),
+      ])
+      
+      const hasAutobuildValue = statusRes.data?.hasAutobuild || false
+      setHasAutobuild(hasAutobuildValue)
+      
+      if (hasAutobuildValue) {
+        setAutobuildSettings(settingsRes.data || { minBalance: 0, strategy: 'balanced', priorityDistrict: null })
+        
+        // Извлекаем список районов для выбора
+        const districtsList = (districtsRes.data || []).map((d: any) => ({
+          code: d.code,
+          name: d.name,
+        }))
+        setDistricts(districtsList)
+      }
+    } catch (error) {
+      console.error('Failed to load autobuild status:', error)
+    }
+  }
+
+  const handleSaveAutobuildSettings = async () => {
+    try {
+      setSavingSettings(true)
+      await apiClient.post('/city/autobuild/settings', {
+        minBalance: autobuildSettings.minBalance,
+        strategy: autobuildSettings.strategy,
+        priorityDistrict: autobuildSettings.strategy === 'priority' ? autobuildSettings.priorityDistrict : null,
+      })
+      alert('Настройки автобилда сохранены!')
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при сохранении настроек')
+      console.error('Failed to save autobuild settings:', error)
+    } finally {
+      setSavingSettings(false)
+    }
+  }
 
   const loadInventory = async () => {
     try {
@@ -255,6 +309,86 @@ export default function Inventory() {
   return (
     <PageLayout title="Инвентарь" showBack={true} tabs={tabs}>
       <div className="inventory-content">
+        {/* Настройки автобилда */}
+        {hasAutobuild && (
+          <Card className="inventory-autobuild-settings">
+            <h3 className="inventory-autobuild-title">⚙️ Настройки автобилда города</h3>
+            <div className="inventory-autobuild-content">
+              <div className="inventory-autobuild-field">
+                <label className="inventory-autobuild-label">Минимальный баланс (NAR):</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={autobuildSettings.minBalance}
+                  onChange={(e) => setAutobuildSettings({
+                    ...autobuildSettings,
+                    minBalance: parseInt(e.target.value) || 0,
+                  })}
+                  className="inventory-autobuild-input"
+                  placeholder="0"
+                />
+                <div className="inventory-autobuild-hint">
+                  Эта сумма всегда будет оставаться на балансе
+                </div>
+              </div>
+
+              <div className="inventory-autobuild-field">
+                <label className="inventory-autobuild-label">Стратегия прокачки:</label>
+                <div className="inventory-autobuild-strategy-buttons">
+                  <button
+                    className={`inventory-autobuild-strategy-btn ${autobuildSettings.strategy === 'balanced' ? 'active' : ''}`}
+                    onClick={() => setAutobuildSettings({
+                      ...autobuildSettings,
+                      strategy: 'balanced',
+                      priorityDistrict: null,
+                    })}
+                  >
+                    Равномерно
+                  </button>
+                  <button
+                    className={`inventory-autobuild-strategy-btn ${autobuildSettings.strategy === 'priority' ? 'active' : ''}`}
+                    onClick={() => setAutobuildSettings({
+                      ...autobuildSettings,
+                      strategy: 'priority',
+                    })}
+                  >
+                    Приоритет района
+                  </button>
+                </div>
+              </div>
+
+              {autobuildSettings.strategy === 'priority' && (
+                <div className="inventory-autobuild-field">
+                  <label className="inventory-autobuild-label">Приоритетный район:</label>
+                  <select
+                    value={autobuildSettings.priorityDistrict || ''}
+                    onChange={(e) => setAutobuildSettings({
+                      ...autobuildSettings,
+                      priorityDistrict: e.target.value || null,
+                    })}
+                    className="inventory-autobuild-select"
+                  >
+                    <option value="">Выберите район</option>
+                    {districts.map((district) => (
+                      <option key={district.code} value={district.code}>
+                        {district.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <button
+                className="inventory-autobuild-save-btn"
+                onClick={handleSaveAutobuildSettings}
+                disabled={savingSettings}
+              >
+                {savingSettings ? 'Сохранение...' : 'Сохранить настройки'}
+              </button>
+            </div>
+          </Card>
+        )}
+
         {loading ? (
           <Card>
             <div className="inventory-empty">Загрузка...</div>
