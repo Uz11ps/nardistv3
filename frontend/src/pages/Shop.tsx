@@ -266,12 +266,15 @@ export default function Shop() {
     return (
       <Card key={skin.id} className="shop-skin-card">
         <div className="shop-skin-content">
+          {/* Заголовок - название и редкость вверху слева */}
           <div className="shop-skin-header">
             <div className="shop-skin-name">{skin.name}</div>
             <div className={`shop-skin-rarity ${getRarityBadgeClass(skin.rarity)}`}>
               {getRarityName(skin.rarity)}
             </div>
           </div>
+
+          {/* Изображение по центру */}
           <div className="shop-skin-image">
             {(skin.shopImageUrl || skin.imageUrl) ? (
               <img
@@ -296,33 +299,37 @@ export default function Shop() {
             }}>
               <div style={{ fontSize: '48px' }}>🎲</div>
             </div>
+          </div>
+
+          {/* Футер - цена справа и кнопка по центру */}
+          <div className="shop-skin-footer">
             {!isOwned && skin.price && (
-              <div className="shop-skin-price-overlay">
+              <div className="shop-skin-price">
                 {skin.price.toLocaleString('ru-RU')} NAR
               </div>
             )}
-          </div>
-          <div className="shop-skin-actions">
-            {isOwned ? (
-              <Button
-                variant="secondary"
-                className="shop-buy-btn shop-buy-btn-purchased"
-                fullWidth
-                disabled
-              >
-                Куплено
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                className="shop-buy-btn"
-                fullWidth
-                onClick={() => handleBuySkin(skin.id)}
-                disabled={processingSkinId !== null}
-              >
-                {processingSkinId === skin.id ? 'Покупка...' : 'Купить'}
-              </Button>
-            )}
+            <div className="shop-skin-actions">
+              {isOwned ? (
+                <Button
+                  variant="secondary"
+                  className="shop-buy-btn shop-buy-btn-purchased"
+                  fullWidth
+                  disabled
+                >
+                  Куплено
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  className="shop-buy-btn"
+                  fullWidth
+                  onClick={() => handleBuySkin(skin.id)}
+                  disabled={processingSkinId !== null}
+                >
+                  {processingSkinId === skin.id ? 'Покупка...' : 'Купить'}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </Card>
