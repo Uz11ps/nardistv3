@@ -633,6 +633,39 @@ export default function BackgammonBoard({
       }
     })
     
+    // Отрисовка области выноса (bear off area)
+    if (dragging && validTargetPoints.has(-1)) {
+      const bearOffMargin = pointWidth * 1.5
+      
+      if (isPlayer1) {
+        // Игрок 1 (белые): область выноса слева
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
+        ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
+        ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+        ctx.lineWidth = 3
+        ctx.strokeRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
+        
+        // Подсветка если курсор над областью выноса
+        if (hoveredPoint === -1) {
+          ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+          ctx.fillRect(0, height - pointHeight * 2, bearOffMargin, pointHeight * 2)
+        }
+      } else {
+        // Игрок 2 (черные): область выноса справа
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
+        ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
+        ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+        ctx.lineWidth = 3
+        ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
+        
+        // Подсветка если курсор над областью выноса
+        if (hoveredPoint === -1) {
+          ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+          ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight * 2)
+        }
+      }
+    }
+    
     // Отрисовка бара (середина доски)
     const barX = width / 2
     if (gameState.bar) {
@@ -768,6 +801,25 @@ export default function BackgammonBoard({
       }
     }
     
+    // Проверяем область выноса (bear off)
+    // Для игрока 1 (белые, нижний ряд): вынос влево (x < 0 или очень близко к левому краю)
+    // Для игрока 2 (черные, верхний ряд): вынос вправо (x > width или очень близко к правому краю)
+    const bearOffMargin = pointWidth * 1.5 // Область для выноса
+    
+    if (isPlayer1) {
+      // Игрок 1 (белые): дом - точки 18-23 (нижний ряд справа), вынос влево
+      // Проверяем область слева от доски
+      if (x < bearOffMargin && y > height - pointHeight * 2 && y < height) {
+        return -1 // Индекс -1 для выноса (как в бэкенде)
+      }
+    } else {
+      // Игрок 2 (черные): дом - точки 0-5 (верхний ряд справа), вынос вправо
+      // Проверяем область справа от доски
+      if (x > width - bearOffMargin && y > 0 && y < pointHeight * 2) {
+        return -1 // Индекс -1 для выноса (как в бэкенде)
+      }
+    }
+    
     return null
   }, [gameState, isPlayer1])
   
@@ -827,11 +879,14 @@ export default function BackgammonBoard({
     setDragPosition({ x, y })
     setSelectedPoint(pointIndex)
     
-    // Устанавливаем валидные точки назначения
+    // Устанавливаем валидные точки назначения (включая вынос -1)
     const validTargets = new Set<number>()
     pointMoves.forEach(move => {
-      if (move.to !== undefined && move.to !== null && move.to >= 0 && move.to < 26) {
-        validTargets.add(move.to)
+      if (move.to !== undefined && move.to !== null) {
+        // Включаем обычные точки (0-23) и вынос (-1)
+        if ((move.to >= 0 && move.to < 24) || move.to === -1) {
+          validTargets.add(move.to)
+        }
       }
     })
     setValidTargetPoints(validTargets)
@@ -870,17 +925,30 @@ export default function BackgammonBoard({
     // Определяем на какую точку перетащили
     const targetPoint = getPointAtPosition(x, y, canvas)
     
-    // Если перетащили на валидную точку, делаем ход
-    if (targetPoint !== null && dragging.pointIndex !== targetPoint && validTargetPoints.has(targetPoint)) {
-      const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
-      if (move) {
-        console.log('✅ Выполняем ход:', move)
-        onMove(move.from, move.to, move.die)
+    // Если перетащили на валидную точку или область выноса, делаем ход
+    if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
+      // Проверяем, является ли это выносом (targetPoint === -1)
+      if (targetPoint === -1) {
+        // Ищем ход на вынос (to === -1)
+        const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
+        if (bearOffMove) {
+          console.log('✅ Выполняем вынос шашки:', bearOffMove)
+          onMove(bearOffMove.from, bearOffMove.to, bearOffMove.die)
+        } else {
+          console.warn('⚠️ Вынос не найден для точки:', dragging.pointIndex)
+        }
+      } else if (validTargetPoints.has(targetPoint)) {
+        // Обычный ход на точку
+        const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
+        if (move) {
+          console.log('✅ Выполняем ход:', move)
+          onMove(move.from, move.to, move.die)
+        } else {
+          console.warn('⚠️ Ход не найден для:', { from: dragging.pointIndex, to: targetPoint })
+        }
       } else {
-        console.warn('⚠️ Ход не найден для:', { from: dragging.pointIndex, to: targetPoint })
+        console.warn('⚠️ Недопустимый ход:', { from: dragging.pointIndex, to: targetPoint, validTargets: Array.from(validTargetPoints) })
       }
-    } else if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
-      console.warn('⚠️ Недопустимый ход:', { from: dragging.pointIndex, to: targetPoint, validTargets: Array.from(validTargetPoints) })
     }
     
     // Сбрасываем состояние перетаскивания
