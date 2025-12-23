@@ -259,11 +259,13 @@ export default function BackgammonBoard({
       }
     }
     
-    // Проверяем бар (если нужно)
-    // ...
-    
-    return null
-  }, [gameState])
+    // Проверяем бар
+    const barCheckWidth = pointWidth * 0.8
+    if (Math.abs(x - (barX + barWidth / 2)) < barCheckWidth / 2) {
+      if (y >= height * 0.25 && y <= height * 0.75) {
+        return isPlayer1 ? 24 : 25
+      }
+    }
     
     // Проверяем область выноса
     const bearOffMargin = pointWidth * 1.5
@@ -283,7 +285,7 @@ export default function BackgammonBoard({
     }
     
     return null
-  }, [gameState, isPlayer1, gameMode, getPointCoordinates])
+  }, [gameState, isPlayer1, gameMode])
   
   // Отрисовка доски
   const drawBoard = useCallback(() => {
