@@ -33,6 +33,74 @@ export default function Game() {
   const [player2Timer, setPlayer2Timer] = useState<number>(30)
   const [moveTimer, setMoveTimer] = useState<number>(30) // Таймер на ход (30 секунд)
   const [overtimeTimer, setOvertimeTimer] = useState<number>(60) // Овертайм (1 минута)
+  const [pipCounts, setPipCounts] = useState({ player1: 0, player2: 0 })
+  const [pipDiff, setPipDiff] = useState<{ player1: number | null; player2: number | null }>({ player1: null, player2: null })
+  const lastPipCounts = useRef({ player1: 0, player2: 0 })
+  const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight)
+
+  // Обновление ориентации
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Расчет Pip Count (очков до финиша)
+  const calculatePipCount = useCallback((points: number[], bar: any, bearOff: any, player: number, mode: string) => {
+    let count = 0
+    const isLong = mode === 'LONG' || mode === 'long'
+    
+    points.forEach((val, idx) => {
+      if (player === 0 && val > 0) {
+        // Белые
+        if (isLong) {
+          // В длинных: 0 -> 23. Расстояние = 24 - idx
+          count += val * (24 - idx)
+        } else {
+          // В коротких: 23 -> 0. Расстояние = idx + 1
+          count += val * (idx + 1)
+        }
+      } else if (player === 1 && val < -0) {
+        // Черные
+        if (isLong) {
+          // В длинных: 12 -> 11 (через 23). Расстояние = (11 - idx + 24) % 24 + 1
+          const dist = (11 - idx + 24) % 24 + 1
+          count += Math.abs(val) * dist
+        } else {
+          // В коротких: 0 -> 23. Расстояние = 24 - idx
+          count += Math.abs(val) * (24 - idx)
+        }
+      }
+    })
+    
+    // Добавляем шашки на баре (максимальное расстояние)
+    if (player === 0 && bar.white > 0) count += bar.white * 24
+    if (player === 1 && bar.black > 0) count += bar.black * 24
+    
+    return count
+  }, [])
+
+  // Обновление Pip Count при изменении состояния игры
+  useEffect(() => {
+    if (!gameState || !gameInfo) return
+    
+    const p1Count = calculatePipCount(gameState.points, gameState.bar, gameState.bearOff, 0, gameInfo.mode)
+    const p2Count = calculatePipCount(gameState.points, gameState.bar, gameState.bearOff, 1, gameInfo.mode)
+    
+    setPipCounts({ player1: p1Count, player2: p2Count })
+    
+    // Считаем разницу, если это наш ход
+    if (lastPipCounts.current.player1 !== 0) {
+      setPipDiff({
+        player1: p1Count - lastPipCounts.current.player1,
+        player2: p2Count - lastPipCounts.current.player2
+      })
+    }
+    
+    lastPipCounts.current = { player1: p1Count, player2: p2Count }
+  }, [gameState, gameInfo?.mode, calculatePipCount])
   const [isInOvertime, setIsInOvertime] = useState<boolean>(false) // Флаг овертайма
   const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
@@ -889,42 +957,26 @@ export default function Game() {
   }
 
   return (
-    <div className="app-container game-container page-transition">
+    <div className={`app-container game-container page-transition ${isLandscape ? 'landscape-mode' : ''}`}>
       <PageHeader 
         title={`Table ${tableNumber} - ${getGameModeName(gameMode)}${stake > 0 ? ` - ${stake} NAR` : ''}`}
         onBack={handleBack}
       />
       
       <div className="game-players-section">
-        {/* Левый игрок */}
-        <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
-          <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
-          <div className={`game-player-avatar ${isMyTurn && isPlayer1 ? 'game-player-active' : ''}`}>
-            {myPlayer?.avatarUrl ? (
-              <img src={myPlayer.avatarUrl} alt={myPlayer.username} />
-            ) : (
-              <Icon name="user" size={48} />
-            )}
+        {/* Левый игрок (в ландшафтном режиме - слева вверху) */}
+        <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''} ${isLandscape ? 'opponent-corner' : ''}`}>
+          <div className="game-player-name">
+            {opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}
+            <div className="pip-count-display">
+              {pipCounts.player2}
+              {pipDiff.player2 !== null && pipDiff.player2 !== 0 && (
+                <span className={`pip-diff ${pipDiff.player2 < 0 ? 'good' : 'bad'}`}>
+                  ({pipDiff.player2 > 0 ? '+' : ''}{pipDiff.player2})
+                </span>
+              )}
+            </div>
           </div>
-          <div className={`game-player-timer ${isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
-            {formatTime(player1Timer)}
-          </div>
-          {myPlayer?.country && (
-            <Icon name={`flag-${myPlayer.country.toLowerCase()}`} size={16} />
-          )}
-        </div>
-
-        {/* Счет */}
-        <div className="game-score-section">
-          <div className="game-score-label">до 3</div>
-          <div className="game-score">
-            {score.player1}:{score.player2}
-          </div>
-        </div>
-
-        {/* Правый игрок */}
-        <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
-          <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
           <div className={`game-player-avatar ${!isPlayer1 && isMyTurn ? 'game-player-active' : ''}`}>
             {opponentPlayer?.avatarUrl ? (
               <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} />
@@ -932,11 +984,47 @@ export default function Game() {
               <Icon name="user" size={48} />
             )}
             <div className={`game-player-timer ${!isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
-              {formatTime(player2Timer)}
+              {formatTime(!isPlayer1 ? player1Timer : player2Timer)}
             </div>
           </div>
           {opponentPlayer?.country && (
             <Icon name={`flag-${opponentPlayer.country.toLowerCase()}`} size={16} />
+          )}
+        </div>
+
+        {/* Счет (всегда по центру сверху) */}
+        <div className="game-score-section">
+          <div className="game-score-label">до 3</div>
+          <div className="game-score">
+            {score.player1}:{score.player2}
+          </div>
+        </div>
+
+        {/* Правый игрок (в ландшафтном режиме - справа вверху) */}
+        <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''} ${isLandscape ? 'my-corner' : ''}`}>
+          <div className="game-player-name">
+            {myPlayer?.nickname || myPlayer?.username || 'Вы'}
+            <div className="pip-count-display">
+              {pipCounts.player1}
+              {pipDiff.player1 !== null && pipDiff.player1 !== 0 && (
+                <span className={`pip-diff ${pipDiff.player1 < 0 ? 'good' : 'bad'}`}>
+                  ({pipDiff.player1 > 0 ? '+' : ''}{pipDiff.player1})
+                </span>
+              )}
+            </div>
+          </div>
+          <div className={`game-player-avatar ${isMyTurn && isPlayer1 ? 'game-player-active' : ''}`}>
+            {myPlayer?.avatarUrl ? (
+              <img src={myPlayer.avatarUrl} alt={myPlayer.username} />
+            ) : (
+              <Icon name="user" size={48} />
+            )}
+            <div className={`game-player-timer ${isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
+              {formatTime(isPlayer1 ? player1Timer : player2Timer)}
+            </div>
+          </div>
+          {myPlayer?.country && (
+            <Icon name={`flag-${myPlayer.country.toLowerCase()}`} size={16} />
           )}
         </div>
       </div>

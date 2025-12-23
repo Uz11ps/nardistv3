@@ -13,6 +13,75 @@
   padding: 16px;
   background: var(--color-background-secondary);
   border-bottom: 1px solid var(--color-border);
+  position: relative;
+  z-index: 10;
+}
+
+/* Ландшафтный режим */
+.landscape-mode .game-players-section {
+  padding: 8px 24px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: none;
+}
+
+.landscape-mode .opponent-corner {
+  position: absolute;
+  top: 8px;
+  left: 24px;
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.landscape-mode .my-corner {
+  position: absolute;
+  top: 8px;
+  right: 24px;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+}
+
+.landscape-mode .game-score-section {
+  margin: 0 auto;
+}
+
+.pip-count-display {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFD700; /* Золотистый цвет */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.pip-diff {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pip-diff.good {
+  color: #4caf50; /* Зеленый (уменьшение pip count) */
+}
+
+.pip-diff.bad {
+  color: #f44336; /* Красный (увеличение, если вдруг) */
+}
+
+.landscape-mode .game-player-avatar {
+  width: 56px;
+  height: 56px;
+}
+
+.landscape-mode .game-player-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 0 12px;
+}
+
+.landscape-mode .my-corner .game-player-name {
+  align-items: flex-end;
 }
 
 .game-player {

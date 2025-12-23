@@ -174,70 +174,51 @@ export default function BackgammonBoard({
     const width = canvas.width
     const height = canvas.height
     
-    // Ширина бара в центре
-    const barWidth = width * 0.08 // Чуть шире бар для наглядности
-    const barX = (width - barWidth) / 2
+    // Параметры области выноса (Контейнеры)
+    const bearOffWidth = width * 0.06
+    const boardWidth = width - (bearOffWidth * 2)
+    const boardStartX = bearOffWidth
+    const boardEndX = width - bearOffWidth
     
-    // Доступная ширина для одной половины (левой или правой)
-    const halfBoardWidth = (width - barWidth) / 2
+    // Центральная полоса (бар)
+    const barWidth = boardWidth * 0.08
+    const barX = boardStartX + (boardWidth - barWidth) / 2
     
-    // Ширина одного треугольника (в одной половине 6 треугольников)
+    // Параметры для точек
+    const halfBoardWidth = (boardWidth - barWidth) / 2
     const pointWidth = halfBoardWidth / 6
-    const pointHeight = height * 0.45 // Высота чуть меньше половины, чтобы в центре было место
+    const pointHeight = height * 0.45
     
     const isTopRow = pointIndex < 12
     
-    // Система нумерации нард:
-    // Index 0 = Point 24 (Top Right)
-    // Index 11 = Point 13 (Top Left)
-    // Index 12 = Point 12 (Bottom Left)
-    // Index 23 = Point 1 (Bottom Right)
-    
-    let x: number
-    let pointNumber: number
-    
-    // Определяем, в какой половине находится точка
-    // Верхний ряд: 0-5 (справа), 6-11 (слева)
-    // Нижний ряд: 12-17 (слева), 18-23 (справа)
+    let x = 0
+    let pointNumber = 0
     
     if (isTopRow) {
-      // Верхний ряд: Points 24-13 (справа налево)
       pointNumber = 24 - pointIndex
-      const isRightSide = pointIndex < 6 // 0-5 -> Правая часть
+      const isRightSide = pointIndex < 6
       
       if (isRightSide) {
-        // Правая часть (от края до бара): индексы 0-5
         const pointInHalf = pointIndex
-        // Справа налево: width - (отступ)
-        x = width - (pointInHalf * pointWidth + pointWidth / 2)
+        x = boardEndX - (pointInHalf * pointWidth + pointWidth / 2)
       } else {
-        // Левая часть (от бара до края): индексы 6-11
         const pointInHalf = pointIndex - 6
-        // Справа налево от левого края бара: barX - (отступ)
         x = barX - (pointInHalf * pointWidth + pointWidth / 2)
       }
     } else {
-      // Нижний ряд: Points 12-1 (слева направо)
       pointNumber = 12 - (pointIndex - 12)
-      const isLeftSide = pointIndex < 18 // 12-17 -> Левая часть
+      const isLeftSide = pointIndex < 18
       
       if (isLeftSide) {
-        // Левая часть (от края до бара): индексы 12-17
         const pointInHalf = pointIndex - 12
-        // Слева направо: 0 + (отступ)
-        x = (pointInHalf * pointWidth + pointWidth / 2)
+        x = boardStartX + (pointInHalf * pointWidth + pointWidth / 2)
       } else {
-        // Правая часть (от бара до края): индексы 18-23
         const pointInHalf = pointIndex - 18
-        // Слева направо от правого края бара: barX + barWidth + (отступ)
         x = barX + barWidth + (pointInHalf * pointWidth + pointWidth / 2)
       }
     }
     
-    // Основания треугольников прижаты к краям доски
-    const y = isTopRow
-      ? 0      // Верхний край
-      : height // Нижний край
+    const y = isTopRow ? 0 : height
     
     return { x, y, isTopRow, pointWidth, pointHeight, pointNumber }
   }, [])
@@ -247,62 +228,53 @@ export default function BackgammonBoard({
     const width = canvas.width
     const height = canvas.height
     
-    // Пересчитываем параметры, как в drawBoard
-    const barWidth = width * 0.08
-    const barX = (width - barWidth) / 2
-    const halfBoardWidth = (width - barWidth) / 2
+    // Параметры области выноса (Контейнеры)
+    const bearOffWidth = width * 0.06
+    const boardWidth = width - (bearOffWidth * 2)
+    const boardStartX = bearOffWidth
+    const boardEndX = width - bearOffWidth
+    
+    // Центральная полоса (бар)
+    const barWidth = boardWidth * 0.08
+    const barX = boardStartX + (boardWidth - barWidth) / 2
+    
+    // Параметры для точек
+    const halfBoardWidth = (boardWidth - barWidth) / 2
     const pointWidth = halfBoardWidth / 6
-    const pointHeight = height * 0.45
     
     // Проверяем все точки
     const points = gameState?.points || []
     
     for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
       const isTopRow = pointIndex < 12
-      
       let columnXStart: number
       let columnXEnd: number
       
-      // Определяем X-границы колонки для этой точки
       if (isTopRow) {
-        // Верхний ряд: 0-5 (справа), 6-11 (слева)
         const isRightSide = pointIndex < 6
         if (isRightSide) {
-          // Правая часть
           const pointInHalf = pointIndex
-          // x центра = width - (pointInHalf * pointWidth + pointWidth / 2)
-          // Границы: от (width - (pointInHalf + 1) * pointWidth) до (width - pointInHalf * pointWidth)
-          columnXEnd = width - pointInHalf * pointWidth
-          columnXStart = width - (pointInHalf + 1) * pointWidth
+          columnXEnd = boardEndX - pointInHalf * pointWidth
+          columnXStart = boardEndX - (pointInHalf + 1) * pointWidth
         } else {
-          // Левая часть
           const pointInHalf = pointIndex - 6
-          // x центра = barX - (pointInHalf * pointWidth + pointWidth / 2)
-          // Границы: от (barX - (pointInHalf + 1) * pointWidth) до (barX - pointInHalf * pointWidth)
           columnXEnd = barX - pointInHalf * pointWidth
           columnXStart = barX - (pointInHalf + 1) * pointWidth
         }
       } else {
-        // Нижний ряд: 12-17 (слева), 18-23 (справа)
         const isLeftSide = pointIndex < 18
         if (isLeftSide) {
-          // Левая часть
           const pointInHalf = pointIndex - 12
-          // x центра = (pointInHalf * pointWidth + pointWidth / 2)
-          columnXStart = pointInHalf * pointWidth
-          columnXEnd = (pointInHalf + 1) * pointWidth
+          columnXStart = boardStartX + pointInHalf * pointWidth
+          columnXEnd = boardStartX + (pointInHalf + 1) * pointWidth
         } else {
-          // Правая часть
           const pointInHalf = pointIndex - 18
-          // x центра = barX + barWidth + (pointInHalf * pointWidth + pointWidth / 2)
           columnXStart = barX + barWidth + pointInHalf * pointWidth
           columnXEnd = barX + barWidth + (pointInHalf + 1) * pointWidth
         }
       }
       
-      // Проверяем X
       if (x >= columnXStart && x <= columnXEnd) {
-        // Проверяем Y (расширенная зона: вся половина высоты доски)
         if (isTopRow) {
           if (y <= height / 2) return pointIndex
         } else {
@@ -312,32 +284,27 @@ export default function BackgammonBoard({
     }
     
     // Проверяем бар
-    const barCheckWidth = pointWidth * 0.8
-    if (Math.abs(x - (barX + barWidth / 2)) < barCheckWidth / 2) {
+    if (x >= barX && x <= barX + barWidth) {
       if (y >= height * 0.25 && y <= height * 0.75) {
         return isPlayer1 ? 24 : 25
       }
     }
     
-    // Проверяем область выноса
-    const bearOffMargin = pointWidth * 1.5
+    // Проверяем контейнеры
+    const leftContainerX = 0
+    const rightContainerX = width - bearOffWidth
+    const isLeftTarget = x >= leftContainerX && x <= leftContainerX + bearOffWidth
+    const isRightTarget = x >= rightContainerX && x <= rightContainerX + bearOffWidth
     
-    if (gameMode === 'long') {
-      if (isPlayer1 && x < bearOffMargin && y > height - pointHeight && y < height) {
-        return -1
-      } else if (!isPlayer1 && x > width - bearOffMargin && y > 0 && y < pointHeight) {
-        return -1
-      }
-    } else {
-      if (isPlayer1 && x > width - bearOffMargin && y > 0 && y < pointHeight) {
-        return -1
-      } else if (!isPlayer1 && x < bearOffMargin && y > height - pointHeight && y < height) {
-        return -1
-      }
+    if (isLeftTarget || isRightTarget) {
+      const isMySide = isPlayer1 
+        ? (gameMode === 'long' ? isLeftTarget : isRightTarget) 
+        : (gameMode === 'long' ? isRightTarget : isLeftTarget)
+      if (isMySide) return -1
     }
     
     return null
-  }, [gameState, isPlayer1, gameMode])
+  }, [virtualGameState, isPlayer1, gameMode])
   
   // Отрисовка доски
   const drawBoard = useCallback(() => {
@@ -353,18 +320,23 @@ export default function BackgammonBoard({
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, width, height)
     
+    // Параметры области выноса (Контейнеры)
+    const bearOffWidth = width * 0.06
+    const boardWidth = width - (bearOffWidth * 2)
+    const boardStartX = bearOffWidth
+    
     // Фон доски
     ctx.fillStyle = '#8B4513'
-    ctx.fillRect(0, 0, width, height)
+    ctx.fillRect(boardStartX, 0, boardWidth, height)
     
     // Центральная полоса (бар)
-    const barWidth = width * 0.08
-    const barX = (width - barWidth) / 2
+    const barWidth = boardWidth * 0.08
+    const barX = boardStartX + (boardWidth - barWidth) / 2
     ctx.fillStyle = '#654321'
     ctx.fillRect(barX, 0, barWidth, height)
     
-    // Параметры для отрисовки
-    const halfBoardWidth = (width - barWidth) / 2
+    // Параметры для точек
+    const halfBoardWidth = (boardWidth - barWidth) / 2
     const pointWidth = halfBoardWidth / 6
     const pointHeight = height * 0.45
     
@@ -591,54 +563,66 @@ export default function BackgammonBoard({
       }
     }
     
-    // Отрисовка области выноса
-    if (dragging && validTargetPoints.has(-1)) {
-      const bearOffMargin = pointWidth * 1.5
+    // Отрисовка области выноса (Контейнеры)
+    const bearOffWidth = width * 0.06
+    const leftContainerX = 0
+    const rightContainerX = width - bearOffWidth
+    
+    // Рисуем контейнеры
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
+    ctx.fillRect(leftContainerX, 0, bearOffWidth, height)
+    ctx.fillRect(rightContainerX, 0, bearOffWidth, height)
+    
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
+    ctx.lineWidth = 1
+    ctx.strokeRect(leftContainerX, 0, bearOffWidth, height)
+    ctx.strokeRect(rightContainerX, 0, bearOffWidth, height)
+
+    // Отрисовка выброшенных шашек в контейнерах
+    if (virtualGameState.bearOff) {
+      const bOff = virtualGameState.bearOff
+      const myBearOffCount = isPlayer1 ? bOff.white || 0 : bOff.black || 0
+      const opponentBearOffCount = isPlayer1 ? bOff.black || 0 : bOff.white || 0
       
-      if (gameMode === 'long') {
-        if (isPlayer1) {
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
-          ctx.fillRect(0, height - pointHeight, bearOffMargin, pointHeight)
-          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-          ctx.lineWidth = 4
-          ctx.strokeRect(0, height - pointHeight, bearOffMargin, pointHeight)
-          if (hoveredPoint === -1) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)'
-            ctx.fillRect(0, height - pointHeight, bearOffMargin, pointHeight)
-          }
-        } else {
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
-          ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
-          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-          ctx.lineWidth = 4
-          ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
-          if (hoveredPoint === -1) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)'
-            ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
-          }
-        }
-      } else {
-        if (isPlayer1) {
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
-          ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
-          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-          ctx.lineWidth = 4
-          ctx.strokeRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
-          if (hoveredPoint === -1) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)'
-            ctx.fillRect(width - bearOffMargin, 0, bearOffMargin, pointHeight)
-          }
-        } else {
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.4)'
-          ctx.fillRect(0, height - pointHeight, bearOffMargin, pointHeight)
-          ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-          ctx.lineWidth = 4
-          ctx.strokeRect(0, height - pointHeight, bearOffMargin, pointHeight)
-          if (hoveredPoint === -1) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)'
-            ctx.fillRect(0, height - pointHeight, bearOffMargin, pointHeight)
-          }
-        }
+      const checkerH = Math.min(height / 16, 15)
+      const checkerW = bearOffWidth * 0.8
+      
+      // Мои выброшенные (снизу вверх)
+      const myX = isPlayer1 ? (gameMode === 'long' ? leftContainerX : rightContainerX) : (gameMode === 'long' ? rightContainerX : leftContainerX)
+      for (let i = 0; i < myBearOffCount; i++) {
+        ctx.fillStyle = isPlayer1 ? '#F0F0F0' : '#333333'
+        ctx.fillRect(myX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
+        ctx.strokeStyle = '#000'
+        ctx.lineWidth = 1
+        ctx.strokeRect(myX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
+      }
+      
+      // Соперника выброшенные (сверху вниз)
+      const oppX = isPlayer1 ? (gameMode === 'long' ? rightContainerX : leftContainerX) : (gameMode === 'long' ? leftContainerX : rightContainerX)
+      for (let i = 0; i < opponentBearOffCount; i++) {
+        ctx.fillStyle = isPlayer1 ? '#333333' : '#F0F0F0'
+        ctx.fillRect(oppX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
+        ctx.strokeStyle = '#000'
+        ctx.lineWidth = 1
+        ctx.strokeRect(oppX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
+      }
+    }
+
+    // Подсветка при перетаскивании в зону выноса
+    if (dragging && validTargetPoints.has(-1)) {
+      const targetX = isPlayer1 
+        ? (gameMode === 'long' ? leftContainerX : rightContainerX) 
+        : (gameMode === 'long' ? rightContainerX : leftContainerX)
+        
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
+      ctx.fillRect(targetX, 0, bearOffWidth, height)
+      ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)'
+      ctx.lineWidth = 3
+      ctx.strokeRect(targetX, 0, bearOffWidth, height)
+      
+      if (hoveredPoint === -1) {
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+        ctx.fillRect(targetX, 0, bearOffWidth, height)
       }
     }
   }, [virtualGameState, selectedPoint, highlightedPoints, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates])
