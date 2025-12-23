@@ -176,6 +176,39 @@
   box-shadow: 0 4px 12px 0 rgba(255, 152, 0, 0.4);
 }
 
+/* Прочее */
+.inventory-other-item {
+  margin-bottom: 12px;
+}
+
+.inventory-other-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inventory-other-icon {
+  font-size: 32px;
+}
+
+.inventory-other-info {
+  flex: 1;
+}
+
+.inventory-other-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.inventory-other-status {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+
 /* Настройки автобилда */
 .inventory-autobuild-settings {
   margin-bottom: 16px;

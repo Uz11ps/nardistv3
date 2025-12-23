@@ -39,45 +39,57 @@ export default function Inventory() {
   const [selectingSkinId, setSelectingSkinId] = useState<string | null>(null)
   const [repairingSkinId, setRepairingSkinId] = useState<string | null>(null)
   const [repairCosts, setRepairCosts] = useState<Map<string, number>>(new Map())
-  const [activeTab, setActiveTab] = useState<'board' | 'checkers' | 'dice'>('board')
+  const [activeTab, setActiveTab] = useState<'board' | 'checkers' | 'dice' | 'other'>('board')
   const [hasAutobuild, setHasAutobuild] = useState(false)
   const [autobuildSettings, setAutobuildSettings] = useState({
     minBalance: 0,
     strategy: 'balanced' as 'balanced' | 'priority',
-    priorityDistrict: null as string | null,
+    priorityBuilding: null as string | null,
   })
-  const [districts, setDistricts] = useState<Array<{ code: string; name: string }>>([])
+  const [buildings, setBuildings] = useState<Array<{ id: string; type: string; name: string }>>([])
   const [savingSettings, setSavingSettings] = useState(false)
+  const [hasPremium, setHasPremium] = useState(false)
 
   useEffect(() => {
     loadInventory()
     loadSelectedSkins()
     loadAutobuildStatus()
+    checkPremium()
   }, [])
 
   const loadAutobuildStatus = async () => {
     try {
-      const [statusRes, settingsRes, districtsRes] = await Promise.all([
+      const [statusRes, settingsRes, buildingsRes] = await Promise.all([
         apiClient.get('/subscription/city-autobuild/status').catch(() => ({ data: { hasAutobuild: false } })),
-        apiClient.get('/city/autobuild/settings').catch(() => ({ data: { minBalance: 0, strategy: 'balanced', priorityDistrict: null } })),
-        apiClient.get('/city/districts').catch(() => ({ data: [] })),
+        apiClient.get('/city/autobuild/settings').catch(() => ({ data: { minBalance: 0, strategy: 'balanced', priorityBuilding: null } })),
+        apiClient.get('/city/buildings').catch(() => ({ data: [] })),
       ])
       
       const hasAutobuildValue = statusRes.data?.hasAutobuild || false
       setHasAutobuild(hasAutobuildValue)
       
       if (hasAutobuildValue) {
-        setAutobuildSettings(settingsRes.data || { minBalance: 0, strategy: 'balanced', priorityDistrict: null })
+        setAutobuildSettings(settingsRes.data || { minBalance: 0, strategy: 'balanced', priorityBuilding: null })
         
-        // Извлекаем список районов для выбора
-        const districtsList = (districtsRes.data || []).map((d: any) => ({
-          code: d.code,
-          name: d.name,
+        // Извлекаем список строений для выбора
+        const buildingsList = (buildingsRes.data || []).map((b: any) => ({
+          id: b.id,
+          type: b.type,
+          name: b.name,
         }))
-        setDistricts(districtsList)
+        setBuildings(buildingsList)
       }
     } catch (error) {
       console.error('Failed to load autobuild status:', error)
+    }
+  }
+
+  const checkPremium = async () => {
+    try {
+      const response = await apiClient.get('/subscription/status').catch(() => ({ data: { hasActive: false } }))
+      setHasPremium(response.data?.hasActive || false)
+    } catch (error) {
+      console.error('Failed to check subscription:', error)
     }
   }
 
@@ -87,7 +99,7 @@ export default function Inventory() {
       await apiClient.post('/city/autobuild/settings', {
         minBalance: autobuildSettings.minBalance,
         strategy: autobuildSettings.strategy,
-        priorityDistrict: autobuildSettings.strategy === 'priority' ? autobuildSettings.priorityDistrict : null,
+        priorityBuilding: autobuildSettings.strategy === 'priority' ? autobuildSettings.priorityBuilding : null,
       })
       alert('Настройки автобилда сохранены!')
     } catch (error: any) {
@@ -237,6 +249,7 @@ export default function Inventory() {
     { id: 'board', label: 'Доски', active: activeTab === 'board', onClick: () => setActiveTab('board') },
     { id: 'checkers', label: 'Шашки', active: activeTab === 'checkers', onClick: () => setActiveTab('checkers') },
     { id: 'dice', label: 'Кубики', active: activeTab === 'dice', onClick: () => setActiveTab('dice') },
+    { id: 'other', label: 'Прочее', active: activeTab === 'other', onClick: () => setActiveTab('other') },
   ]
 
   const renderSkinCard = (skin: Skin) => {
@@ -313,9 +326,37 @@ export default function Inventory() {
   return (
     <PageLayout title="Инвентарь" showBack={true} tabs={tabs}>
       <div className="inventory-content">
-        {/* Настройки автобилда */}
-        {hasAutobuild && (
-          <Card className="inventory-autobuild-settings">
+        {activeTab === 'other' ? (
+          <>
+            {/* Подписка */}
+            <Card className="inventory-other-item">
+              <div className="inventory-other-header">
+                <div className="inventory-other-icon">⭐</div>
+                <div className="inventory-other-info">
+                  <div className="inventory-other-title">Премиум подписка</div>
+                  <div className="inventory-other-status">
+                    {hasPremium ? (
+                      <span style={{ color: '#4CAF50' }}>Активна</span>
+                    ) : (
+                      <span style={{ color: '#B6B6B6' }}>Неактивна</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {!hasPremium && (
+                <button
+                  className="inventory-item-button wear"
+                  onClick={() => navigate('/subscription')}
+                  style={{ marginTop: '12px' }}
+                >
+                  Купить подписку
+                </button>
+              )}
+            </Card>
+
+            {/* Настройки автобилда */}
+            {hasAutobuild && (
+              <Card className="inventory-autobuild-settings">
             <h3 className="inventory-autobuild-title">⚙️ Настройки автобилда города</h3>
             <div className="inventory-autobuild-content">
               <div className="inventory-autobuild-field">
@@ -344,7 +385,7 @@ export default function Inventory() {
                     onClick={() => setAutobuildSettings({
                       ...autobuildSettings,
                       strategy: 'balanced',
-                      priorityDistrict: null,
+                      priorityBuilding: null,
                     })}
                   >
                     Равномерно
@@ -356,26 +397,26 @@ export default function Inventory() {
                       strategy: 'priority',
                     })}
                   >
-                    Приоритет района
+                    Приоритет строения
                   </button>
                 </div>
               </div>
 
               {autobuildSettings.strategy === 'priority' && (
                 <div className="inventory-autobuild-field">
-                  <label className="inventory-autobuild-label">Приоритетный район:</label>
+                  <label className="inventory-autobuild-label">Приоритетное строение:</label>
                   <select
-                    value={autobuildSettings.priorityDistrict || ''}
+                    value={autobuildSettings.priorityBuilding || ''}
                     onChange={(e) => setAutobuildSettings({
                       ...autobuildSettings,
-                      priorityDistrict: e.target.value || null,
+                      priorityBuilding: e.target.value || null,
                     })}
                     className="inventory-autobuild-select"
                   >
-                    <option value="">Выберите район</option>
-                    {districts.map((district) => (
-                      <option key={district.code} value={district.code}>
-                        {district.name}
+                    <option value="">Выберите строение</option>
+                    {buildings.map((building) => (
+                      <option key={building.id} value={building.type}>
+                        {building.name}
                       </option>
                     ))}
                   </select>
