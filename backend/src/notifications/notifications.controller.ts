@@ -16,8 +16,17 @@ export class NotificationsController {
   @Get('unread-count')
   @UseGuards(JwtAuthGuard)
   async getUnreadCount(@CurrentUser() user: any) {
-    const count = await this.notificationsService.getUnreadCount(user.id);
-    return { count };
+    try {
+      if (!user || !user.id) {
+        console.error('❌ Notifications unread-count: пользователь не найден:', user);
+        return { count: 0 };
+      }
+      const count = await this.notificationsService.getUnreadCount(user.id);
+      return { count };
+    } catch (error) {
+      console.error('❌ Ошибка при получении количества непрочитанных уведомлений:', error);
+      return { count: 0 };
+    }
   }
 
   @Put(':id/read')

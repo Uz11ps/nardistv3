@@ -11,8 +11,17 @@ export class SubscriptionController {
   @Get('status')
   @UseGuards(JwtAuthGuard)
   async getStatus(@CurrentUser() user: any) {
-    const hasActive = await this.subscriptionService.hasActiveSubscription(user.id);
-    return { hasActive };
+    try {
+      if (!user || !user.id) {
+        console.error('❌ Subscription status: пользователь не найден:', user);
+        return { hasActive: false };
+      }
+      const hasActive = await this.subscriptionService.hasActiveSubscription(user.id);
+      return { hasActive };
+    } catch (error) {
+      console.error('❌ Ошибка при получении статуса подписки:', error);
+      return { hasActive: false };
+    }
   }
 
   @Get('plans')

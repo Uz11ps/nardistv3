@@ -24,13 +24,22 @@ export class ProgressController {
   @Get('energy')
   @UseGuards(JwtAuthGuard)
   async getEnergy(@CurrentUser() user: any) {
-    await this.progressService.restoreEnergy(user.id);
-    const userEntity = await this.progressService['usersService'].findOne(user.id);
-    return {
-      energy: userEntity.energy,
-      maxEnergy: userEntity.maxEnergy,
-      lastRestore: userEntity.lastEnergyRestore,
-    };
+    try {
+      if (!user || !user.id) {
+        console.error('❌ Progress energy: пользователь не найден:', user);
+        return { energy: 100, maxEnergy: 100, lastRestore: null };
+      }
+      await this.progressService.restoreEnergy(user.id);
+      const userEntity = await this.progressService['usersService'].findOne(user.id);
+      return {
+        energy: userEntity.energy,
+        maxEnergy: userEntity.maxEnergy,
+        lastRestore: userEntity.lastEnergyRestore,
+      };
+    } catch (error) {
+      console.error('❌ Ошибка при получении энергии:', error);
+      return { energy: 100, maxEnergy: 100, lastRestore: null };
+    }
   }
 
   @Get('lives')
