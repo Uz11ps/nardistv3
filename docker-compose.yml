@@ -71,7 +71,6 @@ services:
     volumes:
       - /app/node_modules
       - ./backend/uploads:/app/uploads
-      - ./frontend/public/uploads:/app/frontend-public-uploads
     networks:
       - nardi_network
     restart: unless-stopped
@@ -115,9 +114,8 @@ services:
       - /etc/letsencrypt/live/nardist.site/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
       # Монтируем статические файлы frontend из контейнера
       - frontend_static:/usr/share/nginx/html:ro
-      # Монтируем uploads для прямой отдачи файлов (из backend и frontend)
+      # Монтируем uploads для прямой отдачи файлов из backend
       - ./backend/uploads:/app/uploads:ro
-      - ./frontend/public/uploads:/usr/share/nginx/html/uploads:ro
     depends_on:
       backend:
         condition: service_healthy

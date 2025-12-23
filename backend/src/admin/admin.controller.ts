@@ -532,12 +532,9 @@ export class AdminController {
     AnyFilesInterceptor({ // Принимаем файлы с любыми именами полей: preview, boardTexture, diceTexture1-6, checkersTexture
       storage: diskStorage({
         destination: (req, file, cb) => {
-          // Сохраняем в frontend/public/uploads/skins для единообразия с классическими скинами
-          // Это публичные файлы, которые отдаются через nginx
-          // В Docker используем монтированный volume
-          const uploadsDir = process.env.DOCKER 
-            ? join('/app', 'frontend-public-uploads', 'skins')
-            : join(process.cwd(), '..', 'frontend', 'public', 'uploads', 'skins');
+          // Сохраняем в backend/uploads/skins - nginx отдает их напрямую из /app/uploads
+          // Это публичные файлы, которые отдаются через nginx из backend/uploads
+          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
           // Создаем директорию если её нет
           if (!existsSync(uploadsDir)) {
             mkdirSync(uploadsDir, { recursive: true });
