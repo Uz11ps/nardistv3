@@ -64,6 +64,8 @@ deploy() {
     sudo systemctl stop nginx 2>/dev/null || sudo service nginx stop 2>/dev/null || true
     sudo systemctl stop apache2 2>/dev/null || sudo service apache2 stop 2>/dev/null || true
     sudo systemctl stop httpd 2>/dev/null || sudo service httpd stop 2>/dev/null || true
+    sudo systemctl disable nginx 2>/dev/null || true
+    sudo systemctl disable apache2 2>/dev/null || true
     
     # Полная остановка и удаление контейнеров
     log "${YELLOW}🛑 Остановка и удаление старых контейнеров...${NC}"
@@ -102,8 +104,54 @@ deploy() {
         fi
     done
     
-    # Небольшая задержка чтобы порты освободились
-    sleep 2
+    # Принудительное освобождение портов 80 и 443
+    log "${YELLOW}🔓 Освобождение портов 80 и 443...${NC}"
+    
+    # Находим процессы, использующие порт 80
+    PORT80_PID=$(sudo lsof -ti :80 2>/dev/null || true)
+    if [ ! -z "$PORT80_PID" ]; then
+        log "${YELLOW}⚠️  Найден процесс на порту 80 (PID: $PORT80_PID), останавливаем...${NC}"
+        sudo kill -9 $PORT80_PID 2>/dev/null || true
+        sleep 1
+    fi
+    
+    # Находим процессы, использующие порт 443
+    PORT443_PID=$(sudo lsof -ti :443 2>/dev/null || true)
+    if [ ! -z "$PORT443_PID" ]; then
+        log "${YELLOW}⚠️  Найден процесс на порту 443 (PID: $PORT443_PID), останавливаем...${NC}"
+        sudo kill -9 $PORT443_PID 2>/dev/null || true
+        sleep 1
+    fi
+    
+    # Дополнительная проверка через netstat
+    if command -v netstat >/dev/null 2>&1; then
+        PORT80_PROCESS=$(sudo netstat -tulpn 2>/dev/null | grep ':80 ' | awk '{print $7}' | cut -d'/' -f1 | head -1)
+        if [ ! -z "$PORT80_PROCESS" ] && [ "$PORT80_PROCESS" != "-" ]; then
+            log "${YELLOW}⚠️  Найден процесс на порту 80 через netstat (PID: $PORT80_PROCESS), останавливаем...${NC}"
+            sudo kill -9 $PORT80_PROCESS 2>/dev/null || true
+            sleep 1
+        fi
+    fi
+    
+    # Задержка чтобы порты точно освободились
+    sleep 3
+    
+    # Финальная проверка портов
+    if sudo lsof -Pi :80 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        log "${RED}❌ Порт 80 все еще занят! Список процессов:${NC}"
+        sudo lsof -i :80 || true
+        log "${YELLOW}⚠️  Попробуйте вручную остановить процессы и запустите деплой снова${NC}"
+        return 1
+    fi
+    
+    if sudo lsof -Pi :443 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        log "${RED}❌ Порт 443 все еще занят! Список процессов:${NC}"
+        sudo lsof -i :443 || true
+        log "${YELLOW}⚠️  Попробуйте вручную остановить процессы и запустите деплой снова${NC}"
+        return 1
+    fi
+    
+    log "${GREEN}✅ Порты 80 и 443 свободны${NC}"
     
     # Пересборка и запуск
     log "${YELLOW}🔨 Пересборка и запуск контейнеров...${NC}"
