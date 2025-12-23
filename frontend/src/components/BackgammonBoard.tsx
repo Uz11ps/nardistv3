@@ -194,43 +194,76 @@ export default function BackgammonBoard({
   const getPointAtPosition = useCallback((x: number, y: number, canvas: HTMLCanvasElement): number | null => {
     const width = canvas.width
     const height = canvas.height
-    const barWidth = width * 0.05
-    const barX = (width - barWidth) / 2
-    const availableWidth = (width - barWidth) / 2
-    const pointWidth = availableWidth / 6
-    const pointHeight = height / 2
     
-    const points = gameState?.points || []
+    // Пересчитываем параметры, как в drawBoard
+    const barWidth = width * 0.08
+    const barX = (width - barWidth) / 2
+    const halfBoardWidth = (width - barWidth) / 2
+    const pointWidth = halfBoardWidth / 6
+    const pointHeight = height * 0.45
     
     // Проверяем все точки
+    const points = gameState?.points || []
+    
     for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
-      const { x: pointX, y: pointY, isTopRow, pointWidth: pWidth, pointHeight: pHeight } = getPointCoordinates(pointIndex, canvas)
+      const isTopRow = pointIndex < 12
       
-      const triangleWidth = pWidth * 0.95
-      const triangleHeight = pHeight * 0.95
-      const dx = Math.abs(x - pointX)
+      let columnXStart: number
+      let columnXEnd: number
       
-      // Проверка попадания в треугольник (стандартное расположение)
-      // Для верхнего ряда: основание у y (верх), острие у y+h
-      // Для нижнего ряда: основание у y (низ), острие у y-h
-      const inTriangle = dx < triangleWidth / 2 && 
-        (isTopRow 
-          ? (y >= pointY && y <= pointY + triangleHeight) // y растет вниз
-          : (y <= pointY && y >= pointY - triangleHeight)) // y уменьшается вверх
+      // Определяем X-границы колонки для этой точки
+      if (isTopRow) {
+        // Верхний ряд: 0-5 (справа), 6-11 (слева)
+        const isRightSide = pointIndex < 6
+        if (isRightSide) {
+          // Правая часть
+          const pointInHalf = pointIndex
+          // x центра = width - (pointInHalf * pointWidth + pointWidth / 2)
+          // Границы: от (width - (pointInHalf + 1) * pointWidth) до (width - pointInHalf * pointWidth)
+          columnXEnd = width - pointInHalf * pointWidth
+          columnXStart = width - (pointInHalf + 1) * pointWidth
+        } else {
+          // Левая часть
+          const pointInHalf = pointIndex - 6
+          // x центра = barX - (pointInHalf * pointWidth + pointWidth / 2)
+          // Границы: от (barX - (pointInHalf + 1) * pointWidth) до (barX - pointInHalf * pointWidth)
+          columnXEnd = barX - pointInHalf * pointWidth
+          columnXStart = barX - (pointInHalf + 1) * pointWidth
+        }
+      } else {
+        // Нижний ряд: 12-17 (слева), 18-23 (справа)
+        const isLeftSide = pointIndex < 18
+        if (isLeftSide) {
+          // Левая часть
+          const pointInHalf = pointIndex - 12
+          // x центра = (pointInHalf * pointWidth + pointWidth / 2)
+          columnXStart = pointInHalf * pointWidth
+          columnXEnd = (pointInHalf + 1) * pointWidth
+        } else {
+          // Правая часть
+          const pointInHalf = pointIndex - 18
+          // x центра = barX + barWidth + (pointInHalf * pointWidth + pointWidth / 2)
+          columnXStart = barX + barWidth + pointInHalf * pointWidth
+          columnXEnd = barX + barWidth + (pointInHalf + 1) * pointWidth
+        }
+      }
       
-      if (inTriangle) {
-        return pointIndex
+      // Проверяем X
+      if (x >= columnXStart && x <= columnXEnd) {
+        // Проверяем Y (расширенная зона: вся половина высоты доски)
+        if (isTopRow) {
+          if (y <= height / 2) return pointIndex
+        } else {
+          if (y > height / 2) return pointIndex
+        }
       }
     }
     
-    // Проверяем бар
-    const barYTop = pointHeight * 0.25
-    const barYBottom = height - pointHeight * 0.25
-    const barCheckWidth = pointWidth * 0.6
+    // Проверяем бар (если нужно)
+    // ...
     
-    if (Math.abs(x - (barX + barWidth / 2)) < barCheckWidth / 2 && y >= barYTop && y <= barYBottom) {
-      return isPlayer1 ? 24 : 25
-    }
+    return null
+  }, [gameState])
     
     // Проверяем область выноса
     const bearOffMargin = pointWidth * 1.5
@@ -566,6 +599,7 @@ export default function BackgammonBoard({
   
   // Обработка двойного клика (быстрый ход)
   const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // console.log('Double Click')
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
     const canvas = canvasRef.current
@@ -589,21 +623,24 @@ export default function BackgammonBoard({
     
     if (!bestMove) {
       // Сортируем по значению кубика (по убыванию), чтобы использовать больший кубик
-      moves.sort((a, b) => b.die - a.die)
-      bestMove = moves[0]
+      const sortedMoves = [...moves].sort((a, b) => b.die - a.die)
+      bestMove = sortedMoves[0]
     }
     
     if (bestMove) {
+      // console.log('Fast move:', bestMove)
       onMove(bestMove.from, bestMove.to, bestMove.die)
       // Сбрасываем выделение
       setSelectedPoint(null)
       setDragging(null)
       setDragPosition(null)
+      setValidTargetPoints(new Set())
     }
   }
 
   // Обработка начала перетаскивания
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // console.log('MouseDown', { canMove, isMyTurn, dragging })
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
     const canvas = canvasRef.current
@@ -612,6 +649,8 @@ export default function BackgammonBoard({
     const y = e.clientY - rect.top
     
     const pointIndex = getPointAtPosition(x, y, canvas)
+    // console.log('Clicked at', x, y, 'Point:', pointIndex)
+    
     if (pointIndex === null) return
     
     const points = gameState?.points || []
@@ -626,18 +665,25 @@ export default function BackgammonBoard({
       pointValue = points[pointIndex]
     }
     
+    // console.log('Point value:', pointValue, 'Player1:', isPlayer1)
+    
     if (pointValue === 0) return
     
-    const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0) || 
-                      (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
+    // Проверяем, моя ли это шашка
+    // Белые (Player1) > 0, Черные (Player2) < 0
+    const isMyChecker = isPlayer1 ? pointValue > 0 : pointValue < 0
+    const isMyBar = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
     
-    if (!isMyPoint) return
+    if (!isMyChecker && !isMyBar) return
     
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+    // console.log('Possible moves from this point:', pointMoves)
+    
     if (pointMoves.length === 0) return
     
     const { x: pointX, y: pointY } = getPointCoordinates(pointIndex, canvas)
     
+    // Начинаем перетаскивание
     setDragging({ pointIndex, offsetX: x - pointX, offsetY: y - pointY })
     setDragPosition({ x, y })
     setSelectedPoint(pointIndex)
