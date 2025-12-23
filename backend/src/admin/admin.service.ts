@@ -1324,19 +1324,32 @@ export class AdminService implements OnModuleInit {
   // Расширенные функции управления пользователями
   async updateUserBalance(userId: string, narCoin: number, xp?: number) {
     try {
-      const user = await this.usersService.findOne(userId);
-      const updateData: any = { narCoin: BigInt(narCoin) };
+      if (narCoin === undefined || narCoin === null || isNaN(narCoin)) {
+        throw new BadRequestException('Некорректное значение NAR-coin');
+      }
+      
+      const updateData: any = { narCoin: BigInt(Math.max(0, narCoin)) };
+      
       if (xp !== undefined && xp !== null) {
-        // Конвертируем XP в BigInt
-        const xpValue = typeof xp === 'string' ? parseInt(xp, 10) : xp;
+        // Конвертируем XP в число (не BigInt, чтобы usersService.update правильно обработал)
+        const xpValue = typeof xp === 'string' ? parseInt(xp, 10) : Number(xp);
         if (isNaN(xpValue)) {
           throw new BadRequestException('Некорректное значение XP');
         }
-        updateData.xp = BigInt(Math.max(0, xpValue));
+        // Передаем как число, чтобы usersService.update правильно определил изменение
+        updateData.xp = Math.max(0, xpValue);
       }
       
       // Обновляем баланс и XP (синхронизация уровня происходит автоматически в usersService.update)
-      return this.usersService.update(userId, updateData);
+      const updatedUser = await this.usersService.update(userId, updateData);
+      
+      // Убеждаемся, что уровень синхронизирован (дополнительная проверка)
+      if (xp !== undefined && xp !== null) {
+        await this.progressService.syncLevelFromXP(userId);
+        return this.usersService.findOne(userId);
+      }
+      
+      return updatedUser;
     } catch (error) {
       this.logger.error(`Error updating balance for user ${userId}:`, error);
       throw new BadRequestException(`Ошибка при обновлении баланса: ${error.message}`);

@@ -837,27 +837,66 @@ export default function Admin() {
                       onClick={async () => {
                         try {
                           // Собираем все данные из формы
-                          const narCoin = parseInt((document.getElementById('edit-narcoin') as HTMLInputElement).value)
-                          const xp = parseInt((document.getElementById('edit-xp') as HTMLInputElement).value)
-                          const level = parseInt((document.getElementById('edit-level') as HTMLInputElement).value)
-                          const isAdmin = (document.getElementById('edit-admin') as HTMLInputElement).checked
+                          const narCoinEl = document.getElementById('edit-narcoin') as HTMLInputElement
+                          const xpEl = document.getElementById('edit-xp') as HTMLInputElement
+                          const levelEl = document.getElementById('edit-level') as HTMLInputElement
+                          const isAdminEl = document.getElementById('edit-admin') as HTMLInputElement
+                          
+                          const narCoin = narCoinEl ? parseInt(narCoinEl.value || '0') : 0
+                          const xp = xpEl ? parseInt(xpEl.value || '0') : 0
+                          const level = levelEl ? parseInt(levelEl.value || '1') : 1
+                          const isAdmin = isAdminEl ? isAdminEl.checked : false
                           
                           const referralPercentEl = document.getElementById('edit-referral-percent') as HTMLInputElement
                           const referralBaseBonusEl = document.getElementById('edit-referral-base-bonus') as HTMLInputElement
                           const referralPercent = referralPercentEl ? parseInt(referralPercentEl.value || '5') : 5
                           const referralBaseBonus = referralBaseBonusEl ? parseInt(referralBaseBonusEl.value || '100') : 100
 
-                          // Выполняем все запросы последовательно
-                          await apiClient.put(`/admin/users/${selectedUser.id}/balance`, { narCoin, xp })
-                          await apiClient.put(`/admin/users/${selectedUser.id}/level`, { level })
-                          await apiClient.put(`/admin/users/${selectedUser.id}/role`, { isAdmin, isTrainer: false })
-                          await apiClient.put(`/admin/users/${selectedUser.id}/referral-settings`, { referralPercent, referralBaseBonus })
+                          // Валидация
+                          if (isNaN(narCoin) || narCoin < 0) {
+                            alert('Некорректное значение NAR-coin')
+                            return
+                          }
+                          if (isNaN(xp) || xp < 0) {
+                            alert('Некорректное значение XP')
+                            return
+                          }
+                          if (isNaN(level) || level < 1 || level > 50) {
+                            alert('Некорректное значение уровня (должно быть от 1 до 50)')
+                            return
+                          }
+
+                          // Выполняем все запросы последовательно с обработкой ошибок
+                          try {
+                            await apiClient.put(`/admin/users/${selectedUser.id}/balance`, { narCoin, xp })
+                          } catch (err: any) {
+                            throw new Error(`Ошибка обновления баланса: ${err.response?.data?.message || err.message}`)
+                          }
+                          
+                          try {
+                            await apiClient.put(`/admin/users/${selectedUser.id}/level`, { level })
+                          } catch (err: any) {
+                            throw new Error(`Ошибка обновления уровня: ${err.response?.data?.message || err.message}`)
+                          }
+                          
+                          try {
+                            await apiClient.put(`/admin/users/${selectedUser.id}/role`, { isAdmin, isTrainer: false })
+                          } catch (err: any) {
+                            throw new Error(`Ошибка обновления роли: ${err.response?.data?.message || err.message}`)
+                          }
+                          
+                          try {
+                            await apiClient.put(`/admin/users/${selectedUser.id}/referral-settings`, { referralPercent, referralBaseBonus })
+                          } catch (err: any) {
+                            throw new Error(`Ошибка обновления реферальных настроек: ${err.response?.data?.message || err.message}`)
+                          }
 
                           alert('Все изменения сохранены')
                           loadStats()
                           setSelectedUser(null)
                         } catch (err: any) {
-                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                          alert('Ошибка: ' + (err.message || err.response?.data?.message || 'Неизвестная ошибка'))
+                          console.error('Ошибка сохранения пользователя:', err)
                         }
                       }}
                     >

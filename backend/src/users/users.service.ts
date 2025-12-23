@@ -56,8 +56,10 @@ export class UsersService {
     }
     
     // Конвертируем xp в bigint если он есть
-    if ((updateUserDto as any).xp !== undefined) {
+    if ((updateUserDto as any).xp !== undefined && (updateUserDto as any).xp !== null) {
       const xpValue = (updateUserDto as any).xp;
+      const oldXp = user.xp;
+      
       if (typeof xpValue === 'bigint') {
         (user as any).xp = xpValue;
       } else {
@@ -66,7 +68,11 @@ export class UsersService {
           (user as any).xp = BigInt(Math.max(0, xpNum));
         }
       }
-      xpWasUpdated = true;
+      
+      // Проверяем, действительно ли XP изменился
+      if (oldXp !== user.xp) {
+        xpWasUpdated = true;
+      }
       delete (updateUserDto as any).xp;
     }
     
