@@ -33,19 +33,21 @@ export default function ClanTreasury() {
   const [showContributeModal, setShowContributeModal] = useState(false)
   const [contributeAmount, setContributeAmount] = useState('')
   const [contributing, setContributing] = useState(false)
+  const [showAllTransactions, setShowAllTransactions] = useState(false)
 
   useEffect(() => {
     if (clanId) {
       loadData()
     }
-  }, [clanId])
+  }, [clanId, showAllTransactions])
 
   const loadData = async () => {
     try {
       setLoading(true)
+      const limit = showAllTransactions ? 100 : 5
       const [clanResponse, transactionsResponse] = await Promise.all([
         apiClient.get(`/clans/${clanId}`).catch(() => ({ data: null })),
-        apiClient.get(`/clans/${clanId}/treasury/transactions?limit=5`).catch(() => ({ data: [] })),
+        apiClient.get(`/clans/${clanId}/treasury/transactions?limit=${limit}`).catch(() => ({ data: [] })),
       ])
       setClan(clanResponse.data)
       setTransactions(transactionsResponse.data || [])
@@ -55,6 +57,12 @@ export default function ClanTreasury() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (clanId) {
+      loadData()
+    }
+  }, [clanId, showAllTransactions])
 
   const formatAmount = (amount: number | string) => {
     const num = typeof amount === 'string' ? parseInt(amount) : amount
@@ -169,7 +177,14 @@ export default function ClanTreasury() {
               )
             })}
           </div>
-          <button className="clan-treasury-view-all-button">Посмотреть всё</button>
+          <button 
+            className="clan-treasury-view-all-button"
+            onClick={() => {
+              setShowAllTransactions(!showAllTransactions)
+            }}
+          >
+            {showAllTransactions ? 'Скрыть' : 'Посмотреть всё'}
+          </button>
           <button 
             className="clan-treasury-contribute-button"
             onClick={() => setShowContributeModal(true)}

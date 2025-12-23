@@ -342,12 +342,28 @@ export class AdminService implements OnModuleInit {
       if (botToken) {
         for (const user of users) {
           try {
-            await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-              chat_id: user.telegramId,
-              text: message,
-            });
+            if (data.imageUrl) {
+              // Отправляем с изображением
+              const imagePath = join(process.cwd(), 'frontend', 'public', data.imageUrl);
+              const FormData = require('form-data');
+              const fs = require('fs');
+              const form = new FormData();
+              form.append('chat_id', user.telegramId);
+              form.append('caption', message);
+              form.append('photo', fs.createReadStream(imagePath));
+              
+              await axios.post(`https://api.telegram.org/bot${botToken}/sendPhoto`, form, {
+                headers: form.getHeaders(),
+              });
+            } else {
+              // Отправляем только текст
+              await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                chat_id: user.telegramId,
+                text: message,
+              });
+            }
             results.push({ userId: user.telegramId, status: 'sent' });
-          } catch (error) {
+          } catch (error: any) {
             results.push({ userId: user.telegramId, status: 'error', error: error.message });
           }
         }
@@ -370,14 +386,31 @@ export class AdminService implements OnModuleInit {
       await this.notificationsService.createNotification(user.id, title, message, type, data.imageUrl);
 
       // Отправляем через Telegram (если настроен)
-      if (botToken) {
+      if (botToken && user.telegramId) {
         try {
-          await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            chat_id: user.telegramId,
-            text: message,
-          });
-        } catch (error) {
+          if (data.imageUrl) {
+            // Отправляем с изображением
+            const imagePath = join(process.cwd(), 'frontend', 'public', data.imageUrl);
+            const FormData = require('form-data');
+            const fs = require('fs');
+            const form = new FormData();
+            form.append('chat_id', user.telegramId);
+            form.append('caption', message);
+            form.append('photo', fs.createReadStream(imagePath));
+            
+            await axios.post(`https://api.telegram.org/bot${botToken}/sendPhoto`, form, {
+              headers: form.getHeaders(),
+            });
+          } else {
+            // Отправляем только текст
+            await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              chat_id: user.telegramId,
+              text: message,
+            });
+          }
+        } catch (error: any) {
           // Игнорируем ошибки Telegram, так как уведомление уже сохранено в БД
+          this.logger.warn(`Не удалось отправить уведомление в Telegram пользователю ${user.id}: ${error.message}`);
         }
       }
 
@@ -419,22 +452,38 @@ export class AdminService implements OnModuleInit {
 
   async createGame(data: { player1Id: string; player2Id?: string; mode: string; type: string }) {
     try {
-      // Проверяем существование игроков
-      const player1 = await this.usersService.findOne(data.player1Id);
+      // Проверяем существование игроков - поддерживаем как UUID, так и username
+      let player1 = await this.usersService.findOne(data.player1Id);
       if (!player1) {
-        throw new NotFoundException('Игрок 1 не найден');
+        // Пробуем найти по username
+        const users = await this.usersRepository.find({ where: { username: data.player1Id } });
+        if (users.length > 0) {
+          player1 = users[0];
+        } else {
+          throw new NotFoundException('Игрок 1 не найден (проверьте UUID или username)');
+        }
       }
 
+      let player2Id = data.player2Id;
       if (data.player2Id) {
-        const player2 = await this.usersService.findOne(data.player2Id);
+        let player2 = await this.usersService.findOne(data.player2Id);
         if (!player2) {
-          throw new NotFoundException('Игрок 2 не найден');
+          // Пробуем найти по username
+          const users = await this.usersRepository.find({ where: { username: data.player2Id } });
+          if (users.length > 0) {
+            player2 = users[0];
+            player2Id = player2.id;
+          } else {
+            throw new NotFoundException('Игрок 2 не найден (проверьте UUID или username)');
+          }
+        } else {
+          player2Id = player2.id;
         }
       }
 
       return this.gamesService.create(
-        data.player1Id,
-        data.player2Id || null,
+        player1.id,
+        player2Id || null,
         data.mode as GameMode,
         data.type as GameType,
       );

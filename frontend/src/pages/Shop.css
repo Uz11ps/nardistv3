@@ -198,6 +198,44 @@
   margin-bottom: 16px;
 }
 
+.shop-autobuild-card {
+  animation: fadeIn 0.3s ease-out;
+  margin-top: 12px;
+}
+
+.shop-autobuild-payment-btn {
+  transition: all 0.2s ease;
+}
+
+.shop-autobuild-payment-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(232, 65, 66, 0.3);
+}
+
+.shop-autobuild-payment-btn.active {
+  animation: pulse-button 2s infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-button {
+  0%, 100% {
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    box-shadow: 0 2px 8px 0 rgba(232, 65, 66, 0.5);
+  }
+}
+
 .shop-subscription-plans {
   display: flex;
   flex-direction: column;

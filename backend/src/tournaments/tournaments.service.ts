@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Not, IsNull } from 'typeorm';
 import { Tournament, TournamentFormat, TournamentStatus } from './tournament.entity';
 import { TournamentMatch, MatchStatus } from './tournament-match.entity';
 import { GamesService } from '../games/games.service';
@@ -74,13 +74,25 @@ export class TournamentsService {
     const result = [];
     for (const tournament of tournaments) {
       let registered = false;
+      // Пересчитываем currentParticipants для каждого турнира
+      const actualParticipants = await this.matchesRepository.count({
+        where: { 
+          tournamentId: tournament.id,
+          player1Id: Not(IsNull()),
+        },
+      });
+      if (tournament.currentParticipants !== actualParticipants) {
+        tournament.currentParticipants = actualParticipants;
+        await this.tournamentsRepository.save(tournament);
+      }
+
       if (userId) {
-        // Проверяем регистрацию через отдельный запрос к matches
+        // Проверяем регистрацию - пользователь зарегистрирован, если он player1 в матче
         const userMatch = await this.matchesRepository.findOne({
-          where: [
-            { tournamentId: tournament.id, player1Id: userId },
-            { tournamentId: tournament.id, player2Id: userId },
-          ],
+          where: { 
+            tournamentId: tournament.id, 
+            player1Id: userId,
+          },
         });
         registered = !!userMatch;
       }
@@ -140,16 +152,31 @@ export class TournamentsService {
       throw new BadRequestException('Регистрация закрыта');
     }
 
+    // Пересчитываем текущее количество участников на основе реальных матчей
+    const actualParticipants = await this.matchesRepository.count({
+      where: { 
+        tournamentId,
+        player1Id: Not(IsNull()), // Только матчи с зарегистрированным первым игроком
+      },
+    });
+
+    // Синхронизируем currentParticipants с реальным количеством
+    if (tournament.currentParticipants !== actualParticipants) {
+      tournament.currentParticipants = actualParticipants;
+      await this.tournamentsRepository.save(tournament);
+    }
+
     if (tournament.currentParticipants >= tournament.maxParticipants) {
       throw new BadRequestException('Турнир заполнен');
     }
 
     // Проверяем регистрацию через matches (player1Id или player2Id)
+    // Проверяем только матчи, где пользователь является player1 (зарегистрированным участником)
     const existingMatch = await this.matchesRepository.findOne({
-      where: [
-        { tournamentId, player1Id: userId },
-        { tournamentId, player2Id: userId },
-      ],
+      where: { 
+        tournamentId, 
+        player1Id: userId,
+      },
     });
 
     if (existingMatch) {

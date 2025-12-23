@@ -815,7 +815,103 @@
    ============================================ */
 
 .tournaments-list,
-.articles-list,
+.articles-list {
+  margin-top: 24px;
+}
+
+.articles-list table {
+  width: 100%;
+  border-collapse: collapse;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #3a3a3a;
+}
+
+.articles-list thead {
+  background: #1a1a1a;
+}
+
+.articles-list th {
+  padding: 16px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #aaaaaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.articles-list tbody tr {
+  border-bottom: 1px solid #3a3a3a;
+  transition: background 0.2s;
+}
+
+.articles-list tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.articles-list tbody tr:last-child {
+  border-bottom: none;
+}
+
+.articles-list td {
+  padding: 16px;
+  font-size: 14px;
+  color: #ffffff;
+  vertical-align: middle;
+}
+
+.articles-list .articles-list {
+  margin-top: 24px;
+}
+
+.articles-list table {
+  width: 100%;
+  border-collapse: collapse;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #3a3a3a;
+}
+
+.articles-list thead {
+  background: #1a1a1a;
+}
+
+.articles-list th {
+  padding: 16px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #aaaaaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.articles-list tbody tr {
+  border-bottom: 1px solid #3a3a3a;
+  transition: background 0.2s;
+}
+
+.articles-list tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.articles-list tbody tr:last-child {
+  border-bottom: none;
+}
+
+.articles-list td {
+  padding: 16px;
+  font-size: 14px;
+  color: #ffffff;
+  vertical-align: middle;
+}
+
+.articles-list .articles-list,
 .skins-list {
   margin-bottom: 24px;
 }

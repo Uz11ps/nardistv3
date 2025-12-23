@@ -610,8 +610,60 @@ export default function Admin() {
               </table>
             </div>
             {selectedUser && (
-              <div className="edit-form">
-                <h3>Редактирование пользователя: {selectedUser.nickname || selectedUser.username}</h3>
+              <div 
+                className="admin-modal-overlay" 
+                onClick={() => setSelectedUser(null)}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  padding: '20px',
+                }}
+              >
+                <div 
+                  className="edit-form admin-modal"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    maxWidth: '600px',
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    border: '1px solid #3a3a3a',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0, color: '#FFF' }}>Редактирование пользователя: {selectedUser.nickname || selectedUser.username}</h3>
+                    <button
+                      onClick={() => setSelectedUser(null)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#FFF',
+                        fontSize: '32px',
+                        cursor: 'pointer',
+                        padding: 0,
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
                 <div className="form-group">
                   <label>NAR-coin:</label>
                   <input
@@ -1007,7 +1059,35 @@ export default function Admin() {
 
             {/* Управление шаблонами уведомлений Telegram */}
             <div className="notification-templates" style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid #3a3a3a' }}>
-              <h3>Шаблоны уведомлений Telegram</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0 }}>Шаблоны уведомлений Telegram</h3>
+                <button
+                  onClick={() => {
+                    const newType = prompt('Введите тип шаблона (например: inactive_user, birthday, tournament_start):')
+                    if (newType) {
+                      setEditingTemplate({
+                        type: newType,
+                        title: '',
+                        message: '',
+                        isActive: true,
+                        description: '',
+                      })
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#4CAF50',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                  }}
+                >
+                  + Добавить шаблон
+                </button>
+              </div>
               <p style={{ color: '#999', fontSize: '14px', marginBottom: '20px' }}>
                 Редактируйте шаблоны автоматических уведомлений. Используйте переменные: {'{username}'}, {'{level}'}, {'{days}'}
               </p>
@@ -1053,6 +1133,30 @@ export default function Admin() {
                           }}
                         >
                           Редактировать
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (confirm(`Удалить шаблон "${template.type}"?`)) {
+                              try {
+                                await apiClient.delete(`/admin/notification-templates/${template.type}`)
+                                alert('Шаблон удален')
+                                loadStats()
+                              } catch (error: any) {
+                                alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                              }
+                            }
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            background: '#e74c3c',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                          }}
+                        >
+                          Удалить
                         </button>
                       </div>
                     </div>
@@ -1164,12 +1268,25 @@ export default function Admin() {
                       <button
                         onClick={async () => {
                           try {
-                            await apiClient.put(`/admin/notification-templates/${editingTemplate.type}`, {
-                              title: editingTemplate.title,
-                              message: editingTemplate.message,
-                              isActive: editingTemplate.isActive,
-                            })
-                            alert('Шаблон успешно обновлен!')
+                            if (editingTemplate.id) {
+                              // Обновление существующего шаблона
+                              await apiClient.put(`/admin/notification-templates/${editingTemplate.type}`, {
+                                title: editingTemplate.title,
+                                message: editingTemplate.message,
+                                isActive: editingTemplate.isActive,
+                              })
+                              alert('Шаблон успешно обновлен!')
+                            } else {
+                              // Создание нового шаблона
+                              await apiClient.post('/admin/notification-templates', {
+                                type: editingTemplate.type,
+                                title: editingTemplate.title,
+                                message: editingTemplate.message,
+                                isActive: editingTemplate.isActive,
+                                description: editingTemplate.description || '',
+                              })
+                              alert('Шаблон успешно создан!')
+                            }
                             setEditingTemplate(null)
                             const response = await apiClient.get('/admin/notification-templates')
                             setNotificationTemplates(response.data || [])

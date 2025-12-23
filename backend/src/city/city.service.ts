@@ -15,6 +15,7 @@ import { QuestTarget } from '../quests/quest.entity';
 export class CityService {
   private readonly INCOME_CAP = 10000;
   private readonly CAPTURE_COOLDOWN_DAYS = 3; // Клан может захватить территорию раз в 3 дня
+  private readonly CAPTURE_DURATION_HOURS = 3; // Захват длится 3 часа
 
   constructor(
     @InjectRepository(Building)
@@ -74,18 +75,27 @@ export class CityService {
     let clanIncome = 0;
     let platformFee = 0;
 
-    if (building.capturedByClanId) {
-      // 50% игроку, 10% клану, 40% комиссия платформе
-      playerIncome = Math.floor(totalIncome * 0.5);
-      clanIncome = Math.floor(totalIncome * 0.1);
-      platformFee = totalIncome - playerIncome - clanIncome; // Остаток идет в комиссию
-      
-      // Начисляем клану
-      if (clanIncome > 0) {
-        const clan = await this.clansService.findOne(building.capturedByClanId);
-        if (clan) {
-          clan.treasury = (BigInt(clan.treasury || 0) + BigInt(clanIncome)).toString();
-          await this.clansService['clansRepository'].save(clan);
+    // Проверяем, не истекло ли время захвата (3 часа)
+    if (building.capturedByClanId && building.capturedAt) {
+      const hoursSinceCapture = (Date.now() - new Date(building.capturedAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSinceCapture >= this.CAPTURE_DURATION_HOURS) {
+        // Время захвата истекло, освобождаем предприятие
+        building.capturedByClanId = null;
+        building.capturedAt = null;
+        await this.buildingsRepository.save(building);
+      } else {
+        // Если захвачено кланом и время не истекло, игрок получает 50%, клан получает 10% от общей суммы
+        playerIncome = Math.floor(totalIncome * 0.5);
+        clanIncome = Math.floor(totalIncome * 0.1);
+        platformFee = totalIncome - playerIncome - clanIncome; // Остаток идет в комиссию
+        
+        // Начисляем клану
+        if (clanIncome > 0) {
+          const clan = await this.clansService.findOne(building.capturedByClanId);
+          if (clan) {
+            clan.treasury = (BigInt(clan.treasury || 0) + BigInt(clanIncome)).toString();
+            await this.clansService['clansRepository'].save(clan);
+          }
         }
       }
     } else {
@@ -203,9 +213,9 @@ export class CityService {
       throw new BadRequestException('Достигнут максимальный уровень');
     }
 
-    // Вычисляем стоимость улучшения
-    const upgradeCosts = config.upgradeCosts || {};
-    const upgradeCost = upgradeCosts[building.level] || (building.level * 1000);
+    // Вычисляем стоимость улучшения: всегда в 1.4 раза от базовой цены покупки
+    const basePrice = Number(building.purchasePrice || config.basePrice || 0);
+    const upgradeCost = Math.floor(basePrice * 1.4);
 
     const user = await this.usersService.findOne(userId);
 
@@ -220,9 +230,11 @@ export class CityService {
     // Улучшаем предприятие
     building.level++;
     // Увеличиваем доход на 20% за уровень
-    building.incomePerHour = (BigInt(building.incomePerHour || 0) * BigInt(120) / BigInt(100)).toString();
-    // Увеличиваем максимальное накопление на 20%
-    building.maxAccumulation = (BigInt(building.maxAccumulation || 0) * BigInt(120) / BigInt(100)).toString();
+    const currentIncome = Number(building.incomePerHour || 0);
+    const newIncome = Math.floor(currentIncome * 1.2);
+    building.incomePerHour = newIncome.toString();
+    // Увеличиваем максимальное накопление пропорционально (доход * 20 часов)
+    building.maxAccumulation = (newIncome * 20).toString();
     
     return this.buildingsRepository.save(building);
   }
@@ -250,8 +262,20 @@ export class CityService {
     // Получаем предприятия пользователя
     const userBuildings = userId ? await this.buildingsRepository.find({ where: { userId } }) : [];
     
-    // Получаем все захваченные предприятия
+    // Получаем все захваченные предприятия и проверяем истекшие захваты
     const allBuildings = await this.buildingsRepository.find();
+    const now = new Date();
+    for (const b of allBuildings) {
+      if (b.capturedByClanId && b.capturedAt) {
+        const hoursSinceCapture = (now.getTime() - new Date(b.capturedAt).getTime()) / (1000 * 60 * 60);
+        if (hoursSinceCapture >= this.CAPTURE_DURATION_HOURS) {
+          // Время захвата истекло, освобождаем предприятие
+          b.capturedByClanId = null;
+          b.capturedAt = null;
+          await this.buildingsRepository.save(b);
+        }
+      }
+    }
     const capturedBuildings = allBuildings.filter(b => b.capturedByClanId !== null);
     
     const districtsData = await Promise.all(
@@ -442,18 +466,21 @@ export class CityService {
     user.narCoin = BigInt(user.narCoin || 0) - BigInt(purchasePrice);
     await this.usersService['usersRepository'].save(user);
 
-    // Создаем предприятие
+    // Создаем предприятие с базовым доходом на 1 уровне
+    const baseIncome = Number(config.baseIncomePerHour || 0);
+    const maxAccum = Number(config.maxAccumulation || baseIncome * 20); // Максимум = доход * 20 часов
+    
     const building = this.buildingsRepository.create({
       userId,
       district,
       type,
       level: 1,
-      incomePerHour: config.baseIncomePerHour,
-      maxAccumulation: config.maxAccumulation,
-      purchasePrice: config.basePrice,
+      incomePerHour: baseIncome.toString(),
       accumulatedIncome: '0',
+      purchasePrice: config.basePrice,
+      maxAccumulation: maxAccum.toString(),
     });
-
+    
     return this.buildingsRepository.save(building);
   }
 
@@ -495,9 +522,26 @@ export class CityService {
       throw new BadRequestException('Нельзя захватить свое предприятие');
     }
 
-    // Проверяем, не захвачено ли уже другим кланом
-    if (building.capturedByClanId && building.capturedByClanId === clan.id) {
-      throw new BadRequestException('Ваш клан уже владеет этой территорией');
+    // Проверяем, не захвачено ли уже другим кланом или не истекло ли время захвата
+    if (building.capturedByClanId) {
+      // Проверяем, не истекло ли время захвата (3 часа)
+      if (building.capturedAt) {
+        const hoursSinceCapture = (Date.now() - new Date(building.capturedAt).getTime()) / (1000 * 60 * 60);
+        if (hoursSinceCapture >= this.CAPTURE_DURATION_HOURS) {
+          // Время захвата истекло, освобождаем предприятие
+          building.capturedByClanId = null;
+          building.capturedAt = null;
+          await this.buildingsRepository.save(building);
+        } else if (building.capturedByClanId === clan.id) {
+          throw new BadRequestException('Ваш клан уже владеет этой территорией');
+        } else {
+          throw new BadRequestException('Предприятие уже захвачено другим кланом');
+        }
+      } else {
+        // Если нет даты захвата, но есть клан - освобождаем
+        building.capturedByClanId = null;
+        await this.buildingsRepository.save(building);
+      }
     }
 
     // Захватываем территорию
