@@ -68,7 +68,7 @@ export default function City() {
       const [buildingsRes, availableRes, districtsRes] = await Promise.all([
         apiClient.get('/city/my-buildings').catch(() => ({ data: [] })),
         apiClient.get('/city/buildings').catch(() => ({ data: [] })),
-        apiClient.get('/admin/districts').catch(() => ({ data: [] })),
+        apiClient.get('/city/districts').catch(() => apiClient.get('/admin/districts').catch(() => ({ data: [] }))),
       ])
 
       setBuildings(buildingsRes.data || [])
@@ -321,12 +321,12 @@ export default function City() {
           </div>
         </div>
 
-        {buildings.length === 0 && filteredBuildings.length === 0 && (
+        {districts.length === 0 && availableBuildings.length === 0 && buildings.length === 0 && (
           <div className="city-unavailable">
             <img src="/img/город.png" alt="City" className="city-unavailable-icon" />
             <h2 className="city-unavailable-title">Город недоступен</h2>
             <p className="city-unavailable-text">
-              Строения пока не настроены администратором
+              Районы и строения пока не настроены администратором. Обратитесь к администратору для настройки города.
             </p>
           </div>
         )}

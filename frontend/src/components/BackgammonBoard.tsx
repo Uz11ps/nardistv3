@@ -47,6 +47,8 @@ export default function BackgammonBoard({
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
+  const [dragging, setDragging] = useState<{ pointIndex: number; offsetX: number; offsetY: number } | null>(null)
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   
   const [textures, setTextures] = useState<{
     myBoard?: HTMLImageElement
@@ -183,23 +185,23 @@ export default function BackgammonBoard({
     const width = rect.width
     const height = rect.height
     
-    // Кубики кидаются на часть доски, чей ход
-    // Если мой ход - кубики слева внизу (моя часть)
-    // Если ход противника - кубики справа вверху (его часть)
+    // Кубики кидаются на половину доски, чей ход
+    // Если мой ход - кубики на левой половине доски (моя половина = две четверти)
+    // Если ход противника - кубики на правой половине доски (его половина = две четверти)
     const isMyTurnNow = isMyTurn && canMove
     
     if (isMyTurnNow) {
-      // Моя часть доски (левая, нижняя половина)
+      // Моя половина доски (левая половина = две четверти)
       setDice3DPosition({
         x: width * 0.25,
-        y: height * 0.75,
+        y: height * 0.5,
         size: Math.min(width, height) * 0.08,
       })
     } else {
-      // Часть противника (правая, верхняя половина)
+      // Половина противника (правая половина = две четверти)
       setDice3DPosition({
         x: width * 0.75,
-        y: height * 0.25,
+        y: height * 0.5,
         size: Math.min(width, height) * 0.08,
       })
     }
@@ -222,43 +224,39 @@ export default function BackgammonBoard({
     
     const halfWidth = width / 2
     const halfHeight = height / 2
+    const quarterHeight = height / 4
     
-    // ЛЕВАЯ ЧАСТЬ ДОСКИ - МОЯ (нижняя половина левой части)
-    // Рисуем нижнюю левую четверть доски
+    // ЛЕВАЯ ПОЛОВИНА ДОСКИ - МОЯ (две четверти: верхняя левая + нижняя левая)
+    // Рисуем всю левую половину доски
     if (textures.myBoard) {
       ctx.save()
       ctx.beginPath()
-      ctx.rect(0, halfHeight, halfWidth, halfHeight)
+      ctx.rect(0, 0, halfWidth, height)
       ctx.clip()
-      // Рисуем текстуру доски (только нижнюю левую четверть)
-      ctx.drawImage(textures.myBoard, 0, halfHeight, halfWidth, halfHeight)
+      // Рисуем текстуру доски на всю левую половину (две четверти)
+      ctx.drawImage(textures.myBoard, 0, 0, halfWidth, height)
       ctx.restore()
     } else {
       // Дефолтная текстура - коричневая доска
       ctx.fillStyle = '#8B4513'
-      ctx.fillRect(0, halfHeight, halfWidth, halfHeight)
+      ctx.fillRect(0, 0, halfWidth, height)
     }
     
-    // ПРАВАЯ ЧАСТЬ ДОСКИ - ПРОТИВНИКА (верхняя половина правой части)
-    // Рисуем верхнюю правую четверть доски
+    // ПРАВАЯ ПОЛОВИНА ДОСКИ - ПРОТИВНИКА (две четверти: верхняя правая + нижняя правая)
+    // Рисуем всю правую половину доски
     if (textures.opponentBoard) {
       ctx.save()
       ctx.beginPath()
-      ctx.rect(halfWidth, 0, halfWidth, halfHeight)
+      ctx.rect(halfWidth, 0, halfWidth, height)
       ctx.clip()
-      // Рисуем текстуру доски (только верхнюю правую четверть)
-      ctx.drawImage(textures.opponentBoard, halfWidth, 0, halfWidth, halfHeight)
+      // Рисуем текстуру доски на всю правую половину (две четверти)
+      ctx.drawImage(textures.opponentBoard, halfWidth, 0, halfWidth, height)
       ctx.restore()
     } else {
       // Дефолтная текстура
       ctx.fillStyle = '#654321'
-      ctx.fillRect(halfWidth, 0, halfWidth, halfHeight)
+      ctx.fillRect(halfWidth, 0, halfWidth, height)
     }
-    
-    // Остальные части доски (фон)
-    ctx.fillStyle = '#D2B48C'
-    ctx.fillRect(0, 0, halfWidth, halfHeight) // Верхняя левая
-    ctx.fillRect(halfWidth, halfHeight, halfWidth, halfHeight) // Нижняя правая
     
     // Отрисовка точек (24 точки на доске для нардов)
     const points = gameState.points || []
@@ -293,7 +291,11 @@ export default function BackgammonBoard({
       const stackHeight = Math.min(checkerCount, 5) * checkerSize * 0.6
       const startY = isTopRow ? y - stackHeight : y
       
-      for (let i = 0; i < Math.min(checkerCount, 5); i++) {
+      // Если перетаскиваем шашку с этой точки, не рисуем её здесь
+      const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
+      const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, 5) : Math.min(checkerCount, 5)
+      
+      for (let i = 0; i < checkersToDraw; i++) {
         const checkerY = isTopRow 
           ? startY + i * checkerSize * 0.6
           : startY + i * checkerSize * 0.6
@@ -323,12 +325,46 @@ export default function BackgammonBoard({
         }
       }
       
-      // Если шашек больше 5, показываем число
+      // Рисуем перетаскиваемую шашку
+      if (isDraggingFromThisPoint && dragPosition) {
+        const checkerSize = Math.min(pointWidth * 0.35, pointHeight * 0.4)
+        const dragX = dragPosition.x - dragging.offsetX
+        const dragY = dragPosition.y - dragging.offsetY
+        
+        ctx.save()
+        ctx.globalAlpha = 0.8
+        ctx.beginPath()
+        ctx.arc(dragX, dragY, checkerSize / 2, 0, Math.PI * 2)
+        ctx.clip()
+        if (checkerTexture) {
+          ctx.drawImage(
+            checkerTexture,
+            dragX - checkerSize / 2,
+            dragY - checkerSize / 2,
+            checkerSize,
+            checkerSize
+          )
+        } else {
+          ctx.fillStyle = isMyPoint ? '#FFFFFF' : '#000000'
+          ctx.beginPath()
+          ctx.arc(dragX, dragY, checkerSize / 2, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.strokeStyle = '#333'
+          ctx.lineWidth = 2
+          ctx.stroke()
+        }
+        ctx.restore()
+      }
+      
+      // Если шашек больше 5, показываем число (только количество, не номер поля)
       if (checkerCount > 5) {
         ctx.fillStyle = '#FFF'
-        ctx.font = 'bold 16px Arial'
+        ctx.font = 'bold 14px Arial'
         ctx.textAlign = 'center'
-        ctx.fillText(checkerCount.toString(), x, isTopRow ? y - stackHeight - 10 : y + stackHeight + 20)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+        ctx.fillRect(x - 20, isTopRow ? y - stackHeight - 25 : y + stackHeight + 5, 40, 20)
+        ctx.fillStyle = '#000'
+        ctx.fillText(checkerCount.toString(), x, isTopRow ? y - stackHeight - 12 : y + stackHeight + 18)
       }
       
       // Подсветка выбранной точки
@@ -403,7 +439,7 @@ export default function BackgammonBoard({
         }
       }
     }
-  }, [gameState, textures, selectedPoint, highlightedPoints, isPlayer1])
+  }, [gameState, textures, selectedPoint, highlightedPoints, isPlayer1, dragging, dragPosition])
   
   // Перерисовка при изменении состояния
   useEffect(() => {
@@ -435,8 +471,127 @@ export default function BackgammonBoard({
     return () => resizeObserver.disconnect()
   }, [drawBoard])
   
-  // Обработка клика по точке
+  // Обработка начала перетаскивания
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canMove || !isMyTurn || !canvasRef.current) return
+    
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    const width = canvas.width
+    const height = canvas.height
+    const halfWidth = width / 2
+    const halfHeight = height / 2
+    const pointWidth = width / 12
+    const pointHeight = halfHeight / 2
+    
+    // Определяем на какую точку кликнули
+    const points = gameState?.points || []
+    for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+      const pointValue = points[pointIndex]
+      if (pointValue === 0) continue
+      
+      const isTopRow = pointIndex < 12
+      const pointInRow = pointIndex % 12
+      
+      const pointX = isTopRow
+        ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
+        : pointInRow * pointWidth + pointWidth / 2
+      const pointY = isTopRow
+        ? pointHeight
+        : halfHeight + pointHeight
+      
+      // Проверяем, кликнули ли на шашку
+      const checkerCount = Math.abs(pointValue)
+      const checkerSize = Math.min(pointWidth * 0.35, pointHeight * 0.4)
+      const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
+      
+      if (!isMyPoint) continue // Не можем перетаскивать чужие шашки
+      
+      // Проверяем, есть ли возможные ходы с этой точки
+      const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+      if (pointMoves.length === 0) continue
+      
+      // Проверяем расстояние до шашек на этой точке
+      const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2))
+      if (distance < checkerSize / 2 + 10) {
+        setDragging({ pointIndex, offsetX: x - pointX, offsetY: y - pointY })
+        setDragPosition({ x, y })
+        setSelectedPoint(pointIndex)
+        return
+      }
+    }
+  }
+  
+  // Обработка движения мыши при перетаскивании
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!dragging || !canvasRef.current) return
+    
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    setDragPosition({ x, y })
+  }
+  
+  // Обработка отпускания мыши
+  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!dragging || !canvasRef.current) return
+    
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    const width = canvas.width
+    const height = canvas.height
+    const halfWidth = width / 2
+    const halfHeight = height / 2
+    const pointWidth = width / 12
+    const pointHeight = halfHeight / 2
+    
+    // Определяем на какую точку перетащили
+    const points = gameState?.points || []
+    let targetPoint: number | null = null
+    
+    for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+      const isTopRow = pointIndex < 12
+      const pointInRow = pointIndex % 12
+      
+      const pointX = isTopRow
+        ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
+        : pointInRow * pointWidth + pointWidth / 2
+      const pointY = isTopRow
+        ? pointHeight
+        : halfHeight + pointHeight
+      
+      const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2))
+      if (distance < pointWidth / 2) {
+        targetPoint = pointIndex
+        break
+      }
+    }
+    
+    // Если перетащили на валидную точку, делаем ход
+    if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
+      const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
+      if (move) {
+        onMove(move.from, move.to, move.die)
+      }
+    }
+    
+    setDragging(null)
+    setDragPosition(null)
+    setSelectedPoint(null)
+  }
+  
+  // Обработка клика по точке (для совместимости)
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (dragging) return // Если перетаскиваем, не обрабатываем клик
+    
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
     const canvas = canvasRef.current
@@ -506,6 +661,10 @@ export default function BackgammonBoard({
         ref={canvasRef}
         className="backgammon-board-canvas"
         onClick={handleCanvasClick}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       />
       
       {/* Кубики - отображаются на части доски, чей ход */}

@@ -19,6 +19,29 @@ export class CityService {
   ) {}
 
   /**
+   * Получить все районы
+   */
+  async getDistricts() {
+    const districts = await this.districtConfigsRepository.find({
+      where: { isActive: true },
+      order: { order: 'ASC' },
+    });
+
+    return districts.map(district => ({
+      id: district.id,
+      code: district.code,
+      name: district.name,
+      description: district.description,
+      icon: district.icon,
+      image: district.image,
+      order: district.order,
+      isActive: district.isActive,
+      requiredLevel: district.requiredLevel,
+      baseIncomePerDay: Number(district.baseIncomePerDay || 0),
+    }));
+  }
+
+  /**
    * Получить все доступные конфигурации строений
    */
   async getAvailableBuildings(district?: string) {

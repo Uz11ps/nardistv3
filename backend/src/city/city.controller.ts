@@ -13,6 +13,12 @@ export class CityController {
     return this.cityService.getAvailableBuildings(district);
   }
 
+  @Get('districts')
+  @UseGuards(JwtAuthGuard)
+  async getDistricts(@CurrentUser() user: any) {
+    return this.cityService.getDistricts();
+  }
+
   @Get('my-buildings')
   @UseGuards(JwtAuthGuard)
   async getMyBuildings(@CurrentUser() user: any) {
