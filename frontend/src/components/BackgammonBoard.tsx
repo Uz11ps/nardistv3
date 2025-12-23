@@ -123,15 +123,15 @@ export default function BackgammonBoard({
     const height = canvas.height
     
     // Ширина бара в центре
-    const barWidth = width * 0.05
+    const barWidth = width * 0.08 // Чуть шире бар для наглядности
     const barX = (width - barWidth) / 2
     
-    // Доступная ширина для треугольников (с каждой стороны от бара)
-    const availableWidth = (width - barWidth) / 2
+    // Доступная ширина для одной половины (левой или правой)
+    const halfBoardWidth = (width - barWidth) / 2
     
-    // Ширина одного треугольника
-    const pointWidth = availableWidth / 6
-    const pointHeight = height / 2
+    // Ширина одного треугольника (в одной половине 6 треугольников)
+    const pointWidth = halfBoardWidth / 6
+    const pointHeight = height * 0.45 // Высота чуть меньше половины, чтобы в центре было место
     
     const isTopRow = pointIndex < 12
     
@@ -144,16 +144,42 @@ export default function BackgammonBoard({
     let x: number
     let pointNumber: number
     
+    // Определяем, в какой половине находится точка
+    // Верхний ряд: 0-5 (справа), 6-11 (слева)
+    // Нижний ряд: 12-17 (слева), 18-23 (справа)
+    
     if (isTopRow) {
       // Верхний ряд: Points 24-13 (справа налево)
       pointNumber = 24 - pointIndex
-      const pointInRow = pointIndex
-      x = width - (pointInRow * pointWidth + pointWidth / 2)
+      const isRightSide = pointIndex < 6 // 0-5 -> Правая часть
+      
+      if (isRightSide) {
+        // Правая часть (от края до бара): индексы 0-5
+        const pointInHalf = pointIndex
+        // Справа налево: width - (отступ)
+        x = width - (pointInHalf * pointWidth + pointWidth / 2)
+      } else {
+        // Левая часть (от бара до края): индексы 6-11
+        const pointInHalf = pointIndex - 6
+        // Справа налево от левого края бара: barX - (отступ)
+        x = barX - (pointInHalf * pointWidth + pointWidth / 2)
+      }
     } else {
       // Нижний ряд: Points 12-1 (слева направо)
       pointNumber = 12 - (pointIndex - 12)
-      const pointInRow = pointIndex - 12
-      x = barX + barWidth + (pointInRow * pointWidth + pointWidth / 2)
+      const isLeftSide = pointIndex < 18 // 12-17 -> Левая часть
+      
+      if (isLeftSide) {
+        // Левая часть (от края до бара): индексы 12-17
+        const pointInHalf = pointIndex - 12
+        // Слева направо: 0 + (отступ)
+        x = (pointInHalf * pointWidth + pointWidth / 2)
+      } else {
+        // Правая часть (от бара до края): индексы 18-23
+        const pointInHalf = pointIndex - 18
+        // Слева направо от правого края бара: barX + barWidth + (отступ)
+        x = barX + barWidth + (pointInHalf * pointWidth + pointWidth / 2)
+      }
     }
     
     // Основания треугольников прижаты к краям доски
