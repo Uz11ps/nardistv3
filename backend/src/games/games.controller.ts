@@ -63,8 +63,13 @@ export class GamesController {
   @Post('create-bot')
   @UseGuards(JwtAuthGuard)
   async createBotGame(@CurrentUser() user: any, @Body() body?: { mode?: string }) {
-    const mode = body?.mode === 'short' ? 'short' : 'long';
-    return this.gamesService.createBotGame(user.id, mode as any);
+    try {
+      const mode = body?.mode === 'short' ? 'short' : 'long';
+      return await this.gamesService.createBotGame(user.id, mode as any);
+    } catch (error) {
+      console.error('❌ Ошибка при создании игры с ботом:', error);
+      throw error;
+    }
   }
 
   @Post('create-ai')
