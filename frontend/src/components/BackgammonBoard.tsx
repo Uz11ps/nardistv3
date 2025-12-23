@@ -58,6 +58,7 @@ export default function BackgammonBoard({
     opponentDice?: { [face: number]: HTMLImageElement }
     myCheckers?: HTMLImageElement
     opponentCheckers?: HTMLImageElement
+    defaultBoard?: HTMLImageElement
   }>({})
   
   const isPlayer1 = myPlayerId === player1Id
@@ -288,6 +289,23 @@ export default function BackgammonBoard({
           }
         }
         
+        // Загружаем дефолтную доску /img/доска.jpg
+        try {
+          const defaultBoardImg = new Image()
+          defaultBoardImg.crossOrigin = 'anonymous'
+          defaultBoardImg.src = '/img/доска.jpg'
+          loaded.defaultBoard = await new Promise<HTMLImageElement>((resolve, reject) => {
+            defaultBoardImg.onload = () => resolve(defaultBoardImg)
+            defaultBoardImg.onerror = reject
+            // Если изображение уже загружено
+            if (defaultBoardImg.complete) {
+              resolve(defaultBoardImg)
+            }
+          }).catch(() => undefined)
+        } catch (e) {
+          console.warn('Failed to load default board image:', e)
+        }
+        
         console.log('✅ Loaded textures:', loaded)
         setTextures(loaded)
       } catch (error) {
@@ -399,9 +417,14 @@ export default function BackgammonBoard({
       ctx.drawImage(textures.myBoard, 0, 0, halfWidth, height)
       ctx.restore()
     } else {
-      // Дефолтная текстура - коричневая доска
-      ctx.fillStyle = '#8B4513'
-      ctx.fillRect(0, 0, halfWidth, height)
+      // Дефолтная текстура - используем загруженное изображение /img/доска.jpg
+      if (textures.defaultBoard) {
+        ctx.drawImage(textures.defaultBoard, 0, 0, halfWidth, height)
+      } else {
+        // Fallback на коричневую заливку если изображение не загрузилось
+        ctx.fillStyle = '#8B4513'
+        ctx.fillRect(0, 0, halfWidth, height)
+      }
     }
     
     // ПРАВАЯ ПОЛОВИНА ДОСКИ - ПРОТИВНИКА (две четверти: верхняя правая + нижняя правая)
@@ -415,9 +438,14 @@ export default function BackgammonBoard({
       ctx.drawImage(textures.opponentBoard, halfWidth, 0, halfWidth, height)
       ctx.restore()
     } else {
-      // Дефолтная текстура
-      ctx.fillStyle = '#654321'
-      ctx.fillRect(halfWidth, 0, halfWidth, height)
+      // Дефолтная текстура - используем загруженное изображение /img/доска.jpg
+      if (textures.defaultBoard) {
+        ctx.drawImage(textures.defaultBoard, halfWidth, 0, halfWidth, height)
+      } else {
+        // Fallback на коричневую заливку если изображение не загрузилось
+        ctx.fillStyle = '#654321'
+        ctx.fillRect(halfWidth, 0, halfWidth, height)
+      }
     }
     
     // Отрисовка точек (24 точки на доске для нардов)

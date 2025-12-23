@@ -43,8 +43,8 @@ export class SkinsService implements OnModuleInit {
           weight: 1,
           price: null, // Бесплатный
           rarity: 'common',
-          imageUrl: '/skins/default-board.svg', // Превью для магазина
-          boardTextureUrl: '/skins/default-board.svg', // Текстура для игры
+          imageUrl: '/img/доска.jpg', // Превью для магазина
+          boardTextureUrl: '/img/доска.jpg', // Текстура для игры
         },
         {
           name: 'Классические кубики',
