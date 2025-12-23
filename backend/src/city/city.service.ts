@@ -329,5 +329,40 @@ export class CityService {
 
     return toRelease.length;
   }
+
+  /**
+   * Получить настройки автобилда для пользователя
+   */
+  async getAutobuildSettings(userId: string) {
+    const user = await this.usersService.findOne(userId);
+    return {
+      minBalance: Number(user.autobuildMinBalance || 0),
+      strategy: user.autobuildStrategy || 'balanced',
+      priorityBuilding: user.autobuildPriorityBuilding || null,
+    };
+  }
+
+  /**
+   * Сохранить настройки автобилда для пользователя
+   */
+  async saveAutobuildSettings(
+    userId: string,
+    settings: { minBalance: number; strategy: string; priorityBuilding?: string | null },
+  ) {
+    const user = await this.usersService.findOne(userId);
+    user.autobuildMinBalance = BigInt(settings.minBalance);
+    user.autobuildStrategy = settings.strategy;
+    user.autobuildPriorityBuilding = settings.priorityBuilding || null;
+    await this.usersService.update(userId, {
+      autobuildMinBalance: user.autobuildMinBalance,
+      autobuildStrategy: user.autobuildStrategy,
+      autobuildPriorityBuilding: user.autobuildPriorityBuilding,
+    });
+    return {
+      minBalance: Number(user.autobuildMinBalance),
+      strategy: user.autobuildStrategy,
+      priorityBuilding: user.autobuildPriorityBuilding,
+    };
+  }
 }
 

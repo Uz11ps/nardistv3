@@ -432,8 +432,10 @@ export default function Inventory() {
               </button>
             </div>
           </Card>
-        )}
-
+            )}
+          </>
+        ) : (
+          <>
         {loading ? (
           <Card>
             <div className="inventory-empty">Загрузка...</div>
@@ -456,6 +458,8 @@ export default function Inventory() {
           <div className="inventory-list">
             {getFilteredSkins().map((skin) => renderSkinCard(skin))}
           </div>
+        )}
+          </>
         )}
       </div>
     </PageLayout>
