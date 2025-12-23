@@ -695,52 +695,6 @@ export default function Admin() {
                   </label>
                 </div>
                 <div className="edit-form-actions">
-                    <button className="btn btn-primary"
-                      onClick={async () => {
-                        try {
-                          const narCoin = parseInt((document.getElementById('edit-narcoin') as HTMLInputElement).value)
-                          const xp = parseInt((document.getElementById('edit-xp') as HTMLInputElement).value)
-                          await apiClient.put(`/admin/users/${selectedUser.id}/balance`, { narCoin, xp })
-                          alert('Баланс обновлен')
-                          loadStats()
-                          setSelectedUser(null)
-                        } catch (err: any) {
-                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
-                        }
-                      }}
-                    >
-                      Сохранить баланс
-                    </button>
-                    <button className="btn btn-primary"
-                      onClick={async () => {
-                        try {
-                          const level = parseInt((document.getElementById('edit-level') as HTMLInputElement).value)
-                          await apiClient.put(`/admin/users/${selectedUser.id}/level`, { level })
-                          alert('Уровень обновлен')
-                          loadStats()
-                          setSelectedUser(null)
-                        } catch (err: any) {
-                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
-                        }
-                      }}
-                    >
-                      Сохранить уровень
-                    </button>
-                    <button className="btn btn-primary"
-                      onClick={async () => {
-                        try {
-                          const isAdmin = (document.getElementById('edit-admin') as HTMLInputElement).checked
-                          await apiClient.put(`/admin/users/${selectedUser.id}/role`, { isAdmin, isTrainer: false })
-                          alert('Роль обновлена')
-                          loadStats()
-                          setSelectedUser(null)
-                        } catch (err: any) {
-                          alert('Ошибка: ' + (err.response?.data?.message || err.message))
-                        }
-                      }}
-                    >
-                      Сохранить роль
-                    </button>
                     <button
                       className="btn btn-warning"
                       onClick={async () => {
@@ -816,7 +770,6 @@ export default function Admin() {
                     >
                       Выдать премиум подписку
                     </button>
-                    <button className="btn btn-secondary" onClick={() => setSelectedUser(null)}>Отмена</button>
                   </div>
                   <div className="edit-form-section">
                     <h4>Настройки реферальной программы</h4>
@@ -841,13 +794,31 @@ export default function Admin() {
                         style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                       />
                     </div>
-                    <button className="btn btn-primary"
+                  </div>
+                  <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #3a3a3a' }}>
+                    <button 
+                      className="btn btn-primary"
+                      style={{ width: '100%', padding: '12px', fontSize: '16px', fontWeight: 600 }}
                       onClick={async () => {
                         try {
-                          const referralPercent = parseInt((document.getElementById('edit-referral-percent') as HTMLInputElement).value)
-                          const referralBaseBonus = parseInt((document.getElementById('edit-referral-base-bonus') as HTMLInputElement).value)
+                          // Собираем все данные из формы
+                          const narCoin = parseInt((document.getElementById('edit-narcoin') as HTMLInputElement).value)
+                          const xp = parseInt((document.getElementById('edit-xp') as HTMLInputElement).value)
+                          const level = parseInt((document.getElementById('edit-level') as HTMLInputElement).value)
+                          const isAdmin = (document.getElementById('edit-admin') as HTMLInputElement).checked
+                          
+                          const referralPercentEl = document.getElementById('edit-referral-percent') as HTMLInputElement
+                          const referralBaseBonusEl = document.getElementById('edit-referral-base-bonus') as HTMLInputElement
+                          const referralPercent = referralPercentEl ? parseInt(referralPercentEl.value || '5') : 5
+                          const referralBaseBonus = referralBaseBonusEl ? parseInt(referralBaseBonusEl.value || '100') : 100
+
+                          // Выполняем все запросы последовательно
+                          await apiClient.put(`/admin/users/${selectedUser.id}/balance`, { narCoin, xp })
+                          await apiClient.put(`/admin/users/${selectedUser.id}/level`, { level })
+                          await apiClient.put(`/admin/users/${selectedUser.id}/role`, { isAdmin, isTrainer: false })
                           await apiClient.put(`/admin/users/${selectedUser.id}/referral-settings`, { referralPercent, referralBaseBonus })
-                          alert('Настройки реферальной программы обновлены')
+
+                          alert('Все изменения сохранены')
                           loadStats()
                           setSelectedUser(null)
                         } catch (err: any) {
@@ -855,7 +826,14 @@ export default function Admin() {
                         }
                       }}
                     >
-                      Сохранить настройки рефералов
+                      Сохранить
+                    </button>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={() => setSelectedUser(null)}
+                      style={{ width: '100%', padding: '12px', fontSize: '16px', marginTop: '12px' }}
+                    >
+                      Отмена
                     </button>
                   </div>
                 </div>

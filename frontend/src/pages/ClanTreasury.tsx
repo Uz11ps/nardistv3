@@ -33,21 +33,22 @@ export default function ClanTreasury() {
   const [showContributeModal, setShowContributeModal] = useState(false)
   const [contributeAmount, setContributeAmount] = useState('')
   const [contributing, setContributing] = useState(false)
-  const [showAllTransactions, setShowAllTransactions] = useState(false)
+  const [showAllTransactionsModal, setShowAllTransactionsModal] = useState(false)
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
+  const [loadingAllTransactions, setLoadingAllTransactions] = useState(false)
 
   useEffect(() => {
     if (clanId) {
       loadData()
     }
-  }, [clanId, showAllTransactions])
+  }, [clanId])
 
   const loadData = async () => {
     try {
       setLoading(true)
-      const limit = showAllTransactions ? 100 : 5
       const [clanResponse, transactionsResponse] = await Promise.all([
         apiClient.get(`/clans/${clanId}`).catch(() => ({ data: null })),
-        apiClient.get(`/clans/${clanId}/treasury/transactions?limit=${limit}`).catch(() => ({ data: [] })),
+        apiClient.get(`/clans/${clanId}/treasury/transactions?limit=5`).catch(() => ({ data: [] })),
       ])
       setClan(clanResponse.data)
       setTransactions(transactionsResponse.data || [])
@@ -58,11 +59,24 @@ export default function ClanTreasury() {
     }
   }
 
-  useEffect(() => {
-    if (clanId) {
-      loadData()
+  const loadAllTransactions = async () => {
+    if (!clanId) return
+    try {
+      setLoadingAllTransactions(true)
+      const response = await apiClient.get(`/clans/${clanId}/treasury/transactions?limit=100`).catch(() => ({ data: [] }))
+      setAllTransactions(response.data || [])
+    } catch (error) {
+      console.error('Failed to load all transactions:', error)
+      alert('Ошибка при загрузке транзакций')
+    } finally {
+      setLoadingAllTransactions(false)
     }
-  }, [clanId, showAllTransactions])
+  }
+
+  const handleOpenAllTransactions = () => {
+    setShowAllTransactionsModal(true)
+    loadAllTransactions()
+  }
 
   const formatAmount = (amount: number | string) => {
     const num = typeof amount === 'string' ? parseInt(amount) : amount
@@ -179,11 +193,9 @@ export default function ClanTreasury() {
           </div>
           <button 
             className="clan-treasury-view-all-button"
-            onClick={() => {
-              setShowAllTransactions(!showAllTransactions)
-            }}
+            onClick={handleOpenAllTransactions}
           >
-            {showAllTransactions ? 'Скрыть' : 'Посмотреть всё'}
+            Посмотреть всё
           </button>
           <button 
             className="clan-treasury-contribute-button"
@@ -193,6 +205,54 @@ export default function ClanTreasury() {
           </button>
         </div>
       </div>
+
+      {/* Модальное окно всех транзакций */}
+      {showAllTransactionsModal && (
+        <div className="clan-treasury-modal-overlay" onClick={() => setShowAllTransactionsModal(false)}>
+          <div className="clan-treasury-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="clan-treasury-modal-header">
+              <h2 className="clan-treasury-modal-title">Все операции</h2>
+              <button 
+                className="clan-treasury-modal-close"
+                onClick={() => setShowAllTransactionsModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="clan-treasury-modal-content" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {loadingAllTransactions ? (
+                <div style={{ textAlign: 'center', color: '#B6B6B6', padding: '40px' }}>Загрузка...</div>
+              ) : allTransactions.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#B6B6B6', padding: '40px' }}>Нет операций</div>
+              ) : (
+                <div className="clan-treasury-operations-list">
+                  {allTransactions.map((transaction) => {
+                    const amount = typeof transaction.amount === 'string' ? parseInt(transaction.amount) : transaction.amount
+                    const isPositive = amount > 0
+                    const userName = transaction.user?.nickname || transaction.user?.username || 'Алексей'
+                    
+                    return (
+                      <div key={transaction.id} className="clan-treasury-operation-item">
+                        <img src="/img/челувек.png" alt="User" className="clan-treasury-operation-icon" />
+                        <div className="clan-treasury-operation-info">
+                          <div className="clan-treasury-operation-name">{userName}</div>
+                          <div className="clan-treasury-operation-description">{transaction.description}</div>
+                          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+                            {formatDate(transaction.createdAt)}
+                          </div>
+                        </div>
+                        <div className={`clan-treasury-operation-amount ${isPositive ? 'positive' : 'negative'}`}>
+                          {isPositive ? '+' : ''}{formatAmount(transaction.amount)} NAR
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Модальное окно вложения */}
       {showContributeModal && (
