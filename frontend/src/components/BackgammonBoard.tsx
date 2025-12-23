@@ -306,16 +306,12 @@ export default function BackgammonBoard({
     ctx.fillRect(0, 0, width, height)
     
     // Центральная полоса (бар)
-    const barWidth = width * 0.05
+    const barWidth = width * 0.08
     const barX = (width - barWidth) / 2
     ctx.fillStyle = '#654321'
     ctx.fillRect(barX, 0, barWidth, height)
     
     const points = gameState.points || []
-    // Доступная ширина для треугольников (с каждой стороны от бара)
-    const availableWidth = (width - barWidth) / 2
-    const pointWidth = availableWidth / 6
-    const pointHeight = height / 2
     
     // Функция для отрисовки треугольной точки (Классический вид)
     const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, color: string) => {
@@ -339,51 +335,58 @@ export default function BackgammonBoard({
       ctx.stroke()
     }
     
-    // Отрисовка всех 24 точек
-    points.forEach((pointValue: number, pointIndex: number) => {
-      const { x, y, isTopRow, pointNumber } = getPointCoordinates(pointIndex, canvas)
+    // Сначала рисуем все треугольники и их подсветку
+    points.forEach((_value: number, pointIndex: number) => {
+      const { x, y, isTopRow, pointWidth, pointHeight, pointNumber } = getPointCoordinates(pointIndex, canvas)
       
-      // Треугольники занимают почти всю ширину точки, но с небольшим отступом
       const triangleWidth = pointWidth * 0.95
       const triangleHeight = pointHeight * 0.95
       
-      // Чередование цветов треугольников (как на классической доске)
-      // В нардах чередование идет по позиции на доске
       const pointInRow = isTopRow ? pointIndex : pointIndex - 12
       const isLight = pointInRow % 2 === 0
       const triangleColor = isLight ? '#D4A574' : '#8B4513'
       
-      // Подсветка возможных исходных точек (когда не перетаскиваем)
+      // 1. Подсветка точки под курсором (самый нижний слой подсветки)
+      if (hoveredPoint === pointIndex) {
+        ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
+        if (isTopRow) {
+          ctx.fillRect(x - pointWidth / 2, 0, pointWidth, height / 2)
+        } else {
+          ctx.fillRect(x - pointWidth / 2, height / 2, pointWidth, height / 2)
+        }
+      }
+
+      // 2. Подсветка возможных исходных точек (когда не перетаскиваем)
       if (!dragging && highlightedPoints.has(pointIndex)) {
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'
-        drawTrianglePoint(x, y, triangleWidth + 8, triangleHeight + 8, isTopRow, 'rgba(0, 255, 0, 0.3)')
-        ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-        ctx.lineWidth = 4
-        ctx.stroke()
+        ctx.save()
+        ctx.shadowBlur = 15
+        ctx.shadowColor = 'rgba(0, 255, 0, 0.8)'
+        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
+        ctx.restore()
+      } else if (dragging && validTargetPoints.has(pointIndex)) {
+        // 3. Подсветка валидных точек назначения при перетаскивании
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
+        if (isTopRow) {
+          ctx.fillRect(x - pointWidth / 2, 0, pointWidth, height / 2)
+        } else {
+          ctx.fillRect(x - pointWidth / 2, height / 2, pointWidth, height / 2)
+        }
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
+        ctx.lineWidth = 2
+        ctx.strokeRect(x - pointWidth / 2 + 2, isTopRow ? 2 : height / 2 + 2, pointWidth - 4, height / 2 - 4)
       }
       
-      // Подсветка валидных точек назначения при перетаскивании
-      if (dragging && validTargetPoints.has(pointIndex)) {
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'
-        drawTrianglePoint(x, y, triangleWidth + 5, triangleHeight + 5, isTopRow, 'rgba(0, 255, 0, 0.5)')
-        ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
-        ctx.lineWidth = 4
-        ctx.stroke()
-      }
-      
-      // Подсветка точки под курсором
-      if (dragging && hoveredPoint === pointIndex) {
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.6)'
-        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, 'rgba(255, 255, 0, 0.6)')
-      }
-      
-      // Подсветка выбранной точки
+      // 4. Подсветка выбранной точки
       if (selectedPoint === pointIndex) {
-        ctx.fillStyle = 'rgba(90, 127, 196, 0.5)'
-        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, 'rgba(90, 127, 196, 0.5)')
+        ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
+        if (isTopRow) {
+          ctx.fillRect(x - pointWidth / 2, 0, pointWidth, height / 2)
+        } else {
+          ctx.fillRect(x - pointWidth / 2, height / 2, pointWidth, height / 2)
+        }
       }
       
-      // Рисуем треугольник точки
+      // Рисуем сам треугольник
       drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
       
       // Отрисовка нумерации точек (1-24)
@@ -392,91 +395,105 @@ export default function BackgammonBoard({
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       
-      // Номера рисуем у основания треугольников (у краев доски)
       if (isTopRow) {
-        // У верхнего края
         ctx.fillText(pointNumber.toString(), x, y + 15)
-        // DEBUG: Index
-        // ctx.font = '10px Arial'; ctx.fillStyle = '#aaa'; ctx.fillText(`[${pointIndex}]`, x, y + 30);
       } else {
-        // У нижнего края
         ctx.fillText(pointNumber.toString(), x, y - 15)
-        // DEBUG: Index
-        // ctx.font = '10px Arial'; ctx.fillStyle = '#aaa'; ctx.fillText(`[${pointIndex}]`, x, y - 30);
+      }
+    })
+
+    // Вторым проходом рисуем все шашки (чтобы они были поверх всех треугольников)
+    points.forEach((pointValue: number, pointIndex: number) => {
+      if (pointValue === 0) return
+      
+      const { x, y, isTopRow, pointWidth, pointHeight } = getPointCoordinates(pointIndex, canvas)
+      const checkerCount = Math.abs(pointValue)
+      const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
+      
+      const checkerSize = Math.min(pointWidth * 0.85, pointHeight * 0.15) 
+      const checkerBaseY = isTopRow 
+        ? y + checkerSize/2 + 5 
+        : y - checkerSize/2 - 5 
+      
+      const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
+      const checkersToDraw = isDraggingFromThisPoint ? checkerCount - 1 : checkerCount
+      
+      for (let i = 0; i < checkersToDraw; i++) {
+        // Если шашек много (больше 5), начинаем их накладывать друг на друга плотнее
+        const overlap = checkerCount > 5 ? (checkerSize * 0.8) : checkerSize
+        const yOffset = i * overlap
+        const checkerY = isTopRow 
+          ? checkerBaseY + yOffset 
+          : checkerBaseY - yOffset
+        
+        // Рисуем шашку
+        ctx.save()
+        
+        // Тень для объема
+        ctx.shadowBlur = 4
+        ctx.shadowColor = 'rgba(0,0,0,0.4)'
+        ctx.shadowOffsetY = 2
+        
+        ctx.fillStyle = isMyPoint ? '#F0F0F0' : '#333333'
+        ctx.beginPath()
+        ctx.arc(x, checkerY, checkerSize / 2, 0, Math.PI * 2)
+        ctx.fill()
+        
+        ctx.strokeStyle = isMyPoint ? '#999' : '#000'
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+        
+        // Внутренний декор шашки
+        ctx.beginPath()
+        ctx.arc(x, checkerY, checkerSize * 0.35, 0, Math.PI * 2)
+        ctx.strokeStyle = isMyPoint ? '#DDD' : '#555'
+        ctx.stroke()
+        
+        ctx.restore()
       }
       
-      // Отрисовка шашек на точке
-      if (pointValue !== 0) {
-        const checkerCount = Math.abs(pointValue)
-        const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
-        // Немного уменьшаем размер шашек, чтобы влезали 5 штук
-        const checkerSize = Math.min(pointWidth * 0.9, pointHeight * 0.15) 
-        
-        // Шашки начинают рисоваться от основания треугольника (от края доски) к центру
-        const checkerBaseY = isTopRow 
-          ? y + checkerSize/2 + 5 // Отступ сверху
-          : y - checkerSize/2 - 5 // Отступ снизу
-        
-        const stackHeight = Math.min(checkerCount, 5) * checkerSize
-        
-        const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
-        const checkersToDraw = isDraggingFromThisPoint ? Math.min(checkerCount - 1, 5) : Math.min(checkerCount, 5)
-        
-        for (let i = 0; i < checkersToDraw; i++) {
-          // Смещение каждой следующей шашки к центру доски
-          const yOffset = i * checkerSize
-          const checkerY = isTopRow 
-            ? checkerBaseY + yOffset 
-            : checkerBaseY - yOffset
+      // Если шашек больше 5, показываем число на последней шашке
+      if (checkerCount > 5 && !isDraggingFromThisPoint) {
+        const overlap = checkerSize * 0.8
+        const lastCheckerY = isTopRow 
+          ? checkerBaseY + ((checkerCount - 1) * overlap)
+          : checkerBaseY - ((checkerCount - 1) * overlap)
           
-          // Простые шашки без текстур
-          ctx.fillStyle = isMyPoint ? '#E0E0E0' : '#202020' // Белые/Черные (темно-серые)
-          ctx.beginPath()
-          ctx.arc(x, checkerY, checkerSize / 2 * 0.9, 0, Math.PI * 2)
-          ctx.fill()
-          
-          // Блик и обводка для объема
-          ctx.strokeStyle = isMyPoint ? '#999' : '#000'
-          ctx.lineWidth = 1
-          ctx.stroke()
-          
-          // Внутренний круг для детализации
-          ctx.beginPath()
-          ctx.arc(x, checkerY, checkerSize / 2 * 0.5, 0, Math.PI * 2)
-          ctx.strokeStyle = isMyPoint ? '#CCC' : '#444'
-          ctx.stroke()
-        }
-        
-        // Если шашек больше 5, показываем число на последней шашке
-        if (checkerCount > 5) {
-           const lastCheckerY = isTopRow 
-            ? checkerBaseY + (4 * checkerSize)
-            : checkerBaseY - (4 * checkerSize)
-            
-          ctx.fillStyle = isMyPoint ? '#000' : '#FFF'
-          ctx.font = 'bold 10px Arial'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(checkerCount.toString(), x, lastCheckerY)
-        }
+        ctx.fillStyle = isMyPoint ? '#000' : '#FFF'
+        ctx.font = 'bold 11px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(checkerCount.toString(), x, lastCheckerY)
       }
     })
     
-    // Отрисовка перетаскиваемой шашки
+    // Отрисовка перетаскиваемой шашки (самый верхний слой)
     if (dragging && dragPosition) {
-      const checkerSize = Math.min((width / 12) * 0.25, (height / 2) * 0.3)
+      const { pointWidth, pointHeight } = getPointCoordinates(dragging.pointIndex, canvas)
+      const checkerSize = Math.min(pointWidth * 0.85, pointHeight * 0.15)
       const dragX = dragPosition.x - dragging.offsetX
       const dragY = dragPosition.y - dragging.offsetY
       
       ctx.save()
+      ctx.shadowBlur = 15
+      ctx.shadowColor = 'rgba(0,0,0,0.5)'
+      
       ctx.globalAlpha = 0.9
-      ctx.fillStyle = isPlayer1 ? '#FFFFFF' : '#000000'
+      ctx.fillStyle = isPlayer1 ? '#F0F0F0' : '#333333'
       ctx.beginPath()
       ctx.arc(dragX, dragY, checkerSize / 2, 0, Math.PI * 2)
       ctx.fill()
-      ctx.strokeStyle = '#333'
-      ctx.lineWidth = 3
+      
+      ctx.strokeStyle = isPlayer1 ? '#999' : '#000'
+      ctx.lineWidth = 2
       ctx.stroke()
+      
+      // Декор перетаскиваемой шашки
+      ctx.beginPath()
+      ctx.arc(dragX, dragY, checkerSize * 0.35, 0, Math.PI * 2)
+      ctx.strokeStyle = isPlayer1 ? '#DDD' : '#555'
+      ctx.stroke()
+      
       ctx.restore()
     }
     
@@ -667,21 +684,17 @@ export default function BackgammonBoard({
       pointValue = points[pointIndex]
     }
     
-    // console.log('Point value:', pointValue, 'Player1:', isPlayer1)
-    
     if (pointValue === 0) return
     
     // Проверяем, моя ли это шашка
-    // Белые (Player1) > 0, Черные (Player2) < 0
     const isMyChecker = isPlayer1 ? pointValue > 0 : pointValue < 0
     const isMyBar = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
     
     if (!isMyChecker && !isMyBar) return
     
+    // Разрешаем захватить шашку, даже если нет ходов, для визуального отклика
+    // Но подсветим цели только если ходы есть
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
-    // console.log('Possible moves from this point:', pointMoves)
-    
-    if (pointMoves.length === 0) return
     
     const { x: pointX, y: pointY } = getPointCoordinates(pointIndex, canvas)
     
@@ -693,9 +706,7 @@ export default function BackgammonBoard({
     const validTargets = new Set<number>()
     pointMoves.forEach(move => {
       if (move.to !== undefined && move.to !== null) {
-        if ((move.to >= 0 && move.to < 24) || move.to === -1) {
-          validTargets.add(move.to)
-        }
+        validTargets.add(move.to)
       }
     })
     setValidTargetPoints(validTargets)
