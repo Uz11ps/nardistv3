@@ -179,29 +179,67 @@ export class ClansService {
 
     this.logger.log(`🗑️ Распускание клана ${clan.name} (${clanId}). Участников: ${members.length}`);
 
-    // Освобождаем все захваченные территории
-    if (clan.ownedDistricts && clan.ownedDistricts.length > 0) {
+    // 1. Обнуляем все захваты (освобождаем все захваченные строения)
+    try {
+      const capturedBuildings = await this.buildingsRepository.find({
+        where: { capturedByClanId: clanId },
+      });
+
+      // Освобождаем все здания
+      for (const building of capturedBuildings) {
+        building.capturedByClanId = null;
+        building.capturedAt = null;
+        building.captureExpiresAt = null;
+        await this.buildingsRepository.save(building);
+      }
+
+      this.logger.log(`✅ Освобождено ${capturedBuildings.length} захваченных строений`);
+    } catch (error) {
+      this.logger.error(`❌ Ошибка при освобождении захватов: ${error.message}`, error.stack);
+    }
+
+    // 2. Распределяем казну между участниками
+    const treasuryAmount = BigInt(clan.treasury || 0);
+    if (treasuryAmount > 0 && members.length > 0) {
       try {
-        // Находим все здания, захваченные этим кланом
-        const capturedBuildings = await this.buildingsRepository.find({
-          where: { capturedByClanId: clanId },
-        });
+        // Распределяем поровну между всеми участниками
+        const amountPerMember = treasuryAmount / BigInt(members.length);
+        const remainder = treasuryAmount % BigInt(members.length);
 
-        // Освобождаем все здания
-        for (const building of capturedBuildings) {
-          building.capturedByClanId = null;
-          building.capturedAt = null;
-          await this.buildingsRepository.save(building);
+        this.logger.log(`💰 Распределение казны: ${treasuryAmount} NAR между ${members.length} участниками (по ${amountPerMember} NAR каждому)`);
+
+        for (let i = 0; i < members.length; i++) {
+          const member = members[i];
+          let memberAmount = amountPerMember;
+
+          // Остаток от деления отдаем первому участнику (лидеру)
+          if (i === 0) {
+            memberAmount += remainder;
+          }
+
+          if (memberAmount > 0) {
+            try {
+              const user = await this.usersService.findOne(member.userId);
+              if (user) {
+                const newBalance = BigInt(user.narCoin || 0) + memberAmount;
+                await this.usersService.update(member.userId, { narCoin: Number(newBalance) });
+                this.logger.log(`✅ Участнику ${member.userId} начислено ${memberAmount} NAR из казны`);
+              }
+            } catch (error) {
+              this.logger.error(`❌ Ошибка при начислении казны участнику ${member.userId}: ${error.message}`);
+            }
+          }
         }
-
-        this.logger.log(`✅ Освобождено ${capturedBuildings.length} захваченных территорий`);
       } catch (error) {
-        this.logger.error(`❌ Ошибка при освобождении территорий: ${error.message}`, error.stack);
+        this.logger.error(`❌ Ошибка при распределении казны: ${error.message}`, error.stack);
       }
     }
 
-    // Отправляем уведомления всем участникам
-    const notificationMessage = `Клан "${clan.name}" был распущен лидером. Вы больше не состоите в клане.`;
+    // 3. Отправляем уведомления всем участникам
+    const treasuryInfo = treasuryAmount > 0 && members.length > 0
+      ? ` Вам начислено ${(treasuryAmount / BigInt(members.length)).toString()} NAR из казны клана.`
+      : '';
+    const notificationMessage = `Клан "${clan.name}" был распущен лидером. Вы больше не состоите в клане.${treasuryInfo}`;
     
     for (const member of members) {
       try {
@@ -216,16 +254,16 @@ export class ClansService {
       }
     }
 
-    // Удаляем всех участников
+    // 4. Удаляем всех участников
     await this.membersRepository.delete({ clanId });
 
-    // Удаляем все транзакции казны
+    // 5. Удаляем все транзакции казны
     await this.transactionsRepository.delete({ clanId });
 
-    // Удаляем клан
+    // 6. Удаляем клан
     await this.clansRepository.remove(clan);
 
-    this.logger.log(`✅ Клан ${clan.name} успешно распущен. Удалено участников: ${members.length}`);
+    this.logger.log(`✅ Клан ${clan.name} успешно распущен. Удалено участников: ${members.length}, казна распределена`);
   }
 
   async getMembers(clanId: string): Promise<ClanMember[]> {
