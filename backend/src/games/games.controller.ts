@@ -64,12 +64,25 @@ export class GamesController {
   @UseGuards(JwtAuthGuard)
   async createBotGame(@CurrentUser() user: any, @Body() body?: { mode?: string }) {
     try {
-      console.log('🎮 create-bot вызван:', { userId: user?.id, userType: typeof user, userKeys: user ? Object.keys(user) : 'null' });
-      if (!user || !user.id) {
-        console.error('❌ Пользователь не найден в токене:', user);
-        throw new Error('Пользователь не найден в токене');
+      console.log('🎮 create-bot вызван:', { 
+        userId: user?.id, 
+        userType: typeof user, 
+        userKeys: user ? Object.keys(user) : 'null',
+        userFull: JSON.stringify(user, null, 2)
+      });
+      
+      if (!user) {
+        console.error('❌ Пользователь не найден в токене (user is null/undefined)');
+        throw new Error('Пользователь не найден в токене. Возможно, токен недействителен или пользователь был удален.');
       }
+      
+      if (!user.id) {
+        console.error('❌ Пользователь не имеет ID:', user);
+        throw new Error('Пользователь не имеет ID. Возможно, проблема с валидацией токена.');
+      }
+      
       const mode = body?.mode === 'short' ? 'short' : 'long';
+      console.log('🎮 Создание игры с ботом:', { userId: user.id, mode });
       return await this.gamesService.createBotGame(user.id, mode as any);
     } catch (error) {
       console.error('❌ Ошибка при создании игры с ботом:', error);
