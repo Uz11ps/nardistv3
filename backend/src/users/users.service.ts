@@ -48,11 +48,32 @@ export class UsersService {
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
     
-    // Проверяем уровень для редактирования профиля (nickname, country, avatarUrl)
-    if (updateUserDto.nickname !== undefined || updateUserDto.country !== undefined || updateUserDto.avatarUrl !== undefined) {
-      const userLevel = user.level || 0;
-      if (userLevel < 5) {
-        throw new BadRequestException('Редактирование профиля доступно с 5 уровня');
+    // Конвертируем narCoin в bigint если он есть
+    if (updateUserDto.narCoin !== undefined) {
+      (user as any).narCoin = BigInt(updateUserDto.narCoin);
+      delete (updateUserDto as any).narCoin;
+    }
+    
+    // Конвертируем birthday в Date если он есть
+    if (updateUserDto.birthday) {
+      (user as any).birthday = new Date(updateUserDto.birthday);
+      delete (updateUserDto as any).birthday;
+    }
+    
+    Object.assign(user, updateUserDto);
+    return this.usersRepository.save(user);
+  }
+
+  async updateProfile(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.findOne(id);
+    
+    // Проверяем уровень для РЕДАКТИРОВАНИЯ профиля (только если профиль уже создан)
+    if (user.profileSetupCompleted) {
+      if (updateUserDto.nickname !== undefined || updateUserDto.country !== undefined || updateUserDto.avatarUrl !== undefined) {
+        const userLevel = user.level || 0;
+        if (userLevel < 5) {
+          throw new BadRequestException('Редактирование профиля доступно с 5 уровня');
+        }
       }
     }
     

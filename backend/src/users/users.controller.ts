@@ -17,7 +17,7 @@ export class UsersController {
   @Put('me')
   @UseGuards(JwtAuthGuard)
   async updateMe(@CurrentUser() user: any, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(user.id, updateUserDto);
+    return this.usersService.updateProfile(user.id, updateUserDto);
   }
 
   @Get('onboarding-progress')
