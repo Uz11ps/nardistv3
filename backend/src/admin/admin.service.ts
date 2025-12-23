@@ -893,6 +893,7 @@ export class AdminService implements OnModuleInit {
     baseIncomePerHour: number;
     maxAccumulation?: number;
     maxLevel?: number;
+    upgradeMultiplier?: number;
     upgradeCosts?: any;
   }) {
     const config = this.buildingConfigsRepository.create({
