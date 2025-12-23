@@ -9,7 +9,6 @@ import './City.css'
 
 interface Building {
   id: string
-  district: string
   type: string
   level: number
   accumulatedIncome: number
@@ -22,7 +21,6 @@ interface Building {
 
 interface BuildingConfig {
   id: string
-  district: string
   type: string
   name: string
   icon?: string
@@ -33,17 +31,6 @@ interface BuildingConfig {
   maxLevel: number
 }
 
-interface DistrictConfig {
-  id: string
-  code: string
-  name: string
-  description?: string
-  icon?: string
-  image?: string
-  order: number
-  isActive: boolean
-  requiredLevel?: number
-}
 
 export default function City() {
   const navigate = useNavigate()
@@ -51,8 +38,6 @@ export default function City() {
   const [loading, setLoading] = useState(true)
   const [buildings, setBuildings] = useState<Building[]>([])
   const [availableBuildings, setAvailableBuildings] = useState<BuildingConfig[]>([])
-  const [districts, setDistricts] = useState<DistrictConfig[]>([])
-  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
   const [collecting, setCollecting] = useState<string | null>(null)
   const [purchasing, setPurchasing] = useState<string | null>(null)
 
@@ -65,15 +50,13 @@ export default function City() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [buildingsRes, availableRes, districtsRes] = await Promise.all([
+      const [buildingsRes, availableRes] = await Promise.all([
         apiClient.get('/city/my-buildings').catch(() => ({ data: [] })),
         apiClient.get('/city/buildings').catch(() => ({ data: [] })),
-        apiClient.get('/city/districts').catch(() => apiClient.get('/admin/districts').catch(() => ({ data: [] }))),
       ])
 
       setBuildings(buildingsRes.data || [])
       setAvailableBuildings(availableRes.data || [])
-      setDistricts((districtsRes.data || []).filter((d: DistrictConfig) => d.isActive))
     } catch (error) {
       console.error('Failed to load city data:', error)
     } finally {
@@ -140,30 +123,22 @@ export default function City() {
     return Math.min(building.accumulatedIncome + incomeToAdd, 1000000) // Максимальное накопление
   }
 
-  const getDistrictName = (districtCode: string): string => {
-    const district = districts.find(d => d.code === districtCode)
-    return district?.name || districtCode
-  }
-
   const getBuildingName = (building: Building): string => {
-    const config = availableBuildings.find(c => c.district === building.district && c.type === building.type)
-    return config?.name || `${building.type} (${building.district})`
+    const config = availableBuildings.find(c => c.type === building.type)
+    return config?.name || building.type
   }
 
   const getBuildingIcon = (building: Building): string | undefined => {
-    const config = availableBuildings.find(c => c.district === building.district && c.type === building.type)
+    const config = availableBuildings.find(c => c.type === building.type)
     return config?.icon
   }
 
-  const filteredBuildings = selectedDistrict
-    ? availableBuildings.filter(b => b.district === selectedDistrict)
-    : availableBuildings
-
-  const myBuildingsByDistrict = buildings.reduce((acc, building) => {
-    if (!acc[building.district]) {
-      acc[building.district] = []
+  // Группируем строения по типу, а не по району
+  const myBuildingsByType = buildings.reduce((acc, building) => {
+    if (!acc[building.type]) {
+      acc[building.type] = []
     }
-    acc[building.district].push(building)
+    acc[building.type].push(building)
     return acc
   }, {} as Record<string, Building[]>)
 
@@ -187,13 +162,12 @@ export default function City() {
           <div className="city-section">
             <h2 className="city-section-title">Мои строения</h2>
             <div className="city-buildings-list">
-              {Object.entries(myBuildingsByDistrict).map(([districtCode, districtBuildings]) => (
-                <div key={districtCode} className="city-district-buildings">
-                  <h3 className="city-district-title">{getDistrictName(districtCode)}</h3>
-                  {districtBuildings.map((building) => {
+              {Object.entries(myBuildingsByType).map(([buildingType, typeBuildings]) => (
+                <div key={buildingType} className="city-district-buildings">
+                  {typeBuildings.map((building) => {
                     const accumulated = calculateAccumulatedIncome(building)
                     const config = availableBuildings.find(
-                      c => c.district === building.district && c.type === building.type
+                      c => c.type === building.type
                     )
                     const upgradePrice = config
                       ? Math.floor(config.basePrice * Math.pow(1.4, building.level))
@@ -254,32 +228,11 @@ export default function City() {
         {/* Доступные строения для покупки */}
         <div className="city-section">
           <h2 className="city-section-title">Доступные строения</h2>
-          
-          {/* Фильтр по районам */}
-          {districts.length > 0 && (
-            <div className="city-district-filters">
-              <button
-                className={`city-district-filter ${!selectedDistrict ? 'active' : ''}`}
-                onClick={() => setSelectedDistrict(null)}
-              >
-                Все
-              </button>
-              {districts.map(district => (
-                <button
-                  key={district.id}
-                  className={`city-district-filter ${selectedDistrict === district.code ? 'active' : ''}`}
-                  onClick={() => setSelectedDistrict(district.code)}
-                >
-                  {district.name}
-                </button>
-              ))}
-            </div>
-          )}
 
           <div className="city-available-buildings">
-            {filteredBuildings.map((config) => {
+            {availableBuildings.map((config) => {
               const existingBuilding = buildings.find(
-                b => b.district === config.district && b.type === config.type
+                b => b.type === config.type
               )
 
               return (
@@ -294,7 +247,6 @@ export default function City() {
                     )}
                     <div className="city-building-info">
                       <div className="city-building-name">{config.name}</div>
-                      <div className="city-building-district">{getDistrictName(config.district)}</div>
                       <div className="city-building-stats">
                         <div>Цена: {config.basePrice} NAR</div>
                         <div>Доход: {config.baseIncomePerHour} NAR/час</div>
@@ -321,12 +273,12 @@ export default function City() {
           </div>
         </div>
 
-        {districts.length === 0 && availableBuildings.length === 0 && buildings.length === 0 && (
+        {availableBuildings.length === 0 && buildings.length === 0 && (
           <div className="city-unavailable">
             <img src="/img/город.png" alt="City" className="city-unavailable-icon" />
             <h2 className="city-unavailable-title">Город недоступен</h2>
             <p className="city-unavailable-text">
-              Районы и строения пока не настроены администратором. Обратитесь к администратору для настройки города.
+              Строения пока не настроены администратором. Обратитесь к администратору для настройки города.
             </p>
           </div>
         )}

@@ -9,14 +9,8 @@ export class CityController {
 
   @Get('buildings')
   @UseGuards(JwtAuthGuard)
-  async getAvailableBuildings(@CurrentUser() user: any, @Param('district') district?: string) {
-    return this.cityService.getAvailableBuildings(district);
-  }
-
-  @Get('districts')
-  @UseGuards(JwtAuthGuard)
-  async getDistricts(@CurrentUser() user: any) {
-    return this.cityService.getDistricts();
+  async getAvailableBuildings(@CurrentUser() user: any) {
+    return this.cityService.getAvailableBuildings();
   }
 
   @Get('my-buildings')

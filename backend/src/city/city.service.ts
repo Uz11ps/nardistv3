@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
 import { Building } from './building.entity';
 import { BuildingConfig } from './building-config.entity';
-import { DistrictConfig } from './district-config.entity';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
@@ -13,52 +12,19 @@ export class CityService {
     private buildingsRepository: Repository<Building>,
     @InjectRepository(BuildingConfig)
     private buildingConfigsRepository: Repository<BuildingConfig>,
-    @InjectRepository(DistrictConfig)
-    private districtConfigsRepository: Repository<DistrictConfig>,
     private usersService: UsersService,
   ) {}
 
   /**
-   * Получить все районы
-   */
-  async getDistricts() {
-    const districts = await this.districtConfigsRepository.find({
-      where: { isActive: true },
-      order: { order: 'ASC' },
-    });
-
-    return districts.map(district => ({
-      id: district.id,
-      code: district.code,
-      name: district.name,
-      description: district.description,
-      icon: district.icon,
-      image: district.image,
-      order: district.order,
-      isActive: district.isActive,
-      requiredLevel: district.requiredLevel,
-      baseIncomePerDay: Number(district.baseIncomePerDay || 0),
-    }));
-  }
-
-  /**
    * Получить все доступные конфигурации строений
    */
-  async getAvailableBuildings(district?: string) {
-    const query = this.buildingConfigsRepository.createQueryBuilder('config');
-    
-    if (district) {
-      query.where('config.district = :district', { district });
-    }
-    
-    const configs = await query
-      .orderBy('config.district', 'ASC')
-      .addOrderBy('config.type', 'ASC')
-      .getMany();
+  async getAvailableBuildings() {
+    const configs = await this.buildingConfigsRepository.find({
+      order: { type: 'ASC' },
+    });
 
     return configs.map(config => ({
       id: config.id,
-      district: config.district,
       type: config.type,
       name: config.name,
       icon: config.icon,
@@ -81,7 +47,6 @@ export class CityService {
 
     return buildings.map(building => ({
       id: building.id,
-      district: building.district,
       type: building.type,
       level: building.level,
       accumulatedIncome: Number(building.accumulatedIncome),
@@ -124,7 +89,6 @@ export class CityService {
     // Создаем строение
     const building = this.buildingsRepository.create({
       userId,
-      district: config.district,
       type: config.type,
       level: 1,
       accumulatedIncome: '0',
@@ -136,7 +100,6 @@ export class CityService {
 
     return {
       id: building.id,
-      district: building.district,
       type: building.type,
       level: building.level,
       incomePerHour: Number(building.incomePerHour),
@@ -156,7 +119,7 @@ export class CityService {
     }
 
     const config = await this.buildingConfigsRepository.findOne({
-      where: { district: building.district, type: building.type },
+      where: { type: building.type },
     });
 
     if (!config) {
@@ -221,7 +184,7 @@ export class CityService {
     const newAccumulated = Number(building.accumulatedIncome) + incomeToAdd;
 
     const config = await this.buildingConfigsRepository.findOne({
-      where: { district: building.district, type: building.type },
+      where: { type: building.type },
     });
 
     // Ограничиваем максимальным накоплением

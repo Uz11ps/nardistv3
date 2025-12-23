@@ -12,9 +12,6 @@ export class BuildingConfig {
   id: string;
 
   @Column()
-  district: string; // Район (district_1, district_2, etc.)
-
-  @Column()
   type: string; // Тип строения (shop, factory, etc.)
 
   @Column()
