@@ -711,7 +711,7 @@ export default function BackgammonBoard({
       if (pointValue === 0) continue
       
       const isTopRow = pointIndex < 12
-      const pointInRow = pointIndex % 12
+      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
       
       const pointX = isTopRow
         ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
@@ -737,8 +737,9 @@ export default function BackgammonBoard({
       const dx = Math.abs(x - pointX)
       const dy = Math.abs(y - pointY)
       
-      // Проверяем попадание в треугольник
-      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight
+      // Улучшенная проверка попадания в треугольник (учитываем форму треугольника)
+      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight && 
+        (isTopRow ? y >= pointY && y <= pointY + triangleHeight : y <= pointY && y >= pointY - triangleHeight)
       if (inTriangle) {
         setDragging({ pointIndex, offsetX: x - pointX, offsetY: y - pointY })
         setDragPosition({ x, y })
@@ -782,7 +783,7 @@ export default function BackgammonBoard({
     
     for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
       const isTopRow = pointIndex < 12
-      const pointInRow = pointIndex % 12
+      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
       
       const pointX = isTopRow
         ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
@@ -791,12 +792,13 @@ export default function BackgammonBoard({
         ? pointHeight
         : height - pointHeight
       
-      // Проверяем попадание в треугольник
+      // Улучшенная проверка попадания в треугольник
       const triangleWidth = pointWidth * 0.8
       const triangleHeight = pointHeight * 0.9
       const dx = Math.abs(x - pointX)
       const dy = Math.abs(y - pointY)
-      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight
+      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight &&
+        (isTopRow ? y >= pointY && y <= pointY + triangleHeight : y <= pointY && y >= pointY - triangleHeight)
       
       if (inTriangle) {
         targetPoint = pointIndex
@@ -839,7 +841,7 @@ export default function BackgammonBoard({
     const points = gameState?.points || []
     points.forEach((pointValue: number, pointIndex: number) => {
       const isTopRow = pointIndex < 12
-      const pointInRow = pointIndex % 12
+      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
       
       const pointX = isTopRow
         ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
@@ -848,12 +850,13 @@ export default function BackgammonBoard({
         ? pointHeight
         : height - pointHeight
       
-      // Проверяем попадание в треугольник
+      // Улучшенная проверка попадания в треугольник
       const triangleWidth = pointWidth * 0.8
       const triangleHeight = pointHeight * 0.9
       const dx = Math.abs(x - pointX)
       const dy = Math.abs(y - pointY)
-      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight
+      const inTriangle = dx < triangleWidth / 2 && dy < triangleHeight &&
+        (isTopRow ? y >= pointY && y <= pointY + triangleHeight : y <= pointY && y >= pointY - triangleHeight)
       
       if (inTriangle) {
         handlePointClick(pointIndex)
