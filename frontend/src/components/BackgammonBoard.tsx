@@ -361,9 +361,13 @@ export default function BackgammonBoard({
       if (isTopRow) {
         // У верхнего края
         ctx.fillText(pointNumber.toString(), x, y + 15)
+        // DEBUG: Index
+        // ctx.font = '10px Arial'; ctx.fillStyle = '#aaa'; ctx.fillText(`[${pointIndex}]`, x, y + 30);
       } else {
         // У нижнего края
         ctx.fillText(pointNumber.toString(), x, y - 15)
+        // DEBUG: Index
+        // ctx.font = '10px Arial'; ctx.fillStyle = '#aaa'; ctx.fillText(`[${pointIndex}]`, x, y - 30);
       }
       
       // Отрисовка шашек на точке
