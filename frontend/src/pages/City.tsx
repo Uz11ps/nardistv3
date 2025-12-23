@@ -158,7 +158,12 @@ export default function City() {
 
   const getBuildingIcon = (building: Building): string | undefined => {
     const config = availableBuildings.find(c => c.type === building.type)
-    return config?.icon
+    return config?.icon ? getImageUrl(config.icon) || config.icon : undefined
+  }
+
+  const getBuildingImage = (building: Building): string | undefined => {
+    const config = availableBuildings.find(c => c.type === building.type)
+    return config?.image ? getImageUrl(config.image) || config.image : undefined
   }
 
   // Группируем строения по типу, а не по району
@@ -212,34 +217,40 @@ export default function City() {
                 ) : (
                   clanBuildings.map((building: any) => (
                     <div key={building.id || building.type} className="city-building-card">
-                      <div className="city-building-header">
-                        {building.icon && (
+                      {/* Изображение строения - заполняет все пространство */}
+                      {building.image && (
+                        <div className="city-building-image-container">
                           <img
-                            src={getImageUrl(building.icon) || building.icon}
+                            src={getImageUrl(building.image) || building.image}
                             alt={building.name}
-                            className="city-building-icon"
+                            className="city-building-image"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none'
                             }}
                           />
-                        )}
-                        <div className="city-building-info">
-                          <div className="city-building-name">{building.name}</div>
-                          <div className="city-building-stats">
-                            <div>Тип: {building.type}</div>
-                            <div>Доступно строений: {building.availableCount}</div>
-                            <div>Потенциальный доход: {building.totalPotentialIncome.toLocaleString()} NAR/час</div>
+                        </div>
+                      )}
+                      {/* Информация поверх изображения */}
+                      <div className="city-building-content">
+                        <div className="city-building-header">
+                          <div className="city-building-info">
+                            <div className="city-building-name">{building.name}</div>
+                            <div className="city-building-stats">
+                              <div>Тип: {building.type}</div>
+                              <div>Доступно строений: {building.availableCount}</div>
+                              <div>Потенциальный доход: {building.totalPotentialIncome.toLocaleString()} NAR/час</div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="city-building-actions">
-                        <Button
-                          variant="primary"
-                          onClick={() => handleCaptureBuilding(building.type)}
-                          disabled={capturing === building.type || building.availableCount === 0}
-                        >
-                          {capturing === building.type ? 'Захват...' : building.availableCount === 0 ? 'Нет доступных' : 'Захватить'}
-                        </Button>
+                        <div className="city-building-actions">
+                          <Button
+                            variant="primary"
+                            onClick={() => handleCaptureBuilding(building.type)}
+                            disabled={capturing === building.type || building.availableCount === 0}
+                          >
+                            {capturing === building.type ? 'Захват...' : building.availableCount === 0 ? 'Нет доступных' : 'Захватить'}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -267,49 +278,55 @@ export default function City() {
 
                     return (
                       <div key={building.id} className="city-building-card">
-                        <div className="city-building-header">
-                          {getBuildingIcon(building) && (
+                        {/* Изображение строения - заполняет все пространство */}
+                        {getBuildingImage(building) && (
+                          <div className="city-building-image-container">
                             <img
-                              src={getBuildingIcon(building)!}
+                              src={getBuildingImage(building)!}
                               alt={getBuildingName(building)}
-                              className="city-building-icon"
+                              className="city-building-image"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none'
                               }}
                             />
-                          )}
-                          <div className="city-building-info">
-                            <div className="city-building-name">{getBuildingName(building)}</div>
-                            <div className="city-building-level">Уровень {building.level}</div>
-                            <div className="city-building-income">
-                              Доход: {building.incomePerHour} NAR/час
-                            </div>
-                            {building.capturedByClanId && (
-                              <div className="city-building-captured">
-                                ⚠️ Захвачено кланом (доход -50%)
+                          </div>
+                        )}
+                        {/* Информация поверх изображения */}
+                        <div className="city-building-content">
+                          <div className="city-building-header">
+                            <div className="city-building-info">
+                              <div className="city-building-name">{getBuildingName(building)}</div>
+                              <div className="city-building-level">Уровень {building.level}</div>
+                              <div className="city-building-income">
+                                Доход: {building.incomePerHour} NAR/час
                               </div>
+                              {building.capturedByClanId && (
+                                <div className="city-building-captured">
+                                  ⚠️ Захвачено кланом (доход -50%)
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="city-building-actions">
+                            {accumulated > 0 && (
+                              <Button
+                                variant="primary"
+                                onClick={() => handleCollectIncome(building.id)}
+                                disabled={collecting === building.id}
+                              >
+                                {collecting === building.id ? 'Сбор...' : `Собрать ${accumulated} NAR`}
+                              </Button>
+                            )}
+                            {config && building.level < config.maxLevel && (
+                              <Button
+                                variant="secondary"
+                                onClick={() => handleUpgradeBuilding(building.id)}
+                                disabled={purchasing === building.id}
+                              >
+                                {purchasing === building.id ? 'Улучшение...' : `Улучшить (${upgradePrice} NAR)`}
+                              </Button>
                             )}
                           </div>
-                        </div>
-                        <div className="city-building-actions">
-                          {accumulated > 0 && (
-                            <Button
-                              variant="primary"
-                              onClick={() => handleCollectIncome(building.id)}
-                              disabled={collecting === building.id}
-                            >
-                              {collecting === building.id ? 'Сбор...' : `Собрать ${accumulated} NAR`}
-                            </Button>
-                          )}
-                          {config && building.level < config.maxLevel && (
-                            <Button
-                              variant="secondary"
-                              onClick={() => handleUpgradeBuilding(building.id)}
-                              disabled={purchasing === building.id}
-                            >
-                              {purchasing === building.id ? 'Улучшение...' : `Улучшить (${upgradePrice} NAR)`}
-                            </Button>
-                          )}
                         </div>
                       </div>
                     )
@@ -332,38 +349,44 @@ export default function City() {
 
               return (
                 <div key={config.id} className="city-building-card">
-                  <div className="city-building-header">
-                    {config.icon && (
+                  {/* Изображение строения - заполняет все пространство */}
+                  {config.image && (
+                    <div className="city-building-image-container">
                       <img
-                        src={getImageUrl(config.icon) || config.icon}
+                        src={getImageUrl(config.image) || config.image}
                         alt={config.name}
-                        className="city-building-icon"
+                        className="city-building-image"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none'
                         }}
                       />
-                    )}
-                    <div className="city-building-info">
-                      <div className="city-building-name">{config.name}</div>
-                      <div className="city-building-stats">
-                        <div>Цена: {config.basePrice} NAR</div>
-                        <div>Доход: {config.baseIncomePerHour} NAR/час</div>
-                        <div>Макс. уровень: {config.maxLevel}</div>
+                    </div>
+                  )}
+                  {/* Информация поверх изображения */}
+                  <div className="city-building-content">
+                    <div className="city-building-header">
+                      <div className="city-building-info">
+                        <div className="city-building-name">{config.name}</div>
+                        <div className="city-building-stats">
+                          <div>Цена: {config.basePrice} NAR</div>
+                          <div>Доход: {config.baseIncomePerHour} NAR/час</div>
+                          <div>Макс. уровень: {config.maxLevel}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="city-building-actions">
-                    {existingBuilding ? (
-                      <div className="city-building-owned">Уже куплено</div>
-                    ) : (
-                      <Button
-                        variant="primary"
-                        onClick={() => handlePurchaseBuilding(config.id)}
-                        disabled={purchasing === config.id}
-                      >
-                        {purchasing === config.id ? 'Покупка...' : `Купить за ${config.basePrice} NAR`}
-                      </Button>
-                    )}
+                    <div className="city-building-actions">
+                      {existingBuilding ? (
+                        <div className="city-building-owned">Уже куплено</div>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          onClick={() => handlePurchaseBuilding(config.id)}
+                          disabled={purchasing === config.id}
+                        >
+                          {purchasing === config.id ? 'Покупка...' : `Купить за ${config.basePrice} NAR`}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
