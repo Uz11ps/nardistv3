@@ -58,22 +58,6 @@ export class ProgressService {
     return level;
   }
   
-  /**
-   * Синхронизирует уровень пользователя на основе его текущего XP
-   * Публичный метод для использования в других сервисах
-   */
-  async syncLevelFromXP(userId: string): Promise<User> {
-    const user = await this.usersService.findOne(userId);
-    const totalXP = Number(user.xp || 0);
-    const correctLevel = this.getLevelFromTotalXP(totalXP);
-    const finalLevel = Math.max(1, correctLevel);
-    
-    if (user.level !== finalLevel) {
-      user.level = finalLevel;
-      await this.usersService['usersRepository'].save(user);
-    }
-    return user;
-  }
   private readonly ENERGY_RESTORE_INTERVAL = 30 * 60 * 1000; // 30 минут
   private readonly ENERGY_RESTORE_AMOUNT = 10; // 10 энергии за восстановление
   private readonly LIFE_RESTORE_INTERVAL = 4 * 60 * 60 * 1000; // 4 часа
