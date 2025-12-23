@@ -606,12 +606,30 @@ export default function BackgammonBoard({
         ctx.fill()
       }
       
-      // Подсветка возможных ходов
-      if (highlightedPoints.has(pointIndex)) {
+      // Подсветка возможных ходов (исходные точки)
+      if (highlightedPoints.has(pointIndex) && !dragging) {
         ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)'
         ctx.lineWidth = 3
         drawTrianglePoint(x, y, triangleWidth + 10, triangleHeight + 10, isTopRow)
         ctx.stroke()
+      }
+      
+      // Подсветка валидных точек назначения при перетаскивании
+      if (dragging && validTargetPoints.has(pointIndex)) {
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
+        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow)
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(0, 255, 0, 1)'
+        ctx.lineWidth = 3
+        drawTrianglePoint(x, y, triangleWidth + 5, triangleHeight + 5, isTopRow)
+        ctx.stroke()
+      }
+      
+      // Подсветка точки под курсором при перетаскивании
+      if (dragging && hoveredPoint === pointIndex) {
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
+        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow)
+        ctx.fill()
       }
     })
     
