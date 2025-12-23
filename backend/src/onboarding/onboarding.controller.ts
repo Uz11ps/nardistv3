@@ -22,6 +22,12 @@ export class OnboardingController {
     return this.onboardingService.completeProfileSetup(user.id, body);
   }
 
+  @Get('starter-kit-info')
+  @UseGuards(JwtAuthGuard)
+  async getStarterKitInfo(@CurrentUser() user: any) {
+    return this.onboardingService.getStarterKitInfo();
+  }
+
   @Post('claim-starter-kit')
   @UseGuards(JwtAuthGuard)
   async claimStarterKit(@CurrentUser() user: any) {

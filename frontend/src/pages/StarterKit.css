@@ -7,15 +7,56 @@
   min-height: 60vh;
 }
 
-.starter-kit-image-placeholder {
-  flex: 1;
-  min-height: 400px;
+.starter-kit-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.starter-kit-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
   border-radius: 12px;
   box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.starter-kit-item-coin {
+  grid-column: 1 / -1;
+}
+
+.starter-kit-item-image {
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #2a2a2a;
+}
+
+.starter-kit-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.starter-kit-item-placeholder {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.starter-kit-item-name {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
 }
 
 .starter-kit-claim-btn {

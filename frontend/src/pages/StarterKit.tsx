@@ -2,18 +2,42 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
-import { apiClient } from '../api/client'
+import { apiClient, getImageUrl } from '../api/client'
 import './StarterKit.css'
+
+interface StarterKitItem {
+  id: string
+  name: string
+  imageUrl?: string
+}
 
 export default function StarterKit() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [claimed, setClaimed] = useState(false)
+  const [starterKit, setStarterKit] = useState<{
+    narCoin: number
+    starterKit: {
+      board: StarterKitItem
+      dice: StarterKitItem
+      checkers: StarterKitItem
+    }
+  } | null>(null)
 
   useEffect(() => {
     checkOnboardingStatus()
+    loadStarterKitInfo()
   }, [])
+
+  const loadStarterKitInfo = async () => {
+    try {
+      const response = await apiClient.get('/onboarding/starter-kit-info')
+      setStarterKit(response.data)
+    } catch (error) {
+      console.error('Failed to load starter kit info:', error)
+    }
+  }
 
   const checkOnboardingStatus = async () => {
     try {
@@ -51,10 +75,54 @@ export default function StarterKit() {
       showBack={true}
     >
       <div className="starter-kit-content">
-        {/* Контент набора - пустая область для изображения */}
-        <div className="starter-kit-image-placeholder">
-          {/* Здесь будет изображение набора */}
-        </div>
+        {/* Элементы стартового набора */}
+        {starterKit && (
+          <div className="starter-kit-items">
+            {/* Базовая доска */}
+            <div className="starter-kit-item">
+              <div className="starter-kit-item-image">
+                {starterKit.starterKit.board.imageUrl ? (
+                  <img src={getImageUrl(starterKit.starterKit.board.imageUrl)} alt={starterKit.starterKit.board.name} />
+                ) : (
+                  <div className="starter-kit-item-placeholder">📋</div>
+                )}
+              </div>
+              <div className="starter-kit-item-name">{starterKit.starterKit.board.name}</div>
+            </div>
+
+            {/* Базовые кости */}
+            <div className="starter-kit-item">
+              <div className="starter-kit-item-image">
+                {starterKit.starterKit.dice.imageUrl ? (
+                  <img src={getImageUrl(starterKit.starterKit.dice.imageUrl)} alt={starterKit.starterKit.dice.name} />
+                ) : (
+                  <div className="starter-kit-item-placeholder">🎲</div>
+                )}
+              </div>
+              <div className="starter-kit-item-name">{starterKit.starterKit.dice.name}</div>
+            </div>
+
+            {/* Базовые шашки */}
+            <div className="starter-kit-item">
+              <div className="starter-kit-item-image">
+                {starterKit.starterKit.checkers.imageUrl ? (
+                  <img src={getImageUrl(starterKit.starterKit.checkers.imageUrl)} alt={starterKit.starterKit.checkers.name} />
+                ) : (
+                  <div className="starter-kit-item-placeholder">⚫</div>
+                )}
+              </div>
+              <div className="starter-kit-item-name">{starterKit.starterKit.checkers.name}</div>
+            </div>
+
+            {/* 1000 NAR койнов */}
+            <div className="starter-kit-item starter-kit-item-coin">
+              <div className="starter-kit-item-image">
+                <div className="starter-kit-item-placeholder">💰</div>
+              </div>
+              <div className="starter-kit-item-name">{starterKit.narCoin.toLocaleString()} NAR</div>
+            </div>
+          </div>
+        )}
 
         {/* Кнопка забрать набор */}
         {claimed ? (

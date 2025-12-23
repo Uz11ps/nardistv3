@@ -63,6 +63,47 @@ export class OnboardingService {
   }
 
   /**
+   * Получение информации о стартовом наборе (без выдачи)
+   */
+  async getStarterKitInfo(): Promise<{
+    narCoin: number;
+    starterKit: {
+      board: { id: string; name: string; imageUrl?: string };
+      dice: { id: string; name: string; imageUrl?: string };
+      checkers: { id: string; name: string; imageUrl?: string };
+    };
+  }> {
+    const starterCoinAmount = 1000;
+
+    // Выдаем базовые скины (доска, кости и шашки) - ищем скины с isDefault = true
+    const allSkins = await this.skinsService.getAllSkins();
+    const defaultBoard = allSkins.find(s => s.type === 'board' && s.isDefault);
+    const defaultDice = allSkins.find(s => s.type === 'dice' && s.isDefault);
+    const defaultCheckers = allSkins.find(s => s.type === 'checkers' && s.isDefault);
+
+    return {
+      narCoin: starterCoinAmount,
+      starterKit: {
+        board: defaultBoard ? {
+          id: defaultBoard.id,
+          name: defaultBoard.name,
+          imageUrl: defaultBoard.shopImageUrl || defaultBoard.imageUrl,
+        } : { id: '', name: 'Базовая доска' },
+        dice: defaultDice ? {
+          id: defaultDice.id,
+          name: defaultDice.name,
+          imageUrl: defaultDice.shopImageUrl || defaultDice.imageUrl,
+        } : { id: '', name: 'Базовые кости' },
+        checkers: defaultCheckers ? {
+          id: defaultCheckers.id,
+          name: defaultCheckers.name,
+          imageUrl: defaultCheckers.shopImageUrl || defaultCheckers.imageUrl,
+        } : { id: '', name: 'Базовые шашки' },
+      },
+    };
+  }
+
+  /**
    * Выдача стартового набора
    */
   async claimStarterKit(userId: string): Promise<{
