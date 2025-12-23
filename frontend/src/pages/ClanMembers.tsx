@@ -66,7 +66,7 @@ export default function ClanMembers() {
 
   const getRoleName = (role: string) => {
     const roleNames: { [key: string]: string } = {
-      leader: 'Глава клана',
+      leader: 'Глава федерации',
       officer: 'Офицер',
       member: 'Участник',
     }

@@ -111,6 +111,47 @@ export default function Profile() {
     }
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Проверяем размер файла (макс 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Размер файла не должен превышать 5MB')
+      return
+    }
+
+    // Проверяем тип файла
+    if (!file.type.startsWith('image/')) {
+      alert('Выберите изображение')
+      return
+    }
+
+    try {
+      setLoading(true)
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await apiClient.post('/upload/avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      if (response.data?.url) {
+        setEditFormData({ ...editFormData, avatarUrl: response.data.url })
+        alert('Изображение успешно загружено!')
+      }
+    } catch (error: any) {
+      console.error('Failed to upload image:', error)
+      alert(error.response?.data?.message || 'Ошибка загрузки изображения')
+    } finally {
+      setLoading(false)
+      // Сбрасываем input
+      e.target.value = ''
+    }
+  }
+
   const menuItems = [
     { icon: '/img/c86058c8dc0c93af3b43acd129cee0eae6877c3e.png', title: 'Магазин', path: '/shop' },
     { icon: '/img/инв.png', title: 'Инвентарь', path: '/inventory' },
@@ -206,9 +247,21 @@ export default function Profile() {
                     </div>
                   )}
                 </div>
-                <button className="profile-edit-use-telegram-btn" onClick={handleUseTelegramPhoto}>
-                  Использовать фото из Telegram
-                </button>
+                <div className="profile-edit-avatar-buttons">
+                  <label className="profile-edit-upload-btn">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{ display: 'none' }}
+                      disabled={loading}
+                    />
+                    📷 Загрузить изображение
+                  </label>
+                  <button className="profile-edit-use-telegram-btn" onClick={handleUseTelegramPhoto}>
+                    Использовать фото из Telegram
+                  </button>
+                </div>
               </div>
 
               {/* Никнейм */}

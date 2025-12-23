@@ -84,7 +84,7 @@ export default function ClanSearch() {
 
   return (
     <PageLayout
-      title="Поиск клана"
+      title="Поиск федерации"
       subtitle="Выбирай по духу, рейтингу или числу участников - и присоединяйся"
       showBack={true}
       tabs={[
@@ -99,7 +99,7 @@ export default function ClanSearch() {
         <input
           type="text"
           className="clan-search-input"
-          placeholder="Поиск клана"
+          placeholder="Поиск федерации"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -109,7 +109,7 @@ export default function ClanSearch() {
       {loading ? (
         <div className="clan-search-loading">Загрузка...</div>
       ) : clans.length === 0 ? (
-        <div className="clan-search-empty">Кланы не найдены</div>
+        <div className="clan-search-empty">Федерации не найдены</div>
       ) : (
         <div className="clan-search-list">
           {clans.map((clan) => (

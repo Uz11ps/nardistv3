@@ -58,10 +58,10 @@ export default function ClanDetail() {
   const handleJoin = async () => {
     try {
       await apiClient.post(`/clans/${clanId}/join`)
-      alert('Вы успешно вступили в клан!')
+      alert('Вы успешно вступили в федерацию!')
       navigate(`/clans/${clanId}/manage`)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при вступлении в клан')
+      alert(error.response?.data?.message || 'Ошибка при вступлении в федерацию')
     }
   }
 
@@ -80,7 +80,7 @@ export default function ClanDetail() {
 
   if (loading) {
     return (
-      <PageLayout title="Клан" showBack={true}>
+      <PageLayout title="Федерация" showBack={true}>
         <div className="clan-detail-loading">Загрузка...</div>
       </PageLayout>
     )
@@ -88,8 +88,8 @@ export default function ClanDetail() {
 
   if (!clan) {
     return (
-      <PageLayout title="Клан" showBack={true}>
-        <div className="clan-detail-empty">Клан не найден</div>
+      <PageLayout title="Федерация" showBack={true}>
+        <div className="clan-detail-empty">Федерация не найдена</div>
       </PageLayout>
     )
   }
@@ -113,7 +113,7 @@ export default function ClanDetail() {
         {/* Кнопка вступления */}
         {!isMember && (
           <button className="clan-detail-join-button" onClick={handleJoin}>
-            Вступить в клан
+            Вступить в федерацию
           </button>
         )}
       </div>

@@ -160,7 +160,7 @@ export default function City() {
                     </div>
                     {district.userBuilding.capturedByClanId && (
                       <div className="city-building-captured">
-                        ⚠️ Захвачено кланом
+                        ⚠️ Захвачено федерацией
                         <br />
                         <small>Вы получаете 50% дохода</small>
                       </div>

@@ -29,7 +29,7 @@ export default function ClanCreate() {
       navigate(`/clans/${response.data.id}/manage`)
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при создании федерации')
-      console.error('Failed to create clan:', error)
+      console.error('Failed to create federation:', error)
     } finally {
       setLoading(false)
     }
@@ -69,7 +69,7 @@ export default function ClanCreate() {
         {/* Форма */}
         <form className="clan-create-form" onSubmit={handleSubmit}>
           <div className="clan-create-form-group">
-            <label className="clan-create-label">Название клана</label>
+            <label className="clan-create-label">Название федерации</label>
             <input
               type="text"
               className="clan-create-input"
@@ -98,12 +98,12 @@ export default function ClanCreate() {
             className="clan-create-submit-button"
             disabled={loading}
           >
-            {loading ? 'Создание...' : 'Создать клан'}
+            {loading ? 'Создание...' : 'Создать федерацию'}
           </button>
         </form>
 
         <div className="clan-create-footer">
-          После создания клана ты сможешь приглашать участников и улучшать район
+          После создания федерации ты сможешь приглашать участников и улучшать район
         </div>
       </div>
     </PageLayout>

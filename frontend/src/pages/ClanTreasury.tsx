@@ -117,7 +117,7 @@ export default function ClanTreasury() {
 
   if (loading) {
     return (
-      <PageLayout title="Казна клана" showBack={true}>
+      <PageLayout title="Казна федерации" showBack={true}>
         <div className="clan-treasury-loading">Загрузка...</div>
       </PageLayout>
     )
@@ -132,8 +132,8 @@ export default function ClanTreasury() {
 
   return (
     <PageLayout
-      title="Казна клана"
-      subtitle="Общий фонд клана. Средства поступают из налогов и вкладов участников"
+      title="Казна федерации"
+      subtitle="Общий фонд федерации. Средства поступают из налогов и вкладов участников"
       showBack={true}
     >
       <div className="clan-treasury-content">
@@ -144,12 +144,6 @@ export default function ClanTreasury() {
           <div className="clan-treasury-weekly-income">
             +{weeklyIncome.toLocaleString()} NAR / неделя (поступления)
           </div>
-          <button 
-            className="clan-treasury-contribute-button"
-            onClick={() => setShowContributeModal(true)}
-          >
-            Вложиться
-          </button>
         </div>
 
         {/* Последние операции */}
@@ -176,6 +170,12 @@ export default function ClanTreasury() {
             })}
           </div>
           <button className="clan-treasury-view-all-button">Посмотреть всё</button>
+          <button 
+            className="clan-treasury-contribute-button"
+            onClick={() => setShowContributeModal(true)}
+          >
+            Вложиться
+          </button>
         </div>
       </div>
 

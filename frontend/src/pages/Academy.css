@@ -59,6 +59,41 @@
   transform: scale(0.98);
 }
 
+.academy-create-article-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.25);
+  border: none;
+  color: #FFF;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  animation: pulse 2s infinite;
+}
+
+.academy-create-article-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px 0 rgba(232, 65, 66, 0.4);
+}
+
+.academy-create-article-button:active {
+  transform: scale(0.95);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.5);
+  }
+}
+
 /* Course/Article Cards */
 .academy-list {
   display: flex;

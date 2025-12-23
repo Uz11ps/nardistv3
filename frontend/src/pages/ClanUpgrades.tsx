@@ -66,7 +66,7 @@ export default function ClanUpgrades() {
   const upgradeConfig = [
     {
       key: 'level' as const,
-      title: 'Уровень клана',
+      title: 'Уровень федерации',
       description: 'Увеличивает кол-во участников',
     },
     {
@@ -81,7 +81,7 @@ export default function ClanUpgrades() {
     },
     {
       key: 'fort' as const,
-      title: 'Форт клана',
+      title: 'Форт федерации',
       description: 'Уменьшает потери при сражениях за районы',
     },
   ]
@@ -107,7 +107,7 @@ export default function ClanUpgrades() {
   return (
     <PageLayout
       title="Улучшения"
-      subtitle="Используй средства из казны, чтоб усиливать влияние и бонусы клана"
+      subtitle="Используй средства из казны, чтоб усиливать влияние и бонусы федерации"
       showBack={true}
     >
       <div className="clan-upgrades-list">
@@ -139,7 +139,7 @@ export default function ClanUpgrades() {
 
       {!isLeader && (
         <div className="clan-upgrades-footer">
-          Только глава клана может управлять улучшениями
+          Только глава федерации может управлять улучшениями
         </div>
       )}
     </PageLayout>

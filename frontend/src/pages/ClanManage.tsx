@@ -71,34 +71,34 @@ export default function ClanManage() {
   const isLeader = member?.role === 'leader' || clan?.leaderId === user?.id
 
   const handleLeave = async () => {
-    if (!confirm('Вы уверены, что хотите покинуть клан?')) {
+    if (!confirm('Вы уверены, что хотите покинуть федерацию?')) {
       return
     }
 
     try {
       await apiClient.post(`/clans/${clanId}/leave`)
-      alert('Вы покинули клан')
+      alert('Вы покинули федерацию')
       navigate('/', { replace: true })
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при выходе из клана')
+      alert(error.response?.data?.message || 'Ошибка при выходе из федерации')
     }
   }
 
   const handleDisband = async () => {
-    if (!confirm('Вы уверены, что хотите распустить клан? Все участники потеряют клан, и клан будет удален навсегда.')) {
+    if (!confirm('Вы уверены, что хотите распустить федерацию? Все участники потеряют федерацию, и федерация будет удалена навсегда.')) {
       return
     }
 
-    if (!confirm('Это действие необратимо! Вы действительно хотите распустить клан?')) {
+    if (!confirm('Это действие необратимо! Вы действительно хотите распустить федерацию?')) {
       return
     }
 
     try {
       await apiClient.post(`/clans/${clanId}/disband`)
-      alert('Клан распущен')
+      alert('Федерация распущена')
       navigate('/', { replace: true })
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при распускании клана')
+      alert(error.response?.data?.message || 'Ошибка при распускании федерации')
     }
   }
 
@@ -117,7 +117,7 @@ export default function ClanManage() {
 
   if (loading) {
     return (
-      <PageLayout title="Клан" showBack={true}>
+      <PageLayout title="Федерация" showBack={true}>
         <div className="clan-manage-loading">Загрузка...</div>
       </PageLayout>
     )
@@ -125,8 +125,8 @@ export default function ClanManage() {
 
   if (!clan) {
     return (
-      <PageLayout title="Клан" showBack={true}>
-        <div className="clan-manage-empty">Клан не найден</div>
+      <PageLayout title="Федерация" showBack={true}>
+        <div className="clan-manage-empty">Федерация не найдена</div>
       </PageLayout>
     )
   }
@@ -153,7 +153,7 @@ export default function ClanManage() {
             Казна
           </button>
           <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/upgrades`)}>
-            Улучшить клан
+            Улучшить федерацию
           </button>
           <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/members`)}>
             Участники
@@ -163,11 +163,11 @@ export default function ClanManage() {
           </button>
           {isLeader ? (
             <button className="clan-manage-button clan-manage-button-disband" onClick={handleDisband}>
-              Распустить клан
+              Распустить федерацию
             </button>
           ) : (
             <button className="clan-manage-button clan-manage-button-leave" onClick={handleLeave}>
-              Покинуть клан
+              Покинуть федерацию
             </button>
           )}
         </div>

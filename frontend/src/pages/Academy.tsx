@@ -264,6 +264,8 @@ export default function Academy() {
     )
   }
 
+  const canCreateArticle = (user?.level || 0) >= 20
+
   return (
     <PageLayout
       title="Академия"
@@ -273,6 +275,17 @@ export default function Academy() {
         { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
         { id: 'materials', label: 'Мои материалы', active: activeTab === 'materials', onClick: () => setActiveTab('materials') },
       ]}
+      rightAction={
+        canCreateArticle && activeTab === 'articles' ? (
+          <button 
+            className="academy-create-article-button"
+            onClick={() => navigate('/academy/publish?type=article')}
+            title="Создать статью"
+          >
+            ✏️
+          </button>
+        ) : undefined
+      }
     >
       {/* Курсы */}
       {activeTab === 'courses' && (

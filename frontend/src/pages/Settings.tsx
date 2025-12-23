@@ -132,7 +132,7 @@ export default function Settings() {
         <div className="settings-divider" />
 
         <div className="settings-item" onClick={() => handleToggle('clanEvents')}>
-          <span className="settings-label">Клановые события</span>
+          <span className="settings-label">События федерации</span>
           <div className={`settings-toggle ${settings.clanEvents ? 'active' : ''}`}>
             {settings.clanEvents && <div className="settings-toggle-dot" />}
           </div>
