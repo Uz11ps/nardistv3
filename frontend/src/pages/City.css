@@ -200,3 +200,217 @@
 .city-district-button-details:hover {
   background: #4a4a4a;
 }
+
+/* Контент страницы */
+.city-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 16px 40px;
+}
+
+.city-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.city-section-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Список строений */
+.city-buildings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.city-district-buildings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.city-district-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  padding: 0 4px;
+}
+
+/* Карточка строения */
+.city-building-card {
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.city-building-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.city-building-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+
+.city-building-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.city-building-name {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.city-building-level {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.city-building-district {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.city-building-income {
+  color: #ffd700;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.city-building-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.city-building-stats > div {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.city-building-captured {
+  color: #FF9800;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 152, 0, 0.1);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.city-building-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.city-building-owned {
+  color: #4CAF50;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* Фильтры районов */
+.city-district-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.city-district-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.city-district-filter {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.city-district-filter:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #FFF;
+}
+
+.city-district-filter.active {
+  background: rgba(201, 60, 61, 0.2);
+  border-color: #C93C3D;
+  color: #FFF;
+}
+
+/* Доступные строения */
+.city-available-buildings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .city-content {
+    padding: 0 12px 40px;
+  }
+
+  .city-building-card {
+    padding: 12px;
+  }
+
+  .city-building-actions {
+    flex-direction: column;
+  }
+
+  .city-building-actions > * {
+    width: 100%;
+  }
+}

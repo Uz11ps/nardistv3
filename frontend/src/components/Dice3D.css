@@ -1,9 +1,9 @@
 .dice3d-container {
   display: flex;
-  gap: var(--spacing-2);
+  gap: 8px;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(var(--shadow-md));
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
 }
 
 .dice3d {
@@ -12,7 +12,7 @@
   position: relative;
   perspective: 200px;
   transform-style: preserve-3d;
-  transition: transform var(--transition-base);
+  transition: transform 0.2s;
 }
 
 .dice3d:hover {
@@ -23,30 +23,30 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  border: 2px solid var(--color-border-light);
-  background: var(--color-background-secondary);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
 }
 
 .dice3d-face {
   width: 100%;
   height: 100%;
-  background: var(--color-text-primary);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: #FFF;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: var(--spacing-1);
-  padding: var(--spacing-2);
-  box-shadow: var(--shadow-md);
-  transition: all var(--transition-base);
+  gap: 4px;
+  padding: 6px;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  transition: all 0.2s;
 }
 
 .dice3d-face:hover {
-  box-shadow: var(--shadow-primary);
-  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+  border-color: #C93C3D;
 }
 
 .dice3d-dots {
@@ -59,12 +59,12 @@
 }
 
 .dice3d-dot {
-  background: var(--color-background);
-  border-radius: var(--radius-full);
+  background: #0B0C0E;
+  border-radius: 50%;
   width: 8px;
   height: 8px;
   margin: auto;
-  transition: all var(--transition-fast);
+  transition: all 0.15s;
 }
 
 .dice3d-animating {
@@ -96,10 +96,10 @@
 
 @keyframes diceGlow {
   0%, 100% {
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
   }
   50% {
-    box-shadow: var(--shadow-glow);
+    box-shadow: 0 4px 16px 0 rgba(232, 65, 66, 0.5);
   }
 }
 
@@ -113,6 +113,10 @@
   .dice3d-dot {
     width: 6px;
     height: 6px;
+  }
+  
+  .dice3d-container {
+    gap: 6px;
   }
 }
 
@@ -128,6 +132,6 @@
   }
   
   .dice3d-container {
-    gap: var(--spacing-1);
+    gap: 4px;
   }
 }
