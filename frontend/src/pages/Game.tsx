@@ -31,7 +31,7 @@ export default function Game() {
   const [gameStatus, setGameStatus] = useState<string>('waiting')
   const [player1Timer, setPlayer1Timer] = useState<number>(30)
   const [player2Timer, setPlayer2Timer] = useState<number>(30)
-  const [moveTimer, setMoveTimer] = useState<number>(20) // Таймер на ход (20 секунд)
+  const [moveTimer, setMoveTimer] = useState<number>(30) // Таймер на ход (30 секунд)
   const [overtimeTimer, setOvertimeTimer] = useState<number>(60) // Овертайм (1 минута)
   const [isInOvertime, setIsInOvertime] = useState<boolean>(false) // Флаг овертайма
   const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
@@ -92,8 +92,7 @@ export default function Game() {
     }
   }, [gameInfo?.player1Id, gameInfo?.player2Id])
 
-  // Таймер на ход: 20 секунд, затем 1 минута овертайм
-  // Овертайм НЕ обновляется в течение игры, обновляется только каждый ход
+  // Таймер на ход: 30 секунд, затем 1 минута овертайм
   useEffect(() => {
     // Очищаем предыдущие таймеры
     if (moveTimerRef.current) {
@@ -107,30 +106,34 @@ export default function Game() {
 
     // Если это мой ход и игра идет, запускаем таймер
     if (gameState?.canMove && gameStatus === 'in_progress' && gameState?.dice && !isBotGame) {
-      // Сбрасываем таймер на 20 секунд при новом ходе
-      setMoveTimer(20)
-      setIsInOvertime(false)
-      setOvertimeTimer(60) // Овертайм всегда 60 секунд
+      // Если мы только что начали ход (таймер был сброшен в 30 в else или вручную), 
+      // или если мы перешли в состояние canMove
       
       moveTimerRef.current = setInterval(() => {
         setMoveTimer((prev) => {
           if (prev <= 1) {
             // Основной таймер закончился - переходим в овертайм
             setIsInOvertime(true)
-            if (overtimeRef.current) {
-              clearInterval(overtimeRef.current)
+            if (!overtimeRef.current) {
+              overtimeRef.current = setInterval(() => {
+                setOvertimeTimer((prevOvertime) => {
+                  if (prevOvertime <= 1) {
+                    // Овертайм закончился - техническое поражение
+                    handleAutoMove()
+                    if (overtimeRef.current) {
+                      clearInterval(overtimeRef.current)
+                      overtimeRef.current = null
+                    }
+                    return 0
+                  }
+                  return prevOvertime - 1
+                })
+              }, 1000)
             }
-            // Запускаем овертайм таймер
-            overtimeRef.current = setInterval(() => {
-              setOvertimeTimer((prevOvertime) => {
-                if (prevOvertime <= 1) {
-                  // Овертайм закончился - автолуз
-                  handleAutoMove()
-                  return 0
-                }
-                return prevOvertime - 1
-              })
-            }, 1000)
+            if (moveTimerRef.current) {
+              clearInterval(moveTimerRef.current)
+              moveTimerRef.current = null
+            }
             return 0
           }
           return prev - 1
@@ -138,8 +141,8 @@ export default function Game() {
       }, 1000)
     } else {
       // Не мой ход или игра не идет - сбрасываем таймеры
-      setMoveTimer(20)
       setIsInOvertime(false)
+      setMoveTimer(30)
       setOvertimeTimer(60)
     }
 
@@ -153,30 +156,19 @@ export default function Game() {
         overtimeRef.current = null
       }
     }
-  }, [gameState?.canMove, gameStatus, gameState?.dice, isBotGame])
+  }, [gameState?.canMove, gameStatus, !!gameState?.dice, isBotGame])
 
   // Функция автолуза
   const handleAutoMove = async () => {
-    if (!gameId || !gameState?.canMove || !gameState?.dice) return
+    if (!gameId) return
 
+    console.log('⏱️ Таймер истек! Оформляем техническое поражение...')
     try {
-      // Получаем возможные ходы
-      const response = await apiClient.get(`/games/${gameId}/possible-moves`)
-      const possibleMoves = response.data?.moves || []
-      
-      if (possibleMoves.length > 0) {
-        // Берем первый доступный ход
-        const firstMove = possibleMoves[0]
-        if (firstMove.length > 0) {
-          const move = firstMove[0]
-          handleMove(move.from, move.to, move.die)
-        }
-      } else {
-        // Если нет доступных ходов, пропускаем ход (это может быть ситуация когда все ходы заблокированы)
-        console.log('⚠️ Нет доступных ходов для автолуза')
-      }
+      await apiClient.post(`/games/${gameId}/resign`)
+      setGameStatus('finished')
+      // После resignGame сервер пришлет событие game_finished через сокет
     } catch (error) {
-      console.error('❌ Ошибка при автолузе:', error)
+      console.error('❌ Ошибка при автоматической сдаче:', error)
     }
   }
   

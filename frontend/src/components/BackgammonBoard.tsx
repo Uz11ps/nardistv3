@@ -714,6 +714,107 @@ export default function BackgammonBoard({
     }
   }
 
+  // Обработка начала касания (мобильные устройства)
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!canMove || !isMyTurn || !canvasRef.current) return
+    
+    // Предотвращаем прокрутку страницы при перетаскивании шашки
+    if (e.touches.length === 1) {
+      const touch = e.touches[0]
+      const canvas = canvasRef.current
+      const rect = canvas.getBoundingClientRect()
+      const x = touch.clientX - rect.left
+      const y = touch.clientY - rect.top
+      
+      const pointIndex = getPointAtPosition(x, y, canvas)
+      if (pointIndex !== null) {
+        // Проверяем, есть ли шашки на этой точке
+        const points = gameState?.points || []
+        let pointValue = 0
+        if (pointIndex === 24 || pointIndex === 25) {
+          const bar = gameState?.bar || { white: 0, black: 0 }
+          pointValue = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1) 
+            ? (isPlayer1 ? bar.white : bar.black)
+            : 0
+        } else if (pointIndex >= 0 && pointIndex < points.length) {
+          pointValue = points[pointIndex]
+        }
+        
+        const isMyChecker = isPlayer1 ? pointValue > 0 : pointValue < 0
+        const isMyBar = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
+        
+        if (isMyChecker || isMyBar) {
+          const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+          const { x: pointX, y: pointY } = getPointCoordinates(pointIndex, canvas)
+          
+          setDragging({ pointIndex, offsetX: x - pointX, offsetY: y - pointY })
+          setDragPosition({ x, y })
+          setSelectedPoint(pointIndex)
+          
+          const validTargets = new Set<number>()
+          pointMoves.forEach(move => {
+            if (move.to !== undefined && move.to !== null) {
+              validTargets.add(move.to)
+            }
+          })
+          setValidTargetPoints(validTargets)
+        }
+      }
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!dragging || !canvasRef.current) return
+    
+    // Предотвращаем прокрутку
+    if (e.cancelable) e.preventDefault()
+    
+    const touch = e.touches[0]
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const x = touch.clientX - rect.left
+    const y = touch.clientY - rect.top
+    
+    setDragPosition({ x, y })
+    const hovered = getPointAtPosition(x, y, canvas)
+    setHoveredPoint(hovered)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!dragging || !canvasRef.current) return
+    
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    
+    // У TouchEnd нет координат в e.touches, используем последнюю позицию dragPosition
+    if (dragPosition) {
+      const x = dragPosition.x
+      const y = dragPosition.y
+      
+      const targetPoint = getPointAtPosition(x, y, canvas)
+      
+      if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
+        if (targetPoint === -1) {
+          const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
+          if (bearOffMove) {
+            onMove(bearOffMove.from, bearOffMove.to, bearOffMove.die)
+          }
+        } else if (validTargetPoints.has(targetPoint)) {
+          const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
+          if (move) {
+            onMove(move.from, move.to, move.die)
+          }
+        }
+      }
+    }
+    
+    setDragging(null)
+    setDragPosition(null)
+    setSelectedPoint(null)
+    setHoveredPoint(null)
+    setValidTargetPoints(new Set())
+  }
+
   // Обработка начала перетаскивания
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // console.log('MouseDown', { canMove, isMyTurn, dragging })
@@ -871,6 +972,10 @@ export default function BackgammonBoard({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'none' }} // Отключаем стандартные жесты браузера на канвасе
       />
       
       {/* Кубики */}
