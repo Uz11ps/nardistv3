@@ -2162,11 +2162,11 @@ export default function Admin() {
                   </label>
                 </div>
                 <div className="form-group">
-                  <label>Превью (для магазина):</label>
+                  <label>Превью (для инвентаря):</label>
                   {selectedSkin.imageUrl && (
                     <div style={{ marginBottom: '8px' }}>
                       <img 
-                        src={selectedSkin.imageUrl} 
+                        src={getImageUrl(selectedSkin.imageUrl) || selectedSkin.imageUrl} 
                         alt={selectedSkin.name}
                         style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
                         onError={(e) => {
@@ -2194,7 +2194,42 @@ export default function Admin() {
                     }}
                   />
                   <div id="edit-skin-image-preview" style={{ marginTop: '8px' }}></div>
-                  <span className="field-hint">Превью для отображения в магазине и инвентаре</span>
+                  <span className="field-hint">Превью для отображения в инвентаре</span>
+                </div>
+                <div className="form-group">
+                  <label>Изображение для магазина:</label>
+                  {selectedSkin.shopImageUrl && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <img 
+                        src={getImageUrl(selectedSkin.shopImageUrl) || selectedSkin.shopImageUrl} 
+                        alt="Изображение для магазина"
+                        style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    id="edit-skin-shop-image"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        const reader = new FileReader()
+                        reader.onload = (event) => {
+                          const preview = document.getElementById('edit-skin-shop-image-preview')
+                          if (preview) {
+                            preview.innerHTML = `<img src="${event.target?.result}" alt="Изображение для магазина" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                          }
+                        }
+                        reader.readAsDataURL(file)
+                      }
+                    }}
+                  />
+                  <div id="edit-skin-shop-image-preview" style={{ marginTop: '8px' }}></div>
+                  <span className="field-hint">Отдельное изображение для отображения в магазине</span>
                 </div>
                 {selectedSkin.type === 'board' && (
                   <div className="form-group">
@@ -2202,7 +2237,7 @@ export default function Admin() {
                     {selectedSkin.boardTextureUrl && (
                       <div style={{ marginBottom: '8px' }}>
                         <img 
-                          src={selectedSkin.boardTextureUrl} 
+                          src={getImageUrl(selectedSkin.boardTextureUrl) || selectedSkin.boardTextureUrl} 
                           alt="Board texture"
                           style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
                           onError={(e) => {
@@ -2243,7 +2278,7 @@ export default function Admin() {
                             <div key={num} style={{ textAlign: 'center' }}>
                               <div style={{ fontSize: '12px', marginBottom: '4px', color: '#aaa' }}>Кубик {num}</div>
                               <img 
-                                src={selectedSkin.diceTextureUrls[num]} 
+                                src={getImageUrl(selectedSkin.diceTextureUrls[num]) || selectedSkin.diceTextureUrls[num]} 
                                 alt={`Dice ${num}`}
                                 style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', border: '1px solid #333' }}
                                 onError={(e) => {
@@ -2290,7 +2325,7 @@ export default function Admin() {
                     {selectedSkin.checkersTextureUrl && (
                       <div style={{ marginBottom: '8px' }}>
                         <img 
-                          src={selectedSkin.checkersTextureUrl} 
+                          src={getImageUrl(selectedSkin.checkersTextureUrl) || selectedSkin.checkersTextureUrl} 
                           alt="Checkers texture"
                           style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
                           onError={(e) => {
@@ -2342,6 +2377,15 @@ export default function Admin() {
                         const imageFormData = new FormData()
                         imageFormData.append('image', fileInput.files[0])
                         await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-image`, imageFormData, {
+                          headers: { 'Content-Type': 'multipart/form-data' }
+                        })
+                      }
+                      
+                      const shopImageInput = document.getElementById('edit-skin-shop-image') as HTMLInputElement
+                      if (shopImageInput.files && shopImageInput.files[0]) {
+                        const shopImageFormData = new FormData()
+                        shopImageFormData.append('shopImage', shopImageInput.files[0])
+                        await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-textures`, shopImageFormData, {
                           headers: { 'Content-Type': 'multipart/form-data' }
                         })
                       }
@@ -2445,7 +2489,7 @@ export default function Admin() {
                 </label>
               </div>
               <div className="form-group">
-                <label>Превью (для магазина):</label>
+                <label>Превью (для инвентаря):</label>
                 <input 
                   type="file" 
                   accept="image/*" 
@@ -2465,7 +2509,30 @@ export default function Admin() {
                   }}
                 />
                 <div id="skin-image-preview" style={{ marginTop: '8px' }}></div>
-                <span className="field-hint">Превью для отображения в магазине и инвентаре</span>
+                <span className="field-hint">Превью для отображения в инвентаре</span>
+              </div>
+              <div className="form-group">
+                <label>Изображение для магазина:</label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  id="skin-shop-image"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = (event) => {
+                        const preview = document.getElementById('skin-shop-image-preview')
+                        if (preview) {
+                          preview.innerHTML = `<img src="${event.target?.result}" alt="Изображение для магазина" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                        }
+                      }
+                      reader.readAsDataURL(file)
+                    }
+                  }}
+                />
+                <div id="skin-shop-image-preview" style={{ marginTop: '8px' }}></div>
+                <span className="field-hint">Отдельное изображение для отображения в магазине</span>
               </div>
               <div className="form-group" id="skin-texture-group" style={{ display: 'none' }}>
                 <label id="skin-texture-label">Текстура (файл для игры):</label>
@@ -2589,6 +2656,11 @@ export default function Admin() {
                   formData.append('preview', fileInput.files[0])
                 }
                 
+                const shopImageInput = document.getElementById('skin-shop-image') as HTMLInputElement
+                if (shopImageInput.files && shopImageInput.files[0]) {
+                  formData.append('shopImage', shopImageInput.files[0])
+                }
+                
                 // Добавляем текстуру в зависимости от типа
                 if (skinType === 'board') {
                   const textureInput = document.getElementById('skin-texture') as HTMLInputElement
@@ -2625,6 +2697,10 @@ export default function Admin() {
                   ;(document.getElementById('skin-premium') as HTMLInputElement).checked = false
                   ;(document.getElementById('skin-default') as HTMLInputElement).checked = false
                   fileInput.value = ''
+                  const shopImageInput = document.getElementById('skin-shop-image') as HTMLInputElement
+                  if (shopImageInput) shopImageInput.value = ''
+                  const shopImagePreview = document.getElementById('skin-shop-image-preview')
+                  if (shopImagePreview) shopImagePreview.innerHTML = ''
                   // Очистить поля текстур
                   const textureInput = document.getElementById('skin-texture') as HTMLInputElement
                   if (textureInput) textureInput.value = ''

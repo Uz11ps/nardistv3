@@ -532,8 +532,8 @@ export class AdminController {
     AnyFilesInterceptor({ // Принимаем файлы с любыми именами полей: preview, boardTexture, diceTexture1-6, checkersTexture
       storage: diskStorage({
         destination: (req, file, cb) => {
-          // Сохраняем в backend/uploads/skins - nginx отдает их напрямую из /app/uploads
-          // Это публичные файлы, которые отдаются через nginx из backend/uploads
+          // ВСЕ скины сохраняются в backend/uploads/skins - единый путь для всех
+          // Nginx отдает их напрямую из /app/uploads через /uploads/skins/
           const uploadsDir = join(process.cwd(), 'uploads', 'skins');
           // Создаем директорию если её нет
           if (!existsSync(uploadsDir)) {
@@ -594,6 +594,7 @@ export class AdminController {
     
     // Обрабатываем загруженные файлы
     let imageUrl = body.imageUrl || null;
+    let shopImageUrl = body.shopImageUrl || null;
     let boardTextureUrl = null;
     let diceTextureUrl = null;
     let diceTextureUrls: any = null;
@@ -607,6 +608,8 @@ export class AdminController {
         // Определяем тип файла по fieldname
         if (file.fieldname === 'preview' || file.fieldname === 'image') {
           imageUrl = fileUrl;
+        } else if (file.fieldname === 'shopImage' || file.fieldname === 'shopPreview') {
+          shopImageUrl = fileUrl; // Отдельное изображение для магазина
         } else if (file.fieldname === 'boardTexture') {
           boardTextureUrl = fileUrl;
         } else if (file.fieldname === 'diceTexture') {
@@ -658,6 +661,7 @@ export class AdminController {
       price: body.price ? parseFloat(body.price) : null,
       rarity: body.rarity || 'common',
       imageUrl,
+      shopImageUrl, // Отдельное изображение для магазина
       boardTextureUrl,
       diceTextureUrl,
       diceTextureUrls: diceTextureUrls || null,
@@ -693,8 +697,8 @@ export class AdminController {
     FileInterceptor('image', {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          // Сохраняем в frontend/public/uploads/skins для единообразия с классическими скинами
-          const uploadsDir = join(process.cwd(), '..', 'frontend', 'public', 'uploads', 'skins');
+          // ВСЕ скины сохраняются в backend/uploads/skins - единый путь для всех
+          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
           if (!existsSync(uploadsDir)) {
             mkdirSync(uploadsDir, { recursive: true });
           }
@@ -738,8 +742,8 @@ export class AdminController {
     AnyFilesInterceptor({ // preview, boardTexture/diceTexture1-6/checkersTexture (до 10 файлов для кубиков)
       storage: diskStorage({
         destination: (req, file, cb) => {
-          // Сохраняем в frontend/public/uploads/skins для единообразия с классическими скинами
-          const uploadsDir = join(process.cwd(), '..', 'frontend', 'public', 'uploads', 'skins');
+          // ВСЕ скины сохраняются в backend/uploads/skins - единый путь для всех
+          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
           if (!existsSync(uploadsDir)) {
             mkdirSync(uploadsDir, { recursive: true });
           }
@@ -786,6 +790,8 @@ export class AdminController {
       const fileUrl = `/uploads/skins/${file.filename}`;
       if (file.fieldname === 'image' || file.fieldname === 'preview') {
         updateData.imageUrl = fileUrl;
+      } else if (file.fieldname === 'shopImage' || file.fieldname === 'shopPreview') {
+        updateData.shopImageUrl = fileUrl; // Отдельное изображение для магазина
       } else if (file.fieldname === 'boardTexture' && skin.type === 'board') {
         updateData.boardTextureUrl = fileUrl;
       } else if (file.fieldname === 'diceTexture' && skin.type === 'dice') {

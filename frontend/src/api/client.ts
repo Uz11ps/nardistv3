@@ -52,6 +52,7 @@ apiClient.interceptors.response.use(
 
 /**
  * Формирует полный URL для изображения
+ * ВСЕ скины используют единый путь /uploads/skins/
  * Если imageUrl уже полный URL - возвращает как есть
  * Если относительный путь - добавляет базовый URL
  */
@@ -63,20 +64,25 @@ export const getImageUrl = (imageUrl?: string | null): string | undefined => {
     return imageUrl
   }
   
-  // Если путь начинается с /uploads/, возвращаем как есть
-  // Nginx отдает файлы напрямую без /api префикса
+  // ЕДИНЫЙ ПУТЬ: ВСЕ скины через /uploads/skins/
+  // Nginx отдает файлы напрямую из /app/uploads/skins/ через /uploads/skins/
   if (imageUrl.startsWith('/uploads/')) {
     return imageUrl
   }
   
-  // Если путь начинается с /skins/, возвращаем как есть (файлы из public/skins/)
-  if (imageUrl.startsWith('/skins/')) {
+  // Если путь начинается с /api/uploads/, убираем /api (для старых записей в БД)
+  if (imageUrl.startsWith('/api/uploads/')) {
+    return imageUrl.replace('/api/uploads/', '/uploads/')
+  }
+  
+  // Если путь начинается с /img/ - это иконки интерфейса, оставляем как есть
+  if (imageUrl.startsWith('/img/')) {
     return imageUrl
   }
   
-  // Если путь уже содержит /api/uploads/, убираем /api (для старых записей в БД)
-  if (imageUrl.startsWith('/api/uploads/')) {
-    return imageUrl.replace('/api/uploads/', '/uploads/')
+  // Если путь начинается с /skins/ - это старые пути, конвертируем в /uploads/skins/
+  if (imageUrl.startsWith('/skins/')) {
+    return imageUrl.replace('/skins/', '/uploads/skins/')
   }
   
   // Для других путей (если вдруг есть)

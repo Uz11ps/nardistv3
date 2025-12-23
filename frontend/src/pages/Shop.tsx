@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import { apiClient } from '../api/client'
+import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
 import './Shop.css'
@@ -273,13 +273,13 @@ export default function Shop() {
             </div>
           </div>
           <div className="shop-skin-image">
-            {skin.imageUrl ? (
+            {(skin.shopImageUrl || skin.imageUrl) ? (
               <img
-                src={skin.imageUrl}
+                src={getImageUrl(skin.shopImageUrl || skin.imageUrl) || (skin.shopImageUrl || skin.imageUrl)}
                 alt={skin.name}
                 className="shop-skin-img"
                 onError={(e) => {
-                  console.error('Failed to load skin image:', skin.imageUrl)
+                  console.error('Failed to load skin image:', skin.shopImageUrl || skin.imageUrl)
                   e.currentTarget.style.display = 'none'
                   const placeholder = e.currentTarget.nextElementSibling as HTMLElement
                   if (placeholder && placeholder.classList.contains('shop-skin-placeholder')) {

@@ -42,7 +42,10 @@ export class Skin {
   weight: number; // Вес скина для лимита силы
 
   @Column({ nullable: true })
-  imageUrl: string; // URL превью изображения скина для магазина
+  imageUrl: string; // URL превью изображения скина (для инвентаря и общего отображения)
+  
+  @Column({ nullable: true })
+  shopImageUrl: string; // URL отдельного изображения для магазина
 
   @Column({ nullable: true })
   boardTextureUrl: string; // URL файла текстуры доски (для типа 'board')

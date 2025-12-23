@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
-import { apiClient } from '../api/client'
+import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import './Inventory.css'
 
@@ -247,14 +247,8 @@ export default function Inventory() {
     const needsRepair = currentDurability < maxDurability && skin.price && skin.price > 0
     const repairCost = repairCosts.get(skin.id) || 0
     
-    // Используем изображение доски по умолчанию для досок без imageUrl
-    const getImageUrl = () => {
-      if (skin.imageUrl) return skin.imageUrl
-      if (skin.type === 'board') return '/img/3a87c78273c1488e736bcebbfc6ea74f1dc383a7.png'
-      return null
-    }
-
-    const imageUrl = getImageUrl()
+    // Используем getImageUrl для единой обработки всех путей
+    const imageUrl = getImageUrl(skin.imageUrl)
 
     return (
       <Card key={skin.id} className="inventory-item">
