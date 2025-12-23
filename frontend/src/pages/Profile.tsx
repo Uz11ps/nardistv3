@@ -100,11 +100,19 @@ export default function Profile() {
 
     try {
       setLoading(true)
-      const response = await apiClient.put('/users/me', {
+      // Отправляем только nickname и country
+      // avatarUrl обновляется автоматически при загрузке файла через handleImageUpload
+      const updateData: any = {
         nickname: editFormData.nickname,
         country: editFormData.country,
-        avatarUrl: editFormData.avatarUrl,
-      })
+      }
+      
+      // Отправляем avatarUrl только если он был изменен через загрузку файла
+      if (editFormData.avatarUrl && editFormData.avatarUrl !== user?.avatarUrl) {
+        updateData.avatarUrl = editFormData.avatarUrl
+      }
+      
+      const response = await apiClient.put('/users/me', updateData)
       
       // Обновляем пользователя в store
       if (response.data) {
@@ -147,7 +155,7 @@ export default function Profile() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await apiClient.post('/upload/avatar', formData, {
+      const response = await apiClient.post('/upload/image', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -321,17 +329,6 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* URL аватарки */}
-              <div className="profile-edit-field">
-                <label className="profile-edit-label">URL аватарки (опционально)</label>
-                <input
-                  type="text"
-                  className="profile-edit-input"
-                  value={editFormData.avatarUrl}
-                  onChange={(e) => setEditFormData({ ...editFormData, avatarUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
             </div>
 
             <div className="profile-edit-modal-footer">
