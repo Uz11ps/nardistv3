@@ -1364,12 +1364,24 @@ export class AdminService implements OnModuleInit {
   }
 
   async setUserLevel(userId: string, level: number) {
-    const user = await this.usersService.findOne(userId);
-    user.level = Math.max(1, level);
-    // При установке уровня вручную, синхронизируем XP с уровнем
-    const totalXP = this.getTotalXPForLevel(user.level);
-    user.xp = BigInt(totalXP);
-    return this.usersRepository.save(user);
+    try {
+      if (level === undefined || level === null || isNaN(level)) {
+        throw new BadRequestException('Некорректное значение уровня');
+      }
+      
+      const user = await this.usersService.findOne(userId);
+      const finalLevel = Math.max(1, Math.min(50, Math.floor(level))); // Ограничиваем от 1 до 50
+      
+      // При установке уровня вручную, синхронизируем XP с уровнем
+      const totalXP = this.getTotalXPForLevel(finalLevel);
+      user.level = finalLevel;
+      user.xp = BigInt(Math.max(0, totalXP));
+      
+      return this.usersRepository.save(user);
+    } catch (error) {
+      this.logger.error(`Error setting level for user ${userId}:`, error);
+      throw new BadRequestException(`Ошибка при установке уровня: ${error.message}`);
+    }
   }
 
   async syncUserLevelFromXP(userId: string) {
