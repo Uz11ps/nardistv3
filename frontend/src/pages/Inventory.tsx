@@ -57,6 +57,16 @@ export default function Inventory() {
     checkPremium()
   }, [])
 
+  // Обновляем данные при возврате на страницу
+  useEffect(() => {
+    const handleFocus = () => {
+      loadAutobuildStatus()
+      checkPremium()
+    }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [])
+
   const loadAutobuildStatus = async () => {
     try {
       const [statusRes, settingsRes, buildingsRes] = await Promise.all([
@@ -65,8 +75,10 @@ export default function Inventory() {
         apiClient.get('/city/buildings').catch(() => ({ data: [] })),
       ])
       
-      const hasAutobuildValue = statusRes.data?.hasAutobuild || false
+      // Явно проверяем, что hasAutobuild существует и равен true
+      const hasAutobuildValue = statusRes.data?.hasAutobuild === true
       setHasAutobuild(hasAutobuildValue)
+      console.log('Autobuild status:', hasAutobuildValue, statusRes.data)
       
       if (hasAutobuildValue) {
         setAutobuildSettings(settingsRes.data || { minBalance: 0, strategy: 'balanced', priorityBuilding: null })
@@ -78,18 +90,29 @@ export default function Inventory() {
           name: b.name,
         }))
         setBuildings(buildingsList)
+      } else {
+        // Если автобилд не активен, сбрасываем настройки
+        setAutobuildSettings({ minBalance: 0, strategy: 'balanced', priorityBuilding: null })
+        setBuildings([])
       }
     } catch (error) {
       console.error('Failed to load autobuild status:', error)
+      // При ошибке явно устанавливаем false
+      setHasAutobuild(false)
     }
   }
 
   const checkPremium = async () => {
     try {
-      const response = await apiClient.get('/subscription/status').catch(() => ({ data: { hasActive: false } }))
-      setHasPremium(response.data?.hasActive || false)
-    } catch (error) {
+      const response = await apiClient.get('/subscription/status')
+      // Явно проверяем, что hasActive существует и равен true
+      const hasActive = response.data?.hasActive === true
+      setHasPremium(hasActive)
+      console.log('Premium status:', hasActive, response.data)
+    } catch (error: any) {
+      // При ошибке явно устанавливаем false
       console.error('Failed to check subscription:', error)
+      setHasPremium(false)
     }
   }
 
