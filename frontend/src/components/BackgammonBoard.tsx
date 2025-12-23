@@ -134,40 +134,41 @@ export default function BackgammonBoard({
     const pointHeight = height / 2
     
     const isTopRow = pointIndex < 12
-    const pointInRow = isTopRow ? pointIndex : pointIndex - 12
     
-    // Разделение на левую и правую половины
-    // Левая половина: точки 6-11 (верх) и 12-17 (низ)
-    // Правая половина: точки 0-5 (верх) и 18-23 (низ)
-    const isLeftHalf = (isTopRow && pointIndex >= 6) || (!isTopRow && pointIndex >= 12 && pointIndex < 18)
-    const isRightHalf = (isTopRow && pointIndex < 6) || (!isTopRow && pointIndex >= 18)
+    // Система нумерации нард (согласно backend):
+    // Index 0 = Point 24 (Top Right) - White Head
+    // Index 11 = Point 13 (Top Left)
+    // Index 12 = Point 12 (Bottom Left) - Black Head
+    // Index 23 = Point 1 (Bottom Right)
+    //
+    // Верхний ряд (indices 0-11): Points 24-13 (справа налево)
+    // Нижний ряд (indices 12-23): Points 12-1 (слева направо)
     
     let x: number
-    let localIndex: number
+    let pointNumber: number
     
-    if (isLeftHalf) {
-      // Левая половина: от левого края к бару
-      if (isTopRow) {
-        localIndex = pointIndex - 6  // 0-5 для точек 6-11
-      } else {
-        localIndex = pointIndex - 12  // 0-5 для точек 12-17
-      }
-      x = localIndex * pointWidth + pointWidth / 2
+    if (isTopRow) {
+      // Верхний ряд: Points 24-13 (справа налево)
+      // Index 0 = Point 24 (Top Right), Index 11 = Point 13 (Top Left)
+      pointNumber = 24 - pointIndex
+      const pointInRow = pointIndex  // 0-11
+      // Справа налево: от правого края к бару
+      x = width - (pointInRow * pointWidth + pointWidth / 2)
     } else {
-      // Правая половина: от бара к правому краю
-      if (isTopRow) {
-        localIndex = pointIndex  // 0-5 для точек 0-5
-      } else {
-        localIndex = pointIndex - 18  // 0-5 для точек 18-23
-      }
-      x = barX + barWidth + localIndex * pointWidth + pointWidth / 2
+      // Нижний ряд: Points 12-1 (слева направо)
+      // Index 12 = Point 12 (Bottom Left), Index 23 = Point 1 (Bottom Right)
+      pointNumber = 12 - (pointIndex - 12)
+      const pointInRow = pointIndex - 12  // 0-11
+      // Слева направо: от левого края бара к правому краю
+      x = barX + barWidth + (pointInRow * pointWidth + pointWidth / 2)
     }
     
+    // Треугольники прижаты к краям доски
     const y = isTopRow
-      ? height / 2  // Верхний ряд: середина верхней половины
-      : height / 2  // Нижний ряд: середина нижней половины
+      ? pointHeight * 0.05  // Верхний ряд: прижат к верху
+      : height - pointHeight * 0.05  // Нижний ряд: прижат к низу
     
-    return { x, y, isTopRow, pointWidth, pointHeight }
+    return { x, y, isTopRow, pointWidth, pointHeight, pointNumber }
   }, [])
   
   // Функция для определения точки по координатам
@@ -190,13 +191,13 @@ export default function BackgammonBoard({
       const triangleHeight = pHeight * 0.95
       const dx = Math.abs(x - pointX)
       
-      // Проверка попадания в треугольник (перевернутые треугольники)
-      // Для верхнего ряда: треугольник от y - triangleHeight/2 до y + triangleHeight/2
-      // Для нижнего ряда: треугольник от y - triangleHeight/2 до y + triangleHeight/2
+      // Проверка попадания в треугольник (стандартное расположение нард)
+      // Для верхнего ряда: треугольник от y (вершина) до y + triangleHeight (основание)
+      // Для нижнего ряда: треугольник от y - triangleHeight (основание) до y (вершина)
       const inTriangle = dx < triangleWidth / 2 && 
         (isTopRow 
-          ? (y >= pointY - triangleHeight / 2 && y <= pointY + triangleHeight / 2)
-          : (y >= pointY - triangleHeight / 2 && y <= pointY + triangleHeight / 2))
+          ? (y >= pointY && y <= pointY + triangleHeight)
+          : (y <= pointY && y >= pointY - triangleHeight))
       
       if (inTriangle) {
         return pointIndex
@@ -262,19 +263,19 @@ export default function BackgammonBoard({
     const pointWidth = availableWidth / 6
     const pointHeight = height / 2
     
-    // Функция для отрисовки треугольной точки (перевернутые на 180 градусов)
+    // Функция для отрисовки треугольной точки (стандартное расположение нард)
     const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, color: string) => {
       ctx.beginPath()
       if (isTop) {
-        // Верхний треугольник: перевернут - вершина внизу, основание вверху
-        ctx.moveTo(x, y + h / 2)  // Вершина внизу треугольника
-        ctx.lineTo(x - w / 2, y - h / 2)  // Левая точка основания
-        ctx.lineTo(x + w / 2, y - h / 2)  // Правая точка основания
+        // Верхний треугольник: вершина вверху (прижата к верху доски), основание внизу
+        ctx.moveTo(x, y)  // Вершина вверху треугольника
+        ctx.lineTo(x - w / 2, y + h)  // Левая точка основания
+        ctx.lineTo(x + w / 2, y + h)  // Правая точка основания
       } else {
-        // Нижний треугольник: перевернут - вершина вверху, основание внизу
-        ctx.moveTo(x, y - h / 2)  // Вершина вверху треугольника
-        ctx.lineTo(x - w / 2, y + h / 2)  // Левая точка основания
-        ctx.lineTo(x + w / 2, y + h / 2)  // Правая точка основания
+        // Нижний треугольник: вершина внизу (прижата к низу доски), основание вверху
+        ctx.moveTo(x, y)  // Вершина внизу треугольника
+        ctx.lineTo(x - w / 2, y - h)  // Левая точка основания
+        ctx.lineTo(x + w / 2, y - h)  // Правая точка основания
       }
       ctx.closePath()
       ctx.fillStyle = color
@@ -286,14 +287,16 @@ export default function BackgammonBoard({
     
     // Отрисовка всех 24 точек
     points.forEach((pointValue: number, pointIndex: number) => {
-      const { x, y, isTopRow } = getPointCoordinates(pointIndex, canvas)
+      const { x, y, isTopRow, pointNumber } = getPointCoordinates(pointIndex, canvas)
       
       // Треугольники занимают почти всю ширину точки, но с небольшим отступом
       const triangleWidth = pointWidth * 0.95
       const triangleHeight = pointHeight * 0.95
       
       // Чередование цветов треугольников (как на классической доске)
-      const isLight = (pointIndex % 2 === 0 && isTopRow) || (pointIndex % 2 === 1 && !isTopRow)
+      // В нардах чередование идет по позиции на доске
+      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
+      const isLight = pointInRow % 2 === 0
       const triangleColor = isLight ? '#D4A574' : '#8B4513'
       
       // Подсветка возможных исходных точек (когда не перетаскиваем)
@@ -329,18 +332,22 @@ export default function BackgammonBoard({
       // Рисуем треугольник точки
       drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
       
-      // Отрисовка нумерации точек
+      // Отрисовка нумерации точек (правильная нумерация нард: 1-24)
       ctx.fillStyle = '#FFFFFF'
       ctx.font = 'bold 14px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
+      ctx.strokeStyle = '#000000'
+      ctx.lineWidth = 2
       
       if (isTopRow) {
         // Нумерация над верхними треугольниками
-        ctx.fillText(pointIndex.toString(), x, y - triangleHeight / 2 - 15)
+        ctx.strokeText(pointNumber.toString(), x, y - 20)
+        ctx.fillText(pointNumber.toString(), x, y - 20)
       } else {
         // Нумерация под нижними треугольниками
-        ctx.fillText(pointIndex.toString(), x, y + triangleHeight / 2 + 15)
+        ctx.strokeText(pointNumber.toString(), x, y + 20)
+        ctx.fillText(pointNumber.toString(), x, y + 20)
       }
       
       // Отрисовка шашек на точке
@@ -350,8 +357,8 @@ export default function BackgammonBoard({
         const checkerSize = Math.min(pointWidth * 0.25, pointHeight * 0.3)
         
         const stackHeight = Math.min(checkerCount, 5) * checkerSize * 0.6
-        // Для перевернутых треугольников: верхние шашки ближе к центру, нижние тоже
-        const checkerBaseY = isTopRow ? y + triangleHeight * 0.2 : y - triangleHeight * 0.2
+        // Шашки располагаются внутри треугольника
+        const checkerBaseY = isTopRow ? y + triangleHeight * 0.3 : y - triangleHeight * 0.3
         const startY = isTopRow ? checkerBaseY : checkerBaseY - stackHeight
         
         const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
