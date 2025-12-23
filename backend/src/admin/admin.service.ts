@@ -1076,6 +1076,9 @@ export class AdminService implements OnModuleInit {
     blackCheckersTextureUrl: string;
     price: number;
     rarity: string;
+    maxDurability: number;
+    xpBonusPercent: number;
+    moneyBonusPercent: number;
   }>) {
     const skin = await this.skinsRepository.findOne({ where: { id } });
     if (!skin) {
@@ -1449,17 +1452,25 @@ export class AdminService implements OnModuleInit {
   }
 
   // Вспомогательные методы для расчета уровня (та же логика, что в ProgressService)
+  /**
+   * Вычисляет требуемый XP для перехода с уровня (level-1) на level
+   */
   private getXPRequiredForLevel(level: number): number {
     if (level <= 1) return 0;
     if (level === 2) return 200;
+    // Для уровней 3-50: предыдущий переход * 1.25, округляем до кратных 10
     let xp = 200;
     for (let i = 3; i <= level; i++) {
       xp = Math.floor(xp * 1.25);
+      // Округляем до кратных 10
       xp = Math.round(xp / 10) * 10;
     }
     return xp;
   }
 
+  /**
+   * Вычисляет общий XP для уровня (сумма всех переходов до этого уровня)
+   */
   private getTotalXPForLevel(level: number): number {
     if (level <= 1) return 0;
     let totalXP = 0;
