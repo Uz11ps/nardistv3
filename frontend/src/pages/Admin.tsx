@@ -858,6 +858,7 @@ export default function Admin() {
                       Сохранить настройки рефералов
                     </button>
                   </div>
+                </div>
               </div>
             )}
           </div>
