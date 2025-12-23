@@ -63,12 +63,28 @@ export default function BackgammonBoard({
   
   // ЛЕВАЯ ЧАСТЬ - МОИ СКИНЫ И ШАШКИ (независимо от цвета, они слева снизу)
   // ПРАВАЯ ЧАСТЬ - ПРОТИВНИКА (справа сверху)
-  const myBoardSkin = isPlayer1 ? player1Skins?.board : player2Skins?.board
+  // Используем mySkins если есть, иначе определяем по isPlayer1
+  const myBoardSkin = mySkins?.board || (isPlayer1 ? player1Skins?.board : player2Skins?.board)
   const opponentBoardSkin = isPlayer1 ? player2Skins?.board : player1Skins?.board
-  const myDiceSkin = isPlayer1 ? player1Skins?.dice : player2Skins?.dice
+  const myDiceSkin = mySkins?.dice || (isPlayer1 ? player1Skins?.dice : player2Skins?.dice)
   const opponentDiceSkin = isPlayer1 ? player2Skins?.dice : player1Skins?.dice
-  const myCheckersSkin = isPlayer1 ? player1Skins?.checkers : player2Skins?.checkers
+  const myCheckersSkin = mySkins?.checkers || (isPlayer1 ? player1Skins?.checkers : player2Skins?.checkers)
   const opponentCheckersSkin = isPlayer1 ? player2Skins?.checkers : player1Skins?.checkers
+  
+  // Логирование для отладки
+  useEffect(() => {
+    console.log('🎨 BackgammonBoard - Skins debug:', {
+      isPlayer1,
+      myPlayerId,
+      player1Id,
+      player1Skins,
+      player2Skins,
+      mySkins,
+      myBoardSkin,
+      myDiceSkin,
+      myCheckersSkin,
+    })
+  }, [isPlayer1, myPlayerId, player1Id, player1Skins, player2Skins, mySkins, myBoardSkin, myDiceSkin, myCheckersSkin])
   
   // Загрузка текстур
   useEffect(() => {
@@ -86,20 +102,42 @@ export default function BackgammonBoard({
       }
       
       try {
+        console.log('🎨 Loading textures:', {
+          myBoardSkin,
+          opponentBoardSkin,
+          myDiceSkin,
+          opponentDiceSkin,
+          myCheckersSkin,
+          opponentCheckersSkin,
+        })
+        
         // Загружаем текстуру доски (половина для каждого игрока)
         if (myBoardSkin?.boardTextureUrl) {
-          loaded.myBoard = await loadImage(myBoardSkin.boardTextureUrl).catch(() => undefined)
+          console.log('📦 Loading my board texture:', myBoardSkin.boardTextureUrl)
+          loaded.myBoard = await loadImage(myBoardSkin.boardTextureUrl).catch((e) => {
+            console.error('❌ Failed to load my board texture:', e)
+            return undefined
+          })
+        } else {
+          console.warn('⚠️ No myBoardSkin.boardTextureUrl found:', myBoardSkin)
         }
         if (opponentBoardSkin?.boardTextureUrl) {
-          loaded.opponentBoard = await loadImage(opponentBoardSkin.boardTextureUrl).catch(() => undefined)
+          console.log('📦 Loading opponent board texture:', opponentBoardSkin.boardTextureUrl)
+          loaded.opponentBoard = await loadImage(opponentBoardSkin.boardTextureUrl).catch((e) => {
+            console.error('❌ Failed to load opponent board texture:', e)
+            return undefined
+          })
         }
         
         // Загружаем текстуры кубиков (6 граней)
+        // Проверяем diceTextureUrls (массив) или diceTextureUrl (одна текстура)
         if (myDiceSkin?.diceTextureUrls) {
           const diceFaces: { [face: number]: HTMLImageElement } = {}
           const textureUrls = typeof myDiceSkin.diceTextureUrls === 'string' 
             ? JSON.parse(myDiceSkin.diceTextureUrls) 
             : myDiceSkin.diceTextureUrls
+          
+          console.log('🎲 Loading my dice textures:', textureUrls)
           
           for (let face = 1; face <= 6; face++) {
             if (textureUrls[face]) {
@@ -112,6 +150,16 @@ export default function BackgammonBoard({
           }
           if (Object.keys(diceFaces).length > 0) {
             loaded.myDice = diceFaces
+          }
+        } else if (myDiceSkin?.diceTextureUrl) {
+          // Fallback: если есть одна текстура для всех граней
+          console.log('🎲 Loading single dice texture:', myDiceSkin.diceTextureUrl)
+          const singleTexture = await loadImage(myDiceSkin.diceTextureUrl).catch(() => undefined)
+          if (singleTexture) {
+            loaded.myDice = {
+              1: singleTexture, 2: singleTexture, 3: singleTexture,
+              4: singleTexture, 5: singleTexture, 6: singleTexture,
+            }
           }
         }
         
@@ -137,12 +185,23 @@ export default function BackgammonBoard({
         
         // Загружаем текстуры шашек
         if (myCheckersSkin?.checkersTextureUrl) {
-          loaded.myCheckers = await loadImage(myCheckersSkin.checkersTextureUrl).catch(() => undefined)
+          console.log('♟️ Loading my checkers texture:', myCheckersSkin.checkersTextureUrl)
+          loaded.myCheckers = await loadImage(myCheckersSkin.checkersTextureUrl).catch((e) => {
+            console.error('❌ Failed to load my checkers texture:', e)
+            return undefined
+          })
+        } else {
+          console.warn('⚠️ No myCheckersSkin.checkersTextureUrl found:', myCheckersSkin)
         }
         if (opponentCheckersSkin?.checkersTextureUrl) {
-          loaded.opponentCheckers = await loadImage(opponentCheckersSkin.checkersTextureUrl).catch(() => undefined)
+          console.log('♟️ Loading opponent checkers texture:', opponentCheckersSkin.checkersTextureUrl)
+          loaded.opponentCheckers = await loadImage(opponentCheckersSkin.checkersTextureUrl).catch((e) => {
+            console.error('❌ Failed to load opponent checkers texture:', e)
+            return undefined
+          })
         }
         
+        console.log('✅ Loaded textures:', loaded)
         setTextures(loaded)
       } catch (error) {
         console.error('Ошибка загрузки текстур:', error)

@@ -243,40 +243,54 @@ export default function Game() {
 
   const loadPlayerSkins = async (player1Id: string, player2Id: string) => {
     try {
-      // Загружаем скины игры через новый endpoint
-      if (!gameId) return
+      const currentUser = useAuthStore.getState().user
+      const myId = currentUser?.id
       
-      const skinsRes = await apiClient.get(`/games/${gameId}/skins`)
-      const gameSkins = skinsRes.data || {}
+      // Загружаем скины каждого игрока напрямую
+      const promises = [
+        apiClient.get(`/skins/user/${player1Id}/selected`).catch(() => ({ data: {} })),
+        player2Id ? apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} })) : Promise.resolve({ data: {} }),
+      ]
       
-      console.log('🎮 Game - Loaded game skins:', gameSkins)
+      // Если я один из игроков, загружаем мои скины отдельно
+      if (myId && (myId === player1Id || myId === player2Id)) {
+        promises.push(apiClient.get(`/skins/user/${myId}/selected`).catch(() => ({ data: {} })))
+      } else {
+        promises.push(Promise.resolve({ data: {} }))
+      }
+      
+      const [player1SkinsRes, player2SkinsRes, mySkinsRes] = await Promise.all(promises)
+      
+      const player1Skins = player1SkinsRes.data || {}
+      const player2Skins = player2SkinsRes.data || {}
+      const mySkins = mySkinsRes.data || {}
+      
+      console.log('🎮 Game - Loaded player skins:', {
+        player1Id,
+        player2Id,
+        myId,
+        isPlayer1: myId === player1Id,
+        player1Skins,
+        player2Skins,
+        mySkins,
+        player1Board: player1Skins.board,
+        player2Board: player2Skins.board,
+        myBoard: mySkins.board,
+      })
       
       // Устанавливаем скины каждого игрока отдельно
-      // Каждый игрок использует свои скины для доски, кубиков и шашек
       setPlayerSkins({
-        player1: gameSkins.player1 || {},
-        player2: gameSkins.player2 || {},
-        mySkins: {}, // Больше не используется, оставляем для обратной совместимости
+        player1: player1Skins,
+        player2: player2Skins,
+        mySkins: mySkins, // Мои скины для использования в доске
       })
     } catch (error) {
-      console.error('Failed to load game skins:', error)
-      // Fallback - загружаем текущие выбранные скины
-      try {
-        const player1SkinsRes = await apiClient.get(`/skins/user/${player1Id}/selected`).catch(() => ({ data: {} }))
-        const player2SkinsRes = player2Id ? await apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} })) : { data: null }
-        
-        setPlayerSkins({
-          player1: player1SkinsRes.data || {},
-          player2: player2SkinsRes.data || {},
-          mySkins: {},
-        })
-      } catch (fallbackError) {
-        setPlayerSkins({
-          player1: {},
-          player2: {},
-          mySkins: {},
-        })
-      }
+      console.error('Failed to load player skins:', error)
+      setPlayerSkins({
+        player1: {},
+        player2: {},
+        mySkins: {},
+      })
     }
   }
 

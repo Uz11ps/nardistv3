@@ -672,14 +672,12 @@ export class AdminService implements OnModuleInit {
   async getCityRewards() {
     const configs = await this.buildingConfigsRepository
       .createQueryBuilder('config')
-      .orderBy('config.district', 'ASC')
-      .addOrderBy('config.type', 'ASC')
+      .orderBy('config.type', 'ASC')
       .getMany();
 
     return {
       buildings: configs.map(c => ({
         id: c.id,
-        district: c.district,
         type: c.type,
         basePrice: Number(c.basePrice),
         baseIncomePerHour: Number(c.baseIncomePerHour),
@@ -709,8 +707,8 @@ export class AdminService implements OnModuleInit {
         } else {
           // Создаем новую конфигурацию
           const config = this.buildingConfigsRepository.create({
-            district: buildingData.district,
             type: buildingData.type,
+            name: buildingData.name || buildingData.type,
             basePrice: buildingData.basePrice?.toString() || '0',
             baseIncomePerHour: buildingData.baseIncomePerHour?.toString() || '0',
             maxAccumulation: buildingData.maxAccumulation?.toString() || '0',
@@ -831,16 +829,8 @@ export class AdminService implements OnModuleInit {
       throw new NotFoundException('Территория не найдена');
     }
 
-    // Проверяем, нет ли связанных предприятий
-    const { Building } = await import('../city/building.entity');
-    const buildingsRepository = this.usersRepository.manager.getRepository(Building);
-    const buildingsCount = await buildingsRepository.count({
-      where: { district: district.code as any },
-    });
-
-    if (buildingsCount > 0) {
-      throw new BadRequestException(`Невозможно удалить территорию: есть ${buildingsCount} связанных предприятий`);
-    }
+    // Проверяем, нет ли связанных предприятий (больше не проверяем по district, так как его нет)
+    // Districts больше не используются, но оставляем метод для обратной совместимости
 
     await this.districtConfigsRepository.remove(district);
     return { message: 'Территория удалена' };
@@ -849,12 +839,11 @@ export class AdminService implements OnModuleInit {
   // CRUD для конфигураций строений
   async getAllBuildingConfigs() {
     const configs = await this.buildingConfigsRepository.find({
-      order: { district: 'ASC', type: 'ASC' },
+      order: { type: 'ASC' },
     });
     
     return configs.map(c => ({
       id: c.id,
-      district: c.district,
       type: c.type,
       name: c.name,
       icon: c.icon,
@@ -875,7 +864,6 @@ export class AdminService implements OnModuleInit {
     
     return {
       id: config.id,
-      district: config.district,
       type: config.type,
       name: config.name,
       icon: config.icon,
@@ -889,7 +877,6 @@ export class AdminService implements OnModuleInit {
   }
 
   async createBuildingConfig(data: {
-    district: string;
     type: string;
     name: string;
     icon?: string;
@@ -901,7 +888,6 @@ export class AdminService implements OnModuleInit {
     upgradeCosts?: any;
   }) {
     const config = this.buildingConfigsRepository.create({
-      district: data.district,
       type: data.type,
       name: data.name,
       icon: data.icon || null,
@@ -917,7 +903,6 @@ export class AdminService implements OnModuleInit {
     
     return {
       id: savedConfig.id,
-      district: savedConfig.district,
       type: savedConfig.type,
       name: savedConfig.name,
       icon: savedConfig.icon,
@@ -931,7 +916,6 @@ export class AdminService implements OnModuleInit {
   }
 
   async updateBuildingConfig(id: string, data: Partial<{
-    district: string;
     type: string;
     name: string;
     icon: string;
@@ -958,7 +942,6 @@ export class AdminService implements OnModuleInit {
     
     return {
       id: savedConfig.id,
-      district: savedConfig.district,
       type: savedConfig.type,
       name: savedConfig.name,
       icon: savedConfig.icon,
@@ -981,7 +964,7 @@ export class AdminService implements OnModuleInit {
     const { Building } = await import('../city/building.entity');
     const buildingsRepository = this.usersRepository.manager.getRepository(Building);
     const buildingsCount = await buildingsRepository.count({
-      where: { district: config.district as any, type: config.type as any },
+      where: { type: config.type },
     });
 
     if (buildingsCount > 0) {

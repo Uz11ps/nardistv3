@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Not } from 'typeorm';
 import { Clan } from './clan.entity';
 import { ClanMember, ClanRole } from './clan-member.entity';
 import { ClanTreasuryTransaction, TreasuryTransactionType } from './clan-treasury-transaction.entity';
@@ -428,50 +428,38 @@ export class ClansService {
   async getAvailableTerritoriesForCapture(clanId: string): Promise<any[]> {
     const clan = await this.findOne(clanId);
     
-    // Получаем все активные территории
-    const allDistricts = await this.districtConfigsRepository.find({
-      where: { isActive: true },
-      order: { order: 'ASC' },
+    // Получаем все строения, которые можно захватить (не захваченные этим кланом или вообще не захваченные)
+    const allBuildings = await this.buildingsRepository.find({
+      where: [
+        { capturedByClanId: null }, // Не захваченные
+        { capturedByClanId: Not(clanId) }, // Захваченные другим кланом
+      ],
     });
 
-    // Получаем все предприятия
-    const allBuildings = await this.buildingsRepository.find();
-
-    // Для каждой территории находим предприятия, которые можно захватить
-    const result = [];
-    for (const district of allDistricts) {
-      const districtBuildings = allBuildings.filter(b => b.district === district.code);
-      
-      // Фильтруем: исключаем предприятия, которые уже захвачены этим кланом
-      const captureableBuildings = districtBuildings.filter(b => {
-        // Исключаем уже захваченные этим кланом
-        if (b.capturedByClanId === clanId) {
-          return false;
-        }
-        return true;
-      });
-
-      if (captureableBuildings.length > 0) {
-        result.push({
-          district: {
-            code: district.code,
-            name: district.name,
-            description: district.description,
-            order: district.order,
-          },
-          buildings: captureableBuildings.map(b => ({
-            id: b.id,
-            type: b.type,
-            level: b.level,
-            incomePerHour: Number(b.incomePerHour),
-            ownerId: b.userId,
-            capturedByClanId: b.capturedByClanId,
-            capturedAt: b.capturedAt,
-          })),
-          totalIncome: captureableBuildings.reduce((sum, b) => sum + Number(b.incomePerHour), 0),
-        });
+    // Группируем строения по типу
+    const buildingsByType = allBuildings.reduce((acc, building) => {
+      if (!acc[building.type]) {
+        acc[building.type] = [];
       }
-    }
+      acc[building.type].push(building);
+      return acc;
+    }, {} as Record<string, typeof allBuildings>);
+
+    // Преобразуем в формат результата
+    const result = Object.entries(buildingsByType).map(([type, buildings]) => ({
+      type,
+      buildings: buildings.map(b => ({
+        id: b.id,
+        type: b.type,
+        level: b.level,
+        incomePerHour: Number(b.incomePerHour),
+        ownerId: b.userId,
+        capturedByClanId: b.capturedByClanId,
+        capturedAt: b.capturedAt,
+        captureExpiresAt: b.captureExpiresAt,
+      })),
+      totalIncome: buildings.reduce((sum, b) => sum + Number(b.incomePerHour), 0),
+    }));
 
     return result;
   }
