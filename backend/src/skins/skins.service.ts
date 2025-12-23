@@ -84,33 +84,41 @@ export class SkinsService implements OnModuleInit {
           this.logger.log(`✅ Создан дефолтный скин: ${skinData.name} (${skinData.type})`);
         }
       } else {
-        // Обновляем существующие дефолтные скины, если у них нет нужных полей
+        // Обновляем существующие дефолтные скины
         for (const skinData of defaultSkinsData) {
           const existingSkin = existingDefaultSkins.find(s => s.type === skinData.type);
           if (existingSkin) {
             let needsUpdate = false;
             
-            // Обновляем поля, если их нет
-            if (!existingSkin.imageUrl && skinData.imageUrl) {
-              existingSkin.imageUrl = skinData.imageUrl;
-              needsUpdate = true;
-            }
-            if (skinData.type === 'board' && !existingSkin.boardTextureUrl) {
-              existingSkin.boardTextureUrl = skinData.boardTextureUrl;
-              needsUpdate = true;
-            }
-            if (skinData.type === 'dice' && !existingSkin.diceTextureUrl) {
-              existingSkin.diceTextureUrl = skinData.diceTextureUrl;
-              needsUpdate = true;
-            }
-            if (skinData.type === 'checkers') {
-              if (!existingSkin.whiteCheckersTextureUrl) {
-                existingSkin.whiteCheckersTextureUrl = skinData.whiteCheckersTextureUrl;
+            // Для дефолтной доски всегда обновляем на новую текстуру
+            if (skinData.type === 'board') {
+              if (existingSkin.boardTextureUrl !== skinData.boardTextureUrl) {
+                existingSkin.boardTextureUrl = skinData.boardTextureUrl;
                 needsUpdate = true;
               }
-              if (!existingSkin.blackCheckersTextureUrl) {
-                existingSkin.blackCheckersTextureUrl = skinData.blackCheckersTextureUrl;
+              if (existingSkin.imageUrl !== skinData.imageUrl) {
+                existingSkin.imageUrl = skinData.imageUrl;
                 needsUpdate = true;
+              }
+            } else {
+              // Для других скинов обновляем только если поля отсутствуют
+              if (!existingSkin.imageUrl && skinData.imageUrl) {
+                existingSkin.imageUrl = skinData.imageUrl;
+                needsUpdate = true;
+              }
+              if (skinData.type === 'dice' && !existingSkin.diceTextureUrl) {
+                existingSkin.diceTextureUrl = skinData.diceTextureUrl;
+                needsUpdate = true;
+              }
+              if (skinData.type === 'checkers') {
+                if (!existingSkin.whiteCheckersTextureUrl) {
+                  existingSkin.whiteCheckersTextureUrl = skinData.whiteCheckersTextureUrl;
+                  needsUpdate = true;
+                }
+                if (!existingSkin.blackCheckersTextureUrl) {
+                  existingSkin.blackCheckersTextureUrl = skinData.blackCheckersTextureUrl;
+                  needsUpdate = true;
+                }
               }
             }
             
