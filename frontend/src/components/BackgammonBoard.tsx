@@ -87,8 +87,8 @@ export default function BackgammonBoard({
   const [loadedTextures, setLoadedTextures] = useState<{
     player1Board?: HTMLImageElement  // Доска для левой стороны (моя сторона)
     player2Board?: HTMLImageElement  // Доска для правой стороны (сторона противника)
-    player1Dice?: HTMLImageElement   // Мои кубики
-    player2Dice?: HTMLImageElement   // Кубики противника
+    player1Dice?: { [key: number]: HTMLImageElement }   // Мои кубики - объект с текстурами для граней 1-6
+    player2Dice?: { [key: number]: HTMLImageElement }   // Кубики противника - объект с текстурами для граней 1-6
     whiteCheckers?: HTMLImageElement // Мои шашки (pointValue > 0 после отзеркаливания)
     blackCheckers?: HTMLImageElement // Шашки противника (pointValue < 0 после отзеркаливания)
   }>({})
@@ -117,8 +117,8 @@ export default function BackgammonBoard({
     const textures: {
       leftBoard?: HTMLImageElement   // Моя сторона (слева)
       rightBoard?: HTMLImageElement  // Сторона противника (справа)
-      myDice?: HTMLImageElement      // Мои кубики
-      opponentDice?: HTMLImageElement // Кубики противника
+      myDice?: { [key: number]: HTMLImageElement }      // Мои кубики - объект с текстурами для граней 1-6
+      opponentDice?: { [key: number]: HTMLImageElement } // Кубики противника - объект с текстурами для граней 1-6
       myCheckers?: HTMLImageElement   // Мои шашки
       opponentCheckers?: HTMLImageElement // Шашки противника
     } = {}
@@ -190,14 +190,37 @@ export default function BackgammonBoard({
       checkAndDraw()
     }
     
-    // 3. Загружаем текстуру КУБИКОВ для меня
-    const myDiceTextureUrl = myDiceSkin?.diceTextureUrl
-    expectedCount++
-    if (myDiceTextureUrl) {
+    // 3. Загружаем текстуры КУБИКОВ для меня (6 граней: 1, 2, 3, 4, 5, 6)
+    textures.myDice = {}
+    const myDiceTextureUrls = myDiceSkin?.diceTextureUrls || {}
+    const myDiceTextureUrl = myDiceSkin?.diceTextureUrl // Старый формат для обратной совместимости
+    
+    if (Object.keys(myDiceTextureUrls).length > 0) {
+      // Загружаем все 6 текстур из diceTextureUrls
+      for (let face = 1; face <= 6; face++) {
+        const textureUrl = myDiceTextureUrls[face]
+        if (textureUrl) {
+          expectedCount++
+          loadImage(textureUrl)
+            .then((img) => {
+              console.log(`✅ My dice texture loaded for face ${face}:`, textureUrl)
+              textures.myDice![face] = img
+              checkAndDraw()
+            })
+            .catch(() => {
+              console.error(`Failed to load my dice texture for face ${face}:`, textureUrl)
+              checkAndDraw()
+            })
+        }
+      }
+    } else if (myDiceTextureUrl) {
+      // Используем старый формат - одну текстуру для всех граней
+      expectedCount++
       loadImage(myDiceTextureUrl)
         .then((img) => {
-          console.log('✅ My dice texture loaded:', myDiceTextureUrl)
-          textures.myDice = img
+          console.log('✅ My dice texture loaded (legacy format, using for all faces):', myDiceTextureUrl)
+          // Используем одну текстуру для всех граней
+          textures.myDice = { 1: img, 2: img, 3: img, 4: img, 5: img, 6: img }
           checkAndDraw()
         })
         .catch(() => {
@@ -208,14 +231,37 @@ export default function BackgammonBoard({
       checkAndDraw()
     }
     
-    // 4. Загружаем текстуру КУБИКОВ для противника
-    const opponentDiceTextureUrl = opponentDiceSkin?.diceTextureUrl
-    expectedCount++
-    if (opponentDiceTextureUrl) {
+    // 4. Загружаем текстуры КУБИКОВ для противника (6 граней: 1, 2, 3, 4, 5, 6)
+    textures.opponentDice = {}
+    const opponentDiceTextureUrls = opponentDiceSkin?.diceTextureUrls || {}
+    const opponentDiceTextureUrl = opponentDiceSkin?.diceTextureUrl // Старый формат для обратной совместимости
+    
+    if (Object.keys(opponentDiceTextureUrls).length > 0) {
+      // Загружаем все 6 текстур из diceTextureUrls
+      for (let face = 1; face <= 6; face++) {
+        const textureUrl = opponentDiceTextureUrls[face]
+        if (textureUrl) {
+          expectedCount++
+          loadImage(textureUrl)
+            .then((img) => {
+              console.log(`✅ Opponent dice texture loaded for face ${face}:`, textureUrl)
+              textures.opponentDice![face] = img
+              checkAndDraw()
+            })
+            .catch(() => {
+              console.error(`Failed to load opponent dice texture for face ${face}:`, textureUrl)
+              checkAndDraw()
+            })
+        }
+      }
+    } else if (opponentDiceTextureUrl) {
+      // Используем старый формат - одну текстуру для всех граней
+      expectedCount++
       loadImage(opponentDiceTextureUrl)
         .then((img) => {
-          console.log('✅ Opponent dice texture loaded:', opponentDiceTextureUrl)
-          textures.opponentDice = img
+          console.log('✅ Opponent dice texture loaded (legacy format, using for all faces):', opponentDiceTextureUrl)
+          // Используем одну текстуру для всех граней
+          textures.opponentDice = { 1: img, 2: img, 3: img, 4: img, 5: img, 6: img }
           checkAndDraw()
         })
         .catch(() => {
@@ -840,18 +886,21 @@ export default function BackgammonBoard({
       const diceSize = 40
       const diceSpacing = 50
       const isPlayer1Turn = currentPlayer === 0
-      const diceTexture = isPlayer1Turn ? loadedTextures.player1Dice : loadedTextures.player2Dice
+      const diceTextures = isPlayer1Turn ? loadedTextures.player1Dice : loadedTextures.player2Dice
 
       if (diceRolling) {
         // Анимация броска кубиков
         const roll1 = Math.floor(Math.random() * 6) + 1
         const roll2 = Math.floor(Math.random() * 6) + 1
-        drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true, false, diceTexture)
-        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true, false, diceTexture)
+        const texture1 = diceTextures?.[roll1]
+        const texture2 = diceTextures?.[roll2]
+        drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true, false, texture1)
+        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true, false, texture2)
       } else if (diceArray.length > 0) {
         // Отрисовка кубиков из массива
         diceArray.forEach((die, index) => {
-          drawDice(ctx, diceAreaX + index * diceSpacing, diceAreaY, die, diceSize, false, false, diceTexture)
+          const texture = diceTextures?.[die]
+          drawDice(ctx, diceAreaX + index * diceSpacing, diceAreaY, die, diceSize, false, false, texture)
         })
       }
     }
