@@ -177,7 +177,8 @@ export default function BackgammonBoard({
           for (let face = 1; face <= 6; face++) {
             if (textureUrls[face]) {
               try {
-                diceFaces[face] = await loadImage(textureUrls[face])
+                const processedUrl = getImageUrl(textureUrls[face]) || textureUrls[face]
+                diceFaces[face] = await loadImage(processedUrl)
               } catch (e) {
                 console.warn(`Failed to load dice texture ${face}:`, e)
               }
@@ -188,8 +189,9 @@ export default function BackgammonBoard({
           }
         } else if (myDiceSkin?.diceTextureUrl) {
           // Fallback: если есть одна текстура для всех граней
-          console.log('🎲 Loading single dice texture:', myDiceSkin.diceTextureUrl)
-          const singleTexture = await loadImage(myDiceSkin.diceTextureUrl).catch(() => undefined)
+          const processedUrl = getImageUrl(myDiceSkin.diceTextureUrl) || myDiceSkin.diceTextureUrl
+          console.log('🎲 Loading single dice texture:', processedUrl)
+          const singleTexture = await loadImage(processedUrl).catch(() => undefined)
           if (singleTexture) {
             loaded.myDice = {
               1: singleTexture, 2: singleTexture, 3: singleTexture,
@@ -207,7 +209,8 @@ export default function BackgammonBoard({
           for (let face = 1; face <= 6; face++) {
             if (textureUrls[face]) {
               try {
-                diceFaces[face] = await loadImage(textureUrls[face])
+                const processedUrl = getImageUrl(textureUrls[face]) || textureUrls[face]
+                diceFaces[face] = await loadImage(processedUrl)
               } catch (e) {
                 console.warn(`Failed to load opponent dice texture ${face}:`, e)
               }
@@ -291,17 +294,25 @@ export default function BackgammonBoard({
         
         // Загружаем дефолтную доску /img/доска.jpg
         try {
+          const defaultBoardPath = getImageUrl('/img/доска.jpg') || '/img/доска.jpg'
           const defaultBoardImg = new Image()
           defaultBoardImg.crossOrigin = 'anonymous'
-          defaultBoardImg.src = '/img/доска.jpg'
+          const fullUrl = defaultBoardPath.startsWith('http') ? defaultBoardPath : `${window.location.origin}${defaultBoardPath}`
+          defaultBoardImg.src = fullUrl
           loaded.defaultBoard = await new Promise<HTMLImageElement>((resolve, reject) => {
             defaultBoardImg.onload = () => resolve(defaultBoardImg)
-            defaultBoardImg.onerror = reject
+            defaultBoardImg.onerror = (e) => {
+              console.error('❌ Failed to load default board image:', { path: defaultBoardPath, fullUrl, error: e })
+              reject(e)
+            }
             // Если изображение уже загружено
             if (defaultBoardImg.complete) {
               resolve(defaultBoardImg)
             }
           }).catch(() => undefined)
+          if (loaded.defaultBoard) {
+            console.log('✅ Successfully loaded default board image:', defaultBoardPath)
+          }
         } catch (e) {
           console.warn('Failed to load default board image:', e)
         }

@@ -84,14 +84,15 @@ export const getImageUrl = (imageUrl?: string | null): string | undefined => {
     return imageUrl.replace('/api/uploads/', '/uploads/')
   }
   
-  // Если путь начинается с /img/ - это иконки интерфейса, оставляем как есть
+  // Если путь начинается с /img/ - это иконки интерфейса и дефолтные изображения, оставляем как есть
   if (imageUrl.startsWith('/img/')) {
     return imageUrl
   }
   
-  // Если путь начинается с /skins/ - это старые пути, конвертируем в /uploads/skins/
+  // Если путь начинается с /skins/ - это дефолтные скины из public/skins/, оставляем как есть
+  // Они должны быть доступны напрямую через веб-сервер
   if (imageUrl.startsWith('/skins/')) {
-    return imageUrl.replace('/skins/', '/uploads/skins/')
+    return imageUrl
   }
   
   // Для других путей (если вдруг есть)
