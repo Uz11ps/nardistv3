@@ -835,6 +835,34 @@ export default function Game() {
               />
             </div>
           )}
+
+          {/* Подтверждение хода (только в портрете) */}
+          {!isLandscape && gameStatus === 'in_progress' && isMyTurn && gameState?.dice && (
+            <div className="game-confirm-section">
+              <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                {!isInOvertime ? (
+                  <div className="game-move-timer">⏱️ {moveTimer}с</div>
+                ) : (
+                  <div className="game-overtime-timer">⚠️ {overtimeTimer}с</div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                {pendingMoves.length > 0 && (
+                  <Button variant="secondary" onClick={handleUndo} style={{ flex: 1 }}>
+                    Отменить
+                  </Button>
+                )}
+                <Button 
+                  variant="primary" 
+                  onClick={handleConfirm}
+                  disabled={pendingMoves.length === 0}
+                  style={{ flex: 2 }}
+                >
+                  {pendingMoves.length > 0 ? `Подтвердить (${pendingMoves.length})` : 'Подтвердить ход'}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Правая панель (ландшафт) */}

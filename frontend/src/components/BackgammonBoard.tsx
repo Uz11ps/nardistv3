@@ -51,6 +51,13 @@ export default function BackgammonBoard({
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
+  const [animatingChecker, setAnimatingChecker] = useState<{
+    from: number;
+    to: number;
+    die: number;
+    progress: number;
+    startTime: number;
+  } | null>(null)
   
   const isPlayer1 = myPlayerId === player1Id
 
@@ -340,6 +347,34 @@ export default function BackgammonBoard({
     const pointWidth = halfBoardWidth / 6
     const pointHeight = height * 0.45
     
+    // Вспомогательная функция для отрисовки шашки
+    const drawChecker = (cX: number, cY: number, size: number, color: string, isMy: boolean, alpha: number = 1) => {
+      ctx.save()
+      ctx.globalAlpha = alpha
+      
+      // Тень для объема
+      ctx.shadowBlur = size * 0.2
+      ctx.shadowColor = 'rgba(0,0,0,0.4)'
+      ctx.shadowOffsetY = 2
+      
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.arc(cX, cY, size / 2, 0, Math.PI * 2)
+      ctx.fill()
+      
+      ctx.strokeStyle = isMy ? '#999' : '#000'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+      
+      // Внутренний декор шашки
+      ctx.beginPath()
+      ctx.arc(cX, cY, size * 0.35, 0, Math.PI * 2)
+      ctx.strokeStyle = isMy ? '#DDD' : '#555'
+      ctx.stroke()
+      
+      ctx.restore()
+    }
+
     const points = virtualGameState.points || []
     
     // Функция для отрисовки треугольной точки (Классический вид)
@@ -445,7 +480,8 @@ export default function BackgammonBoard({
         : y - checkerSize/2 - 5 
       
       const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
-      const checkersToDraw = isDraggingFromThisPoint ? checkerCount - 1 : checkerCount
+      const isAnimatingFromThisPoint = animatingChecker && animatingChecker.from === pointIndex
+      const checkersToDraw = (isDraggingFromThisPoint || isAnimatingFromThisPoint) ? checkerCount - 1 : checkerCount
       
       for (let i = 0; i < checkersToDraw; i++) {
         // Если шашек много (больше 5), начинаем их накладывать друг на друга плотнее
@@ -455,34 +491,11 @@ export default function BackgammonBoard({
           ? checkerBaseY + yOffset 
           : checkerBaseY - yOffset
         
-        // Рисуем шашку
-        ctx.save()
-        
-        // Тень для объема
-        ctx.shadowBlur = 4
-        ctx.shadowColor = 'rgba(0,0,0,0.4)'
-        ctx.shadowOffsetY = 2
-        
-        ctx.fillStyle = isMyPoint ? '#F0F0F0' : '#333333'
-        ctx.beginPath()
-        ctx.arc(x, checkerY, checkerSize / 2, 0, Math.PI * 2)
-        ctx.fill()
-        
-        ctx.strokeStyle = isMyPoint ? '#999' : '#000'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-        
-        // Внутренний декор шашки
-        ctx.beginPath()
-        ctx.arc(x, checkerY, checkerSize * 0.35, 0, Math.PI * 2)
-        ctx.strokeStyle = isMyPoint ? '#DDD' : '#555'
-        ctx.stroke()
-        
-        ctx.restore()
+        drawChecker(x, checkerY, checkerSize, isMyPoint ? '#F0F0F0' : '#333333', isMyPoint)
       }
       
       // Если шашек больше 5, показываем число на последней шашке
-      if (checkerCount > 5 && !isDraggingFromThisPoint) {
+      if (checkerCount > 5 && !isDraggingFromThisPoint && !isAnimatingFromThisPoint) {
         const overlap = checkerSize * 0.8
         const lastCheckerY = isTopRow 
           ? checkerBaseY + ((checkerCount - 1) * overlap)
@@ -503,27 +516,59 @@ export default function BackgammonBoard({
       const dragX = dragPosition.x - dragging.offsetX
       const dragY = dragPosition.y - dragging.offsetY
       
-      ctx.save()
-      ctx.shadowBlur = 15
-      ctx.shadowColor = 'rgba(0,0,0,0.5)'
+      drawChecker(dragX, dragY, checkerSize, isPlayer1 ? '#F0F0F0' : '#333333', isPlayer1, 0.9)
+    }
+
+    // Отрисовка анимируемой шашки
+    if (animatingChecker) {
+      const { x: fromX, y: fromY, isTopRow: fromTop, pointWidth: pW, pointHeight: pH } = getPointCoordinates(animatingChecker.from, canvas)
+      const checkerSize = Math.min(pW * 0.85, pH * 0.15)
       
-      ctx.globalAlpha = 0.9
-      ctx.fillStyle = isPlayer1 ? '#F0F0F0' : '#333333'
-      ctx.beginPath()
-      ctx.arc(dragX, dragY, checkerSize / 2, 0, Math.PI * 2)
-      ctx.fill()
+      let toX, toY, toTop;
+      if (animatingChecker.to === -1) {
+        // Координаты контейнера выноса
+        const leftContainerX = 0
+        const rightContainerX = width - bearOffWidth
+        const myX = isPlayer1 ? (gameMode === 'long' ? leftContainerX : rightContainerX) : (gameMode === 'long' ? rightContainerX : leftContainerX)
+        toX = myX + bearOffWidth / 2
+        toY = height / 2
+        toTop = false
+      } else {
+        const coords = getPointCoordinates(animatingChecker.to, canvas)
+        toX = coords.x
+        toY = coords.y
+        toTop = coords.isTopRow
+      }
+
+      // Начальная позиция Y (с учетом стопки)
+      let fromCheckerCount = 0
+      if (animatingChecker.from === 24 || animatingChecker.from === 25) {
+        fromCheckerCount = isPlayer1 ? virtualGameState.bar.white : virtualGameState.bar.black
+      } else {
+        fromCheckerCount = Math.abs(virtualGameState.points[animatingChecker.from])
+      }
       
-      ctx.strokeStyle = isPlayer1 ? '#999' : '#000'
-      ctx.lineWidth = 2
-      ctx.stroke()
-      
-      // Декор перетаскиваемой шашки
-      ctx.beginPath()
-      ctx.arc(dragX, dragY, checkerSize * 0.35, 0, Math.PI * 2)
-      ctx.strokeStyle = isPlayer1 ? '#DDD' : '#555'
-      ctx.stroke()
-      
-      ctx.restore()
+      const fromOverlap = fromCheckerCount > 5 ? (checkerSize * 0.8) : checkerSize
+      const startY = fromTop 
+        ? fromY + checkerSize/2 + 5 + (fromCheckerCount - 1) * fromOverlap
+        : fromY - checkerSize/2 - 5 - (fromCheckerCount - 1) * fromOverlap
+
+      // Конечная позиция Y (куда приземлится)
+      let endY;
+      if (animatingChecker.to === -1) {
+        endY = toY
+      } else {
+        const toCheckerCount = Math.abs(virtualGameState.points[animatingChecker.to])
+        const toOverlap = (toCheckerCount + 1) > 5 ? (checkerSize * 0.8) : checkerSize
+        endY = toTop
+          ? toY + checkerSize/2 + 5 + toCheckerCount * toOverlap
+          : toY - checkerSize/2 - 5 - toCheckerCount * toOverlap
+      }
+
+      const curX = fromX + (toX - fromX) * animatingChecker.progress
+      const curY = startY + (endY - startY) * animatingChecker.progress
+
+      drawChecker(curX, curY, checkerSize, isPlayer1 ? '#F0F0F0' : '#333333', isPlayer1)
     }
     
     // Отрисовка бара
@@ -535,30 +580,22 @@ export default function BackgammonBoard({
       const barX = width / 2
       
       if (myBarCount > 0) {
+        const isAnimatingFromMyBar = animatingChecker && animatingChecker.from === (isPlayer1 ? 24 : 25)
+        const countToDraw = isAnimatingFromMyBar ? myBarCount - 1 : myBarCount
         const barStartY = height - pointHeight * 0.3
-        for (let i = 0; i < myBarCount; i++) {
+        for (let i = 0; i < countToDraw; i++) {
           const barY = barStartY - (i * checkerSize * 0.6)
-          ctx.fillStyle = '#FFFFFF'
-          ctx.beginPath()
-          ctx.arc(barX - 25, barY, checkerSize / 2, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.strokeStyle = '#333'
-          ctx.lineWidth = 2
-          ctx.stroke()
+          drawChecker(barX - 25, barY, checkerSize, '#FFFFFF', true)
         }
       }
       
       if (opponentBarCount > 0) {
+        const isAnimatingFromOpponentBar = animatingChecker && animatingChecker.from === (isPlayer1 ? 25 : 24)
+        const countToDraw = isAnimatingFromOpponentBar ? opponentBarCount - 1 : opponentBarCount
         const barStartY = pointHeight * 0.3
-        for (let i = 0; i < opponentBarCount; i++) {
+        for (let i = 0; i < countToDraw; i++) {
           const barY = barStartY + (i * checkerSize * 0.6)
-          ctx.fillStyle = '#000000'
-          ctx.beginPath()
-          ctx.arc(barX + 25, barY, checkerSize / 2, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.strokeStyle = '#333'
-          ctx.lineWidth = 2
-          ctx.stroke()
+          drawChecker(barX + 25, barY, checkerSize, '#000000', false)
         }
       }
     }
@@ -624,7 +661,7 @@ export default function BackgammonBoard({
         ctx.fillRect(targetX, 0, bearOffWidth, height)
       }
     }
-  }, [virtualGameState, selectedPoint, highlightedPoints, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates])
+  }, [virtualGameState, selectedPoint, highlightedPoints, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates, animatingChecker])
   
   // Перерисовка при изменении состояния
   useEffect(() => {
@@ -637,6 +674,48 @@ export default function BackgammonBoard({
     }
   }, [drawBoard])
   
+  // Обработка анимации
+  useEffect(() => {
+    if (!animatingChecker) return
+
+    let animationFrame: number
+    const duration = 300 // мс
+
+    const animate = (time: number) => {
+      const elapsed = time - animatingChecker.startTime
+      const progress = Math.min(elapsed / duration, 1)
+
+      if (progress < 1) {
+        setAnimatingChecker(prev => prev ? { ...prev, progress } : null)
+        animationFrame = requestAnimationFrame(animate)
+      } else {
+        // Анимация завершена
+        onMove(animatingChecker.from, animatingChecker.to, animatingChecker.die)
+        setAnimatingChecker(null)
+      }
+    }
+
+    animationFrame = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(animationFrame)
+  }, [animatingChecker, onMove])
+
+  // Вспомогательная функция для запуска анимации
+  const startMoveAnimation = (from: number, to: number, die: number) => {
+    setAnimatingChecker({
+      from,
+      to,
+      die,
+      progress: 0,
+      startTime: performance.now()
+    })
+    // Сбрасываем состояния взаимодействия
+    setSelectedPoint(null)
+    setDragging(null)
+    setDragPosition(null)
+    setHoveredPoint(null)
+    setValidTargetPoints(new Set())
+  }
+
   // Обновление размера canvas
   useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
@@ -688,12 +767,7 @@ export default function BackgammonBoard({
     
     if (bestMove) {
       // console.log('Fast move:', bestMove)
-      onMove(bestMove.from, bestMove.to, bestMove.die)
-      // Сбрасываем выделение
-      setSelectedPoint(null)
-      setDragging(null)
-      setDragPosition(null)
-      setValidTargetPoints(new Set())
+      startMoveAnimation(bestMove.from, bestMove.to, bestMove.die)
     }
   }
 
@@ -780,12 +854,14 @@ export default function BackgammonBoard({
         if (targetPoint === -1) {
           const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
           if (bearOffMove) {
-            onMove(bearOffMove.from, bearOffMove.to, bearOffMove.die)
+            startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die)
+            return // startMoveAnimation сам все сбросит
           }
         } else if (validTargetPoints.has(targetPoint)) {
           const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
           if (move) {
-            onMove(move.from, move.to, move.die)
+            startMoveAnimation(move.from, move.to, move.die)
+            return // startMoveAnimation сам все сбросит
           }
         }
       }
@@ -886,12 +962,14 @@ export default function BackgammonBoard({
       if (targetPoint === -1) {
         const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
         if (bearOffMove) {
-          onMove(bearOffMove.from, bearOffMove.to, bearOffMove.die)
+          startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die)
+          return
         }
       } else if (validTargetPoints.has(targetPoint)) {
         const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
         if (move) {
-          onMove(move.from, move.to, move.die)
+          startMoveAnimation(move.from, move.to, move.die)
+          return
         }
       }
     }
@@ -931,8 +1009,7 @@ export default function BackgammonBoard({
     } else {
       const move = possibleMoves.find(m => m.from === selectedPoint && m.to === pointIndex)
       if (move) {
-        onMove(move.from, move.to, move.die)
-        setSelectedPoint(null)
+        startMoveAnimation(move.from, move.to, move.die)
       } else {
         setSelectedPoint(pointIndex)
       }
