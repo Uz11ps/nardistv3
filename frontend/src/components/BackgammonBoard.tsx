@@ -118,19 +118,20 @@ export default function BackgammonBoard({
         // Загружаем текстуру доски (половина для каждого игрока)
         if (myBoardSkin?.boardTextureUrl) {
           const textureUrl = myBoardSkin.boardTextureUrl
+          const processedUrl = getImageUrl(textureUrl) || textureUrl
           console.log('📦 Loading my board texture:', {
             original: textureUrl,
-            processedUrl: getImageUrl(textureUrl),
+            processedUrl: processedUrl,
             skinId: myBoardSkin.id,
             skinName: myBoardSkin.name,
             isDefault: myBoardSkin.isDefault,
             skin: myBoardSkin,
           })
-          loaded.myBoard = await loadImage(textureUrl).catch((e) => {
+          loaded.myBoard = await loadImage(processedUrl).catch((e) => {
             console.error('❌ Failed to load my board texture:', {
               error: e,
               originalUrl: textureUrl,
-              processedUrl: getImageUrl(textureUrl),
+              processedUrl: processedUrl,
               skinId: myBoardSkin.id,
             })
             return undefined
@@ -147,18 +148,19 @@ export default function BackgammonBoard({
           })
         }
         if (opponentBoardSkin?.boardTextureUrl) {
+          const processedUrl = getImageUrl(opponentBoardSkin.boardTextureUrl) || opponentBoardSkin.boardTextureUrl
           console.log('📦 Loading opponent board texture:', {
             original: opponentBoardSkin.boardTextureUrl,
-            processedUrl: getImageUrl(opponentBoardSkin.boardTextureUrl),
+            processedUrl: processedUrl,
             skinId: opponentBoardSkin.id,
             skinName: opponentBoardSkin.name,
             isDefault: opponentBoardSkin.isDefault,
           })
-          loaded.opponentBoard = await loadImage(opponentBoardSkin.boardTextureUrl).catch((e) => {
+          loaded.opponentBoard = await loadImage(processedUrl).catch((e) => {
             console.error('❌ Failed to load opponent board texture:', {
               error: e,
               originalUrl: opponentBoardSkin.boardTextureUrl,
-              processedUrl: getImageUrl(opponentBoardSkin.boardTextureUrl),
+              processedUrl: processedUrl,
             })
             return undefined
           })
