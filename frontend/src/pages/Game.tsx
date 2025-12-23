@@ -246,7 +246,7 @@ export default function Game() {
       const currentUser = useAuthStore.getState().user
       const myId = currentUser?.id
       
-      // Загружаем дефолтные классические скины для бота
+      // Загружаем дефолтные классические скины ТОЛЬКО для бота
       const loadDefaultSkins = async () => {
         try {
           const allSkinsRes = await apiClient.get('/skins').catch(() => ({ data: [] }))
@@ -288,21 +288,12 @@ export default function Game() {
       
       const [player1SkinsRes, player2SkinsRes, mySkinsRes] = await Promise.all(promises)
       
-      let player1Skins = player1SkinsRes.data || {}
-      let player2Skins = player2SkinsRes.data || {}
+      // БЕЗ FALLBACK - используем ТОЛЬКО то, что вернул сервер (selected скины)
+      const player1Skins = player1SkinsRes.data || {}
+      const player2Skins = player2SkinsRes.data || {}
       const mySkins = mySkinsRes.data || {}
       
-      // Если у бота нет скинов, устанавливаем дефолтные
-      if (isBotPlayer2) {
-        const defaultSkins = await loadDefaultSkins()
-        player2Skins = {
-          board: player2Skins.board || defaultSkins.board,
-          dice: player2Skins.dice || defaultSkins.dice,
-          checkers: player2Skins.checkers || defaultSkins.checkers,
-        }
-      }
-      
-      console.log('🎮 Game - Loaded player skins:', {
+      console.log('🎮 Game - Loaded player skins (NO FALLBACK):', {
         player1Id,
         player2Id,
         myId,
@@ -313,10 +304,16 @@ export default function Game() {
         player2Skins,
         mySkins,
         player1Board: player1Skins.board,
-        player2Board: player2Skins.board,
-        myBoard: mySkins.board,
+        player1BoardId: player1Skins.board?.id,
+        player1BoardName: player1Skins.board?.name,
         player1BoardTexture: player1Skins.board?.boardTextureUrl,
+        player2Board: player2Skins.board,
+        player2BoardId: player2Skins.board?.id,
+        player2BoardName: player2Skins.board?.name,
         player2BoardTexture: player2Skins.board?.boardTextureUrl,
+        myBoard: mySkins.board,
+        myBoardId: mySkins.board?.id,
+        myBoardName: mySkins.board?.name,
         myBoardTexture: mySkins.board?.boardTextureUrl,
       })
       

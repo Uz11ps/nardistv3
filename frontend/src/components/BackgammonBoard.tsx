@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { apiClient } from '../api/client'
+import { apiClient, getImageUrl } from '../api/client'
 import Dice3D from './Dice3D'
 import './BackgammonBoard.css'
 
@@ -98,7 +98,9 @@ export default function BackgammonBoard({
           img.crossOrigin = 'anonymous'
           img.onload = () => resolve(img)
           img.onerror = reject
-          img.src = url.startsWith('http') ? url : `${window.location.origin}${url}`
+          // Используем getImageUrl для правильной обработки путей /uploads/ и /skins/
+          const imageUrl = getImageUrl(url) || url
+          img.src = imageUrl.startsWith('http') ? imageUrl : `${window.location.origin}${imageUrl}`
         })
       }
       
@@ -114,18 +116,49 @@ export default function BackgammonBoard({
         
         // Загружаем текстуру доски (половина для каждого игрока)
         if (myBoardSkin?.boardTextureUrl) {
-          console.log('📦 Loading my board texture:', myBoardSkin.boardTextureUrl)
-          loaded.myBoard = await loadImage(myBoardSkin.boardTextureUrl).catch((e) => {
-            console.error('❌ Failed to load my board texture:', e)
+          const textureUrl = myBoardSkin.boardTextureUrl
+          console.log('📦 Loading my board texture:', {
+            original: textureUrl,
+            processedUrl: getImageUrl(textureUrl),
+            skinId: myBoardSkin.id,
+            skinName: myBoardSkin.name,
+            isDefault: myBoardSkin.isDefault,
+            skin: myBoardSkin,
+          })
+          loaded.myBoard = await loadImage(textureUrl).catch((e) => {
+            console.error('❌ Failed to load my board texture:', {
+              error: e,
+              originalUrl: textureUrl,
+              processedUrl: getImageUrl(textureUrl),
+              skinId: myBoardSkin.id,
+            })
             return undefined
           })
+          if (loaded.myBoard) {
+            console.log('✅ Successfully loaded my board texture')
+          }
         } else {
-          console.warn('⚠️ No myBoardSkin.boardTextureUrl found:', myBoardSkin)
+          console.warn('⚠️ No myBoardSkin.boardTextureUrl found:', {
+            myBoardSkin,
+            hasBoardSkin: !!myBoardSkin,
+            boardTextureUrl: myBoardSkin?.boardTextureUrl,
+            allKeys: myBoardSkin ? Object.keys(myBoardSkin) : [],
+          })
         }
         if (opponentBoardSkin?.boardTextureUrl) {
-          console.log('📦 Loading opponent board texture:', opponentBoardSkin.boardTextureUrl)
+          console.log('📦 Loading opponent board texture:', {
+            original: opponentBoardSkin.boardTextureUrl,
+            processedUrl: getImageUrl(opponentBoardSkin.boardTextureUrl),
+            skinId: opponentBoardSkin.id,
+            skinName: opponentBoardSkin.name,
+            isDefault: opponentBoardSkin.isDefault,
+          })
           loaded.opponentBoard = await loadImage(opponentBoardSkin.boardTextureUrl).catch((e) => {
-            console.error('❌ Failed to load opponent board texture:', e)
+            console.error('❌ Failed to load opponent board texture:', {
+              error: e,
+              originalUrl: opponentBoardSkin.boardTextureUrl,
+              processedUrl: getImageUrl(opponentBoardSkin.boardTextureUrl),
+            })
             return undefined
           })
         }

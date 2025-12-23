@@ -532,8 +532,12 @@ export class AdminController {
     AnyFilesInterceptor({ // Принимаем файлы с любыми именами полей: preview, boardTexture, diceTexture1-6, checkersTexture
       storage: diskStorage({
         destination: (req, file, cb) => {
-          // Используем абсолютный путь для Docker
-          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
+          // Сохраняем в frontend/public/uploads/skins для единообразия с классическими скинами
+          // Это публичные файлы, которые отдаются через nginx
+          // В Docker используем монтированный volume
+          const uploadsDir = process.env.DOCKER 
+            ? join('/app', 'frontend-public-uploads', 'skins')
+            : join(process.cwd(), '..', 'frontend', 'public', 'uploads', 'skins');
           // Создаем директорию если её нет
           if (!existsSync(uploadsDir)) {
             mkdirSync(uploadsDir, { recursive: true });
@@ -692,7 +696,8 @@ export class AdminController {
     FileInterceptor('image', {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
+          // Сохраняем в frontend/public/uploads/skins для единообразия с классическими скинами
+          const uploadsDir = join(process.cwd(), '..', 'frontend', 'public', 'uploads', 'skins');
           if (!existsSync(uploadsDir)) {
             mkdirSync(uploadsDir, { recursive: true });
           }
@@ -736,7 +741,8 @@ export class AdminController {
     AnyFilesInterceptor({ // preview, boardTexture/diceTexture1-6/checkersTexture (до 10 файлов для кубиков)
       storage: diskStorage({
         destination: (req, file, cb) => {
-          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
+          // Сохраняем в frontend/public/uploads/skins для единообразия с классическими скинами
+          const uploadsDir = join(process.cwd(), '..', 'frontend', 'public', 'uploads', 'skins');
           if (!existsSync(uploadsDir)) {
             mkdirSync(uploadsDir, { recursive: true });
           }
