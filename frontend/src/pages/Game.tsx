@@ -40,6 +40,7 @@ export default function Game() {
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
   const [player2Ready, setPlayer2Ready] = useState<boolean>(false)
   const [myReady, setMyReady] = useState<boolean>(false)
+  const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const moveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const overtimeRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -450,7 +451,7 @@ export default function Game() {
       }
     })
 
-    socket.on('move_made', (data: any) => {
+      socket.on('move_made', (data: any) => {
       console.log('🎯 Получено move_made:', data)
       console.log('🎯 Детали move_made:', {
         currentPlayer: data.currentPlayer,
@@ -459,6 +460,13 @@ export default function Game() {
         dice: data.gameState?.dice,
         status: data.status
       })
+      
+      // Очищаем очередь ходов после успешного хода
+      setPendingMoves([])
+      
+      // Сбрасываем выбранную точку на доске
+      // Это делается через обновление компонента BackgammonBoard
+      
       const diceData = data.gameState?.dice
       // Если dice пустой массив или null/undefined, formattedDice должен быть null
       const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
@@ -651,27 +659,27 @@ export default function Game() {
       return
     }
 
-    const socket = getSocket()
-    if (!socket) {
-      console.error('❌ WebSocket не подключен')
+    // Проверяем что кубик еще доступен
+    const diceArray = gameState.dice 
+      ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2])
+      : []
+    
+    // Подсчитываем сколько раз уже использован этот кубик
+    const usedCount = pendingMoves.filter(m => m.die === die).length
+    const availableCount = diceArray.filter(d => d === die).length
+    
+    if (usedCount >= availableCount) {
+      console.warn(`⚠️ Кубик ${die} уже использован максимальное количество раз (${availableCount})`)
+      alert(`Кубик ${die} уже использован максимальное количество раз`)
       return
     }
 
-    try {
-      // Сбрасываем таймер при выполнении хода
-      setMoveTimer(30)
-      
-      // Собираем все ходы в массив (пока один ход)
-      const moves = [{ from, to, die }]
-      console.log('📤 Отправляем ход на сервер:', { gameId, moves })
-      socket.emit('make_move', {
-        gameId,
-        moves,
-      })
-      console.log('✅ Ход отправлен на сервер')
-    } catch (error) {
-      console.error('❌ Ошибка отправки хода:', error)
-    }
+    // Добавляем ход в очередь ожидающих ходов
+    setPendingMoves(prev => {
+      const newMoves = [...prev, { from, to, die }]
+      console.log('📝 Ход добавлен в очередь:', { from, to, die }, 'Всего ходов:', newMoves.length)
+      return newMoves
+    })
   }
 
   const handleRollDice = async () => {
@@ -705,12 +713,7 @@ export default function Game() {
   }
 
   const handleConfirm = async () => {
-    // Правильно проверяем наличие кубиков: массив должен быть непустым
-    const hasDice = gameState?.dice && (
-      (Array.isArray(gameState.dice) && gameState.dice.length >= 2) ||
-      (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
-    )
-    console.log('🔘 handleConfirm вызван', { gameId, gameStatus, isMyTurn, hasDice, dice: gameState?.dice })
+    console.log('🔘 handleConfirm вызван', { gameId, gameStatus, isMyTurn, pendingMoves: pendingMoves.length })
     
     if (!gameId) {
       console.error('❌ Нет gameId')
@@ -725,13 +728,11 @@ export default function Game() {
     }
 
     // Игры с ИИ теперь сразу создаются со статусом in_progress, этап waiting пропускается
-    // Эта проверка больше не нужна, но оставляем для совместимости
     if (gameStatus === 'waiting' && isBotGame) {
       console.log('🎲 Начинаем игру - бросаем кубики')
       try {
         let socket = getSocket()
         
-        // Если WebSocket не подключен, пытаемся переподключиться
         if (!socket || !socket.connected) {
           console.warn('⚠️ WebSocket не подключен, пытаемся переподключиться...')
           const { token } = useAuthStore.getState()
@@ -749,10 +750,8 @@ export default function Game() {
         }
         
         console.log('✅ WebSocket подключен, отправляем roll_dice для gameId:', gameId)
-        // Бросаем кубики через WebSocket
         socket.emit('roll_dice', { gameId })
         
-        // Обновляем состояние через небольшую задержку
         setTimeout(() => {
           console.log('🔄 Обновляем состояние игры после броска кубиков')
           loadGame()
@@ -764,15 +763,39 @@ export default function Game() {
       return
     }
 
-    // Если игра в процессе и есть кубики и это мой ход - ничего не делаем
-    // Ход уже сделан через клик по доске, подтверждение не требуется
-    if (gameStatus === 'in_progress' && hasDice && isMyTurn) {
-      console.log('ℹ️ Ход уже сделан, подтверждение не требуется')
+    // Если игра в процессе и это мой ход - отправляем накопленные ходы
+    if (gameStatus === 'in_progress' && isMyTurn && pendingMoves.length > 0) {
+      const socket = getSocket()
+      if (!socket) {
+        console.error('❌ WebSocket не подключен')
+        alert('Ошибка подключения. Перезагрузите страницу.')
+        return
+      }
+
+      try {
+        // Сбрасываем таймер при отправке ходов
+        setMoveTimer(30)
+        
+        console.log('📤 Отправляем ходы на сервер:', { gameId, moves: pendingMoves })
+        socket.emit('make_move', {
+          gameId,
+          moves: pendingMoves,
+        })
+        console.log('✅ Ходы отправлены на сервер')
+        
+        // Очищаем очередь ходов
+        setPendingMoves([])
+      } catch (error) {
+        console.error('❌ Ошибка отправки ходов:', error)
+        alert('Ошибка отправки ходов: ' + (error as Error).message)
+      }
       return
     }
     
-    // Кубики теперь бросаются только по кнопке, не автоматически
-    console.log('ℹ️ Для броска кубиков используйте кнопку "Бросить кубики"')
+    // Если нет ходов для отправки
+    if (pendingMoves.length === 0 && gameStatus === 'in_progress' && isMyTurn) {
+      console.log('ℹ️ Нет ходов для подтверждения')
+    }
   }
 
   // Таймер теперь управляется бэкендом через WebSocket событие timer_update
@@ -987,8 +1010,9 @@ export default function Game() {
             fullWidth 
             onClick={handleConfirm}
             className="game-confirm-btn"
+            disabled={pendingMoves.length === 0}
           >
-            Подтвердить ход
+            {pendingMoves.length > 0 ? `Подтвердить ход (${pendingMoves.length})` : 'Подтвердить ход'}
           </Button>
         </div>
       )}
@@ -1024,6 +1048,7 @@ export default function Game() {
       {gameStatus === 'in_progress' || gameStatus === 'finished' ? (
         <div className="board-wrapper">
           <BackgammonBoard
+            key={`board-${gameState?.points?.join(',')}-${gameState?.currentPlayer}-${pendingMoves.length}`}
             player1Skins={playerSkins.player1}
             player2Skins={playerSkins.player2}
             mySkins={playerSkins.mySkins}

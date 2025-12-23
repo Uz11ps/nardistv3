@@ -54,6 +54,7 @@ export class CityService {
         baseIncomePerHour: Number(config.baseIncomePerHour),
         maxAccumulation: Number(config.maxAccumulation),
         maxLevel: config.maxLevel,
+        upgradeMultiplier: config.upgradeMultiplier || 1.4,
       }));
   }
 
@@ -153,8 +154,9 @@ export class CityService {
 
     const user = await this.usersService.findOne(userId);
 
-    // Рассчитываем цену улучшения: basePrice * 1.4^level
-    const upgradePrice = Math.floor(Number(config.basePrice) * Math.pow(1.4, building.level));
+    // Рассчитываем цену улучшения: basePrice * upgradeMultiplier^level
+    const multiplier = config.upgradeMultiplier || 1.4;
+    const upgradePrice = Math.floor(Number(config.basePrice) * Math.pow(multiplier, building.level));
     
     if (Number(user.narCoin) < upgradePrice) {
       throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${upgradePrice}, у вас: ${Number(user.narCoin)}`);

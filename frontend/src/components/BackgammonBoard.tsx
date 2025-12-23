@@ -305,17 +305,33 @@ export default function BackgammonBoard({
     const fetchPossibleMoves = async () => {
       try {
         const response = await apiClient.get(`/games/${gameId}/possible-moves`)
-        const moves = response.data?.moves || []
-        setPossibleMoves(moves.flat() || [])
+        const allMoves = response.data?.allMoves || []
+        // Преобразуем массив массивов ходов в плоский список уникальных ходов
+        const movesSet = new Set<string>()
+        const flatMoves: Array<{ from: number; to: number; die: number }> = []
+        
+        allMoves.forEach((moveSeq: Array<{ from: number; to: number; die: number }>) => {
+          moveSeq.forEach((move) => {
+            const key = `${move.from}-${move.to}-${move.die}`
+            if (!movesSet.has(key)) {
+              movesSet.add(key)
+              flatMoves.push(move)
+            }
+          })
+        })
+        
+        setPossibleMoves(flatMoves)
         
         const highlighted = new Set<number>()
-        moves.flat().forEach((move: any) => {
-          highlighted.add(move.from)
-          highlighted.add(move.to)
+        flatMoves.forEach((move: any) => {
+          if (move.from !== undefined && move.from !== null) highlighted.add(move.from)
+          if (move.to !== undefined && move.to !== null && move.to >= 0 && move.to < 24) highlighted.add(move.to)
         })
         setHighlightedPoints(highlighted)
       } catch (error) {
         console.error('Ошибка получения возможных ходов:', error)
+        setPossibleMoves([])
+        setHighlightedPoints(new Set())
       }
     }
     

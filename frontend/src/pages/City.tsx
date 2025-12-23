@@ -282,8 +282,9 @@ export default function City() {
                     const config = availableBuildings.find(
                       c => c.type === building.type
                     )
+                    const multiplier = config?.upgradeMultiplier || 1.4
                     const upgradePrice = config
-                      ? Math.floor(config.basePrice * Math.pow(1.4, building.level))
+                      ? Math.floor(config.basePrice * Math.pow(multiplier, building.level))
                       : 0
 
                     return (
@@ -324,14 +325,14 @@ export default function City() {
                                   {collecting === building.id ? 'Сбор...' : `Собрать ${accumulated} NAR`}
                                 </Button>
                               )}
-                              {config && building.level < config.maxLevel && (
+                              {config && building.level < (config.maxLevel || 10) && (
                                 <Button
                                   variant="secondary"
                                   onClick={() => handleUpgradeBuilding(building.id)}
                                   disabled={purchasing === building.id}
                                   className="city-building-action-btn"
                                 >
-                                  {purchasing === building.id ? 'Улучшение...' : `Улучшить`}
+                                  {purchasing === building.id ? 'Улучшение...' : `Улучшить (${upgradePrice.toLocaleString()} NAR)`}
                                 </Button>
                               )}
                             </div>

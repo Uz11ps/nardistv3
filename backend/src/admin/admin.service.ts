@@ -858,6 +858,7 @@ export class AdminService implements OnModuleInit {
       baseIncomePerHour: Number(c.baseIncomePerHour),
       maxAccumulation: Number(c.maxAccumulation),
       maxLevel: c.maxLevel,
+      upgradeMultiplier: c.upgradeMultiplier || 1.4,
       upgradeCosts: c.upgradeCosts,
     }));
   }
@@ -878,6 +879,7 @@ export class AdminService implements OnModuleInit {
       baseIncomePerHour: Number(config.baseIncomePerHour),
       maxAccumulation: Number(config.maxAccumulation),
       maxLevel: config.maxLevel,
+      upgradeMultiplier: config.upgradeMultiplier || 1.4,
       upgradeCosts: config.upgradeCosts,
     };
   }
@@ -902,23 +904,25 @@ export class AdminService implements OnModuleInit {
       baseIncomePerHour: data.baseIncomePerHour.toString(),
       maxAccumulation: (data.maxAccumulation || 0).toString(),
       maxLevel: data.maxLevel || 10,
+      upgradeMultiplier: data.upgradeMultiplier || 1.4,
       upgradeCosts: data.upgradeCosts || null,
     });
 
     const savedConfig = await this.buildingConfigsRepository.save(config);
     
-    return {
-      id: savedConfig.id,
-      type: savedConfig.type,
-      name: savedConfig.name,
-      icon: savedConfig.icon,
-      image: savedConfig.image,
-      basePrice: Number(savedConfig.basePrice),
-      baseIncomePerHour: Number(savedConfig.baseIncomePerHour),
-      maxAccumulation: Number(savedConfig.maxAccumulation),
-      maxLevel: savedConfig.maxLevel,
-      upgradeCosts: savedConfig.upgradeCosts,
-    };
+      return {
+        id: savedConfig.id,
+        type: savedConfig.type,
+        name: savedConfig.name,
+        icon: savedConfig.icon,
+        image: savedConfig.image,
+        basePrice: Number(savedConfig.basePrice),
+        baseIncomePerHour: Number(savedConfig.baseIncomePerHour),
+        maxAccumulation: Number(savedConfig.maxAccumulation),
+        maxLevel: savedConfig.maxLevel,
+        upgradeMultiplier: savedConfig.upgradeMultiplier || 1.4,
+        upgradeCosts: savedConfig.upgradeCosts,
+      };
   }
 
   async updateBuildingConfig(id: string, data: Partial<{
@@ -930,6 +934,7 @@ export class AdminService implements OnModuleInit {
     baseIncomePerHour: number;
     maxAccumulation: number;
     maxLevel: number;
+    upgradeMultiplier: number;
     upgradeCosts: any;
   }>) {
     const config = await this.buildingConfigsRepository.findOne({ where: { id } });
@@ -942,6 +947,7 @@ export class AdminService implements OnModuleInit {
       basePrice: data.basePrice !== undefined ? data.basePrice.toString() : config.basePrice,
       baseIncomePerHour: data.baseIncomePerHour !== undefined ? data.baseIncomePerHour.toString() : config.baseIncomePerHour,
       maxAccumulation: data.maxAccumulation !== undefined ? data.maxAccumulation.toString() : config.maxAccumulation,
+      upgradeMultiplier: data.upgradeMultiplier !== undefined ? data.upgradeMultiplier : (config.upgradeMultiplier || 1.4),
     });
 
     const savedConfig = await this.buildingConfigsRepository.save(config);
@@ -956,6 +962,7 @@ export class AdminService implements OnModuleInit {
       baseIncomePerHour: Number(savedConfig.baseIncomePerHour),
       maxAccumulation: Number(savedConfig.maxAccumulation),
       maxLevel: savedConfig.maxLevel,
+      upgradeMultiplier: savedConfig.upgradeMultiplier || 1.4,
       upgradeCosts: savedConfig.upgradeCosts,
     };
   }
@@ -1406,12 +1413,18 @@ export class AdminService implements OnModuleInit {
       }
       
       user.level = finalLevel;
-      user.xp = BigInt(Math.max(0, totalXP));
+      user.xp = BigInt(Math.max(0, Math.floor(totalXP)));
       
       const savedUser = await this.usersRepository.save(user);
       this.logger.log(`✅ Установлен уровень пользователя ${userId}: Level=${finalLevel}, XP=${totalXP}`);
       
-      return savedUser;
+      return {
+        id: savedUser.id,
+        level: savedUser.level,
+        xp: Number(savedUser.xp),
+        username: savedUser.username,
+        nickname: savedUser.nickname,
+      };
     } catch (error) {
       this.logger.error(`Error setting level for user ${userId}:`, error);
       throw new BadRequestException(`Ошибка при установке уровня: ${error.message}`);
