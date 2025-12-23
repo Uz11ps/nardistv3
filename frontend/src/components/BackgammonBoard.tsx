@@ -354,15 +354,22 @@ export default function BackgammonBoard({
     }
     
     const dpr = window.devicePixelRatio || 1
-    canvas.width = containerWidth * dpr
-    canvas.height = containerHeight * dpr
-    canvas.style.width = `${containerWidth}px`
-    canvas.style.height = `${containerHeight}px`
-    
-    ctx.scale(dpr, dpr)
-    
     const width = containerWidth
     const height = containerHeight
+    
+    // Устанавливаем размеры canvas - это автоматически очищает canvas
+    canvas.width = width * dpr
+    canvas.height = height * dpr
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
+    
+    // Сбрасываем все трансформации и стили перед рисованием
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.scale(dpr, dpr)
+    
+    // Очищаем canvas полностью (на всякий случай)
+    ctx.clearRect(0, 0, width, height)
+    
     const boardPadding = 0
     const boardWidth = width
     const boardHeight = height
@@ -375,8 +382,6 @@ export default function BackgammonBoard({
     const barY = (boardHeight - barHeight) / 2
     const barLeftX = barX
     const barRightX = barX + barWidth
-    
-    ctx.clearRect(0, 0, width, height)
     
     // Рисуем доски: слева моя, справа оппонента
     if (textures.myBoard) {
@@ -831,18 +836,8 @@ export default function BackgammonBoard({
     }
   }, [drawBoard])
   
-  useEffect(() => {
-    const animate = () => {
-      drawBoard()
-      animationFrameRef.current = requestAnimationFrame(animate)
-    }
-    animate()
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-    }
-  }, [drawBoard])
+  // Убираем постоянную анимацию - drawBoard вызывается только при изменении состояния
+  // Это предотвращает накопление трансформаций и лишние перерисовки
   
   const getPointFromCoords = (x: number, y: number): number | null => {
     const canvas = canvasRef.current
