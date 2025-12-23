@@ -423,6 +423,52 @@ export class AdminController {
     return this.adminService.deleteDistrict(id);
   }
 
+  // CRUD для конфигураций строений
+  @Get('buildings')
+  @UseGuards(JwtAuthGuard)
+  async getAllBuildings(@CurrentUser() user: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getAllBuildingConfigs();
+  }
+
+  @Get('buildings/:id')
+  @UseGuards(JwtAuthGuard)
+  async getBuilding(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.getBuildingConfig(id);
+  }
+
+  @Post('buildings')
+  @UseGuards(JwtAuthGuard)
+  async createBuilding(@CurrentUser() user: any, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.createBuildingConfig(body);
+  }
+
+  @Put('buildings/:id')
+  @UseGuards(JwtAuthGuard)
+  async updateBuilding(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.updateBuildingConfig(id, body);
+  }
+
+  @Delete('buildings/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteBuilding(@CurrentUser() user: any, @Param('id') id: string) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    return this.adminService.deleteBuildingConfig(id);
+  }
+
   // CRUD для шаблонов уведомлений Telegram
   @Get('notification-templates')
   @UseGuards(JwtAuthGuard)

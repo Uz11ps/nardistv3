@@ -1,75 +1,59 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  Index,
+} from 'typeorm';
 import { User } from '../users/user.entity';
-
-export enum District {
-  DISTRICT_1 = 'district_1',
-  DISTRICT_2 = 'district_2',
-  DISTRICT_3 = 'district_3',
-  DISTRICT_4 = 'district_4',
-  DISTRICT_5 = 'district_5',
-  DISTRICT_6 = 'district_6',
-  DISTRICT_7 = 'district_7',
-}
-
-export enum BuildingType {
-  CLUB = 'club',
-  WORKSHOP = 'workshop',
-  FACTORY = 'factory',
-  SCHOOL = 'school',
-  MARKET = 'market',
-  ACADEMY = 'academy',
-  TEMPLE = 'temple',
-}
 
 @Entity('buildings')
 export class Building {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column()
+  @Index()
+  userId: string;
+
   @ManyToOne(() => User)
   user: User;
 
   @Column()
-  userId: string;
+  district: string; // Район (district_1, district_2, etc.)
 
-  @Column({
-    type: 'enum',
-    enum: District,
-  })
-  district: District;
-
-  @Column({
-    type: 'enum',
-    enum: BuildingType,
-  })
-  type: BuildingType;
+  @Column()
+  type: string; // Тип строения (shop, factory, etc.)
 
   @Column({ type: 'int', default: 1 })
-  level: number;
+  level: number; // Уровень строения
 
   @Column({ type: 'bigint', default: 0 })
-  incomePerHour: string;
+  accumulatedIncome: string; // Накопленный доход (в NAR-coin)
 
   @Column({ type: 'bigint', default: 0 })
-  accumulatedIncome: string;
+  incomePerHour: string; // Доход в час (рассчитывается: baseIncomePerHour * 1.2^level)
 
   @Column({ type: 'timestamp', nullable: true })
-  lastCollectedAt: Date;
+  lastIncomeCollection: Date; // Время последнего сбора дохода
 
   // Захват кланом
   @Column({ nullable: true })
-  capturedByClanId: string; // ID клана, который захватил это предприятие
+  @Index()
+  capturedByClanId: string | null; // ID клана, который захватил строение
 
   @Column({ type: 'timestamp', nullable: true })
-  capturedAt: Date; // Дата захвата
+  capturedAt: Date | null; // Время захвата
 
-  @Column({ type: 'bigint', default: 0 })
-  purchasePrice: string; // Цена покупки предприятия
+  @Column({ type: 'timestamp', nullable: true })
+  captureExpiresAt: Date | null; // Время окончания захвата (3 часа)
 
-  @Column({ type: 'bigint', default: 0 })
-  maxAccumulation: string; // Максимальное накопление дохода
-
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
 

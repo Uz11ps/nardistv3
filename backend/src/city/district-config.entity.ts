@@ -4,38 +4,42 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  Index,
 } from 'typeorm';
 
 @Entity('district_configs')
-@Index(['code'], { unique: true })
 export class DistrictConfig {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ unique: true })
-  code: string; // Уникальный код территории (например, 'district_1')
+  code: string; // Код района (district_1, district_2, etc.)
 
   @Column()
-  name: string; // Название территории (например, 'Центральный')
+  name: string; // Название района
 
   @Column({ type: 'text', nullable: true })
-  description: string; // Описание территории
+  description: string; // Описание района
 
-  @Column({ type: 'int', default: 1 })
+  @Column({ nullable: true })
+  icon: string; // Иконка района (URL)
+
+  @Column({ nullable: true })
+  image: string; // Изображение района (URL)
+
+  @Column({ type: 'int', default: 0 })
   order: number; // Порядок отображения
 
   @Column({ default: true })
-  isActive: boolean; // Активна ли территория
+  isActive: boolean; // Активен ли район
+
+  @Column({ type: 'int', nullable: true })
+  requiredLevel: number; // Требуемый уровень для доступа
 
   @Column({ type: 'bigint', default: 0 })
   baseIncomePerDay: string; // Базовый доход в день (для кланов)
 
   @Column({ type: 'jsonb', nullable: true })
-  metadata: any; // Дополнительные данные (цвет, иконка и т.д.)
-
-  @Column({ type: 'int', default: 1 })
-  requiredLevel: number; // Минимальный уровень для появления района
+  metadata: any; // Дополнительные метаданные
 
   @CreateDateColumn()
   createdAt: Date;

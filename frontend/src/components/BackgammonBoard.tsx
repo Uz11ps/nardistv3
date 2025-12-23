@@ -3,21 +3,10 @@ import { apiClient } from '../api/client'
 import Dice3D from './Dice3D'
 import './BackgammonBoard.css'
 
-interface Point {
-  index: number
-  checkers: number[]
-  color: 'white' | 'black' | null
-}
-
-interface Dice {
-  die1: number
-  die2: number
-}
-
 interface BackgammonBoardProps {
   gameState: any
   currentPlayer: number
-  dice: Dice | number[] | null
+  dice: { die1: number; die2: number } | number[] | null
   onMove: (from: number, to: number, die: number) => void
   onRollDice: () => void
   canMove: boolean
@@ -35,11 +24,6 @@ interface BackgammonBoardProps {
   player2Name?: string
 }
 
-const POINT_NUMBERS = [
-  24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13,
-  12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
-]
-
 export default function BackgammonBoard({
   gameState,
   currentPlayer,
@@ -55,27 +39,15 @@ export default function BackgammonBoard({
   diceAnimating = false,
   myPlayerId,
   player1Id,
-  player2Id,
-  player1Name,
-  player2Name,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
-  const [hoverPoint, setHoverPoint] = useState<number | null>(null)
-  const [animating, setAnimating] = useState(false)
-  const [diceRolling, setDiceRolling] = useState(false)
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
-  const animationFrameRef = useRef<number>()
-  const [dice3DPositions, setDice3DPositions] = useState<{ x: number; y: number; size: number; spacing: number } | null>(null)
+  const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
   
-  const [dragging, setDragging] = useState(false)
-  const [dragFromPoint, setDragFromPoint] = useState<number | null>(null)
-  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
-  const [dragHoverPoint, setDragHoverPoint] = useState<number | null>(null)
-  
-  // Текстуры скинов
   const [textures, setTextures] = useState<{
     myBoard?: HTMLImageElement
     opponentBoard?: HTMLImageElement
@@ -86,6 +58,9 @@ export default function BackgammonBoard({
   }>({})
   
   const isPlayer1 = myPlayerId === player1Id
+  
+  // ЛЕВАЯ ЧАСТЬ - МОИ СКИНЫ И ШАШКИ (независимо от цвета, они слева снизу)
+  // ПРАВАЯ ЧАСТЬ - ПРОТИВНИКА (справа сверху)
   const myBoardSkin = isPlayer1 ? player1Skins?.board : player2Skins?.board
   const opponentBoardSkin = isPlayer1 ? player2Skins?.board : player1Skins?.board
   const myDiceSkin = isPlayer1 ? player1Skins?.dice : player2Skins?.dice
@@ -101,1053 +76,455 @@ export default function BackgammonBoard({
       const loadImage = (url: string): Promise<HTMLImageElement> => {
         return new Promise((resolve, reject) => {
           const img = new Image()
+          img.crossOrigin = 'anonymous'
           img.onload = () => resolve(img)
           img.onerror = reject
-          img.src = url
+          img.src = url.startsWith('http') ? url : `${window.location.origin}${url}`
         })
       }
       
-      // 1. Моя доска (левая сторона)
-      if (myBoardSkin?.boardTextureUrl) {
-        try {
-          loaded.myBoard = await loadImage(myBoardSkin.boardTextureUrl)
-        } catch (e) {
-          console.error('Failed to load my board texture:', e)
+      try {
+        // Загружаем текстуру доски (половина для каждого игрока)
+        if (myBoardSkin?.boardTextureUrl) {
+          loaded.myBoard = await loadImage(myBoardSkin.boardTextureUrl).catch(() => undefined)
         }
-      }
-      
-      // 2. Доска оппонента (правая сторона)
-      if (opponentBoardSkin?.boardTextureUrl) {
-        try {
-          loaded.opponentBoard = await loadImage(opponentBoardSkin.boardTextureUrl)
-        } catch (e) {
-          console.error('Failed to load opponent board texture:', e)
+        if (opponentBoardSkin?.boardTextureUrl) {
+          loaded.opponentBoard = await loadImage(opponentBoardSkin.boardTextureUrl).catch(() => undefined)
         }
-      }
-      
-      // 3. Мои кубики (6 граней)
-      loaded.myDice = {}
-      const myDiceUrls = myDiceSkin?.diceTextureUrls || {}
-      if (Object.keys(myDiceUrls).length > 0) {
-        for (let face = 1; face <= 6; face++) {
-          if (myDiceUrls[face]) {
-            try {
-              loaded.myDice[face] = await loadImage(myDiceUrls[face])
-            } catch (e) {
-              console.error(`Failed to load my dice texture face ${face}:`, e)
+        
+        // Загружаем текстуры кубиков (6 граней)
+        if (myDiceSkin?.diceTextureUrls) {
+          const diceFaces: { [face: number]: HTMLImageElement } = {}
+          const textureUrls = typeof myDiceSkin.diceTextureUrls === 'string' 
+            ? JSON.parse(myDiceSkin.diceTextureUrls) 
+            : myDiceSkin.diceTextureUrls
+          
+          for (let face = 1; face <= 6; face++) {
+            if (textureUrls[face]) {
+              try {
+                diceFaces[face] = await loadImage(textureUrls[face])
+              } catch (e) {
+                console.warn(`Failed to load dice texture ${face}:`, e)
+              }
             }
           }
-        }
-      } else if (myDiceSkin?.diceTextureUrl) {
-        // Fallback: одна текстура для всех граней
-        try {
-          const img = await loadImage(myDiceSkin.diceTextureUrl)
-          loaded.myDice = { 1: img, 2: img, 3: img, 4: img, 5: img, 6: img }
-        } catch (e) {
-          console.error('Failed to load my dice texture:', e)
-        }
-      }
-      
-      // 4. Кубики оппонента (6 граней)
-      loaded.opponentDice = {}
-      const opponentDiceUrls = opponentDiceSkin?.diceTextureUrls || {}
-      if (Object.keys(opponentDiceUrls).length > 0) {
-        for (let face = 1; face <= 6; face++) {
-          if (opponentDiceUrls[face]) {
-            try {
-              loaded.opponentDice[face] = await loadImage(opponentDiceUrls[face])
-            } catch (e) {
-              console.error(`Failed to load opponent dice texture face ${face}:`, e)
-            }
+          if (Object.keys(diceFaces).length > 0) {
+            loaded.myDice = diceFaces
           }
         }
-      } else if (opponentDiceSkin?.diceTextureUrl) {
-        try {
-          const img = await loadImage(opponentDiceSkin.diceTextureUrl)
-          loaded.opponentDice = { 1: img, 2: img, 3: img, 4: img, 5: img, 6: img }
-        } catch (e) {
-          console.error('Failed to load opponent dice texture:', e)
+        
+        if (opponentDiceSkin?.diceTextureUrls) {
+          const diceFaces: { [face: number]: HTMLImageElement } = {}
+          const textureUrls = typeof opponentDiceSkin.diceTextureUrls === 'string' 
+            ? JSON.parse(opponentDiceSkin.diceTextureUrls) 
+            : opponentDiceSkin.diceTextureUrls
+          
+          for (let face = 1; face <= 6; face++) {
+            if (textureUrls[face]) {
+              try {
+                diceFaces[face] = await loadImage(textureUrls[face])
+              } catch (e) {
+                console.warn(`Failed to load opponent dice texture ${face}:`, e)
+              }
+            }
+          }
+          if (Object.keys(diceFaces).length > 0) {
+            loaded.opponentDice = diceFaces
+          }
         }
-      }
-      
-      // 5. Мои шашки (внизу на доске)
-      const myCheckersUrl = isPlayer1
-        ? (myCheckersSkin?.whiteCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl)
-        : (myCheckersSkin?.blackCheckersTextureUrl || myCheckersSkin?.checkersTextureUrl)
-      if (myCheckersUrl) {
-        try {
-          loaded.myCheckers = await loadImage(myCheckersUrl)
-        } catch (e) {
-          console.error('Failed to load my checkers texture:', e)
+        
+        // Загружаем текстуры шашек
+        if (myCheckersSkin?.checkersTextureUrl) {
+          loaded.myCheckers = await loadImage(myCheckersSkin.checkersTextureUrl).catch(() => undefined)
         }
-      }
-      
-      // 6. Шашки оппонента (вверху на доске)
-      const opponentCheckersUrl = isPlayer1
-        ? (opponentCheckersSkin?.blackCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl)
-        : (opponentCheckersSkin?.whiteCheckersTextureUrl || opponentCheckersSkin?.checkersTextureUrl)
-      if (opponentCheckersUrl) {
-        try {
-          loaded.opponentCheckers = await loadImage(opponentCheckersUrl)
-        } catch (e) {
-          console.error('Failed to load opponent checkers texture:', e)
+        if (opponentCheckersSkin?.checkersTextureUrl) {
+          loaded.opponentCheckers = await loadImage(opponentCheckersSkin.checkersTextureUrl).catch(() => undefined)
         }
+        
+        setTextures(loaded)
+      } catch (error) {
+        console.error('Ошибка загрузки текстур:', error)
       }
-      
-      setTextures(loaded)
     }
     
     loadTextures()
-  }, [myBoardSkin, opponentBoardSkin, myDiceSkin, opponentDiceSkin, myCheckersSkin, opponentCheckersSkin, isPlayer1])
+  }, [myBoardSkin, opponentBoardSkin, myDiceSkin, opponentDiceSkin, myCheckersSkin, opponentCheckersSkin])
   
-  const shouldMirror = !isPlayer1
-  const myPlayerIndex = isPlayer1 ? 0 : 1
-  
-  const mirrorPointIndex = (index: number): number => {
-    if (index < 0 || index >= 24) return index
-    return 23 - index
-  }
-  
-  const unmirrorPointIndex = (index: number): number => {
-    if (index < 0 || index >= 24) return index
-    return 23 - index
-  }
-  
-  // Обработка gameState
-  const pointsRaw = gameState?.points || []
-  let points: number[] = Array.isArray(pointsRaw)
-    ? pointsRaw.map((p: any) => {
-        if (typeof p === 'number') return p
-        if (p && typeof p === 'object') {
-          if ('checkers' in p && Array.isArray(p.checkers)) {
-            const count = p.checkers.length
-            return p.color === 'white' ? count : -count
-          }
-          if ('value' in p && typeof p.value === 'number') {
-            return p.value
-          }
-        }
-        return 0
-      })
-    : []
-  
-  if (shouldMirror) {
-    const mirrored: number[] = new Array(24)
-    for (let i = 0; i < 24; i++) {
-      mirrored[i] = -points[mirrorPointIndex(i)]
-    }
-    points = mirrored
-  }
-  
-  let bar = gameState?.bar || { white: 0, black: 0 }
-  let bearOff = gameState?.borneOff || gameState?.bearOff || { white: 0, black: 0 }
-  
-  if (Array.isArray(bar)) {
-    bar = { white: bar[0] || 0, black: bar[1] || 0 }
-  }
-  if (Array.isArray(bearOff)) {
-    bearOff = { white: bearOff[0] || 0, black: bearOff[1] || 0 }
-  }
-  
-  if (shouldMirror) {
-    bar = { white: bar.black, black: bar.white }
-    bearOff = { white: bearOff.black, black: bearOff.white }
-  }
-  
-  const diceArray: number[] = dice
-    ? Array.isArray(dice)
-      ? dice
-      : [dice.die1, dice.die2]
-    : []
-  
+  // Получение возможных ходов
   useEffect(() => {
-    if (gameId && diceArray.length > 0 && isMyTurn && canMove) {
-      apiClient
-        .get(`/games/${gameId}/possible-moves`)
-        .then((response: any) => {
-          const allMoves = response.data?.allMoves || []
-          const movesSet = new Set<string>()
-          allMoves.forEach((moveSeq: any[]) => {
-            moveSeq.forEach((move: any) => {
-              movesSet.add(`${move.from}-${move.to}-${move.die}`)
-            })
-          })
-          
-          const uniqueMoves = Array.from(movesSet).map((key) => {
-            let [from, to, die] = key.split('-').map(Number)
-            if (shouldMirror) {
-              from = from === -1 ? -1 : mirrorPointIndex(from)
-              to = to === -1 ? -1 : mirrorPointIndex(to)
-            }
-            return { from, to, die }
-          })
-          
-          setPossibleMoves(uniqueMoves)
+    if (!gameId || !isMyTurn || !canMove || !dice) return
+    
+    const fetchPossibleMoves = async () => {
+      try {
+        const response = await apiClient.get(`/games/${gameId}/possible-moves`)
+        const moves = response.data?.moves || []
+        setPossibleMoves(moves.flat() || [])
+        
+        const highlighted = new Set<number>()
+        moves.flat().forEach((move: any) => {
+          highlighted.add(move.from)
+          highlighted.add(move.to)
         })
-        .catch((error) => {
-          console.error('Error loading possible moves:', error)
-          setPossibleMoves([])
-        })
-    } else {
-      setPossibleMoves([])
-      setHighlightedPoints(new Set())
-      setSelectedPoint(null)
-    }
-  }, [gameId, diceArray.join(','), isMyTurn, canMove, gameState?.currentPlayer, shouldMirror])
-  
-  useEffect(() => {
-    if (gameId && selectedPoint !== null && diceArray.length > 0 && isMyTurn && canMove) {
-      const originalPointIndex = shouldMirror ? unmirrorPointIndex(selectedPoint) : selectedPoint
-      
-      const quickHighlights = new Set<number>()
-      const filteredMoves = possibleMoves.filter((move) => {
-        return selectedPoint === -1 ? move.from === -1 : move.from === selectedPoint
-      })
-      filteredMoves.forEach((move) => {
-        if (move.to >= 0 && move.to < 24) {
-          quickHighlights.add(move.to)
-        }
-      })
-      if (quickHighlights.size > 0) {
-        setHighlightedPoints(quickHighlights)
+        setHighlightedPoints(highlighted)
+      } catch (error) {
+        console.error('Ошибка получения возможных ходов:', error)
       }
-      
-      apiClient
-        .get(`/games/${gameId}/possible-moves/${originalPointIndex}`)
-        .then((response: any) => {
-          const movesFromPoint = response.data?.movesFromPoint || []
-          const highlights = new Set<number>()
-          movesFromPoint.forEach((move: any) => {
-            if (move.to >= 0 && move.to < 24) {
-              const displayIndex = shouldMirror ? mirrorPointIndex(move.to) : move.to
-              highlights.add(displayIndex)
-            }
-          })
-          setHighlightedPoints(highlights)
-        })
-        .catch(() => {})
-    } else if (selectedPoint === null) {
-      setHighlightedPoints(new Set())
     }
-  }, [gameId, selectedPoint, diceArray.join(','), isMyTurn, canMove, shouldMirror, possibleMoves])
+    
+    fetchPossibleMoves()
+  }, [gameId, isMyTurn, canMove, dice, gameState])
   
+  // Определение позиции для кубиков (на части доски, чей ход)
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    const rect = container.getBoundingClientRect()
+    const width = rect.width
+    const height = rect.height
+    
+    // Кубики кидаются на часть доски, чей ход
+    // Если мой ход - кубики слева внизу (моя часть)
+    // Если ход противника - кубики справа вверху (его часть)
+    const isMyTurnNow = isMyTurn && canMove
+    
+    if (isMyTurnNow) {
+      // Моя часть доски (левая, нижняя половина)
+      setDice3DPosition({
+        x: width * 0.25,
+        y: height * 0.75,
+        size: Math.min(width, height) * 0.08,
+      })
+    } else {
+      // Часть противника (правая, верхняя половина)
+      setDice3DPosition({
+        x: width * 0.75,
+        y: height * 0.25,
+        size: Math.min(width, height) * 0.08,
+      })
+    }
+  }, [isMyTurn, canMove])
+  
+  // Отрисовка доски
   const drawBoard = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    if (!ctx || !gameState) return
     
-    const container = canvas.parentElement
-    if (!container) return
+    const width = canvas.width
+    const height = canvas.height
     
-    let containerWidth = container.clientWidth
-    let containerHeight = container.clientHeight
-    
-    if (containerHeight > containerWidth * 0.5) {
-      containerHeight = containerWidth * 0.5
-    }
-    
-    if (containerWidth < 400) {
-      containerWidth = 400
-      containerHeight = 200
-    }
-    
-    const dpr = window.devicePixelRatio || 1
-    const width = containerWidth
-    const height = containerHeight
-    
-    // Устанавливаем размеры canvas - это автоматически очищает canvas
-    canvas.width = width * dpr
-    canvas.height = height * dpr
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
-    
-    // Сбрасываем все трансформации и стили перед рисованием
+    // Сбрасываем трансформации
     ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.scale(dpr, dpr)
-    
-    // Очищаем canvas полностью (на всякий случай)
     ctx.clearRect(0, 0, width, height)
     
-    const boardPadding = 0
-    const boardWidth = width
-    const boardHeight = height
-    const pointWidth = boardWidth / 12
-    const pointHeight = boardHeight / 2
-    const barWidth = boardWidth * 0.12
-    const barHeight = boardHeight * 0.3
+    const halfWidth = width / 2
+    const halfHeight = height / 2
     
-    const barX = (boardWidth - barWidth) / 2
-    const barY = (boardHeight - barHeight) / 2
-    const barLeftX = barX
-    const barRightX = barX + barWidth
-    
-    // Рисуем доски: слева моя, справа оппонента
+    // ЛЕВАЯ ЧАСТЬ ДОСКИ - МОЯ (нижняя половина левой части)
+    // Рисуем нижнюю левую четверть доски
     if (textures.myBoard) {
-      ctx.drawImage(textures.myBoard, 0, 0, barLeftX, height)
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(0, halfHeight, halfWidth, halfHeight)
+      ctx.clip()
+      // Рисуем текстуру доски (только нижнюю левую четверть)
+      ctx.drawImage(textures.myBoard, 0, halfHeight, halfWidth, halfHeight)
+      ctx.restore()
     } else {
+      // Дефолтная текстура - коричневая доска
       ctx.fillStyle = '#8B4513'
-      ctx.fillRect(0, 0, barLeftX, height)
+      ctx.fillRect(0, halfHeight, halfWidth, halfHeight)
     }
     
+    // ПРАВАЯ ЧАСТЬ ДОСКИ - ПРОТИВНИКА (верхняя половина правой части)
+    // Рисуем верхнюю правую четверть доски
     if (textures.opponentBoard) {
-      const rightWidth = width - barRightX
-      ctx.drawImage(textures.opponentBoard, barRightX, 0, rightWidth, height)
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(halfWidth, 0, halfWidth, halfHeight)
+      ctx.clip()
+      // Рисуем текстуру доски (только верхнюю правую четверть)
+      ctx.drawImage(textures.opponentBoard, halfWidth, 0, halfWidth, halfHeight)
+      ctx.restore()
     } else {
+      // Дефолтная текстура
       ctx.fillStyle = '#654321'
-      ctx.fillRect(barRightX, 0, width - barRightX, height)
+      ctx.fillRect(halfWidth, 0, halfWidth, halfHeight)
     }
     
-    // Центральный бар
-    ctx.fillStyle = '#4a4a4a'
-    ctx.fillRect(barLeftX, 0, barWidth, height)
+    // Остальные части доски (фон)
+    ctx.fillStyle = '#D2B48C'
+    ctx.fillRect(0, 0, halfWidth, halfHeight) // Верхняя левая
+    ctx.fillRect(halfWidth, halfHeight, halfWidth, halfHeight) // Нижняя правая
     
-    // Рисуем точки и шашки
-    for (let i = 0; i < 24; i++) {
-      const pointNum = POINT_NUMBERS[i]
-      const isTop = i < 12
+    // Отрисовка точек (24 точки на доске для нардов)
+    const points = gameState.points || []
+    const pointWidth = width / 12
+    const pointHeight = halfHeight / 2
+    
+    points.forEach((pointValue: number, pointIndex: number) => {
+      if (pointValue === 0) return
       
-      let x: number
-      if (i < 12) {
-        x = (11 - i) * pointWidth
-      } else {
-        x = (i - 12) * pointWidth
-      }
-      const y = isTop ? 0 : boardHeight
+      // Определяем позицию точки
+      // Точки 1-12: верхний ряд (правая часть доски - противник)
+      // Точки 13-24: нижний ряд (левая часть доски - я)
+      const isTopRow = pointIndex < 12
+      const pointInRow = pointIndex % 12
       
-      // Номер точки
-      ctx.fillStyle = '#FFFFFF'
-      ctx.font = 'bold 11px Arial'
-      ctx.textAlign = 'center'
-      ctx.strokeStyle = '#654321'
-      ctx.lineWidth = 2
-      const numY = isTop ? y + pointHeight - 5 : y - pointHeight + 15
-      ctx.strokeText(pointNum.toString(), x + pointWidth / 2, numY)
-      ctx.fillText(pointNum.toString(), x + pointWidth / 2, numY)
+      // Определяем, моя это точка или противника
+      // В нардах: положительные значения - один игрок, отрицательные - другой
+      const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
       
-      // Шашки на точке
-      const pointValue = points[i] || 0
+      const x = isTopRow
+        ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
+        : pointInRow * pointWidth + pointWidth / 2
+      const y = isTopRow
+        ? pointHeight
+        : halfHeight + pointHeight
+      
       const checkerCount = Math.abs(pointValue)
-      if (checkerCount > 0) {
-        const isMyChecker = pointValue > 0
-        const checkerColor = isMyChecker ? '#FFFFFF' : '#1a1a1a'
-        const checkerRadius = 14
-        const maxStack = 5
-        const stackSpacing = 4
+      const checkerSize = Math.min(pointWidth * 0.35, pointHeight * 0.4)
+      const checkerTexture = isMyPoint ? textures.myCheckers : textures.opponentCheckers
+      
+      // Отрисовываем шашки
+      const stackHeight = Math.min(checkerCount, 5) * checkerSize * 0.6
+      const startY = isTopRow ? y - stackHeight : y
+      
+      for (let i = 0; i < Math.min(checkerCount, 5); i++) {
+        const checkerY = isTopRow 
+          ? startY + i * checkerSize * 0.6
+          : startY + i * checkerSize * 0.6
         
-        const isDraggingFromThisPoint = dragging && dragFromPoint === i
-        const checkersToDraw = isDraggingFromThisPoint
-          ? Math.min(checkerCount - 1, maxStack)
-          : Math.min(checkerCount, maxStack)
-        
-        for (let j = 0; j < checkersToDraw; j++) {
-          let checkerY: number
-          if (isTop) {
-            checkerY = y + (j * stackSpacing) + checkerRadius
-          } else {
-            checkerY = y - (j * stackSpacing) - checkerRadius
-          }
-          
-          const checkerX = x + pointWidth / 2
-          
-          const isSelected = !isDraggingFromThisPoint && selectedPoint === i && j === checkersToDraw - 1
-          const scale = isSelected ? 1.2 : 1.0
-          const offsetX = isSelected ? Math.sin(Date.now() / 100) * 3 : 0
-          const offsetY = isSelected ? Math.cos(Date.now() / 100) * 2 : 0
-          
+        if (checkerTexture) {
           ctx.save()
-          ctx.translate(checkerX + offsetX, checkerY + offsetY)
-          ctx.scale(scale, scale)
-          
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
-          ctx.shadowBlur = 8
-          ctx.shadowOffsetX = 2
-          ctx.shadowOffsetY = 2
-          
-          const checkerTexture = isMyChecker ? textures.myCheckers : textures.opponentCheckers
-          
-          if (checkerTexture) {
-            ctx.beginPath()
-            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-            ctx.save()
-            ctx.clip()
-            ctx.drawImage(checkerTexture, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
-            ctx.restore()
-            
-            ctx.beginPath()
-            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-            ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
-            ctx.lineWidth = 2
-            ctx.stroke()
-          } else {
-            ctx.fillStyle = checkerColor
-            ctx.beginPath()
-            ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-            ctx.fill()
-            ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
-            ctx.lineWidth = 2
-            ctx.stroke()
-          }
-          
+          ctx.beginPath()
+          ctx.arc(x, checkerY, checkerSize / 2, 0, Math.PI * 2)
+          ctx.clip()
+          ctx.drawImage(
+            checkerTexture,
+            x - checkerSize / 2,
+            checkerY - checkerSize / 2,
+            checkerSize,
+            checkerSize
+          )
           ctx.restore()
+        } else {
+          // Дефолтные шашки
+          ctx.fillStyle = isMyPoint ? '#FFFFFF' : '#000000'
+          ctx.beginPath()
+          ctx.arc(x, checkerY, checkerSize / 2, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.strokeStyle = '#333'
+          ctx.lineWidth = 2
+          ctx.stroke()
         }
-        
-        if (checkerCount > maxStack) {
-          ctx.fillStyle = '#FFFFFF'
-          ctx.font = 'bold 12px Arial'
-          ctx.textAlign = 'center'
-          const countTextY = isTop
-            ? y + maxStack * stackSpacing + checkerRadius + 15
-            : y - maxStack * stackSpacing - checkerRadius - 10
-          ctx.fillText(checkerCount.toString(), x + pointWidth / 2, countTextY)
-        }
+      }
+      
+      // Если шашек больше 5, показываем число
+      if (checkerCount > 5) {
+        ctx.fillStyle = '#FFF'
+        ctx.font = 'bold 16px Arial'
+        ctx.textAlign = 'center'
+        ctx.fillText(checkerCount.toString(), x, isTopRow ? y - stackHeight - 10 : y + stackHeight + 20)
       }
       
       // Подсветка выбранной точки
-      if (selectedPoint === i && isMyTurn && canMove) {
+      if (selectedPoint === pointIndex) {
+        ctx.fillStyle = 'rgba(90, 127, 196, 0.4)'
         ctx.beginPath()
-        if (isTop) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        } else {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        }
-        ctx.closePath()
-        ctx.fillStyle = 'rgba(0, 100, 255, 0.3)'
+        ctx.arc(x, y, pointWidth / 2, 0, Math.PI * 2)
         ctx.fill()
-        ctx.strokeStyle = 'rgba(0, 100, 255, 0.8)'
-        ctx.lineWidth = 3
-        ctx.stroke()
       }
       
       // Подсветка возможных ходов
-      const isHighlighted = highlightedPoints.has(i) && isMyTurn && canMove &&
-        ((selectedPoint !== null && selectedPoint !== i) || (dragging && dragFromPoint !== null && dragFromPoint !== i))
-      if (isHighlighted) {
-        ctx.beginPath()
-        if (isTop) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        } else {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        }
-        ctx.closePath()
-        const isDragTarget = dragging && dragHoverPoint === i
-        ctx.fillStyle = isDragTarget ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.6)'
-        ctx.fill()
-        ctx.strokeStyle = 'rgba(0, 255, 0, 1.0)'
-        ctx.lineWidth = isDragTarget ? 5 : 4
-        ctx.stroke()
-      }
-      
-      // Подсветка при наведении
-      if (hoverPoint === i && selectedPoint === null && isMyTurn && canMove) {
-        ctx.beginPath()
-        if (isTop) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y + pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        } else {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + pointWidth / 2, y - pointHeight)
-          ctx.lineTo(x + pointWidth, y)
-        }
-        ctx.closePath()
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'
-        ctx.fill()
-        ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)'
+      if (highlightedPoints.has(pointIndex)) {
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)'
         ctx.lineWidth = 3
+        ctx.beginPath()
+        ctx.arc(x, y, pointWidth / 2 + 5, 0, Math.PI * 2)
         ctx.stroke()
       }
-    }
-    
-    // Бар
-    const barCenterX = barX + barWidth / 2
-    const barCenterY = barY + barHeight / 2
-    
-    if (bar.white > 0) {
-      for (let i = 0; i < Math.min(bar.white, 5); i++) {
-        const checkerX = barCenterX - 20 + (i % 3) * 15
-        const checkerY = barCenterY - 5 + Math.floor(i / 3) * 15
-        
-        ctx.save()
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
-        ctx.shadowBlur = 8
-        ctx.shadowOffsetX = 2
-        ctx.shadowOffsetY = 2
-        
-        if (textures.opponentCheckers) {
-          ctx.beginPath()
-          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
-          ctx.save()
-          ctx.clip()
-          ctx.drawImage(textures.opponentCheckers, checkerX - 12, checkerY - 12, 24, 24)
-          ctx.restore()
-          ctx.strokeStyle = '#1a1a1a'
-          ctx.lineWidth = 2
-          ctx.stroke()
-        } else {
-          ctx.fillStyle = '#FFFFFF'
-          ctx.beginPath()
-          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.strokeStyle = '#1a1a1a'
-          ctx.lineWidth = 2
-          ctx.stroke()
-        }
-        ctx.restore()
-      }
-      
-      if (bar.white > 5) {
-        ctx.fillStyle = '#1a1a1a'
-        ctx.font = 'bold 12px Arial'
-        ctx.fillText(bar.white.toString(), barCenterX + 25, barCenterY)
-      }
-    }
-    
-    if (bar.black > 0) {
-      for (let i = 0; i < Math.min(bar.black, 5); i++) {
-        const checkerX = barCenterX - 20 + (i % 3) * 15
-        const checkerY = barCenterY + 10 + Math.floor(i / 3) * 15
-        
-        ctx.save()
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
-        ctx.shadowBlur = 8
-        ctx.shadowOffsetX = 2
-        ctx.shadowOffsetY = 2
-        
-        if (textures.myCheckers) {
-          ctx.beginPath()
-          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
-          ctx.save()
-          ctx.clip()
-          ctx.drawImage(textures.myCheckers, checkerX - 12, checkerY - 12, 24, 24)
-          ctx.restore()
-          ctx.strokeStyle = '#FFFFFF'
-          ctx.lineWidth = 2
-          ctx.stroke()
-        } else {
-          ctx.fillStyle = '#1a1a1a'
-          ctx.beginPath()
-          ctx.arc(checkerX, checkerY, 12, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.strokeStyle = '#FFFFFF'
-          ctx.lineWidth = 2
-          ctx.stroke()
-        }
-        ctx.restore()
-      }
-      
-      if (bar.black > 5) {
-        ctx.fillStyle = '#FFFFFF'
-        ctx.font = 'bold 12px Arial'
-        ctx.fillText(bar.black.toString(), barCenterX + 25, barCenterY + 20)
-      }
-    }
-    
-    // Вынос
-    const bearOffX = width - 30
-    const bearOffYTop = boardPadding + 20
-    const bearOffYBottom = boardPadding + boardHeight - 20
-    
-    if (bearOff.white > 0) {
-      ctx.fillStyle = '#FFFFFF'
-      ctx.font = 'bold 14px Arial'
-      ctx.textAlign = 'right'
-      ctx.fillText(`Вынос: ${bearOff.white}`, bearOffX, bearOffYTop)
-    }
-    
-    if (bearOff.black > 0) {
-      ctx.fillStyle = '#1a1a1a'
-      ctx.font = 'bold 14px Arial'
-      ctx.textAlign = 'right'
-      ctx.fillText(`Вынос: ${bearOff.black}`, bearOffX, bearOffYBottom)
-    }
-    
-    // Кубики
-    const diceAreaX = boardPadding + 20
-    const diceAreaY = height - 100
-    const diceSize = 40
-    const diceSpacing = 50
-    
-    if (diceAnimating || diceRolling) {
-      setDice3DPositions({ x: diceAreaX, y: diceAreaY, size: diceSize, spacing: diceSpacing })
-    } else {
-      setDice3DPositions(null)
-    }
-    
-    if ((dice || diceRolling) && !diceAnimating) {
-      const diceTextures = textures.myDice
-      
-      if (diceRolling && !diceAnimating) {
-        const roll1 = Math.floor(Math.random() * 6) + 1
-        const roll2 = Math.floor(Math.random() * 6) + 1
-        const texture1 = diceTextures?.[roll1]
-        const texture2 = diceTextures?.[roll2]
-        drawDice(ctx, diceAreaX, diceAreaY, roll1, diceSize, true, false, texture1)
-        drawDice(ctx, diceAreaX + diceSpacing, diceAreaY, roll2, diceSize, true, false, texture2)
-      } else if (diceArray.length > 0) {
-        diceArray.forEach((die, index) => {
-          const texture = diceTextures?.[die]
-          drawDice(ctx, diceAreaX + index * diceSpacing, diceAreaY, die, diceSize, false, false, texture)
-        })
-      }
-    }
-    
-    // Перетаскиваемая шашка
-    if (dragging && dragFromPoint !== null && dragPosition) {
-      const pointValue = points[dragFromPoint] || 0
-      const isPlayer1Checker = pointValue > 0
-      const checkerColor = isPlayer1Checker ? '#FFFFFF' : '#1a1a1a'
-      const checkerRadius = 14
-      
-      ctx.save()
-      ctx.translate(dragPosition.x, dragPosition.y)
-      
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
-      ctx.shadowBlur = 12
-      ctx.shadowOffsetX = 4
-      ctx.shadowOffsetY = 4
-      
-      if (textures.myCheckers) {
-        ctx.beginPath()
-        ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-        ctx.save()
-        ctx.clip()
-        ctx.drawImage(textures.myCheckers, -checkerRadius, -checkerRadius, checkerRadius * 2, checkerRadius * 2)
-        ctx.restore()
-        ctx.beginPath()
-        ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-        ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
-        ctx.lineWidth = 2
-        ctx.stroke()
-      } else {
-        ctx.fillStyle = checkerColor
-        ctx.beginPath()
-        ctx.arc(0, 0, checkerRadius, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.strokeStyle = checkerColor === '#FFFFFF' ? '#1a1a1a' : '#FFFFFF'
-        ctx.lineWidth = 2
-        ctx.stroke()
-      }
-      
-      ctx.restore()
-    }
-  }, [
-    points, bar, bearOff, selectedPoint, hoverPoint, highlightedPoints, dice, diceRolling, diceAnimating,
-    isMyTurn, canMove, dragging, dragFromPoint, dragPosition, textures
-  ])
-  
-  const drawDice = (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    value: number,
-    size: number,
-    rolling: boolean,
-    dropping: boolean,
-    diceTexture?: HTMLImageElement
-  ) => {
-    if (!diceTexture) {
-      ctx.fillStyle = '#FFFFFF'
-      ctx.fillRect(x, y, size, size)
-      ctx.strokeStyle = '#1a1a1a'
-      ctx.lineWidth = 2
-      ctx.strokeRect(x, y, size, size)
-      
-      ctx.fillStyle = '#1a1a1a'
-      const dotSize = size / 6
-      const dotPositions: { [key: number]: Array<[number, number]> } = {
-        1: [[size / 2, size / 2]],
-        2: [[size / 4, size / 4], [3 * size / 4, 3 * size / 4]],
-        3: [[size / 4, size / 4], [size / 2, size / 2], [3 * size / 4, 3 * size / 4]],
-        4: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
-        5: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 2, size / 2], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
-        6: [[size / 4, size / 4], [3 * size / 4, size / 4], [size / 4, size / 2], [3 * size / 4, size / 2], [size / 4, 3 * size / 4], [3 * size / 4, 3 * size / 4]],
-      }
-      const dots = dotPositions[value] || []
-      dots.forEach(([dx, dy]) => {
-        ctx.beginPath()
-        ctx.arc(x + dx, y + dy, dotSize, 0, Math.PI * 2)
-        ctx.fill()
-      })
-      return
-    }
-    
-    ctx.save()
-    let drawX = x
-    let drawY = y
-    
-    if (rolling) {
-      const rotation = (Date.now() / 50) % 360
-      ctx.translate(drawX + size / 2, drawY + size / 2)
-      ctx.rotate((rotation * Math.PI) / 180)
-      ctx.translate(-size / 2, -size / 2)
-      drawX = 0
-      drawY = 0
-    }
-    
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-    ctx.shadowBlur = 8
-    ctx.shadowOffsetX = 3
-    ctx.shadowOffsetY = 3
-    
-    ctx.drawImage(diceTexture, drawX, drawY, size, size)
-    
-    ctx.strokeStyle = '#1a1a1a'
-    ctx.lineWidth = 2
-    ctx.strokeRect(drawX, drawY, size, size)
-    
-    ctx.restore()
-  }
-  
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const resizeCanvas = () => {
-      drawBoard()
-    }
-    
-    const container = canvas.parentElement
-    if (!container) return
-    
-    const resizeObserver = new ResizeObserver(() => {
-      resizeCanvas()
     })
     
-    resizeObserver.observe(container)
-    window.addEventListener('resize', resizeCanvas)
-    window.addEventListener('orientationchange', resizeCanvas)
-    
-    resizeCanvas()
-    
-    return () => {
-      resizeObserver.disconnect()
-      window.removeEventListener('resize', resizeCanvas)
-      window.removeEventListener('orientationchange', resizeCanvas)
+    // Отрисовка бара (середина доски)
+    const barX = width / 2
+    if (gameState.bar) {
+      const bar = gameState.bar
+      const myBarCount = isPlayer1 ? bar.white || 0 : bar.black || 0
+      const opponentBarCount = isPlayer1 ? bar.black || 0 : bar.white || 0
+      const checkerSize = Math.min(pointWidth * 0.35, pointHeight * 0.4)
+      
+      // Мои шашки на баре (снизу, слева от центра)
+      if (myBarCount > 0) {
+        for (let i = 0; i < myBarCount; i++) {
+          const barY = halfHeight + (i * checkerSize * 0.6) + checkerSize
+          if (textures.myCheckers) {
+            ctx.save()
+            ctx.beginPath()
+            ctx.arc(barX - 20, barY, checkerSize / 2, 0, Math.PI * 2)
+            ctx.clip()
+            ctx.drawImage(textures.myCheckers, barX - 20 - checkerSize / 2, barY - checkerSize / 2, checkerSize, checkerSize)
+            ctx.restore()
+          } else {
+            ctx.fillStyle = '#FFFFFF'
+            ctx.beginPath()
+            ctx.arc(barX - 20, barY, checkerSize / 2, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.strokeStyle = '#333'
+            ctx.lineWidth = 2
+            ctx.stroke()
+          }
+        }
+      }
+      
+      // Шашки противника на баре (сверху, справа от центра)
+      if (opponentBarCount > 0) {
+        for (let i = 0; i < opponentBarCount; i++) {
+          const barY = halfHeight - (i * checkerSize * 0.6) - checkerSize
+          if (textures.opponentCheckers) {
+            ctx.save()
+            ctx.beginPath()
+            ctx.arc(barX + 20, barY, checkerSize / 2, 0, Math.PI * 2)
+            ctx.clip()
+            ctx.drawImage(textures.opponentCheckers, barX + 20 - checkerSize / 2, barY - checkerSize / 2, checkerSize, checkerSize)
+            ctx.restore()
+          } else {
+            ctx.fillStyle = '#000000'
+            ctx.beginPath()
+            ctx.arc(barX + 20, barY, checkerSize / 2, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.strokeStyle = '#333'
+            ctx.lineWidth = 2
+            ctx.stroke()
+          }
+        }
+      }
+    }
+  }, [gameState, textures, selectedPoint, highlightedPoints, isPlayer1])
+  
+  // Перерисовка при изменении состояния
+  useEffect(() => {
+    if (canvasRef.current && containerRef.current) {
+      const container = containerRef.current
+      const rect = container.getBoundingClientRect()
+      canvasRef.current.width = rect.width
+      canvasRef.current.height = rect.height
+      drawBoard()
     }
   }, [drawBoard])
   
-  // Убираем постоянную анимацию - drawBoard вызывается только при изменении состояния
-  // Это предотвращает накопление трансформаций и лишние перерисовки
-  
-  const getPointFromCoords = (x: number, y: number): number | null => {
-    const canvas = canvasRef.current
-    if (!canvas) return null
-    
-    const rect = canvas.getBoundingClientRect()
-    const width = rect.width
-    const height = rect.height
-    const boardWidth = width
-    const boardHeight = height
-    const pointWidth = boardWidth / 12
-    const pointHeight = boardHeight / 2
-    
-    for (let i = 0; i < 24; i++) {
-      const isTop = i < 12
-      let pointX: number
-      
-      if (i < 12) {
-        pointX = (11 - i) * pointWidth
-      } else {
-        pointX = (i - 12) * pointWidth
-      }
-      
-      const pointY = isTop ? 0 : boardHeight
-      const relativeX = x - pointX
-      const relativeY = isTop ? y - pointY : pointY - y
-      
-      if (
-        relativeX >= 0 &&
-        relativeX <= pointWidth &&
-        relativeY >= 0 &&
-        relativeY <= pointHeight &&
-        relativeX <= pointWidth - (relativeY / pointHeight) * pointWidth &&
-        relativeX >= (relativeY / pointHeight) * pointWidth
-      ) {
-        return i
-      }
-    }
-    return null
-  }
-  
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    
-    if (dragging && dragFromPoint !== null) {
-      setDragPosition({ x, y })
-      const hoveredPoint = getPointFromCoords(x, y)
-      setDragHoverPoint(hoveredPoint)
-      return
-    }
-    
-    const hoveredPoint = getPointFromCoords(x, y)
-    setHoverPoint(hoveredPoint)
-  }
-  
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isMyTurn || !canMove || diceArray.length === 0) return
-    
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    
-    const clickedPoint = getPointFromCoords(x, y)
-    if (clickedPoint === null || clickedPoint < 0 || clickedPoint >= 24) return
-    
-    const pointValue = points[clickedPoint] || 0
-    const myPlayerIndexMirrored = shouldMirror ? (myPlayerIndex === 0 ? 1 : 0) : myPlayerIndex
-    const checkerCount = myPlayerIndexMirrored === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
-    const isMyChecker = myPlayerIndexMirrored === 0 ? pointValue > 0 : pointValue < 0
-    
-    if (isMyChecker && checkerCount > 0) {
-      const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
-      if (hasPossibleMoves) {
-        setDragging(true)
-        setDragFromPoint(clickedPoint)
-        setDragPosition({ x, y })
-        setSelectedPoint(clickedPoint)
-      }
-    }
-  }
-  
-  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!dragging || dragFromPoint === null) {
-      handleCanvasClick(e)
-      return
-    }
-    
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    
-    const dropPoint = getPointFromCoords(x, y)
-    
-    setDragging(false)
-    const fromPoint = dragFromPoint
-    setDragFromPoint(null)
-    setDragPosition(null)
-    setDragHoverPoint(null)
-    
-    if (dropPoint !== null && dropPoint >= 0 && dropPoint < 24 && highlightedPoints.has(dropPoint)) {
-      const validMove = possibleMoves.find(
-        move => move.from === fromPoint && move.to === dropPoint
-      )
-      
-      if (validMove) {
-        const originalFrom = shouldMirror ? unmirrorPointIndex(fromPoint) : fromPoint
-        const originalTo = shouldMirror ? unmirrorPointIndex(dropPoint) : dropPoint
-        onMove(originalFrom, originalTo, validMove.die)
-        setSelectedPoint(null)
-        setHighlightedPoints(new Set())
-        return
-      }
-    }
-    
-    setSelectedPoint(null)
-    setHighlightedPoints(new Set())
-  }
-  
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isMyTurn || !canMove || diceArray.length === 0) return
-    
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    
-    const clickedPoint = getPointFromCoords(x, y)
-    if (clickedPoint === null) {
-      setSelectedPoint(null)
-      return
-    }
-    
-    if (selectedPoint === null) {
-      const myPlayerIndexMirrored = shouldMirror ? (myPlayerIndex === 0 ? 1 : 0) : myPlayerIndex
-      const hasBarCheckers = (myPlayerIndexMirrored === 0 && bar.white > 0) || (myPlayerIndexMirrored === 1 && bar.black > 0)
-      
-      if (clickedPoint >= 0 && clickedPoint < 24) {
-        const pointValue = points[clickedPoint] || 0
-        if (pointValue !== 0) {
-          const checkerCount = myPlayerIndexMirrored === 0 ? (pointValue > 0 ? pointValue : 0) : (pointValue < 0 ? Math.abs(pointValue) : 0)
-          const isMyChecker = myPlayerIndexMirrored === 0 ? pointValue > 0 : pointValue < 0
-          if (isMyChecker && checkerCount > 0) {
-            const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
-            if (hasPossibleMoves) {
-              setSelectedPoint(clickedPoint)
-              return
-            }
-          }
-        }
-      }
-      
-      if (hasBarCheckers) {
-        const hasPossibleMovesFromBar = possibleMoves.some(move => move.from === -1)
-        if (hasPossibleMovesFromBar) {
-          setSelectedPoint(-1)
-          return
-        }
-      }
-    } else {
-      if (selectedPoint !== clickedPoint && highlightedPoints.has(clickedPoint)) {
-        const validMove = possibleMoves.find(
-          move => move.from === selectedPoint && move.to === clickedPoint
-        )
-        
-        if (validMove) {
-          const originalFrom = shouldMirror ? unmirrorPointIndex(selectedPoint) : selectedPoint
-          const originalTo = shouldMirror ? unmirrorPointIndex(clickedPoint) : clickedPoint
-          onMove(originalFrom, originalTo, validMove.die)
-          setSelectedPoint(null)
-          setHighlightedPoints(new Set())
-        }
-      } else if (selectedPoint === clickedPoint) {
-        setSelectedPoint(null)
-        setHighlightedPoints(new Set())
-      } else {
-        const pointValue = points[clickedPoint] || 0
-        const isMyChecker = currentPlayer === 0 ? pointValue > 0 : pointValue < 0
-        if (isMyChecker) {
-          const hasPossibleMoves = possibleMoves.some(move => move.from === clickedPoint)
-          if (hasPossibleMoves) {
-            setSelectedPoint(clickedPoint)
-          } else {
-            setSelectedPoint(null)
-            setHighlightedPoints(new Set())
-          }
-        } else {
-          setSelectedPoint(null)
-          setHighlightedPoints(new Set())
-        }
-      }
-    }
-  }
-  
-  const handleRollDice = () => {
-    if (!isMyTurn || dice) return
-    
-    setDiceRolling(true)
-    setAnimating(true)
-    
-    const rollDuration = 1000
-    const startTime = Date.now()
-    
-    const rollInterval = setInterval(() => {
-      if (Date.now() - startTime >= rollDuration) {
-        clearInterval(rollInterval)
-        setDiceRolling(false)
-        setAnimating(false)
-        onRollDice()
-      } else {
+  // Обновление размера canvas при изменении размера контейнера
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(() => {
+      if (canvasRef.current && containerRef.current) {
+        const container = containerRef.current
+        const rect = container.getBoundingClientRect()
+        canvasRef.current.width = rect.width
+        canvasRef.current.height = rect.height
         drawBoard()
       }
-    }, 50)
+    })
+    
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+    
+    return () => resizeObserver.disconnect()
+  }, [drawBoard])
+  
+  // Обработка клика по точке
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canMove || !isMyTurn || !canvasRef.current) return
+    
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    const width = canvas.width
+    const height = canvas.height
+    const halfWidth = width / 2
+    const halfHeight = height / 2
+    const pointWidth = width / 12
+    const pointHeight = halfHeight / 2
+    
+    // Определяем на какую точку кликнули
+    const points = gameState?.points || []
+    points.forEach((pointValue: number, pointIndex: number) => {
+      const isTopRow = pointIndex < 12
+      const pointInRow = pointIndex % 12
+      
+      const pointX = isTopRow
+        ? width - (pointInRow + 1) * pointWidth + pointWidth / 2
+        : pointInRow * pointWidth + pointWidth / 2
+      const pointY = isTopRow
+        ? pointHeight
+        : halfHeight + pointHeight
+      
+      const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2))
+      if (distance < pointWidth / 2) {
+        handlePointClick(pointIndex)
+      }
+    })
   }
   
-  const diceTexturesFor3D = textures.myDice
-  
-  let dice1Value = 1
-  let dice2Value = 1
-  if (dice && typeof dice === 'object' && 'die1' in dice && 'die2' in dice) {
-    dice1Value = dice.die1
-    dice2Value = dice.die2
-  } else if (Array.isArray(dice) && dice.length >= 2) {
-    dice1Value = dice[0]
-    dice2Value = dice[1]
+  const handlePointClick = (pointIndex: number) => {
+    if (!canMove || !isMyTurn) return
+    
+    if (selectedPoint === null) {
+      // Выбираем точку для хода
+      const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+      if (pointMoves.length > 0) {
+        setSelectedPoint(pointIndex)
+      }
+    } else {
+      // Делаем ход
+      const move = possibleMoves.find(m => m.from === selectedPoint && m.to === pointIndex)
+      if (move) {
+        onMove(move.from, move.to, move.die)
+        setSelectedPoint(null)
+      } else {
+        setSelectedPoint(pointIndex)
+      }
+    }
   }
-
+  
+  // Определение формата кубиков
+  const diceArray = dice 
+    ? (Array.isArray(dice) ? dice : [dice.die1, dice.die2])
+    : null
+  
+  // Определяем, чьи кубики показывать
+  const currentDiceTextures = isMyTurn && canMove ? textures.myDice : textures.opponentDice
+  
   return (
-    <div className="backgammon-board-container" ref={containerRef}>
-      {(player1Name || player2Name) && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          padding: '8px 16px',
-          background: 'rgba(0,0,0,0.3)',
-          borderRadius: '8px 8px 0 0',
-          fontSize: '14px',
-          color: '#fff'
-        }}>
-          <div style={{ fontWeight: 'bold', color: shouldMirror ? '#888' : '#fff' }}>
-            {shouldMirror ? (player1Name || 'Игрок 1') : (player2Name || 'Игрок 2')}
-            <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
-              {shouldMirror ? '⬜' : '⬛'}
-            </span>
-          </div>
-          <div style={{ fontWeight: 'bold', color: shouldMirror ? '#fff' : '#888' }}>
-            {shouldMirror ? (player2Name || 'Игрок 2') : (player1Name || 'Игрок 1')}
-            <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
-              {shouldMirror ? '⬛' : '⬜'}
-            </span>
-            <span style={{ marginLeft: '8px', fontSize: '10px', color: '#4CAF50' }}>(Вы)</span>
-          </div>
-        </div>
-      )}
+    <div ref={containerRef} className="backgammon-board-container">
       <canvas
         ref={canvasRef}
+        className="backgammon-board-canvas"
         onClick={handleCanvasClick}
-        onMouseMove={handleMouseMove}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={() => {
-          if (dragging) {
-            setDragging(false)
-            setDragFromPoint(null)
-            setDragPosition(null)
-            setDragHoverPoint(null)
-            setSelectedPoint(null)
-            setHighlightedPoints(new Set())
-          }
-        }}
-        className="backgammon-board"
-        style={{ cursor: dragging ? 'grabbing' : 'pointer' }}
       />
-      {diceAnimating && dice3DPositions && diceTexturesFor3D && Object.keys(diceTexturesFor3D).length > 0 && (
-        <>
+      
+      {/* Кубики - отображаются на части доски, чей ход */}
+      {diceArray && dice3DPosition && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${dice3DPosition.x - dice3DPosition.size}px`,
+            top: `${dice3DPosition.y - dice3DPosition.size / 2}px`,
+            width: `${dice3DPosition.size * 2.5}px`,
+            height: `${dice3DPosition.size}px`,
+            pointerEvents: 'none',
+          }}
+        >
           <Dice3D
-            value={dice1Value}
-            textures={diceTexturesFor3D}
-            x={dice3DPositions.x}
-            y={dice3DPositions.y}
-            size={dice3DPositions.size}
-            rolling={true}
-            onAnimationEnd={() => {}}
+            values={diceArray}
+            animating={diceAnimating}
+            diceTextures={currentDiceTextures}
           />
-          <Dice3D
-            value={dice2Value}
-            textures={diceTexturesFor3D}
-            x={dice3DPositions.x + dice3DPositions.spacing}
-            y={dice3DPositions.y}
-            size={dice3DPositions.size}
-            rolling={true}
-            onAnimationEnd={() => {}}
-          />
-        </>
-      )}
-      {selectedPoint !== null && (
-        <div className="selected-point-indicator">
-          Выбрана точка {POINT_NUMBERS[selectedPoint]}
         </div>
       )}
     </div>

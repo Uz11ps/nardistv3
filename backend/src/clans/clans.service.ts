@@ -499,8 +499,23 @@ export class ClansService {
   }
 
   async captureTerritoryForClan(userId: string, clanId: string, buildingId: string): Promise<void> {
+    // Проверяем права на захват
+    const canCapture = await this.canClanCaptureTerritory(clanId);
+    if (!canCapture.canCapture) {
+      throw new BadRequestException(
+        canCapture.reason === 'cooldown'
+          ? `Клан может захватывать территории раз в день. Осталось: ${canCapture.cooldownRemaining} дней`
+          : 'Клан не может захватить территорию'
+      );
+    }
+
     // Используем CityService для захвата
-    await this.cityService.captureTerritory(userId, buildingId);
+    await this.cityService.captureTerritory(clanId, buildingId);
+
+    // Обновляем время последнего захвата
+    const clan = await this.findOne(clanId);
+    clan.lastTerritoryCaptureAt = new Date();
+    await this.clansRepository.save(clan);
   }
 }
 

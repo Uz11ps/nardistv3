@@ -31,7 +31,10 @@ export default function Game() {
   const [gameStatus, setGameStatus] = useState<string>('waiting')
   const [player1Timer, setPlayer1Timer] = useState<number>(30)
   const [player2Timer, setPlayer2Timer] = useState<number>(30)
-  const [moveTimer, setMoveTimer] = useState<number>(30) // Таймер на ход (30 секунд)
+  const [moveTimer, setMoveTimer] = useState<number>(20) // Таймер на ход (20 секунд)
+  const [overtimeTimer, setOvertimeTimer] = useState<number>(60) // Овертайм (1 минута)
+  const [isInOvertime, setIsInOvertime] = useState<boolean>(false) // Флаг овертайма
+  const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
@@ -39,6 +42,7 @@ export default function Game() {
   const [myReady, setMyReady] = useState<boolean>(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const moveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const overtimeRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const mode = searchParams.get('mode')
   const isBotGame = mode === 'bot'
@@ -87,37 +91,65 @@ export default function Game() {
     }
   }, [gameInfo?.player1Id, gameInfo?.player2Id])
 
-  // Таймер на ход (30 секунд)
+  // Таймер на ход: 20 секунд, затем 1 минута овертайм
+  // Овертайм НЕ обновляется в течение игры, обновляется только каждый ход
   useEffect(() => {
-    // Очищаем предыдущий таймер
+    // Очищаем предыдущие таймеры
     if (moveTimerRef.current) {
       clearInterval(moveTimerRef.current)
       moveTimerRef.current = null
     }
+    if (overtimeRef.current) {
+      clearInterval(overtimeRef.current)
+      overtimeRef.current = null
+    }
 
     // Если это мой ход и игра идет, запускаем таймер
     if (gameState?.canMove && gameStatus === 'in_progress' && gameState?.dice && !isBotGame) {
-      setMoveTimer(30) // Устанавливаем таймер на 30 секунд
+      // Сбрасываем таймер на 20 секунд при новом ходе
+      setMoveTimer(20)
+      setIsInOvertime(false)
+      setOvertimeTimer(60) // Овертайм всегда 60 секунд
       
       moveTimerRef.current = setInterval(() => {
         setMoveTimer((prev) => {
           if (prev <= 1) {
-            // Таймер закончился - делаем автолуз
-            handleAutoMove()
+            // Основной таймер закончился - переходим в овертайм
+            setIsInOvertime(true)
+            if (overtimeRef.current) {
+              clearInterval(overtimeRef.current)
+            }
+            // Запускаем овертайм таймер
+            overtimeRef.current = setInterval(() => {
+              setOvertimeTimer((prevOvertime) => {
+                if (prevOvertime <= 1) {
+                  // Овертайм закончился - автолуз
+                  handleAutoMove()
+                  return 0
+                }
+                return prevOvertime - 1
+              })
+            }, 1000)
             return 0
           }
           return prev - 1
         })
       }, 1000)
     } else {
-      // Не мой ход или игра не идет - сбрасываем таймер
-      setMoveTimer(30)
+      // Не мой ход или игра не идет - сбрасываем таймеры
+      setMoveTimer(20)
+      setIsInOvertime(false)
+      setOvertimeTimer(60)
     }
 
     return () => {
       if (moveTimerRef.current) {
         clearInterval(moveTimerRef.current)
         moveTimerRef.current = null
+      }
+      if (overtimeRef.current) {
+        clearInterval(overtimeRef.current)
+        overtimeRef.current = null
       }
     }
   }, [gameState?.canMove, gameStatus, gameState?.dice, isBotGame])
@@ -715,6 +747,12 @@ export default function Game() {
       return
     }
 
+    // Если игра активна (в процессе) - показываем модальное окно
+    if (gameStatus === 'in_progress' && gameId && gameInfo?.type !== 'vs_bot') {
+      setShowExitModal(true)
+      return
+    }
+
     // Если игра не завершена и не бот-игра, сдаем игру
     if (gameStatus !== 'finished' && gameId && gameInfo?.type !== 'vs_bot') {
       try {
@@ -726,6 +764,22 @@ export default function Game() {
     
     // Редирект на главную после сдачи или если игра уже завершена
     navigate('/')
+  }
+
+  const handleConfirmExit = async () => {
+    setShowExitModal(false)
+    if (gameId) {
+      try {
+        await apiClient.post(`/games/${gameId}/resign`)
+      } catch (error) {
+        console.error('Failed to resign game:', error)
+      }
+    }
+    navigate('/')
+  }
+
+  const handleCancelExit = () => {
+    setShowExitModal(false)
   }
 
   return (
@@ -837,15 +891,26 @@ export default function Game() {
         (typeof gameState.dice === 'object' && gameState.dice.die1 && gameState.dice.die2)
       )) && (
         <div className="game-confirm-section">
-          {moveTimer > 0 && (
+          {!isInOvertime && moveTimer > 0 && (
             <div className="game-move-timer" style={{ 
               textAlign: 'center', 
               marginBottom: '12px', 
               fontSize: '18px', 
               fontWeight: 'bold',
-              color: moveTimer <= 10 ? '#ff3333' : '#ffffff'
+              color: moveTimer <= 5 ? '#ff3333' : '#ffffff'
             }}>
               ⏱️ Время на ход: {moveTimer}с
+            </div>
+          )}
+          {isInOvertime && (
+            <div className="game-overtime-timer" style={{ 
+              textAlign: 'center', 
+              marginBottom: '12px', 
+              fontSize: '18px', 
+              fontWeight: 'bold',
+              color: overtimeTimer <= 10 ? '#ff3333' : '#ffaa00'
+            }}>
+              ⚠️ Овертайм: {overtimeTimer}с
             </div>
           )}
           <Button 
@@ -856,6 +921,32 @@ export default function Game() {
           >
             Подтвердить ход
           </Button>
+        </div>
+      )}
+
+      {/* Модальное окно выхода */}
+      {showExitModal && (
+        <div className="modal-overlay" onClick={handleCancelExit}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Выход из игры</h2>
+            <p>Вы уверены? Вам засчитается поражение!</p>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <Button 
+                variant="primary" 
+                onClick={handleConfirmExit}
+                style={{ flex: 1 }}
+              >
+                Да, сдаться
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={handleCancelExit}
+                style={{ flex: 1 }}
+              >
+                Нет, продолжить
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -846,6 +846,152 @@ export class AdminService implements OnModuleInit {
     return { message: 'Территория удалена' };
   }
 
+  // CRUD для конфигураций строений
+  async getAllBuildingConfigs() {
+    const configs = await this.buildingConfigsRepository.find({
+      order: { district: 'ASC', type: 'ASC' },
+    });
+    
+    return configs.map(c => ({
+      id: c.id,
+      district: c.district,
+      type: c.type,
+      name: c.name,
+      icon: c.icon,
+      image: c.image,
+      basePrice: Number(c.basePrice),
+      baseIncomePerHour: Number(c.baseIncomePerHour),
+      maxAccumulation: Number(c.maxAccumulation),
+      maxLevel: c.maxLevel,
+      upgradeCosts: c.upgradeCosts,
+    }));
+  }
+
+  async getBuildingConfig(id: string) {
+    const config = await this.buildingConfigsRepository.findOne({ where: { id } });
+    if (!config) {
+      throw new NotFoundException('Конфигурация строения не найдена');
+    }
+    
+    return {
+      id: config.id,
+      district: config.district,
+      type: config.type,
+      name: config.name,
+      icon: config.icon,
+      image: config.image,
+      basePrice: Number(config.basePrice),
+      baseIncomePerHour: Number(config.baseIncomePerHour),
+      maxAccumulation: Number(config.maxAccumulation),
+      maxLevel: config.maxLevel,
+      upgradeCosts: config.upgradeCosts,
+    };
+  }
+
+  async createBuildingConfig(data: {
+    district: string;
+    type: string;
+    name: string;
+    icon?: string;
+    image?: string;
+    basePrice: number;
+    baseIncomePerHour: number;
+    maxAccumulation?: number;
+    maxLevel?: number;
+    upgradeCosts?: any;
+  }) {
+    const config = this.buildingConfigsRepository.create({
+      district: data.district,
+      type: data.type,
+      name: data.name,
+      icon: data.icon || null,
+      image: data.image || null,
+      basePrice: data.basePrice.toString(),
+      baseIncomePerHour: data.baseIncomePerHour.toString(),
+      maxAccumulation: (data.maxAccumulation || 0).toString(),
+      maxLevel: data.maxLevel || 10,
+      upgradeCosts: data.upgradeCosts || null,
+    });
+
+    const savedConfig = await this.buildingConfigsRepository.save(config);
+    
+    return {
+      id: savedConfig.id,
+      district: savedConfig.district,
+      type: savedConfig.type,
+      name: savedConfig.name,
+      icon: savedConfig.icon,
+      image: savedConfig.image,
+      basePrice: Number(savedConfig.basePrice),
+      baseIncomePerHour: Number(savedConfig.baseIncomePerHour),
+      maxAccumulation: Number(savedConfig.maxAccumulation),
+      maxLevel: savedConfig.maxLevel,
+      upgradeCosts: savedConfig.upgradeCosts,
+    };
+  }
+
+  async updateBuildingConfig(id: string, data: Partial<{
+    district: string;
+    type: string;
+    name: string;
+    icon: string;
+    image: string;
+    basePrice: number;
+    baseIncomePerHour: number;
+    maxAccumulation: number;
+    maxLevel: number;
+    upgradeCosts: any;
+  }>) {
+    const config = await this.buildingConfigsRepository.findOne({ where: { id } });
+    if (!config) {
+      throw new NotFoundException('Конфигурация строения не найдена');
+    }
+
+    Object.assign(config, {
+      ...data,
+      basePrice: data.basePrice !== undefined ? data.basePrice.toString() : config.basePrice,
+      baseIncomePerHour: data.baseIncomePerHour !== undefined ? data.baseIncomePerHour.toString() : config.baseIncomePerHour,
+      maxAccumulation: data.maxAccumulation !== undefined ? data.maxAccumulation.toString() : config.maxAccumulation,
+    });
+
+    const savedConfig = await this.buildingConfigsRepository.save(config);
+    
+    return {
+      id: savedConfig.id,
+      district: savedConfig.district,
+      type: savedConfig.type,
+      name: savedConfig.name,
+      icon: savedConfig.icon,
+      image: savedConfig.image,
+      basePrice: Number(savedConfig.basePrice),
+      baseIncomePerHour: Number(savedConfig.baseIncomePerHour),
+      maxAccumulation: Number(savedConfig.maxAccumulation),
+      maxLevel: savedConfig.maxLevel,
+      upgradeCosts: savedConfig.upgradeCosts,
+    };
+  }
+
+  async deleteBuildingConfig(id: string) {
+    const config = await this.buildingConfigsRepository.findOne({ where: { id } });
+    if (!config) {
+      throw new NotFoundException('Конфигурация строения не найдена');
+    }
+
+    // Проверяем, нет ли связанных строений
+    const { Building } = await import('../city/building.entity');
+    const buildingsRepository = this.usersRepository.manager.getRepository(Building);
+    const buildingsCount = await buildingsRepository.count({
+      where: { district: config.district as any, type: config.type as any },
+    });
+
+    if (buildingsCount > 0) {
+      throw new BadRequestException(`Невозможно удалить конфигурацию: есть ${buildingsCount} связанных строений`);
+    }
+
+    await this.buildingConfigsRepository.remove(config);
+    return { message: 'Конфигурация строения удалена' };
+  }
+
   // CRUD для скинов
   async getAllSkins() {
     return this.skinsRepository.find({
