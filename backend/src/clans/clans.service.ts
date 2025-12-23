@@ -7,6 +7,7 @@ import { ClanTreasuryTransaction, TreasuryTransactionType } from './clan-treasur
 import { UsersService } from '../users/users.service';
 import { DistrictConfig } from '../city/district-config.entity';
 import { Building } from '../city/building.entity';
+import { BuildingConfig } from '../city/building-config.entity';
 import { CityService } from '../city/city.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -25,6 +26,8 @@ export class ClansService {
     private districtConfigsRepository: Repository<DistrictConfig>,
     @InjectRepository(Building)
     private buildingsRepository: Repository<Building>,
+    @InjectRepository(BuildingConfig)
+    private buildingConfigsRepository: Repository<BuildingConfig>,
     private usersService: UsersService,
     @Inject(forwardRef(() => CityService))
     private cityService: CityService,
@@ -428,40 +431,41 @@ export class ClansService {
   async getAvailableTerritoriesForCapture(clanId: string): Promise<any[]> {
     const clan = await this.findOne(clanId);
     
-    // Получаем все строения, которые можно захватить (не захваченные этим кланом или вообще не захваченные)
-    const allBuildings = await this.buildingsRepository.find({
-      where: [
-        { capturedByClanId: null }, // Не захваченные
-        { capturedByClanId: Not(clanId) }, // Захваченные другим кланом
-      ],
-    });
-
-    // Группируем строения по типу
-    const buildingsByType = allBuildings.reduce((acc, building) => {
-      if (!acc[building.type]) {
-        acc[building.type] = [];
-      }
-      acc[building.type].push(building);
-      return acc;
-    }, {} as Record<string, typeof allBuildings>);
-
-    // Преобразуем в формат результата
-    const result = Object.entries(buildingsByType).map(([type, buildings]) => ({
-      type,
-      buildings: buildings.map(b => ({
-        id: b.id,
-        type: b.type,
-        level: b.level,
-        incomePerHour: Number(b.incomePerHour),
-        ownerId: b.userId,
-        capturedByClanId: b.capturedByClanId,
-        capturedAt: b.capturedAt,
-        captureExpiresAt: b.captureExpiresAt,
-      })),
-      totalIncome: buildings.reduce((sum, b) => sum + Number(b.incomePerHour), 0),
-    }));
-
-    return result;
+    // Получаем все конфигурации строений (BuildingConfig) - общие для всех
+    const allBuildingConfigs = await this.buildingConfigsRepository.find();
+    
+    // Для каждой конфигурации проверяем, можно ли захватить (есть ли игроки с таким строением)
+    const result = await Promise.all(
+      allBuildingConfigs.map(async (config) => {
+        // Получаем все строения этого типа, которые не захвачены или захвачены другим кланом
+        const availableBuildings = await this.buildingsRepository.find({
+          where: [
+            { type: config.type, capturedByClanId: null },
+            { type: config.type, capturedByClanId: Not(clanId) },
+          ],
+        });
+        
+        // Подсчитываем потенциальный доход (20% от дохода всех доступных строений)
+        const totalPotentialIncome = availableBuildings.reduce(
+          (sum, b) => sum + Math.floor(Number(b.incomePerHour) * 0.2),
+          0
+        );
+        
+        return {
+          id: config.id,
+          type: config.type,
+          name: config.name,
+          icon: config.icon,
+          image: config.image,
+          baseIncomePerHour: Number(config.baseIncomePerHour),
+          availableCount: availableBuildings.length,
+          totalPotentialIncome,
+        };
+      })
+    );
+    
+    // Фильтруем только те типы, у которых есть доступные строения
+    return result.filter(item => item.availableCount > 0);
   }
 
   async canClanCaptureTerritory(clanId: string): Promise<{ canCapture: boolean; reason?: string; cooldownRemaining?: number }> {
@@ -486,7 +490,7 @@ export class ClansService {
     return { canCapture: true };
   }
 
-  async captureTerritoryForClan(userId: string, clanId: string, buildingId: string): Promise<void> {
+  async captureTerritoryForClan(userId: string, clanId: string, buildingType: string): Promise<void> {
     // Проверяем права на захват
     const canCapture = await this.canClanCaptureTerritory(clanId);
     if (!canCapture.canCapture) {
@@ -498,7 +502,7 @@ export class ClansService {
     }
 
     // Используем CityService для захвата
-    await this.cityService.captureTerritory(clanId, buildingId);
+    await this.cityService.captureTerritory(clanId, buildingType);
 
     // Обновляем время последнего захвата
     const clan = await this.findOne(clanId);

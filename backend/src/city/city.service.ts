@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
 import { Building } from './building.entity';
 import { BuildingConfig } from './building-config.entity';
 import { UsersService } from '../users/users.service';
+import { ClansService } from '../clans/clans.service';
 
 @Injectable()
 export class CityService {
@@ -13,6 +14,8 @@ export class CityService {
     @InjectRepository(BuildingConfig)
     private buildingConfigsRepository: Repository<BuildingConfig>,
     private usersService: UsersService,
+    @Inject(forwardRef(() => ClansService))
+    private clansService: ClansService,
   ) {}
 
   /**
@@ -213,35 +216,73 @@ export class CityService {
 
   /**
    * Захват строения кланом
+   * Захватывает у случайных игроков строения указанного типа
    */
-  async captureTerritory(clanId: string, buildingId: string) {
-    const building = await this.buildingsRepository.findOne({
-      where: { id: buildingId },
+  async captureTerritory(clanId: string, buildingType: string) {
+    // Получаем конфигурацию строения
+    const config = await this.buildingConfigsRepository.findOne({
+      where: { type: buildingType },
     });
 
-    if (!building) {
-      throw new NotFoundException('Строение не найдено');
+    if (!config) {
+      throw new NotFoundException('Тип строения не найден');
     }
 
-    // Проверяем, не захвачено ли уже
-    if (building.capturedByClanId && building.captureExpiresAt && building.captureExpiresAt > new Date()) {
-      throw new BadRequestException('Строение уже захвачено');
+    // Получаем все строения этого типа, которые не захвачены
+    const availableBuildings = await this.buildingsRepository.find({
+      where: {
+        type: buildingType,
+        capturedByClanId: null,
+      },
+    });
+
+    if (availableBuildings.length === 0) {
+      throw new BadRequestException('Нет доступных строений для захвата');
     }
+
+    // Получаем клан для подсчета количества участников
+    const clan = await this.clansService.findOne(clanId);
+    const memberCount = clan.memberCount || 1;
+
+    // Выбираем случайных игроков (количество = количеству участников клана, но не больше доступных строений)
+    const targetCount = Math.min(memberCount, availableBuildings.length);
+    const shuffled = availableBuildings.sort(() => Math.random() - 0.5);
+    const targetBuildings = shuffled.slice(0, targetCount);
 
     // Устанавливаем захват на 3 часа
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3 часа
 
-    building.capturedByClanId = clanId;
-    building.capturedAt = now;
-    building.captureExpiresAt = expiresAt;
+    let totalIncome = 0;
 
-    await this.buildingsRepository.save(building);
+    // Захватываем строения у выбранных игроков
+    for (const building of targetBuildings) {
+      building.capturedByClanId = clanId;
+      building.capturedAt = now;
+      building.captureExpiresAt = expiresAt;
+
+      // Снижаем доход на 50% (доход уже учитывается при расчете, просто сохраняем)
+      // Доход игрока будет рассчитываться с учетом захвата (50% от обычного)
+      
+      // Добавляем 20% от дохода в казну клана
+      const incomeForClan = Math.floor(Number(building.incomePerHour) * 0.2);
+      totalIncome += incomeForClan;
+
+      await this.buildingsRepository.save(building);
+    }
+
+    // Добавляем доход в казну клана
+    if (totalIncome > 0) {
+      const currentTreasury = Number(clan.treasury || 0);
+      clan.treasury = (currentTreasury + totalIncome).toString();
+      await this.clansService.update(clanId, { treasury: clan.treasury });
+    }
 
     return {
-      buildingId: building.id,
-      capturedAt: building.capturedAt,
-      expiresAt: building.captureExpiresAt,
+      capturedCount: targetBuildings.length,
+      totalIncome,
+      capturedAt: now,
+      expiresAt,
     };
   }
 

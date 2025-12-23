@@ -36,6 +36,7 @@ import { UserMaterial } from '../academy/user-material.entity';
 import { SystemSettings } from './system-settings.entity';
 import { NotificationTemplate } from './notification-template.entity';
 import { InactiveUsersService } from './inactive-users.service';
+import { ImageProcessorService } from './image-processor.service';
 import { QuestProgress } from '../quests/quest-progress.entity';
 
 @Module({
@@ -65,7 +66,7 @@ import { QuestProgress } from '../quests/quest-progress.entity';
     ProgressModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService, InactiveUsersService],
+  providers: [AdminService, InactiveUsersService, ImageProcessorService],
   exports: [AdminService],
 })
 export class AdminModule {}

@@ -217,22 +217,75 @@ export default function BackgammonBoard({
           }
         }
         
-        // Загружаем текстуры шашек
-        if (myCheckersSkin?.checkersTextureUrl) {
-          console.log('♟️ Loading my checkers texture:', myCheckersSkin.checkersTextureUrl)
-          loaded.myCheckers = await loadImage(myCheckersSkin.checkersTextureUrl).catch((e) => {
-            console.error('❌ Failed to load my checkers texture:', e)
-            return undefined
-          })
+        // Загружаем текстуры шашек (белые и черные отдельно)
+        // Игрок 1 (myPlayerId === player1Id) - белые шашки
+        // Игрок 2 (opponent) - черные шашки
+        const isPlayer1 = myPlayerId === player1Id
+        
+        if (isPlayer1) {
+          // Я игрок 1 - белые шашки
+          if (myCheckersSkin?.whiteCheckersTextureUrl) {
+            console.log('♟️ Loading my white checkers texture:', myCheckersSkin.whiteCheckersTextureUrl)
+            loaded.myCheckers = await loadImage(getImageUrl(myCheckersSkin.whiteCheckersTextureUrl) || myCheckersSkin.whiteCheckersTextureUrl).catch((e) => {
+              console.error('❌ Failed to load my white checkers texture:', e)
+              return undefined
+            })
+          } else if (myCheckersSkin?.checkersTextureUrl) {
+            // Fallback на старую текстуру для обратной совместимости
+            console.log('♟️ Loading my checkers texture (fallback):', myCheckersSkin.checkersTextureUrl)
+            loaded.myCheckers = await loadImage(getImageUrl(myCheckersSkin.checkersTextureUrl) || myCheckersSkin.checkersTextureUrl).catch((e) => {
+              console.error('❌ Failed to load my checkers texture:', e)
+              return undefined
+            })
+          }
+          
+          // Противник - черные шашки
+          if (opponentCheckersSkin?.blackCheckersTextureUrl) {
+            console.log('♟️ Loading opponent black checkers texture:', opponentCheckersSkin.blackCheckersTextureUrl)
+            loaded.opponentCheckers = await loadImage(getImageUrl(opponentCheckersSkin.blackCheckersTextureUrl) || opponentCheckersSkin.blackCheckersTextureUrl).catch((e) => {
+              console.error('❌ Failed to load opponent black checkers texture:', e)
+              return undefined
+            })
+          } else if (opponentCheckersSkin?.checkersTextureUrl) {
+            // Fallback на старую текстуру для обратной совместимости
+            console.log('♟️ Loading opponent checkers texture (fallback):', opponentCheckersSkin.checkersTextureUrl)
+            loaded.opponentCheckers = await loadImage(getImageUrl(opponentCheckersSkin.checkersTextureUrl) || opponentCheckersSkin.checkersTextureUrl).catch((e) => {
+              console.error('❌ Failed to load opponent checkers texture:', e)
+              return undefined
+            })
+          }
         } else {
-          console.warn('⚠️ No myCheckersSkin.checkersTextureUrl found:', myCheckersSkin)
-        }
-        if (opponentCheckersSkin?.checkersTextureUrl) {
-          console.log('♟️ Loading opponent checkers texture:', opponentCheckersSkin.checkersTextureUrl)
-          loaded.opponentCheckers = await loadImage(opponentCheckersSkin.checkersTextureUrl).catch((e) => {
-            console.error('❌ Failed to load opponent checkers texture:', e)
-            return undefined
-          })
+          // Я игрок 2 - черные шашки
+          if (myCheckersSkin?.blackCheckersTextureUrl) {
+            console.log('♟️ Loading my black checkers texture:', myCheckersSkin.blackCheckersTextureUrl)
+            loaded.myCheckers = await loadImage(getImageUrl(myCheckersSkin.blackCheckersTextureUrl) || myCheckersSkin.blackCheckersTextureUrl).catch((e) => {
+              console.error('❌ Failed to load my black checkers texture:', e)
+              return undefined
+            })
+          } else if (myCheckersSkin?.checkersTextureUrl) {
+            // Fallback на старую текстуру для обратной совместимости
+            console.log('♟️ Loading my checkers texture (fallback):', myCheckersSkin.checkersTextureUrl)
+            loaded.myCheckers = await loadImage(getImageUrl(myCheckersSkin.checkersTextureUrl) || myCheckersSkin.checkersTextureUrl).catch((e) => {
+              console.error('❌ Failed to load my checkers texture:', e)
+              return undefined
+            })
+          }
+          
+          // Противник - белые шашки
+          if (opponentCheckersSkin?.whiteCheckersTextureUrl) {
+            console.log('♟️ Loading opponent white checkers texture:', opponentCheckersSkin.whiteCheckersTextureUrl)
+            loaded.opponentCheckers = await loadImage(getImageUrl(opponentCheckersSkin.whiteCheckersTextureUrl) || opponentCheckersSkin.whiteCheckersTextureUrl).catch((e) => {
+              console.error('❌ Failed to load opponent white checkers texture:', e)
+              return undefined
+            })
+          } else if (opponentCheckersSkin?.checkersTextureUrl) {
+            // Fallback на старую текстуру для обратной совместимости
+            console.log('♟️ Loading opponent checkers texture (fallback):', opponentCheckersSkin.checkersTextureUrl)
+            loaded.opponentCheckers = await loadImage(getImageUrl(opponentCheckersSkin.checkersTextureUrl) || opponentCheckersSkin.checkersTextureUrl).catch((e) => {
+              console.error('❌ Failed to load opponent checkers texture:', e)
+              return undefined
+            })
+          }
         }
         
         console.log('✅ Loaded textures:', loaded)

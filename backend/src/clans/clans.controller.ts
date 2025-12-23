@@ -118,7 +118,7 @@ export class ClansController {
   async captureTerritory(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body() body: { buildingId: string },
+    @Body() body: { buildingType: string },
   ) {
     // Проверяем что пользователь состоит в этом клане
     const userClan = await this.clansService.getUserClan(user.id);
@@ -132,7 +132,7 @@ export class ClansController {
     }
 
     // Используем CityService через ClansService
-    await this.clansService.captureTerritoryForClan(user.id, id, body.buildingId);
+    await this.clansService.captureTerritoryForClan(user.id, id, body.buildingType);
     return { message: 'Территория успешно захвачена' };
   }
 }

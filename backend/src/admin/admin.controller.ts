@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Unauthorize
 import { FileInterceptor, FilesInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import { AdminService } from './admin.service';
+import { ImageProcessorService } from './image-processor.service';
 import { AcademyService } from '../academy/academy.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -19,6 +20,7 @@ export class AdminController {
     @Inject(forwardRef(() => AcademyService))
     private readonly academyService: AcademyService,
     private readonly jwtService: JwtService,
+    private readonly imageProcessor: ImageProcessorService,
   ) {}
 
   @Post('login')
@@ -444,20 +446,102 @@ export class AdminController {
 
   @Post('buildings')
   @UseGuards(JwtAuthGuard)
-  async createBuilding(@CurrentUser() user: any, @Body() body: any) {
+  @UseInterceptors(
+    AnyFilesInterceptor({
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadsDir = join(process.cwd(), 'uploads', 'buildings');
+          if (!existsSync(uploadsDir)) {
+            mkdirSync(uploadsDir, { recursive: true });
+          }
+          cb(null, uploadsDir);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    }),
+  )
+  async createBuilding(
+    @CurrentUser() user: any,
+    @Body() body: any,
+    @UploadedFiles() files?: Array<{ fieldname: string; filename: string; originalname: string; mimetype: string; size: number }>,
+  ) {
     if (!user.isAdmin) {
       throw new UnauthorizedException('Недостаточно прав');
     }
-    return this.adminService.createBuildingConfig(body);
+    
+    // Обрабатываем загруженные файлы
+    let iconUrl = body.icon || null;
+    let imageUrl = body.image || null;
+    
+    if (files && files.length > 0) {
+      for (const file of files) {
+        const fileUrl = `/uploads/buildings/${file.filename}`;
+        if (file.fieldname === 'icon') {
+          iconUrl = fileUrl;
+        } else if (file.fieldname === 'image') {
+          imageUrl = fileUrl;
+        }
+      }
+    }
+    
+    const buildingData = {
+      ...body,
+      icon: iconUrl,
+      image: imageUrl,
+    };
+    
+    return this.adminService.createBuildingConfig(buildingData);
   }
 
   @Put('buildings/:id')
   @UseGuards(JwtAuthGuard)
-  async updateBuilding(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+  @UseInterceptors(
+    AnyFilesInterceptor({
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadsDir = join(process.cwd(), 'uploads', 'buildings');
+          if (!existsSync(uploadsDir)) {
+            mkdirSync(uploadsDir, { recursive: true });
+          }
+          cb(null, uploadsDir);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    }),
+  )
+  async updateBuilding(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: any,
+    @UploadedFiles() files?: Array<{ fieldname: string; filename: string; originalname: string; mimetype: string; size: number }>,
+  ) {
     if (!user.isAdmin) {
       throw new UnauthorizedException('Недостаточно прав');
     }
-    return this.adminService.updateBuildingConfig(id, body);
+    
+    const updateData: any = { ...body };
+    
+    // Обрабатываем загруженные файлы
+    if (files && files.length > 0) {
+      for (const file of files) {
+        const fileUrl = `/uploads/buildings/${file.filename}`;
+        if (file.fieldname === 'icon') {
+          updateData.icon = fileUrl;
+        } else if (file.fieldname === 'image') {
+          updateData.image = fileUrl;
+        }
+      }
+    }
+    
+    return this.adminService.updateBuildingConfig(id, updateData);
   }
 
   @Delete('buildings/:id')
@@ -604,7 +688,27 @@ export class AdminController {
     
     if (files && files.length > 0) {
       for (const file of files) {
-        const fileUrl = `/uploads/skins/${file.filename}`;
+        // Обрабатываем изображение: ресайз и конвертация в SVG
+        const originalFilePath = join(process.cwd(), 'uploads', 'skins', file.filename);
+        let processedFilePath: string;
+        let processedFilename: string;
+        
+        try {
+          // Обрабатываем файл (ресайз и конвертация в SVG)
+          processedFilePath = await this.imageProcessor.processUploadedFile(
+            originalFilePath,
+            file.fieldname,
+            skinType,
+          );
+          processedFilename = processedFilePath.split(/[/\\]/).pop() || file.filename.replace(/\.[^.]+$/, '.svg');
+        } catch (error) {
+          console.error(`Error processing file ${file.filename}:`, error);
+          // Если обработка не удалась, используем оригинальный файл
+          processedFilename = file.filename;
+        }
+        
+        const fileUrl = `/uploads/skins/${processedFilename}`;
+        
         // Определяем тип файла по fieldname
         if (file.fieldname === 'preview' || file.fieldname === 'image') {
           imageUrl = fileUrl;
@@ -625,11 +729,11 @@ export class AdminController {
             }
           }
         } else if (file.fieldname === 'checkersTexture') {
-          checkersTextureUrl = fileUrl;
+          checkersTextureUrl = fileUrl; // Устаревшее, для обратной совместимости
         } else if (file.fieldname === 'whiteCheckersTexture') {
-          whiteCheckersTextureUrl = fileUrl;
+          whiteCheckersTextureUrl = fileUrl; // Текстура белых шашек
         } else if (file.fieldname === 'blackCheckersTexture') {
-          blackCheckersTextureUrl = fileUrl;
+          blackCheckersTextureUrl = fileUrl; // Текстура черных шашек
         }
       }
     }
@@ -732,7 +836,26 @@ export class AdminController {
       throw new BadRequestException('Файл не загружен');
     }
     
-    const fileUrl = `/uploads/skins/${file.filename}`;
+    // Обрабатываем изображение: ресайз и конвертация в SVG
+    const originalFilePath = join(process.cwd(), 'uploads', 'skins', file.filename);
+    let processedFilename: string;
+    
+    try {
+      // Получаем тип скина для определения размеров
+      const skin = await this.adminService.getSkin(id);
+      const processedFilePath = await this.imageProcessor.processUploadedFile(
+        originalFilePath,
+        'image',
+        skin?.type,
+      );
+      processedFilename = processedFilePath.split(/[/\\]/).pop() || file.filename.replace(/\.[^.]+$/, '.svg');
+    } catch (error) {
+      console.error(`Error processing file ${file.filename}:`, error);
+      // Если обработка не удалась, используем оригинальный файл
+      processedFilename = file.filename;
+    }
+    
+    const fileUrl = `/uploads/skins/${processedFilename}`;
     return this.adminService.updateSkin(id, { imageUrl: fileUrl });
   }
 
@@ -787,7 +910,27 @@ export class AdminController {
     const updateData: any = {};
     
     for (const file of files) {
-      const fileUrl = `/uploads/skins/${file.filename}`;
+      // Обрабатываем изображение: ресайз и конвертация в SVG
+      const originalFilePath = join(process.cwd(), 'uploads', 'skins', file.filename);
+      let processedFilePath: string;
+      let processedFilename: string;
+      
+      try {
+        // Обрабатываем файл (ресайз и конвертация в SVG)
+        processedFilePath = await this.imageProcessor.processUploadedFile(
+          originalFilePath,
+          file.fieldname,
+          skin.type,
+        );
+        processedFilename = processedFilePath.split(/[/\\]/).pop() || file.filename.replace(/\.[^.]+$/, '.svg');
+      } catch (error) {
+        console.error(`Error processing file ${file.filename}:`, error);
+        // Если обработка не удалась, используем оригинальный файл
+        processedFilename = file.filename;
+      }
+      
+      const fileUrl = `/uploads/skins/${processedFilename}`;
+      
       if (file.fieldname === 'image' || file.fieldname === 'preview') {
         updateData.imageUrl = fileUrl;
       } else if (file.fieldname === 'shopImage' || file.fieldname === 'shopPreview') {
@@ -807,7 +950,11 @@ export class AdminController {
           }
         }
       } else if (file.fieldname === 'checkersTexture' && skin.type === 'checkers') {
-        updateData.checkersTextureUrl = fileUrl;
+        updateData.checkersTextureUrl = fileUrl; // Устаревшее, для обратной совместимости
+      } else if (file.fieldname === 'whiteCheckersTexture' && skin.type === 'checkers') {
+        updateData.whiteCheckersTextureUrl = fileUrl; // Текстура белых шашек
+      } else if (file.fieldname === 'blackCheckersTexture' && skin.type === 'checkers') {
+        updateData.blackCheckersTextureUrl = fileUrl; // Текстура черных шашек
       }
     }
     

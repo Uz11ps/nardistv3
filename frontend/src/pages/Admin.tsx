@@ -250,6 +250,17 @@ export default function Admin() {
         maxAccumulation: 0,
         maxLevel: 10,
       })
+      
+      // Очистить файлы
+      const iconInput = document.getElementById('building-icon-file') as HTMLInputElement
+      if (iconInput) iconInput.value = ''
+      const imageInput = document.getElementById('building-image-file') as HTMLInputElement
+      if (imageInput) imageInput.value = ''
+      const iconPreview = document.getElementById('building-icon-preview')
+      if (iconPreview) iconPreview.innerHTML = ''
+      const imagePreview = document.getElementById('building-image-preview')
+      if (imagePreview) imagePreview.innerHTML = ''
+      
       loadBuildings()
     } catch (error: any) {
       alert('Ошибка: ' + (error.response?.data?.message || error.message))
@@ -258,7 +269,27 @@ export default function Admin() {
 
   const handleUpdateBuilding = async (id: string, data: any) => {
     try {
-      await apiClient.put(`/admin/buildings/${id}`, data)
+      const formData = new FormData()
+      formData.append('type', data.type)
+      formData.append('name', data.name)
+      formData.append('basePrice', data.basePrice.toString())
+      formData.append('baseIncomePerHour', data.baseIncomePerHour.toString())
+      formData.append('maxAccumulation', data.maxAccumulation.toString())
+      formData.append('maxLevel', data.maxLevel.toString())
+      
+      const iconFile = (document.getElementById('edit-building-icon-file') as HTMLInputElement)?.files?.[0]
+      if (iconFile) {
+        formData.append('icon', iconFile)
+      }
+      
+      const imageFile = (document.getElementById('edit-building-image-file') as HTMLInputElement)?.files?.[0]
+      if (imageFile) {
+        formData.append('image', imageFile)
+      }
+      
+      await apiClient.put(`/admin/buildings/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
       alert('Строение обновлено!')
       loadBuildings()
       setSelectedBuilding(null)
@@ -2321,39 +2352,78 @@ export default function Admin() {
                 )}
                 {selectedSkin.type === 'checkers' && (
                   <div className="form-group">
-                    <label>Текстура шашек (файл для игры):</label>
-                    {selectedSkin.checkersTextureUrl && (
-                      <div style={{ marginBottom: '8px' }}>
-                        <img 
-                          src={getImageUrl(selectedSkin.checkersTextureUrl) || selectedSkin.checkersTextureUrl} 
-                          alt="Checkers texture"
-                          style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
+                    <label>Текстуры шашек (2 файла для игры - белые и черные):</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '8px' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', marginBottom: '4px', color: '#aaa' }}>Белые шашки:</div>
+                        {selectedSkin.whiteCheckersTextureUrl && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <img 
+                              src={getImageUrl(selectedSkin.whiteCheckersTextureUrl) || selectedSkin.whiteCheckersTextureUrl} 
+                              alt="White checkers texture"
+                              style={{ maxWidth: '150px', maxHeight: '150px', borderRadius: '8px', border: '1px solid #333' }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          </div>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          id="edit-skin-white-checkers-texture"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              const reader = new FileReader()
+                              reader.onload = (event) => {
+                                const preview = document.getElementById('edit-skin-white-checkers-texture-preview')
+                                if (preview) {
+                                  preview.innerHTML = `<img src="${event.target?.result}" alt="Белые шашки" style="max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 4px; border: 1px solid #333;" />`
+                                }
+                              }
+                              reader.readAsDataURL(file)
+                            }
                           }}
                         />
+                        <div id="edit-skin-white-checkers-texture-preview" style={{ marginTop: '4px' }}></div>
                       </div>
-                    )}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      id="edit-skin-checkers-texture"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          const reader = new FileReader()
-                          reader.onload = (event) => {
-                            const preview = document.getElementById('edit-skin-checkers-texture-preview')
-                            if (preview) {
-                              preview.innerHTML = `<img src="${event.target?.result}" alt="Текстура шашек" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
+                      <div>
+                        <div style={{ fontSize: '14px', marginBottom: '4px', color: '#aaa' }}>Черные шашки:</div>
+                        {selectedSkin.blackCheckersTextureUrl && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <img 
+                              src={getImageUrl(selectedSkin.blackCheckersTextureUrl) || selectedSkin.blackCheckersTextureUrl} 
+                              alt="Black checkers texture"
+                              style={{ maxWidth: '150px', maxHeight: '150px', borderRadius: '8px', border: '1px solid #333' }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          </div>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          id="edit-skin-black-checkers-texture"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              const reader = new FileReader()
+                              reader.onload = (event) => {
+                                const preview = document.getElementById('edit-skin-black-checkers-texture-preview')
+                                if (preview) {
+                                  preview.innerHTML = `<img src="${event.target?.result}" alt="Черные шашки" style="max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 4px; border: 1px solid #333;" />`
+                                }
+                              }
+                              reader.readAsDataURL(file)
                             }
-                          }
-                          reader.readAsDataURL(file)
-                        }
-                      }}
-                    />
-                    <div id="edit-skin-checkers-texture-preview" style={{ marginTop: '8px' }}></div>
-                    <span className="field-hint">Оставьте пустым, чтобы не изменять текстуру</span>
+                          }}
+                        />
+                        <div id="edit-skin-black-checkers-texture-preview" style={{ marginTop: '4px' }}></div>
+                      </div>
+                    </div>
+                    <span className="field-hint">Загрузите 2 изображения: для белых и черных шашек. Оставьте пустым, чтобы не изменять текстуру</span>
                   </div>
                 )}
                 <div className="btn-group">
@@ -2419,10 +2489,19 @@ export default function Admin() {
                           })
                         }
                       } else if (selectedSkin.type === 'checkers') {
-                        const checkersTextureInput = document.getElementById('edit-skin-checkers-texture') as HTMLInputElement
-                        if (checkersTextureInput.files && checkersTextureInput.files[0]) {
+                        const whiteCheckersInput = document.getElementById('edit-skin-white-checkers-texture') as HTMLInputElement
+                        const blackCheckersInput = document.getElementById('edit-skin-black-checkers-texture') as HTMLInputElement
+                        const hasWhite = whiteCheckersInput.files && whiteCheckersInput.files[0]
+                        const hasBlack = blackCheckersInput.files && blackCheckersInput.files[0]
+                        
+                        if (hasWhite || hasBlack) {
                           const textureFormData = new FormData()
-                          textureFormData.append('checkersTexture', checkersTextureInput.files[0])
+                          if (hasWhite) {
+                            textureFormData.append('whiteCheckersTexture', whiteCheckersInput.files[0])
+                          }
+                          if (hasBlack) {
+                            textureFormData.append('blackCheckersTexture', blackCheckersInput.files[0])
+                          }
                           await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-textures`, textureFormData, {
                             headers: { 'Content-Type': 'multipart/form-data' }
                           })
@@ -2586,6 +2665,55 @@ export default function Admin() {
                   </div>
                   <span className="field-hint" style={{ marginTop: '8px', display: 'block' }}>Загрузите 6 изображений в порядке от 1 до 6</span>
                 </div>
+                <div id="skin-texture-checkers" style={{ display: 'none' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Белые шашки:</label>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        id="skin-white-checkers-texture"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            const reader = new FileReader()
+                            reader.onload = (event) => {
+                              const preview = document.getElementById('skin-white-checkers-texture-preview')
+                              if (preview) {
+                                preview.innerHTML = `<img src="${event.target?.result}" alt="Белые шашки" style="max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 4px; border: 1px solid #333;" />`
+                              }
+                            }
+                            reader.readAsDataURL(file)
+                          }
+                        }}
+                      />
+                      <div id="skin-white-checkers-texture-preview" style={{ marginTop: '4px' }}></div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Черные шашки:</label>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        id="skin-black-checkers-texture"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            const reader = new FileReader()
+                            reader.onload = (event) => {
+                              const preview = document.getElementById('skin-black-checkers-texture-preview')
+                              if (preview) {
+                                preview.innerHTML = `<img src="${event.target?.result}" alt="Черные шашки" style="max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 4px; border: 1px solid #333;" />`
+                              }
+                            }
+                            reader.readAsDataURL(file)
+                          }
+                        }}
+                      />
+                      <div id="skin-black-checkers-texture-preview" style={{ marginTop: '4px' }}></div>
+                    </div>
+                  </div>
+                  <span className="field-hint" style={{ marginTop: '8px', display: 'block' }}>Загрузите 2 изображения: для белых и черных шашек</span>
+                </div>
                 <span className="field-hint" id="skin-texture-hint">Этот файл будет использоваться в игре</span>
               </div>
               <script dangerouslySetInnerHTML={{__html: `
@@ -2595,6 +2723,7 @@ export default function Admin() {
                   const textureLabel = document.getElementById('skin-texture-label');
                   const textureSingle = document.getElementById('skin-texture-single');
                   const textureDice = document.getElementById('skin-texture-dice');
+                  const textureCheckers = document.getElementById('skin-texture-checkers');
                   const textureHint = document.getElementById('skin-texture-hint');
                   
                   if (type) {
@@ -2603,17 +2732,21 @@ export default function Admin() {
                       textureLabel.textContent = 'Текстура доски (файл для игры):';
                       textureSingle.style.display = 'block';
                       textureDice.style.display = 'none';
+                      if (textureCheckers) textureCheckers.style.display = 'none';
                       textureHint.textContent = 'Этот файл будет использоваться в игре';
+                      textureHint.style.display = 'block';
                     } else if (type === 'dice') {
                       textureLabel.textContent = 'Текстуры кубиков (6 файлов для игры - от 1 до 6):';
                       textureSingle.style.display = 'none';
                       textureDice.style.display = 'block';
+                      if (textureCheckers) textureCheckers.style.display = 'none';
                       textureHint.style.display = 'none';
                     } else if (type === 'checkers') {
-                      textureLabel.textContent = 'Текстура шашек (файл для игры):';
-                      textureSingle.style.display = 'block';
+                      textureLabel.textContent = 'Текстуры шашек (2 файла для игры - белые и черные):';
+                      textureSingle.style.display = 'none';
                       textureDice.style.display = 'none';
-                      textureHint.textContent = 'Этот файл будет использоваться в игре';
+                      if (textureCheckers) textureCheckers.style.display = 'block';
+                      textureHint.style.display = 'none';
                     }
                   } else {
                     textureGroup.style.display = 'none';
@@ -2676,9 +2809,13 @@ export default function Admin() {
                     }
                   }
                 } else if (skinType === 'checkers') {
-                  const textureInput = document.getElementById('skin-texture') as HTMLInputElement
-                  if (textureInput.files && textureInput.files[0]) {
-                    formData.append('checkersTexture', textureInput.files[0])
+                  const whiteCheckersInput = document.getElementById('skin-white-checkers-texture') as HTMLInputElement
+                  if (whiteCheckersInput.files && whiteCheckersInput.files[0]) {
+                    formData.append('whiteCheckersTexture', whiteCheckersInput.files[0])
+                  }
+                  const blackCheckersInput = document.getElementById('skin-black-checkers-texture') as HTMLInputElement
+                  if (blackCheckersInput.files && blackCheckersInput.files[0]) {
+                    formData.append('blackCheckersTexture', blackCheckersInput.files[0])
                   }
                 }
 
@@ -2713,6 +2850,15 @@ export default function Admin() {
                   }
                   const texturePreview = document.getElementById('skin-texture-preview')
                   if (texturePreview) texturePreview.innerHTML = ''
+                  // Очистить поля шашек
+                  const whiteCheckersInput = document.getElementById('skin-white-checkers-texture') as HTMLInputElement
+                  if (whiteCheckersInput) whiteCheckersInput.value = ''
+                  const blackCheckersInput = document.getElementById('skin-black-checkers-texture') as HTMLInputElement
+                  if (blackCheckersInput) blackCheckersInput.value = ''
+                  const whiteCheckersPreview = document.getElementById('skin-white-checkers-texture-preview')
+                  if (whiteCheckersPreview) whiteCheckersPreview.innerHTML = ''
+                  const blackCheckersPreview = document.getElementById('skin-black-checkers-texture-preview')
+                  if (blackCheckersPreview) blackCheckersPreview.innerHTML = ''
                   const imagePreview = document.getElementById('skin-image-preview')
                   if (imagePreview) imagePreview.innerHTML = ''
                 } catch (error: any) {
@@ -3250,12 +3396,24 @@ export default function Admin() {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Иконка (URL)</label>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Иконка (файл)</label>
                     <input
-                      type="text"
-                      value={newBuilding.icon}
-                      onChange={(e) => setNewBuilding({ ...newBuilding, icon: e.target.value })}
-                      placeholder="https://..."
+                      type="file"
+                      accept="image/*"
+                      id="building-icon-file"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          const reader = new FileReader()
+                          reader.onload = (event) => {
+                            const preview = document.getElementById('building-icon-preview')
+                            if (preview) {
+                              preview.innerHTML = `<img src="${event.target?.result}" alt="Иконка" style="max-width: 64px; max-height: 64px; border-radius: 4px; margin-top: 4px;" />`
+                            }
+                          }
+                          reader.readAsDataURL(file)
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '8px',
@@ -3265,14 +3423,27 @@ export default function Admin() {
                         color: '#fff',
                       }}
                     />
+                    <div id="building-icon-preview" style={{ marginTop: '4px' }}></div>
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Изображение (URL)</label>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Изображение (файл)</label>
                     <input
-                      type="text"
-                      value={newBuilding.image}
-                      onChange={(e) => setNewBuilding({ ...newBuilding, image: e.target.value })}
-                      placeholder="https://..."
+                      type="file"
+                      accept="image/*"
+                      id="building-image-file"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          const reader = new FileReader()
+                          reader.onload = (event) => {
+                            const preview = document.getElementById('building-image-preview')
+                            if (preview) {
+                              preview.innerHTML = `<img src="${event.target?.result}" alt="Изображение" style="max-width: 200px; max-height: 200px; border-radius: 4px; margin-top: 4px;" />`
+                            }
+                          }
+                          reader.readAsDataURL(file)
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '8px',
@@ -3282,6 +3453,7 @@ export default function Admin() {
                         color: '#fff',
                       }}
                     />
+                    <div id="building-image-preview" style={{ marginTop: '4px' }}></div>
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовая цена (NAR)</label>
@@ -3492,11 +3664,36 @@ export default function Admin() {
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Иконка (URL)</label>
+                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Иконка (файл)</label>
+                        {selectedBuilding.icon && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <img 
+                              src={getImageUrl(selectedBuilding.icon) || selectedBuilding.icon} 
+                              alt="Иконка"
+                              style={{ maxWidth: '64px', maxHeight: '64px', borderRadius: '4px' }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          </div>
+                        )}
                         <input
-                          type="text"
-                          value={selectedBuilding.icon || ''}
-                          onChange={(e) => setSelectedBuilding({ ...selectedBuilding, icon: e.target.value })}
+                          type="file"
+                          accept="image/*"
+                          id="edit-building-icon-file"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              const reader = new FileReader()
+                              reader.onload = (event) => {
+                                const preview = document.getElementById('edit-building-icon-preview')
+                                if (preview) {
+                                  preview.innerHTML = `<img src="${event.target?.result}" alt="Иконка" style="max-width: 64px; max-height: 64px; border-radius: 4px; margin-top: 4px;" />`
+                                }
+                              }
+                              reader.readAsDataURL(file)
+                            }
+                          }}
                           style={{
                             width: '100%',
                             padding: '8px',
@@ -3506,13 +3703,39 @@ export default function Admin() {
                             color: '#fff',
                           }}
                         />
+                        <div id="edit-building-icon-preview" style={{ marginTop: '4px' }}></div>
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Изображение (URL)</label>
+                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Изображение (файл)</label>
+                        {selectedBuilding.image && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <img 
+                              src={getImageUrl(selectedBuilding.image) || selectedBuilding.image} 
+                              alt="Изображение"
+                              style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px' }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          </div>
+                        )}
                         <input
-                          type="text"
-                          value={selectedBuilding.image || ''}
-                          onChange={(e) => setSelectedBuilding({ ...selectedBuilding, image: e.target.value })}
+                          type="file"
+                          accept="image/*"
+                          id="edit-building-image-file"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              const reader = new FileReader()
+                              reader.onload = (event) => {
+                                const preview = document.getElementById('edit-building-image-preview')
+                                if (preview) {
+                                  preview.innerHTML = `<img src="${event.target?.result}" alt="Изображение" style="max-width: 200px; max-height: 200px; border-radius: 4px; margin-top: 4px;" />`
+                                }
+                              }
+                              reader.readAsDataURL(file)
+                            }
+                          }}
                           style={{
                             width: '100%',
                             padding: '8px',
@@ -3522,6 +3745,7 @@ export default function Admin() {
                             color: '#fff',
                           }}
                         />
+                        <div id="edit-building-image-preview" style={{ marginTop: '4px' }}></div>
                       </div>
                       <div>
                         <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовая цена (NAR)</label>
