@@ -311,6 +311,11 @@ export default function BackgammonBoard({
     ctx.fillStyle = '#654321'
     ctx.fillRect(barX, 0, barWidth, height)
     
+    // Параметры для отрисовки
+    const halfBoardWidth = (width - barWidth) / 2
+    const pointWidth = halfBoardWidth / 6
+    const pointHeight = height * 0.45
+    
     const points = gameState.points || []
     
     // Функция для отрисовки треугольной точки (Классический вид)
