@@ -12,6 +12,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (err || !user) {
       throw err || new UnauthorizedException('Не авторизован');
     }
+    
+    // Дополнительная проверка бана (на случай если пользователь обошел проверку в strategy)
+    if (user.isBanned) {
+      const reason = user.banReason || 'Нарушение правил';
+      throw new UnauthorizedException(`Вы были забанены по причине: ${reason}`);
+    }
+    
     return user;
   }
 }

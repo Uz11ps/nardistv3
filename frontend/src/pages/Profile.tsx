@@ -26,8 +26,21 @@ export default function Profile() {
         level: user.level || 1,
       })
       checkPremium()
+      
+      // Проверяем, завершена ли настройка профиля (первичное создание)
+      // Если нет - перенаправляем на создание профиля
+      apiClient.get('/onboarding/status')
+        .then((response) => {
+          const profileSetupCompleted = response?.data?.profileSetupCompleted ?? true
+          if (!profileSetupCompleted) {
+            navigate('/onboarding/profile')
+          }
+        })
+        .catch(() => {
+          // Если не удалось проверить статус, продолжаем работу
+        })
     }
-  }, [user])
+  }, [user, navigate])
 
   const checkPremium = async () => {
     try {
@@ -66,6 +79,8 @@ export default function Profile() {
   }, [user, showEditModal])
 
   const handleOpenEdit = () => {
+    // Проверка уровня только для РЕДАКТИРОВАНИЯ существующего профиля
+    // При первой регистрации пользователь должен использовать CreateProfile
     if ((user?.level || 0) < 5) {
       alert('Редактирование профиля доступно с 5 уровня')
       return

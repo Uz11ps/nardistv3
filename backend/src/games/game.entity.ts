@@ -56,10 +56,10 @@ export class Game {
   })
   type: GameType;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   player1: User;
 
-  @Column()
+  @Column({ nullable: true })
   player1Id: string;
 
   @ManyToOne(() => User, { nullable: true })

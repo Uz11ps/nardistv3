@@ -35,10 +35,11 @@ import { UserMaterial } from '../academy/user-material.entity';
 import { SystemSettings } from './system-settings.entity';
 import { NotificationTemplate } from './notification-template.entity';
 import { InactiveUsersService } from './inactive-users.service';
+import { QuestProgress } from '../quests/quest-progress.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate]),
     ScheduleModule.forRoot(),
     AuthModule,
     JwtModule.registerAsync({

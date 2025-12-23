@@ -45,7 +45,7 @@ import Referrals from './pages/Referrals'
 function App() {
   const [initialized, setInitialized] = useState(false)
   const [initError, setInitError] = useState<string | null>(null)
-  const { user, init, token } = useAuthStore()
+  const { user, init, token, banReason } = useAuthStore()
 
   useEffect(() => {
     const initialize = async () => {
@@ -153,6 +153,45 @@ function App() {
         color: '#ffffff'
       }}>
         Загрузка...
+      </div>
+    )
+  }
+
+  // Заглушка для забаненных пользователей
+  if (banReason) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 100%)',
+        color: '#ffffff',
+        padding: '20px'
+      }}>
+        <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+          <div style={{ fontSize: '64px', marginBottom: '24px' }}>🚫</div>
+          <h1 style={{ color: '#ff3333', marginBottom: '20px', fontSize: '28px', fontWeight: 'bold' }}>
+            Доступ запрещен
+          </h1>
+          <div style={{ 
+            padding: '24px', 
+            background: '#2a2a2a', 
+            borderRadius: '16px', 
+            marginBottom: '20px',
+            border: '2px solid #ff3333'
+          }}>
+            <p style={{ fontSize: '18px', marginBottom: '12px', color: '#ffffff' }}>
+              Вы были забанены по причине:
+            </p>
+            <p style={{ fontSize: '16px', color: '#ff6666', fontWeight: '500' }}>
+              {banReason}
+            </p>
+          </div>
+          <p style={{ color: '#aaaaaa', fontSize: '14px' }}>
+            Если вы считаете, что это ошибка, свяжитесь с администрацией
+          </p>
+        </div>
       </div>
     )
   }

@@ -630,6 +630,50 @@ export class AdminController {
     return this.adminService.deleteSkin(id);
   }
 
+  @Post('skins/:id/upload-image')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
+          if (!existsSync(uploadsDir)) {
+            mkdirSync(uploadsDir, { recursive: true });
+          }
+          cb(null, uploadsDir);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `preview-${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Только изображения разрешены'), false);
+        }
+      },
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB для preview изображения
+    }),
+  )
+  async uploadSkinImage(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @UploadedFile() file?: { fieldname: string; filename: string; originalname: string; mimetype: string; size: number },
+  ) {
+    if (!user.isAdmin) {
+      throw new UnauthorizedException('Недостаточно прав');
+    }
+    
+    if (!file) {
+      throw new BadRequestException('Файл не загружен');
+    }
+    
+    const fileUrl = `/uploads/skins/${file.filename}`;
+    return this.adminService.updateSkin(id, { imageUrl: fileUrl });
+  }
+
   @Post('skins/:id/upload-textures')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(

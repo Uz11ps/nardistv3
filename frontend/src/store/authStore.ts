@@ -23,16 +23,19 @@ interface User {
 interface AuthState {
   user: User | null
   token: string | null
+  banReason: string | null
   init: () => Promise<void>
   login: () => Promise<void>
   loginAsGuest: () => Promise<void>
   logout: () => void
   updateUser: (userData: Partial<User>) => void
+  setBanReason: (reason: string | null) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: localStorage.getItem('token'),
+  banReason: null,
   
   init: async () => {
     const token = localStorage.getItem('token')
@@ -43,10 +46,21 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       const response = await apiClient.get('/auth/me')
-      set({ user: response.data, token })
-    } catch (error) {
+      set({ user: response.data, token, banReason: null })
+    } catch (error: any) {
+      // Проверяем, не забанен ли пользователь
+      if (error.response?.status === 401) {
+        const errorMessage = error.response?.data?.message || ''
+        if (errorMessage.includes('забанены') || errorMessage.includes('забанен')) {
+          const banMatch = errorMessage.match(/по причине:\s*(.+)/i)
+          const reason = banMatch ? banMatch[1] : errorMessage.replace(/Вы были забанены\s*/i, '')
+          localStorage.removeItem('token')
+          set({ user: null, token: null, banReason: reason })
+          return
+        }
+      }
       localStorage.removeItem('token')
-      set({ user: null, token: null })
+      set({ user: null, token: null, banReason: null })
     }
   },
 
@@ -86,7 +100,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { access_token, user } = response.data
 
       localStorage.setItem('token', access_token)
-      set({ token: access_token, user })
+      set({ token: access_token, user, banReason: null })
     } catch (error: any) {
       console.error('❌ Ошибка авторизации:', error)
       console.error('Статус:', error.response?.status)
@@ -96,6 +110,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (error.response?.status === 401) {
         const errorMessage = error.response?.data?.message || 'Ошибка авторизации Telegram'
         console.error('Детали ошибки 401:', errorMessage)
+        
+        // Проверяем, является ли ошибка баном
+        if (errorMessage.includes('забанены') || errorMessage.includes('забанен')) {
+          // Извлекаем причину из сообщения
+          const banMatch = errorMessage.match(/по причине:\s*(.+)/i)
+          const reason = banMatch ? banMatch[1] : errorMessage.replace(/Вы были забанены\s*/i, '')
+          set({ banReason: reason, user: null, token: null })
+          localStorage.removeItem('token')
+          const banError = new Error(errorMessage)
+          ;(banError as any).code = 'USER_BANNED'
+          throw banError
+        }
         
         const telegramError = new Error(errorMessage || 'Ошибка авторизации Telegram. Проверьте настройки бота и домена.')
         ;(telegramError as any).code = 'TELEGRAM_AUTH_ERROR'
@@ -166,6 +192,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set((state) => ({
       user: state.user ? { ...state.user, ...userData } : null,
     }))
+  },
+  
+  setBanReason: (reason: string | null) => {
+    set({ banReason: reason })
   },
 }))
 

@@ -21,6 +21,35 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
+// Interceptor для обработки ошибок (включая бан пользователя)
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Обрабатываем только ошибки 401 для пользовательских токенов (не админских)
+    if (error.response?.status === 401 && !localStorage.getItem('admin_token')) {
+      const errorMessage = error.response?.data?.message || ''
+      
+      // Проверяем, является ли ошибка баном
+      if (errorMessage.includes('забанены') || errorMessage.includes('забанен')) {
+        // Импортируем store динамически чтобы избежать циклических зависимостей
+        import('../store/authStore').then(({ useAuthStore }) => {
+          const { setBanReason } = useAuthStore.getState()
+          
+          // Извлекаем причину из сообщения
+          const banMatch = errorMessage.match(/по причине:\s*(.+)/i)
+          const reason = banMatch ? banMatch[1] : errorMessage.replace(/Вы были забанены\s*/i, '')
+          
+          // Удаляем токен и устанавливаем причину бана
+          localStorage.removeItem('token')
+          setBanReason(reason)
+        })
+      }
+    }
+    
+    return Promise.reject(error)
+  }
+)
+
 /**
  * Формирует полный URL для изображения
  * Если imageUrl уже полный URL - возвращает как есть

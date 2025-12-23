@@ -169,6 +169,12 @@ export class AuthService {
       }
     }
 
+    // Проверяем, забанен ли пользователь
+    if (user.isBanned) {
+      const reason = user.banReason || 'Нарушение правил';
+      throw new UnauthorizedException(`Вы были забанены по причине: ${reason}`);
+    }
+
     const payload = {
       sub: user.id,
       telegramId: user.telegramId,
@@ -219,7 +225,18 @@ export class AuthService {
   }
 
   async validateUser(payload: any) {
-    return await this.usersService.findOne(payload.sub);
+    const user = await this.usersService.findOne(payload.sub);
+    if (!user) {
+      return null;
+    }
+    
+    // Проверяем, забанен ли пользователь
+    if (user.isBanned) {
+      const reason = user.banReason || 'Нарушение правил';
+      throw new UnauthorizedException(`Вы были забанены по причине: ${reason}`);
+    }
+    
+    return user;
   }
 }
 

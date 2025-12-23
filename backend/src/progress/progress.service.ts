@@ -38,6 +38,24 @@ export class ProgressService {
     }
     return totalXP;
   }
+
+  /**
+   * Вычисляет уровень на основе общего XP
+   */
+  private getLevelFromTotalXP(totalXP: number): number {
+    if (totalXP <= 0) return 1;
+    
+    let level = 1;
+    while (level < this.MAX_LEVEL) {
+      const xpForNextLevel = this.getTotalXPForLevel(level + 1);
+      if (totalXP >= xpForNextLevel) {
+        level++;
+      } else {
+        break;
+      }
+    }
+    return level;
+  }
   private readonly ENERGY_RESTORE_INTERVAL = 30 * 60 * 1000; // 30 минут
   private readonly ENERGY_RESTORE_AMOUNT = 10; // 10 энергии за восстановление
   private readonly LIFE_RESTORE_INTERVAL = 4 * 60 * 60 * 1000; // 4 часа
@@ -54,26 +72,21 @@ export class ProgressService {
 
   async addXP(userId: string, amount: number): Promise<void> {
     const user = await this.usersService.findOne(userId);
-    if (user.level >= this.MAX_LEVEL) {
+    
+    // Используем реальный XP из базы данных (общий накопленный XP)
+    let currentXP = Number(user.xp || 0);
+    
+    // Если уровень уже максимальный, не добавляем XP
+    const currentLevel = this.getLevelFromTotalXP(currentXP);
+    if (currentLevel >= this.MAX_LEVEL) {
       return; // Максимальный уровень достигнут
     }
-    
-    // Текущий XP = сумма всех XP до текущего уровня
-    let currentXP = this.getTotalXPForLevel(user.level);
     
     // Добавляем полученный XP
     currentXP += amount;
     
-    // Вычисляем новый уровень
-    let newLevel = user.level;
-    while (newLevel < this.MAX_LEVEL) {
-      const xpForNextLevel = this.getTotalXPForLevel(newLevel + 1);
-      if (currentXP >= xpForNextLevel) {
-        newLevel++;
-      } else {
-        break;
-      }
-    }
+    // Вычисляем новый уровень на основе общего XP
+    const newLevel = this.getLevelFromTotalXP(currentXP);
     
     // Обновляем уровень и XP
     user.level = newLevel;
@@ -310,6 +323,21 @@ export class ProgressService {
   async getSkinWeightLimit(userId: string): Promise<number> {
     const enhancementLevel = await this.getEnhancementLevel(userId, EnhancementType.POWER);
     return 10 + (enhancementLevel * 5);
+  }
+
+  /**
+   * Синхронизирует уровень пользователя с его XP
+   * Используется для исправления рассинхронизации уровня и XP
+   */
+  async syncLevelFromXP(userId: string): Promise<void> {
+    const user = await this.usersService.findOne(userId);
+    const totalXP = Number(user.xp || 0);
+    const correctLevel = this.getLevelFromTotalXP(totalXP);
+    
+    if (user.level !== correctLevel) {
+      user.level = correctLevel;
+      await this.usersService['usersRepository'].save(user);
+    }
   }
 }
 

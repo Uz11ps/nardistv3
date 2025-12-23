@@ -18,6 +18,7 @@ import { Article } from '../academy/article.entity';
 import { Skin } from '../skins/skin.entity';
 import { UserSkin } from '../skins/user-skin.entity';
 import { Quest, QuestType, QuestTarget } from '../quests/quest.entity';
+import { QuestProgress } from '../quests/quest-progress.entity';
 import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
 import { ClanTreasuryTransaction } from '../clans/clan-treasury-transaction.entity';
@@ -55,6 +56,8 @@ export class AdminService implements OnModuleInit {
     private userSkinsRepository: Repository<UserSkin>,
     @InjectRepository(Quest)
     private questsRepository: Repository<Quest>,
+    @InjectRepository(QuestProgress)
+    private questProgressRepository: Repository<QuestProgress>,
     @InjectRepository(Clan)
     private clansRepository: Repository<Clan>,
     @InjectRepository(ClanMember)
@@ -250,31 +253,13 @@ export class AdminService implements OnModuleInit {
         throw new BadRequestException('Нельзя удалить администратора');
       }
 
-      // Удаляем все связанные данные пользователя
-      // Удаляем игры, где пользователь был игроком (каскадное удаление через БД)
-      const userGames = await this.gamesRepository.find({
-        where: [
-          { player1Id: userId },
-          { player2Id: userId },
-        ],
-        select: ['id'],
-      });
+      // Удаляем все связанные данные пользователя (КРОМЕ истории игр - игры и ходы остаются)
       
-      if (userGames.length > 0) {
-        const gameIds = userGames.map(g => g.id);
-        // Удаляем ходы через QueryBuilder
-        await this.movesRepository
-          .createQueryBuilder()
-          .delete()
-          .where('gameId IN (:...gameIds)', { gameIds })
-          .execute();
-        
-        // Удаляем игры
-        await this.gamesRepository
-          .createQueryBuilder()
-          .delete()
-          .where('id IN (:...gameIds)', { gameIds })
-          .execute();
+      // Удаляем подписки
+      try {
+        await this.subscriptionsRepository.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete subscriptions for user ${userId}:`, error);
       }
 
       // Удаляем рейтинги пользователя
@@ -307,6 +292,93 @@ export class AdminService implements OnModuleInit {
 
       // Удаляем членство в кланах
       await this.clanMembersRepository.delete({ userId });
+
+      // Удаляем прогресс квестов пользователя
+      try {
+        await this.questProgressRepository.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete quest progress for user ${userId}:`, error);
+      }
+
+      // Удаляем все остальные связанные данные через DataSource
+      const dataSource = this.usersRepository.manager.connection;
+      
+      // Удаляем здания города
+      try {
+        const buildingRepo = dataSource.getRepository('buildings');
+        await buildingRepo.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete buildings for user ${userId}:`, error);
+      }
+
+      // Удаляем прогресс тренировок
+      try {
+        const userTaskProgressRepo = dataSource.getRepository('user_task_progress');
+        await userTaskProgressRepo.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete user task progress for user ${userId}:`, error);
+      }
+
+      // Удаляем прогресс обучения
+      try {
+        const userTrainingProgressRepo = dataSource.getRepository('user_training_progress');
+        await userTrainingProgressRepo.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete user training progress for user ${userId}:`, error);
+      }
+
+      // Удаляем достижения
+      try {
+        const userAchievementRepo = dataSource.getRepository('user_achievements');
+        await userAchievementRepo.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete user achievements for user ${userId}:`, error);
+      }
+
+      // Удаляем слоты статей
+      try {
+        const articleSlotRepo = dataSource.getRepository('article_slots');
+        await articleSlotRepo.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete article slots for user ${userId}:`, error);
+      }
+
+      // Удаляем улучшения
+      try {
+        const enhancementRepo = dataSource.getRepository('enhancements');
+        await enhancementRepo.delete({ userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete enhancements for user ${userId}:`, error);
+      }
+
+      // Удаляем доходы от рефералов (где пользователь был реферером или рефералом)
+      try {
+        const referralEarningRepo = dataSource.getRepository('referral_earnings');
+        await referralEarningRepo.delete({ referrerId: userId });
+        await referralEarningRepo.delete({ referredUserId: userId });
+      } catch (error) {
+        this.logger.warn(`Failed to delete referral earnings for user ${userId}:`, error);
+      }
+
+      // Обнуляем ссылки на пользователя в матчах турниров (историю турниров оставляем)
+      try {
+        const tournamentMatchRepo = dataSource.getRepository('tournament_matches');
+        await tournamentMatchRepo.update({ player1Id: userId }, { player1Id: null });
+        await tournamentMatchRepo.update({ player2Id: userId }, { player2Id: null });
+        await tournamentMatchRepo.update({ winnerId: userId }, { winnerId: null });
+      } catch (error) {
+        this.logger.warn(`Failed to update tournament matches for user ${userId}:`, error);
+      }
+
+      // Обнуляем ссылки на пользователя в играх (историю игр оставляем)
+      // Теперь player1Id тоже nullable благодаря миграции
+      try {
+        await this.gamesRepository.update({ player1Id: userId }, { player1Id: null });
+        await this.gamesRepository.update({ player2Id: userId }, { player2Id: null });
+        await this.gamesRepository.update({ winnerId: userId }, { winnerId: null });
+      } catch (error) {
+        this.logger.warn(`Failed to update games for user ${userId}:`, error);
+      }
 
       // Удаляем самого пользователя
       await this.usersRepository.remove(user);
