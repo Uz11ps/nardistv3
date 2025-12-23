@@ -194,6 +194,42 @@ export class AuthService {
       
       console.log('👤 Создание гостевого пользователя:', { guestId });
       
+      // Проверяем, не существует ли уже пользователь с таким telegramId (на случай коллизии)
+      let existingUser = await this.usersService.findByTelegramId(guestId);
+      if (existingUser) {
+        console.log('⚠️ Пользователь с таким telegramId уже существует, используем существующего:', { userId: existingUser.id });
+        // Если пользователь уже существует и это гость, используем его
+        if (existingUser.isGuest) {
+          const payload = {
+            sub: existingUser.id,
+            telegramId: existingUser.telegramId,
+            username: existingUser.username,
+            isGuest: true,
+          };
+          const token = this.jwtService.sign(payload);
+          return {
+            access_token: token,
+            user: existingUser,
+          };
+        }
+        // Если это не гость, генерируем новый ID
+        const newGuestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        existingUser = await this.usersService.findByTelegramId(newGuestId);
+        if (existingUser && existingUser.isGuest) {
+          const payload = {
+            sub: existingUser.id,
+            telegramId: existingUser.telegramId,
+            username: existingUser.username,
+            isGuest: true,
+          };
+          const token = this.jwtService.sign(payload);
+          return {
+            access_token: token,
+            user: existingUser,
+          };
+        }
+      }
+      
       // Создаем гостевого пользователя
       const createUserDto: CreateUserDto = {
         telegramId: guestId,
@@ -204,8 +240,31 @@ export class AuthService {
         avatarUrl: '',
       };
       
-      const user = await this.usersService.create(createUserDto);
-      console.log('✅ Гостевой пользователь создан:', { userId: user.id, telegramId: user.telegramId });
+      let user: any;
+      try {
+        user = await this.usersService.create(createUserDto);
+        console.log('✅ Гостевой пользователь создан:', { userId: user.id, telegramId: user.telegramId });
+      } catch (createError: any) {
+        // Если ошибка уникальности telegramId, пробуем найти существующего гостя
+        if (createError.code === '23505' || createError.message?.includes('unique') || createError.message?.includes('duplicate')) {
+          console.log('⚠️ Коллизия telegramId, ищем существующего гостя');
+          existingUser = await this.usersService.findByTelegramId(guestId);
+          if (existingUser && existingUser.isGuest) {
+            const payload = {
+              sub: existingUser.id,
+              telegramId: existingUser.telegramId,
+              username: existingUser.username,
+              isGuest: true,
+            };
+            const token = this.jwtService.sign(payload);
+            return {
+              access_token: token,
+              user: existingUser,
+            };
+          }
+        }
+        throw createError;
+      }
       
       // Помечаем как гостя и пропускаем онбординг
       const updatedUser = await this.usersService.update(user.id, { 
@@ -217,22 +276,30 @@ export class AuthService {
       
       console.log('✅ Гостевой пользователь обновлен:', { userId: updatedUser.id, isGuest: updatedUser.isGuest });
 
+      // Проверяем, что пользователь действительно сохранен в БД
+      const verifyUser = await this.usersService.findOne(updatedUser.id);
+      if (!verifyUser) {
+        throw new Error('Пользователь не найден после создания');
+      }
+      console.log('✅ Пользователь подтвержден в БД:', { userId: verifyUser.id, isGuest: verifyUser.isGuest });
+
       const payload = {
-        sub: updatedUser.id,
-        telegramId: updatedUser.telegramId,
-        username: updatedUser.username,
+        sub: verifyUser.id,
+        telegramId: verifyUser.telegramId,
+        username: verifyUser.username,
         isGuest: true,
       };
 
       const token = this.jwtService.sign(payload);
-      console.log('✅ Токен создан для гостя:', { userId: updatedUser.id, tokenLength: token.length });
+      console.log('✅ Токен создан для гостя:', { userId: verifyUser.id, tokenLength: token.length, payloadSub: payload.sub });
 
       return {
         access_token: token,
-        user: updatedUser,
+        user: verifyUser,
       };
     } catch (error) {
       console.error('❌ Ошибка при создании гостевого пользователя:', error);
+      console.error('❌ Stack trace:', error.stack);
       throw error;
     }
   }
