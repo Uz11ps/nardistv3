@@ -246,18 +246,20 @@ export default function Game() {
       const currentUser = useAuthStore.getState().user
       const myId = currentUser?.id
       
-      // Загружаем скины каждого игрока напрямую
+      // Загружаем скины: для текущего пользователя используем /skins/selected (как в Inventory)
+      // Для других игроков используем /skins/user/:userId/selected
       const promises = [
-        apiClient.get(`/skins/user/${player1Id}/selected`).catch(() => ({ data: {} })),
-        player2Id ? apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} })) : Promise.resolve({ data: {} }),
+        myId === player1Id 
+          ? apiClient.get('/skins/selected').catch(() => ({ data: {} }))
+          : apiClient.get(`/skins/user/${player1Id}/selected`).catch(() => ({ data: {} })),
+        player2Id 
+          ? (myId === player2Id
+              ? apiClient.get('/skins/selected').catch(() => ({ data: {} }))
+              : apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} })))
+          : Promise.resolve({ data: {} }),
+        // Мои скины - всегда через /skins/selected
+        myId ? apiClient.get('/skins/selected').catch(() => ({ data: {} })) : Promise.resolve({ data: {} }),
       ]
-      
-      // Если я один из игроков, загружаем мои скины отдельно
-      if (myId && (myId === player1Id || myId === player2Id)) {
-        promises.push(apiClient.get(`/skins/user/${myId}/selected`).catch(() => ({ data: {} })))
-      } else {
-        promises.push(Promise.resolve({ data: {} }))
-      }
       
       const [player1SkinsRes, player2SkinsRes, mySkinsRes] = await Promise.all(promises)
       
@@ -276,6 +278,8 @@ export default function Game() {
         player1Board: player1Skins.board,
         player2Board: player2Skins.board,
         myBoard: mySkins.board,
+        player1BoardTexture: player1Skins.board?.boardTextureUrl,
+        myBoardTexture: mySkins.board?.boardTextureUrl,
       })
       
       // Устанавливаем скины каждого игрока отдельно
