@@ -49,6 +49,17 @@ export class SkinsController {
     return this.skinsService.getSelectedSkin(userId);
   }
 
+  @Post('update-defaults')
+  @UseGuards(JwtAuthGuard)
+  async updateDefaultSkins(@CurrentUser() user: any) {
+    // Только администраторы могут обновлять дефолтные скины
+    if (!user.isAdmin) {
+      throw new Error('Недостаточно прав');
+    }
+    await this.skinsService.updateDefaultSkins();
+    return { message: 'Дефолтные скины обновлены' };
+  }
+
   @Post('select')
   @UseGuards(JwtAuthGuard)
   async selectSkin(@CurrentUser() user: any, @Body('skinId') skinId: string) {

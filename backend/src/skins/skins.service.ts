@@ -145,6 +145,11 @@ export class SkinsService implements OnModuleInit {
     });
   }
 
+  async updateDefaultSkins(): Promise<void> {
+    // Принудительно обновляем дефолтные скины
+    await this.initializeDefaultSkins();
+  }
+
   async getSkinBonuses(userId: string): Promise<{ xpBonusPercent: number; moneyBonusPercent: number }> {
     // Получаем выбранные скины пользователя
     const selectedSkins = await this.userSkinsRepository.find({
