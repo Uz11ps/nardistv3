@@ -29,6 +29,7 @@ interface BuildingConfig {
   baseIncomePerHour: number
   maxAccumulation: number
   maxLevel: number
+  upgradeMultiplier?: number
 }
 
 
