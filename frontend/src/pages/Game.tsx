@@ -246,31 +246,68 @@ export default function Game() {
       const currentUser = useAuthStore.getState().user
       const myId = currentUser?.id
       
+      // Загружаем дефолтные классические скины для бота
+      const loadDefaultSkins = async () => {
+        try {
+          const allSkinsRes = await apiClient.get('/skins').catch(() => ({ data: [] }))
+          const allSkins = allSkinsRes.data || []
+          const defaultBoard = allSkins.find((s: any) => s.type === 'board' && s.isDefault)
+          const defaultDice = allSkins.find((s: any) => s.type === 'dice' && s.isDefault)
+          const defaultCheckers = allSkins.find((s: any) => s.type === 'checkers' && s.isDefault)
+          return {
+            board: defaultBoard || null,
+            dice: defaultDice || null,
+            checkers: defaultCheckers || null,
+          }
+        } catch (error) {
+          console.error('Failed to load default skins:', error)
+          return { board: null, dice: null, checkers: null }
+        }
+      }
+      
+      // Определяем, является ли player2 ботом (нет player2Id или это бот-игра)
+      const isBotPlayer2 = !player2Id || isBotGame || gameInfo?.type === 'vs_bot'
+      
       // Загружаем скины: для текущего пользователя используем /skins/selected (как в Inventory)
       // Для других игроков используем /skins/user/:userId/selected
+      // Для бота - всегда дефолтные классические скины
       const promises = [
         myId === player1Id 
           ? apiClient.get('/skins/selected').catch(() => ({ data: {} }))
           : apiClient.get(`/skins/user/${player1Id}/selected`).catch(() => ({ data: {} })),
-        player2Id 
-          ? (myId === player2Id
-              ? apiClient.get('/skins/selected').catch(() => ({ data: {} }))
-              : apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} })))
-          : Promise.resolve({ data: {} }),
+        isBotPlayer2
+          ? loadDefaultSkins().then(defaultSkins => ({ data: defaultSkins }))
+          : (player2Id
+              ? (myId === player2Id
+                  ? apiClient.get('/skins/selected').catch(() => ({ data: {} }))
+                  : apiClient.get(`/skins/user/${player2Id}/selected`).catch(() => ({ data: {} })))
+              : Promise.resolve({ data: {} })),
         // Мои скины - всегда через /skins/selected
         myId ? apiClient.get('/skins/selected').catch(() => ({ data: {} })) : Promise.resolve({ data: {} }),
       ]
       
       const [player1SkinsRes, player2SkinsRes, mySkinsRes] = await Promise.all(promises)
       
-      const player1Skins = player1SkinsRes.data || {}
-      const player2Skins = player2SkinsRes.data || {}
+      let player1Skins = player1SkinsRes.data || {}
+      let player2Skins = player2SkinsRes.data || {}
       const mySkins = mySkinsRes.data || {}
+      
+      // Если у бота нет скинов, устанавливаем дефолтные
+      if (isBotPlayer2) {
+        const defaultSkins = await loadDefaultSkins()
+        player2Skins = {
+          board: player2Skins.board || defaultSkins.board,
+          dice: player2Skins.dice || defaultSkins.dice,
+          checkers: player2Skins.checkers || defaultSkins.checkers,
+        }
+      }
       
       console.log('🎮 Game - Loaded player skins:', {
         player1Id,
         player2Id,
         myId,
+        isBotGame,
+        isBotPlayer2,
         isPlayer1: myId === player1Id,
         player1Skins,
         player2Skins,
@@ -279,6 +316,7 @@ export default function Game() {
         player2Board: player2Skins.board,
         myBoard: mySkins.board,
         player1BoardTexture: player1Skins.board?.boardTextureUrl,
+        player2BoardTexture: player2Skins.board?.boardTextureUrl,
         myBoardTexture: mySkins.board?.boardTextureUrl,
       })
       
