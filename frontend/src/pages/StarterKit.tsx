@@ -117,7 +117,7 @@ export default function StarterKit() {
             {/* 1000 NAR койнов */}
             <div className="starter-kit-item starter-kit-item-coin">
               <div className="starter-kit-item-image">
-                <div className="starter-kit-item-placeholder">💰</div>
+                <img src="/img/narcoin.png" alt="NAR" className="starter-kit-nar-icon" />
               </div>
               <div className="starter-kit-item-name">{starterKit.narCoin.toLocaleString()} NAR</div>
             </div>

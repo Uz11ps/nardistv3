@@ -46,6 +46,13 @@
   object-fit: contain;
 }
 
+.starter-kit-nar-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
+}
+
 .starter-kit-item-placeholder {
   font-size: 48px;
   line-height: 1;
