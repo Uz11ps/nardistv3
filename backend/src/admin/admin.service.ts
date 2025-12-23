@@ -1408,11 +1408,16 @@ export class AdminService implements OnModuleInit {
       }
       
       const user = await this.usersService.findOne(userId);
+      if (!user) {
+        throw new BadRequestException('Пользователь не найден');
+      }
+      
       const finalLevel = Math.max(1, Math.min(50, Math.floor(Number(level)))); // Ограничиваем от 1 до 50
       
       // При установке уровня вручную, синхронизируем XP с уровнем
       const totalXP = this.getTotalXPForLevel(finalLevel);
-      if (isNaN(totalXP) || totalXP < 0) {
+      if (isNaN(totalXP) || totalXP < 0 || !isFinite(totalXP)) {
+        this.logger.error(`Ошибка расчета XP для уровня ${finalLevel}: totalXP=${totalXP}`);
         throw new BadRequestException(`Ошибка расчета XP для уровня ${finalLevel}`);
       }
       
@@ -1431,7 +1436,10 @@ export class AdminService implements OnModuleInit {
       };
     } catch (error) {
       this.logger.error(`Error setting level for user ${userId}:`, error);
-      throw new BadRequestException(`Ошибка при установке уровня: ${error.message}`);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при установке уровня: ${error.message || 'Неизвестная ошибка'}`);
     }
   }
 
