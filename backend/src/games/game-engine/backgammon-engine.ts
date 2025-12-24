@@ -281,16 +281,24 @@ export class BackgammonEngine {
       }
 
       // Пробуем использовать каждый доступный кубик
-      const triedDice = new Set<number>();
+      // ВАЖНО: При дубле (4 одинаковых кубика) нужно использовать ВСЕ 4, не пропуская дубликаты
+      const isDoubles = remainingDice.length >= 2 && remainingDice.every(d => d === remainingDice[0]);
+      
+      // Для дублей используем все кубики по порядку (не пропускаем дубликаты)
+      // Для обычных ходов можем оптимизировать, пропуская одинаковые значения
+      const triedDice = isDoubles ? new Set<number>() : new Set<number>();
       
       for (let i = 0; i < remainingDice.length; i++) {
         const die = remainingDice[i];
         
-        // Пропускаем дубликаты в рамках одной итерации (но используем каждый кубик отдельно)
-        if (triedDice.has(die)) {
+        // Для обычных ходов пропускаем дубликаты в рамках одной итерации
+        // Для дублей НЕ пропускаем - используем каждый кубик отдельно
+        if (!isDoubles && triedDice.has(die)) {
           continue;
         }
-        triedDice.add(die);
+        if (!isDoubles) {
+          triedDice.add(die);
+        }
         
         const possibleMoves = this.getPossibleMovesForDie(currentState, die);
         

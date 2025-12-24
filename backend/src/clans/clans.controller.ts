@@ -118,7 +118,7 @@ export class ClansController {
   async captureTerritory(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body() body: { buildingType: string },
+    @Body() body: { districtCode: string },
   ) {
     // Проверяем что пользователь состоит в этом клане
     const userClan = await this.clansService.getUserClan(user.id);
@@ -131,9 +131,30 @@ export class ClansController {
       throw new BadRequestException('Только лидер и офицеры могут захватывать территории');
     }
 
-    // Используем CityService через ClansService
-    await this.clansService.captureTerritoryForClan(user.id, id, body.buildingType);
-    return { message: 'Территория успешно захвачена' };
+    // Используем новую логику захвата районов
+    await this.clansService.captureDistrictForClan(user.id, id, body.districtCode);
+    return { message: 'Район успешно захвачен' };
+  }
+
+  @Post(':id/districts/:districtCode/collect')
+  @UseGuards(JwtAuthGuard)
+  async collectDistrictIncome(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Param('districtCode') districtCode: string,
+  ) {
+    // Проверяем что пользователь состоит в этом клане
+    const userClan = await this.clansService.getUserClan(user.id);
+    if (!userClan || !userClan.clan || userClan.clan.id !== id) {
+      throw new BadRequestException('Вы должны состоять в этом клане');
+    }
+
+    // Проверяем права
+    if (!userClan.member || (userClan.member.role !== 'leader' && userClan.member.role !== 'officer')) {
+      throw new BadRequestException('Только лидер и офицеры могут собирать доход');
+    }
+
+    return this.clansService.collectDistrictIncome(id, districtCode);
   }
 }
 

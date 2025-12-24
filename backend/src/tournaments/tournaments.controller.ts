@@ -29,5 +29,10 @@ export class TournamentsController {
   async findOne(@Param('id') id: string) {
     return this.tournamentsService.findOne(id);
   }
+
+  @Get(':id/results')
+  async getResults(@Param('id') id: string) {
+    return this.tournamentsService.getTournamentResults(id);
+  }
 }
 

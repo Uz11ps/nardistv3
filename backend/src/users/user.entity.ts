@@ -65,6 +65,30 @@ export class User {
   @Column({ default: 'economy' })
   enhancement: string;
 
+  // Skill Points (SP) - очки прокачки
+  @Column({ type: 'int', default: 0 })
+  skillPoints: number; // Всего накопленных SP
+
+  @Column({ type: 'int', default: 0 })
+  freeSkillPoints: number; // Свободные SP (не распределенные)
+
+  // Распределение SP по веткам
+  @Column({ type: 'int', default: 0 })
+  economySp: number; // SP в ветке Экономика
+
+  @Column({ type: 'int', default: 0 })
+  energySp: number; // SP в ветке Энергия
+
+  @Column({ type: 'int', default: 0 })
+  livesSp: number; // SP в ветке Жизни
+
+  @Column({ type: 'int', default: 0 })
+  powerSp: number; // SP в ветке Сила
+
+  // Лицензия предпринимателя
+  @Column({ default: false })
+  hasBusinessLicense: boolean; // Есть ли лицензия предпринимателя
+
   // Энергия
   @Column({ type: 'int', default: 100 })
   energy: number;

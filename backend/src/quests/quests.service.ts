@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -7,6 +7,8 @@ import { Quest, QuestType, QuestTarget } from './quest.entity';
 import { QuestProgress } from './quest-progress.entity';
 import { ProgressService } from '../progress/progress.service';
 import { UsersService } from '../users/users.service';
+import { SkinsService } from '../skins/skins.service';
+import { BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class QuestsService {
@@ -20,6 +22,10 @@ export class QuestsService {
     private progressService: ProgressService,
     private configService: ConfigService,
     private usersService: UsersService,
+    @Inject(forwardRef(() => SkinsService))
+    private skinsService: SkinsService,
+    @Inject(forwardRef(() => TournamentTicketsService))
+    private ticketsService: TournamentTicketsService,
   ) {}
 
   async getActiveQuests(userId: string): Promise<any[]> {
@@ -104,6 +110,8 @@ export class QuestsService {
         description: quest.description,
         rewardNarCoin: Number(quest.rewardNarCoin),
         rewardXP: quest.rewardXP,
+        rewardSkin: quest.rewardSkin || null,
+        rewardTickets: quest.rewardTickets || 0,
         progress: progress.progress,
         target: quest.targetValue,
         completed: progress.completed,
@@ -140,18 +148,102 @@ export class QuestsService {
     return { quests: result, resetTime };
   }
 
-  async claimQuest(userId: string, questId: string): Promise<void> {
+  async claimQuest(userId: string, questId: string): Promise<{ message: string; rewards: any }> {
     const progress = await this.progressRepository.findOne({
       where: { userId, questId },
       relations: ['quest'],
     });
 
-    if (!progress || !progress.completed || progress.claimed) {
-      throw new Error('Задание не может быть получено');
+    if (!progress) {
+      throw new BadRequestException('Прогресс задания не найден');
     }
 
+    if (!progress.completed) {
+      throw new BadRequestException('Задание еще не выполнено');
+    }
+
+    if (progress.claimed) {
+      throw new BadRequestException('Награда уже получена');
+    }
+
+    const quest = progress.quest;
+    const rewards: any = {
+      narCoin: 0,
+      xp: 0,
+      skin: null,
+      tickets: 0,
+    };
+
+    // Выдаем NAR-coin
+    if (quest.rewardNarCoin && Number(quest.rewardNarCoin) > 0) {
+      const user = await this.usersService.findOne(userId);
+      const currentBalance = Number(user.narCoin || 0);
+      const rewardAmount = Number(quest.rewardNarCoin);
+      await this.usersService.update(userId, {
+        narCoin: currentBalance + rewardAmount,
+      });
+      rewards.narCoin = rewardAmount;
+      this.logger.log(`💰 Начислено NAR-coin пользователю ${userId}: +${rewardAmount} NAR`);
+    }
+
+    // Выдаем XP
+    if (quest.rewardXP && quest.rewardXP > 0) {
+      await this.progressService.addXP(userId, quest.rewardXP);
+      rewards.xp = quest.rewardXP;
+      this.logger.log(`⭐ Начислено XP пользователю ${userId}: +${quest.rewardXP} XP`);
+    }
+
+    // Выдаем скин (если указан)
+    if (quest.rewardSkin) {
+      try {
+        let skinId: string;
+        
+        // Если rewardSkin - это объект с id
+        if (typeof quest.rewardSkin === 'object' && quest.rewardSkin.id) {
+          skinId = quest.rewardSkin.id;
+        } 
+        // Если rewardSkin - это строка (ID скина)
+        else if (typeof quest.rewardSkin === 'string') {
+          skinId = quest.rewardSkin;
+        }
+        // Если rewardSkin - это объект с данными скина (создаем новый скин)
+        else if (typeof quest.rewardSkin === 'object') {
+          // TODO: Создать скин из данных (если нужно)
+          this.logger.warn(`⚠️ Неподдерживаемый формат rewardSkin для квеста ${questId}`);
+          skinId = null;
+        }
+
+        if (skinId) {
+          await this.skinsService.addSkinToUser(userId, skinId);
+          rewards.skin = { id: skinId };
+          this.logger.log(`🎨 Выдан скин пользователю ${userId}: ${skinId}`);
+        }
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при выдаче скина за квест ${questId}:`, error);
+        // Не прерываем процесс, просто логируем ошибку
+      }
+    }
+
+    // Выдаем билеты на турнир (если указаны)
+    if (quest.rewardTickets && quest.rewardTickets > 0) {
+      try {
+        await this.ticketsService.addTickets(userId, quest.rewardTickets, 'quest', questId);
+        rewards.tickets = quest.rewardTickets;
+        this.logger.log(`🎫 Начислено билетов пользователю ${userId}: +${quest.rewardTickets} билетов`);
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при выдаче билетов за квест ${questId}:`, error);
+        // Не прерываем процесс, просто логируем ошибку
+      }
+    }
+
+    // Помечаем награду как полученную
     progress.claimed = true;
     await this.progressRepository.save(progress);
+
+    return {
+      message: 'Награда успешно получена',
+      rewards,
+    };
   }
 
   async updateProgress(userId: string, target: QuestTarget | string, amount: number = 1): Promise<void> {

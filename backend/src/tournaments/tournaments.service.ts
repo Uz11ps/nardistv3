@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Not, IsNull } from 'typeorm';
 import { Tournament, TournamentFormat, TournamentStatus } from './tournament.entity';
@@ -8,9 +8,13 @@ import { GameMode, GameType } from '../games/game.entity';
 import { UsersService } from '../users/users.service';
 import { QuestsService } from '../quests/quests.service';
 import { QuestTarget } from '../quests/quest.entity';
+import { ProgressService } from '../progress/progress.service';
+import { TournamentTicketsService } from './tournament-tickets.service';
 
 @Injectable()
 export class TournamentsService {
+  private readonly logger = new Logger(TournamentsService.name);
+
   constructor(
     @InjectRepository(Tournament)
     private tournamentsRepository: Repository<Tournament>,
@@ -20,6 +24,9 @@ export class TournamentsService {
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
     private questsService: QuestsService,
+    @Inject(forwardRef(() => ProgressService))
+    private progressService: ProgressService,
+    private ticketsService: TournamentTicketsService,
   ) {}
 
   async create(tournamentData: Partial<Tournament>): Promise<Tournament> {
@@ -146,6 +153,147 @@ export class TournamentsService {
     return tournament;
   }
 
+  /**
+   * Получить таблицу результатов турнира
+   */
+  async getTournamentResults(tournamentId: string): Promise<any> {
+    const tournament = await this.findOne(tournamentId);
+    
+    if (tournament.format === TournamentFormat.BRACKET) {
+      return this.getBracketResults(tournament);
+    } else {
+      return this.getRoundRobinResults(tournament);
+    }
+  }
+
+  /**
+   * Результаты брекет-турнира
+   */
+  private async getBracketResults(tournament: Tournament): Promise<any> {
+    const matches = await this.matchesRepository.find({
+      where: { tournamentId: tournament.id },
+      relations: ['player1', 'player2'],
+      order: { round: 'ASC', matchNumber: 'ASC' },
+    });
+
+    // Группируем матчи по раундам
+    const rounds: any[] = [];
+    const roundsMap = new Map<number, any[]>();
+
+    matches.forEach(match => {
+      if (!roundsMap.has(match.round)) {
+        roundsMap.set(match.round, []);
+      }
+      roundsMap.get(match.round)!.push({
+        id: match.id,
+        round: match.round,
+        matchNumber: match.matchNumber,
+        player1: match.player1 ? {
+          id: match.player1.id,
+          username: match.player1.username,
+        } : null,
+        player2: match.player2 ? {
+          id: match.player2.id,
+          username: match.player2.username,
+        } : null,
+        winnerId: match.winnerId,
+        status: match.status,
+      });
+    });
+
+    // Преобразуем в массив раундов
+    roundsMap.forEach((matches, round) => {
+      rounds.push({
+        round,
+        matches: matches.sort((a, b) => a.matchNumber - b.matchNumber),
+      });
+    });
+
+    return {
+      tournamentId: tournament.id,
+      tournamentName: tournament.name,
+      format: tournament.format,
+      rounds: rounds.sort((a, b) => a.round - b.round),
+    };
+  }
+
+  /**
+   * Результаты кругового турнира (таблица с очками)
+   */
+  private async getRoundRobinResults(tournament: Tournament): Promise<any> {
+    const matches = await this.matchesRepository.find({
+      where: { tournamentId: tournament.id },
+      relations: ['player1', 'player2'],
+    });
+
+    // Подсчитываем очки для каждого участника
+    const standings = new Map<string, {
+      userId: string;
+      username: string;
+      wins: number;
+      losses: number;
+      draws: number;
+      points: number;
+    }>();
+
+    matches.forEach(match => {
+      if (!match.player1Id || !match.player2Id) return;
+
+      // Инициализируем участников если их еще нет
+      if (!standings.has(match.player1Id)) {
+        standings.set(match.player1Id, {
+          userId: match.player1Id,
+          username: match.player1?.username || 'Unknown',
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          points: 0,
+        });
+      }
+      if (!standings.has(match.player2Id)) {
+        standings.set(match.player2Id, {
+          userId: match.player2Id,
+          username: match.player2?.username || 'Unknown',
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          points: 0,
+        });
+      }
+
+      const player1 = standings.get(match.player1Id)!;
+      const player2 = standings.get(match.player2Id)!;
+
+      if (match.status === MatchStatus.FINISHED && match.winnerId) {
+        if (match.winnerId === match.player1Id) {
+          player1.wins++;
+          player1.points += 2; // Победа = 2 очка
+          player2.losses++;
+        } else {
+          player2.wins++;
+          player2.points += 2;
+          player1.losses++;
+        }
+      }
+    });
+
+    // Сортируем по очкам (убывание)
+    const standingsArray = Array.from(standings.values()).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return b.wins - a.wins; // При равных очках по победам
+    });
+
+    return {
+      tournamentId: tournament.id,
+      tournamentName: tournament.name,
+      format: tournament.format,
+      standings: standingsArray.map((s, index) => ({
+        ...s,
+        rank: index + 1,
+      })),
+    };
+  }
+
   async register(tournamentId: string, userId: string): Promise<void> {
     const tournament = await this.findOne(tournamentId);
     
@@ -184,17 +332,28 @@ export class TournamentsService {
       throw new BadRequestException('Вы уже зарегистрированы');
     }
 
-    // Списываем взнос, если он есть
+    // Проверяем взнос или билет
     if (tournament.entryFee > 0) {
-      const user = await this.usersService.findOne(userId);
-      const userBalance = Number(user.narCoin || 0);
-      const entryFee = Number(tournament.entryFee);
+      // Сначала проверяем, есть ли билет
+      const hasTicket = await this.ticketsService.useTicket(userId, tournamentId);
       
-      if (userBalance < entryFee) {
-        throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${entryFee}, доступно: ${userBalance}`);
+      if (!hasTicket) {
+        // Если билета нет, списываем NAR-coin
+        const user = await this.usersService.findOne(userId);
+        const userBalance = Number(user.narCoin || 0);
+        const entryFee = Number(tournament.entryFee);
+        
+        if (userBalance < entryFee) {
+          throw new BadRequestException(
+            `Недостаточно средств. Требуется: ${entryFee} NAR-coin или билет на турнир. Доступно: ${userBalance} NAR-coin`
+          );
+        }
+        
+        await this.usersService.update(userId, { narCoin: userBalance - entryFee });
+      } else {
+        // Билет использован успешно
+        this.logger.log(`🎫 Пользователь ${userId} использовал билет для участия в турнире ${tournamentId}`);
       }
-      
-      await this.usersService.update(userId, { narCoin: userBalance - entryFee });
     }
 
     // Создаем запись в matches для регистрации (пока без второго игрока)
@@ -237,16 +396,70 @@ export class TournamentsService {
   }
 
   private async createBracketMatches(tournament: Tournament): Promise<void> {
-    const participants = tournament.currentParticipants;
-    const rounds = Math.ceil(Math.log2(participants));
+    // Получаем всех зарегистрированных участников (player1Id из матчей round 0)
+    const registeredMatches = await this.matchesRepository.find({
+      where: {
+        tournamentId: tournament.id,
+        round: 0,
+        player1Id: Not(IsNull()),
+      },
+      order: { matchNumber: 'ASC' },
+    });
+
+    const participants = registeredMatches.map(m => m.player1Id).filter(id => id !== null);
+    const rounds = Math.ceil(Math.log2(participants.length));
+
+    // Удаляем старые матчи round 0 (они были созданы при регистрации)
+    // Создаем новые матчи первого раунда с парами участников
+    const matchesInFirstRound = Math.floor(participants.length / 2);
     
-    for (let round = 0; round < rounds; round++) {
-      const matchesInRound = Math.floor(participants / Math.pow(2, round + 1));
+    for (let matchNum = 0; matchNum < matchesInFirstRound; matchNum++) {
+      const player1Id = participants[matchNum * 2];
+      const player2Id = participants[matchNum * 2 + 1];
+      
+      // Обновляем существующий матч или создаем новый
+      const existingMatch = registeredMatches.find(m => m.matchNumber === matchNum);
+      if (existingMatch) {
+        existingMatch.player1Id = player1Id;
+        existingMatch.player2Id = player2Id;
+        existingMatch.status = MatchStatus.SCHEDULED;
+        await this.matchesRepository.save(existingMatch);
+      } else {
+        await this.matchesRepository.save({
+          tournamentId: tournament.id,
+          round: 0,
+          matchNumber: matchNum,
+          player1Id,
+          player2Id,
+          status: MatchStatus.SCHEDULED,
+        });
+      }
+    }
+
+    // Если нечетное количество участников, последний проходит автоматически (BYE)
+    if (participants.length % 2 === 1) {
+      const byePlayerId = participants[participants.length - 1];
+      await this.matchesRepository.save({
+        tournamentId: tournament.id,
+        round: 0,
+        matchNumber: matchesInFirstRound,
+        player1Id: byePlayerId,
+        player2Id: null,
+        status: MatchStatus.BYE,
+        winnerId: byePlayerId, // Автоматический проход
+      });
+    }
+
+    // Создаем пустые матчи для следующих раундов (будут заполнены победителями)
+    for (let round = 1; round < rounds; round++) {
+      const matchesInRound = Math.floor(participants.length / Math.pow(2, round + 1));
       for (let matchNum = 0; matchNum < matchesInRound; matchNum++) {
         await this.matchesRepository.save({
           tournamentId: tournament.id,
           round,
           matchNumber: matchNum,
+          player1Id: null, // Будет заполнено победителем предыдущего раунда
+          player2Id: null,
           status: MatchStatus.SCHEDULED,
         });
       }
@@ -292,6 +505,15 @@ export class TournamentsService {
     return this.matchesRepository.save(match);
   }
 
+  /**
+   * Найти турнирный матч по gameId
+   */
+  async findMatchByGameId(gameId: string): Promise<TournamentMatch | null> {
+    return this.matchesRepository.findOne({
+      where: { gameId },
+    });
+  }
+
   async finishMatch(matchId: string, winnerId: string): Promise<void> {
     const match = await this.matchesRepository.findOne({ where: { id: matchId } });
     if (!match) {
@@ -302,13 +524,177 @@ export class TournamentsService {
     match.status = MatchStatus.FINISHED;
     await this.matchesRepository.save(match);
 
+    // Начисляем XP за победу в турнире
+    // Базовый XP за победу в турнире выше, чем в обычной игре
+    // Формула: базовый XP * (1 + множитель за раунд)
+    const tournament = await this.findOne(match.tournamentId);
+    const baseTournamentXP = 200; // Базовый XP за победу в турнире
+    const roundMultiplier = match.round + 1; // Чем дальше раунд, тем больше XP
+    const winnerXP = baseTournamentXP * roundMultiplier;
+    
+    // Проигравший получает меньше XP
+    const loserId = match.player1Id === winnerId ? match.player2Id : match.player1Id;
+    const loserXP = Math.floor(baseTournamentXP * 0.5 * roundMultiplier);
+    
+    try {
+      if (this.progressService) {
+        await this.progressService.addXP(winnerId, winnerXP);
+        if (loserId) {
+          await this.progressService.addXP(loserId, loserXP);
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка при начислении XP за турнир:', error);
+    }
+
     await this.advanceTournament(match.tournamentId);
   }
 
   private async advanceTournament(tournamentId: string): Promise<void> {
     const tournament = await this.findOne(tournamentId);
+    
+    if (tournament.format === TournamentFormat.BRACKET) {
+      await this.advanceBracketTournament(tournament);
+    } else {
+      await this.advanceRoundRobinTournament(tournament);
+    }
+  }
+
+  /**
+   * Продвижение брекет-турнира: создание матчей следующего раунда с победителями
+   */
+  private async advanceBracketTournament(tournament: Tournament): Promise<void> {
+    // Получаем все завершенные матчи текущего раунда
+    const finishedMatches = await this.matchesRepository.find({
+      where: {
+        tournamentId: tournament.id,
+        status: MatchStatus.FINISHED,
+      },
+      order: { round: 'ASC', matchNumber: 'ASC' },
+    });
+
+    if (finishedMatches.length === 0) {
+      return; // Нет завершенных матчей
+    }
+
+    // Находим максимальный раунд с завершенными матчами
+    const maxFinishedRound = Math.max(...finishedMatches.map(m => m.round));
+    
+    // Получаем все матчи текущего раунда
+    const currentRoundMatches = await this.matchesRepository.find({
+      where: {
+        tournamentId: tournament.id,
+        round: maxFinishedRound,
+      },
+    });
+
+    // Проверяем, все ли матчи текущего раунда завершены
+    const allFinished = currentRoundMatches.every(m => 
+      m.status === MatchStatus.FINISHED || m.status === MatchStatus.BYE
+    );
+
+    if (!allFinished) {
+      return; // Еще есть незавершенные матчи в текущем раунде
+    }
+
+    // Если это финальный раунд, завершаем турнир
+    const totalRounds = Math.ceil(Math.log2(tournament.currentParticipants));
+    if (maxFinishedRound >= totalRounds - 1) {
+      // Определяем победителя турнира (победитель финального матча)
+      const finalMatch = currentRoundMatches.find(m => m.round === maxFinishedRound);
+      if (finalMatch && finalMatch.winnerId) {
+        tournament.status = TournamentStatus.FINISHED;
+        tournament.endDate = new Date();
+        await this.tournamentsRepository.save(tournament);
+      }
+      return;
+    }
+
+    // Создаем матчи следующего раунда с победителями
+    const nextRound = maxFinishedRound + 1;
+    const winners = currentRoundMatches
+      .filter(m => m.winnerId)
+      .map(m => m.winnerId)
+      .sort((a, b) => {
+        // Сортируем по matchNumber для правильного распределения
+        const matchA = currentRoundMatches.find(m => m.winnerId === a);
+        const matchB = currentRoundMatches.find(m => m.winnerId === b);
+        return (matchA?.matchNumber || 0) - (matchB?.matchNumber || 0);
+      });
+
+    const matchesInNextRound = Math.floor(winners.length / 2);
+    
+    for (let matchNum = 0; matchNum < matchesInNextRound; matchNum++) {
+      const player1Id = winners[matchNum * 2];
+      const player2Id = winners[matchNum * 2 + 1];
+      
+      // Ищем существующий матч следующего раунда или создаем новый
+      let nextMatch = await this.matchesRepository.findOne({
+        where: {
+          tournamentId: tournament.id,
+          round: nextRound,
+          matchNumber: matchNum,
+        },
+      });
+
+      if (nextMatch) {
+        nextMatch.player1Id = player1Id;
+        nextMatch.player2Id = player2Id;
+        nextMatch.status = MatchStatus.SCHEDULED;
+        await this.matchesRepository.save(nextMatch);
+      } else {
+        await this.matchesRepository.save({
+          tournamentId: tournament.id,
+          round: nextRound,
+          matchNumber: matchNum,
+          player1Id,
+          player2Id,
+          status: MatchStatus.SCHEDULED,
+        });
+      }
+    }
+
+    // Если нечетное количество победителей, последний проходит автоматически
+    if (winners.length % 2 === 1) {
+      const byePlayerId = winners[winners.length - 1];
+      let byeMatch = await this.matchesRepository.findOne({
+        where: {
+          tournamentId: tournament.id,
+          round: nextRound,
+          matchNumber: matchesInNextRound,
+        },
+      });
+
+      if (byeMatch) {
+        byeMatch.player1Id = byePlayerId;
+        byeMatch.player2Id = null;
+        byeMatch.status = MatchStatus.BYE;
+        byeMatch.winnerId = byePlayerId;
+        await this.matchesRepository.save(byeMatch);
+      } else {
+        await this.matchesRepository.save({
+          tournamentId: tournament.id,
+          round: nextRound,
+          matchNumber: matchesInNextRound,
+          player1Id: byePlayerId,
+          player2Id: null,
+          status: MatchStatus.BYE,
+          winnerId: byePlayerId,
+        });
+      }
+    }
+  }
+
+  /**
+   * Продвижение кругового турнира (ROUND_ROBIN)
+   */
+  private async advanceRoundRobinTournament(tournament: Tournament): Promise<void> {
+    // Для кругового турнира проверяем завершение всех матчей
     const unfinishedMatches = await this.matchesRepository.find({
-      where: { tournamentId, status: MatchStatus.IN_PROGRESS },
+      where: {
+        tournamentId: tournament.id,
+        status: In([MatchStatus.SCHEDULED, MatchStatus.IN_PROGRESS]),
+      },
     });
 
     if (unfinishedMatches.length === 0) {

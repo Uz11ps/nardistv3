@@ -1,11 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import { Game, GameMode, GameStatus, GameType } from './game.entity';
 import { GameMove } from './game-move.entity';
+import { PlayerMatchHistory } from './player-match-history.entity';
 import { BackgammonEngine } from './game-engine/backgammon-engine';
 import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
 import { ProgressService } from '../progress/progress.service';
+import { XpCalculatorService } from '../progress/xp-calculator.service';
 import { RatingsService } from '../ratings/ratings.service';
 import { UsersService } from '../users/users.service';
 import { BotService } from '../bot/bot.service';
@@ -14,6 +16,7 @@ import { QuestsService } from '../quests/quests.service';
 import { QuestTarget } from '../quests/quest.entity';
 import { TrainingService } from '../training/training.service';
 import { TaskType } from '../training/training-task.entity';
+import { TournamentsService } from '../tournaments/tournaments.service';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -25,10 +28,14 @@ export class GamesService {
     private gamesRepository: Repository<Game>,
     @InjectRepository(GameMove)
     private movesRepository: Repository<GameMove>,
+    @InjectRepository(PlayerMatchHistory)
+    private matchHistoryRepository: Repository<PlayerMatchHistory>,
     private backgammonEngine: BackgammonEngine,
     private longBackgammonEngine: LongBackgammonEngine,
     @Inject(forwardRef(() => ProgressService))
     private progressService: ProgressService,
+    @Inject(forwardRef(() => XpCalculatorService))
+    private xpCalculator: XpCalculatorService,
     @Inject(forwardRef(() => RatingsService))
     private ratingsService: RatingsService,
     @Inject(forwardRef(() => UsersService))
@@ -41,6 +48,8 @@ export class GamesService {
     private questsService: QuestsService,
     @Inject(forwardRef(() => TrainingService))
     private trainingService: TrainingService,
+    @Inject(forwardRef(() => TournamentsService))
+    private tournamentsService: TournamentsService,
   ) {}
 
   async create(
@@ -95,16 +104,16 @@ export class GamesService {
     let player1EnergyChecked = false;
     let player2EnergyChecked = false;
     
-    if (type !== GameType.VS_BOT) {
-      await this.progressService.checkEnergyForGame(player1Id, type);
+    // Проверяем энергию перед созданием игры (проверяем максимальный возможный расход)
+    const isTournament = type === GameType.TOURNAMENT;
+    if (type === GameType.VS_PLAYER || type === GameType.TOURNAMENT) {
+      await this.progressService.checkEnergyForGame(player1Id, type, isTournament);
       player1EnergyChecked = true;
-    }
-
-
-    // Проверка энергии для player2, если он есть
-    if (player2Id && type !== GameType.VS_BOT) {
-      await this.progressService.checkEnergyForGame(player2Id, type);
-      player2EnergyChecked = true;
+      
+      if (player2Id) {
+        await this.progressService.checkEnergyForGame(player2Id, type, isTournament);
+        player2EnergyChecked = true;
+      }
     }
 
     // Если игра на ставки, проверяем баланс и блокируем средства
@@ -203,21 +212,8 @@ export class GamesService {
     // Сохраняем игру в БД
     const savedGame = await this.gamesRepository.save(game);
 
-    // Только ПОСЛЕ успешного создания игры тратим энергию
-    try {
-      if (player1EnergyChecked) {
-        await this.progressService.consumeEnergyForGame(player1Id, type);
-      }
-      if (player2EnergyChecked && player2Id) {
-        await this.progressService.consumeEnergyForGame(player2Id, type);
-      }
-    } catch (error) {
-      // Если не удалось потратить энергию после создания игры, логируем ошибку
-      // но игру не удаляем, т.к. она уже создана
-      this.logger.error(`Ошибка при трате энергии после создания игры ${savedGame.id}:`, error);
-      // Можно также удалить игру, если энергия не потратилась, но это может быть проблематично
-      // Пока просто логируем
-    }
+    // Энергия теперь тратится при завершении матча, а не при создании
+    // Проверка энергии оставлена для валидации перед созданием игры
 
     return savedGame;
   }
@@ -908,6 +904,92 @@ export class GamesService {
   }
 
   /**
+   * Проверяет, является ли победа "Марсом" (разгромной)
+   * Марс = противник не вывел ни одной шашки (borneOff = 0)
+   */
+  private isMarsWin(game: Game): boolean {
+    if (!game.gameState || !game.winnerId) return false;
+    
+    const state = game.gameState;
+    const winnerIsPlayer1 = game.winnerId === game.player1Id;
+    
+    // Проверяем, вывел ли проигравший хотя бы одну шашку
+    if (winnerIsPlayer1) {
+      // Победил player1, проверяем player2
+      return (state.borneOff?.[1] || 0) === 0;
+    } else {
+      // Победил player2, проверяем player1
+      return (state.borneOff?.[0] || 0) === 0;
+    }
+  }
+
+  /**
+   * Получить количество повторных матчей между игроками за последние 24 часа
+   */
+  private async getRepeatMatchesCount(player1Id: string, player2Id: string): Promise<number> {
+    // Нормализуем пару (меньший ID всегда первый)
+    const [p1, p2] = player1Id < player2Id ? [player1Id, player2Id] : [player2Id, player1Id];
+    
+    const now = new Date();
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    // Ищем историю матчей
+    let history = await this.matchHistoryRepository.findOne({
+      where: { player1Id: p1, player2Id: p2 },
+    });
+    
+    // Если истории нет или первый матч был больше 24 часов назад, возвращаем 1 (текущий матч)
+    if (!history || history.firstMatchAt < dayAgo) {
+      return 1;
+    }
+    
+    // Возвращаем количество матчей + текущий
+    return history.matchCount + 1;
+  }
+
+  /**
+   * Обновить историю матчей между игроками
+   */
+  private async updateMatchHistory(player1Id: string, player2Id: string): Promise<void> {
+    // Нормализуем пару
+    const [p1, p2] = player1Id < player2Id ? [player1Id, player2Id] : [player2Id, player1Id];
+    
+    const now = new Date();
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    let history = await this.matchHistoryRepository.findOne({
+      where: { player1Id: p1, player2Id: p2 },
+    });
+    
+    if (!history) {
+      // Создаем новую запись
+      history = this.matchHistoryRepository.create({
+        player1Id: p1,
+        player2Id: p2,
+        matchCount: 1,
+        firstMatchAt: now,
+        lastMatchAt: now,
+      });
+    } else if (history.firstMatchAt < dayAgo) {
+      // Окно 24 часа истекло, сбрасываем счетчик
+      history.matchCount = 1;
+      history.firstMatchAt = now;
+      history.lastMatchAt = now;
+    } else {
+      // Увеличиваем счетчик
+      history.matchCount += 1;
+      history.lastMatchAt = now;
+    }
+    
+    await this.matchHistoryRepository.save(history);
+    
+    // Очищаем старые записи (старше 24 часов)
+    await this.matchHistoryRepository.delete({
+      firstMatchAt: LessThan(dayAgo),
+    });
+  }
+
+  /**
    * Обработка завершения игры: жизни, рейтинги, награды (ставки, опыт)
    */
   private async onGameFinished(game: Game): Promise<void> {
@@ -935,17 +1017,25 @@ export class GamesService {
     
     this.logger.log(`🎮 Обработка наград: winnerId=${game.winnerId}, loserId=${loserId}, stake=${game.stake}`);
 
-    // Обработка ставок - победитель получает обе ставки (с учетом комиссии 10%)
+    // Обработка ставок - победитель получает обе ставки (с учетом комиссии)
     if (game.stake > 0 && game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
       try {
         const stake = Number(game.stake);
         const totalPot = stake * 2;
-        const commission = Math.floor(totalPot * 0.05); // 5% комиссия
+        const baseCommission = Math.floor(totalPot * 0.15); // Базовая комиссия 15%
         
-        // Применяем снижение комиссии через экономику
+        // Применяем снижение комиссии через ветку Экономика и экипировку
         const winnerUser = await this.usersService.findOne(game.winnerId);
-        const economyLevel = winnerUser.enhancement === 'economy' ? 1 : 0; // TODO: получить уровень экономики
-        const finalCommission = this.progressService.calculateFeeWithEconomy(commission, economyLevel);
+        const econSp = winnerUser.economySp || 0;
+        
+        // Получаем бонус комиссии от экипировки (TODO: реализовать получение из скинов)
+        const gearCommissionBonus = 0; // Пока нет реализации бонусов от экипировки
+        
+        const finalCommission = this.progressService.calculateFeeWithEconomy(
+          baseCommission,
+          econSp,
+          gearCommissionBonus,
+        );
         const winnerReward = totalPot - finalCommission;
 
         // Получаем бонусы от скинов для денег
@@ -956,30 +1046,102 @@ export class GamesService {
         const winnerBalance = Number(winnerUser.narCoin);
         const newWinnerBalance = winnerBalance + finalWinnerReward;
         await this.usersService.update(game.winnerId, { narCoin: newWinnerBalance });
-        this.logger.log(`💰 Награда начислена победителю ${game.winnerId}: +${finalWinnerReward} NAR (базовая: ${winnerReward}, бонус: ${moneyBonus} (${winnerBonuses.moneyBonusPercent}%)), было ${winnerBalance}, стало ${newWinnerBalance}, комиссия: ${finalCommission} NAR`);
+        
+        // Пополняем казну города комиссией
+        await this.progressService.addToCityTreasury(finalCommission);
+        
+        this.logger.log(`💰 Награда начислена победителю ${game.winnerId}: +${finalWinnerReward} NAR (базовая: ${winnerReward}, бонус: ${moneyBonus} (${winnerBonuses.moneyBonusPercent}%)), было ${winnerBalance}, стало ${newWinnerBalance}, комиссия: ${finalCommission} NAR (в казну)`);
       } catch (error) {
         this.logger.error(`❌ Ошибка при начислении ставки: ${error.message}`, error.stack);
       }
     }
 
-    // Начисление опыта: победителю больше, проигравшему меньше
-    // Проигравший НЕ получает NAR, только победитель получает ставку (если есть)
+    // Начисление опыта по новой системе с множителями
     if (game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
       try {
-        const WINNER_XP = 100; // XP за победу
-        const LOSER_XP = 50; // XP за участие
+        // Получаем рейтинги игроков (нужен mode для получения рейтинга)
+        const winnerRating = await this.ratingsService.getRating(game.winnerId, game.mode) || 1000;
+        const loserRating = await this.ratingsService.getRating(loserId, game.mode) || 1000;
+        
+        // Получаем количество повторных матчей за 24 часа
+        const repeatMatchesCount = await this.getRepeatMatchesCount(game.winnerId, loserId);
         
         // Получаем бонусы от скинов
         const winnerBonuses = await this.skinsService.getSkinBonuses(game.winnerId);
         const loserBonuses = await this.skinsService.getSkinBonuses(loserId);
         
-        // Применяем бонусы к XP
-        const winnerXP = Math.floor(WINNER_XP * (1 + winnerBonuses.xpBonusPercent / 100));
-        const loserXP = Math.floor(LOSER_XP * (1 + loserBonuses.xpBonusPercent / 100));
+        // Извлекаем бонусы XP из скинов (преобразуем проценты в десятичные)
+        const winnerItemsXPBonus = [winnerBonuses.xpBonusPercent / 100];
+        const loserItemsXPBonus = [loserBonuses.xpBonusPercent / 100];
         
-        await this.progressService.addXP(game.winnerId, winnerXP);
-        await this.progressService.addXP(loserId, loserXP);
-        this.logger.log(`⭐ XP начислен: победитель ${game.winnerId} +${winnerXP} XP (бонус: ${winnerBonuses.xpBonusPercent}%), проигравший ${loserId} +${loserXP} XP (бонус: ${loserBonuses.xpBonusPercent}%)`);
+        // Проверяем "Марс" (разгромная победа - противник не вывел ни одной шашки)
+        const isMarsWin = this.isMarsWin(game);
+        
+        // Определяем тип игры для расчета XP (игры на NAR-coin имеют другой базовый XP)
+        const xpGameType = game.stake && game.stake > 0 ? GameType.VS_PLAYER : game.type;
+        
+        // Рассчитываем XP для победителя
+        const winnerXP = this.xpCalculator.calculateXP({
+          mode: game.mode,
+          gameType: game.type,
+          playerWon: true,
+          playerRating: winnerRating,
+          opponentRating: loserRating,
+          repeatMatchesCount: repeatMatchesCount,
+          itemsXPBonus: winnerItemsXPBonus,
+          isMarsWin: isMarsWin,
+          trustLevel: 'high', // TODO: Реализовать систему доверия
+          stake: Number(game.stake || 0),
+        });
+        
+        // Рассчитываем XP для проигравшего
+        const loserXP = this.xpCalculator.calculateXP({
+          mode: game.mode,
+          gameType: game.type,
+          playerWon: false,
+          playerRating: loserRating,
+          opponentRating: winnerRating,
+          repeatMatchesCount: repeatMatchesCount,
+          itemsXPBonus: loserItemsXPBonus,
+          isMarsWin: false,
+          trustLevel: 'high',
+          stake: Number(game.stake || 0),
+        });
+        
+        // Начисляем XP
+        const winnerResult = await this.progressService.addXP(game.winnerId, winnerXP);
+        const loserResult = await this.progressService.addXP(loserId, loserXP);
+        
+        // Тратим энергию при завершении матча согласно таблице 9 спецификации
+        const isTournament = game.type === GameType.TOURNAMENT;
+        try {
+          await this.progressService.consumeEnergyForFinishedGame(game.winnerId, game.type, true, isTournament);
+          await this.progressService.consumeEnergyForFinishedGame(loserId, game.type, false, isTournament);
+        } catch (error) {
+          this.logger.error(`❌ Ошибка при трате энергии после завершения игры: ${error.message}`);
+        }
+        
+        // Тратим жизнь при поражении (только для боевых матчей)
+        if (game.type === GameType.VS_PLAYER || game.type === GameType.TOURNAMENT) {
+          try {
+            await this.progressService.loseLifeOnDefeat(loserId);
+          } catch (error) {
+            this.logger.error(`❌ Ошибка при трате жизни после поражения: ${error.message}`);
+          }
+        }
+        
+        // Обновляем историю матчей для анти-фарма
+        await this.updateMatchHistory(game.winnerId, loserId);
+        
+        this.logger.log(`⭐ XP начислен: победитель ${game.winnerId} +${winnerXP} XP (Марс: ${isMarsWin}, повторы: ${repeatMatchesCount}), проигравший ${loserId} +${loserXP} XP`);
+        
+        // Если уровень повысился, логируем
+        if (winnerResult.levelUp) {
+          this.logger.log(`🎉 Победитель ${game.winnerId} повысил уровень до ${winnerResult.newLevel}!`);
+        }
+        if (loserResult.levelUp) {
+          this.logger.log(`🎉 Проигравший ${loserId} повысил уровень до ${loserResult.newLevel}!`);
+        }
         
         // Обновляем прогресс заданий обучения
         try {
@@ -1037,8 +1199,8 @@ export class GamesService {
       // Не прерываем выполнение, просто логируем ошибку
     }
 
-    // Обновление рейтингов (если RatingsService подключен)
-    if (game.type === GameType.VS_PLAYER && game.mode && game.winnerId && loserId) {
+    // Обновление рейтингов (для VS_PLAYER и TOURNAMENT игр)
+    if ((game.type === GameType.VS_PLAYER || game.type === GameType.TOURNAMENT) && game.mode && game.winnerId && loserId) {
       try {
         await this.ratingsService.updateRatings(
           game.winnerId,
@@ -1046,10 +1208,24 @@ export class GamesService {
           game.mode,
           false,
         );
-        this.logger.log(`📊 Рейтинги обновлены для игры ${game.id}`);
+        this.logger.log(`📊 Рейтинги обновлены для игры ${game.id} (тип: ${game.type})`);
       } catch (error) {
         // Игнорируем ошибки рейтинга, чтобы не сломать завершение игры
         this.logger.error(`❌ Ошибка при обновлении рейтингов: ${error.message}`);
+      }
+    }
+
+    // Завершение турнирного матча (если это турнирная игра)
+    if (game.type === GameType.TOURNAMENT && game.winnerId) {
+      try {
+        // Находим турнирный матч по gameId
+        const tournamentMatch = await this.tournamentsService.findMatchByGameId(game.id);
+        if (tournamentMatch) {
+          await this.tournamentsService.finishMatch(tournamentMatch.id, game.winnerId);
+          this.logger.log(`🏆 Турнирный матч ${tournamentMatch.id} завершен, победитель: ${game.winnerId}`);
+        }
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при завершении турнирного матча: ${error.message}`);
       }
     }
     

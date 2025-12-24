@@ -1,11 +1,15 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { AcademyService } from './academy.service';
+import { CourseTasksService } from './course-tasks.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('academy')
 export class AcademyController {
-  constructor(private readonly academyService: AcademyService) {}
+  constructor(
+    private readonly academyService: AcademyService,
+    private readonly courseTasksService: CourseTasksService,
+  ) {}
 
   @Get('courses')
   @UseGuards(JwtAuthGuard)
@@ -111,6 +115,61 @@ export class AcademyController {
     }
     await this.academyService.delete(id);
     return { message: 'Статья удалена' };
+  }
+
+  // Задания курсов
+  @Get('courses/:courseId/tasks')
+  @UseGuards(JwtAuthGuard)
+  async getCourseTasks(@CurrentUser() user: any, @Param('courseId') courseId: string) {
+    return this.courseTasksService.getCourseTasks(courseId, user.id);
+  }
+
+  @Post('courses/:courseId/tasks')
+  @UseGuards(JwtAuthGuard)
+  async createTask(
+    @CurrentUser() user: any,
+    @Param('courseId') courseId: string,
+    @Body() taskData: any,
+  ) {
+    if (!user.isAdmin) {
+      throw new Error('Недостаточно прав');
+    }
+    return this.courseTasksService.createTask(courseId, taskData);
+  }
+
+  @Post('tasks')
+  @UseGuards(JwtAuthGuard)
+  async createTaskWithoutCourse(
+    @CurrentUser() user: any,
+    @Body() taskData: { courseId?: string | null } & any,
+  ) {
+    if (!user.isAdmin) {
+      throw new Error('Недостаточно прав');
+    }
+    const { courseId, ...rest } = taskData;
+    return this.courseTasksService.createTask(courseId || null, rest);
+  }
+
+  @Post('tasks/:taskId/progress')
+  @UseGuards(JwtAuthGuard)
+  async updateTaskProgress(
+    @CurrentUser() user: any,
+    @Param('taskId') taskId: string,
+    @Body() progressData: any,
+  ) {
+    return this.courseTasksService.updateTaskProgress(user.id, taskId, progressData);
+  }
+
+  @Post('tasks/:taskId/claim')
+  @UseGuards(JwtAuthGuard)
+  async claimTaskReward(@CurrentUser() user: any, @Param('taskId') taskId: string) {
+    return this.courseTasksService.claimTaskReward(user.id, taskId);
+  }
+
+  @Get('onboarding/tasks')
+  @UseGuards(JwtAuthGuard)
+  async getOnboardingTasks(@CurrentUser() user: any) {
+    return this.courseTasksService.getOnboardingTasks(user.id);
   }
 }
 

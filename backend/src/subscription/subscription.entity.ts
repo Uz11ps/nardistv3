@@ -42,6 +42,12 @@ export class Subscription {
   @Column({ default: true })
   isActive: boolean;
 
+  /**
+   * ID транзакции оплаты (если оплачено через TON/USDT)
+   */
+  @Column({ nullable: true })
+  paymentTransactionId: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

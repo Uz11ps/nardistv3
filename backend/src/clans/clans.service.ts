@@ -528,6 +528,33 @@ export class ClansService {
     return { canCapture: true };
   }
 
+  /**
+   * Захват района кланом (новая логика)
+   */
+  async captureDistrictForClan(userId: string, clanId: string, districtCode: string): Promise<void> {
+    // Проверяем права на захват
+    const canCapture = await this.canClanCaptureTerritory(clanId);
+    if (!canCapture.canCapture) {
+      throw new BadRequestException(
+        canCapture.reason === 'cooldown'
+          ? `Клан может захватывать территории раз в день. Осталось: ${canCapture.cooldownRemaining} дней`
+          : 'Клан не может захватить территорию'
+      );
+    }
+
+    // Используем CityService для захвата района
+    await this.cityService.captureDistrict(clanId, districtCode);
+
+    // Обновляем время последнего захвата
+    const clan = await this.findOne(clanId);
+    clan.lastTerritoryCaptureAt = new Date();
+    await this.clansRepository.save(clan);
+  }
+
+  /**
+   * @deprecated Используйте captureDistrictForClan вместо этого
+   * Захват строения кланом (старая логика)
+   */
   async captureTerritoryForClan(userId: string, clanId: string, buildingType: string): Promise<void> {
     // Проверяем права на захват
     const canCapture = await this.canClanCaptureTerritory(clanId);
@@ -539,13 +566,34 @@ export class ClansService {
       );
     }
 
-    // Используем CityService для захвата
+    // Используем CityService для захвата (старая логика)
     await this.cityService.captureTerritory(clanId, buildingType);
 
     // Обновляем время последнего захвата
     const clan = await this.findOne(clanId);
     clan.lastTerritoryCaptureAt = new Date();
     await this.clansRepository.save(clan);
+  }
+
+  /**
+   * Получить доступные районы для захвата
+   */
+  async getAvailableDistrictsForCapture(clanId: string) {
+    return this.cityService.getAvailableDistrictsForCapture(clanId);
+  }
+
+  /**
+   * Получить захваченные районы клана
+   */
+  async getClanDistricts(clanId: string) {
+    return this.cityService.getClanDistricts(clanId);
+  }
+
+  /**
+   * Собрать доход с захваченного района
+   */
+  async collectDistrictIncome(clanId: string, districtCode: string) {
+    return this.cityService.collectDistrictIncome(clanId, districtCode);
   }
 }
 

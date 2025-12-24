@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subscription, SubscriptionPlan } from './subscription.entity';
 import { UsersService } from '../users/users.service';
+import { PaymentTransaction } from '../payment/payment-transaction.entity';
 
 @Injectable()
 export class SubscriptionService {
@@ -31,7 +32,11 @@ export class SubscriptionService {
     return true;
   }
 
-  async createSubscription(userId: string, plan: SubscriptionPlan): Promise<Subscription> {
+  async createSubscription(
+    userId: string,
+    plan: SubscriptionPlan,
+    paymentTransactionId?: string,
+  ): Promise<Subscription> {
     const months = plan === SubscriptionPlan.MONTH_1 ? 1 : plan === SubscriptionPlan.MONTH_3 ? 3 : 12;
     const startDate = new Date();
     const endDate = new Date();
@@ -49,6 +54,7 @@ export class SubscriptionService {
       startDate,
       endDate,
       isActive: true,
+      paymentTransactionId,
     });
 
     return this.subscriptionsRepository.save(subscription);

@@ -1,12 +1,19 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
+import { PaymentTransactionService } from '../payment/payment-transaction.service';
+import { WalletService } from '../payment/wallet.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SubscriptionPlan } from './subscription.entity';
+import { PaymentMethod } from '../payment/payment-transaction.entity';
 
 @Controller('subscription')
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) {}
+  constructor(
+    private readonly subscriptionService: SubscriptionService,
+    private readonly paymentTransactionService: PaymentTransactionService,
+    private readonly walletService: WalletService,
+  ) {}
 
   @Get('status')
   @UseGuards(JwtAuthGuard)
@@ -37,6 +44,98 @@ export class SubscriptionController {
   @UseGuards(JwtAuthGuard)
   async purchase(@CurrentUser() user: any, @Body() body: { plan: SubscriptionPlan }) {
     return this.subscriptionService.createSubscription(user.id, body.plan);
+  }
+
+  /**
+   * Создать транзакцию для оплаты подписки через TON/USDT
+   */
+  @Post('payment/create')
+  @UseGuards(JwtAuthGuard)
+  async createPayment(@CurrentUser() user: any, @Body() body: { plan: SubscriptionPlan; method?: PaymentMethod }) {
+    const method = body.method || PaymentMethod.TON;
+    const transaction = await this.paymentTransactionService.createSubscriptionTransaction(
+      user.id,
+      body.plan,
+      method,
+    );
+
+    // Получаем кошелек пользователя
+    const wallet = await this.walletService.getWallet(user.id);
+    if (!wallet) {
+      throw new Error('Кошелек не найден');
+    }
+
+    return {
+      transactionId: transaction.id,
+      walletAddress: wallet.address,
+      amount: transaction.amount,
+      comment: transaction.comment,
+      method: transaction.method,
+      status: transaction.status,
+      // Инструкции для пользователя
+      instructions: {
+        ton: `Отправьте ${transaction.amount} TON на адрес ${wallet.address} с комментарием: ${transaction.comment}`,
+        usdt: `Отправьте ${transaction.amount} USDT на адрес ${wallet.address} с комментарием: ${transaction.comment}`,
+      },
+    };
+  }
+
+  /**
+   * Подтвердить платеж (когда пользователь отправил транзакцию)
+   */
+  @Post('payment/:transactionId/confirm')
+  @UseGuards(JwtAuthGuard)
+  async confirmPayment(
+    @CurrentUser() user: any,
+    @Param('transactionId') transactionId: string,
+    @Body() body: { txHash: string },
+  ) {
+    const transaction = await this.paymentTransactionService.updateTransactionHash(transactionId, body.txHash);
+    
+    // Сразу проверяем статус транзакции
+    await this.paymentTransactionService.checkTransactionStatus(transactionId);
+
+    return {
+      message: 'Платеж подтвержден, проверяется в блокчейне',
+      transactionId: transaction.id,
+      status: transaction.status,
+    };
+  }
+
+  /**
+   * Проверить статус платежа
+   */
+  @Get('payment/:transactionId/status')
+  @UseGuards(JwtAuthGuard)
+  async getPaymentStatus(@CurrentUser() user: any, @Param('transactionId') transactionId: string) {
+    const transaction = await this.paymentTransactionService.getTransaction(transactionId);
+
+    // Проверяем, что транзакция принадлежит пользователю
+    if (transaction.userId !== user.id) {
+      throw new Error('Транзакция не принадлежит пользователю');
+    }
+
+    // Проверяем статус в блокчейне (если еще не завершена)
+    if (transaction.status !== 'completed' && transaction.status !== 'failed') {
+      await this.paymentTransactionService.checkTransactionStatus(transactionId);
+      // Получаем обновленную транзакцию
+      return await this.paymentTransactionService.getTransaction(transactionId);
+    }
+
+    return transaction;
+  }
+
+  /**
+   * Получить адрес кошелька пользователя
+   */
+  @Get('wallet')
+  @UseGuards(JwtAuthGuard)
+  async getWallet(@CurrentUser() user: any) {
+    const wallet = await this.walletService.getOrCreateWallet(user.id);
+    return {
+      address: wallet.address,
+      balance: await this.walletService.getWalletBalance(user.id),
+    };
   }
 
   @Get('city-autobuild/status')

@@ -39,10 +39,13 @@ import { NotificationTemplate } from './notification-template.entity';
 import { InactiveUsersService } from './inactive-users.service';
 import { ImageProcessorService } from './image-processor.service';
 import { QuestProgress } from '../quests/quest-progress.entity';
+import { PaymentModule } from '../payment/payment.module';
+import { UserWallet } from '../payment/user-wallet.entity';
+import { PaymentTransaction } from '../payment/payment-transaction.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate, UserWallet, PaymentTransaction]),
     ScheduleModule.forRoot(),
     AuthModule,
     JwtModule.registerAsync({
@@ -65,6 +68,7 @@ import { QuestProgress } from '../quests/quest-progress.entity';
     SubscriptionModule,
     NotificationsModule,
     ProgressModule,
+    forwardRef(() => PaymentModule),
   ],
   controllers: [AdminController],
   providers: [AdminService, InactiveUsersService, ImageProcessorService],

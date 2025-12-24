@@ -3,10 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
 import { Building } from './building.entity';
 import { BuildingConfig } from './building-config.entity';
+import { DistrictConfig } from './district-config.entity';
+import { DistrictCapture } from './district-capture.entity';
+import { District } from '../clans/clan.entity';
 import { UsersService } from '../users/users.service';
 import { ClansService } from '../clans/clans.service';
 import { Clan } from '../clans/clan.entity';
 import { User } from '../users/user.entity';
+import { ProgressionBranchesService } from '../progress/progression-branches.service';
 
 @Injectable()
 export class CityService {
@@ -15,6 +19,10 @@ export class CityService {
     private buildingsRepository: Repository<Building>,
     @InjectRepository(BuildingConfig)
     private buildingConfigsRepository: Repository<BuildingConfig>,
+    @InjectRepository(DistrictConfig)
+    private districtConfigsRepository: Repository<DistrictConfig>,
+    @InjectRepository(DistrictCapture)
+    private districtCapturesRepository: Repository<DistrictCapture>,
     @InjectRepository(Clan)
     private clansRepository: Repository<Clan>,
     @InjectRepository(User)
@@ -22,6 +30,8 @@ export class CityService {
     private usersService: UsersService,
     @Inject(forwardRef(() => ClansService))
     private clansService: ClansService,
+    @Inject(forwardRef(() => ProgressionBranchesService))
+    private branchesService: ProgressionBranchesService,
   ) {}
 
   /**
@@ -105,8 +115,9 @@ export class CityService {
     const newBalance = Number(user.narCoin) - price;
     await this.usersService.update(userId, { narCoin: newBalance });
 
-    // Рассчитываем доход для уровня 1
-    const incomePerHour = Number(config.baseIncomePerHour);
+    // Рассчитываем доход для уровня 1: baseIncomePerHour * 1.2^level (где level = 1)
+    // Для уровня 1: baseIncomePerHour * 1.2^1 = baseIncomePerHour * 1.2
+    const incomePerHour = Math.floor(Number(config.baseIncomePerHour) * Math.pow(1.2, 1));
 
     // Создаем строение
     const building = this.buildingsRepository.create({
@@ -184,6 +195,7 @@ export class CityService {
 
   /**
    * Сбор накопленного дохода
+   * Применяет бонус пассивного дохода из ветки Экономика
    */
   async collectIncome(userId: string, buildingId: string) {
     const building = await this.buildingsRepository.findOne({
@@ -194,14 +206,24 @@ export class CityService {
       throw new NotFoundException('Строение не найдено');
     }
 
+    // Получаем пользователя для расчета бонуса пассивного дохода
+    const user = await this.usersService.findOne(userId);
+
     // Рассчитываем накопленный доход
     const now = new Date();
     const lastCollection = building.lastIncomeCollection || building.createdAt;
     const hoursPassed = (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60);
 
     // Если строение захвачено кланом, доход уменьшается на 50%
-    const incomeMultiplier = building.capturedByClanId ? 0.5 : 1.0;
-    const incomePerHour = Number(building.incomePerHour) * incomeMultiplier;
+    const captureMultiplier = building.capturedByClanId ? 0.5 : 1.0;
+    
+    // Применяем бонус пассивного дохода из ветки Экономика
+    const passiveIncomeMultiplier = this.branchesService.calculatePassiveIncomeMultiplier(
+      user.economySp || 0
+    );
+    
+    const baseIncomePerHour = Number(building.incomePerHour);
+    const incomePerHour = baseIncomePerHour * captureMultiplier * passiveIncomeMultiplier;
     
     const incomeToAdd = Math.floor(incomePerHour * hoursPassed);
     const newAccumulated = Number(building.accumulatedIncome) + incomeToAdd;
@@ -220,7 +242,6 @@ export class CityService {
     await this.buildingsRepository.save(building);
 
     // Добавляем доход игроку
-    const user = await this.usersService.findOne(userId);
     const newBalance = Number(user.narCoin) + finalIncome;
     await this.usersService.update(userId, { narCoin: newBalance });
 
@@ -231,12 +252,211 @@ export class CityService {
     return {
       collected: finalIncome,
       newBalance: newBalance,
+      passiveIncomeBonus: passiveIncomeMultiplier > 1 ? `${((passiveIncomeMultiplier - 1) * 100).toFixed(1)}%` : '0%',
     };
   }
 
   /**
-   * Захват строения кланом
-   * Захватывает у случайных игроков строения указанного типа
+   * Захват района кланом
+   * Захватывает район (district) вместо строений
+   */
+  async captureDistrict(clanId: string, districtCode: string) {
+    // Проверяем, что район существует
+    const districtConfig = await this.districtConfigsRepository.findOne({
+      where: { code: districtCode },
+    });
+
+    if (!districtConfig) {
+      throw new NotFoundException('Район не найден');
+    }
+
+    // Проверяем, не захвачен ли уже район другим кланом
+    const existingCapture = await this.districtCapturesRepository.findOne({
+      where: { districtCode },
+      order: { capturedAt: 'DESC' },
+    });
+
+    if (existingCapture && existingCapture.capturedByClanId !== clanId) {
+      // Проверяем, не истек ли срок захвата
+      if (existingCapture.expiresAt && existingCapture.expiresAt > new Date()) {
+        throw new BadRequestException('Район уже захвачен другим кланом');
+      }
+    }
+
+    // Получаем клан
+    const clan = await this.clansService.findOne(clanId);
+
+    // Если район уже захвачен этим кланом, обновляем время захвата
+    if (existingCapture && existingCapture.capturedByClanId === clanId) {
+      const now = new Date();
+      // Захват на 24 часа
+      const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      existingCapture.capturedAt = now;
+      existingCapture.expiresAt = expiresAt;
+      await this.districtCapturesRepository.save(existingCapture);
+
+      // Обновляем ownedDistricts в клане
+      const ownedDistricts = (clan.ownedDistricts || []) as District[];
+      if (!ownedDistricts.includes(districtCode as District)) {
+        ownedDistricts.push(districtCode as District);
+        clan.ownedDistricts = ownedDistricts;
+        await this.clansRepository.save(clan);
+      }
+
+      return {
+        districtCode,
+        capturedAt: now,
+        expiresAt,
+        message: 'Захват района продлен',
+      };
+    }
+
+    // Создаем новый захват
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 часа
+
+    const capture = this.districtCapturesRepository.create({
+      districtCode,
+      capturedByClanId: clanId,
+      capturedAt: now,
+      expiresAt,
+      totalIncomeCollected: '0',
+      lastIncomeCollection: null,
+    });
+
+    await this.districtCapturesRepository.save(capture);
+
+    // Обновляем ownedDistricts в клане
+    const ownedDistricts = (clan.ownedDistricts || []) as District[];
+    if (!ownedDistricts.includes(districtCode as District)) {
+      ownedDistricts.push(districtCode as District);
+      clan.ownedDistricts = ownedDistricts;
+      await this.clansRepository.save(clan);
+    }
+
+    return {
+      districtCode,
+      capturedAt: now,
+      expiresAt,
+      message: 'Район успешно захвачен',
+    };
+  }
+
+  /**
+   * Получить захваченные районы клана
+   */
+  async getClanDistricts(clanId: string) {
+    const captures = await this.districtCapturesRepository.find({
+      where: { capturedByClanId: clanId },
+      order: { capturedAt: 'DESC' },
+    });
+
+    const districts = await Promise.all(
+      captures.map(async (capture) => {
+        const config = await this.districtConfigsRepository.findOne({
+          where: { code: capture.districtCode },
+        });
+
+        return {
+          districtCode: capture.districtCode,
+          districtName: config?.name || capture.districtCode,
+          capturedAt: capture.capturedAt,
+          expiresAt: capture.expiresAt,
+          totalIncomeCollected: Number(capture.totalIncomeCollected),
+          baseIncomePerDay: config ? Number(config.baseIncomePerDay) : 0,
+        };
+      }),
+    );
+
+    return districts;
+  }
+
+  /**
+   * Собрать доход с захваченного района
+   */
+  async collectDistrictIncome(clanId: string, districtCode: string) {
+    const capture = await this.districtCapturesRepository.findOne({
+      where: { districtCode, capturedByClanId: clanId },
+    });
+
+    if (!capture) {
+      throw new NotFoundException('Район не захвачен вашим кланом');
+    }
+
+    const districtConfig = await this.districtConfigsRepository.findOne({
+      where: { code: districtCode },
+    });
+
+    if (!districtConfig) {
+      throw new NotFoundException('Конфигурация района не найдена');
+    }
+
+    const now = new Date();
+    const lastCollection = capture.lastIncomeCollection || capture.capturedAt;
+    const daysPassed = (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60 * 24);
+
+    const baseIncomePerDay = Number(districtConfig.baseIncomePerDay);
+    const incomeToAdd = Math.floor(baseIncomePerDay * daysPassed);
+
+    if (incomeToAdd <= 0) {
+      return {
+        collected: 0,
+        message: 'Доход еще не накоплен',
+      };
+    }
+
+    // Обновляем захват
+    capture.totalIncomeCollected = (Number(capture.totalIncomeCollected) + incomeToAdd).toString();
+    capture.lastIncomeCollection = now;
+    await this.districtCapturesRepository.save(capture);
+
+    // Добавляем доход в казну клана
+    const clan = await this.clansService.findOne(clanId);
+    const currentTreasury = Number(clan.treasury || 0);
+    clan.treasury = (currentTreasury + incomeToAdd).toString();
+    await this.clansRepository.save(clan);
+
+    return {
+      collected: incomeToAdd,
+      newTreasury: Number(clan.treasury),
+    };
+  }
+
+  /**
+   * Получить все доступные районы для захвата
+   */
+  async getAvailableDistrictsForCapture(clanId: string) {
+    const allDistricts = await this.districtConfigsRepository.find({
+      where: { isActive: true },
+      order: { order: 'ASC' },
+    });
+
+    const captures = await this.districtCapturesRepository.find({
+      where: { capturedByClanId: Not(clanId) },
+    });
+
+    const now = new Date();
+    const activeCaptures = captures.filter(
+      (c) => !c.expiresAt || c.expiresAt > now,
+    );
+
+    const capturedCodes = new Set(activeCaptures.map((c) => c.districtCode));
+
+    return allDistricts.map((district) => ({
+      code: district.code,
+      name: district.name,
+      description: district.description,
+      icon: district.icon,
+      image: district.image,
+      baseIncomePerDay: Number(district.baseIncomePerDay),
+      isCaptured: capturedCodes.has(district.code),
+      capturedBy: activeCaptures.find((c) => c.districtCode === district.code)?.capturedByClanId || null,
+    }));
+  }
+
+  /**
+   * @deprecated Используйте captureDistrict вместо этого
+   * Захват строения кланом (старая логика - оставлена для обратной совместимости)
    */
   async captureTerritory(clanId: string, buildingType: string) {
     // Получаем конфигурацию строения

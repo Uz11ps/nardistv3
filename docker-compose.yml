@@ -51,6 +51,9 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       BACKEND_PORT: ${BACKEND_PORT:-3000}
       DOMAIN: ${DOMAIN:-nardist.site}
+      TON_API_URL: ${TON_API_URL:-https://toncenter.com/api/v2}
+      TON_API_KEY: ${TON_API_KEY:-}
+      WALLET_ENCRYPTION_KEY: ${WALLET_ENCRYPTION_KEY}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}

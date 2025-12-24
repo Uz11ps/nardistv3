@@ -36,6 +36,10 @@ import { Notification } from '../notifications/notification.entity';
 import { UserMaterial } from '../academy/user-material.entity';
 import { NotificationTemplate, NotificationTemplateType } from './notification-template.entity';
 import { SystemSettings } from './system-settings.entity';
+import { WalletService } from '../payment/wallet.service';
+import { PaymentTransactionService } from '../payment/payment-transaction.service';
+import { UserWallet } from '../payment/user-wallet.entity';
+import { PaymentTransaction } from '../payment/payment-transaction.entity';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -84,6 +88,10 @@ export class AdminService implements OnModuleInit {
     private systemSettingsRepository: Repository<SystemSettings>,
     @InjectRepository(NotificationTemplate)
     private notificationTemplatesRepository: Repository<NotificationTemplate>,
+    @InjectRepository(UserWallet)
+    private walletsRepository: Repository<UserWallet>,
+    @InjectRepository(PaymentTransaction)
+    private paymentTransactionsRepository: Repository<PaymentTransaction>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
     @Inject(forwardRef(() => AcademyService))
@@ -97,6 +105,8 @@ export class AdminService implements OnModuleInit {
     private progressService: ProgressService,
     private configService: ConfigService,
     private notificationsService: NotificationsService,
+    private walletService: WalletService,
+    private paymentTransactionService: PaymentTransactionService,
   ) {}
 
   async getStats() {
@@ -1519,6 +1529,65 @@ export class AdminService implements OnModuleInit {
     user.energy = user.maxEnergy;
     user.lives = user.maxLives;
     return this.usersRepository.save(user);
+  }
+
+  /**
+   * Получить все кошельки пользователей
+   */
+  async getAllWallets(): Promise<any[]> {
+    const wallets = await this.walletService.getAllWallets();
+    return wallets.map(w => ({
+      id: w.id,
+      userId: w.userId,
+      username: w.user?.username || 'Unknown',
+      address: w.address,
+      walletType: w.walletType,
+      isActive: w.isActive,
+      createdAt: w.createdAt,
+      balance: 0, // Можно добавить получение баланса
+    }));
+  }
+
+  /**
+   * Получить расшифрованный приватный ключ кошелька (только для админа)
+   */
+  async getWalletPrivateKey(walletId: string): Promise<{ privateKey: string; address: string }> {
+    const wallet = await this.walletsRepository.findOne({ where: { id: walletId } });
+    if (!wallet) {
+      throw new NotFoundException('Кошелек не найден');
+    }
+
+    const privateKey = await this.walletService.getDecryptedPrivateKey(walletId);
+    return {
+      privateKey,
+      address: wallet.address,
+    };
+  }
+
+  /**
+   * Получить транзакции пользователя
+   */
+  async getUserTransactions(userId: string): Promise<any[]> {
+    return this.paymentTransactionService.getUserTransactions(userId);
+  }
+
+  /**
+   * Получить все транзакции
+   */
+  async getAllTransactions(limit: number = 100): Promise<any[]> {
+    return this.paymentTransactionsRepository.find({
+      relations: ['user', 'wallet', 'subscription'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Проверить статус транзакции в блокчейне
+   */
+  async checkTransactionStatus(transactionId: string): Promise<any> {
+    const transaction = await this.paymentTransactionService.checkTransactionStatus(transactionId);
+    return transaction;
   }
 
   async giveSubscription(userId: string, plan: string, months?: number): Promise<any> {

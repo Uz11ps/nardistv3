@@ -96,9 +96,11 @@ export class RatingsService {
         username: rating.user.username,
         level: rating.user.level || 1,
         rating: rating.elo,
+        badge: this.getBadge(rating.elo),
       } : null,
       wins: rating.wins || 0,
       losses: rating.losses || 0,
+      draws: rating.draws || 0,
     }));
   }
 

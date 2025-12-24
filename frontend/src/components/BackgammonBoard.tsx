@@ -191,6 +191,7 @@ export default function BackgammonBoard({
   }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey]) // Используем стабилизированные ключи
   
   // Определение позиции для кубиков
+  // Мои кубики на моей части доски, его кубики на его части
   useEffect(() => {
     if (!containerRef.current) return
     
@@ -199,22 +200,28 @@ export default function BackgammonBoard({
     const width = rect.width
     const height = rect.height
     
-    const isMyTurnNow = isMyTurn && canMove
+    // Для player1 (белые): кубики внизу слева
+    // Для player2 (черные): кубики вверху справа
+    // Показываем кубики текущего игрока на его части доски
     
-    if (isMyTurnNow) {
+    const currentPlayerIsMe = (currentPlayer === 0 && isPlayer1) || (currentPlayer === 1 && !isPlayer1)
+    
+    if (isPlayer1) {
+      // Мои кубики (player1) - внизу слева, его кубики (player2) - вверху справа
       setDice3DPosition({
-        x: width * 0.25,
-        y: height * 0.5,
+        x: currentPlayerIsMe ? width * 0.15 : width * 0.85,
+        y: currentPlayerIsMe ? height * 0.85 : height * 0.15,
         size: Math.min(width, height) * 0.08,
       })
     } else {
+      // Мои кубики (player2) - вверху справа, его кубики (player1) - внизу слева
       setDice3DPosition({
-        x: width * 0.75,
-        y: height * 0.5,
+        x: currentPlayerIsMe ? width * 0.85 : width * 0.15,
+        y: currentPlayerIsMe ? height * 0.15 : height * 0.85,
         size: Math.min(width, height) * 0.08,
       })
     }
-  }, [isMyTurn, canMove])
+  }, [isPlayer1, currentPlayer, isMyTurn, canMove])
   
   // Вспомогательная функция для получения координат точки
   const getPointCoordinates = useCallback((pointIndex: number, canvas: HTMLCanvasElement) => {
@@ -1185,6 +1192,67 @@ export default function BackgammonBoard({
   const diceArray = dice 
     ? (Array.isArray(dice) ? dice : ('die1' in dice && 'die2' in dice ? [dice.die1, dice.die2] : null))
     : null
+
+  // Определяем использованные кубики из pendingMoves
+  // Используем Set для отслеживания индексов использованных кубиков (для дублей)
+  const usedDiceIndices = useMemo(() => {
+    if (!diceArray || !pendingMoves || pendingMoves.length === 0) {
+      return new Set<number>()
+    }
+    
+    const usedIndices = new Set<number>()
+    const diceCopy = [...diceArray]
+    
+    pendingMoves.forEach(move => {
+      // Если есть steps, используем их
+      if ((move as any).steps && Array.isArray((move as any).steps)) {
+        (move as any).steps.forEach((step: any) => {
+          const idx = diceCopy.findIndex((d, i) => d === step.die && !usedIndices.has(i))
+          if (idx !== -1) {
+            usedIndices.add(idx)
+            diceCopy[idx] = -1 // Помечаем как использованный
+          }
+        })
+      } else {
+        // Ищем кубик по значению
+        const idx = diceCopy.findIndex((d, i) => d === move.die && !usedIndices.has(i))
+        if (idx !== -1) {
+          usedIndices.add(idx)
+          diceCopy[idx] = -1
+        } else if (gameMode === 'long') {
+          // Для длинных нард пробуем найти сумму
+          for (let i = 0; i < diceCopy.length; i++) {
+            if (usedIndices.has(i)) continue
+            for (let j = i + 1; j < diceCopy.length; j++) {
+              if (usedIndices.has(j)) continue
+              if (diceCopy[i] + diceCopy[j] === move.die) {
+                usedIndices.add(i)
+                usedIndices.add(j)
+                diceCopy[i] = -1
+                diceCopy[j] = -1
+                break
+              }
+            }
+            if (usedIndices.has(i)) break
+          }
+        }
+      }
+    })
+    
+    return usedIndices
+  }, [diceArray, pendingMoves, gameMode])
+
+  // Подсчитываем сколько ходов осталось при дубле
+  const remainingMoves = useMemo(() => {
+    if (!diceArray || diceArray.length === 0) return 0
+    
+    const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0])
+    if (!isDoubles) return 0
+    
+    const totalDice = diceArray.length
+    const usedCount = usedDiceIndices.size
+    return totalDice - usedCount
+  }, [diceArray, usedDiceIndices])
   
   return (
     <div ref={containerRef} className="backgammon-board-container">
@@ -1238,16 +1306,60 @@ export default function BackgammonBoard({
             position: 'absolute',
             left: `${dice3DPosition.x - dice3DPosition.size}px`,
             top: `${dice3DPosition.y - dice3DPosition.size / 2}px`,
-            width: `${dice3DPosition.size * 2.5}px`,
+            width: `${dice3DPosition.size * 2.5 * diceArray.length}px`,
             height: `${dice3DPosition.size}px`,
             pointerEvents: 'none',
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'center',
           }}
         >
-          <Dice3D
-            values={diceArray}
-            animating={diceAnimating}
-            diceTextures={undefined}
-          />
+          {diceArray.map((dieValue, index) => {
+            const isUsed = usedDiceIndices.has(index)
+            const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0])
+            
+            return (
+              <div
+                key={index}
+                style={{
+                  position: 'relative',
+                  opacity: isUsed ? 0.4 : 1,
+                  filter: isUsed ? 'grayscale(100%) brightness(0.5)' : 'none',
+                  transition: 'opacity 0.3s, filter 0.3s',
+                }}
+              >
+                <Dice3D
+                  values={[dieValue]}
+                  animating={diceAnimating && !isUsed}
+                  diceTextures={undefined}
+                />
+                {/* Показываем сколько ходов осталось при дубле на каждом неиспользованном кубике */}
+                {isDoubles && !isUsed && remainingMoves > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '-20px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: 'rgba(255, 0, 0, 0.8)',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      zIndex: 10,
+                    }}
+                  >
+                    {remainingMoves}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

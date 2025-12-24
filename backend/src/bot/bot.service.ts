@@ -3,18 +3,27 @@ import { BackgammonEngine } from '../games/game-engine/backgammon-engine';
 import { LongBackgammonEngine } from '../games/game-engine/long-backgammon-engine';
 import { GameMode } from '../games/game.entity';
 import { GptBotService } from './gpt-bot.service';
+import { ImprovedBotService } from './improved-bot.service';
 
 @Injectable()
 export class BotService {
   private readonly logger = new Logger(BotService.name);
+  private readonly BOT_MOVE_DELAY_MIN = 1000; // Минимальная задержка 1 секунда
+  private readonly BOT_MOVE_DELAY_MAX = 3000; // Максимальная задержка 3 секунды
 
   constructor(
     private backgammonEngine: BackgammonEngine,
     private longBackgammonEngine: LongBackgammonEngine,
     private gptBotService: GptBotService,
+    private improvedBotService: ImprovedBotService,
   ) {}
 
   async makeBotMove(gameState: any, mode: GameMode): Promise<Array<{ from: number; to: number; die: number }>> {
+    // Добавляем реалистичную задержку для бота (имитация размышления)
+    const delay = this.BOT_MOVE_DELAY_MIN + 
+                  Math.random() * (this.BOT_MOVE_DELAY_MAX - this.BOT_MOVE_DELAY_MIN);
+    await new Promise(resolve => setTimeout(resolve, delay));
+
     const engine = mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     const dice = gameState.dice || [];
 
@@ -31,7 +40,7 @@ export class BotService {
       return [];
     }
 
-    // For long backgammon, use GPT to evaluate moves
+    // For long backgammon, use GPT to evaluate moves (если доступен)
     if (mode === GameMode.LONG) {
       try {
         const gptSelectedMove = await this.gptBotService.evaluateMoves(
@@ -46,15 +55,15 @@ export class BotService {
           return gptSelectedMove;
         }
       } catch (error) {
-        this.logger.warn(`GPT evaluation failed: ${error.message}, using fallback`);
+        this.logger.warn(`GPT evaluation failed: ${error.message}, using improved bot`);
       }
       
-      // Fallback to simple heuristic if GPT fails
-      return this.selectBestMove(gameState, allValidMoves, mode);
+      // Fallback to improved bot with heuristics
+      return this.improvedBotService.selectBestMove(gameState, allValidMoves, mode);
     }
 
-    // For short backgammon, use simple heuristic
-    const bestMove = this.selectBestMove(gameState, allValidMoves, mode);
+    // For short backgammon, use improved bot with heuristics
+    const bestMove = this.improvedBotService.selectBestMove(gameState, allValidMoves, mode);
     return bestMove;
   }
 

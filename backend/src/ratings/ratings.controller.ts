@@ -31,9 +31,17 @@ export class RatingsController {
   async getMyRatings(@CurrentUser() user: any) {
     const shortRating = await this.ratingsService.getRating(user.id, GameMode.SHORT);
     const longRating = await this.ratingsService.getRating(user.id, GameMode.LONG);
+    
+    const shortRatingValue = shortRating || 1000;
+    const longRatingValue = longRating || 1000;
+    
     return {
-      short: shortRating || 1000,
-      long: longRating || 1000,
+      short: shortRatingValue,
+      long: longRatingValue,
+      badges: {
+        short: this.ratingsService.getBadge(shortRatingValue),
+        long: this.ratingsService.getBadge(longRatingValue),
+      },
     };
   }
 

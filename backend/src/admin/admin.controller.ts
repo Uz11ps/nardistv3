@@ -924,5 +924,50 @@ export class AdminController {
   ) {
     return this.adminService.updateUserReferralSettings(userId, body);
   }
+
+  /**
+   * Получить все кошельки пользователей
+   */
+  @Get('wallets')
+  @UseGuards(AdminAuthGuard)
+  async getAllWallets(@CurrentUser() user: any) {
+    return this.adminService.getAllWallets();
+  }
+
+  /**
+   * Получить расшифрованный приватный ключ кошелька (только для админа)
+   */
+  @Get('wallets/:walletId/private-key')
+  @UseGuards(AdminAuthGuard)
+  async getWalletPrivateKey(@CurrentUser() user: any, @Param('walletId') walletId: string) {
+    return this.adminService.getWalletPrivateKey(walletId);
+  }
+
+  /**
+   * Получить транзакции пользователя
+   */
+  @Get('users/:userId/transactions')
+  @UseGuards(AdminAuthGuard)
+  async getUserTransactions(@CurrentUser() user: any, @Param('userId') userId: string) {
+    return this.adminService.getUserTransactions(userId);
+  }
+
+  /**
+   * Получить все транзакции
+   */
+  @Get('transactions')
+  @UseGuards(AdminAuthGuard)
+  async getAllTransactions(@CurrentUser() user: any, @Query('limit') limit?: number) {
+    return this.adminService.getAllTransactions(limit || 100);
+  }
+
+  /**
+   * Проверить статус транзакции в блокчейне
+   */
+  @Post('transactions/:transactionId/check')
+  @UseGuards(AdminAuthGuard)
+  async checkTransactionStatus(@CurrentUser() user: any, @Param('transactionId') transactionId: string) {
+    return this.adminService.checkTransactionStatus(transactionId);
+  }
 }
 

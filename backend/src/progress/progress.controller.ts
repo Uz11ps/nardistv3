@@ -21,6 +21,37 @@ export class ProgressController {
     return { message: 'Усиление выбрано' };
   }
 
+  @Post('skill-points/distribute')
+  @UseGuards(JwtAuthGuard)
+  async distributeSkillPoints(
+    @CurrentUser() user: any,
+    @Body('type') type: EnhancementType,
+    @Body('amount') amount: number,
+  ) {
+    await this.progressService.distributeSkillPoints(user.id, type, amount);
+    return { message: 'Skill Points распределены' };
+  }
+
+  @Get('skill-points')
+  @UseGuards(JwtAuthGuard)
+  async getSkillPoints(@CurrentUser() user: any) {
+    const userEntity = await this.progressService['usersService'].findOne(user.id);
+    return {
+      total: userEntity.skillPoints || 0,
+      free: userEntity.freeSkillPoints || 0,
+      economy: userEntity.economySp || 0,
+      energy: userEntity.energySp || 0,
+      lives: userEntity.livesSp || 0,
+      power: userEntity.powerSp || 0,
+    };
+  }
+
+  @Get('enhancement/availability')
+  @UseGuards(JwtAuthGuard)
+  async getEnhancementAvailability(@CurrentUser() user: any) {
+    return this.progressService.canChooseEnhancement(user.id);
+  }
+
   @Get('energy')
   @UseGuards(JwtAuthGuard)
   async getEnergy(@CurrentUser() user: any) {
@@ -58,7 +89,14 @@ export class ProgressController {
   @UseGuards(JwtAuthGuard)
   async buyLife(@CurrentUser() user: any) {
     await this.progressService.buyLife(user.id);
-    return { message: 'Жизнь куплена' };
+    return { message: 'Жизни куплены' };
+  }
+
+  @Post('energy/buy')
+  @UseGuards(JwtAuthGuard)
+  async buyEnergy(@CurrentUser() user: any) {
+    await this.progressService.buyEnergy(user.id);
+    return { message: 'Энергия куплена' };
   }
 
   @Get('skin-weight-limit')
@@ -66,6 +104,13 @@ export class ProgressController {
   async getSkinWeightLimit(@CurrentUser() user: any) {
     const limit = await this.progressService.getSkinWeightLimit(user.id);
     return { limit };
+  }
+
+  @Post('business-license/buy')
+  @UseGuards(JwtAuthGuard)
+  async buyBusinessLicense(@CurrentUser() user: any) {
+    await this.progressService.buyBusinessLicense(user.id);
+    return { message: 'Лицензия предпринимателя приобретена' };
   }
 }
 

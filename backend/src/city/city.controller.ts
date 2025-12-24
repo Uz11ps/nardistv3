@@ -54,5 +54,21 @@ export class CityController {
   ) {
     return this.cityService.saveAutobuildSettings(user.id, body);
   }
+
+  @Get('districts')
+  @UseGuards(JwtAuthGuard)
+  async getDistricts(@CurrentUser() user: any) {
+    // Получаем все районы (для отображения в городе)
+    return this.cityService.getAvailableDistrictsForCapture(null);
+  }
+
+  @Get('districts/available-for-capture')
+  @UseGuards(JwtAuthGuard)
+  async getAvailableDistrictsForCapture(@CurrentUser() user: any) {
+    // Получаем клан пользователя, если есть
+    const userClan = await this.cityService['clansService'].getUserClan(user.id);
+    const clanId = userClan?.clan?.id || null;
+    return this.cityService.getAvailableDistrictsForCapture(clanId);
+  }
 }
 

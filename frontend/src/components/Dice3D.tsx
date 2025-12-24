@@ -5,9 +5,10 @@ interface Dice3DProps {
   values: number[]
   animating?: boolean
   diceTextures?: { [face: number]: HTMLImageElement }
+  used?: boolean
 }
 
-export default function Dice3D({ values, animating = false, diceTextures }: Dice3DProps) {
+export default function Dice3D({ values, animating = false, diceTextures, used = false }: Dice3DProps) {
   const [displayValues, setDisplayValues] = useState<number[]>(values)
   const [internalAnimating, setInternalAnimating] = useState(false)
   const lastValues = useRef<number[]>(values)

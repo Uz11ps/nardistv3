@@ -55,7 +55,10 @@ export class Quest {
   rewardXP: number;
 
   @Column({ type: 'jsonb', nullable: true })
-  rewardSkin: any;
+  rewardSkin: any; // ID скина или объект с данными скина
+
+  @Column({ type: 'int', default: 0 })
+  rewardTickets: number; // Количество билетов на турнир
 
   @Column({ nullable: true })
   channelUsername: string; // Username канала для подписки (например, @channelname)
