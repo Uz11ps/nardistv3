@@ -4923,6 +4923,25 @@ export default function Admin() {
                     Лицензия предпринимателя
                   </label>
                 </div>
+                <div>
+                  <label>Реферальный процент (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editingUser.referralPercent || 5}
+                    onChange={(e) => setEditingUser({ ...editingUser, referralPercent: parseInt(e.target.value) || 5 })}
+                  />
+                </div>
+                <div>
+                  <label>Базовый реферальный бонус (NAR)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={Number(editingUser.referralBaseBonus || 100)}
+                    onChange={(e) => setEditingUser({ ...editingUser, referralBaseBonus: BigInt(parseInt(e.target.value) || 100) })}
+                  />
+                </div>
               </div>
               <div style={{ marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                 <button
@@ -4949,6 +4968,8 @@ export default function Admin() {
                         livesSp: editingUser.livesSp,
                         powerSp: editingUser.powerSp,
                         hasBusinessLicense: editingUser.hasBusinessLicense,
+                        referralPercent: editingUser.referralPercent,
+                        referralBaseBonus: Number(editingUser.referralBaseBonus),
                       })
                       alert('Пользователь обновлен')
                       setEditingUser(null)
@@ -5105,7 +5126,7 @@ export default function Admin() {
                       />
                     </div>
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <label>URL текстуры кубиков (JSON: {"1": "url1", "2": "url2", ...})</label>
+                      <label>URL текстуры кубиков (JSON: {'{"1": "url1", "2": "url2", ...}'})</label>
                       <textarea
                         value={editingSkin.diceTextureUrls ? JSON.stringify(editingSkin.diceTextureUrls, null, 2) : ''}
                         onChange={(e) => {

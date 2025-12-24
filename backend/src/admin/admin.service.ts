@@ -1947,6 +1947,8 @@ export class AdminService implements OnModuleInit {
     livesSp?: number;
     powerSp?: number;
     hasBusinessLicense?: boolean;
+    referralPercent?: number;
+    referralBaseBonus?: number;
   }) {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
     if (!user) {
@@ -1967,6 +1969,8 @@ export class AdminService implements OnModuleInit {
     if (data.livesSp !== undefined) user.livesSp = data.livesSp;
     if (data.powerSp !== undefined) user.powerSp = data.powerSp;
     if (data.hasBusinessLicense !== undefined) user.hasBusinessLicense = data.hasBusinessLicense;
+    if (data.referralPercent !== undefined) user.referralPercent = Math.max(0, Math.min(100, Math.floor(data.referralPercent)));
+    if (data.referralBaseBonus !== undefined) user.referralBaseBonus = BigInt(Math.max(0, Math.floor(data.referralBaseBonus)));
 
     await this.usersRepository.save(user);
     return user;

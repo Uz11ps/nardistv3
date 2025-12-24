@@ -6,6 +6,7 @@ import axios from 'axios';
 import { UsersService } from '../users/users.service';
 import { ProgressService } from '../progress/progress.service';
 import { ReferralEarning } from './referral-earning.entity';
+import { Game } from '../games/game.entity';
 
 @Injectable()
 export class ReferralsService {
@@ -17,6 +18,8 @@ export class ReferralsService {
     private configService: ConfigService,
     @InjectRepository(ReferralEarning)
     private referralEarningsRepository: Repository<ReferralEarning>,
+    @InjectRepository(Game)
+    private gamesRepository: Repository<Game>,
   ) {}
 
   async useReferralCode(userId: string, referralCode: string): Promise<void> {
@@ -53,6 +56,46 @@ export class ReferralsService {
 
     const totalEarnings = earnings.reduce((sum, e) => sum + Number(e.referralBonus), 0);
 
+    // Метрики ретеншна и участия
+    const referredUserIds = referredUsers.map(u => u.id);
+    let activePlayersCount = 0;
+    let playersWithMatchesCount = 0;
+    let playersWithDonationsCount = 0;
+    
+    if (referredUserIds.length > 0) {
+      // Рефералы, которые играли матчи (проверяем и player1Id и player2Id)
+      const gamesAsPlayer1 = await this.gamesRepository
+        .createQueryBuilder('game')
+        .select('DISTINCT game.player1Id', 'playerId')
+        .where('game.player1Id IN (:...ids)', { ids: referredUserIds })
+        .getRawMany();
+      
+      const gamesAsPlayer2 = await this.gamesRepository
+        .createQueryBuilder('game')
+        .select('DISTINCT game.player2Id', 'playerId')
+        .where('game.player2Id IN (:...ids)', { ids: referredUserIds })
+        .getRawMany();
+      
+      const uniquePlayerIds = new Set([
+        ...gamesAsPlayer1.map(p => p.playerId).filter(Boolean),
+        ...gamesAsPlayer2.map(p => p.playerId).filter(Boolean),
+      ]);
+      playersWithMatchesCount = uniquePlayerIds.size;
+      
+      // Рефералы, которые делали донаты (есть записи в earnings)
+      playersWithDonationsCount = new Set(earnings.map(e => e.referredUserId)).size;
+      
+      // Активные рефералы (не забанены и играли хотя бы раз)
+      activePlayersCount = referredUsers.filter((u) => {
+        return !u.isBanned && uniquePlayerIds.has(u.id);
+      }).length;
+    }
+
+    // Ретеншн: процент рефералов, которые играли матчи
+    const retentionRate = referredUsers.length > 0 
+      ? (playersWithMatchesCount / referredUsers.length) * 100 
+      : 0;
+
     // Формируем ссылку для Telegram бота
     // Формат: https://t.me/BOT_USERNAME?start=REFERRAL_CODE
     const botUsername = await this.getBotUsername();
@@ -62,7 +105,10 @@ export class ReferralsService {
       referralCode: user.referralCode,
       referralLink: referralLink,
       totalReferred: referredUsers.length,
-      activeReferred: referredUsers.filter((u) => !u.isBanned).length,
+      activeReferred: activePlayersCount,
+      playersWithMatches: playersWithMatchesCount,
+      playersWithDonations: playersWithDonationsCount,
+      retentionRate: Math.round(retentionRate * 10) / 10, // Округляем до 1 знака после запятой
       totalEarnings: totalEarnings,
       referralPercent: user.referralPercent || 5,
       referralBaseBonus: Number(user.referralBaseBonus || 100),

@@ -10,6 +10,9 @@ interface ReferralStats {
   referralLink: string
   totalReferred: number
   activeReferred: number
+  playersWithMatches: number
+  playersWithDonations: number
+  retentionRate: number
   totalEarnings: number
   referralPercent: number
   referralBaseBonus: number
@@ -170,6 +173,18 @@ export default function Referrals() {
             <div className="referrals-stat-card">
               <div className="referrals-stat-value">{stats.activeReferred}</div>
               <div className="referrals-stat-label">Активных</div>
+            </div>
+            <div className="referrals-stat-card">
+              <div className="referrals-stat-value">{stats.playersWithMatches}</div>
+              <div className="referrals-stat-label">Играли матчи</div>
+            </div>
+            <div className="referrals-stat-card">
+              <div className="referrals-stat-value">{stats.playersWithDonations}</div>
+              <div className="referrals-stat-label">Делали донаты</div>
+            </div>
+            <div className="referrals-stat-card">
+              <div className="referrals-stat-value">{stats.retentionRate.toFixed(1)}%</div>
+              <div className="referrals-stat-label">Ретеншн</div>
             </div>
             <div className="referrals-stat-card earnings">
               <div className="referrals-stat-value">
