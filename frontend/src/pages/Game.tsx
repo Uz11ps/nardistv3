@@ -185,13 +185,16 @@ export default function Game() {
       animationFrameRef.current = null
     }
 
-    // Если это мой ход и игра идет, запускаем таймер
+    // Если это мой ход и игра идет, запускаем таймер ТОЛЬКО если кубики уже брошены
     if (gameState?.canMove && gameStatus === 'in_progress' && gameState?.dice && !isBotGame) {
-      timerStartTimeRef.current = Date.now()
-      setIsInOvertime(false)
-      setMoveTimer(30)
-      setOvertimeTimer(60)
-      setTimerProgress(1)
+      // Запускаем таймер только если он еще не запущен (чтобы не сбрасывать при каждом обновлении)
+      if (!timerStartTimeRef.current) {
+        timerStartTimeRef.current = Date.now()
+        setIsInOvertime(false)
+        setMoveTimer(30)
+        setOvertimeTimer(60)
+        setTimerProgress(1)
+      }
       
       // Плавное обновление таймера через requestAnimationFrame
       const updateTimer = () => {
@@ -318,6 +321,16 @@ export default function Game() {
       setOpponent(game.player1Id === user?.id ? game.player2 : game.player1)
       setScore({ player1: game.player1Score || 0, player2: game.player2Score || 0 })
       setGameStatus(game.status)
+      
+      // Загружаем смещения игроков
+      const isP1 = game.player1Id === user?.id
+      if (isP1) {
+        setMyOffset(game.p1Offset || 1)
+        setOpponentOffset(game.p2Offset || 1)
+      } else {
+        setMyOffset(game.p2Offset || 1)
+        setOpponentOffset(game.p1Offset || 1)
+      }
       
       if (game.status === 'in_progress') {
         const timeLimitSeconds = game.moveTimeLimit ? Math.floor(game.moveTimeLimit / 1000) : 60
@@ -473,12 +486,15 @@ export default function Game() {
         ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
         : bearOffRaw
       
+      // Сохраняем текущие кубики, если они есть, чтобы не потерять их при обновлении
+      const currentDice = gameState?.dice || formattedDice
+      
       setGameState({
         points: data.gameState?.points || [],
         bar,
         bearOff,
         currentPlayer: data.currentPlayer || 0,
-        dice: formattedDice,
+        dice: currentDice || formattedDice, // Используем текущие кубики, если они есть
         canMove: canMove,
         verificationSalt: data.verificationSalt,
         p1Rolls: data.p1Rolls,
@@ -490,10 +506,13 @@ export default function Game() {
       
       if (isMyTurnNow && !wasMyTurn) {
         setMoveTimer(30)
-        timerStartTimeRef.current = Date.now()
+        // Запускаем таймер только если есть кубики
+        if (currentDice || formattedDice) {
+          timerStartTimeRef.current = Date.now()
+        }
       }
 
-      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice) {
+      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && !currentDice) {
         setTimeout(() => {
           const socket = getSocket()
           if (socket) {
@@ -502,10 +521,8 @@ export default function Game() {
         }, 500)
       }
       
-      // Дополнительно загружаем игру для полной синхронизации
-      if (newStatus === 'in_progress') {
-        loadGame()
-      }
+      // НЕ вызываем loadGame() здесь автоматически, чтобы не сбросить подсветку
+      // loadGame() вызывается только при необходимости (например, при старте игры)
     })
 
     socket.on('move_made', (data: any) => {
@@ -579,20 +596,24 @@ export default function Game() {
         if (data.dice && Array.isArray(data.dice) && data.dice.length >= 2) {
           const formattedDice = { die1: data.dice[0], die2: data.dice[1] }
           setGameState(prev => prev ? ({ ...prev, dice: formattedDice }) : null)
+          // Запускаем таймер только после обновления кубиков
+          if (gameState?.canMove && gameStatus === 'in_progress' && !isBotGame) {
+            timerStartTimeRef.current = Date.now()
+          }
         }
-        // Полностью перезагружаем игру для синхронизации
-        loadGame()
+        // НЕ вызываем loadGame() здесь, чтобы не сбросить подсветку
+        // Состояние уже обновлено через game_state событие
       }, 1500) // Увеличили время для красивой 3D анимации
     })
 
     socket.on('offset_updated', (data: any) => {
       const isP1 = gameInfo?.player1Id === user?.id
       if (isP1) {
-        setMyOffset(data.player1Offset)
-        setOpponentOffset(data.player2Offset)
+        setMyOffset(data.player1Offset || 1)
+        setOpponentOffset(data.player2Offset || 1)
       } else {
-        setMyOffset(data.player2Offset)
-        setOpponentOffset(data.player1Offset)
+        setMyOffset(data.player2Offset || 1)
+        setOpponentOffset(data.player1Offset || 1)
       }
     })
 
@@ -1037,6 +1058,7 @@ export default function Game() {
                   
                   <div className="offset-selector">
                     <label>Ваше смещение (1-100):</label>
+                    <p className="offset-hint">Каждый игрок выбирает свое смещение независимо</p>
                     <input 
                       type="range" 
                       min="1" 
@@ -1046,8 +1068,8 @@ export default function Game() {
                       disabled={myReady}
                     />
                     <div className="offset-values">
-                      <span>Вы: {myOffset}</span>
-                      <span>Соперник: {opponentOffset}</span>
+                      <span>Вы: <strong>{myOffset}</strong></span>
+                      <span>Соперник: <strong>{opponentOffset}</strong></span>
                     </div>
                   </div>
 

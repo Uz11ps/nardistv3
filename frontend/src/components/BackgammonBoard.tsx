@@ -154,7 +154,7 @@ export default function BackgammonBoard({
     }
     
     fetchPossibleMoves()
-  }, [gameId, isMyTurn, canMove, dice, gameState?.points, gameState?.bar, gameState?.bearOff, pendingMoves]) // Используем конкретные поля вместо всего gameState
+  }, [gameId, isMyTurn, canMove, dice, pendingMoves]) // Убрали зависимости от gameState, чтобы подсветка не сбрасывалась при обновлении состояния
   
   // Определение позиции для кубиков
   useEffect(() => {
