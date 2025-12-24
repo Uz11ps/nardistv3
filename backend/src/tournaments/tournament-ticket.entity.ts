@@ -25,7 +25,6 @@ export class TournamentTicket {
   user: User;
 
   @Column()
-  @Index()
   userId: string;
 
   @ManyToOne(() => Tournament, { nullable: true })

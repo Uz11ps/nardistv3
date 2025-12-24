@@ -226,7 +226,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         }
       }
     } catch (error) {
-      this.logger.error(`❌ Error checking move timeouts:`, error);
+      this.logger.error(`❌ Error checking move timeouts:`, error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.stack) {
+        this.logger.debug(`Error stack:`, error.stack);
+      }
     }
   }
 
