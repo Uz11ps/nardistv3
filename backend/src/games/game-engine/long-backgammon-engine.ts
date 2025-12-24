@@ -101,54 +101,22 @@ export class LongBackgammonEngine {
   }
 
   /**
-   * Check Doubles Rule: При дубле можно вывести две шашки из ОДНОЙ точки, если одна не использует все кубики
-   * 
-   * Правила дублей в длинных нардах:
-   * - При дубле (например, 4-4) у игрока 4 хода по 4 пункта
-   * - Можно вывести ДВЕ шашки из ОДНОЙ точки, если:
-   *   - Одна шашка использует часть кубиков (например, 2 кубика = 8 пунктов)
-   *   - Другая шашка использует оставшиеся кубики (например, 2 кубика = 8 пунктов)
-   * - НО нельзя вывести две шашки, если одна использует ВСЕ 4 кубика (16 пунктов)
-   * 
-   * Примеры:
-   * - Дубль 4-4: Можно вывести шашку на 8 (2 кубика) + шашку на 8 (2 кубика) ✅
-   * - Дубль 4-4: Можно вывести шашку на 12 (3 кубика) + шашку на 4 (1 кубик) ✅
-   * - Дубль 4-4: НЕЛЬЗЯ вывести две шашки, если одна идет на 16 (все 4 кубика) ❌
+   * Check Head Rule: Only 1 checker can be moved from head per complete turn (using all dice)
+   * This rule applies only to non-doubles moves
    */
-  private checkDoublesRule(state: LongBoardState, from: number, moveDie: number, diceUsed: number[]): boolean {
-    // Проверяем, это дубль?
-    const isDoubles = state.dice && state.dice.length === 2 && state.dice[0] === state.dice[1];
-    if (!isDoubles) {
-      // Для обычных ходов правило не применяется
+  private checkHeadRule(state: LongBoardState, from: number, dice: number[]): boolean {
+    const player = state.currentPlayer;
+    const headIndex = player === 0 ? this.WHITE_HEAD : this.BLACK_HEAD;
+    
+    // If not moving from head, rule doesn't apply
+    if (from !== headIndex) {
       return true;
     }
     
-    const dieValue = state.dice[0];
-    const totalDice = 4; // Дубль расширяется до 4 кубиков
+    const movedThisTurn = state.movesFromHead || 0;
     
-    // Сколько шашек уже выведено из этой точки в этом ходе?
-    const movesFromThisPoint = (state.movesFromPoint || {})[from] || 0;
-    
-    // Если это первая шашка из этой точки - всегда разрешаем
-    if (movesFromThisPoint === 0) {
-      return true;
-    }
-    
-    // Если это вторая шашка из этой точки - проверяем, что первая не использовала все кубики
-    if (movesFromThisPoint === 1) {
-      // Нужно проверить, сколько кубиков использовала первая шашка
-      // Это сложно проверить здесь, поэтому проверяем в getAllValidMoves
-      // Здесь просто разрешаем, если это не все 4 кубика
-      const diceUsedCount = diceUsed.length;
-      if (diceUsedCount >= totalDice) {
-        // Использованы все кубики - нельзя вывести вторую шашку
-        return false;
-      }
-      return true;
-    }
-    
-    // Больше двух шашек из одной точки нельзя
-    return false;
+    // For non-doubles: only 1 checker per turn from head
+    return movedThisTurn === 0;
   }
 
   /**
@@ -294,7 +262,7 @@ export class LongBackgammonEngine {
       }
     } else {
       // Для обычных ходов проверяем правило головы
-      if (!this.checkHeadRule(state, from, state.dice, die)) return false;
+      if (!this.checkHeadRule(state, from, state.dice)) return false;
     }
     
     if (!this.checkBlockRule(state, to)) return false;
@@ -357,7 +325,7 @@ export class LongBackgammonEngine {
       }
     } else {
       // Для обычных ходов проверяем правило головы
-      if (!this.checkHeadRule(state, from, state.dice, die)) return false;
+      if (!this.checkHeadRule(state, from, state.dice)) return false;
     }
     
     if (!this.checkBlockRule(state, to)) return false;
