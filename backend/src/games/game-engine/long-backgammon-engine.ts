@@ -530,18 +530,11 @@ export class LongBackgammonEngine {
     return null;
   }
 
-  /**
-   * Get all valid move combinations for current player
-   */
   getAllValidMoves(state: LongBoardState, dice: number[]): Array<Array<{ from: number; to: number; die: number }>> {
     if (dice.length === 0) return [];
 
     const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
     
-    // Use current state with existing movesFromHead value
-    // Don't reset it here - it should reflect moves already made in this turn
-    const stateWithReset = { ...state };
-
     const generateMoves = (
       currentState: LongBoardState,
       remainingDice: number[],
@@ -555,60 +548,34 @@ export class LongBackgammonEngine {
       }
 
       const player = currentState.currentPlayer;
-      const hasBarCheckers = player === 0 ? currentState.bar[0] > 0 : currentState.bar[1] > 0;
-
-      // If checkers on bar, must enter them first
-      if (hasBarCheckers) {
-        for (let i = 0; i < remainingDice.length; i++) {
-          const die = remainingDice[i];
-          // Calculate enter point based on player's head position
-          const enterPoint = player === 0 
-            ? (this.WHITE_HEAD + die) % this.BOARD_SIZE
-            : (this.BLACK_HEAD - die + this.BOARD_SIZE) % this.BOARD_SIZE;
-          
-          if (this.validateMove(currentState, -1, enterPoint, die)) {
-            const newState = this.applyMove(currentState, -1, enterPoint, die);
-            const newDice = [...remainingDice];
-            newDice.splice(i, 1);
-            generateMoves(newState, newDice, [...currentMoves, { from: -1, to: enterPoint, die }]);
-          }
-        }
-        return;
-      }
+      const headIndex = player === 0 ? this.WHITE_HEAD : this.BLACK_HEAD;
 
       // Find all possible moves from board
       let foundAnyMove = false;
       
-      // First, try using dice separately (one die per move)
       for (let from = 0; from < this.BOARD_SIZE; from++) {
         const pointValue = currentState.points[from];
         const hasMyCheckers = player === 0 ? pointValue > 0 : pointValue < 0;
         
         if (!hasMyCheckers) continue;
 
+        const triedDice = new Set<number>();
         for (let i = 0; i < remainingDice.length; i++) {
           const die = remainingDice[i];
+          if (triedDice.has(die)) continue;
+          triedDice.add(die);
           
-          // Calculate target point
-          let to: number;
-          const calculatedTo = this.calculateTargetPoint(player, from, die);
+          // Пробуем обычный ход
+          const toPoint = this.calculateTargetPoint(player, from, die);
           
-          // Check if bearing off
-          // White home: indices 18-23 (Points 1-6)
-          // Black home: indices 6-11 (Points 13-18)
-          if (calculatedTo < 0 || 
-              (player === 0 && calculatedTo >= this.WHITE_HOME_START && calculatedTo < this.BOARD_SIZE && this.canBearOff(currentState, 0)) ||
-              (player === 1 && calculatedTo >= this.BLACK_HOME_START && calculatedTo < 12 && this.canBearOff(currentState, 1))) {
-            if (this.canBearOff(currentState, player)) {
-              to = -1; // Bear off
-            } else {
-              continue; // Cannot bear off yet
-            }
-          } else {
-            to = calculatedTo;
-          }
+          // Проверяем на вынос
+          const distanceTraveled = player === 0 
+            ? (from - this.WHITE_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE
+            : (from - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
+          
+          const isBearingOffMove = (distanceTraveled + die) >= this.BOARD_SIZE;
+          const to = isBearingOffMove ? -1 : toPoint;
 
-          // Validate move
           if (this.validateMove(currentState, from, to, die)) {
             foundAnyMove = true;
             const newState = this.applyMove(currentState, from, to, die);
@@ -619,69 +586,18 @@ export class LongBackgammonEngine {
         }
       }
       
-      // Second, try using sum of two dice (only if NOT doubles and we have 2+ dice)
-      // In Long Backgammon, you can combine two dice into one move, but NOT with doubles
-      if (remainingDice.length >= 2) {
-        // Check if this is NOT doubles (all dice are the same)
-        const isDoubles = remainingDice.every(d => d === remainingDice[0]);
-        
-        if (!isDoubles) {
-          // Try combining first two dice
-          const die1 = remainingDice[0];
-          const die2 = remainingDice[1];
-          const sumDie = die1 + die2;
-          
-          for (let from = 0; from < this.BOARD_SIZE; from++) {
-            const pointValue = currentState.points[from];
-            const hasMyCheckers = player === 0 ? pointValue > 0 : pointValue < 0;
-            
-            if (!hasMyCheckers) continue;
-            
-            // Calculate target point using sum
-            let to: number;
-            const calculatedTo = this.calculateTargetPoint(player, from, sumDie);
-            
-            // Check if bearing off
-            // White home: indices 18-23 (Points 1-6)
-            // Black home: indices 6-11 (Points 13-18)
-            if (calculatedTo < 0 || 
-                (player === 0 && calculatedTo >= this.WHITE_HOME_START && calculatedTo < this.BOARD_SIZE && this.canBearOff(currentState, 0)) ||
-                (player === 1 && calculatedTo >= this.BLACK_HOME_START && calculatedTo < 12 && this.canBearOff(currentState, 1))) {
-              if (this.canBearOff(currentState, player)) {
-                to = -1; // Bear off
-              } else {
-                continue; // Cannot bear off yet
-              }
-            } else {
-              to = calculatedTo;
-            }
-            
-            // Validate move using sum of two dice
-            if (this.validateMoveWithSum(currentState, from, to, die1, die2)) {
-              foundAnyMove = true;
-              const newState = this.applyMove(currentState, from, to, sumDie);
-              const newDice = remainingDice.slice(2); // Remove both dice
-              // Store sum as the die value for tracking
-              generateMoves(newState, newDice, [...currentMoves, { from, to, die: sumDie }]);
-            }
-          }
-        }
-      }
-
-      // If no moves found but we have partial moves, save them
+      // ... (rest of the logic for combining dice if needed, but Long Backgammon usually uses dice separately)
+      // В длинных нардах кубики используются по отдельности.
+      
       if (!foundAnyMove && currentMoves.length > 0) {
         moves.push([...currentMoves]);
       }
     };
 
-    generateMoves(stateWithReset, dice, []);
+    generateMoves(state, dice, []);
     
-    // If no moves, return empty array (pass turn)
-    if (moves.length === 0) {
-      return [[]];
-    }
+    if (moves.length === 0) return [[]];
 
-    // Return maximum length move sequences
     const maxLength = Math.max(...moves.map((m) => m.length));
     return moves.filter((m) => m.length === maxLength);
   }

@@ -298,9 +298,9 @@ export default function BackgammonBoard({
     const isRightTarget = x >= rightContainerX && x <= rightContainerX + bearOffWidth
     
     if (isLeftTarget || isRightTarget) {
-      const isMySide = isPlayer1 
-        ? (gameMode === 'long' ? isLeftTarget : isRightTarget) 
-        : (gameMode === 'long' ? isRightTarget : isLeftTarget)
+      // Для Белых (P1) дом всегда в правой нижней четверти (пункты 1-6)
+      // Для Черных (P2) дом либо в правой верхней (короткие), либо в левой верхней (длинные)
+      const isMySide = isPlayer1 ? isRightTarget : (gameMode === 'long' ? isLeftTarget : isRightTarget)
       if (isMySide) return -1
     }
     
@@ -421,8 +421,8 @@ export default function BackgammonBoard({
         ctx.shadowColor = 'rgba(0, 255, 0, 0.8)'
         drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
         ctx.restore()
-      } else if (dragging && validTargetPoints.has(pointIndex)) {
-        // 3. Подсветка валидных точек назначения при перетаскивании
+      // 3. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
+      if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
         ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
         if (isTopRow) {
           ctx.fillRect(x - pW / 2, 0, pW, height / 2)
@@ -523,7 +523,7 @@ export default function BackgammonBoard({
         // Координаты контейнера выноса
         const leftContainerX = 0
         const rightContainerX = width - bearOffWidth
-        const myX = isPlayer1 ? (gameMode === 'long' ? leftContainerX : rightContainerX) : (gameMode === 'long' ? rightContainerX : leftContainerX)
+        const myX = isPlayer1 ? rightContainerX : (gameMode === 'long' ? leftContainerX : rightContainerX)
         toX = myX + bearOffWidth / 2
         toY = height / 2
         toTop = false
@@ -618,7 +618,7 @@ export default function BackgammonBoard({
       const checkerW = bearOffWidth * 0.8
       
       // Мои выброшенные (снизу вверх)
-      const myX = isPlayer1 ? (gameMode === 'long' ? leftContainerX : rightContainerX) : (gameMode === 'long' ? rightContainerX : leftContainerX)
+      const myX = isPlayer1 ? rightContainerX : (gameMode === 'long' ? leftContainerX : rightContainerX)
       for (let i = 0; i < myBearOffCount; i++) {
         ctx.fillStyle = isPlayer1 ? '#F0F0F0' : '#333333'
         ctx.fillRect(myX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
@@ -628,7 +628,7 @@ export default function BackgammonBoard({
       }
       
       // Соперника выброшенные (сверху вниз)
-      const oppX = isPlayer1 ? (gameMode === 'long' ? rightContainerX : leftContainerX) : (gameMode === 'long' ? leftContainerX : rightContainerX)
+      const oppX = isPlayer1 ? (gameMode === 'long' ? leftContainerX : rightContainerX) : rightContainerX
       for (let i = 0; i < opponentBearOffCount; i++) {
         ctx.fillStyle = isPlayer1 ? '#333333' : '#F0F0F0'
         ctx.fillRect(oppX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
@@ -639,10 +639,8 @@ export default function BackgammonBoard({
     }
 
     // Подсветка при перетаскивании в зону выноса
-    if (dragging && validTargetPoints.has(-1)) {
-      const targetX = isPlayer1 
-        ? (gameMode === 'long' ? leftContainerX : rightContainerX) 
-        : (gameMode === 'long' ? rightContainerX : leftContainerX)
+    if ((dragging || selectedPoint !== null) && validTargetPoints.has(-1)) {
+      const targetX = isPlayer1 ? rightContainerX : (gameMode === 'long' ? leftContainerX : rightContainerX)
         
       ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
       ctx.fillRect(targetX, 0, bearOffWidth, height)
@@ -999,13 +997,31 @@ export default function BackgammonBoard({
       const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
       if (pointMoves.length > 0) {
         setSelectedPoint(pointIndex)
+        // Устанавливаем валидные точки назначения для подсветки
+        const targets = new Set<number>()
+        pointMoves.forEach(m => targets.add(m.to))
+        setValidTargetPoints(targets)
       }
+    } else if (selectedPoint === pointIndex) {
+      // Отмена выбора при повторном клике
+      setSelectedPoint(null)
+      setValidTargetPoints(new Set())
     } else {
       const move = possibleMoves.find(m => m.from === selectedPoint && m.to === pointIndex)
       if (move) {
         startMoveAnimation(move.from, move.to, move.die)
       } else {
-        setSelectedPoint(pointIndex)
+        // Если кликнули на другую свою шашку, переключаем выбор
+        const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+        if (pointMoves.length > 0) {
+          setSelectedPoint(pointIndex)
+          const targets = new Set<number>()
+          pointMoves.forEach(m => targets.add(m.to))
+          setValidTargetPoints(targets)
+        } else {
+          setSelectedPoint(null)
+          setValidTargetPoints(new Set())
+        }
       }
     }
   }
