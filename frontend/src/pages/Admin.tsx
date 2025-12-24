@@ -558,7 +558,7 @@ export default function Admin() {
       <div className="admin-content">
         {activeTab === 'stats' && (
           stats ? (
-          <div className="admin-stats">
+            <div className="admin-stats">
             <div className="stats-grid">
               <div className="stat-card">
                 <h3>Пользователи</h3>
@@ -622,6 +622,11 @@ export default function Admin() {
               </div>
             </div>
           </div>
+          ) : (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#aaaaaa' }}>
+              Загрузка статистики...
+            </div>
+          )
         )}
 
         {activeTab === 'users' && (
