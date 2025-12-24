@@ -143,4 +143,22 @@ export class GamesController {
     
     return game;
   }
+
+  @Post(':id/offset')
+  @UseGuards(JwtAuthGuard)
+  async setOffset(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { offset: number },
+  ) {
+    const game = await this.gamesService.setOffset(id, user.id, body.offset);
+    
+    // Оповещаем второго игрока об изменении смещения через WebSocket
+    this.gamesGateway.server.to(`game:${id}`).emit('offset_updated', {
+      player1Offset: game.p1Offset,
+      player2Offset: game.p2Offset,
+    });
+    
+    return game;
+  }
 }

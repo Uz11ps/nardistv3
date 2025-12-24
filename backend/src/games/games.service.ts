@@ -142,7 +142,27 @@ export class GamesService {
     }
 
     const rngSeed = crypto.randomBytes(32).toString('hex');
-    const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
+    const verificationSalt = crypto.randomBytes(16).toString('hex');
+    
+    // Генерация последовательностей бросков (по 1000 для каждого)
+    const generateRolls = () => {
+      const rolls = [];
+      for (let i = 0; i < 1000; i++) {
+        rolls.push([
+          Math.floor(Math.random() * 6) + 1,
+          Math.floor(Math.random() * 6) + 1
+        ]);
+      }
+      return rolls;
+    };
+
+    const p1Rolls = generateRolls();
+    const p2Rolls = generateRolls();
+
+    // Хешируем последовательности для контроля честности
+    const p1Hash = crypto.createHash('sha256').update(JSON.stringify(p1Rolls) + verificationSalt).digest('hex');
+    const p2Hash = crypto.createHash('sha256').update(JSON.stringify(p2Rolls) + verificationSalt).digest('hex');
+    const rngHash = JSON.stringify({ p1Hash, p2Hash });
 
     const engine = mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     const initialState = engine.createInitialState();
@@ -178,6 +198,11 @@ export class GamesService {
       gameState: initialState,
       rngSeed,
       rngHash,
+      p1Rolls,
+      p2Rolls,
+      verificationSalt,
+      p1Offset: 1,
+      p2Offset: 1,
       currentPlayer: 0,
       moveTimeLimit: moveTimeLimit,
       skinData,
@@ -347,9 +372,23 @@ export class GamesService {
     }
 
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
-    // Используем количество ходов из массива moves или 0, если moves не загружен
-    const movesCount = game.moves?.length || 0;
-    const diceRoll = engine.rollDice(game.rngSeed + movesCount);
+    
+    // Контроль честности: выбираем бросок из последовательности
+    const isPlayer1 = playerId === game.player1Id;
+    const playerRolls = isPlayer1 ? game.p1Rolls : game.p2Rolls;
+    const myOffset = isPlayer1 ? game.p1Offset : game.p2Offset;
+    const opponentOffset = isPlayer1 ? game.p2Offset : game.p1Offset;
+    
+    // Формула: (Смещение игрока - 1) * 2 + Смещение соперника
+    const startIdx = ((myOffset || 1) - 1) * 2 + (opponentOffset || 1);
+    
+    // Номер текущего броска для этого игрока
+    const playerMovesCount = (game.moves || []).filter(m => m.playerId === playerId).length;
+    const currentRollIdx = (startIdx + playerMovesCount) % (playerRolls?.length || 1000);
+    
+    const diceRoll = playerRolls ? playerRolls[currentRollIdx] : engine.rollDice(game.rngSeed + (game.moves?.length || 0));
+    
+    console.log(`🎲 Provably Fair Dice: player=${isPlayer1 ? 'P1' : 'P2'}, startIdx=${startIdx}, rollIdx=${currentRollIdx}, roll=[${diceRoll.join(', ')}]`);
     
     console.log(`🎲 rollDice called: gameId=${gameId}, mode=${game.mode}, diceRoll=[${diceRoll.join(', ')}]`);
     
@@ -1074,6 +1113,39 @@ export class GamesService {
       player1Score: game.player1Score,
       player2Score: game.player2Score,
       winnerId: game.winnerId,
+      rngHash: game.rngHash,
+      p1Offset: game.p1Offset,
+      p2Offset: game.p2Offset,
+      verificationSalt: game.status === GameStatus.FINISHED ? game.verificationSalt : undefined,
+      p1Rolls: game.status === GameStatus.FINISHED ? game.p1Rolls : undefined,
+      p2Rolls: game.status === GameStatus.FINISHED ? game.p2Rolls : undefined,
     };
+  }
+
+  async setOffset(gameId: string, playerId: string, offset: number): Promise<Game> {
+    const game = await this.findOne(gameId);
+    if (game.status !== GameStatus.WAITING && game.status !== GameStatus.IN_PROGRESS) {
+      throw new BadRequestException('Нельзя изменить смещение после начала игры');
+    }
+    
+    // В длинных нардах и на сайте nardgammon смещение можно менять за несколько секунд до старта.
+    // Для простоты разрешим менять пока статус WAITING или IN_PROGRESS, но если ходов еще не было.
+    if ((game.moves || []).length > 0) {
+      throw new BadRequestException('Нельзя изменить смещение после начала совершения ходов');
+    }
+
+    if (offset < 1 || offset > 100) {
+      throw new BadRequestException('Смещение должно быть от 1 до 100');
+    }
+
+    if (game.player1Id === playerId) {
+      game.p1Offset = offset;
+    } else if (game.player2Id === playerId) {
+      game.p2Offset = offset;
+    } else {
+      throw new BadRequestException('Вы не участник этой игры');
+    }
+
+    return this.gamesRepository.save(game);
   }
 }

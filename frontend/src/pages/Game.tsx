@@ -109,6 +109,8 @@ export default function Game() {
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
   const [player2Ready, setPlayer2Ready] = useState<boolean>(false)
   const [myReady, setMyReady] = useState<boolean>(false)
+  const [myOffset, setMyOffset] = useState<number>(1)
+  const [opponentOffset, setOpponentOffset] = useState<number>(1)
   const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const moveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -507,7 +509,18 @@ export default function Game() {
           setGameState(prev => prev ? ({ ...prev, dice: formattedDice }) : null)
         }
         loadGame()
-      }, 1000)
+      }, 1500) // Увеличили время для красивой 3D анимации
+    })
+
+    socket.on('offset_updated', (data: any) => {
+      const isP1 = gameInfo?.player1Id === user?.id
+      if (isP1) {
+        setMyOffset(data.player1Offset)
+        setOpponentOffset(data.player2Offset)
+      } else {
+        setMyOffset(data.player2Offset)
+        setOpponentOffset(data.player1Offset)
+      }
     })
 
     socket.on('timer_update', (data: any) => {
@@ -621,6 +634,15 @@ export default function Game() {
     }
     ms.emit('ready_to_start', { gameId })
     setMyReady(true)
+  }
+
+  const handleOffsetChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseInt(e.target.value, 10)
+    if (isNaN(val) || val < 1 || val > 100) return
+    setMyOffset(val)
+    try {
+      await apiClient.post(`/games/${gameId}/offset`, { offset: val })
+    } catch (error) {}
   }
 
   const handleConfirm = async () => {
@@ -797,11 +819,33 @@ export default function Game() {
               {!gameInfo?.player2Id ? (
                 <div>⏳ Ожидание соперника...</div>
               ) : (
-                <div>
+                <div className="fair-play-setup">
+                  <h3>Контроль честности</h3>
+                  <div className="hash-display">
+                    <div>Хеш последовательности (SHA-256):</div>
+                    <code>{gameInfo.rngHash ? (JSON.parse(gameInfo.rngHash).p1Hash.substring(0, 16) + '...') : '---'}</code>
+                  </div>
+                  
+                  <div className="offset-selector">
+                    <label>Ваше смещение (1-100):</label>
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="100" 
+                      value={myOffset} 
+                      onChange={handleOffsetChange}
+                      disabled={myReady}
+                    />
+                    <div className="offset-values">
+                      <span>Вы: {myOffset}</span>
+                      <span>Соперник: {opponentOffset}</span>
+                    </div>
+                  </div>
+
                   {!myReady ? (
-                    <Button variant="primary" onClick={handleReadyToStart}>Начать игру</Button>
+                    <Button variant="primary" onClick={handleReadyToStart} className="ready-btn">Начать игру</Button>
                   ) : (
-                    <div>⏳ Ожидание готовности соперника...</div>
+                    <div className="ready-status">✅ Вы готовы. Ожидание соперника...</div>
                   )}
                 </div>
               )}
@@ -935,7 +979,39 @@ export default function Game() {
           <div className="game-result">
             <h2>Игра завершена!</h2>
             <p>Победитель: {score.player1 > score.player2 ? (isPlayer1 ? 'Вы' : myPlayer?.username) : (isPlayer1 ? opponentPlayer?.username : 'Вы')}</p>
-            <button onClick={() => navigate('/game/result/' + gameId)}>Результат</button>
+            
+            <div className="fair-play-verification">
+              <h4>Контроль честности</h4>
+              <div className="verification-item">
+                <span>Ваше смещение:</span>
+                <strong>{myOffset}</strong>
+              </div>
+              <div className="verification-item">
+                <span>Смещение соперника:</span>
+                <strong>{opponentOffset}</strong>
+              </div>
+              <div className="verification-item">
+                <span>Итоговый индекс:</span>
+                <strong>{((myOffset - 1) * 2 + opponentOffset)}</strong>
+              </div>
+              {gameState.verificationSalt && (
+                <div className="verification-details">
+                  <div className="salt-display">
+                    Соль: <code>{gameState.verificationSalt}</code>
+                  </div>
+                  <button 
+                    className="verify-btn"
+                    onClick={() => {
+                      alert('Для проверки: HASH(Sequence + Salt) должен совпадать с хешем в начале игры.')
+                    }}
+                  >
+                    Как проверить?
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button className="result-close-btn" onClick={() => navigate('/game/result/' + gameId)}>К результатам</button>
           </div>
         </div>
       )}

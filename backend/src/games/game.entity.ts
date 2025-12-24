@@ -83,6 +83,21 @@ export class Game {
   @Column({ type: 'text', nullable: true })
   rngHash: string;
 
+  @Column({ type: 'jsonb', nullable: true })
+  p1Rolls: number[][]; // Предварительно сгенерированная последовательность бросков игрока 1
+
+  @Column({ type: 'jsonb', nullable: true })
+  p2Rolls: number[][]; // Предварительно сгенерированная последовательность бросков игрока 2
+
+  @Column({ default: 1 })
+  p1Offset: number; // Смещение, выбранное игроком 1
+
+  @Column({ default: 1 })
+  p2Offset: number; // Смещение, выбранное игроком 2
+
+  @Column({ type: 'text', nullable: true })
+  verificationSalt: string; // Соль для хеширования (раскрывается в конце игры)
+
   @Column({ nullable: true })
   currentPlayer: number;
 
