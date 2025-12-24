@@ -1212,11 +1212,52 @@ export default function Game() {
                   </div>
                   <button 
                     className="verify-btn"
-                    onClick={() => {
-                      alert('Для проверки: HASH(Sequence + Salt) должен совпадать с хешем в начале игры.')
+                    onClick={async () => {
+                      try {
+                        if (!gameState?.p1Rolls || !gameState?.p2Rolls || !gameState?.verificationSalt || !gameInfo?.rngHash) {
+                          alert('Недостаточно данных для проверки')
+                          return
+                        }
+
+                        // Вычисляем SHA256 хеш
+                        const calculateHash = async (data: string): Promise<string> => {
+                          const encoder = new TextEncoder()
+                          const dataBuffer = encoder.encode(data)
+                          const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer)
+                          const hashArray = Array.from(new Uint8Array(hashBuffer))
+                          return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+                        }
+
+                        // Вычисляем хеши для обеих последовательностей
+                        const p1Data = JSON.stringify(gameState.p1Rolls) + gameState.verificationSalt
+                        const p2Data = JSON.stringify(gameState.p2Rolls) + gameState.verificationSalt
+                        
+                        const p1Hash = await calculateHash(p1Data)
+                        const p2Hash = await calculateHash(p2Data)
+
+                        // Парсим исходный rngHash
+                        const originalHashes = JSON.parse(gameInfo.rngHash)
+                        const originalP1Hash = originalHashes.p1Hash
+                        const originalP2Hash = originalHashes.p2Hash
+
+                        // Сравниваем
+                        const p1Valid = p1Hash === originalP1Hash
+                        const p2Valid = p2Hash === originalP2Hash
+                        const allValid = p1Valid && p2Valid
+
+                        // Показываем результат
+                        const result = allValid 
+                          ? '✅ Проверка пройдена!\n\nХеши последовательностей совпадают с исходными.'
+                          : `❌ Проверка не пройдена!\n\nИгрок 1: ${p1Valid ? '✅' : '❌'}\nИгрок 2: ${p2Valid ? '✅' : '❌'}\n\nВычисленные хеши:\nP1: ${p1Hash.substring(0, 16)}...\nP2: ${p2Hash.substring(0, 16)}...\n\nОжидаемые хеши:\nP1: ${originalP1Hash.substring(0, 16)}...\nP2: ${originalP2Hash.substring(0, 16)}...`
+                        
+                        alert(result)
+                      } catch (error: any) {
+                        console.error('Ошибка проверки:', error)
+                        alert(`Ошибка при проверке: ${error.message || 'Неизвестная ошибка'}`)
+                      }
                     }}
                   >
-                    Как проверить?
+                    Проверить
                   </button>
                 </div>
               )}
