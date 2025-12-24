@@ -48,7 +48,6 @@ export class PaymentTransaction {
   user: User;
 
   @Column()
-  @Index()
   userId: string;
 
   @ManyToOne(() => UserWallet, { nullable: true })

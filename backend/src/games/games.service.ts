@@ -318,18 +318,26 @@ export class GamesService {
    */
   async getActiveInProgressGames(): Promise<Game[]> {
     try {
-      return this.gamesRepository.find({
+      // Проверяем, что репозиторий инициализирован
+      if (!this.gamesRepository) {
+        this.logger.warn('gamesRepository is not initialized');
+        return [];
+      }
+      
+      return await this.gamesRepository.find({
         where: { 
           status: GameStatus.IN_PROGRESS,
           type: GameType.VS_PLAYER, // Исключаем игры с ботом
         },
         relations: [], // Не загружаем relations для производительности
       });
-    } catch (error) {
-      this.logger.error(`Error fetching active in-progress games:`, error instanceof Error ? error.message : String(error));
-      if (error instanceof Error && error.stack) {
-        this.logger.debug(`Error stack:`, error.stack);
-      }
+    } catch (error: any) {
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+      const errorStack = error?.stack || 'No stack trace';
+      
+      this.logger.error(`Error fetching active in-progress games: ${errorMessage}`);
+      this.logger.debug(`Error stack: ${errorStack}`);
+      
       return []; // Возвращаем пустой массив при ошибке
     }
   }
