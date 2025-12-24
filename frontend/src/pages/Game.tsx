@@ -834,10 +834,33 @@ export default function Game() {
                 </div>
               </div>
               <div className={`game-player-avatar ${!isPlayer1 && isMyTurn ? 'game-player-active' : ''}`}>
+                {!isPlayer1 && isMyTurn && gameStatus === 'in_progress' && gameState?.dice && (
+                  <svg className="game-player-timer-ring" viewBox="0 0 100 100">
+                    <circle
+                      className="game-player-timer-ring-bg"
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="rgba(255, 255, 255, 0.1)"
+                      strokeWidth="6"
+                    />
+                    <circle
+                      className={`game-player-timer-ring-progress ${isInOvertime ? 'overtime' : 'normal'}`}
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke={isInOvertime ? '#FF9800' : '#4caf50'}
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 45}`}
+                      strokeDashoffset={`${2 * Math.PI * 45 * (1 - (isInOvertime ? overtimeTimer / 60 : moveTimer / 30))}`}
+                      transform="rotate(-90 50 50)"
+                    />
+                  </svg>
+                )}
                 {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
-                <div className={`game-player-timer ${!isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
-                  {formatTime(!isPlayer1 ? player1Timer : player2Timer)}
-                </div>
               </div>
             </div>
             
@@ -854,10 +877,33 @@ export default function Game() {
               <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
                 <div className={`game-player-avatar ${!isPlayer1 && isMyTurn ? 'game-player-active' : ''}`}>
+                  {!isPlayer1 && isMyTurn && gameStatus === 'in_progress' && gameState?.dice && (
+                    <svg className="game-player-timer-ring" viewBox="0 0 100 100">
+                      <circle
+                        className="game-player-timer-ring-bg"
+                        cx="50"
+                        cy="50"
+                        r="45"
+                        fill="none"
+                        stroke="rgba(255, 255, 255, 0.1)"
+                        strokeWidth="6"
+                      />
+                      <circle
+                        className={`game-player-timer-ring-progress ${isInOvertime ? 'overtime' : 'normal'}`}
+                        cx="50"
+                        cy="50"
+                        r="45"
+                        fill="none"
+                        stroke={isInOvertime ? '#FF9800' : '#4caf50'}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 45}`}
+                        strokeDashoffset={`${2 * Math.PI * 45 * (1 - (isInOvertime ? overtimeTimer / 60 : moveTimer / 30))}`}
+                        transform="rotate(-90 50 50)"
+                      />
+                    </svg>
+                  )}
                   {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
-                  <div className={`game-player-timer ${!isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
-                    {formatTime(!isPlayer1 ? player1Timer : player2Timer)}
-                  </div>
                 </div>
               </div>
               <div className="game-score-section">
@@ -867,10 +913,33 @@ export default function Game() {
               <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
                 <div className={`game-player-avatar ${isMyTurn && isPlayer1 ? 'game-player-active' : ''}`}>
+                  {isMyTurn && isPlayer1 && gameStatus === 'in_progress' && gameState?.dice && (
+                    <svg className="game-player-timer-ring" viewBox="0 0 100 100">
+                      <circle
+                        className="game-player-timer-ring-bg"
+                        cx="50"
+                        cy="50"
+                        r="45"
+                        fill="none"
+                        stroke="rgba(255, 255, 255, 0.1)"
+                        strokeWidth="6"
+                      />
+                      <circle
+                        className={`game-player-timer-ring-progress ${isInOvertime ? 'overtime' : 'normal'}`}
+                        cx="50"
+                        cy="50"
+                        r="45"
+                        fill="none"
+                        stroke={isInOvertime ? '#FF9800' : '#4caf50'}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 45}`}
+                        strokeDashoffset={`${2 * Math.PI * 45 * (1 - (isInOvertime ? overtimeTimer / 60 : moveTimer / 30))}`}
+                        transform="rotate(-90 50 50)"
+                      />
+                    </svg>
+                  )}
                   {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
-                  <div className={`game-player-timer ${isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
-                    {formatTime(isPlayer1 ? player1Timer : player2Timer)}
-                  </div>
                 </div>
               </div>
             </div>
@@ -915,6 +984,24 @@ export default function Game() {
             </div>
           )}
 
+          {/* Подтверждение хода (только в портрете, только если есть pendingMoves) - выше поля */}
+          {!isLandscape && gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
+            <div className="game-confirm-section">
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', padding: '8px 16px' }}>
+                <Button variant="secondary" onClick={handleUndo} style={{ flex: 1 }}>
+                  Отменить
+                </Button>
+                <Button 
+                  variant="primary" 
+                  onClick={handleConfirm}
+                  style={{ flex: 2 }}
+                >
+                  Подтвердить ({pendingMoves.length})
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Доска */}
           {(gameStatus === 'in_progress' || gameStatus === 'finished') && (
             <div className="board-wrapper">
@@ -942,31 +1029,6 @@ export default function Game() {
               />
             </div>
           )}
-
-          {/* Подтверждение хода (только в портрете, только если есть pendingMoves) */}
-          {!isLandscape && gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
-            <div className="game-confirm-section">
-              <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                {!isInOvertime ? (
-                  <div className="game-move-timer">⏱️ {moveTimer}с</div>
-                ) : (
-                  <div className="game-overtime-timer">⚠️ {overtimeTimer}с</div>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                <Button variant="secondary" onClick={handleUndo} style={{ flex: 1 }}>
-                  Отменить
-                </Button>
-                <Button 
-                  variant="primary" 
-                  onClick={handleConfirm}
-                  style={{ flex: 2 }}
-                >
-                  Подтвердить ({pendingMoves.length})
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Правая панель (ландшафт) */}
@@ -985,10 +1047,33 @@ export default function Game() {
                 </div>
               </div>
               <div className={`game-player-avatar ${isMyTurn && isPlayer1 ? 'game-player-active' : ''}`}>
+                {isMyTurn && isPlayer1 && gameStatus === 'in_progress' && gameState?.dice && (
+                  <svg className="game-player-timer-ring" viewBox="0 0 100 100">
+                    <circle
+                      className="game-player-timer-ring-bg"
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="rgba(255, 255, 255, 0.1)"
+                      strokeWidth="6"
+                    />
+                    <circle
+                      className={`game-player-timer-ring-progress ${isInOvertime ? 'overtime' : 'normal'}`}
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke={isInOvertime ? '#FF9800' : '#4caf50'}
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 45}`}
+                      strokeDashoffset={`${2 * Math.PI * 45 * (1 - (isInOvertime ? overtimeTimer / 60 : moveTimer / 30))}`}
+                      transform="rotate(-90 50 50)"
+                    />
+                  </svg>
+                )}
                 {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
-                <div className={`game-player-timer ${isPlayer1 && isMyTurn ? 'game-player-timer-active' : ''}`}>
-                  {formatTime(isPlayer1 ? player1Timer : player2Timer)}
-                </div>
               </div>
             </div>
 
