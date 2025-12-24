@@ -114,7 +114,7 @@ export default function Game() {
   const [myReady, setMyReady] = useState<boolean>(false)
   const [myOffset, setMyOffset] = useState<number>(1)
   const [opponentOffset, setOpponentOffset] = useState<number>(1)
-  const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
+  const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const moveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const overtimeRef = useRef<ReturnType<typeof setInterval> | null>(null)

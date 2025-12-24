@@ -13,7 +13,7 @@ interface BackgammonBoardProps {
   isMyTurn: boolean
   gameId?: string
   gameMode?: 'short' | 'long'
-  pendingMoves?: Array<{ from: number; to: number; die: number }>
+  pendingMoves?: Array<{ from: number; to: number; die: number; steps?: any[] }>
   player1Skins?: { board?: any; dice?: any; checkers?: any }
   player2Skins?: { board?: any; dice?: any; checkers?: any }
   mySkins?: { board?: any; dice?: any; checkers?: any }
@@ -686,7 +686,7 @@ export default function BackgammonBoard({
         animationFrame = requestAnimationFrame(animate)
       } else {
         // Анимация завершена
-        onMove(animatingChecker.from, animatingChecker.to, animatingChecker.die)
+        onMove(animatingChecker.from, animatingChecker.to, animatingChecker.die, animatingChecker.steps)
         setAnimatingChecker(null)
       }
     }
