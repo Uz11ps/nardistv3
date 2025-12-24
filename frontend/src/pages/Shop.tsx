@@ -17,9 +17,7 @@ interface NarCoinPackage {
 export default function Shop() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'skins' | 'other'>('coin')
-  const [lives, setLives] = useState({ lives: 5, maxLives: 5 })
-  const [buyingLife, setBuyingLife] = useState(false)
+  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'skins'>('coin')
   const [skinFilter, setSkinFilter] = useState<'all' | 'board' | 'dice' | 'checkers'>('all')
   const [narCoinPackages, setNarCoinPackages] = useState<NarCoinPackage[]>([])
   const [allSkins, setAllSkins] = useState<Skin[]>([])
@@ -40,8 +38,6 @@ export default function Shop() {
       loadSkins()
     } else if (activeTab === 'subscription') {
       loadCityAutobuildStatus()
-    } else if (activeTab === 'other') {
-      loadLives()
     }
   }, [activeTab])
 
@@ -128,38 +124,6 @@ export default function Shop() {
       }
       return s.type === type
     })
-  }
-
-  const loadLives = async () => {
-    try {
-      const response = await apiClient.get('/progress/lives')
-      setLives({
-        lives: response.data.lives || 5,
-        maxLives: response.data.maxLives || 5,
-      })
-    } catch (error) {
-      console.error('Failed to load lives:', error)
-    }
-  }
-
-  const handleBuyLife = async () => {
-    if (buyingLife) return
-    try {
-      setBuyingLife(true)
-      await apiClient.post('/progress/lives/buy')
-      alert('Жизнь успешно куплена!')
-      await loadLives()
-      // Обновляем данные пользователя
-      if (user) {
-        const userResponse = await apiClient.get('/users/me')
-        useAuthStore.setState({ user: userResponse.data })
-      }
-    } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при покупке жизни')
-      console.error('Failed to buy life:', error)
-    } finally {
-      setBuyingLife(false)
-    }
   }
 
   const loadCityAutobuildStatus = async () => {
@@ -376,7 +340,6 @@ export default function Shop() {
     { id: 'coin', label: 'NAR-coin', active: activeTab === 'coin', onClick: () => setActiveTab('coin') },
     { id: 'subscription', label: 'Подписка', active: activeTab === 'subscription', onClick: () => setActiveTab('subscription') },
     { id: 'skins', label: 'Доски', active: activeTab === 'skins', onClick: () => setActiveTab('skins') },
-    { id: 'other', label: 'Прочее', active: activeTab === 'other', onClick: () => setActiveTab('other') },
   ]
 
   return (
@@ -535,73 +498,6 @@ export default function Shop() {
                 </div>
                 <div className="shop-subscription-icon">
                   <div style={{ fontSize: '64px' }}>🏗️</div>
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Прочее */}
-        {activeTab === 'other' && (
-          <div className="shop-list">
-            <Card className="shop-subscription-card">
-              <div className="shop-subscription-content">
-                <div className="shop-subscription-info">
-                  <div className="shop-subscription-title">Жизнь</div>
-                  <div className="shop-subscription-description" style={{ marginTop: '8px', marginBottom: '12px' }}>
-                    Покупка дополнительной жизни для участия в PvP играх
-                  </div>
-                  <div style={{ 
-                    marginBottom: '12px',
-                    padding: '8px 12px',
-                    background: '#2a2a2a',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    color: '#B6B6B6',
-                  }}>
-                    Текущее количество: <strong style={{ color: '#FF6B6B' }}>{lives.lives}/{lives.maxLives}</strong>
-                  </div>
-                  <div style={{ 
-                    marginBottom: '12px',
-                    padding: '8px 12px',
-                    background: '#2a2a2a',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    color: '#B6B6B6',
-                  }}>
-                    Цена: <strong style={{ color: '#FFF' }}>500 NAR</strong>
-                  </div>
-                  {lives.lives >= lives.maxLives ? (
-                    <div style={{
-                      padding: '8px 16px',
-                      background: '#4CAF50',
-                      borderRadius: '8px',
-                      color: '#FFF',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      textAlign: 'center',
-                      marginTop: '8px',
-                    }}>
-                      ✅ Максимальное количество жизней
-                    </div>
-                  ) : (
-                    <button
-                      className="shop-subscription-buy-btn"
-                      onClick={handleBuyLife}
-                      disabled={buyingLife}
-                      style={{
-                        opacity: buyingLife ? 0.6 : 1,
-                        cursor: buyingLife ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      {buyingLife ? 'Покупка...' : 'Купить жизнь'}
-                    </button>
-                  )}
-                </div>
-                <div className="shop-subscription-icon">
-                  <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#FF6B6B"/>
-                  </svg>
                 </div>
               </div>
             </Card>

@@ -7,7 +7,7 @@ import './Home.css'
 export default function Home() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100, lives: 5, maxLives: 5 })
+  const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
   const [hasPremium, setHasPremium] = useState(false)
   const [hasNotifications, setHasNotifications] = useState(false)
 
@@ -26,7 +26,6 @@ export default function Home() {
         checkPremium()
         checkNotifications()
         loadEnergy()
-        loadLives()
       } catch (error) {
         console.error('Ошибка при загрузке статистики:', error)
         setStats({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
@@ -47,18 +46,6 @@ export default function Home() {
     }
   }
 
-  const loadLives = async () => {
-    try {
-      const response = await apiClient.get('/progress/lives')
-      setStats(prev => ({
-        ...prev,
-        lives: response.data.lives || prev.lives,
-        maxLives: response.data.maxLives || prev.maxLives,
-      }))
-    } catch (error) {
-      // Игнорируем ошибки
-    }
-  }
 
   const checkPremium = async () => {
     try {
@@ -125,12 +112,6 @@ export default function Home() {
           <div className="home-energy">
             <img src="/img/молния.png" alt="energy" className="home-energy-icon" />
             <span>{stats.energy}/{stats.maxEnergy}</span>
-          </div>
-          <div className="home-lives">
-            <svg className="home-lives-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#FF6B6B"/>
-            </svg>
-            <span>{stats.lives}/{stats.maxLives}</span>
           </div>
         </div>
       </div>

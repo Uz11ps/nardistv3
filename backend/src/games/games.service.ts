@@ -100,24 +100,6 @@ export class GamesService {
       player1EnergyChecked = true;
     }
 
-    // Проверка жизней для player1 (только для игр с игроками)
-    // Жизни - дополнительный лимит для PvP игр (блокируют создание игры)
-    // Энергия - основной ресурс для начала игры
-    // Жизни тратятся только при поражении
-    if (type === GameType.VS_PLAYER) {
-      const hasLives = await this.progressService.checkLives(player1Id);
-      if (!hasLives) {
-        throw new BadRequestException('Недостаточно жизней для начала игры. Жизни восстанавливаются каждые 4 часа или их можно купить в магазине.');
-      }
-    }
-
-    // Проверка жизней для player2
-    if (player2Id && type === GameType.VS_PLAYER) {
-      const hasLives = await this.progressService.checkLives(player2Id);
-      if (!hasLives) {
-        throw new BadRequestException('У соперника недостаточно жизней для начала игры.');
-      }
-    }
 
     // Проверка энергии для player2, если он есть
     if (player2Id && type !== GameType.VS_BOT) {
@@ -946,16 +928,6 @@ export class GamesService {
     }
     
     this.logger.log(`🎮 Обработка наград: winnerId=${game.winnerId}, loserId=${loserId}, stake=${game.stake}`);
-    
-    // Только для игр с реальными игроками применяем жизни
-    if (game.type === GameType.VS_PLAYER && loserId) {
-      try {
-        await this.progressService.loseLifeOnDefeat(loserId);
-        this.logger.log(`💔 Жизнь отнята у проигравшего ${loserId}`);
-      } catch (error) {
-        this.logger.error(`❌ Ошибка при отнятии жизни: ${error.message}`);
-      }
-    }
 
     // Обработка ставок - победитель получает обе ставки (с учетом комиссии 10%)
     if (game.stake > 0 && game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
