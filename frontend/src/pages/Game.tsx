@@ -693,6 +693,15 @@ export default function Game() {
       }
       try {
         setMoveTimer(30)
+        
+        const onMoveError = (err: any) => {
+          console.error('Move rejected:', err)
+          alert(`Ход отклонен: ${err.message || 'Ошибка'}`)
+          socket.off('error', onMoveError)
+        }
+        socket.on('error', onMoveError)
+        setTimeout(() => socket.off('error', onMoveError), 3000)
+        
         socket.emit('make_move', { gameId, moves: pendingMoves })
         setPendingMoves([])
       } catch (error) {

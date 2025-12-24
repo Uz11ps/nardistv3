@@ -122,35 +122,35 @@ export class LongBackgammonEngine {
       return true;
     }
     
-    // Check if this is the first move of the game for this player
-    // We check: current checkers on head + checkers moved from head this turn = 15
-    // This tells us how many were on head at the start of this turn
+    // Check if this is the first turn of the game for this player
     const currentHeadCheckers = Math.abs(state.points[headIndex] || 0);
     const movedThisTurn = state.movesFromHead || 0;
     const wasFirstTurn = (currentHeadCheckers + movedThisTurn) === 15;
     
-    console.log(`🔍 checkHeadRule: from=${from}, headIndex=${headIndex}, currentHeadCheckers=${currentHeadCheckers}, movedThisTurn=${movedThisTurn}, wasFirstTurn=${wasFirstTurn}, dice=[${dice.join(', ')}]`);
+    // Check if it's a doubles turn
+    // In Long Backgammon, doubles are expanded to 4 dice. 
+    // Even if some are used, the remaining will all have the same value.
+    const isDoubles = dice.length > 0 && dice.every(d => d === dice[0]) && (state.dice.length === 2 || state.dice.length === 3 || state.dice.length === 4);
+    const dieValue = dice[0];
+    const isSpecialDouble = isDoubles && (dieValue === 3 || dieValue === 4 || dieValue === 6);
     
-    // Check if doubles are rolled
-    // Doubles can be: [x, x] (2 dice) or [x, x, x, x] (4 dice after expansion)
-    const isDoubles = (dice.length === 2 && dice[0] === dice[1]) || 
-                      (dice.length === 4 && dice[0] === dice[1] && dice[1] === dice[2] && dice[2] === dice[3]);
+    console.log(`🔍 checkHeadRule debug:`, {
+      from,
+      movedThisTurn,
+      wasFirstTurn,
+      isDoubles,
+      dieValue,
+      isSpecialDouble,
+      dice
+    });
     
-    // If first move and doubles, check if one checker can make all moves
-    // If not (due to blocked points), allow up to 2 checkers from head
-    if (wasFirstTurn && isDoubles) {
-      // For now, we allow up to 2 checkers from head on first move with doubles
-      // In a more strict implementation, we would check if one checker can make all moves
-      const result = movedThisTurn < 2;
-      console.log(`  ✅ First turn with doubles: allow up to 2, result=${result}`);
-      return result;
+    // Exception: 3:3, 4:4, 6:6 on the FIRST turn allow taking 2 checkers from head
+    if (wasFirstTurn && isSpecialDouble) {
+      return movedThisTurn < 2;
     }
     
-    // Otherwise, only 1 checker per complete turn from head
-    // This means: if we've already moved 1 checker from head in this turn, we cannot move another
-    const result = movedThisTurn === 0;
-    console.log(`  ${result ? '✅' : '❌'} Regular turn: movedThisTurn=${movedThisTurn}, result=${result}`);
-    return result;
+    // Otherwise, only 1 checker per turn from head
+    return movedThisTurn === 0;
   }
 
   /**

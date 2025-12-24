@@ -254,7 +254,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       // Bot auto-move is now handled in games.service.ts after makeMove
       // This ensures proper sequencing and state management
     } catch (error) {
-      client.emit('error', { message: error.message });
+      this.logger.error(`❌ Error in make_move: ${error.message}`);
+      client.emit('error', { message: error.message || 'Ошибка выполнения хода' });
     }
   }
 

@@ -461,11 +461,11 @@ export class GamesService {
     for (const move of moves) {
       console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       console.log(`  Текущее состояние: movesFromHead=${currentState.movesFromHead || 0}, dice=[${currentState.dice?.join(', ') || 'none'}]`);
+      
       const isValid = engine.validateMove(currentState, move.from, move.to, move.die);
-      console.log(`  Результат валидации: ${isValid ? '✅ валиден' : '❌ невалиден'}`);
       
       if (!isValid) {
-        console.error(`❌ Ход отклонен: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+        console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
         throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       }
       
@@ -479,11 +479,6 @@ export class GamesService {
       
       console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       currentState = engine.applyMove(currentState, move.from, move.to, move.die);
-      console.log(`  Состояние после хода:`, {
-        points: currentState.points,
-        bar: currentState.bar,
-        borneOff: currentState.borneOff,
-      });
     }
 
     // Проверяем обязательность использования всех кубиков, если это возможно
@@ -584,35 +579,34 @@ export class GamesService {
     }
 
     // Calculate remaining dice after moves
-    const remainingDice = diceCopy; // diceCopy contains unused dice after moves
+    const remainingDice = diceCopy;
     
-    // In Long Backgammon, turn switches only when:
-    // 1. All dice are used, OR
-    // 2. No more valid moves are possible with remaining dice
     if (game.mode === GameMode.LONG) {
       if (remainingDice.length === 0) {
-        // All dice used - switch turn
+        // Все кубики использованы - смена хода
         currentState.dice = [];
         currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
         currentState.movesFromHead = 0;
+        this.logger.log(`🔄 Turn switched: all dice used. New player: ${currentState.currentPlayer}`);
       } else {
-        // Check if there are any valid moves with remaining dice
+        // Проверяем, есть ли валидные ходы с оставшимися кубиками
         let hasValidMoves = false;
         if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
           const remainingMoves = engine.getAllValidMoves(currentState, remainingDice);
+          // getAllValidMoves возвращает последовательности. Если есть хотя бы одна непустая - ходы есть.
           hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
         }
         
         if (hasValidMoves) {
-          // Not all dice used, but there are valid moves - keep remaining dice and same player
+          // Есть еще ходы - оставляем того же игрока
           currentState.dice = remainingDice;
-          // Keep same player - don't switch turn
-          // movesFromHead stays as is (already tracked in currentState)
+          this.logger.log(`🟡 Keeping same player: valid moves remain with dice [${remainingDice.join(', ')}]`);
         } else {
-          // No valid moves with remaining dice - switch turn
+          // Ходов больше нет - принудительная смена хода
           currentState.dice = [];
           currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
           currentState.movesFromHead = 0;
+          this.logger.log(`🔄 Turn switched: no valid moves remain with [${remainingDice.join(', ')}]. New player: ${currentState.currentPlayer}`);
         }
       }
     } else {
