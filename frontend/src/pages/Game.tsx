@@ -110,8 +110,6 @@ export default function Game() {
 
   const [isInOvertime, setIsInOvertime] = useState<boolean>(false) // Флаг овертайма
   const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
-  const [showVerificationModal, setShowVerificationModal] = useState(false)
-  const [verificationResult, setVerificationResult] = useState<{p1Valid: boolean, p2Valid: boolean, p1Hash: string, p2Hash: string, originalP1Hash: string, originalP2Hash: string} | null>(null)
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
@@ -607,11 +605,9 @@ export default function Game() {
       setTimeout(() => {
         setDiceAnimating(false)
         // Обновляем состояние с кубиками немедленно
+        // НЕ обновляем gameState здесь, чтобы не сбрасывать подсветку
         // Сервер отправит game_state событие после dice_rolled, которое обновит полное состояние
-        if (data.dice && Array.isArray(data.dice) && data.dice.length >= 2) {
-          const formattedDice = { die1: data.dice[0], die2: data.dice[1] }
-          setGameState(prev => prev ? ({ ...prev, dice: formattedDice }) : null)
-        }
+        // Но мы не будем обновлять gameState здесь, чтобы подсветка не сбрасывалась
       }, 1500) // Увеличили время для красивой 3D анимации
     })
 
@@ -1249,82 +1245,6 @@ export default function Game() {
         )}
       </div>
 
-      {showVerificationModal && (
-        <div className="modal-overlay" onClick={() => setShowVerificationModal(false)}>
-          <div className="modal-content verification-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px', maxHeight: '80vh', overflow: 'auto'}}>
-            <h2>Проверка честности игры</h2>
-            {!verificationResult ? (
-              <>
-                <p>Проверяем последовательность бросков кубиков...</p>
-                <Button variant="primary" onClick={async () => {
-                  try {
-                    if (!gameState?.p1Rolls || !gameState?.p2Rolls || !gameState?.verificationSalt || !gameInfo?.rngHash) {
-                      alert('Недостаточно данных для проверки')
-                      return
-                    }
-
-                    const calculateHash = async (data: string): Promise<string> => {
-                      const encoder = new TextEncoder()
-                      const dataBuffer = encoder.encode(data)
-                      const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer)
-                      const hashArray = Array.from(new Uint8Array(hashBuffer))
-                      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-                    }
-
-                    const p1Data = JSON.stringify(gameState.p1Rolls) + gameState.verificationSalt
-                    const p2Data = JSON.stringify(gameState.p2Rolls) + gameState.verificationSalt
-                    
-                    const p1Hash = await calculateHash(p1Data)
-                    const p2Hash = await calculateHash(p2Data)
-
-                    const originalHashes = JSON.parse(gameInfo.rngHash)
-                    const originalP1Hash = originalHashes.p1Hash
-                    const originalP2Hash = originalHashes.p2Hash
-
-                    const p1Valid = p1Hash === originalP1Hash
-                    const p2Valid = p2Hash === originalP2Hash
-
-                    setVerificationResult({ p1Valid, p2Valid, p1Hash, p2Hash, originalP1Hash, originalP2Hash })
-                  } catch (error: any) {
-                    console.error('Ошибка проверки:', error)
-                    alert(`Ошибка: ${error.message}`)
-                  }
-                }}>Начать проверку</Button>
-              </>
-            ) : (
-              <div style={{textAlign: 'left'}}>
-                <div style={{padding: '20px', background: verificationResult.p1Valid && verificationResult.p2Valid ? '#2d5016' : '#501616', borderRadius: '8px', marginBottom: '20px'}}>
-                  <h3>{verificationResult.p1Valid && verificationResult.p2Valid ? '✅ Проверка пройдена' : '❌ Проверка не пройдена'}</h3>
-                  <p>{verificationResult.p1Valid && verificationResult.p2Valid ? 'Хеши последовательностей совпадают с исходными' : 'Обнаружено несоответствие хешей'}</p>
-                </div>
-                
-                <div style={{marginBottom: '15px'}}>
-                  <h4>Игрок 1: {verificationResult.p1Valid ? '✅' : '❌'}</h4>
-                  <div style={{fontSize: '12px', wordBreak: 'break-all'}}>
-                    <div><strong>Ожидается:</strong> {verificationResult.originalP1Hash}</div>
-                    <div><strong>Получено:</strong> {verificationResult.p1Hash}</div>
-                  </div>
-                </div>
-                
-                <div style={{marginBottom: '20px'}}>
-                  <h4>Игрок 2: {verificationResult.p2Valid ? '✅' : '❌'}</h4>
-                  <div style={{fontSize: '12px', wordBreak: 'break-all'}}>
-                    <div><strong>Ожидается:</strong> {verificationResult.originalP2Hash}</div>
-                    <div><strong>Получено:</strong> {verificationResult.p2Hash}</div>
-                  </div>
-                </div>
-                
-                <div style={{marginTop: '20px'}}>
-                  <Button variant="primary" onClick={() => {
-                    setShowVerificationModal(false)
-                    setVerificationResult(null)
-                  }}>Закрыть</Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {showExitModal && (
         <div className="modal-overlay" onClick={() => setShowExitModal(false)}>
@@ -1366,52 +1286,15 @@ export default function Game() {
                   </div>
                   <button 
                     className="verify-btn"
-                    onClick={async () => {
-                      try {
-                        if (!gameState?.p1Rolls || !gameState?.p2Rolls || !gameState?.verificationSalt || !gameInfo?.rngHash) {
-                          alert('Недостаточно данных для проверки')
-                          return
-                        }
-
-                        // Вычисляем SHA256 хеш
-                        const calculateHash = async (data: string): Promise<string> => {
-                          const encoder = new TextEncoder()
-                          const dataBuffer = encoder.encode(data)
-                          const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer)
-                          const hashArray = Array.from(new Uint8Array(hashBuffer))
-                          return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-                        }
-
-                        // Вычисляем хеши для обеих последовательностей
-                        const p1Data = JSON.stringify(gameState.p1Rolls) + gameState.verificationSalt
-                        const p2Data = JSON.stringify(gameState.p2Rolls) + gameState.verificationSalt
-                        
-                        const p1Hash = await calculateHash(p1Data)
-                        const p2Hash = await calculateHash(p2Data)
-
-                        // Парсим исходный rngHash
-                        const originalHashes = JSON.parse(gameInfo.rngHash)
-                        const originalP1Hash = originalHashes.p1Hash
-                        const originalP2Hash = originalHashes.p2Hash
-
-                        // Сравниваем
-                        const p1Valid = p1Hash === originalP1Hash
-                        const p2Valid = p2Hash === originalP2Hash
-                        const allValid = p1Valid && p2Valid
-
-                        // Показываем результат
-                        const result = allValid 
-                          ? '✅ Проверка пройдена!\n\nХеши последовательностей совпадают с исходными.'
-                          : `❌ Проверка не пройдена!\n\nИгрок 1: ${p1Valid ? '✅' : '❌'}\nИгрок 2: ${p2Valid ? '✅' : '❌'}\n\nВычисленные хеши:\nP1: ${p1Hash.substring(0, 16)}...\nP2: ${p2Hash.substring(0, 16)}...\n\nОжидаемые хеши:\nP1: ${originalP1Hash.substring(0, 16)}...\nP2: ${originalP2Hash.substring(0, 16)}...`
-                        
-                        alert(result)
-                      } catch (error: any) {
-                        console.error('Ошибка проверки:', error)
-                        alert(`Ошибка при проверке: ${error.message || 'Неизвестная ошибка'}`)
+                    onClick={() => {
+                      if (!gameState?.p1Rolls || !gameState?.p2Rolls || !gameState?.verificationSalt || !gameInfo?.rngHash) {
+                        alert('Недостаточно данных для проверки. Игра должна быть завершена.')
+                        return
                       }
+                      navigate(`/game/${gameId}/verification`)
                     }}
                   >
-                    Проверить
+                    Проверить честность
                   </button>
                 </div>
               )}

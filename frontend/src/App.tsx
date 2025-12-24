@@ -41,6 +41,7 @@ import ClanUpgrades from './pages/ClanUpgrades'
 import ClanMembers from './pages/ClanMembers'
 import Policy from './pages/Policy'
 import Referrals from './pages/Referrals'
+import FairPlayVerification from './pages/FairPlayVerification'
 
 function App() {
   const [initialized, setInitialized] = useState(false)
@@ -243,6 +244,7 @@ function App() {
             <>
               <Route path="/" element={<Home />} />
               <Route path="/game/:gameId" element={<Game />} />
+              <Route path="/game/:gameId/verification" element={<FairPlayVerification />} />
               <Route path="/game/new" element={<Game />} />
               <Route path="/game/search" element={<GameSearch />} />
               <Route path="/game/tables" element={<GameTables />} />

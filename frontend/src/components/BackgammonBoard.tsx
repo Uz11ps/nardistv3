@@ -784,6 +784,9 @@ export default function BackgammonBoard({
 
   // Обработка начала касания (мобильные устройства)
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // Предотвращаем конфликт с Telegram приложением
+    e.stopPropagation()
+    if (e.cancelable) e.preventDefault()
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
     // Предотвращаем прокрутку страницы при перетаскивании шашки
@@ -1123,7 +1126,7 @@ export default function BackgammonBoard({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ touchAction: 'none' }} // Отключаем стандартные жесты браузера на канвасе
+        style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} // Отключаем стандартные жесты браузера и Telegram
       />
       
       {/* Панель сброса шашки */}
