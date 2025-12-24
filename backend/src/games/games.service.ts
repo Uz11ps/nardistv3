@@ -392,20 +392,16 @@ export class GamesService {
     
     console.log(`🎲 rollDice called: gameId=${gameId}, mode=${game.mode}, diceRoll=[${diceRoll.join(', ')}]`);
     
-    // In Long Backgammon, doubles give 4 moves of that value
-    // In Short Backgammon, doubles give 4 moves as well
+    // В обох режимах дубль дает 4 хода
     let dice: number[];
     const isDoubles = diceRoll.length === 2 && diceRoll[0] === diceRoll[1];
     
-    if (game.mode === GameMode.LONG && isDoubles) {
+    if (isDoubles) {
       // Doubles: expand to 4 moves
       dice = [diceRoll[0], diceRoll[0], diceRoll[0], diceRoll[0]];
       console.log(`✅ Doubles detected (${diceRoll[0]}-${diceRoll[1]}), expanded to 4 moves: [${dice.join(', ')}]`);
     } else {
       dice = diceRoll;
-      if (isDoubles) {
-        console.log(`⚠️ Doubles detected but mode is ${game.mode} (expected ${GameMode.LONG}), not expanding`);
-      }
     }
     
     game.gameState.dice = dice;

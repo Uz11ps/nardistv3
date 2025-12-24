@@ -51,7 +51,7 @@ export default function BackgammonBoard({
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
-  const [showBearOffButton, setShowBearOffButton] = useState<{ pointIndex: number; die: number } | null>(null)
+  const [showBearOffButton, setShowBearOffButton] = useState<{ pointIndex: number; die: number; steps?: any[] } | null>(null)
   const [animatingChecker, setAnimatingChecker] = useState<{
     from: number;
     to: number;
@@ -1048,13 +1048,17 @@ export default function BackgammonBoard({
         setSelectedPoint(pointIndex)
         const targets = new Set<number>()
         let bearOffDie: number | null = null
+        let bearOffSteps: any[] | undefined = undefined
         pointMoves.forEach(m => {
           targets.add(m.to)
-          if (m.to === -1) bearOffDie = m.die
+          if (m.to === -1) {
+            bearOffDie = m.die
+            bearOffSteps = (m as any).steps
+          }
         })
         setValidTargetPoints(targets)
         if (bearOffDie !== null) {
-          setShowBearOffButton({ pointIndex, die: bearOffDie })
+          setShowBearOffButton({ pointIndex, die: bearOffDie, steps: bearOffSteps })
         } else {
           setShowBearOffButton(null)
         }
@@ -1132,8 +1136,7 @@ export default function BackgammonBoard({
               }}
               onClick={(e) => {
                 e.stopPropagation()
-                const move = possibleMoves.find(m => m.from === showBearOffButton.pointIndex && m.to === -1)
-                startMoveAnimation(showBearOffButton.pointIndex, -1, showBearOffButton.die, (move as any)?.steps)
+                startMoveAnimation(showBearOffButton.pointIndex, -1, showBearOffButton.die, showBearOffButton.steps)
               }}
             >
               СБРОСИТЬ

@@ -656,8 +656,11 @@ export default function Game() {
         return
       }
     } else {
-      // Для хода > 6 (комбинированный) без steps - это ошибка, но мы не должны показывать "кубик 7 использован"
-      console.warn(`Move with die=${die} but no steps provided`);
+      // Для хода > 6 (комбинированный) без steps - это ошибка
+      if (!steps || steps.length === 0) {
+        console.warn(`Move with die=${die} but no steps provided`);
+        return; // Не добавляем такой ход
+      }
     }
 
     setPendingMoves(prev => [...prev, { from, to, die }])
