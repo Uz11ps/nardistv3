@@ -136,7 +136,8 @@
 }
 
 .home-currency,
-.home-energy {
+.home-energy,
+.home-lives {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -157,11 +158,21 @@
   color: #B6B6B6;
 }
 
+.home-lives {
+  color: #FF6B6B;
+}
+
 .home-currency-icon,
 .home-energy-icon {
   width: 20px;
   height: 20px;
   object-fit: contain;
+  flex-shrink: 0;
+}
+
+.home-lives-icon {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 

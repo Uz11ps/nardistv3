@@ -156,6 +156,37 @@ export class ProgressService {
   /**
    * ЭНЕРГИЯ: Проверить и потратить энергию на игру
    */
+  /**
+   * Проверка энергии для игры (без траты)
+   * Используется перед созданием игры, чтобы убедиться, что энергии достаточно
+   */
+  async checkEnergyForGame(userId: string, gameType: GameType): Promise<void> {
+    // Бот-игры не тратят энергию
+    if (gameType === GameType.VS_BOT) {
+      return;
+    }
+
+    await this.restoreEnergy(userId); // Сначала восстанавливаем энергию
+    
+    const user = await this.usersService.findOne(userId);
+    const enhancementLevel = await this.getEnhancementLevel(userId, EnhancementType.ENERGY);
+    
+    // С усилением энергии тратится меньше
+    // Каждый уровень снижает расход на 2 энергии (минимум 1)
+    const energyCost = Math.max(
+      this.BASE_ENERGY_COST - (enhancementLevel * 2),
+      1
+    );
+
+    if (user.energy < energyCost) {
+      throw new BadRequestException(`Недостаточно энергии. Требуется: ${energyCost}, доступно: ${user.energy}`);
+    }
+  }
+
+  /**
+   * Трата энергии для игры
+   * Вызывается ПОСЛЕ успешного создания игры
+   */
   async consumeEnergyForGame(userId: string, gameType: GameType): Promise<void> {
     // Бот-игры не тратят энергию
     if (gameType === GameType.VS_BOT) {

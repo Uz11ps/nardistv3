@@ -119,6 +119,7 @@ export default function Game() {
   const [myReady, setMyReady] = useState<boolean>(false)
   const [myOffset, setMyOffset] = useState<number>(1)
   const [opponentOffset, setOpponentOffset] = useState<number>(1)
+  const lastSentOffsetRef = useRef<number | null>(null) // Отслеживаем последний отправленный offset
   const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const moveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -615,19 +616,40 @@ export default function Game() {
     })
 
     socket.on('offset_updated', (data: any) => {
-      const isP1 = gameInfo?.player1Id === user?.id
-      // Обновляем только смещение соперника из события
-      // Свое смещение не трогаем, так как оно уже установлено локально
+      // Важно: gameInfo должен быть загружен, иначе не можем определить, кто мы
+      if (!gameInfo || !user?.id) return
+      
+      const isP1 = gameInfo.player1Id === user.id
+      const isP2 = gameInfo.player2Id === user.id
+      
+      // Если мы не участники игры (наблюдатели), ничего не делаем
+      if (!isP1 && !isP2) return
+      
+      // Обновляем ТОЛЬКО смещение соперника из события
+      // Свое смещение НЕ трогаем, так как оно уже установлено локально при движении ползунка
       if (isP1) {
-        // Мы player1, обновляем только смещение player2 (соперника)
+        // Мы player1, обновляем ТОЛЬКО смещение player2 (соперника)
+        // Игнорируем data.player1Offset полностью, т.к. это наш собственный offset
         if (data.player2Offset !== undefined) {
-          setOpponentOffset(data.player2Offset || 1)
+          // Проверяем, что это не наш только что отправленный offset (на случай, если событие пришло от нас самих)
+          if (data.player2Offset !== lastSentOffsetRef.current) {
+            setOpponentOffset(data.player2Offset || 1)
+          }
         }
-      } else {
-        // Мы player2, обновляем только смещение player1 (соперника)
+      } else if (isP2) {
+        // Мы player2, обновляем ТОЛЬКО смещение player1 (соперника)
+        // Игнорируем data.player2Offset полностью, т.к. это наш собственный offset
         if (data.player1Offset !== undefined) {
-          setOpponentOffset(data.player1Offset || 1)
+          // Проверяем, что это не наш только что отправленный offset (на случай, если событие пришло от нас самих)
+          if (data.player1Offset !== lastSentOffsetRef.current) {
+            setOpponentOffset(data.player1Offset || 1)
+          }
         }
+      }
+      
+      // Сбрасываем отслеживание после обработки события
+      if (lastSentOffsetRef.current !== null) {
+        lastSentOffsetRef.current = null
       }
     })
 
@@ -807,10 +829,19 @@ export default function Game() {
   const handleOffsetChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10)
     if (isNaN(val) || val < 1 || val > 100) return
+    // Обновляем локально только свой offset
     setMyOffset(val)
+    // Сохраняем отправленное значение, чтобы игнорировать его в offset_updated
+    lastSentOffsetRef.current = val
     try {
       await apiClient.post(`/games/${gameId}/offset`, { offset: val })
-    } catch (error) {}
+      // После успешной отправки НЕ обновляем локальное состояние,
+      // т.к. оно уже обновлено выше. Событие offset_updated придет от сервера,
+      // но мы его проигнорируем для своего offset.
+    } catch (error) {
+      // Если ошибка, сбрасываем отслеживание
+      lastSentOffsetRef.current = null
+    }
   }
 
   const handleConfirm = async () => {

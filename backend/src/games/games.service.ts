@@ -89,11 +89,25 @@ export class GamesService {
       }
     }
 
+    // Проверка энергии для player1 (бот-игры не тратят энергию)
+    // Энергия - основной ресурс для начала игры
+    // Проверяем энергию ДО создания игры, но тратим ПОСЛЕ успешного создания
+    let player1EnergyChecked = false;
+    let player2EnergyChecked = false;
+    
+    if (type !== GameType.VS_BOT) {
+      await this.progressService.checkEnergyForGame(player1Id, type);
+      player1EnergyChecked = true;
+    }
+
     // Проверка жизней для player1 (только для игр с игроками)
+    // Жизни - дополнительный лимит для PvP игр (блокируют создание игры)
+    // Энергия - основной ресурс для начала игры
+    // Жизни тратятся только при поражении
     if (type === GameType.VS_PLAYER) {
       const hasLives = await this.progressService.checkLives(player1Id);
       if (!hasLives) {
-        throw new BadRequestException('Недостаточно жизней для начала игры. Восстановите жизни или купите их.');
+        throw new BadRequestException('Недостаточно жизней для начала игры. Жизни восстанавливаются каждые 4 часа или их можно купить в магазине.');
       }
     }
 
@@ -101,18 +115,14 @@ export class GamesService {
     if (player2Id && type === GameType.VS_PLAYER) {
       const hasLives = await this.progressService.checkLives(player2Id);
       if (!hasLives) {
-        throw new BadRequestException('У противника недостаточно жизней');
+        throw new BadRequestException('У соперника недостаточно жизней для начала игры.');
       }
-    }
-
-    // Проверка энергии для player1 (бот-игры не тратят энергию)
-    if (type !== GameType.VS_BOT) {
-      await this.progressService.consumeEnergyForGame(player1Id, type);
     }
 
     // Проверка энергии для player2, если он есть
     if (player2Id && type !== GameType.VS_BOT) {
-      await this.progressService.consumeEnergyForGame(player2Id, type);
+      await this.progressService.checkEnergyForGame(player2Id, type);
+      player2EnergyChecked = true;
     }
 
     // Если игра на ставки, проверяем баланс и блокируем средства
@@ -208,7 +218,26 @@ export class GamesService {
       skinData,
     });
 
-    return this.gamesRepository.save(game);
+    // Сохраняем игру в БД
+    const savedGame = await this.gamesRepository.save(game);
+
+    // Только ПОСЛЕ успешного создания игры тратим энергию
+    try {
+      if (player1EnergyChecked) {
+        await this.progressService.consumeEnergyForGame(player1Id, type);
+      }
+      if (player2EnergyChecked && player2Id) {
+        await this.progressService.consumeEnergyForGame(player2Id, type);
+      }
+    } catch (error) {
+      // Если не удалось потратить энергию после создания игры, логируем ошибку
+      // но игру не удаляем, т.к. она уже создана
+      this.logger.error(`Ошибка при трате энергии после создания игры ${savedGame.id}:`, error);
+      // Можно также удалить игру, если энергия не потратилась, но это может быть проблематично
+      // Пока просто логируем
+    }
+
+    return savedGame;
   }
 
   async findOne(id: string): Promise<Game> {
