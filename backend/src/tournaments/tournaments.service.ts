@@ -20,9 +20,11 @@ export class TournamentsService {
     private tournamentsRepository: Repository<Tournament>,
     @InjectRepository(TournamentMatch)
     private matchesRepository: Repository<TournamentMatch>,
+    @Inject(forwardRef(() => GamesService))
     private gamesService: GamesService,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
+    @Inject(forwardRef(() => QuestsService))
     private questsService: QuestsService,
     @Inject(forwardRef(() => ProgressService))
     private progressService: ProgressService,

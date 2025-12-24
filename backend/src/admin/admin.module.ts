@@ -34,6 +34,8 @@ import { DistrictConfig } from '../city/district-config.entity';
 import { Rating } from '../ratings/rating.entity';
 import { Notification } from '../notifications/notification.entity';
 import { UserMaterial } from '../academy/user-material.entity';
+import { CourseTask } from '../academy/course-task.entity';
+import { CourseTaskProgress } from '../academy/course-task-progress.entity';
 import { SystemSettings } from './system-settings.entity';
 import { NotificationTemplate } from './notification-template.entity';
 import { InactiveUsersService } from './inactive-users.service';
@@ -45,7 +47,7 @@ import { PaymentTransaction } from '../payment/payment-transaction.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, SystemSettings, NotificationTemplate, UserWallet, PaymentTransaction]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, CourseTask, CourseTaskProgress, SystemSettings, NotificationTemplate, UserWallet, PaymentTransaction]),
     ScheduleModule.forRoot(),
     AuthModule,
     JwtModule.registerAsync({

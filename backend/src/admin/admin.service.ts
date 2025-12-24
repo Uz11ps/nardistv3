@@ -34,6 +34,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { Rating } from '../ratings/rating.entity';
 import { Notification } from '../notifications/notification.entity';
 import { UserMaterial } from '../academy/user-material.entity';
+import { CourseTask, TaskType } from '../academy/course-task.entity';
+import { CourseTaskProgress } from '../academy/course-task-progress.entity';
 import { NotificationTemplate, NotificationTemplateType } from './notification-template.entity';
 import { SystemSettings } from './system-settings.entity';
 import { WalletService } from '../payment/wallet.service';
@@ -84,6 +86,10 @@ export class AdminService implements OnModuleInit {
     private notificationsRepository: Repository<Notification>,
     @InjectRepository(UserMaterial)
     private userMaterialsRepository: Repository<UserMaterial>,
+    @InjectRepository(CourseTask)
+    private courseTasksRepository: Repository<CourseTask>,
+    @InjectRepository(CourseTaskProgress)
+    private courseTaskProgressRepository: Repository<CourseTaskProgress>,
     @InjectRepository(SystemSettings)
     private systemSettingsRepository: Repository<SystemSettings>,
     @InjectRepository(NotificationTemplate)
@@ -1832,6 +1838,97 @@ export class AdminService implements OnModuleInit {
     } catch (error) {
       this.logger.error('Ошибка при инициализации шаблонов уведомлений:', error);
     }
+  }
+
+  // ==================== ONBOARDING TASKS MANAGEMENT ====================
+
+  /**
+   * Получить все онбординговые задания
+   */
+  async getAllOnboardingTasks(): Promise<CourseTask[]> {
+    return this.courseTasksRepository.find({
+      where: { isOnboarding: true },
+      order: { order: 'ASC' },
+    });
+  }
+
+  /**
+   * Получить онбординговое задание по ID
+   */
+  async getOnboardingTask(id: string): Promise<CourseTask> {
+    const task = await this.courseTasksRepository.findOne({
+      where: { id, isOnboarding: true },
+    });
+    if (!task) {
+      throw new NotFoundException('Онбординговое задание не найдено');
+    }
+    return task;
+  }
+
+  /**
+   * Создать онбординговое задание
+   */
+  async createOnboardingTask(data: Partial<CourseTask>): Promise<CourseTask> {
+    const task = this.courseTasksRepository.create({
+      ...data,
+      isOnboarding: true,
+      courseId: null, // Онбординговые задания не привязаны к курсу
+    });
+    return this.courseTasksRepository.save(task);
+  }
+
+  /**
+   * Обновить онбординговое задание
+   */
+  async updateOnboardingTask(id: string, data: Partial<CourseTask>): Promise<CourseTask> {
+    const task = await this.getOnboardingTask(id);
+    Object.assign(task, data);
+    // Убеждаемся, что задание остается онбординговым
+    task.isOnboarding = true;
+    task.courseId = null;
+    return this.courseTasksRepository.save(task);
+  }
+
+  /**
+   * Удалить онбординговое задание
+   */
+  async deleteOnboardingTask(id: string): Promise<void> {
+    const task = await this.getOnboardingTask(id);
+    await this.courseTasksRepository.remove(task);
+  }
+
+  /**
+   * Получить статистику по онбордингу
+   */
+  async getOnboardingStats(): Promise<any> {
+    const totalTasks = await this.courseTasksRepository.count({
+      where: { isOnboarding: true },
+    });
+    const activeTasks = await this.courseTasksRepository.count({
+      where: { isOnboarding: true, isActive: true },
+    });
+    
+    // Статистика по прогрессу пользователей
+    const totalProgress = await this.courseTaskProgressRepository
+      .createQueryBuilder('progress')
+      .innerJoin('progress.task', 'task')
+      .where('task.isOnboarding = true')
+      .getCount();
+    
+    const completedProgress = await this.courseTaskProgressRepository
+      .createQueryBuilder('progress')
+      .innerJoin('progress.task', 'task')
+      .where('task.isOnboarding = true')
+      .andWhere('progress.isCompleted = true')
+      .getCount();
+
+    return {
+      totalTasks,
+      activeTasks,
+      totalProgress,
+      completedProgress,
+      completionRate: totalProgress > 0 ? (completedProgress / totalProgress) * 100 : 0,
+    };
   }
 }
 

@@ -15,10 +15,10 @@ import { ProgressModule } from '../progress/progress.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Tournament, TournamentMatch, TournamentTicket]),
-    GamesModule,
-    RatingsModule,
+    forwardRef(() => GamesModule),
+    forwardRef(() => RatingsModule),
     UsersModule,
-    QuestsModule,
+    forwardRef(() => QuestsModule),
     forwardRef(() => ProgressModule),
   ],
   controllers: [TournamentsController],

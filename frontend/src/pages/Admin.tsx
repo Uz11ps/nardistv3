@@ -32,7 +32,21 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'onboarding'>('stats')
+  const [onboardingTasks, setOnboardingTasks] = useState<any[]>([])
+  const [onboardingStats, setOnboardingStats] = useState<any>(null)
+  const [editingOnboardingTask, setEditingOnboardingTask] = useState<any>(null)
+  const [newOnboardingTask, setNewOnboardingTask] = useState({
+    type: 'train_with_bot',
+    title: '',
+    description: '',
+    order: 1,
+    requirements: {},
+    rewardNarCoin: 0,
+    rewardXP: 0,
+    isRequired: true,
+    isActive: true,
+  })
   const [tournaments, setTournaments] = useState<any[]>([])
   const [articles, setArticles] = useState<any[]>([])
   const [selectedArticle, setSelectedArticle] = useState<any>(null)
@@ -159,7 +173,7 @@ export default function Admin() {
         return
       }
       
-      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, buildingsRes, policiesRes, templatesRes] = await Promise.all([
+      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, buildingsRes, policiesRes, templatesRes, onboardingTasksRes, onboardingStatsRes] = await Promise.all([
         apiClient.get('/admin/stats').catch((err) => {
           if (err.response?.status === 401) {
             localStorage.removeItem('admin_token')
@@ -244,6 +258,20 @@ export default function Admin() {
           }
           return { data: [] }
         }),
+        apiClient.get('/admin/onboarding/tasks').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/admin/onboarding/tasks/stats').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: null }
+        }),
       ])
       setStats(statsRes.data)
       setUsers(usersRes.data)
@@ -256,6 +284,8 @@ export default function Admin() {
       setClans(clansRes.data || [])
       setBuildings(buildingsRes.data || [])
       setNotificationTemplates(templatesRes.data || [])
+      setOnboardingTasks(onboardingTasksRes.data || [])
+      setOnboardingStats(onboardingStatsRes.data || null)
       
       // Загружаем политики
       const policiesData: { privacy?: string; agreement?: string } = {}
@@ -292,6 +322,62 @@ export default function Admin() {
       setPolicies(policiesData)
     } catch (error) {
       console.error('Failed to load policies:', error)
+    }
+  }
+
+  const loadOnboardingTasks = async () => {
+    try {
+      const [tasksRes, statsRes] = await Promise.all([
+        apiClient.get('/admin/onboarding/tasks'),
+        apiClient.get('/admin/onboarding/tasks/stats'),
+      ])
+      setOnboardingTasks(tasksRes.data || [])
+      setOnboardingStats(statsRes.data || null)
+    } catch (error) {
+      console.error('Failed to load onboarding tasks:', error)
+    }
+  }
+
+  const handleCreateOnboardingTask = async () => {
+    try {
+      await apiClient.post('/admin/onboarding/tasks', newOnboardingTask)
+      setNewOnboardingTask({
+        type: 'train_with_bot',
+        title: '',
+        description: '',
+        order: onboardingTasks.length + 1,
+        requirements: {},
+        rewardNarCoin: 0,
+        rewardXP: 0,
+        isRequired: true,
+        isActive: true,
+      })
+      await loadOnboardingTasks()
+      alert('Задание создано')
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+    }
+  }
+
+  const handleUpdateOnboardingTask = async (id: string, data: any) => {
+    try {
+      await apiClient.put(`/admin/onboarding/tasks/${id}`, data)
+      await loadOnboardingTasks()
+      setEditingOnboardingTask(null)
+      alert('Задание обновлено')
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+    }
+  }
+
+  const handleDeleteOnboardingTask = async (id: string) => {
+    if (!confirm('Удалить задание?')) return
+    try {
+      await apiClient.delete(`/admin/onboarding/tasks/${id}`)
+      await loadOnboardingTasks()
+      alert('Задание удалено')
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.response?.data?.message || error.message))
     }
   }
 
@@ -554,6 +640,15 @@ export default function Admin() {
           }}
         >
           Политика
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'onboarding' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('onboarding')
+            loadOnboardingTasks()
+          }}
+        >
+          Онбординг
         </button>
       </div>
 
@@ -3467,6 +3562,143 @@ export default function Admin() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'onboarding' && (
+          <div className="admin-onboarding">
+            <h3>Управление онбордингом</h3>
+            
+            {onboardingStats && (
+              <div className="onboarding-stats" style={{ marginBottom: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Всего заданий</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.totalTasks}</div>
+                </div>
+                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Активных</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.activeTasks}</div>
+                </div>
+                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Прогрессов</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.totalProgress}</div>
+                </div>
+                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Завершено</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.completedProgress}</div>
+                </div>
+                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Процент завершения</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.completionRate?.toFixed(1) || 0}%</div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '24px' }}>
+              <h4>Создать задание</h4>
+              <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr' }}>
+                <div>
+                  <label>Тип задания</label>
+                  <select value={newOnboardingTask.type} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, type: e.target.value})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}>
+                    <option value="train_with_bot">Тренировка с ботом</option>
+                    <option value="online_match">Онлайн-партия</option>
+                    <option value="view_city">Просмотр города</option>
+                    <option value="play_short_match">Быстрая партия</option>
+                    <option value="play_long_match">Длинная партия</option>
+                    <option value="win_match">Победа в матче</option>
+                    <option value="complete_training_position">Тренировочная позиция</option>
+                    <option value="join_clan">Вступить в клан</option>
+                    <option value="purchase_building">Купить строение</option>
+                    <option value="upgrade_building">Улучшить строение</option>
+                    <option value="custom">Кастомное</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Порядок</label>
+                  <input type="number" value={newOnboardingTask.order} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, order: parseInt(e.target.value)})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label>Название</label>
+                  <input type="text" value={newOnboardingTask.title} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, title: e.target.value})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label>Описание</label>
+                  <textarea value={newOnboardingTask.description} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, description: e.target.value})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff', minHeight: '80px' }} />
+                </div>
+                <div>
+                  <label>Награда NAR-coin</label>
+                  <input type="number" value={newOnboardingTask.rewardNarCoin} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, rewardNarCoin: parseInt(e.target.value)})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
+                </div>
+                <div>
+                  <label>Награда XP</label>
+                  <input type="number" value={newOnboardingTask.rewardXP} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, rewardXP: parseInt(e.target.value)})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
+                </div>
+                <div>
+                  <label>
+                    <input type="checkbox" checked={newOnboardingTask.isRequired} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, isRequired: e.target.checked})} />
+                    Обязательное
+                  </label>
+                </div>
+                <div>
+                  <label>
+                    <input type="checkbox" checked={newOnboardingTask.isActive} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, isActive: e.target.checked})} />
+                    Активно
+                  </label>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <button onClick={handleCreateOnboardingTask} style={{ padding: '12px 24px', background: '#ff3333', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: '600' }}>Создать задание</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4>Задания онбординга</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {onboardingTasks.map((task: any) => (
+                  <div key={task.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px', border: '1px solid #3a3a3a' }}>
+                    {editingOnboardingTask?.id === task.id ? (
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        <input type="text" value={editingOnboardingTask.title} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, title: e.target.value})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
+                        <textarea value={editingOnboardingTask.description} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, description: e.target.value})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff', minHeight: '60px' }} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                          <input type="number" placeholder="Порядок" value={editingOnboardingTask.order} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, order: parseInt(e.target.value)})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
+                          <input type="number" placeholder="NAR-coin" value={editingOnboardingTask.rewardNarCoin} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, rewardNarCoin: parseInt(e.target.value)})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
+                          <input type="number" placeholder="XP" value={editingOnboardingTask.rewardXP} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, rewardXP: parseInt(e.target.value)})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => handleUpdateOnboardingTask(task.id, editingOnboardingTask)} style={{ padding: '8px 16px', background: '#ff3333', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer' }}>Сохранить</button>
+                          <button onClick={() => setEditingOnboardingTask(null)} style={{ padding: '8px 16px', background: '#555', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer' }}>Отмена</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                          <div>
+                            <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>{task.title}</div>
+                            <div style={{ fontSize: '14px', color: '#aaa', marginBottom: '8px' }}>{task.description}</div>
+                            <div style={{ fontSize: '12px', color: '#888', display: 'flex', gap: '16px' }}>
+                              <span>Тип: {task.type}</span>
+                              <span>Порядок: {task.order}</span>
+                              <span>NAR: {task.rewardNarCoin}</span>
+                              <span>XP: {task.rewardXP}</span>
+                              <span style={{ color: task.isActive ? '#4caf50' : '#f44336' }}>{task.isActive ? 'Активно' : 'Неактивно'}</span>
+                              {task.isRequired && <span>Обязательное</span>}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={() => setEditingOnboardingTask({...task})} style={{ padding: '6px 12px', background: '#4a4a4a', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '12px' }}>Редактировать</button>
+                            <button onClick={() => handleDeleteOnboardingTask(task.id)} style={{ padding: '6px 12px', background: '#f44336', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '12px' }}>Удалить</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {onboardingTasks.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>Нет заданий онбординга</div>
+                )}
+              </div>
             </div>
           </div>
         )}

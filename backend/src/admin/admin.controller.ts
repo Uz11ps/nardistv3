@@ -287,6 +287,45 @@ export class AdminController {
     return this.adminService.deleteArticle(id);
   }
 
+  // ==================== ONBOARDING TASKS MANAGEMENT ====================
+
+  @Get('onboarding/tasks')
+  @UseGuards(AdminAuthGuard)
+  async getAllOnboardingTasks(@CurrentUser() user: any) {
+    return this.adminService.getAllOnboardingTasks();
+  }
+
+  @Get('onboarding/tasks/stats')
+  @UseGuards(AdminAuthGuard)
+  async getOnboardingStats(@CurrentUser() user: any) {
+    return this.adminService.getOnboardingStats();
+  }
+
+  @Get('onboarding/tasks/:id')
+  @UseGuards(AdminAuthGuard)
+  async getOnboardingTask(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.adminService.getOnboardingTask(id);
+  }
+
+  @Post('onboarding/tasks')
+  @UseGuards(AdminAuthGuard)
+  async createOnboardingTask(@CurrentUser() user: any, @Body() body: any) {
+    return this.adminService.createOnboardingTask(body);
+  }
+
+  @Put('onboarding/tasks/:id')
+  @UseGuards(AdminAuthGuard)
+  async updateOnboardingTask(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateOnboardingTask(id, body);
+  }
+
+  @Delete('onboarding/tasks/:id')
+  @UseGuards(AdminAuthGuard)
+  async deleteOnboardingTask(@CurrentUser() user: any, @Param('id') id: string) {
+    await this.adminService.deleteOnboardingTask(id);
+    return { message: 'Онбординговое задание удалено' };
+  }
+
   @Get('city/rewards')
   @UseGuards(AdminAuthGuard)
   async getCityRewards(@CurrentUser() user: any) {
