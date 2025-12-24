@@ -614,12 +614,18 @@ export default function Game() {
 
     socket.on('offset_updated', (data: any) => {
       const isP1 = gameInfo?.player1Id === user?.id
+      // Обновляем только смещение соперника из события
+      // Свое смещение не трогаем, так как оно уже установлено локально
       if (isP1) {
-        setMyOffset(data.player1Offset || 1)
-        setOpponentOffset(data.player2Offset || 1)
+        // Мы player1, обновляем только смещение player2 (соперника)
+        if (data.player2Offset !== undefined) {
+          setOpponentOffset(data.player2Offset || 1)
+        }
       } else {
-        setMyOffset(data.player2Offset || 1)
-        setOpponentOffset(data.player1Offset || 1)
+        // Мы player2, обновляем только смещение player1 (соперника)
+        if (data.player1Offset !== undefined) {
+          setOpponentOffset(data.player1Offset || 1)
+        }
       }
     })
 
@@ -773,6 +779,8 @@ export default function Game() {
   const handleUndo = () => {
     if (pendingMoves.length > 0) {
       setPendingMoves(prev => prev.slice(0, -1))
+      // После отмены хода нужно перезагрузить возможные ходы
+      // Это произойдет автоматически через useEffect в BackgammonBoard при изменении pendingMoves
     }
   }
 
@@ -1207,6 +1215,83 @@ export default function Game() {
           </div>
         )}
       </div>
+
+      {showVerificationModal && (
+        <div className="modal-overlay" onClick={() => setShowVerificationModal(false)}>
+          <div className="modal-content verification-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px', maxHeight: '80vh', overflow: 'auto'}}>
+            <h2>Проверка честности игры</h2>
+            {!verificationResult ? (
+              <>
+                <p>Проверяем последовательность бросков кубиков...</p>
+                <Button variant="primary" onClick={async () => {
+                  try {
+                    if (!gameState?.p1Rolls || !gameState?.p2Rolls || !gameState?.verificationSalt || !gameInfo?.rngHash) {
+                      alert('Недостаточно данных для проверки')
+                      return
+                    }
+
+                    const calculateHash = async (data: string): Promise<string> => {
+                      const encoder = new TextEncoder()
+                      const dataBuffer = encoder.encode(data)
+                      const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer)
+                      const hashArray = Array.from(new Uint8Array(hashBuffer))
+                      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+                    }
+
+                    const p1Data = JSON.stringify(gameState.p1Rolls) + gameState.verificationSalt
+                    const p2Data = JSON.stringify(gameState.p2Rolls) + gameState.verificationSalt
+                    
+                    const p1Hash = await calculateHash(p1Data)
+                    const p2Hash = await calculateHash(p2Data)
+
+                    const originalHashes = JSON.parse(gameInfo.rngHash)
+                    const originalP1Hash = originalHashes.p1Hash
+                    const originalP2Hash = originalHashes.p2Hash
+
+                    const p1Valid = p1Hash === originalP1Hash
+                    const p2Valid = p2Hash === originalP2Hash
+
+                    setVerificationResult({ p1Valid, p2Valid, p1Hash, p2Hash, originalP1Hash, originalP2Hash })
+                  } catch (error: any) {
+                    console.error('Ошибка проверки:', error)
+                    alert(`Ошибка: ${error.message}`)
+                  }
+                }}>Начать проверку</Button>
+              </>
+            ) : (
+              <div style={{textAlign: 'left'}}>
+                <div style={{padding: '20px', background: verificationResult.p1Valid && verificationResult.p2Valid ? '#2d5016' : '#501616', borderRadius: '8px', marginBottom: '20px'}}>
+                  <h3>{verificationResult.p1Valid && verificationResult.p2Valid ? '✅ Проверка пройдена' : '❌ Проверка не пройдена'}</h3>
+                  <p>{verificationResult.p1Valid && verificationResult.p2Valid ? 'Хеши последовательностей совпадают с исходными' : 'Обнаружено несоответствие хешей'}</p>
+                </div>
+                
+                <div style={{marginBottom: '15px'}}>
+                  <h4>Игрок 1: {verificationResult.p1Valid ? '✅' : '❌'}</h4>
+                  <div style={{fontSize: '12px', wordBreak: 'break-all'}}>
+                    <div><strong>Ожидается:</strong> {verificationResult.originalP1Hash}</div>
+                    <div><strong>Получено:</strong> {verificationResult.p1Hash}</div>
+                  </div>
+                </div>
+                
+                <div style={{marginBottom: '20px'}}>
+                  <h4>Игрок 2: {verificationResult.p2Valid ? '✅' : '❌'}</h4>
+                  <div style={{fontSize: '12px', wordBreak: 'break-all'}}>
+                    <div><strong>Ожидается:</strong> {verificationResult.originalP2Hash}</div>
+                    <div><strong>Получено:</strong> {verificationResult.p2Hash}</div>
+                  </div>
+                </div>
+                
+                <div style={{marginTop: '20px'}}>
+                  <Button variant="primary" onClick={() => {
+                    setShowVerificationModal(false)
+                    setVerificationResult(null)
+                  }}>Закрыть</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {showExitModal && (
         <div className="modal-overlay" onClick={() => setShowExitModal(false)}>

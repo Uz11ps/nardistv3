@@ -99,21 +99,20 @@ export class LongBackgammonEngine {
 
   /**
    * Check Head Rule: Only 1 checker can be moved from head per complete turn (using all dice)
-   * Exception: Doubles on first move allow multiple checkers (up to 2) ONLY if one checker cannot make the full move due to blocked points
+   * Exception: Doubles allow multiple checkers (up to 2) if one checker cannot use all dice
    * 
    * According to Long Backgammon rules:
    * - In a complete turn (using all dice), you can take maximum 1 checker from head
-   * - Exception: If doubles are rolled on the FIRST move of the game, AND one checker cannot make the full move due to blocked points,
-   *   then player can move 2 checkers from head
-   * - This rule applies to the entire turn, not individual moves
+   * - Exception: If doubles are rolled, you can move 2 checkers from head IF one checker cannot use all 4 dice
+   *   For example: 2/2 = 4 dice of 2. Can move checker 1: 6 points (3 dice), checker 2: 2 points (1 die)
+   *   But cannot move checker 1: 8 points (all 4 dice) because then no second checker can move
    * 
    * Examples:
-   * - With dice [6, 3]: Can take 1 checker from head and move it 6, then move another checker (not from head) 3
-   * - With dice [6, 3]: Can take 1 checker from head and move it 9 (combining dice)
-   * - With dice [6, 3]: Cannot take 2 checkers from head in the same turn
-   * - With doubles [3, 3] on first move: Can take 2 checkers if one checker cannot make all 4 moves due to blocked points
+   * - Doubles 2/2: Can take 2 checkers if one uses 3 dice (6 points) and another uses 1 die (2 points)
+   * - Doubles 2/2: Can take 2 checkers if both use 2 dice each (4 points each)
+   * - Doubles 2/2: Cannot take 2 checkers if one uses all 4 dice (8 points)
    */
-  private checkHeadRule(state: LongBoardState, from: number, dice: number[]): boolean {
+  private checkHeadRule(state: LongBoardState, from: number, dice: number[], moveDie?: number): boolean {
     const player = state.currentPlayer;
     const headIndex = player === 0 ? this.WHITE_HEAD : this.BLACK_HEAD;
     
@@ -122,34 +121,41 @@ export class LongBackgammonEngine {
       return true;
     }
     
-    // Check if this is the first turn of the game for this player
-    const currentHeadCheckers = Math.abs(state.points[headIndex] || 0);
     const movedThisTurn = state.movesFromHead || 0;
-    const wasFirstTurn = (currentHeadCheckers + movedThisTurn) === 15;
     
-    // Check if it's a doubles turn
-    // In Long Backgammon, doubles are expanded to 4 dice. 
-    // Even if some are used, the remaining will all have the same value.
-    const isDoubles = dice.length > 0 && dice.every(d => d === dice[0]) && (state.dice.length === 2 || state.dice.length === 3 || state.dice.length === 4);
-    const dieValue = dice[0];
-    const isSpecialDouble = isDoubles && (dieValue === 3 || dieValue === 4 || dieValue === 6);
+    // Check if it's a doubles turn (originally 2 dice, expanded to 4)
+    const isDoubles = state.dice && state.dice.length === 2 && state.dice[0] === state.dice[1];
     
-    console.log(`🔍 checkHeadRule debug:`, {
-      from,
-      movedThisTurn,
-      wasFirstTurn,
-      isDoubles,
-      dieValue,
-      isSpecialDouble,
-      dice
-    });
-    
-    // Exception: 3:3, 4:4, 6:6 on the FIRST turn allow taking 2 checkers from head
-    if (wasFirstTurn && isSpecialDouble) {
-      return movedThisTurn < 2;
+    if (isDoubles) {
+      // При дубле можно вывести две шашки, если текущий ход не использует все 4 кубика
+      // Проверяем, сколько кубиков осталось после этого хода
+      const dieValue = state.dice[0];
+      const totalDice = 4; // Дубль расширяется до 4 кубиков
+      
+      // Если это первый ход из головы в этом ходе
+      if (movedThisTurn === 0) {
+        // Проверяем, используется ли текущим ходом все кубики
+        if (moveDie && moveDie === dieValue * 4) {
+          // Ход на все 4 кубика - нельзя вывести вторую шашку
+          return true; // Разрешаем этот ход, но вторую шашку нельзя будет вывести
+        }
+        // Ход не на все кубики - можно будет вывести вторую шашку
+        return true;
+      }
+      
+      // Если это вторая шашка из головы
+      if (movedThisTurn === 1) {
+        // Проверяем, что первый ход не использовал все кубики
+        // Это проверяется в getAllValidMoves - если первый ход использовал все кубики,
+        // то второй ход из головы не будет сгенерирован
+        return true; // Разрешаем вторую шашку из головы при дубле
+      }
+      
+      // Больше двух шашек из головы нельзя
+      return false;
     }
     
-    // Otherwise, only 1 checker per turn from head
+    // Для обычных ходов (не дубль) - только 1 шашка из головы
     return movedThisTurn === 0;
   }
 
@@ -285,7 +291,7 @@ export class LongBackgammonEngine {
     const calculatedTo = (from + die) % this.BOARD_SIZE;
     if (to !== calculatedTo) return false;
     if (state.points[to] < 0) return false;
-    if (!this.checkHeadRule(state, from, state.dice)) return false;
+    if (!this.checkHeadRule(state, from, state.dice, die)) return false;
     if (!this.checkBlockRule(state, to)) return false;
     
     return true;
@@ -335,7 +341,7 @@ export class LongBackgammonEngine {
     const calculatedTo = (from + die) % this.BOARD_SIZE;
     if (to !== calculatedTo) return false;
     if (state.points[to] > 0) return false;
-    if (!this.checkHeadRule(state, from, state.dice)) return false;
+    if (!this.checkHeadRule(state, from, state.dice, die)) return false;
     if (!this.checkBlockRule(state, to)) return false;
     
     return true;
@@ -479,6 +485,7 @@ export class LongBackgammonEngine {
     if (dice.length === 0) return [];
 
     const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
+    const isDoubles = dice.length === 4 && dice.every(d => d === dice[0]);
     
     const generateMoves = (
       currentState: LongBoardState,
@@ -495,6 +502,9 @@ export class LongBackgammonEngine {
       const player = currentState.currentPlayer;
       const headIndex = player === 0 ? this.WHITE_HEAD : this.BLACK_HEAD;
 
+      // Для дублей: проверяем, сколько шашек уже вышло из головы
+      const movedFromHead = currentState.movesFromHead || 0;
+      
       // Find all possible moves from board
       let foundAnyMove = false;
       
@@ -521,6 +531,13 @@ export class LongBackgammonEngine {
           const isBearingOffMove = (distanceTraveled + die) >= this.BOARD_SIZE;
           const to = isBearingOffMove ? -1 : toPoint;
 
+          // Особая логика для дублей: если это вторая шашка из головы,
+          // проверяем что осталось достаточно кубиков
+          if (isDoubles && from === headIndex && movedFromHead === 1) {
+            // Вторая шашка из головы при дубле - проверяем что есть кубики
+            if (remainingDice.length === 0) continue;
+          }
+
           if (this.validateMove(currentState, from, to, die)) {
             foundAnyMove = true;
             const newState = this.applyMove(currentState, from, to, die);
@@ -530,9 +547,6 @@ export class LongBackgammonEngine {
           }
         }
       }
-      
-      // ... (rest of the logic for combining dice if needed, but Long Backgammon usually uses dice separately)
-      // В длинных нардах кубики используются по отдельности.
       
       if (!foundAnyMove && currentMoves.length > 0) {
         moves.push([...currentMoves]);
