@@ -458,7 +458,17 @@ export class GamesService {
     let currentState = JSON.parse(JSON.stringify(game.gameState));
     const diceCopy = [...dice];
 
+    // Разворачиваем комбинированные ходы (те, у которых есть steps) в последовательность обычных
+    const expandedMoves = [];
     for (const move of moves) {
+      if ((move as any).steps && Array.isArray((move as any).steps)) {
+        expandedMoves.push(...(move as any).steps);
+      } else {
+        expandedMoves.push(move);
+      }
+    }
+
+    for (const move of expandedMoves) {
       console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       console.log(`  Текущее состояние: movesFromHead=${currentState.movesFromHead || 0}, dice=[${currentState.dice?.join(', ') || 'none'}]`);
       
@@ -480,6 +490,9 @@ export class GamesService {
       console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       currentState = engine.applyMove(currentState, move.from, move.to, move.die);
     }
+
+    // Для целей сохранения и истории используем развернутые ходы
+    const finalMovesToSave = expandedMoves;
 
     // Проверяем обязательность использования всех кубиков, если это возможно
     // getAllValidMoves доступен только для BackgammonEngine
@@ -515,8 +528,8 @@ export class GamesService {
       
       // В длинных нардах разрешаем делать один ход за раз, если он валиден
       // Но если есть возможность использовать все кубики и пользователь использует только один - предупреждаем
-      if (fullMoves.length > 0 && moves.length < dice.length) {
-        console.log(`⚠️ Пользователь использует только ${moves.length} из ${dice.length} кубиков, но есть возможность использовать все`);
+      if (fullMoves.length > 0 && finalMovesToSave.length < dice.length) {
+        console.log(`⚠️ Пользователь использует только ${finalMovesToSave.length} из ${dice.length} кубиков, но есть возможность использовать все`);
         // Разрешаем, но не требуем использовать все кубики в длинных нардах
         // Пользователь может сделать второй ход позже
       }
@@ -524,9 +537,9 @@ export class GamesService {
       // Для коротких нард требуем использовать все кубики, если это возможно
       const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
       
-      if (fullMoves.length > 0 && moves.length < dice.length) {
+      if (fullMoves.length > 0 && finalMovesToSave.length < dice.length) {
         throw new BadRequestException(
-          `Необходимо использовать все кубики. Доступно ${dice.length} кубиков (${dice.join(', ')}), использовано ${moves.length}. Доступны ходы, использующие все кубики.`
+          `Необходимо использовать все кубики. Доступно ${dice.length} кубиков (${dice.join(', ')}), использовано ${finalMovesToSave.length}. Доступны ходы, использующие все кубики.`
         );
       }
     }
@@ -540,7 +553,7 @@ export class GamesService {
       throw new BadRequestException('Ошибка: ID игры не найден');
     }
     
-    this.logger.log(`Saving move: gameId=${finalGameId}, playerId=${playerId}, moveNumber=${moveNumber}, moves count=${moves.length}`);
+    this.logger.log(`Saving move: gameId=${finalGameId}, playerId=${playerId}, moveNumber=${moveNumber}, moves count=${finalMovesToSave.length}`);
     
     // Используем raw SQL через queryRunner чтобы полностью избежать проблем с relations
     try {
@@ -556,7 +569,7 @@ export class GamesService {
           playerId,
           moveNumber,
           JSON.stringify(dice),
-          JSON.stringify(moves),
+          JSON.stringify(finalMovesToSave),
           JSON.stringify(game.gameState),
           JSON.stringify(currentState),
         ]
@@ -573,7 +586,7 @@ export class GamesService {
         playerId: playerId,
         moveNumber: moveNumber,
         dice: dice,
-        movesCount: moves?.length
+        movesCount: finalMovesToSave.length
       });
       throw error;
     }
@@ -747,8 +760,55 @@ export class GamesService {
       allMoves = engine.getAllValidMoves(state, state.dice);
     }
     
+    // Преобразуем последовательности в плоский список доступных ходов,
+    // включая комбинированные ходы (сумма нескольких кубиков) для одной шашки
+    const flatMoves: Array<{ from: number; to: number; die: number; steps?: any[] }> = [];
+    const seen = new Set<string>();
+
+    for (const seq of allMoves) {
+      if (seq.length === 0) continue;
+
+      // 1. Добавляем все одиночные ходы из последовательностей
+      for (const move of seq) {
+        const key = `${move.from}-${move.to}-${move.die}`;
+        if (!seen.has(key)) {
+          flatMoves.push(move);
+          seen.add(key);
+        }
+      }
+
+      // 2. Добавляем комбинированные ходы (одна шашка идет по цепочке)
+      // Мы берем цепочки шагов одной и той же шашки
+      let currentFrom = seq[0].from;
+      let totalDie = seq[0].die;
+      let steps = [seq[0]];
+
+      for (let i = 1; i < seq.length; i++) {
+        const next = seq[i];
+        // Если следующая точка начала совпадает с предыдущей точкой конца - это та же шашка
+        if (next.from === seq[i-1].to) {
+          totalDie += next.die;
+          steps.push(next);
+          const key = `${currentFrom}-${next.to}-${totalDie}`;
+          if (!seen.has(key)) {
+            flatMoves.push({
+              from: currentFrom,
+              to: next.to,
+              die: totalDie,
+              steps: [...steps]
+            });
+            seen.add(key);
+          }
+        } else {
+          // Цепочка прервалась (другая шашка начала ходить)
+          break;
+        }
+      }
+    }
+
     return {
       allMoves,
+      movesFromPoint: flatMoves,
     };
   }
 

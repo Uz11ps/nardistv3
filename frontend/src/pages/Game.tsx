@@ -606,14 +606,48 @@ export default function Game() {
     }
   }
 
-  const handleMove = async (from: number, to: number, die: number) => {
+  const handleMove = async (from: number, to: number, die: number, steps?: any[]) => {
     if (!gameId || !gameState?.canMove) return
 
     const diceArray = gameState.dice 
       ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2])
       : []
     
-    const usedCount = pendingMoves.filter(m => m.die === die).length
+    // Если есть steps, значит это комбинированный ход
+    if (steps && steps.length > 0) {
+      // Проверяем доступность всех кубиков в комбинации
+      const currentDiceUsage = new Map<number, number>();
+      pendingMoves.forEach(m => {
+        if (m.steps) {
+          m.steps.forEach((s: any) => currentDiceUsage.set(s.die, (currentDiceUsage.get(s.die) || 0) + 1));
+        } else {
+          currentDiceUsage.set(m.die, (currentDiceUsage.get(m.die) || 0) + 1);
+        }
+      });
+
+      for (const step of steps) {
+        const used = (currentDiceUsage.get(step.die) || 0) + steps.filter((s, idx) => s.die === step.die && steps.indexOf(s) < steps.indexOf(step)).length;
+        const avail = diceArray.filter(d => d === step.die).length;
+        if (used >= avail) {
+          alert(`Кубик ${step.die} из комбинации уже использован`);
+          return;
+        }
+      }
+      setPendingMoves(prev => [...prev, { from, to, die, steps }])
+      return
+    }
+
+    // Для обычного хода
+    const currentDiceUsage = new Map<number, number>();
+    pendingMoves.forEach(m => {
+      if (m.steps) {
+        m.steps.forEach((s: any) => currentDiceUsage.set(s.die, (currentDiceUsage.get(s.die) || 0) + 1));
+      } else {
+        currentDiceUsage.set(m.die, (currentDiceUsage.get(m.die) || 0) + 1);
+      }
+    });
+
+    const usedCount = currentDiceUsage.get(die) || 0;
     const availableCount = diceArray.filter(d => d === die).length
     
     if (usedCount >= availableCount) {

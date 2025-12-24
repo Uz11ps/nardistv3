@@ -244,18 +244,37 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     const userId = client.data.userId;
     try {
       const dice = await this.gamesService.rollDice(data.gameId, userId);
-      const gameState = await this.gamesService.getGameState(data.gameId);
+      let gameState = await this.gamesService.getGameState(data.gameId);
       this.server.to(`game:${data.gameId}`).emit('dice_rolled', { dice, playerId: userId });
-      this.server.to(`game:${data.gameId}`).emit('game_state', gameState);
       
-      // Отправляем обновление таймера сразу после броска кубиков
-      await this.sendTimerUpdateForGame(data.gameId);
+      // Проверяем наличие ходов после броска
+      const possibleMoves = await this.gamesService.getPossibleMoves(data.gameId, userId);
+      const hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
       
-      // Bot auto-move is now handled in games.service.ts after makeMove
-      // This ensures proper sequencing and state management
+      if (!hasMoves) {
+        this.logger.log(`🔄 No possible moves for user ${userId}, switching turn automatically`);
+        // Делаем небольшую задержку перед переключением для визуального комфорта
+        setTimeout(async () => {
+          try {
+            await this.gamesService.makeMove(data.gameId, userId, []);
+            const updatedGameState = await this.gamesService.getGameState(data.gameId);
+            this.server.to(`game:${data.gameId}`).emit('game_state', updatedGameState);
+            await this.sendTimerUpdateForGame(data.gameId);
+            
+            // Если после переключения должен ходить бот
+            await this.handleBotTurnIfNeeded(data.gameId);
+          } catch (e) {
+            this.logger.error(`Error in auto-skip turn: ${e.message}`);
+          }
+        }, 1500);
+      } else {
+        this.server.to(`game:${data.gameId}`).emit('game_state', gameState);
+        // Отправляем обновление таймера сразу после броска кубиков
+        await this.sendTimerUpdateForGame(data.gameId);
+      }
     } catch (error) {
-      this.logger.error(`❌ Error in make_move: ${error.message}`);
-      client.emit('error', { message: error.message || 'Ошибка выполнения хода' });
+      this.logger.error(`❌ Error in roll_dice: ${error.message}`);
+      client.emit('error', { message: error.message || 'Ошибка броска кубиков' });
     }
   }
 

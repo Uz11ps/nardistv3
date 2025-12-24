@@ -7,7 +7,7 @@ interface BackgammonBoardProps {
   gameState: any
   currentPlayer: number
   dice: { die1: number; die2: number } | number[] | null
-  onMove: (from: number, to: number, die: number) => void
+  onMove: (from: number, to: number, die: number, steps?: any[]) => void
   onRollDice: () => void
   canMove: boolean
   isMyTurn: boolean
@@ -44,7 +44,7 @@ export default function BackgammonBoard({
   const containerRef = useRef<HTMLDivElement>(null)
   
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
-  const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number }>>([])
+  const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
   const [dragging, setDragging] = useState<{ pointIndex: number; offsetX: number; offsetY: number } | null>(null)
@@ -56,6 +56,7 @@ export default function BackgammonBoard({
     from: number;
     to: number;
     die: number;
+    steps?: any[];
     progress: number;
     startTime: number;
   } | null>(null)
@@ -71,30 +72,38 @@ export default function BackgammonBoard({
     const bearOff = { ...(gameState.bearOff || { white: 0, black: 0 }) }
     
     pendingMoves.forEach(move => {
-      // 1. Убираем шашку из исходной точки
-      if (move.from === 24) bar.white--
-      else if (move.from === 25) bar.black--
-      else {
-        const val = points[move.from]
-        if (val > 0) points[move.from]--
-        else if (val < 0) points[move.from]++
-      }
-      
-      // 2. Добавляем в целевую точку
-      if (move.to === -1) {
-        if (isPlayer1) bearOff.white++
-        else bearOff.black++
-      } else if (move.to >= 0 && move.to < 24) {
-        const unit = isPlayer1 ? 1 : -1
-        
-        // В коротких нардах можно сбить шашку
-        if (gameMode === 'short' && points[move.to] === -unit) {
-          points[move.to] = unit
-          if (unit === 1) bar.black++
-          else bar.white++
-        } else {
-          points[move.to] += unit
+      const applyStep = (m: any) => {
+        // 1. Убираем шашку из исходной точки
+        if (m.from === 24) bar.white--
+        else if (m.from === 25) bar.black--
+        else {
+          const val = points[m.from]
+          if (val > 0) points[m.from]--
+          else if (val < 0) points[m.from]++
         }
+        
+        // 2. Добавляем в целевую точку
+        if (m.to === -1) {
+          if (isPlayer1) bearOff.white++
+          else bearOff.black++
+        } else if (m.to >= 0 && m.to < 24) {
+          const unit = isPlayer1 ? 1 : -1
+          
+          // В коротких нардах можно сбить шашку
+          if (gameMode === 'short' && points[m.to] === -unit) {
+            points[m.to] = unit
+            if (unit === 1) bar.black++
+            else bar.white++
+          } else {
+            points[m.to] += unit
+          }
+        }
+      }
+
+      if ((move as any).steps) {
+        (move as any).steps.forEach((s: any) => applyStep(s))
+      } else {
+        applyStep(move)
       }
     })
     
@@ -116,34 +125,23 @@ export default function BackgammonBoard({
             const response = await apiClient.post(`/games/${gameId}/possible-moves`, { 
               pendingMoves 
             })
-            const allMoves = response.data?.allMoves || []
-            const movesSet = new Set<string>()
-            const flatMoves: Array<{ from: number; to: number; die: number }> = []
+            const flatMoves = response.data?.movesFromPoint || []
             const highlighted = new Set<number>()
             
-            allMoves.forEach((moveSeq: Array<{ from: number; to: number; die: number }>) => {
-              // Берем только первый ход в каждой последовательности
-              if (moveSeq.length > 0) {
-                const firstMove = moveSeq[0]
-                const key = `${firstMove.from}-${firstMove.to}-${firstMove.die}`
-                if (!movesSet.has(key)) {
-                  movesSet.add(key)
-                  flatMoves.push(firstMove)
-                  if (firstMove.from !== undefined && firstMove.from !== null) {
-                    highlighted.add(firstMove.from)
-                  }
-                }
+            flatMoves.forEach((move: any) => {
+              if (move.from !== undefined && move.from !== null && move.from !== -1) {
+                highlighted.add(move.from)
               }
             })
             
             setPossibleMoves(flatMoves)
             setHighlightedPoints(highlighted)
           } catch (error) {
-        console.error('Ошибка получения возможных ходов:', error)
-        setPossibleMoves([])
-        setHighlightedPoints(new Set())
-      }
-    }
+            console.error('Ошибка получения возможных ходов:', error)
+            setPossibleMoves([])
+            setHighlightedPoints(new Set())
+          }
+        }
     
     fetchPossibleMoves()
   }, [gameId, isMyTurn, canMove, dice, gameState, pendingMoves]) // Добавили pendingMoves в зависимости
@@ -698,11 +696,12 @@ export default function BackgammonBoard({
   }, [animatingChecker, onMove])
 
   // Вспомогательная функция для запуска анимации
-  const startMoveAnimation = (from: number, to: number, die: number) => {
+  const startMoveAnimation = (from: number, to: number, die: number, steps?: any[]) => {
     setAnimatingChecker({
       from,
       to,
       die,
+      steps,
       progress: 0,
       startTime: performance.now()
     })
@@ -769,7 +768,7 @@ export default function BackgammonBoard({
     
     if (bestMove) {
       // console.log('Fast move:', bestMove)
-      startMoveAnimation(bestMove.from, bestMove.to, bestMove.die)
+      startMoveAnimation(bestMove.from, bestMove.to, bestMove.die, (bestMove as any).steps)
     }
   }
 
@@ -986,17 +985,17 @@ export default function BackgammonBoard({
     if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
       if (targetPoint === -1) {
         const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
-        if (bearOffMove) {
-          startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die)
-          return
+          if (bearOffMove) {
+            startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die, bearOffMove.steps)
+            return
+          }
+        } else if (validTargetPoints.has(targetPoint)) {
+          const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
+          if (move) {
+            startMoveAnimation(move.from, move.to, move.die, move.steps)
+            return
+          }
         }
-      } else if (validTargetPoints.has(targetPoint)) {
-        const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
-        if (move) {
-          startMoveAnimation(move.from, move.to, move.die)
-          return
-        }
-      }
     }
     
     setDragging(null)
@@ -1064,7 +1063,7 @@ export default function BackgammonBoard({
       // Если точка уже была выбрана, пытаемся сделать ход
       const move = possibleMoves.find(m => m.from === selectedPoint && m.to === pointIndex)
       if (move) {
-        startMoveAnimation(move.from, move.to, move.die)
+        startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
       } else {
         // Если ход невозможен, но кликнули на другую свою шашку - переключаем выбор на неё
         if (pointMoves.length > 0) {
@@ -1133,7 +1132,8 @@ export default function BackgammonBoard({
               }}
               onClick={(e) => {
                 e.stopPropagation()
-                startMoveAnimation(showBearOffButton.pointIndex, -1, showBearOffButton.die)
+                const move = possibleMoves.find(m => m.from === showBearOffButton.pointIndex && m.to === -1)
+                startMoveAnimation(showBearOffButton.pointIndex, -1, showBearOffButton.die, (move as any)?.steps)
               }}
             >
               СБРОСИТЬ
