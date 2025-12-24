@@ -9,6 +9,8 @@ export interface LongBoardState {
   dice: number[];
   // Track moves from head in current turn for Head Rule
   movesFromHead: number;
+  // Track how many checkers moved from each point in current turn (for doubles rule)
+  movesFromPoint: { [pointIndex: number]: number };
 }
 
 @Injectable()
@@ -43,6 +45,7 @@ export class LongBackgammonEngine {
       currentPlayer: 0,
       dice: [],
       movesFromHead: 0,
+      movesFromPoint: {},
     };
   }
 
@@ -98,65 +101,54 @@ export class LongBackgammonEngine {
   }
 
   /**
-   * Check Head Rule: Only 1 checker can be moved from head per complete turn (using all dice)
-   * Exception: Doubles allow multiple checkers (up to 2) if one checker cannot use all dice
+   * Check Doubles Rule: При дубле можно вывести две шашки из ОДНОЙ точки, если одна не использует все кубики
    * 
-   * According to Long Backgammon rules:
-   * - In a complete turn (using all dice), you can take maximum 1 checker from head
-   * - Exception: If doubles are rolled, you can move 2 checkers from head IF one checker cannot use all 4 dice
-   *   For example: 2/2 = 4 dice of 2. Can move checker 1: 6 points (3 dice), checker 2: 2 points (1 die)
-   *   But cannot move checker 1: 8 points (all 4 dice) because then no second checker can move
+   * Правила дублей в длинных нардах:
+   * - При дубле (например, 4-4) у игрока 4 хода по 4 пункта
+   * - Можно вывести ДВЕ шашки из ОДНОЙ точки, если:
+   *   - Одна шашка использует часть кубиков (например, 2 кубика = 8 пунктов)
+   *   - Другая шашка использует оставшиеся кубики (например, 2 кубика = 8 пунктов)
+   * - НО нельзя вывести две шашки, если одна использует ВСЕ 4 кубика (16 пунктов)
    * 
-   * Examples:
-   * - Doubles 2/2: Can take 2 checkers if one uses 3 dice (6 points) and another uses 1 die (2 points)
-   * - Doubles 2/2: Can take 2 checkers if both use 2 dice each (4 points each)
-   * - Doubles 2/2: Cannot take 2 checkers if one uses all 4 dice (8 points)
+   * Примеры:
+   * - Дубль 4-4: Можно вывести шашку на 8 (2 кубика) + шашку на 8 (2 кубика) ✅
+   * - Дубль 4-4: Можно вывести шашку на 12 (3 кубика) + шашку на 4 (1 кубик) ✅
+   * - Дубль 4-4: НЕЛЬЗЯ вывести две шашки, если одна идет на 16 (все 4 кубика) ❌
    */
-  private checkHeadRule(state: LongBoardState, from: number, dice: number[], moveDie?: number): boolean {
-    const player = state.currentPlayer;
-    const headIndex = player === 0 ? this.WHITE_HEAD : this.BLACK_HEAD;
-    
-    // If not moving from head, rule doesn't apply
-    if (from !== headIndex) {
+  private checkDoublesRule(state: LongBoardState, from: number, moveDie: number, diceUsed: number[]): boolean {
+    // Проверяем, это дубль?
+    const isDoubles = state.dice && state.dice.length === 2 && state.dice[0] === state.dice[1];
+    if (!isDoubles) {
+      // Для обычных ходов правило не применяется
       return true;
     }
     
-    const movedThisTurn = state.movesFromHead || 0;
+    const dieValue = state.dice[0];
+    const totalDice = 4; // Дубль расширяется до 4 кубиков
     
-    // Check if it's a doubles turn (originally 2 dice, expanded to 4)
-    const isDoubles = state.dice && state.dice.length === 2 && state.dice[0] === state.dice[1];
+    // Сколько шашек уже выведено из этой точки в этом ходе?
+    const movesFromThisPoint = (state.movesFromPoint || {})[from] || 0;
     
-    if (isDoubles) {
-      // При дубле можно вывести две шашки, если текущий ход не использует все 4 кубика
-      // Проверяем, сколько кубиков осталось после этого хода
-      const dieValue = state.dice[0];
-      const totalDice = 4; // Дубль расширяется до 4 кубиков
-      
-      // Если это первый ход из головы в этом ходе
-      if (movedThisTurn === 0) {
-        // Проверяем, используется ли текущим ходом все кубики
-        if (moveDie && moveDie === dieValue * 4) {
-          // Ход на все 4 кубика - нельзя вывести вторую шашку
-          return true; // Разрешаем этот ход, но вторую шашку нельзя будет вывести
-        }
-        // Ход не на все кубики - можно будет вывести вторую шашку
-        return true;
-      }
-      
-      // Если это вторая шашка из головы
-      if (movedThisTurn === 1) {
-        // Проверяем, что первый ход не использовал все кубики
-        // Это проверяется в getAllValidMoves - если первый ход использовал все кубики,
-        // то второй ход из головы не будет сгенерирован
-        return true; // Разрешаем вторую шашку из головы при дубле
-      }
-      
-      // Больше двух шашек из головы нельзя
-      return false;
+    // Если это первая шашка из этой точки - всегда разрешаем
+    if (movesFromThisPoint === 0) {
+      return true;
     }
     
-    // Для обычных ходов (не дубль) - только 1 шашка из головы
-    return movedThisTurn === 0;
+    // Если это вторая шашка из этой точки - проверяем, что первая не использовала все кубики
+    if (movesFromThisPoint === 1) {
+      // Нужно проверить, сколько кубиков использовала первая шашка
+      // Это сложно проверить здесь, поэтому проверяем в getAllValidMoves
+      // Здесь просто разрешаем, если это не все 4 кубика
+      const diceUsedCount = diceUsed.length;
+      if (diceUsedCount >= totalDice) {
+        // Использованы все кубики - нельзя вывести вторую шашку
+        return false;
+      }
+      return true;
+    }
+    
+    // Больше двух шашек из одной точки нельзя
+    return false;
   }
 
   /**
@@ -291,7 +283,20 @@ export class LongBackgammonEngine {
     const calculatedTo = (from + die) % this.BOARD_SIZE;
     if (to !== calculatedTo) return false;
     if (state.points[to] < 0) return false;
-    if (!this.checkHeadRule(state, from, state.dice, die)) return false;
+    
+    // Проверяем правило дублей для ЛЮБОЙ точки (не только головы)
+    const isDoubles = state.dice && state.dice.length === 2 && state.dice[0] === state.dice[1];
+    if (isDoubles) {
+      const movesFromThisPoint = (state.movesFromPoint || {})[from] || 0;
+      if (movesFromThisPoint >= 2) {
+        // Больше двух шашек из одной точки нельзя
+        return false;
+      }
+    } else {
+      // Для обычных ходов проверяем правило головы
+      if (!this.checkHeadRule(state, from, state.dice, die)) return false;
+    }
+    
     if (!this.checkBlockRule(state, to)) return false;
     
     return true;
@@ -341,7 +346,20 @@ export class LongBackgammonEngine {
     const calculatedTo = (from + die) % this.BOARD_SIZE;
     if (to !== calculatedTo) return false;
     if (state.points[to] > 0) return false;
-    if (!this.checkHeadRule(state, from, state.dice, die)) return false;
+    
+    // Проверяем правило дублей для ЛЮБОЙ точки (не только головы)
+    const isDoubles = state.dice && state.dice.length === 2 && state.dice[0] === state.dice[1];
+    if (isDoubles) {
+      const movesFromThisPoint = (state.movesFromPoint || {})[from] || 0;
+      if (movesFromThisPoint >= 2) {
+        // Больше двух шашек из одной точки нельзя
+        return false;
+      }
+    } else {
+      // Для обычных ходов проверяем правило головы
+      if (!this.checkHeadRule(state, from, state.dice, die)) return false;
+    }
+    
     if (!this.checkBlockRule(state, to)) return false;
     
     return true;
@@ -411,6 +429,12 @@ export class LongBackgammonEngine {
         state.movesFromHead = (state.movesFromHead || 0) + 1;
       }
       
+      // Track moves from each point for Doubles Rule
+      if (!state.movesFromPoint) {
+        state.movesFromPoint = {};
+      }
+      state.movesFromPoint[from] = (state.movesFromPoint[from] || 0) + 1;
+      
       // Cannot place on opponent's point (already validated, but double-check)
       if (state.points[to] < 0) {
         // Return checker
@@ -418,6 +442,7 @@ export class LongBackgammonEngine {
         if (from === this.WHITE_HEAD) {
           state.movesFromHead = Math.max(0, (state.movesFromHead || 0) - 1);
         }
+        state.movesFromPoint[from] = Math.max(0, (state.movesFromPoint[from] || 0) - 1);
         return;
       }
       
@@ -457,6 +482,12 @@ export class LongBackgammonEngine {
         state.movesFromHead = (state.movesFromHead || 0) + 1;
       }
       
+      // Track moves from each point for Doubles Rule
+      if (!state.movesFromPoint) {
+        state.movesFromPoint = {};
+      }
+      state.movesFromPoint[from] = (state.movesFromPoint[from] || 0) + 1;
+      
       // Cannot place on opponent's point (already validated, but double-check)
       if (state.points[to] > 0) {
         // Return checker
@@ -464,6 +495,7 @@ export class LongBackgammonEngine {
         if (from === this.BLACK_HEAD) {
           state.movesFromHead = Math.max(0, (state.movesFromHead || 0) - 1);
         }
+        state.movesFromPoint[from] = Math.max(0, (state.movesFromPoint[from] || 0) - 1);
         return;
       }
       
@@ -500,10 +532,6 @@ export class LongBackgammonEngine {
       }
 
       const player = currentState.currentPlayer;
-      const headIndex = player === 0 ? this.WHITE_HEAD : this.BLACK_HEAD;
-
-      // Для дублей: проверяем, сколько шашек уже вышло из головы
-      const movedFromHead = currentState.movesFromHead || 0;
       
       // Find all possible moves from board
       let foundAnyMove = false;
@@ -513,6 +541,13 @@ export class LongBackgammonEngine {
         const hasMyCheckers = player === 0 ? pointValue > 0 : pointValue < 0;
         
         if (!hasMyCheckers) continue;
+
+        // Для дублей: проверяем, сколько шашек уже вышло из этой точки
+        const movesFromThisPoint = (currentState.movesFromPoint || {})[from] || 0;
+        if (isDoubles && movesFromThisPoint >= 2) {
+          // Уже выведено 2 шашки из этой точки - больше нельзя
+          continue;
+        }
 
         const triedDice = new Set<number>();
         for (let i = 0; i < remainingDice.length; i++) {
@@ -530,13 +565,6 @@ export class LongBackgammonEngine {
           
           const isBearingOffMove = (distanceTraveled + die) >= this.BOARD_SIZE;
           const to = isBearingOffMove ? -1 : toPoint;
-
-          // Особая логика для дублей: если это вторая шашка из головы,
-          // проверяем что осталось достаточно кубиков
-          if (isDoubles && from === headIndex && movedFromHead === 1) {
-            // Вторая шашка из головы при дубле - проверяем что есть кубики
-            if (remainingDice.length === 0) continue;
-          }
 
           if (this.validateMove(currentState, from, to, die)) {
             foundAnyMove = true;

@@ -596,6 +596,7 @@ export class GamesService {
         currentState.dice = [];
         currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
         currentState.movesFromHead = 0;
+        currentState.movesFromPoint = {};
         this.logger.log(`🔄 Turn switched: all dice used. New player: ${currentState.currentPlayer}`);
       } else {
         // Проверяем, есть ли валидные ходы с оставшимися кубиками
@@ -615,6 +616,7 @@ export class GamesService {
           currentState.dice = [];
           currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
           currentState.movesFromHead = 0;
+        currentState.movesFromPoint = {};
           this.logger.log(`🔄 Turn switched: no valid moves remain with [${remainingDice.join(', ')}]. New player: ${currentState.currentPlayer}`);
         }
       }
@@ -764,22 +766,36 @@ export class GamesService {
       return { allMoves: [] };
     }
 
-    // Получаем все возможные комбинации ходов
+    // Получаем все возможные комбинации ходов ТОЛЬКО с оставшимися кубиками
     let allMoves: Array<Array<{ from: number; to: number; die: number }>> = [];
     if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
-      allMoves = engine.getAllValidMoves(state, state.dice);
+      // Важно: передаем только оставшиеся кубики (state.dice уже обновлен после pendingMoves)
+      allMoves = engine.getAllValidMoves(state, state.dice || []);
     }
     
     // Преобразуем последовательности в плоский список доступных ходов,
     // включая комбинированные ходы (сумма нескольких кубиков) для одной шашки
     const flatMoves: Array<{ from: number; to: number; die: number; steps?: any[] }> = [];
     const seen = new Set<string>();
+    
+    // Получаем список доступных кубиков для фильтрации
+    const availableDice = state.dice || [];
+    const diceCounts = new Map<number, number>();
+    availableDice.forEach(d => diceCounts.set(d, (diceCounts.get(d) || 0) + 1));
 
     for (const seq of allMoves) {
       if (seq.length === 0) continue;
 
       // 1. Добавляем все одиночные ходы из последовательностей
+      // Но только те, которые используют доступные кубики
       for (const move of seq) {
+        // Проверяем, что кубик доступен
+        const availableCount = diceCounts.get(move.die) || 0;
+        if (availableCount === 0) {
+          // Этот кубик уже использован - пропускаем
+          continue;
+        }
+        
         const key = `${move.from}-${move.to}-${move.die}`;
         if (!seen.has(key)) {
           flatMoves.push(move);
@@ -793,15 +809,34 @@ export class GamesService {
       let currentFrom = seq[0].from;
       let totalDie = seq[0].die;
       let steps = [seq[0]];
+      
+      // Проверяем доступность всех кубиков в цепочке
+      const tempDiceCounts = new Map(diceCounts);
+      let allDiceAvailable = true;
+      
+      // Проверяем первый кубик
+      const firstDieCount = tempDiceCounts.get(seq[0].die) || 0;
+      if (firstDieCount === 0) {
+        continue; // Первый кубик недоступен
+      }
+      tempDiceCounts.set(seq[0].die, firstDieCount - 1);
 
       for (let i = 1; i < seq.length; i++) {
         const next = seq[i];
         // Если следующая точка начала совпадает с предыдущей точкой конца - это та же шашка
         if (next.from === seq[i-1].to) {
+          // Проверяем доступность кубика для этого шага
+          const nextDieCount = tempDiceCounts.get(next.die) || 0;
+          if (nextDieCount === 0) {
+            allDiceAvailable = false;
+            break; // Кубик недоступен
+          }
+          tempDiceCounts.set(next.die, nextDieCount - 1);
+          
           totalDie += next.die;
           steps.push(next);
           const key = `${currentFrom}-${next.to}-${totalDie}`;
-          if (!seen.has(key)) {
+          if (!seen.has(key) && allDiceAvailable) {
             flatMoves.push({
               from: currentFrom,
               to: next.to,
@@ -833,8 +868,8 @@ export class GamesService {
         }
       }
       
-      // Сохраняем последнюю цепочку, если она содержит более одного шага
-      if (steps.length > 1) {
+      // Сохраняем последнюю цепочку, если она содержит более одного шага и все кубики доступны
+      if (steps.length > 1 && allDiceAvailable) {
         const lastStep = steps[steps.length - 1];
         const key = `${currentFrom}-${lastStep.to}-${totalDie}`;
         if (!seen.has(key)) {
