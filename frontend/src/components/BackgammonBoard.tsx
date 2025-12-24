@@ -120,7 +120,7 @@ export default function BackgammonBoard({
     // Проверяем наличие кубиков (может быть массив или объект {die1, die2})
     const hasDice = dice && (
       (Array.isArray(dice) && dice.length > 0) || 
-      (typeof dice === 'object' && (dice.die1 || dice.die2))
+      (typeof dice === 'object' && !Array.isArray(dice) && 'die1' in dice && 'die2' in dice && (dice.die1 || dice.die2))
     )
     
     if (!gameId || !isMyTurn || !canMove || !hasDice) {
@@ -1106,7 +1106,7 @@ export default function BackgammonBoard({
   
   // Определение формата кубиков
   const diceArray = dice 
-    ? (Array.isArray(dice) ? dice : [dice.die1, dice.die2])
+    ? (Array.isArray(dice) ? dice : ('die1' in dice && 'die2' in dice ? [dice.die1, dice.die2] : null))
     : null
   
   return (
