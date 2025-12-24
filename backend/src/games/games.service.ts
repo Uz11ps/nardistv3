@@ -686,7 +686,7 @@ export class GamesService {
   async getPossibleMoves(
     gameId: string,
     playerId: string,
-    fromPoint?: number,
+    pendingMoves?: Array<{ from: number; to: number; die: number }>,
   ): Promise<{
     allMoves: Array<Array<{ from: number; to: number; die: number }>>;
     movesFromPoint?: Array<{ from: number; to: number; die: number }>;
@@ -702,38 +702,34 @@ export class GamesService {
       throw new BadRequestException('Не ваш ход');
     }
 
-    if (!game.gameState.dice || game.gameState.dice.length === 0) {
+    const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
+    let state = game.gameState;
+
+    // Применяем локальные ходы к состоянию перед расчетом возможных ходов
+    if (pendingMoves && pendingMoves.length > 0) {
+      const diceCopy = [...(state.dice || [])];
+      for (const move of pendingMoves) {
+        const dieIndex = diceCopy.indexOf(move.die);
+        if (dieIndex !== -1) {
+          diceCopy.splice(dieIndex, 1);
+          state = engine.applyMove(state, move.from, move.to, move.die);
+        }
+      }
+      state.dice = diceCopy;
+    }
+
+    if (!state.dice || state.dice.length === 0) {
       return { allMoves: [] };
     }
 
-    const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
-    
     // Получаем все возможные комбинации ходов
     let allMoves: Array<Array<{ from: number; to: number; die: number }>> = [];
     if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
-      allMoves = engine.getAllValidMoves(game.gameState, game.gameState.dice);
-    }
-    
-    // Если указана точка, фильтруем ходы для этой точки
-    let movesFromPoint: Array<{ from: number; to: number; die: number }> | undefined;
-    if (fromPoint !== undefined) {
-      const movesSet = new Set<string>();
-      allMoves.forEach((moveSeq) => {
-        moveSeq.forEach((move) => {
-          if (move.from === fromPoint) {
-            movesSet.add(`${move.from}-${move.to}-${move.die}`);
-          }
-        });
-      });
-      movesFromPoint = Array.from(movesSet).map((key) => {
-        const [from, to, die] = key.split('-').map(Number);
-        return { from, to, die };
-      });
+      allMoves = engine.getAllValidMoves(state, state.dice);
     }
     
     return {
       allMoves,
-      ...(movesFromPoint && { movesFromPoint }),
     };
   }
 

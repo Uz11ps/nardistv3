@@ -91,6 +91,7 @@ export class BackgammonEngine {
       }
       if (die > distanceToFinish) {
         // Can only bear off from a closer point if no checkers are further away
+        // Further away means LOWER indices (0 to from-1)
         for (let i = 0; i < from; i++) {
           if (state.points[i] > 0) return false;
         }
@@ -137,6 +138,7 @@ export class BackgammonEngine {
       }
       if (die > distanceToFinish) {
         // Can only bear off from a closer point if no checkers are further away
+        // Further away means HIGHER indices (from+1 to 23)
         for (let i = this.BOARD_SIZE - 1; i > from; i--) {
           if (state.points[i] < 0) return false;
         }
@@ -161,7 +163,7 @@ export class BackgammonEngine {
       return !outsideHome && state.bar[0] === 0;
     } else {
       // Black: all checkers must be in indices 0-5
-      const outsideHome = state.points.slice(6).some(p => p < 0);
+      const outsideHome = state.points.slice(6, 24).some(p => p < 0);
       return !outsideHome && state.bar[1] === 0;
     }
   }

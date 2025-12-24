@@ -98,14 +98,14 @@ export class GamesController {
     return this.gamesService.createBotGame(user.id, mode as any);
   }
 
-  @Get(':id/possible-moves')
+  @Post(':id/possible-moves')
   @UseGuards(JwtAuthGuard)
   async getPossibleMoves(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body() body?: { fromPoint?: number },
+    @Body() body?: { pendingMoves?: Array<{ from: number; to: number; die: number }> },
   ) {
-    return this.gamesService.getPossibleMoves(id, user.id, body?.fromPoint);
+    return this.gamesService.getPossibleMoves(id, user.id, body?.pendingMoves);
   }
 
   @Get(':id/possible-moves/:fromPoint')

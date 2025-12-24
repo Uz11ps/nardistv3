@@ -112,14 +112,17 @@ export default function BackgammonBoard({
     
         const fetchPossibleMoves = async () => {
           try {
-            const response = await apiClient.get(`/games/${gameId}/possible-moves`)
+            // Теперь отправляем pendingMoves на сервер, чтобы получить актуальные варианты
+            const response = await apiClient.post(`/games/${gameId}/possible-moves`, { 
+              pendingMoves 
+            })
             const allMoves = response.data?.allMoves || []
             const movesSet = new Set<string>()
             const flatMoves: Array<{ from: number; to: number; die: number }> = []
             const highlighted = new Set<number>()
             
             allMoves.forEach((moveSeq: Array<{ from: number; to: number; die: number }>) => {
-              // Только первый ход в каждой последовательности является доступным для начала
+              // Берем только первый ход в каждой последовательности
               if (moveSeq.length > 0) {
                 const firstMove = moveSeq[0]
                 const key = `${firstMove.from}-${firstMove.to}-${firstMove.die}`
