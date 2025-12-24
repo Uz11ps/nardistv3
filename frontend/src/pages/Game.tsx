@@ -486,15 +486,12 @@ export default function Game() {
         ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
         : bearOffRaw
       
-      // Сохраняем текущие кубики, если они есть, чтобы не потерять их при обновлении
-      const currentDice = gameState?.dice || formattedDice
-      
       setGameState({
         points: data.gameState?.points || [],
         bar,
         bearOff,
         currentPlayer: data.currentPlayer || 0,
-        dice: currentDice || formattedDice, // Используем текущие кубики, если они есть
+        dice: formattedDice,
         canMove: canMove,
         verificationSalt: data.verificationSalt,
         p1Rolls: data.p1Rolls,
@@ -504,15 +501,24 @@ export default function Game() {
       setGameStatus(newStatus)
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
       
+      // Обновляем таймеры из данных сервера, если они есть
+      if (data.player1Timer !== undefined) {
+        setPlayer1Timer(data.player1Timer)
+      }
+      if (data.player2Timer !== undefined) {
+        setPlayer2Timer(data.player2Timer)
+      }
+      
       if (isMyTurnNow && !wasMyTurn) {
         setMoveTimer(30)
-        // Запускаем таймер только если есть кубики
-        if (currentDice || formattedDice) {
+        // Запускаем таймер только если есть кубики (ход начался)
+        if (formattedDice) {
           timerStartTimeRef.current = Date.now()
         }
       }
 
-      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && !currentDice) {
+      // Если это начало нашего хода и кубиков нет - бросаем их автоматически
+      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice) {
         setTimeout(() => {
           const socket = getSocket()
           if (socket) {
@@ -520,9 +526,6 @@ export default function Game() {
           }
         }, 500)
       }
-      
-      // НЕ вызываем loadGame() здесь автоматически, чтобы не сбросить подсветку
-      // loadGame() вызывается только при необходимости (например, при старте игры)
     })
 
     socket.on('move_made', (data: any) => {
@@ -569,23 +572,31 @@ export default function Game() {
         p2Rolls: data.p2Rolls,
       })
       setGameStatus(data.status || 'in_progress')
+      setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
       
+      // Сбрасываем таймер при смене хода
+      if (!isMyTurnNow && wasMyTurn) {
+        timerStartTimeRef.current = null
+        setMoveTimer(30)
+        setOvertimeTimer(60)
+        setIsInOvertime(false)
+      }
+      
+      // Если это начало нашего хода - запускаем таймер и бросаем кубики если их нет
       if (isMyTurnNow && !wasMyTurn) {
         setMoveTimer(30)
-        timerStartTimeRef.current = Date.now()
+        timerStartTimeRef.current = null // Сбрасываем, чтобы запустился заново после броска кубиков
+        
+        if (!formattedDice && data.status === 'in_progress') {
+          // Автоматически бросаем кубики для следующего игрока (как в боте)
+          setTimeout(() => {
+            const socket = getSocket()
+            if (socket) {
+              socket.emit('roll_dice', { gameId })
+            }
+          }, 500)
+        }
       }
-
-      if (data.status === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice) {
-        setTimeout(() => {
-          const socket = getSocket()
-          if (socket) {
-            socket.emit('roll_dice', { gameId })
-          }
-        }, 500)
-      }
-      
-      // Дополнительно загружаем игру для полной синхронизации
-      loadGame()
     })
 
     socket.on('dice_rolled', (data: any) => {
@@ -593,16 +604,11 @@ export default function Game() {
       setTimeout(() => {
         setDiceAnimating(false)
         // Обновляем состояние с кубиками немедленно
+        // Сервер отправит game_state событие после dice_rolled, которое обновит полное состояние
         if (data.dice && Array.isArray(data.dice) && data.dice.length >= 2) {
           const formattedDice = { die1: data.dice[0], die2: data.dice[1] }
           setGameState(prev => prev ? ({ ...prev, dice: formattedDice }) : null)
-          // Запускаем таймер только после обновления кубиков
-          if (gameState?.canMove && gameStatus === 'in_progress' && !isBotGame) {
-            timerStartTimeRef.current = Date.now()
-          }
         }
-        // НЕ вызываем loadGame() здесь, чтобы не сбросить подсветку
-        // Состояние уже обновлено через game_state событие
       }, 1500) // Увеличили время для красивой 3D анимации
     })
 
