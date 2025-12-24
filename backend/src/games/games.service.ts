@@ -1008,9 +1008,10 @@ export class GamesService {
     }
 
     const loserId = game.winnerId === game.player1Id ? game.player2Id : game.player1Id;
+    const gameType: GameType = game.type;
     
     // Проверяем, что есть проигравший (для игр с игроками)
-    if (game.type === GameType.VS_PLAYER && !loserId) {
+    if (gameType === GameType.VS_PLAYER && !loserId) {
       this.logger.warn(`⚠️ Игра ${game.id} типа VS_PLAYER, но нет loserId`);
       return;
     }
@@ -1113,16 +1114,16 @@ export class GamesService {
         const loserResult = await this.progressService.addXP(loserId, loserXP);
         
         // Тратим энергию при завершении матча согласно таблице 9 спецификации
-        const isTournament = game.type === GameType.TOURNAMENT;
+        const isTournament = gameType === GameType.TOURNAMENT;
         try {
-          await this.progressService.consumeEnergyForFinishedGame(game.winnerId, game.type, true, isTournament);
-          await this.progressService.consumeEnergyForFinishedGame(loserId, game.type, false, isTournament);
+          await this.progressService.consumeEnergyForFinishedGame(game.winnerId, gameType, true, isTournament);
+          await this.progressService.consumeEnergyForFinishedGame(loserId, gameType, false, isTournament);
         } catch (error) {
           this.logger.error(`❌ Ошибка при трате энергии после завершения игры: ${error.message}`);
         }
         
         // Тратим жизнь при поражении (только для боевых матчей)
-        if (game.type === GameType.VS_PLAYER || game.type === GameType.TOURNAMENT) {
+        if (gameType === GameType.VS_PLAYER || gameType === GameType.TOURNAMENT) {
           try {
             await this.progressService.loseLifeOnDefeat(loserId);
           } catch (error) {

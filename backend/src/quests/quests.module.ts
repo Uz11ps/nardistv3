@@ -8,6 +8,7 @@ import { ProgressModule } from '../progress/progress.module';
 import { UsersModule } from '../users/users.module';
 import { SkinsModule } from '../skins/skins.module';
 import { TournamentsModule } from '../tournaments/tournaments.module';
+import { TournamentTicketsService } from '../tournaments/tournament-tickets.service';
 
 @Module({
   imports: [

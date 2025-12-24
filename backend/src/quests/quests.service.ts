@@ -8,6 +8,7 @@ import { QuestProgress } from './quest-progress.entity';
 import { ProgressService } from '../progress/progress.service';
 import { UsersService } from '../users/users.service';
 import { SkinsService } from '../skins/skins.service';
+import { TournamentTicketsService } from '../tournaments/tournament-tickets.service';
 import { BadRequestException } from '@nestjs/common';
 
 @Injectable()

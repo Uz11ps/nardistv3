@@ -10,12 +10,14 @@ import { CourseTask } from './course-task.entity';
 import { CourseTaskProgress } from './course-task-progress.entity';
 import { UsersModule } from '../users/users.module';
 import { AdminModule } from '../admin/admin.module';
+import { ProgressModule } from '../progress/progress.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Article, UserMaterial, ArticleSlot, CourseTask, CourseTaskProgress]),
     UsersModule,
     forwardRef(() => AdminModule),
+    forwardRef(() => ProgressModule),
   ],
   controllers: [AcademyController],
   providers: [AcademyService, CourseTasksService],

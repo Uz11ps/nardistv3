@@ -112,6 +112,40 @@ export class ProgressService {
   }
 
   /**
+   * Распределить Skill Points по веткам прогрессии
+   */
+  async distributeSkillPoints(userId: string, type: EnhancementType, amount: number): Promise<void> {
+    const user = await this.usersService.findOne(userId);
+    
+    if ((user.freeSkillPoints || 0) < amount) {
+      throw new BadRequestException(`Недостаточно свободных Skill Points. Доступно: ${user.freeSkillPoints || 0}, требуется: ${amount}`);
+    }
+    
+    // Распределяем SP по веткам
+    switch (type) {
+      case EnhancementType.ECONOMY:
+        user.economySp = (user.economySp || 0) + amount;
+        break;
+      case EnhancementType.ENERGY:
+        user.energySp = (user.energySp || 0) + amount;
+        break;
+      case EnhancementType.LIVES:
+        user.livesSp = (user.livesSp || 0) + amount;
+        break;
+      case EnhancementType.POWER:
+        user.powerSp = (user.powerSp || 0) + amount;
+        break;
+      default:
+        throw new BadRequestException(`Неизвестный тип усиления: ${type}`);
+    }
+    
+    user.freeSkillPoints = (user.freeSkillPoints || 0) - amount;
+    await this.usersService['usersRepository'].save(user);
+    
+    this.logger.log(`✅ Распределено ${amount} SP в ветку ${type} для пользователя ${userId}`);
+  }
+
+  /**
    * Получить количество Skill Points за уровень
    * Уровни 2-5: +1 SP, уровни 6-50: +2 SP
    */

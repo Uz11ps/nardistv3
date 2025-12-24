@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { CourseTask, TaskType } from './course-task.entity';
 import { CourseTaskProgress } from './course-task-progress.entity';
 import { Article } from './article.entity';
 import { UsersService } from '../users/users.service';
+import { ProgressService } from '../progress/progress.service';
 
 @Injectable()
 export class CourseTasksService {
@@ -17,6 +18,8 @@ export class CourseTasksService {
     private articlesRepository: Repository<Article>,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
+    @Inject(forwardRef(() => ProgressService))
+    private progressService: ProgressService,
   ) {}
 
   /**
@@ -48,7 +51,7 @@ export class CourseTasksService {
 
     // Получаем прогресс пользователя
     const progressList = await this.courseTaskProgressRepository.find({
-      where: { userId, taskId: tasks.map((t) => t.id) },
+      where: { userId, taskId: In(tasks.map((t) => t.id)) },
     });
 
     const progressMap = new Map(progressList.map((p) => [p.taskId, p]));
@@ -190,10 +193,15 @@ export class CourseTasksService {
     const newNarCoin = Number(user.narCoin) + Number(task.rewardNarCoin);
     const newXP = Number(user.xp || 0) + task.rewardXP;
 
+    // Обновляем NAR-coin через update, XP через addXP
     await this.usersService.update(userId, {
       narCoin: newNarCoin,
-      xp: newXP,
     });
+    
+    // Начисляем XP через ProgressService
+    if (task.rewardXP > 0) {
+      await this.progressService.addXP(userId, task.rewardXP);
+    }
 
     // Отмечаем награду как полученную
     progress.isRewardClaimed = true;
@@ -218,7 +226,7 @@ export class CourseTasksService {
     });
 
     const progressList = await this.courseTaskProgressRepository.find({
-      where: { userId, taskId: onboardingTasks.map((t) => t.id) },
+      where: { userId, taskId: In(onboardingTasks.map((t) => t.id)) },
     });
 
     const progressMap = new Map(progressList.map((p) => [p.taskId, p]));
