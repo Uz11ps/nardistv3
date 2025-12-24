@@ -51,6 +51,7 @@ export default function BackgammonBoard({
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
+  const [showBearOffButton, setShowBearOffButton] = useState<{ pointIndex: number; die: number } | null>(null)
   const [animatingChecker, setAnimatingChecker] = useState<{
     from: number;
     to: number;
@@ -708,8 +709,11 @@ export default function BackgammonBoard({
     setDragPosition(null)
     setHoveredPoint(null)
     setValidTargetPoints(new Set())
+    setShowBearOffButton(null)
   }
 
+  const [containerHeight, setContainerHeight] = useState(0)
+  
   // Обновление размера canvas
   useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
@@ -718,6 +722,7 @@ export default function BackgammonBoard({
         const rect = container.getBoundingClientRect()
         canvasRef.current.width = rect.width
         canvasRef.current.height = rect.height
+        setContainerHeight(rect.height)
         drawBoard()
       }
     })
@@ -881,7 +886,12 @@ export default function BackgammonBoard({
     const pointIndex = getPointAtPosition(x, y, canvas)
     // console.log('Clicked at', x, y, 'Point:', pointIndex)
     
-    if (pointIndex === null) return
+    if (pointIndex === null) {
+      setSelectedPoint(null)
+      setValidTargetPoints(new Set())
+      setShowBearOffButton(null)
+      return
+    }
     
     const points = gameState?.points || []
     let pointValue = 0
@@ -895,13 +905,23 @@ export default function BackgammonBoard({
       pointValue = points[pointIndex]
     }
     
-    if (pointValue === 0) return
+    if (pointValue === 0) {
+      setSelectedPoint(null)
+      setValidTargetPoints(new Set())
+      setShowBearOffButton(null)
+      return
+    }
     
     // Проверяем, моя ли это шашка
     const isMyChecker = isPlayer1 ? pointValue > 0 : pointValue < 0
     const isMyBar = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
     
-    if (!isMyChecker && !isMyBar) return
+    if (!isMyChecker && !isMyBar) {
+      setSelectedPoint(null)
+      setValidTargetPoints(new Set())
+      setShowBearOffButton(null)
+      return
+    }
     
     // Разрешаем захватить шашку, даже если нет ходов, для визуального отклика
     // Но подсветим цели только если ходы есть
@@ -915,12 +935,20 @@ export default function BackgammonBoard({
     setSelectedPoint(pointIndex)
     
     const validTargets = new Set<number>()
+    let bearOffDie: number | null = null
     pointMoves.forEach(move => {
       if (move.to !== undefined && move.to !== null) {
         validTargets.add(move.to)
+        if (move.to === -1) bearOffDie = move.die
       }
     })
     setValidTargetPoints(validTargets)
+    
+    if (bearOffDie !== null) {
+      setShowBearOffButton({ pointIndex, die: bearOffDie })
+    } else {
+      setShowBearOffButton(null)
+    }
   }
   
   // Обработка движения мыши
@@ -970,9 +998,15 @@ export default function BackgammonBoard({
     
     setDragging(null)
     setDragPosition(null)
-    setSelectedPoint(null)
+    // Мы НЕ сбрасываем selectedPoint здесь, чтобы можно было увидеть кнопку "Сбросить" после перетаскивания
+    // Но нам нужно обновить showBearOffButton если мы отпустили шашку на том же месте
+    const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
+    if (bearOffMove) {
+      setShowBearOffButton({ pointIndex: dragging.pointIndex, die: bearOffMove.die })
+    }
+    
     setHoveredPoint(null)
-    setValidTargetPoints(new Set())
+    // setValidTargetPoints(new Set()) // Тоже не сбрасываем для select-эффекта
   }
   
   // Обработка клика
@@ -1001,28 +1035,52 @@ export default function BackgammonBoard({
         setSelectedPoint(pointIndex)
         // Устанавливаем валидные точки назначения для подсветки
         const targets = new Set<number>()
-        pointMoves.forEach(m => targets.add(m.to))
+        let bearOffDie: number | null = null
+        pointMoves.forEach(m => {
+          targets.add(m.to)
+          if (m.to === -1) bearOffDie = m.die
+        })
         setValidTargetPoints(targets)
+        
+        // Если есть ход на вынос, показываем кнопку
+        if (bearOffDie !== null) {
+          setShowBearOffButton({ pointIndex, die: bearOffDie })
+        } else {
+          setShowBearOffButton(null)
+        }
       }
     } else if (selectedPoint === pointIndex) {
       // Отмена выбора при повторном клике
       setSelectedPoint(null)
       setValidTargetPoints(new Set())
+      setShowBearOffButton(null)
     } else {
       const move = possibleMoves.find(m => m.from === selectedPoint && m.to === pointIndex)
       if (move) {
         startMoveAnimation(move.from, move.to, move.die)
+        setShowBearOffButton(null)
       } else {
         // Если кликнули на другую свою шашку, переключаем выбор
         const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
         if (pointMoves.length > 0) {
           setSelectedPoint(pointIndex)
           const targets = new Set<number>()
-          pointMoves.forEach(m => targets.add(m.to))
+          let bearOffDie: number | null = null
+          pointMoves.forEach(m => {
+            targets.add(m.to)
+            if (m.to === -1) bearOffDie = m.die
+          })
           setValidTargetPoints(targets)
+          
+          if (bearOffDie !== null) {
+            setShowBearOffButton({ pointIndex, die: bearOffDie })
+          } else {
+            setShowBearOffButton(null)
+          }
         } else {
           setSelectedPoint(null)
           setValidTargetPoints(new Set())
+          setShowBearOffButton(null)
         }
       }
     }
@@ -1049,6 +1107,35 @@ export default function BackgammonBoard({
         onTouchEnd={handleTouchEnd}
         style={{ touchAction: 'none' }} // Отключаем стандартные жесты браузера на канвасе
       />
+      
+      {/* Кнопка сброса шашки */}
+      {showBearOffButton && canvasRef.current && (
+        (() => {
+          const coords = getPointCoordinates(showBearOffButton.pointIndex, canvasRef.current)
+          const isTop = coords.isTopRow
+          const btnX = coords.x
+          const btnY = isTop ? coords.pointHeight + 40 : containerHeight - coords.pointHeight - 40
+          
+          return (
+            <button
+              className="bear-off-overlay-btn"
+              style={{
+                position: 'absolute',
+                left: `${btnX}px`,
+                top: `${btnY}px`,
+                transform: 'translate(-50%, -50%)',
+                zIndex: 100,
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                startMoveAnimation(showBearOffButton.pointIndex, -1, showBearOffButton.die)
+              }}
+            >
+              СБРОСИТЬ
+            </button>
+          )
+        })()
+      )}
       
       {/* Кубики */}
       {diceArray && dice3DPosition && (
