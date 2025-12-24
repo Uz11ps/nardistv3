@@ -264,46 +264,40 @@ export class LongBackgammonEngine {
 
     // Calculate target point
     const calculatedTo = this.calculateTargetPoint(0, from, die);
+    const distanceTraveled = (from - this.WHITE_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
     
     // Handle bearing off
     // White home: indices 18-23 (Points 1-6)
-    // If calculatedTo is outside home or we can bear off, allow bearing off
-    if (calculatedTo < 0 || (calculatedTo >= this.WHITE_HOME_START && calculatedTo < this.BOARD_SIZE && this.canBearOff(state, 0))) {
+    // Journey: 0 -> 1 -> ... -> 23 -> OFF
+    if (distanceTraveled + die >= this.BOARD_SIZE) {
       if (!this.canBearOff(state, 0)) {
         return false;
       }
-      // When bearing off, allow moving from any point in home
-      // If die value point (Point 1-6 = indices 23, 22, 21, 20, 19, 18) has no checkers, can move from higher points
-      // Point number = 24 - index, so Point 1 = index 23, Point 6 = index 18
-      const diePointIndex = this.BOARD_SIZE - die; // Point die = index (24 - die)
-      const diePointIndexCorrected = Math.max(this.WHITE_HOME_START, Math.min(this.BOARD_SIZE - 1, this.BOARD_SIZE - die));
       
       // Check if from point is in home
-      if (from < this.WHITE_HOME_START || from >= this.BOARD_SIZE) {
+      if (!this.isInHome(0, from)) {
         return false;
       }
       
-      // If die value point has checkers, must bear off from that point
-      if (state.points[diePointIndexCorrected] > 0) {
-        return from === diePointIndexCorrected && (to === -1 || to < 0);
+      // Standard bearing off rules:
+      // 1. Can bear off if die exactly matches point distance to finish
+      // 2. Can bear off from further point if die is greater AND no checkers on points further from finish
+      
+      const pToFinish = this.BOARD_SIZE - distanceTraveled; // 1 to 6
+      
+      if (die === pToFinish) {
+        return to === -1 || to >= this.BOARD_SIZE;
       }
       
-      // If die value point has no checkers, can bear off from higher points (lower indices)
-      // Find highest point (lowest index) with checkers
-      let highestPointWithCheckers = -1;
-      for (let i = this.WHITE_HOME_START; i < this.BOARD_SIZE; i++) {
-        if (state.points[i] > 0) {
-          highestPointWithCheckers = i;
-          break; // Found highest point
+      if (die > pToFinish) {
+        // Check if there are any checkers further from finish (lower indices in white home)
+        for (let i = this.WHITE_HOME_START; i < from; i++) {
+          if (state.points[i] > 0) return false; // Must move/bear off from further points first
         }
+        return to === -1 || to >= this.BOARD_SIZE;
       }
       
-      if (highestPointWithCheckers === -1) {
-        return false; // No checkers in home
-      }
-      
-      // Can bear off from highest point or from points higher than die value point
-      return from <= diePointIndexCorrected && (to === -1 || to < 0);
+      return false; // die < pToFinish, must move within home
     }
 
     if (to !== calculatedTo) {
@@ -347,45 +341,38 @@ export class LongBackgammonEngine {
 
     // Calculate target point
     const calculatedTo = this.calculateTargetPoint(1, from, die);
+    const distanceTraveled = (from - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
     
     // Handle bearing off
     // Black home: indices 6-11 (Points 13-18)
-    // If calculatedTo is outside home or we can bear off, allow bearing off
-    if (calculatedTo < 0 || (calculatedTo >= this.BLACK_HOME_START && calculatedTo < 12 && this.canBearOff(state, 1))) {
+    // Journey: 12 -> 13 -> ... -> 23 -> 0 -> ... -> 11 -> OFF
+    if (distanceTraveled + die >= this.BOARD_SIZE) {
       if (!this.canBearOff(state, 1)) {
         return false;
       }
-      // When bearing off, allow moving from any point in home
-      // If die value point (Point 13-18 = indices 6-11) has no checkers, can move from higher points
-      const diePointIndex = this.BLACK_HOME_START + (6 - die); // Point (13 + die - 1) = index (6 + die - 1)
-      const diePointIndexCorrected = Math.max(this.BLACK_HOME_START, Math.min(11, this.BLACK_HOME_START + (6 - die)));
       
       // Check if from point is in home
-      if (from < this.BLACK_HOME_START || from >= 12) {
+      if (!this.isInHome(1, from)) {
         return false;
       }
       
-      // If die value point has checkers, must bear off from that point
-      if (state.points[diePointIndexCorrected] < 0) {
-        return from === diePointIndexCorrected && (to === -1 || to >= this.BOARD_SIZE);
+      // Standard bearing off rules:
+      const pToFinish = this.BOARD_SIZE - distanceTraveled; // 1 to 6
+      
+      if (die === pToFinish) {
+        return to === -1 || to >= this.BOARD_SIZE;
       }
       
-      // If die value point has no checkers, can bear off from higher points (lower indices)
-      // Find highest point (lowest index) with checkers
-      let highestPointWithCheckers = -1;
-      for (let i = this.BLACK_HOME_START; i < 12; i++) {
-        if (state.points[i] < 0) {
-          highestPointWithCheckers = i;
-          break; // Found highest point
+      if (die > pToFinish) {
+        // Check if there are any checkers further from finish (lower distances in black home)
+        // Indices 6, 7, 8, 9, 10, 11 (distanceTraveled 18, 19, 20, 21, 22, 23)
+        for (let i = this.BLACK_HOME_START; i < from; i++) {
+          if (state.points[i] < 0) return false;
         }
+        return to === -1 || to >= this.BOARD_SIZE;
       }
       
-      if (highestPointWithCheckers === -1) {
-        return false; // No checkers in home
-      }
-      
-      // Can bear off from highest point or from points higher than die value point
-      return from <= diePointIndexCorrected && (to === -1 || to >= this.BOARD_SIZE);
+      return false;
     }
 
     if (to !== calculatedTo) {

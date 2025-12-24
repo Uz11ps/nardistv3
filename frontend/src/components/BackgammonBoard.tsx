@@ -109,38 +109,32 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (!gameId || !isMyTurn || !canMove || !dice) return
     
-    const fetchPossibleMoves = async () => {
-      try {
-        // Мы запрашиваем возможные ходы ОТ ТЕКУЩЕГО СОСТОЯНИЯ на сервере
-        // Но на фронте мы уже могли сделать часть ходов. 
-        // Поэтому нам нужно фильтровать possibleMoves, исключая те, что уже в pendingMoves
-        const response = await apiClient.get(`/games/${gameId}/possible-moves`)
-        const allMoves = response.data?.allMoves || []
-        const movesSet = new Set<string>()
-        const flatMoves: Array<{ from: number; to: number; die: number }> = []
-        
-        allMoves.forEach((moveSeq: Array<{ from: number; to: number; die: number }>) => {
-          // Здесь сложнее: сервер возвращает последовательности.
-          // Для простоты берем все уникальные первые ходы в последовательностях,
-          // которые еще не сделаны.
-          moveSeq.forEach((move) => {
-            const key = `${move.from}-${move.to}-${move.die}`
-            if (!movesSet.has(key)) {
-              movesSet.add(key)
-              flatMoves.push(move)
-            }
-          })
-        })
-        
-        setPossibleMoves(flatMoves)
-        
-        const highlighted = new Set<number>()
-        flatMoves.forEach((move: any) => {
-          if (move.from !== undefined && move.from !== null) highlighted.add(move.from)
-          if (move.to !== undefined && move.to !== null && move.to >= 0 && move.to < 24) highlighted.add(move.to)
-        })
-        setHighlightedPoints(highlighted)
-      } catch (error) {
+        const fetchPossibleMoves = async () => {
+          try {
+            const response = await apiClient.get(`/games/${gameId}/possible-moves`)
+            const allMoves = response.data?.allMoves || []
+            const movesSet = new Set<string>()
+            const flatMoves: Array<{ from: number; to: number; die: number }> = []
+            const highlighted = new Set<number>()
+            
+            allMoves.forEach((moveSeq: Array<{ from: number; to: number; die: number }>) => {
+              // Только первый ход в каждой последовательности является доступным для начала
+              if (moveSeq.length > 0) {
+                const firstMove = moveSeq[0]
+                const key = `${firstMove.from}-${firstMove.to}-${firstMove.die}`
+                if (!movesSet.has(key)) {
+                  movesSet.add(key)
+                  flatMoves.push(firstMove)
+                  if (firstMove.from !== undefined && firstMove.from !== null) {
+                    highlighted.add(firstMove.from)
+                  }
+                }
+              }
+            })
+            
+            setPossibleMoves(flatMoves)
+            setHighlightedPoints(highlighted)
+          } catch (error) {
         console.error('Ошибка получения возможных ходов:', error)
         setPossibleMoves([])
         setHighlightedPoints(new Set())

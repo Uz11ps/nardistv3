@@ -16,7 +16,7 @@ export interface BoardState {
 export class BackgammonEngine {
   private readonly BOARD_SIZE = 24;
   private readonly INITIAL_BOARD = [
-    0, 2, 0, 0, 0, 0, -5, 0, -3, 0, 0, 0, 5, -5, 0, 0, 0, 3, 0, 5, 0, 0, 0, -2, 0,
+    2, 0, 0, 0, 0, -5, 0, -3, 0, 0, 0, 5, -5, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, -2
   ];
 
   createInitialState(): BoardState {
@@ -63,12 +63,12 @@ export class BackgammonEngine {
   }
 
   private validateMovePlayer1(state: BoardState, from: number, to: number, die: number): boolean {
-    // Player 1 (White) moves from point 24 to point 1 (decreasing indices)
+    // Player 1 (White) moves from index 0 towards index 23 (Point 24 to 1)
     
     // If checkers on bar, must enter from bar first
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      const enterPoint = 24 - die; // Point 24-die (e.g., die=6 -> point 18)
+      const enterPoint = die - 1; // Die 1 -> Index 0, Die 6 -> Index 5
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
       // Cannot enter on opponent's point (2 or more opponent checkers)
       if (state.points[enterPoint] < -1) return false;
@@ -77,35 +77,29 @@ export class BackgammonEngine {
 
     // Regular move from board
     if (from < 0 || from >= this.BOARD_SIZE) return false;
-    if (state.points[from] <= 0) return false; // No checker at from point
+    if (state.points[from] <= 0) return false; // No white checker at from point
 
-    const toPoint = from - die;
+    const toPoint = from + die;
     
     // Bearing off
-    if (toPoint < 0) {
+    if (toPoint >= this.BOARD_SIZE) {
       if (!this.canBearOff(state, 0)) return false;
-      // When bearing off, must bear off from exact die value point if available
-      // Otherwise can bear off from highest point
-      const diePoint = 24 - die; // Point number (1-6)
-      const diePointIndex = diePoint - 1; // Index (0-5, but we need 18-23 for white home)
-      const whiteHomeStart = 18;
-      const whiteHomeEnd = 24;
       
-      // Check if from point is in home (indices 18-23)
-      if (from < whiteHomeStart || from >= whiteHomeEnd) return false;
-      
-      // If die value point has checkers, must bear off from that point
-      const diePointIndexInHome = whiteHomeEnd - diePoint; // Convert point to index
-      if (state.points[diePointIndexInHome] > 0) {
-        return from === diePointIndexInHome && (to < 0 || to >= this.BOARD_SIZE);
+      const distanceToFinish = this.BOARD_SIZE - from; // 1 to 6
+      if (die === distanceToFinish) {
+        return to === -1 || to >= this.BOARD_SIZE;
       }
-      
-      // Otherwise can bear off from highest point (lowest index) with checkers
-      return to < 0 || to >= this.BOARD_SIZE;
+      if (die > distanceToFinish) {
+        // Can only bear off from a closer point if no checkers are further away
+        for (let i = 0; i < from; i++) {
+          if (state.points[i] > 0) return false;
+        }
+        return to === -1 || to >= this.BOARD_SIZE;
+      }
+      return false; // die < distance, must move within home
     }
 
     // Regular move on board
-    if (toPoint < 0 || toPoint >= this.BOARD_SIZE) return false;
     if (to !== toPoint && to !== -1) return false;
     
     // Cannot move to opponent's point (2 or more opponent checkers)
@@ -115,12 +109,12 @@ export class BackgammonEngine {
   }
 
   private validateMovePlayer2(state: BoardState, from: number, to: number, die: number): boolean {
-    // Player 2 (Black) moves from point 1 to point 24 (increasing indices)
+    // Player 2 (Black) moves from index 23 towards index 0 (Point 1 to 24)
     
     // If checkers on bar, must enter from bar first
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      const enterPoint = die - 1; // Point die (e.g., die=1 -> point 1, index 0)
+      const enterPoint = this.BOARD_SIZE - die; // Die 1 -> Index 23, Die 6 -> Index 18
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
       // Cannot enter on opponent's point (2 or more opponent checkers)
       if (state.points[enterPoint] > 1) return false;
@@ -129,33 +123,29 @@ export class BackgammonEngine {
 
     // Regular move from board
     if (from < 0 || from >= this.BOARD_SIZE) return false;
-    if (state.points[from] >= 0) return false; // No checker at from point
+    if (state.points[from] >= 0) return false; // No black checker at from point
 
-    const toPoint = from + die;
+    const toPoint = from - die;
     
     // Bearing off
-    if (toPoint >= this.BOARD_SIZE) {
+    if (toPoint < 0) {
       if (!this.canBearOff(state, 1)) return false;
-      // When bearing off, must bear off from exact die value point if available
-      // Otherwise can bear off from highest point
-      const blackHomeStart = 0;
-      const blackHomeEnd = 6;
       
-      // Check if from point is in home (indices 0-5)
-      if (from < blackHomeStart || from >= blackHomeEnd) return false;
-      
-      // If die value point has checkers, must bear off from that point
-      const diePointIndex = die - 1; // Point die = index (die-1)
-      if (state.points[diePointIndex] < 0) {
-        return from === diePointIndex && (to < 0 || to >= this.BOARD_SIZE);
+      const distanceToFinish = from + 1; // 1 to 6
+      if (die === distanceToFinish) {
+        return to === -1 || to < 0;
       }
-      
-      // Otherwise can bear off from highest point (highest index) with checkers
-      return to < 0 || to >= this.BOARD_SIZE;
+      if (die > distanceToFinish) {
+        // Can only bear off from a closer point if no checkers are further away
+        for (let i = this.BOARD_SIZE - 1; i > from; i--) {
+          if (state.points[i] < 0) return false;
+        }
+        return to === -1 || to < 0;
+      }
+      return false;
     }
 
     // Regular move on board
-    if (toPoint < 0 || toPoint >= this.BOARD_SIZE) return false;
     if (to !== toPoint && to !== -1) return false;
     
     // Cannot move to opponent's point (2 or more opponent checkers)
@@ -166,13 +156,13 @@ export class BackgammonEngine {
 
   canBearOff(state: BoardState, player: number): boolean {
     if (player === 0) {
-      const homeBoard = state.points.slice(18, 24);
-      const allInHome = homeBoard.every((p) => p >= 0);
-      return allInHome && state.bar[0] === 0;
+      // White: all checkers must be in indices 18-23
+      const outsideHome = state.points.slice(0, 18).some(p => p > 0);
+      return !outsideHome && state.bar[0] === 0;
     } else {
-      const homeBoard = state.points.slice(0, 6);
-      const allInHome = homeBoard.every((p) => p <= 0);
-      return allInHome && state.bar[1] === 0;
+      // Black: all checkers must be in indices 0-5
+      const outsideHome = state.points.slice(6).some(p => p < 0);
+      return !outsideHome && state.bar[1] === 0;
     }
   }
 
@@ -192,8 +182,7 @@ export class BackgammonEngine {
     // Entering from bar
     if (state.bar[0] > 0 && from === -1) {
       state.bar[0]--;
-      const enterPoint = 24 - die; // Point number
-      const enterPointIndex = enterPoint - 1; // Convert to index (0-23)
+      const enterPointIndex = die - 1;
       
       // Hit opponent's single checker
       if (state.points[enterPointIndex] === -1) {
@@ -232,14 +221,14 @@ export class BackgammonEngine {
     // Entering from bar
     if (state.bar[1] > 0 && from === -1) {
       state.bar[1]--;
-      const enterPoint = die - 1; // Point die = index (die-1)
+      const enterPointIndex = this.BOARD_SIZE - die;
       
       // Hit opponent's single checker
-      if (state.points[enterPoint] === 1) {
-        state.points[enterPoint] = -1;
+      if (state.points[enterPointIndex] === 1) {
+        state.points[enterPointIndex] = -1;
         state.bar[0]++;
       } else {
-        state.points[enterPoint]--;
+        state.points[enterPointIndex]--;
       }
       return;
     }
@@ -353,8 +342,7 @@ export class BackgammonEngine {
       // Player 1 (White)
       if (state.bar[0] > 0) {
         // Must enter from bar
-        const enterPoint = 24 - die; // Point number
-        const enterPointIndex = enterPoint - 1; // Index
+        const enterPointIndex = die - 1;
         if (this.validateMove(state, -1, enterPointIndex, die)) {
           moves.push({ from: -1, to: enterPointIndex });
         }
@@ -362,9 +350,9 @@ export class BackgammonEngine {
         // Regular moves from board
         for (let from = 0; from < this.BOARD_SIZE; from++) {
           if (state.points[from] > 0) {
-            const to = from - die;
+            const to = from + die;
             // Handle bearing off
-            if (to < 0) {
+            if (to >= this.BOARD_SIZE) {
               if (this.canBearOff(state, 0) && this.validateMove(state, from, -1, die)) {
                 moves.push({ from, to: -1 });
               }
@@ -378,17 +366,17 @@ export class BackgammonEngine {
       // Player 2 (Black)
       if (state.bar[1] > 0) {
         // Must enter from bar
-        const enterPoint = die - 1; // Index
-        if (this.validateMove(state, -1, enterPoint, die)) {
-          moves.push({ from: -1, to: enterPoint });
+        const enterPointIndex = this.BOARD_SIZE - die;
+        if (this.validateMove(state, -1, enterPointIndex, die)) {
+          moves.push({ from: -1, to: enterPointIndex });
         }
       } else {
         // Regular moves from board
         for (let from = 0; from < this.BOARD_SIZE; from++) {
           if (state.points[from] < 0) {
-            const to = from + die;
+            const to = from - die;
             // Handle bearing off
-            if (to >= this.BOARD_SIZE) {
+            if (to < 0) {
               if (this.canBearOff(state, 1) && this.validateMove(state, from, -1, die)) {
                 moves.push({ from, to: -1 });
               }
