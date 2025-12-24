@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan, MoreThan } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { AcademyService } from '../academy/academy.service';
@@ -41,7 +41,7 @@ import { SystemSettings } from './system-settings.entity';
 import { WalletService } from '../payment/wallet.service';
 import { PaymentTransactionService } from '../payment/payment-transaction.service';
 import { UserWallet } from '../payment/user-wallet.entity';
-import { PaymentTransaction } from '../payment/payment-transaction.entity';
+import { PaymentTransaction, PaymentStatus } from '../payment/payment-transaction.entity';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -1928,6 +1928,197 @@ export class AdminService implements OnModuleInit {
       totalProgress,
       completedProgress,
       completionRate: totalProgress > 0 ? (completedProgress / totalProgress) * 100 : 0,
+    };
+  }
+
+  // ========== РАСШИРЕННОЕ РЕДАКТИРОВАНИЕ ПОЛЬЗОВАТЕЛЕЙ ==========
+  async updateUserFull(userId: string, data: {
+    narCoin?: number;
+    xp?: number;
+    level?: number;
+    energy?: number;
+    maxEnergy?: number;
+    lives?: number;
+    maxLives?: number;
+    skillPoints?: number;
+    freeSkillPoints?: number;
+    economySp?: number;
+    energySp?: number;
+    livesSp?: number;
+    powerSp?: number;
+    hasBusinessLicense?: boolean;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.narCoin !== undefined) user.narCoin = BigInt(data.narCoin);
+    if (data.xp !== undefined) user.xp = BigInt(data.xp);
+    if (data.level !== undefined) user.level = data.level;
+    if (data.energy !== undefined) user.energy = data.energy;
+    if (data.maxEnergy !== undefined) user.maxEnergy = data.maxEnergy;
+    if (data.lives !== undefined) user.lives = data.lives;
+    if (data.maxLives !== undefined) user.maxLives = data.maxLives;
+    if (data.skillPoints !== undefined) user.skillPoints = data.skillPoints;
+    if (data.freeSkillPoints !== undefined) user.freeSkillPoints = data.freeSkillPoints;
+    if (data.economySp !== undefined) user.economySp = data.economySp;
+    if (data.energySp !== undefined) user.energySp = data.energySp;
+    if (data.livesSp !== undefined) user.livesSp = data.livesSp;
+    if (data.powerSp !== undefined) user.powerSp = data.powerSp;
+    if (data.hasBusinessLicense !== undefined) user.hasBusinessLicense = data.hasBusinessLicense;
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  // ========== УПРАВЛЕНИЕ ЦЕНАМИ ==========
+  async getSubscriptionPrices() {
+    const setting = await this.systemSettingsRepository.findOne({ where: { key: 'subscription_prices' } });
+    if (setting) {
+      return JSON.parse(setting.value);
+    }
+    // Дефолтные цены
+    return {
+      month_1: 3,
+      month_3: 7,
+      month_12: 22,
+    };
+  }
+
+  async updateSubscriptionPrices(prices: { month_1?: number; month_3?: number; month_12?: number }) {
+    let setting = await this.systemSettingsRepository.findOne({ where: { key: 'subscription_prices' } });
+    const currentPrices = setting ? JSON.parse(setting.value) : { month_1: 3, month_3: 7, month_12: 22 };
+    
+    const updatedPrices = { ...currentPrices, ...prices };
+    
+    if (!setting) {
+      setting = this.systemSettingsRepository.create({
+        key: 'subscription_prices',
+        value: JSON.stringify(updatedPrices),
+      });
+    } else {
+      setting.value = JSON.stringify(updatedPrices);
+    }
+    
+    await this.systemSettingsRepository.save(setting);
+    return updatedPrices;
+  }
+
+  async getNarCoinPrices() {
+    const setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
+    if (setting) {
+      return JSON.parse(setting.value);
+    }
+    return [];
+  }
+
+  async updateNarCoinPrices(packages: Array<{ amount: number; price: number }>) {
+    let setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
+    
+    if (!setting) {
+      setting = this.systemSettingsRepository.create({
+        key: 'nar_coin_packages',
+        value: JSON.stringify(packages),
+      });
+    } else {
+      setting.value = JSON.stringify(packages);
+    }
+    
+    await this.systemSettingsRepository.save(setting);
+    return packages;
+  }
+
+  // ========== СИСТЕМНЫЕ НАСТРОЙКИ ==========
+  async getSystemSettings() {
+    const settings = await this.systemSettingsRepository.find();
+    const result: Record<string, any> = {};
+    settings.forEach(s => {
+      try {
+        result[s.key] = JSON.parse(s.value);
+      } catch {
+        result[s.key] = s.value;
+      }
+    });
+    return result;
+  }
+
+  async updateSystemSettings(settings: Record<string, any>) {
+    for (const [key, value] of Object.entries(settings)) {
+      let setting = await this.systemSettingsRepository.findOne({ where: { key } });
+      const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+      
+      if (!setting) {
+        setting = this.systemSettingsRepository.create({ key, value: stringValue });
+      } else {
+        setting.value = stringValue;
+      }
+      
+      await this.systemSettingsRepository.save(setting);
+    }
+    return this.getSystemSettings();
+  }
+
+  // ========== КУРСЫ (ПОЛНОЕ РЕДАКТИРОВАНИЕ) ==========
+  async updateCourseFull(id: string, data: Partial<CourseTask>) {
+    const course = await this.courseTasksRepository.findOne({ where: { id } });
+    if (!course) {
+      throw new NotFoundException('Курс не найден');
+    }
+
+    Object.assign(course, data);
+    await this.courseTasksRepository.save(course);
+    return course;
+  }
+
+  // ========== СТАТИСТИКА ==========
+  async getStatistics() {
+    const [
+      totalUsers,
+      activeUsers,
+      totalGames,
+      finishedGames,
+      totalTournaments,
+      activeTournaments,
+      totalQuests,
+      activeQuests,
+      totalSkins,
+      totalTransactions,
+      completedTransactions,
+      totalNarCoin,
+      totalXp,
+    ] = await Promise.all([
+      this.usersRepository.count(),
+      this.usersRepository.count({ where: { banned: false } }),
+      this.gamesRepository.count(),
+      this.gamesRepository.count({ where: { status: GameStatus.FINISHED } }),
+      this.tournamentsRepository.count(),
+      this.tournamentsRepository.count({ where: { status: 'in_progress' } }),
+      this.questsRepository.count(),
+      this.questsRepository.count({ where: { startDate: LessThan(new Date()), endDate: MoreThan(new Date()) } }),
+      this.skinsRepository.count(),
+      this.paymentTransactionsRepository.count(),
+      this.paymentTransactionsRepository.count({ where: { status: PaymentStatus.COMPLETED } }),
+      this.usersRepository
+        .createQueryBuilder('user')
+        .select('SUM(user.narCoin)', 'total')
+        .getRawOne()
+        .then(r => r?.total || '0'),
+      this.usersRepository
+        .createQueryBuilder('user')
+        .select('SUM(user.xp)', 'total')
+        .getRawOne()
+        .then(r => r?.total || '0'),
+    ]);
+
+    return {
+      users: { total: totalUsers, active: activeUsers },
+      games: { total: totalGames, finished: finishedGames },
+      tournaments: { total: totalTournaments, active: activeTournaments },
+      quests: { total: totalQuests, active: activeQuests },
+      skins: { total: totalSkins },
+      transactions: { total: totalTransactions, completed: completedTransactions },
+      economy: { totalNarCoin, totalXp },
     };
   }
 }

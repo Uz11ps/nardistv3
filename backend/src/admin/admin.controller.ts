@@ -1008,5 +1008,100 @@ export class AdminController {
   async checkTransactionStatus(@CurrentUser() user: any, @Param('transactionId') transactionId: string) {
     return this.adminService.checkTransactionStatus(transactionId);
   }
+
+  // ========== РАСШИРЕННОЕ РЕДАКТИРОВАНИЕ ПОЛЬЗОВАТЕЛЕЙ ==========
+  @Put('users/:id/full')
+  @UseGuards(AdminAuthGuard)
+  async updateUserFull(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      narCoin?: number;
+      xp?: number;
+      level?: number;
+      energy?: number;
+      maxEnergy?: number;
+      lives?: number;
+      maxLives?: number;
+      skillPoints?: number;
+      freeSkillPoints?: number;
+      economySp?: number;
+      energySp?: number;
+      livesSp?: number;
+      powerSp?: number;
+      hasBusinessLicense?: boolean;
+    },
+  ) {
+    return this.adminService.updateUserFull(userId, body);
+  }
+
+  // ========== УПРАВЛЕНИЕ ЦЕНАМИ ==========
+  @Get('prices/subscription')
+  @UseGuards(AdminAuthGuard)
+  async getSubscriptionPrices(@CurrentUser() user: any) {
+    return this.adminService.getSubscriptionPrices();
+  }
+
+  @Put('prices/subscription')
+  @UseGuards(AdminAuthGuard)
+  async updateSubscriptionPrices(
+    @CurrentUser() user: any,
+    @Body() body: {
+      month_1?: number;
+      month_3?: number;
+      month_12?: number;
+    },
+  ) {
+    return this.adminService.updateSubscriptionPrices(body);
+  }
+
+  @Get('prices/nar-coin')
+  @UseGuards(AdminAuthGuard)
+  async getNarCoinPrices(@CurrentUser() user: any) {
+    return this.adminService.getNarCoinPrices();
+  }
+
+  @Put('prices/nar-coin')
+  @UseGuards(AdminAuthGuard)
+  async updateNarCoinPrices(
+    @CurrentUser() user: any,
+    @Body() body: { packages: Array<{ amount: number; price: number }> },
+  ) {
+    return this.adminService.updateNarCoinPrices(body.packages);
+  }
+
+  // ========== СИСТЕМНЫЕ НАСТРОЙКИ ==========
+  @Get('system-settings')
+  @UseGuards(AdminAuthGuard)
+  async getSystemSettings(@CurrentUser() user: any) {
+    return this.adminService.getSystemSettings();
+  }
+
+  @Put('system-settings')
+  @UseGuards(AdminAuthGuard)
+  async updateSystemSettings(
+    @CurrentUser() user: any,
+    @Body() body: Record<string, any>,
+  ) {
+    return this.adminService.updateSystemSettings(body);
+  }
+
+  // ========== КУРСЫ (ПОЛНОЕ РЕДАКТИРОВАНИЕ) ==========
+  @Put('courses/:id/full')
+  @UseGuards(AdminAuthGuard)
+  async updateCourseFull(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: Partial<CourseTask>,
+  ) {
+    return this.adminService.updateCourseFull(id, body);
+  }
+
+  // ========== СТАТИСТИКА ==========
+  @Get('statistics')
+  @UseGuards(AdminAuthGuard)
+  async getStatistics(@CurrentUser() user: any) {
+    return this.adminService.getStatistics();
+  }
 }
 

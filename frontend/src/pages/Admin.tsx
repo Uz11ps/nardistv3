@@ -32,7 +32,7 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'onboarding'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'onboarding' | 'prices' | 'system-settings'>('stats')
   const [onboardingTasks, setOnboardingTasks] = useState<any[]>([])
   const [onboardingStats, setOnboardingStats] = useState<any>(null)
   const [editingOnboardingTask, setEditingOnboardingTask] = useState<any>(null)
@@ -89,7 +89,19 @@ export default function Admin() {
   const [clans, setClans] = useState<any[]>([])
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [selectedSkin, setSelectedSkin] = useState<any>(null)
+  const [editingSkin, setEditingSkin] = useState<any>(null)
+  const [selectedQuest, setSelectedQuest] = useState<any>(null)
+  const [editingQuest, setEditingQuest] = useState<any>(null)
+  const [selectedCourse, setSelectedCourse] = useState<any>(null)
+  const [editingCourse, setEditingCourse] = useState<any>(null)
+  const [selectedArticle, setSelectedArticle] = useState<any>(null)
+  const [editingArticle, setEditingArticle] = useState<any>(null)
   const [selectedTournament, setSelectedTournament] = useState<any>(null)
+  const [editingUser, setEditingUser] = useState<any>(null)
+  const [subscriptionPrices, setSubscriptionPrices] = useState({ month_1: 3, month_3: 7, month_12: 22 })
+  const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; price: number }>>([])
+  const [systemSettings, setSystemSettings] = useState<Record<string, any>>({})
+  const [editingSetting, setEditingSetting] = useState<{ key: string; value: any } | null>(null)
   
   // Фильтры
   const [userFilters, setUserFilters] = useState({ search: '', status: '', level: '' })
@@ -173,8 +185,15 @@ export default function Admin() {
         return
       }
       
-      const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, buildingsRes, policiesRes, templatesRes, onboardingTasksRes, onboardingStatsRes] = await Promise.all([
+      const [statsRes, statisticsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, buildingsRes, policiesRes, templatesRes, onboardingTasksRes, onboardingStatsRes] = await Promise.all([
         apiClient.get('/admin/stats').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: {} }
+        }),
+        apiClient.get('/admin/statistics').catch((err) => {
           if (err.response?.status === 401) {
             localStorage.removeItem('admin_token')
             setIsAuthenticated(false)
@@ -273,7 +292,9 @@ export default function Admin() {
           return { data: null }
         }),
       ])
-      setStats(statsRes.data)
+      // Объединяем базовую статистику с расширенной
+      const mergedStats = { ...statsRes.data, ...statisticsRes.data }
+      setStats(mergedStats)
       setUsers(usersRes.data)
       setGames(gamesRes.data)
       setTournaments(tournamentsRes.data || [])
@@ -610,7 +631,10 @@ export default function Admin() {
         </button>
         <button
           className={`admin-tab-btn ${activeTab === 'city' ? 'active' : ''}`}
-          onClick={() => setActiveTab('city')}
+          onClick={() => {
+            setActiveTab('city')
+            loadDistricts()
+          }}
         >
           Город
         </button>
@@ -674,6 +698,35 @@ export default function Admin() {
                   <div>Завершено: {stats?.games?.finished || 0}</div>
                   <div>В процессе: {stats?.games?.inProgress || 0}</div>
                   <div>Всего ходов: {stats?.games?.totalMoves || 0}</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <h3>Турниры</h3>
+                <div className="stat-value">{stats?.tournaments?.total || 0}</div>
+                <div className="stat-details">
+                  <div>Активных: {stats?.tournaments?.active || 0}</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <h3>Квесты</h3>
+                <div className="stat-value">{stats?.quests?.total || 0}</div>
+                <div className="stat-details">
+                  <div>Активных: {stats?.quests?.active || 0}</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <h3>Скины</h3>
+                <div className="stat-value">{stats?.skins?.total || 0}</div>
+              </div>
+
+              <div className="stat-card">
+                <h3>Транзакции</h3>
+                <div className="stat-value">{stats?.transactions?.total || 0}</div>
+                <div className="stat-details">
+                  <div>Завершено: {stats?.transactions?.completed || 0}</div>
                 </div>
               </div>
 
@@ -809,6 +862,14 @@ export default function Admin() {
                               Забанить
                             </button>
                           )}
+                          <button
+                            onClick={() => {
+                              setEditingUser(user)
+                            }}
+                            style={{ padding: '4px 8px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                          >
+                            Редактировать
+                          </button>
                           {!user.isAdmin && (
                             <>
                               <button
@@ -829,10 +890,10 @@ export default function Admin() {
                               <button
                           className="btn btn-info btn-sm"
                           onClick={() => {
-                                  setSelectedUser(user)
+                                  setEditingUser({ ...user })
                                 }}
                               >
-                                Редактировать
+                                Полное редактирование
                               </button>
                             </>
                           )}
@@ -2055,6 +2116,20 @@ export default function Admin() {
                           >
                             Просмотр
                           </button>
+                          <button 
+                            onClick={() => setEditingArticle({ ...a })}
+                            style={{
+                              padding: '4px 8px',
+                              background: '#4a9eff',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                            }}
+                          >
+                            Редактировать
+                          </button>
                           {a.type === 'article' && a.authorId && !a.isVerified && (
                             <button 
                               onClick={async () => {
@@ -2328,7 +2403,7 @@ export default function Admin() {
                       <td>{skin.isDefault ? 'Да' : 'Нет'}</td>
                       <td>
                         <div className="btn-group">
-                          <button className="btn btn-secondary btn-sm" onClick={() => setSelectedSkin(skin)}>Редактировать</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => setEditingSkin({ ...skin })}>Полное редактирование</button>
                           <button className="btn btn-danger btn-sm" onClick={() => {
                             if (confirm('Удалить скин?')) {
                               apiClient.delete(`/admin/skins/${skin.id}`).then(() => {
@@ -3169,21 +3244,29 @@ export default function Admin() {
                         {new Date(quest.startDate).toLocaleDateString()} - {new Date(quest.endDate).toLocaleDateString()}
                       </td>
                       <td>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => {
-                            if (confirm('Удалить квест?')) {
-                              apiClient.delete(`/admin/quests/${quest.id}`).then(() => {
-                                alert('Квест удален')
-                                loadStats()
-                              }).catch((err) => {
-                                alert('Ошибка: ' + (err.response?.data?.message || err.message))
-                              })
-                            }
-                          }}
-                        >
-                          Удалить
-                        </button>
+                        <div className="btn-group">
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setEditingQuest({ ...quest })}
+                          >
+                            Редактировать
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => {
+                              if (confirm('Удалить квест?')) {
+                                apiClient.delete(`/admin/quests/${quest.id}`).then(() => {
+                                  alert('Квест удален')
+                                  loadStats()
+                                }).catch((err) => {
+                                  alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                                })
+                              }
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -4496,6 +4579,790 @@ export default function Admin() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* РАЗДЕЛ ЦЕН */}
+      {activeTab === 'prices' && (
+        <div className="admin-section">
+          <h2>Управление ценами</h2>
+          
+          {/* Цены подписок */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3>Цены подписок (TON)</h3>
+            <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
+              <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>1 месяц</label>
+                <input
+                  type="number"
+                  value={subscriptionPrices.month_1}
+                  onChange={(e) => setSubscriptionPrices({ ...subscriptionPrices, month_1: parseFloat(e.target.value) || 0 })}
+                  style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                />
+              </div>
+              <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>3 месяца</label>
+                <input
+                  type="number"
+                  value={subscriptionPrices.month_3}
+                  onChange={(e) => setSubscriptionPrices({ ...subscriptionPrices, month_3: parseFloat(e.target.value) || 0 })}
+                  style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                />
+              </div>
+              <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>12 месяцев</label>
+                <input
+                  type="number"
+                  value={subscriptionPrices.month_12}
+                  onChange={(e) => setSubscriptionPrices({ ...subscriptionPrices, month_12: parseFloat(e.target.value) || 0 })}
+                  style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                />
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  await apiClient.put('/admin/prices/subscription', subscriptionPrices)
+                  alert('Цены подписок обновлены')
+                } catch (error: any) {
+                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                }
+              }}
+              style={{ marginTop: '16px', padding: '10px 20px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Сохранить цены подписок
+            </button>
+          </div>
+
+          {/* Пакеты NAR-coin */}
+          <div>
+            <h3>Пакеты NAR-coin</h3>
+            <div style={{ marginBottom: '16px' }}>
+              {narCoinPackages.map((pkg, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    placeholder="Количество NAR"
+                    value={pkg.amount}
+                    onChange={(e) => {
+                      const newPackages = [...narCoinPackages]
+                      newPackages[idx].amount = parseFloat(e.target.value) || 0
+                      setNarCoinPackages(newPackages)
+                    }}
+                    style={{ flex: 1, padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Цена TON"
+                    value={pkg.price}
+                    onChange={(e) => {
+                      const newPackages = [...narCoinPackages]
+                      newPackages[idx].price = parseFloat(e.target.value) || 0
+                      setNarCoinPackages(newPackages)
+                    }}
+                    style={{ flex: 1, padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                  <button
+                    onClick={() => {
+                      setNarCoinPackages(narCoinPackages.filter((_, i) => i !== idx))
+                    }}
+                    style={{ padding: '8px 16px', background: '#ff3333', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                    Удалить
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setNarCoinPackages([...narCoinPackages, { amount: 0, price: 0 }])}
+                style={{ padding: '8px 16px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}
+              >
+                + Добавить пакет
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await apiClient.put('/admin/prices/nar-coin', { packages: narCoinPackages })
+                    alert('Пакеты NAR-coin обновлены')
+                  } catch (error: any) {
+                    alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                  }
+                }}
+                style={{ padding: '8px 16px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Сохранить пакеты
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* РАЗДЕЛ СИСТЕМНЫХ НАСТРОЕК */}
+      {activeTab === 'system-settings' && (
+        <div className="admin-section">
+          <h2>Системные настройки</h2>
+          
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {Object.entries(systemSettings).map(([key, value]) => (
+              <div key={key} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: 600 }}>{key}</label>
+                {typeof value === 'object' ? (
+                  <textarea
+                    value={JSON.stringify(value, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        const parsed = JSON.parse(e.target.value)
+                        setSystemSettings({ ...systemSettings, [key]: parsed })
+                      } catch {
+                        // Игнорируем ошибки парсинга
+                      }
+                    }}
+                    style={{ width: '100%', minHeight: '100px', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff', fontFamily: 'monospace' }}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={String(value)}
+                    onChange={(e) => setSystemSettings({ ...systemSettings, [key]: e.target.value })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                )}
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiClient.put('/admin/system-settings', { [key]: systemSettings[key] })
+                      alert('Настройка сохранена')
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}
+                  style={{ marginTop: '8px', padding: '6px 12px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Сохранить
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: '24px' }}>
+            <h3>Добавить новую настройку</h3>
+            {editingSetting ? (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="Ключ настройки"
+                  value={editingSetting.key}
+                  onChange={(e) => setEditingSetting({ ...editingSetting, key: e.target.value })}
+                  style={{ flex: 1, padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Значение"
+                  value={editingSetting.value}
+                  onChange={(e) => setEditingSetting({ ...editingSetting, value: e.target.value })}
+                  style={{ flex: 1, padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                />
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiClient.put('/admin/system-settings', { [editingSetting.key]: editingSetting.value })
+                      await loadSystemSettings()
+                      setEditingSetting(null)
+                      alert('Настройка добавлена')
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}
+                  style={{ padding: '8px 16px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Сохранить
+                </button>
+                <button
+                  onClick={() => setEditingSetting(null)}
+                  style={{ padding: '8px 16px', background: '#666', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Отмена
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditingSetting({ key: '', value: '' })}
+                style={{ padding: '8px 16px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                + Добавить настройку
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ ПОЛЬЗОВАТЕЛЯ */}
+      {editingUser && (
+        <div className="admin-modal-overlay" onClick={() => setEditingUser(null)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h3>Редактирование пользователя: {editingUser.nickname || editingUser.username}</h3>
+              <button className="admin-modal-close" onClick={() => setEditingUser(null)}>×</button>
+            </div>
+            <div className="admin-modal-content">
+              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                <div>
+                  <label>NAR-coin</label>
+                  <input
+                    type="number"
+                    value={Number(editingUser.narCoin || 0)}
+                    onChange={(e) => setEditingUser({ ...editingUser, narCoin: BigInt(parseInt(e.target.value) || 0) })}
+                  />
+                </div>
+                <div>
+                  <label>XP</label>
+                  <input
+                    type="number"
+                    value={Number(editingUser.xp || 0)}
+                    onChange={(e) => setEditingUser({ ...editingUser, xp: BigInt(parseInt(e.target.value) || 0) })}
+                  />
+                </div>
+                <div>
+                  <label>Уровень</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={editingUser.level || 1}
+                    onChange={(e) => setEditingUser({ ...editingUser, level: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+                <div>
+                  <label>Энергия</label>
+                  <input
+                    type="number"
+                    value={editingUser.energy || 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, energy: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>Макс. энергия</label>
+                  <input
+                    type="number"
+                    value={editingUser.maxEnergy || 100}
+                    onChange={(e) => setEditingUser({ ...editingUser, maxEnergy: parseInt(e.target.value) || 100 })}
+                  />
+                </div>
+                <div>
+                  <label>Жизни</label>
+                  <input
+                    type="number"
+                    value={editingUser.lives || 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, lives: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>Макс. жизни</label>
+                  <input
+                    type="number"
+                    value={editingUser.maxLives || 100}
+                    onChange={(e) => setEditingUser({ ...editingUser, maxLives: parseInt(e.target.value) || 100 })}
+                  />
+                </div>
+                <div>
+                  <label>Skill Points (всего)</label>
+                  <input
+                    type="number"
+                    value={editingUser.skillPoints || 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, skillPoints: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>Свободные SP</label>
+                  <input
+                    type="number"
+                    value={editingUser.freeSkillPoints || 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, freeSkillPoints: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>SP Экономика</label>
+                  <input
+                    type="number"
+                    value={editingUser.economySp || 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, economySp: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>SP Энергия</label>
+                  <input
+                    type="number"
+                    value={editingUser.energySp || 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, energySp: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>SP Жизни</label>
+                  <input
+                    type="number"
+                    value={editingUser.livesSp || 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, livesSp: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>SP Сила</label>
+                  <input
+                    type="number"
+                    value={editingUser.powerSp || 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, powerSp: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={editingUser.hasBusinessLicense || false}
+                      onChange={(e) => setEditingUser({ ...editingUser, hasBusinessLicense: e.target.checked })}
+                      style={{ marginRight: '8px' }}
+                    />
+                    Лицензия предпринимателя
+                  </label>
+                </div>
+              </div>
+              <div style={{ marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setEditingUser(null)}
+                  style={{ padding: '10px 20px', background: '#666', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiClient.put(`/admin/users/${editingUser.id}/full`, {
+                        narCoin: Number(editingUser.narCoin),
+                        xp: Number(editingUser.xp),
+                        level: editingUser.level,
+                        energy: editingUser.energy,
+                        maxEnergy: editingUser.maxEnergy,
+                        lives: editingUser.lives,
+                        maxLives: editingUser.maxLives,
+                        skillPoints: editingUser.skillPoints,
+                        freeSkillPoints: editingUser.freeSkillPoints,
+                        economySp: editingUser.economySp,
+                        energySp: editingUser.energySp,
+                        livesSp: editingUser.livesSp,
+                        powerSp: editingUser.powerSp,
+                        hasBusinessLicense: editingUser.hasBusinessLicense,
+                      })
+                      alert('Пользователь обновлен')
+                      setEditingUser(null)
+                      await loadStats()
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}
+                  style={{ padding: '10px 20px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Сохранить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ СКИНА */}
+      {editingSkin && (
+        <div className="admin-modal-overlay" onClick={() => setEditingSkin(null)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px' }}>
+            <div className="admin-modal-header">
+              <h3>Редактирование скина: {editingSkin.name}</h3>
+              <button className="admin-modal-close" onClick={() => setEditingSkin(null)}>×</button>
+            </div>
+            <div className="admin-modal-content">
+              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                <div>
+                  <label>Название</label>
+                  <input
+                    type="text"
+                    value={editingSkin.name || ''}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label>Тип (нельзя изменить)</label>
+                  <input
+                    type="text"
+                    value={editingSkin.type || ''}
+                    disabled
+                    style={{ opacity: 0.5 }}
+                  />
+                </div>
+                <div>
+                  <label>Тема</label>
+                  <input
+                    type="text"
+                    value={editingSkin.theme || ''}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, theme: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label>Описание</label>
+                  <input
+                    type="text"
+                    value={editingSkin.description || ''}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, description: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label>Цена (NAR-coin, 0 = бесплатно)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingSkin.price || 0}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, price: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>Вес</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingSkin.weight || 1}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, weight: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+                <div>
+                  <label>Редкость</label>
+                  <select
+                    value={editingSkin.rarity || 'common'}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, rarity: e.target.value })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  >
+                    <option value="common">Обычный</option>
+                    <option value="rare">Редкий</option>
+                    <option value="epic">Эпический</option>
+                    <option value="legendary">Легендарный</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Макс. прочность</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingSkin.maxDurability || 100}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, maxDurability: parseInt(e.target.value) || 100 })}
+                  />
+                </div>
+                <div>
+                  <label>Бонус XP (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingSkin.xpBonusPercent || 0}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, xpBonusPercent: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>Бонус денег (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingSkin.moneyBonusPercent || 0}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, moneyBonusPercent: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>URL изображения</label>
+                  <input
+                    type="text"
+                    value={editingSkin.imageUrl || ''}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, imageUrl: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label>URL изображения для магазина</label>
+                  <input
+                    type="text"
+                    value={editingSkin.shopImageUrl || ''}
+                    onChange={(e) => setEditingSkin({ ...editingSkin, shopImageUrl: e.target.value })}
+                  />
+                </div>
+                {editingSkin.type === 'board' && (
+                  <div>
+                    <label>URL текстуры доски</label>
+                    <input
+                      type="text"
+                      value={editingSkin.boardTextureUrl || ''}
+                      onChange={(e) => setEditingSkin({ ...editingSkin, boardTextureUrl: e.target.value })}
+                    />
+                  </div>
+                )}
+                {editingSkin.type === 'dice' && (
+                  <>
+                    <div>
+                      <label>URL текстуры кубиков (старое)</label>
+                      <input
+                        type="text"
+                        value={editingSkin.diceTextureUrl || ''}
+                        onChange={(e) => setEditingSkin({ ...editingSkin, diceTextureUrl: e.target.value })}
+                      />
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label>URL текстуры кубиков (JSON: {"1": "url1", "2": "url2", ...})</label>
+                      <textarea
+                        value={editingSkin.diceTextureUrls ? JSON.stringify(editingSkin.diceTextureUrls, null, 2) : ''}
+                        onChange={(e) => {
+                          try {
+                            const parsed = JSON.parse(e.target.value)
+                            setEditingSkin({ ...editingSkin, diceTextureUrls: parsed })
+                          } catch {
+                            // Игнорируем ошибки парсинга
+                          }
+                        }}
+                        style={{ minHeight: '100px' }}
+                      />
+                    </div>
+                  </>
+                )}
+                {editingSkin.type === 'checkers' && (
+                  <>
+                    <div>
+                      <label>URL текстуры белых шашек</label>
+                      <input
+                        type="text"
+                        value={editingSkin.whiteCheckersTextureUrl || ''}
+                        onChange={(e) => setEditingSkin({ ...editingSkin, whiteCheckersTextureUrl: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label>URL текстуры черных шашек</label>
+                      <input
+                        type="text"
+                        value={editingSkin.blackCheckersTextureUrl || ''}
+                        onChange={(e) => setEditingSkin({ ...editingSkin, blackCheckersTextureUrl: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
+                <div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={editingSkin.isPremium || false}
+                      onChange={(e) => setEditingSkin({ ...editingSkin, isPremium: e.target.checked })}
+                      style={{ marginRight: '8px' }}
+                    />
+                    Премиум
+                  </label>
+                </div>
+                <div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={editingSkin.isDefault || false}
+                      onChange={(e) => setEditingSkin({ ...editingSkin, isDefault: e.target.checked })}
+                      style={{ marginRight: '8px' }}
+                    />
+                    По умолчанию
+                  </label>
+                </div>
+              </div>
+              <div style={{ marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setEditingSkin(null)}
+                  style={{ padding: '10px 20px', background: '#666', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiClient.put(`/admin/skins/${editingSkin.id}`, editingSkin)
+                      alert('Скин обновлен')
+                      setEditingSkin(null)
+                      await loadStats()
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}
+                  style={{ padding: '10px 20px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Сохранить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ КВЕСТА */}
+      {editingQuest && (
+        <div className="admin-modal-overlay" onClick={() => setEditingQuest(null)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px' }}>
+            <div className="admin-modal-header">
+              <h3>Редактирование квеста: {editingQuest.name}</h3>
+              <button className="admin-modal-close" onClick={() => setEditingQuest(null)}>×</button>
+            </div>
+            <div className="admin-modal-content">
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div>
+                  <label>Название</label>
+                  <input
+                    type="text"
+                    value={editingQuest.name || ''}
+                    onChange={(e) => setEditingQuest({ ...editingQuest, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label>Описание</label>
+                  <textarea
+                    value={editingQuest.description || ''}
+                    onChange={(e) => setEditingQuest({ ...editingQuest, description: e.target.value })}
+                    style={{ minHeight: '80px' }}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  <div>
+                    <label>Тип</label>
+                    <select
+                      value={editingQuest.type || 'daily'}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, type: e.target.value })}
+                      style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                    >
+                      <option value="daily">Ежедневный</option>
+                      <option value="weekly">Еженедельный</option>
+                      <option value="special">Особый</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Цель</label>
+                    <select
+                      value={editingQuest.target || 'play_matches'}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, target: e.target.value })}
+                      style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                    >
+                      <option value="play_matches">Играть матчи</option>
+                      <option value="win_streak">Серия побед</option>
+                      <option value="collect_income">Собрать доход</option>
+                      <option value="tournament">Турнир</option>
+                      <option value="subscribe_channel">Подписка на канал</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  <div>
+                    <label>Целевое значение</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editingQuest.targetValue || 1}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, targetValue: parseInt(e.target.value) || 1 })}
+                    />
+                  </div>
+                  <div>
+                    <label>Канал (username, например @channel)</label>
+                    <input
+                      type="text"
+                      value={editingQuest.channelUsername || ''}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, channelUsername: e.target.value })}
+                      placeholder="@channelname"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  <div>
+                    <label>Награда NAR-coin</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={Number(editingQuest.rewardNarCoin || 0)}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, rewardNarCoin: BigInt(parseInt(e.target.value) || 0) })}
+                    />
+                  </div>
+                  <div>
+                    <label>Награда XP</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingQuest.rewardXP || 0}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, rewardXP: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  <div>
+                    <label>Награда: ID скина (опционально)</label>
+                    <input
+                      type="text"
+                      value={typeof editingQuest.rewardSkin === 'object' && editingQuest.rewardSkin?.id ? editingQuest.rewardSkin.id : (editingQuest.rewardSkin || '')}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, rewardSkin: e.target.value || null })}
+                      placeholder="UUID скина"
+                    />
+                  </div>
+                  <div>
+                    <label>Награда: Билеты на турнир</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingQuest.rewardTickets || 0}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, rewardTickets: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  <div>
+                    <label>Дата начала</label>
+                    <input
+                      type="datetime-local"
+                      value={editingQuest.startDate ? new Date(editingQuest.startDate).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, startDate: new Date(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <label>Дата окончания</label>
+                    <input
+                      type="datetime-local"
+                      value={editingQuest.endDate ? new Date(editingQuest.endDate).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, endDate: new Date(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={editingQuest.isPremium || false}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, isPremium: e.target.checked })}
+                      style={{ marginRight: '8px' }}
+                    />
+                    Только для премиум пользователей
+                  </label>
+                </div>
+              </div>
+              <div style={{ marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setEditingQuest(null)}
+                  style={{ padding: '10px 20px', background: '#666', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiClient.put(`/admin/quests/${editingQuest.id}`, {
+                        ...editingQuest,
+                        rewardNarCoin: String(editingQuest.rewardNarCoin),
+                      })
+                      alert('Квест обновлен')
+                      setEditingQuest(null)
+                      await loadStats()
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}
+                  style={{ padding: '10px 20px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Сохранить
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
