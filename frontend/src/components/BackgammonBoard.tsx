@@ -146,7 +146,7 @@ export default function BackgammonBoard({
       return
     }
     
-    let timeoutId: NodeJS.Timeout | null = null
+    let timeoutId: number | null = null
     
     const fetchPossibleMoves = async () => {
       try {
@@ -173,12 +173,12 @@ export default function BackgammonBoard({
     }
     
     // Debounce для предотвращения частых запросов
-    timeoutId = setTimeout(() => {
+    timeoutId = window.setTimeout(() => {
       fetchPossibleMoves()
     }, 100)
     
     return () => {
-      if (timeoutId) clearTimeout(timeoutId)
+      if (timeoutId !== null) window.clearTimeout(timeoutId)
     }
   }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey]) // Используем стабилизированные ключи
   
