@@ -730,6 +730,9 @@ export class GamesService {
     // Применяем локальные ходы к состоянию перед расчетом возможных ходов
     if (pendingMoves && pendingMoves.length > 0) {
       const diceCopy = [...(state.dice || [])];
+      // Создаем глубокую копию состояния для применения pendingMoves
+      state = JSON.parse(JSON.stringify(state));
+      
       for (const move of pendingMoves) {
         // Пытаемся найти кубик или комбинацию кубиков
         
@@ -770,6 +773,7 @@ export class GamesService {
           state = engine.applyMove(state, move.from, move.to, move.die);
         }
       }
+      // Обновляем кубики в состоянии после применения всех ходов
       state.dice = diceCopy;
     }
 

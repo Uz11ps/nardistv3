@@ -147,13 +147,19 @@ export default function BackgammonBoard({
     }
     
     let timeoutId: number | null = null
+    let cancelled = false
     
     const fetchPossibleMoves = async () => {
+      if (cancelled) return
+      
       try {
         // Теперь отправляем pendingMoves на сервер, чтобы получить актуальные варианты
         const response = await apiClient.post(`/games/${gameId}/possible-moves`, { 
           pendingMoves 
         })
+        
+        if (cancelled) return
+        
         const flatMoves = response.data?.movesFromPoint || []
         const highlighted = new Set<number>()
         
@@ -166,6 +172,7 @@ export default function BackgammonBoard({
         setPossibleMoves(flatMoves)
         setHighlightedPoints(highlighted)
       } catch (error) {
+        if (cancelled) return
         console.error('Ошибка получения возможных ходов:', error)
         setPossibleMoves([])
         setHighlightedPoints(new Set())
@@ -175,9 +182,10 @@ export default function BackgammonBoard({
     // Debounce для предотвращения частых запросов
     timeoutId = window.setTimeout(() => {
       fetchPossibleMoves()
-    }, 100)
+    }, 150)
     
     return () => {
+      cancelled = true
       if (timeoutId !== null) window.clearTimeout(timeoutId)
     }
   }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey]) // Используем стабилизированные ключи
@@ -267,6 +275,14 @@ export default function BackgammonBoard({
     const width = canvas.width
     const height = canvas.height
     
+    // Для player2 инвертируем координаты клика, так как доска инвертирована
+    let actualX = x
+    let actualY = y
+    if (!isPlayer1) {
+      actualX = width - x
+      actualY = height - y
+    }
+    
     // Параметры области выноса (Контейнеры)
     const bearOffWidth = width * 0.06
     const boardWidth = width - (bearOffWidth * 2)
@@ -313,18 +329,18 @@ export default function BackgammonBoard({
         }
       }
       
-      if (x >= columnXStart && x <= columnXEnd) {
+      if (actualX >= columnXStart && actualX <= columnXEnd) {
         if (isTopRow) {
-          if (y <= height / 2) return pointIndex
+          if (actualY <= height / 2) return pointIndex
         } else {
-          if (y > height / 2) return pointIndex
+          if (actualY > height / 2) return pointIndex
         }
       }
     }
     
     // Проверяем бар
-    if (x >= barX && x <= barX + barWidth) {
-      if (y >= height * 0.25 && y <= height * 0.75) {
+    if (actualX >= barX && actualX <= barX + barWidth) {
+      if (actualY >= height * 0.25 && actualY <= height * 0.75) {
         return isPlayer1 ? 24 : 25
       }
     }
@@ -332,8 +348,8 @@ export default function BackgammonBoard({
     // Проверяем контейнеры
     const leftContainerX = 0
     const rightContainerX = width - bearOffWidth
-    const isLeftTarget = x >= leftContainerX && x <= leftContainerX + bearOffWidth
-    const isRightTarget = x >= rightContainerX && x <= rightContainerX + bearOffWidth
+    const isLeftTarget = actualX >= leftContainerX && actualX <= leftContainerX + bearOffWidth
+    const isRightTarget = actualX >= rightContainerX && actualX <= rightContainerX + bearOffWidth
     
     if (isLeftTarget || isRightTarget) {
       // Для Белых (P1) дом всегда в правой нижней четверти (пункты 1-6)
@@ -358,6 +374,13 @@ export default function BackgammonBoard({
     
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, width, height)
+    
+    // Для player2 инвертируем доску на 180 градусов (чтобы свои шашки были слева)
+    // Но цвета шашек остаются изначальными
+    if (!isPlayer1) {
+      ctx.translate(width, height)
+      ctx.scale(-1, -1)
+    }
     
     // Параметры области выноса (Контейнеры)
     const bearOffWidth = width * 0.06
@@ -506,7 +529,9 @@ export default function BackgammonBoard({
       
       const { x, y, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       const checkerCount = Math.abs(pointValue)
-      const isMyPoint = (isPlayer1 && pointValue > 0) || (!isPlayer1 && pointValue < 0)
+      // Цвета остаются изначальными: положительные = белые, отрицательные = черные
+      const isWhiteChecker = pointValue > 0
+      const isMyPoint = (isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker)
       
       const checkerSize = Math.min(pW * 0.85, pH * 0.15) 
       const checkerBaseY = isTopRow 
@@ -525,7 +550,9 @@ export default function BackgammonBoard({
           ? checkerBaseY + yOffset 
           : checkerBaseY - yOffset
         
-        drawChecker(x, checkerY, checkerSize, isMyPoint ? '#F0F0F0' : '#333333', isMyPoint)
+        // Цвета остаются изначальными: белые = #F0F0F0, черные = #333333
+        // isMyPoint определяет только обводку шашки
+        drawChecker(x, checkerY, checkerSize, isWhiteChecker ? '#F0F0F0' : '#333333', isMyPoint)
       }
       
       // Если шашек больше 5, показываем число на последней шашке
@@ -534,8 +561,8 @@ export default function BackgammonBoard({
         const lastCheckerY = isTopRow 
           ? checkerBaseY + ((checkerCount - 1) * overlap)
           : checkerBaseY - ((checkerCount - 1) * overlap)
-          
-        ctx.fillStyle = isMyPoint ? '#000' : '#FFF'
+        
+        ctx.fillStyle = isWhiteChecker ? '#000' : '#FFF'
         ctx.font = 'bold 11px Arial'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
@@ -602,34 +629,49 @@ export default function BackgammonBoard({
       const curX = fromX + (toX - fromX) * animatingChecker.progress
       const curY = startY + (endY - startY) * animatingChecker.progress
 
-      drawChecker(curX, curY, checkerSize, isPlayer1 ? '#F0F0F0' : '#333333', isPlayer1)
+      // Определяем цвет шашки по исходной точке
+      let fromPointValue = 0
+      if (animatingChecker.from === 24 || animatingChecker.from === 25) {
+        // Из бара - определяем по игроку
+        fromPointValue = isPlayer1 ? 1 : -1
+      } else {
+        fromPointValue = virtualGameState.points[animatingChecker.from] || 0
+      }
+      const isWhiteChecker = fromPointValue > 0
+      const isMyChecker = (isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker)
+      
+      drawChecker(curX, curY, checkerSize, isWhiteChecker ? '#F0F0F0' : '#333333', isMyChecker)
     }
     
     // Отрисовка бара
     if (virtualGameState.bar) {
       const bar = virtualGameState.bar
-      const myBarCount = isPlayer1 ? bar.white || 0 : bar.black || 0
-      const opponentBarCount = isPlayer1 ? bar.black || 0 : bar.white || 0
+      const whiteBarCount = bar.white || 0
+      const blackBarCount = bar.black || 0
       const checkerSize = Math.min(pointWidth * 0.25, pointHeight * 0.3)
       const barX = width / 2
       
-      if (myBarCount > 0) {
-        const isAnimatingFromMyBar = animatingChecker && animatingChecker.from === (isPlayer1 ? 24 : 25)
-        const countToDraw = isAnimatingFromMyBar ? myBarCount - 1 : myBarCount
+      // Белые шашки на баре (положительные значения)
+      if (whiteBarCount > 0) {
+        const isAnimatingFromWhiteBar = animatingChecker && animatingChecker.from === 24
+        const countToDraw = isAnimatingFromWhiteBar ? whiteBarCount - 1 : whiteBarCount
         const barStartY = height - pointHeight * 0.3
+        const isMyBar = isPlayer1
         for (let i = 0; i < countToDraw; i++) {
           const barY = barStartY - (i * checkerSize * 0.6)
-          drawChecker(barX - 25, barY, checkerSize, '#FFFFFF', true)
+          drawChecker(barX - 25, barY, checkerSize, '#F0F0F0', isMyBar)
         }
       }
       
-      if (opponentBarCount > 0) {
-        const isAnimatingFromOpponentBar = animatingChecker && animatingChecker.from === (isPlayer1 ? 25 : 24)
-        const countToDraw = isAnimatingFromOpponentBar ? opponentBarCount - 1 : opponentBarCount
+      // Черные шашки на баре (отрицательные значения)
+      if (blackBarCount > 0) {
+        const isAnimatingFromBlackBar = animatingChecker && animatingChecker.from === 25
+        const countToDraw = isAnimatingFromBlackBar ? blackBarCount - 1 : blackBarCount
         const barStartY = pointHeight * 0.3
+        const isMyBar = !isPlayer1
         for (let i = 0; i < countToDraw; i++) {
           const barY = barStartY + (i * checkerSize * 0.6)
-          drawChecker(barX + 25, barY, checkerSize, '#000000', false)
+          drawChecker(barX + 25, barY, checkerSize, '#333333', isMyBar)
         }
       }
     }
@@ -651,30 +693,30 @@ export default function BackgammonBoard({
     // Отрисовка выброшенных шашек в контейнерах
     if (virtualGameState.bearOff) {
       const bOff = virtualGameState.bearOff
-      const myBearOffCount = isPlayer1 ? bOff.white || 0 : bOff.black || 0
-      const opponentBearOffCount = isPlayer1 ? bOff.black || 0 : bOff.white || 0
+      const whiteBearOffCount = bOff.white || 0
+      const blackBearOffCount = bOff.black || 0
       
       const checkerH = Math.min(height / 16, 15)
       const checkerW = bearOffWidth * 0.8
       
-      // Мои выброшенные (снизу вверх)
-      const myX = isPlayer1 ? rightContainerX : (gameMode === 'long' ? leftContainerX : rightContainerX)
-      for (let i = 0; i < myBearOffCount; i++) {
-        ctx.fillStyle = isPlayer1 ? '#F0F0F0' : '#333333'
-        ctx.fillRect(myX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
+      // Белые выброшенные шашки (снизу вверх, справа для player1, слева для player2 после инверсии)
+      const whiteX = isPlayer1 ? rightContainerX : leftContainerX
+      for (let i = 0; i < whiteBearOffCount; i++) {
+        ctx.fillStyle = '#F0F0F0'
+        ctx.fillRect(whiteX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
         ctx.strokeStyle = '#000'
         ctx.lineWidth = 1
-        ctx.strokeRect(myX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
+        ctx.strokeRect(whiteX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
       }
       
-      // Соперника выброшенные (сверху вниз)
-      const oppX = isPlayer1 ? (gameMode === 'long' ? leftContainerX : rightContainerX) : rightContainerX
-      for (let i = 0; i < opponentBearOffCount; i++) {
-        ctx.fillStyle = isPlayer1 ? '#333333' : '#F0F0F0'
-        ctx.fillRect(oppX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
+      // Черные выброшенные шашки (сверху вниз, слева для player1, справа для player2 после инверсии)
+      const blackX = isPlayer1 ? leftContainerX : rightContainerX
+      for (let i = 0; i < blackBearOffCount; i++) {
+        ctx.fillStyle = '#333333'
+        ctx.fillRect(blackX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
         ctx.strokeStyle = '#000'
         ctx.lineWidth = 1
-        ctx.strokeRect(oppX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
+        ctx.strokeRect(blackX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
       }
     }
 
