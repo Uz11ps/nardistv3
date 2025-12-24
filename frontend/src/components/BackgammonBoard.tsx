@@ -421,6 +421,8 @@ export default function BackgammonBoard({
         ctx.shadowColor = 'rgba(0, 255, 0, 0.8)'
         drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
         ctx.restore()
+      }
+
       // 3. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
       if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
         ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
