@@ -4,10 +4,18 @@ import { useAuthStore } from '../store/authStore'
 import { apiClient } from '../api/client'
 import './Home.css'
 
+interface Stats {
+  narCoin: number
+  xp: number
+  level: number
+  energy: number
+  maxEnergy: number
+}
+
 export default function Home() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
+  const [stats, setStats] = useState<Stats>({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
   const [hasPremium, setHasPremium] = useState(false)
   const [hasNotifications, setHasNotifications] = useState(false)
 
