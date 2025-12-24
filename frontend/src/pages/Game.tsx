@@ -323,6 +323,17 @@ export default function Game() {
         const timeLimitSeconds = game.moveTimeLimit ? Math.floor(game.moveTimeLimit / 1000) : 60
         setPlayer1Timer(timeLimitSeconds)
         setPlayer2Timer(timeLimitSeconds)
+        
+        // Если игра началась и это наш ход, но кубиков нет - бросаем их
+        const canMoveNow = game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1
+        if (canMoveNow && !formattedDice && !isBotGame) {
+          setTimeout(() => {
+            const socket = getSocket()
+            if (socket) {
+              socket.emit('roll_dice', { gameId })
+            }
+          }, 500)
+        }
       } else {
         setPlayer1Timer(0)
         setPlayer2Timer(0)
@@ -481,7 +492,7 @@ export default function Game() {
         setMoveTimer(30)
       }
 
-      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && !isBotGame) {
+      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice) {
         setTimeout(() => {
           const socket = getSocket()
           if (socket) {
@@ -544,7 +555,7 @@ export default function Game() {
         setMoveTimer(30)
       }
 
-      if (data.status === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && !isBotGame) {
+      if (data.status === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice) {
         setTimeout(() => {
           const socket = getSocket()
           if (socket) {
@@ -605,6 +616,8 @@ export default function Game() {
           setPlayer2Ready(data.player2Ready || false)
           const isP1 = gameInfo?.player1Id === user?.id
           setMyReady(isP1 ? (data.player1Ready || false) : (data.player2Ready || false))
+          // Обновляем информацию об игре для актуального состояния
+          loadGame()
         }
       })
 
@@ -614,8 +627,22 @@ export default function Game() {
           setPlayer1Ready(true)
           setPlayer2Ready(true)
           setMyReady(true)
-          if (data.game) setGameInfo(data.game)
-          loadGame()
+          if (data.game) {
+            setGameInfo(data.game)
+            // Автоматически загружаем игру и бросаем кубики
+            loadGame().then(() => {
+              // Небольшая задержка для обновления состояния
+              setTimeout(() => {
+                const socket = getSocket()
+                if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1)) {
+                  // Если это наш ход, бросаем кубики
+                  socket.emit('roll_dice', { gameId })
+                }
+              }, 300)
+            })
+          } else {
+            loadGame()
+          }
         }
       })
 

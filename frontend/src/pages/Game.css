@@ -228,8 +228,12 @@
 
 .game-player-avatar img {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   border-radius: 50%;
+}
+
+.game-player-avatar svg.game-player-timer-ring {
+  z-index: 1;
 }
 
 .game-player-active {
