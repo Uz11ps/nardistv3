@@ -638,21 +638,26 @@ export default function Game() {
     }
 
     // Для обычного хода
-    const currentDiceUsage = new Map<number, number>();
-    pendingMoves.forEach(m => {
-      if (m.steps) {
-        m.steps.forEach((s: any) => currentDiceUsage.set(s.die, (currentDiceUsage.get(s.die) || 0) + 1));
-      } else {
-        currentDiceUsage.set(m.die, (currentDiceUsage.get(m.die) || 0) + 1);
-      }
-    });
+    if (die <= 6) {
+      const currentDiceUsage = new Map<number, number>();
+      pendingMoves.forEach(m => {
+        if (m.steps) {
+          m.steps.forEach((s: any) => currentDiceUsage.set(s.die, (currentDiceUsage.get(s.die) || 0) + 1));
+        } else {
+          currentDiceUsage.set(m.die, (currentDiceUsage.get(m.die) || 0) + 1);
+        }
+      });
 
-    const usedCount = currentDiceUsage.get(die) || 0;
-    const availableCount = diceArray.filter(d => d === die).length
-    
-    if (usedCount >= availableCount) {
-      alert(`Кубик ${die} уже использован максимальное количество раз`)
-      return
+      const usedCount = currentDiceUsage.get(die) || 0;
+      const availableCount = diceArray.filter(d => d === die).length
+      
+      if (usedCount >= availableCount) {
+        alert(`Кубик ${die} уже использован максимальное количество раз`)
+        return
+      }
+    } else {
+      // Для хода > 6 (комбинированный) без steps - это ошибка, но мы не должны показывать "кубик 7 использован"
+      console.warn(`Move with die=${die} but no steps provided`);
     }
 
     setPendingMoves(prev => [...prev, { from, to, die }])
