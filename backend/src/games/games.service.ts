@@ -508,7 +508,7 @@ export class GamesService {
     }
 
     const usedCount = new Map<number, number>();
-    for (const move of moves) {
+    for (const move of finalMovesToSave) {
       usedCount.set(move.die, (usedCount.get(move.die) || 0) + 1);
     }
 
@@ -723,13 +723,27 @@ export class GamesService {
       const diceCopy = [...(state.dice || [])];
       for (const move of pendingMoves) {
         // Пытаемся найти кубик или комбинацию кубиков
+        
+        // 1. Если есть конкретные шаги, используем их
+        if ((move as any).steps && Array.isArray((move as any).steps)) {
+          for (const step of (move as any).steps) {
+            const idx = diceCopy.indexOf(step.die);
+            if (idx !== -1) {
+              diceCopy.splice(idx, 1);
+              state = engine.applyMove(state, step.from, step.to, step.die);
+            }
+          }
+          continue;
+        }
+
+        // 2. Иначе ищем одиночный кубик
         let used = false;
         const dieIndex = diceCopy.indexOf(move.die);
         if (dieIndex !== -1) {
           diceCopy.splice(dieIndex, 1);
           used = true;
         } else if (game.mode === GameMode.LONG) {
-          // Для длинных нард проверяем сумму (комбинированный ход)
+          // 3. Или ищем сумму для длинных нард (fallback)
           for (let i = 0; i < diceCopy.length; i++) {
             for (let j = i + 1; j < diceCopy.length; j++) {
               if (diceCopy[i] + diceCopy[j] === move.die) {
