@@ -343,22 +343,21 @@ export class LongBackgammonEngine {
 
   canBearOff(state: LongBoardState, player: number): boolean {
     if (player === 0) {
-      // White: all checkers must be in home (indices 18-23, Points 1-6) and none on bar
-      const homeBoard = state.points.slice(this.WHITE_HOME_START, this.BOARD_SIZE);
-      const allInHome = homeBoard.every((p) => p >= 0);
-      const noBarCheckers = state.bar[0] === 0;
-      // Also check that no checkers are outside home
-      const outsideHome = state.points.slice(0, this.WHITE_HOME_START).some((p) => p > 0);
-      return allInHome && noBarCheckers && !outsideHome;
+      // White: all checkers must be in home (indices 18-23, Points 1-6)
+      for (let i = 0; i < this.WHITE_HOME_START; i++) {
+        if (state.points[i] > 0) return false;
+      }
+      return state.bar[0] === 0;
     } else {
-      // Black: all checkers must be in home (indices 6-11, Points 13-18) and none on bar
-      const homeBoard = state.points.slice(this.BLACK_HOME_START, 12);
-      const allInHome = homeBoard.every((p) => p <= 0);
-      const noBarCheckers = state.bar[1] === 0;
-      // Also check that no checkers are outside home
-      const outsideHome = state.points.slice(0, this.BLACK_HOME_START).some((p) => p < 0) ||
-                         state.points.slice(12).some((p) => p < 0);
-      return allInHome && noBarCheckers && !outsideHome;
+      // Black: all checkers must be in home (indices 6-11, Points 13-18)
+      // indices outside home: 0-5 and 12-23
+      for (let i = 0; i < this.BLACK_HOME_START; i++) {
+        if (state.points[i] < 0) return false;
+      }
+      for (let i = 12; i < this.BOARD_SIZE; i++) {
+        if (state.points[i] < 0) return false;
+      }
+      return state.bar[1] === 0;
     }
   }
 

@@ -144,13 +144,17 @@ export class BackgammonEngine {
 
   canBearOff(state: BoardState, player: number): boolean {
     if (player === 0) {
-      // White: all checkers must be in indices 18-23
-      const outsideHome = state.points.slice(0, 18).some(p => p > 0);
-      return !outsideHome && state.bar[0] === 0;
+      // White: all checkers must be in home (points 1-6, indices 18-23)
+      for (let i = 0; i < 18; i++) {
+        if (state.points[i] > 0) return false;
+      }
+      return state.bar[0] === 0;
     } else {
-      // Black: all checkers must be in indices 0-5
-      const outsideHome = state.points.slice(6, 24).some(p => p < 0);
-      return !outsideHome && state.bar[1] === 0;
+      // Black: all checkers must be in home (points 19-24, indices 0-5)
+      for (let i = 6; i < 24; i++) {
+        if (state.points[i] < 0) return false;
+      }
+      return state.bar[1] === 0;
     }
   }
 
