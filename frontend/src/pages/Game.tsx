@@ -186,10 +186,13 @@ export default function Game() {
       animationFrameRef.current = null
     }
 
-    // Если это мой ход и игра идет, запускаем таймер ТОЛЬКО если кубики уже брошены
-    if (gameState?.canMove && gameStatus === 'in_progress' && gameState?.dice && !isBotGame) {
-      // Запускаем таймер только если он еще не запущен (чтобы не сбрасывать при каждом обновлении)
-      if (!timerStartTimeRef.current) {
+    // Если игра идет и кубики брошены, запускаем таймер для текущего игрока
+    const currentPlayerId = gameState?.currentPlayer === 0 ? gameInfo?.player1Id : gameInfo?.player2Id
+    const isCurrentPlayer = currentPlayerId === user?.id
+    
+    if (gameStatus === 'in_progress' && gameState?.dice && !isBotGame && gameState?.currentPlayer !== undefined) {
+      // Запускаем таймер только если это ход текущего игрока и он еще не запущен
+      if (isCurrentPlayer && !timerStartTimeRef.current) {
         timerStartTimeRef.current = Date.now()
         setIsInOvertime(false)
         setMoveTimer(30)
@@ -197,61 +200,71 @@ export default function Game() {
         setTimerProgress(1)
       }
       
-      // Плавное обновление таймера через requestAnimationFrame
-      const updateTimer = () => {
-        if (!timerStartTimeRef.current) return
-        
-        const elapsed = (Date.now() - timerStartTimeRef.current) / 1000 // секунды
-        
-        if (elapsed < 30) {
-          // Обычное время
-          const remaining = Math.max(0, 30 - elapsed)
-          const progress = remaining / 30
-          setMoveTimer(Math.ceil(remaining))
-          setTimerProgress(progress)
-          setIsInOvertime(false)
-          animationFrameRef.current = requestAnimationFrame(updateTimer)
-        } else if (elapsed < 90) {
-          // Овертайм
-          const remaining = Math.max(0, 60 - (elapsed - 30))
-          const progress = remaining / 60
-          setOvertimeTimer(Math.ceil(remaining))
-          setTimerProgress(progress)
-          setIsInOvertime(true)
+      // Обновляем таймер только если это ход текущего игрока
+      if (isCurrentPlayer && timerStartTimeRef.current) {
+        // Плавное обновление таймера через requestAnimationFrame
+        const updateTimer = () => {
+          if (!timerStartTimeRef.current) return
           
-          if (remaining <= 0) {
-            handleAutoMove()
-            return
-          }
-          animationFrameRef.current = requestAnimationFrame(updateTimer)
-        } else {
-          // Время истекло
-          setTimerProgress(0)
-          handleAutoMove()
-        }
-      }
-      
-      animationFrameRef.current = requestAnimationFrame(updateTimer)
-      
-      // Также обновляем целые секунды для отображения
-      moveTimerRef.current = setInterval(() => {
-        if (!timerStartTimeRef.current) return
-        
-        const elapsed = (Date.now() - timerStartTimeRef.current) / 1000
-        
-        if (elapsed < 30) {
-          const remaining = Math.max(0, 30 - elapsed)
-          setMoveTimer(Math.ceil(remaining))
-        } else if (elapsed < 90) {
-          const remaining = Math.max(0, 60 - (elapsed - 30))
-          setOvertimeTimer(Math.ceil(remaining))
-          if (!isInOvertime) {
+          const elapsed = (Date.now() - timerStartTimeRef.current) / 1000 // секунды
+          
+          if (elapsed < 30) {
+            // Обычное время
+            const remaining = Math.max(0, 30 - elapsed)
+            const progress = remaining / 30
+            setMoveTimer(Math.ceil(remaining))
+            setTimerProgress(progress)
+            setIsInOvertime(false)
+            animationFrameRef.current = requestAnimationFrame(updateTimer)
+          } else if (elapsed < 90) {
+            // Овертайм
+            const remaining = Math.max(0, 60 - (elapsed - 30))
+            const progress = remaining / 60
+            setOvertimeTimer(Math.ceil(remaining))
+            setTimerProgress(progress)
             setIsInOvertime(true)
+            
+            if (remaining <= 0) {
+              handleAutoMove()
+              return
+            }
+            animationFrameRef.current = requestAnimationFrame(updateTimer)
+          } else {
+            // Время истекло
+            setTimerProgress(0)
+            handleAutoMove()
           }
         }
-      }, 1000)
+        
+        animationFrameRef.current = requestAnimationFrame(updateTimer)
+        
+        // Также обновляем целые секунды для отображения
+        moveTimerRef.current = setInterval(() => {
+          if (!timerStartTimeRef.current) return
+          
+          const elapsed = (Date.now() - timerStartTimeRef.current) / 1000
+          
+          if (elapsed < 30) {
+            const remaining = Math.max(0, 30 - elapsed)
+            setMoveTimer(Math.ceil(remaining))
+          } else if (elapsed < 90) {
+            const remaining = Math.max(0, 60 - (elapsed - 30))
+            setOvertimeTimer(Math.ceil(remaining))
+            if (!isInOvertime) {
+              setIsInOvertime(true)
+            }
+          }
+        }, 1000)
+      } else if (!isCurrentPlayer) {
+        // Не текущий ход - сбрасываем таймеры
+        setIsInOvertime(false)
+        setMoveTimer(30)
+        setOvertimeTimer(60)
+        setTimerProgress(1)
+        timerStartTimeRef.current = null
+      }
     } else {
-      // Не мой ход или игра не идет - сбрасываем таймеры
+      // Игра не идет или нет кубиков - сбрасываем таймеры
       setIsInOvertime(false)
       setMoveTimer(30)
       setOvertimeTimer(60)
@@ -273,7 +286,7 @@ export default function Game() {
         animationFrameRef.current = null
       }
     }
-  }, [gameState?.canMove, gameStatus, !!gameState?.dice, isBotGame])
+  }, [gameState?.currentPlayer, gameStatus, !!gameState?.dice, isBotGame, gameInfo?.player1Id, gameInfo?.player2Id, user?.id])
 
   // Функция автолуза
   const handleAutoMove = async () => {
@@ -974,8 +987,8 @@ export default function Game() {
                   )}
                 </div>
               </div>
-              <div className={`game-player-avatar ${!isPlayer1 && isMyTurn ? 'game-player-active' : ''}`}>
-                {!isPlayer1 && isMyTurn && gameStatus === 'in_progress' && gameState?.dice && timerStartTimeRef.current && (
+              <div className={`game-player-avatar ${!isPlayer1 && gameState?.currentPlayer === 1 ? 'game-player-active' : ''}`}>
+                {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && gameState?.dice && (
                   <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                     <circle
                       className="game-player-timer-ring-bg"
@@ -987,12 +1000,12 @@ export default function Game() {
                       strokeWidth="6"
                     />
                     <circle
-                      className={`game-player-timer-ring-progress ${isInOvertime ? 'overtime' : 'normal'}`}
+                      className={`game-player-timer-ring-progress ${isInOvertime && gameState?.currentPlayer === 1 ? 'overtime' : 'normal'}`}
                       cx="50"
                       cy="50"
                       r="45"
                       fill="none"
-                      stroke={isInOvertime ? '#FF9800' : '#4caf50'}
+                      stroke={isInOvertime && gameState?.currentPlayer === 1 ? '#FF9800' : '#4caf50'}
                       strokeWidth="6"
                       strokeLinecap="round"
                       strokeDasharray={2 * Math.PI * 45}
@@ -1017,8 +1030,8 @@ export default function Game() {
             <div className="game-players-section">
               <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
-                <div className={`game-player-avatar ${!isPlayer1 && isMyTurn ? 'game-player-active' : ''}`}>
-                  {!isPlayer1 && isMyTurn && gameStatus === 'in_progress' && gameState?.dice && timerStartTimeRef.current && (
+                <div className={`game-player-avatar ${!isPlayer1 && gameState?.currentPlayer === 1 ? 'game-player-active' : ''}`}>
+                  {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && gameState?.dice && (
                     <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                       <circle
                         className="game-player-timer-ring-bg"
@@ -1030,12 +1043,12 @@ export default function Game() {
                         strokeWidth="6"
                       />
                       <circle
-                        className={`game-player-timer-ring-progress ${isInOvertime ? 'overtime' : 'normal'}`}
+                        className={`game-player-timer-ring-progress ${isInOvertime && gameState?.currentPlayer === 1 ? 'overtime' : 'normal'}`}
                         cx="50"
                         cy="50"
                         r="45"
                         fill="none"
-                        stroke={isInOvertime ? '#FF9800' : '#4caf50'}
+                        stroke={isInOvertime && gameState?.currentPlayer === 1 ? '#FF9800' : '#4caf50'}
                         strokeWidth="6"
                         strokeLinecap="round"
                         strokeDasharray={2 * Math.PI * 45}
@@ -1053,8 +1066,8 @@ export default function Game() {
               </div>
               <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
-                <div className={`game-player-avatar ${isMyTurn && isPlayer1 ? 'game-player-active' : ''}`}>
-                  {isMyTurn && isPlayer1 && gameStatus === 'in_progress' && gameState?.dice && (
+                <div className={`game-player-avatar ${isPlayer1 && gameState?.currentPlayer === 0 ? 'game-player-active' : ''}`}>
+                  {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && gameState?.dice && (
                     <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                       <circle
                         className="game-player-timer-ring-bg"
@@ -1066,16 +1079,16 @@ export default function Game() {
                         strokeWidth="6"
                       />
                       <circle
-                        className={`game-player-timer-ring-progress ${isInOvertime ? 'overtime' : 'normal'}`}
+                        className={`game-player-timer-ring-progress ${isInOvertime && gameState?.currentPlayer === 0 ? 'overtime' : 'normal'}`}
                         cx="50"
                         cy="50"
                         r="45"
                         fill="none"
-                        stroke={isInOvertime ? '#FF9800' : '#4caf50'}
+                        stroke={isInOvertime && gameState?.currentPlayer === 0 ? '#FF9800' : '#4caf50'}
                         strokeWidth="6"
                         strokeLinecap="round"
-                        strokeDasharray={`${2 * Math.PI * 45}`}
-                        strokeDashoffset={`${2 * Math.PI * 45 * (1 - (isInOvertime ? overtimeTimer / 60 : moveTimer / 30))}`}
+                        strokeDasharray={2 * Math.PI * 45}
+                        strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, timerProgress)))}
                         transform="rotate(-90 50 50)"
                       />
                     </svg>
@@ -1188,8 +1201,8 @@ export default function Game() {
                   )}
                 </div>
               </div>
-              <div className={`game-player-avatar ${isMyTurn && isPlayer1 ? 'game-player-active' : ''}`}>
-                {isMyTurn && isPlayer1 && gameStatus === 'in_progress' && gameState?.dice && timerStartTimeRef.current && (
+              <div className={`game-player-avatar ${isPlayer1 && gameState?.currentPlayer === 0 ? 'game-player-active' : ''}`}>
+                {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && gameState?.dice && (
                   <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                     <circle
                       className="game-player-timer-ring-bg"
@@ -1201,12 +1214,12 @@ export default function Game() {
                       strokeWidth="6"
                     />
                     <circle
-                      className={`game-player-timer-ring-progress ${isInOvertime ? 'overtime' : 'normal'}`}
+                      className={`game-player-timer-ring-progress ${isInOvertime && gameState?.currentPlayer === 0 ? 'overtime' : 'normal'}`}
                       cx="50"
                       cy="50"
                       r="45"
                       fill="none"
-                      stroke={isInOvertime ? '#FF9800' : '#4caf50'}
+                      stroke={isInOvertime && gameState?.currentPlayer === 0 ? '#FF9800' : '#4caf50'}
                       strokeWidth="6"
                       strokeLinecap="round"
                       strokeDasharray={2 * Math.PI * 45}
