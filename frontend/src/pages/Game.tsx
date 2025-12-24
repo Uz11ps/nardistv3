@@ -17,6 +17,9 @@ interface GameState {
   currentPlayer: number
   dice: { die1: number; die2: number } | null
   canMove: boolean
+  verificationSalt?: string
+  p1Rolls?: number[][]
+  p2Rolls?: number[][]
 }
 
 export default function Game() {
@@ -266,6 +269,9 @@ export default function Game() {
         currentPlayer: game.currentPlayer || 0,
         dice: formattedDice,
         canMove: game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1,
+        verificationSalt: game.verificationSalt,
+        p1Rolls: game.p1Rolls,
+        p2Rolls: game.p2Rolls,
       })
       setOpponent(game.player1Id === user?.id ? game.player2 : game.player1)
       setScore({ player1: game.player1Score || 0, player2: game.player2Score || 0 })
@@ -421,6 +427,9 @@ export default function Game() {
         currentPlayer: data.currentPlayer || 0,
         dice: formattedDice,
         canMove: canMove,
+        verificationSalt: data.verificationSalt,
+        p1Rolls: data.p1Rolls,
+        p2Rolls: data.p2Rolls,
       })
       const newStatus = data.status || 'waiting'
       setGameStatus(newStatus)
@@ -483,6 +492,9 @@ export default function Game() {
         currentPlayer: data.currentPlayer || 0,
         dice: formattedDice,
         canMove: canMove,
+        verificationSalt: data.verificationSalt,
+        p1Rolls: data.p1Rolls,
+        p2Rolls: data.p2Rolls,
       })
       setGameStatus(data.status || 'in_progress')
       
@@ -994,7 +1006,7 @@ export default function Game() {
                 <span>Итоговый индекс:</span>
                 <strong>{((myOffset - 1) * 2 + opponentOffset)}</strong>
               </div>
-              {gameState.verificationSalt && (
+              {gameState?.verificationSalt && (
                 <div className="verification-details">
                   <div className="salt-display">
                     Соль: <code>{gameState.verificationSalt}</code>
