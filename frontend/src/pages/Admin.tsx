@@ -4767,6 +4767,7 @@ export default function Admin() {
                   onClick={async () => {
                     try {
                       await apiClient.put('/admin/system-settings', { [key]: systemSettings[key] })
+                      await loadSystemSettings()
                       alert('Настройка сохранена')
                     } catch (error: any) {
                       alert('Ошибка: ' + (error.response?.data?.message || error.message))
