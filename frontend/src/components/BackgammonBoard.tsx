@@ -117,34 +117,44 @@ export default function BackgammonBoard({
 
   // Получение возможных ходов
   useEffect(() => {
-    if (!gameId || !isMyTurn || !canMove || !dice) return
+    // Проверяем наличие кубиков (может быть массив или объект {die1, die2})
+    const hasDice = dice && (
+      (Array.isArray(dice) && dice.length > 0) || 
+      (typeof dice === 'object' && (dice.die1 || dice.die2))
+    )
     
-        const fetchPossibleMoves = async () => {
-          try {
-            // Теперь отправляем pendingMoves на сервер, чтобы получить актуальные варианты
-            const response = await apiClient.post(`/games/${gameId}/possible-moves`, { 
-              pendingMoves 
-            })
-            const flatMoves = response.data?.movesFromPoint || []
-            const highlighted = new Set<number>()
-            
-            flatMoves.forEach((move: any) => {
-              if (move.from !== undefined && move.from !== null && move.from !== -1) {
-                highlighted.add(move.from)
-              }
-            })
-            
-            setPossibleMoves(flatMoves)
-            setHighlightedPoints(highlighted)
-          } catch (error) {
-            console.error('Ошибка получения возможных ходов:', error)
-            setPossibleMoves([])
-            setHighlightedPoints(new Set())
+    if (!gameId || !isMyTurn || !canMove || !hasDice) {
+      setPossibleMoves([])
+      setHighlightedPoints(new Set())
+      return
+    }
+    
+    const fetchPossibleMoves = async () => {
+      try {
+        // Теперь отправляем pendingMoves на сервер, чтобы получить актуальные варианты
+        const response = await apiClient.post(`/games/${gameId}/possible-moves`, { 
+          pendingMoves 
+        })
+        const flatMoves = response.data?.movesFromPoint || []
+        const highlighted = new Set<number>()
+        
+        flatMoves.forEach((move: any) => {
+          if (move.from !== undefined && move.from !== null && move.from !== -1) {
+            highlighted.add(move.from)
           }
-        }
+        })
+        
+        setPossibleMoves(flatMoves)
+        setHighlightedPoints(highlighted)
+      } catch (error) {
+        console.error('Ошибка получения возможных ходов:', error)
+        setPossibleMoves([])
+        setHighlightedPoints(new Set())
+      }
+    }
     
     fetchPossibleMoves()
-  }, [gameId, isMyTurn, canMove, dice, gameState, pendingMoves]) // Добавили pendingMoves в зависимости
+  }, [gameId, isMyTurn, canMove, dice, gameState?.points, gameState?.bar, gameState?.bearOff, pendingMoves]) // Используем конкретные поля вместо всего gameState
   
   // Определение позиции для кубиков
   useEffect(() => {

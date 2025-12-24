@@ -490,6 +490,7 @@ export default function Game() {
       
       if (isMyTurnNow && !wasMyTurn) {
         setMoveTimer(30)
+        timerStartTimeRef.current = Date.now()
       }
 
       if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice) {
@@ -501,6 +502,7 @@ export default function Game() {
         }, 500)
       }
       
+      // Дополнительно загружаем игру для полной синхронизации
       if (newStatus === 'in_progress') {
         loadGame()
       }
@@ -553,6 +555,7 @@ export default function Game() {
       
       if (isMyTurnNow && !wasMyTurn) {
         setMoveTimer(30)
+        timerStartTimeRef.current = Date.now()
       }
 
       if (data.status === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice) {
@@ -563,16 +566,21 @@ export default function Game() {
           }
         }, 500)
       }
+      
+      // Дополнительно загружаем игру для полной синхронизации
+      loadGame()
     })
 
     socket.on('dice_rolled', (data: any) => {
       setDiceAnimating(true)
       setTimeout(() => {
         setDiceAnimating(false)
+        // Обновляем состояние с кубиками немедленно
         if (data.dice && Array.isArray(data.dice) && data.dice.length >= 2) {
           const formattedDice = { die1: data.dice[0], die2: data.dice[1] }
           setGameState(prev => prev ? ({ ...prev, dice: formattedDice }) : null)
         }
+        // Полностью перезагружаем игру для синхронизации
         loadGame()
       }, 1500) // Увеличили время для красивой 3D анимации
     })
@@ -833,8 +841,8 @@ export default function Game() {
     )
   }
 
-  const isMyTurn = gameState.canMove
   const isPlayer1 = gameInfo.player1Id === user?.id
+  const isMyTurn = gameState?.canMove && gameStatus === 'in_progress'
   const myPlayer = isPlayer1 ? gameInfo.player1 : gameInfo.player2
   const opponentPlayer = isPlayer1 ? gameInfo.player2 : gameInfo.player1
 
@@ -1044,9 +1052,9 @@ export default function Game() {
                   </div>
 
                   {!myReady ? (
-                    <Button variant="primary" onClick={handleReadyToStart} className="ready-btn">Начать игру</Button>
+                    <Button variant="primary" onClick={handleReadyToStart} className="ready-btn">Готов</Button>
                   ) : (
-                    <div className="ready-status">✅ Вы готовы. Ожидание соперника...</div>
+                    <div className="ready-status">✅ Готов. Ожидание соперника...</div>
                   )}
                 </div>
               )}
