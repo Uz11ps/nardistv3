@@ -110,6 +110,8 @@ export default function Game() {
 
   const [isInOvertime, setIsInOvertime] = useState<boolean>(false) // Флаг овертайма
   const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
+  const [showVerificationModal, setShowVerificationModal] = useState(false)
+  const [verificationResult, setVerificationResult] = useState<{p1Valid: boolean, p2Valid: boolean, p1Hash: string, p2Hash: string, originalP1Hash: string, originalP2Hash: string} | null>(null)
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
