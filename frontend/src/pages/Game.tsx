@@ -15,7 +15,7 @@ interface GameState {
   bar: { white: number; black: number }
   bearOff: { white: number; black: number }
   currentPlayer: number
-  dice: { die1: number; die2: number } | null
+  dice: { die1: number; die2: number } | number[] | null
   canMove: boolean
   verificationSalt?: string
   p1Rolls?: number[][]
