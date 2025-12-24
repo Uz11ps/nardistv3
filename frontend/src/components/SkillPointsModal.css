@@ -1,0 +1,144 @@
+.skill-points-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.skill-points-modal {
+  background: #1a1a1a;
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid #333;
+}
+
+.skill-points-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #333;
+}
+
+.skill-points-modal-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 20px;
+}
+
+.skill-points-modal-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 32px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.skill-points-modal-close:hover {
+  color: #fff;
+}
+
+.skill-points-modal-content {
+  padding: 24px;
+}
+
+.skill-points-info {
+  margin-bottom: 24px;
+}
+
+.skill-points-free {
+  text-align: center;
+  font-size: 18px;
+  color: #aaa;
+}
+
+.skill-points-branches {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skill-points-branch {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #333;
+}
+
+.skill-points-branch-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.skill-points-branch-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.skill-points-branch-info {
+  flex: 1;
+}
+
+.skill-points-branch-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.skill-points-branch-description {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 8px;
+}
+
+.skill-points-branch-current {
+  font-size: 12px;
+  color: #888;
+}
+
+.skill-points-branch-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.skill-points-btn {
+  flex: 1;
+  background: #4a9eff;
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.skill-points-btn:hover:not(:disabled) {
+  background: #3a8eef;
+}
+
+.skill-points-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

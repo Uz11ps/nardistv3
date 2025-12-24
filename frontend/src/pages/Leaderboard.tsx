@@ -12,6 +12,7 @@ interface LeaderboardEntry {
     avatarUrl?: string
     level: number
     rating: number
+    badge?: string
   }
   wins: number
   losses: number
@@ -125,6 +126,11 @@ export default function Leaderboard() {
                     </div>
                     <div className="leaderboard-details">
                       Уровень {entry.user.level} • Рейтинг: {entry.user.rating}
+                      {entry.user.badge && (
+                        <span style={{ marginLeft: '8px', color: '#ffd700', fontSize: '12px', fontWeight: 600 }}>
+                          🏆 {entry.user.badge}
+                        </span>
+                      )}
                     </div>
                     <div className="leaderboard-stats">
                       Побед: {entry.wins} • Поражений: {entry.losses}

@@ -151,5 +151,35 @@ export class SubscriptionController {
     await this.subscriptionService.purchaseCityAutobuild(user.id, body.paymentMethod);
     return { message: 'Автобилд города успешно активирован' };
   }
+
+  /**
+   * Создать транзакцию для покупки NAR-coin через TON/USDT
+   */
+  @Post('nar-coin/payment/create')
+  @UseGuards(JwtAuthGuard)
+  async createNarCoinPayment(@CurrentUser() user: any, @Body() body: { amount: number; method?: PaymentMethod }) {
+    const method = body.method || PaymentMethod.TON;
+    const transaction = await this.paymentTransactionService.createNarCoinTransaction(
+      user.id,
+      body.amount,
+      method,
+    );
+
+    // Получаем кошелек пользователя
+    const wallet = await this.walletService.getWallet(user.id);
+    if (!wallet) {
+      throw new Error('Кошелек не найден');
+    }
+
+    return {
+      transactionId: transaction.id,
+      walletAddress: wallet.address,
+      amount: transaction.amount,
+      comment: transaction.comment,
+      method: transaction.method,
+      status: transaction.status,
+      narAmount: transaction.amount * 1000, // 1 TON = 1000 NAR
+    };
+  }
 }
 

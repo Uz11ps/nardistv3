@@ -52,10 +52,21 @@ export default function Tournaments() {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null)
   const [tournamentDetail, setTournamentDetail] = useState<Tournament | null>(null)
+  const [availableTickets, setAvailableTickets] = useState(0)
 
   useEffect(() => {
     loadTournaments()
+    loadTickets()
   }, [activeTab])
+
+  const loadTickets = async () => {
+    try {
+      const response = await apiClient.get('/tournaments/tickets/my').catch(() => ({ data: { available: 0 } }))
+      setAvailableTickets(response.data?.available || 0)
+    } catch (error) {
+      console.error('Failed to load tickets:', error)
+    }
+  }
 
   const loadTournaments = async () => {
     try {
@@ -83,6 +94,7 @@ export default function Tournaments() {
     try {
       await apiClient.post(`/tournaments/${tournamentId}/register`)
       loadTournaments()
+      loadTickets() // Обновляем количество билетов
       if (selectedTournament?.id === tournamentId) {
         setSelectedTournament(null)
         setTournamentDetail(null)
@@ -139,6 +151,11 @@ export default function Tournaments() {
                 </div>
                 <div className="tournament-detail">
                   Взнос: {tournament.entryFee} NAR
+                  {availableTickets > 0 && (
+                    <span style={{ marginLeft: '8px', color: '#4CAF50', fontSize: '12px' }}>
+                      или 🎫 {availableTickets} билет{availableTickets > 1 ? 'ов' : ''}
+                    </span>
+                  )}
                 </div>
                 <div className="tournament-detail">
                   Призовой фонд: {tournament.prizePool.toLocaleString()} NAR
@@ -193,7 +210,14 @@ export default function Tournaments() {
                 </div>
                 <div className="tournament-modal-info-row">
                   <span className="tournament-modal-label">Взнос:</span>
-                  <span className="tournament-modal-value">{tournamentDetail.entryFee} NAR</span>
+                  <span className="tournament-modal-value">
+                    {tournamentDetail.entryFee} NAR
+                    {availableTickets > 0 && (
+                      <span style={{ marginLeft: '8px', color: '#4CAF50', fontSize: '12px' }}>
+                        или 🎫 {availableTickets} билет{availableTickets > 1 ? 'ов' : ''}
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="tournament-modal-info-row">
                   <span className="tournament-modal-label">Участников:</span>

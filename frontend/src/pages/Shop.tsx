@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import TonPaymentModal from '../components/TonPaymentModal'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
@@ -30,6 +31,15 @@ export default function Shop() {
   const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
   const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
   const [showPremiumModal, setShowPremiumModal] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentData, setPaymentData] = useState<{
+    transactionId: string
+    walletAddress: string
+    amount: number
+    comment: string
+    method: 'TON' | 'USDT'
+    narAmount: number
+  } | null>(null)
 
   useEffect(() => {
     if (activeTab === 'coin') {
@@ -179,21 +189,40 @@ export default function Shop() {
     
     try {
       setBuyingNarCoinAmount(amount)
-      // TODO: интеграция с платежной системой TON
-      const response = await apiClient.post('/shop/purchase-nar-coin', { amount, price, currency: 'TON' }).catch(() => {
-        throw new Error('Интеграция с платежной системой в разработке')
+      // Создаем платежную транзакцию для покупки NAR-coin
+      const response = await apiClient.post('/subscription/nar-coin/payment/create', {
+        amount: price, // цена в TON
+        method: 'TON',
       })
-      alert(`Покупка ${amount} NAR за ${price} TON успешна!`)
-      // Обновляем баланс пользователя
-      if (user) {
-        const userResponse = await apiClient.get('/users/me')
-        useAuthStore.setState({ user: userResponse.data })
-      }
+      
+      const { transactionId, walletAddress, amount: tonAmount, comment, method, narAmount } = response.data
+      
+      // Показываем модальное окно оплаты
+      setPaymentData({
+        transactionId,
+        walletAddress,
+        amount: tonAmount,
+        comment,
+        method: method === 'TON' ? 'TON' : 'USDT',
+        narAmount,
+      })
+      setShowPaymentModal(true)
     } catch (error: any) {
-      alert(error.response?.data?.message || error.message || 'Ошибка при покупке')
+      alert(error.response?.data?.message || error.message || 'Ошибка при создании платежа')
       console.error('Purchase failed:', error)
     } finally {
       setBuyingNarCoinAmount(null)
+    }
+  }
+
+  const handlePaymentSuccess = async () => {
+    // Обновляем баланс пользователя после успешной оплаты
+    try {
+      const userResponse = await apiClient.get('/users/me')
+      useAuthStore.setState({ user: userResponse.data })
+      alert(`Покупка ${paymentData?.narAmount || 0} NAR успешна!`)
+    } catch (error) {
+      console.error('Failed to update user:', error)
     }
   }
 
@@ -656,6 +685,23 @@ export default function Shop() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Модальное окно оплаты TON */}
+      {showPaymentModal && paymentData && (
+        <TonPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false)
+            setPaymentData(null)
+          }}
+          transactionId={paymentData.transactionId}
+          walletAddress={paymentData.walletAddress}
+          amount={paymentData.amount}
+          comment={paymentData.comment}
+          method={paymentData.method}
+          onSuccess={handlePaymentSuccess}
+        />
       )}
     </PageLayout>
   )

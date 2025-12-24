@@ -79,6 +79,44 @@ export class PaymentTransactionService {
   }
 
   /**
+   * Создать транзакцию для покупки NAR-coin
+   */
+  async createNarCoinTransaction(
+    userId: string,
+    amount: number, // количество TON для покупки
+    method: PaymentMethod = PaymentMethod.TON,
+  ): Promise<PaymentTransaction> {
+    // Получаем или создаем кошелек пользователя
+    const wallet = await this.walletService.getOrCreateWallet(userId);
+    
+    // Генерируем комментарий для идентификации платежа
+    const transactionId = `nar_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const comment = this.tonService.generatePaymentComment(userId, transactionId);
+
+    // Создаем транзакцию
+    const transaction = this.transactionRepository.create({
+      userId,
+      walletId: wallet.id,
+      type: PaymentType.NAR_COIN,
+      method,
+      status: PaymentStatus.PENDING,
+      amount,
+      toAddress: wallet.address,
+      comment,
+      metadata: {
+        userId,
+        transactionId,
+        narAmount: amount * 1000, // 1 TON = 1000 NAR
+      },
+    });
+
+    const savedTransaction = await this.transactionRepository.save(transaction);
+    this.logger.log(`✅ Создана транзакция для покупки NAR-coin: userId=${userId}, amount=${amount} TON`);
+
+    return savedTransaction;
+  }
+
+  /**
    * Получить транзакцию по ID
    */
   async getTransaction(transactionId: string): Promise<PaymentTransaction> {

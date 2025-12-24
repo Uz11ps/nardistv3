@@ -10,6 +10,8 @@ interface Quest {
   description: string
   rewardNarCoin: number
   rewardXP: number
+  rewardSkin?: any
+  rewardTickets?: number
   progress: number
   target: number
   completed: boolean
@@ -153,7 +155,24 @@ export default function Quests() {
                       </div>
                     )}
                     <div className="quest-reward">
-                      Награда: {quest.rewardNarCoin.toLocaleString('ru-RU')} NAR • {quest.rewardXP} XP
+                      Награда:{' '}
+                      {quest.rewardNarCoin > 0 && (
+                        <span>{quest.rewardNarCoin.toLocaleString('ru-RU')} NAR</span>
+                      )}
+                      {quest.rewardNarCoin > 0 && quest.rewardXP > 0 && ' • '}
+                      {quest.rewardXP > 0 && <span>{quest.rewardXP} XP</span>}
+                      {quest.rewardSkin && (
+                        <>
+                          {(quest.rewardNarCoin > 0 || quest.rewardXP > 0) && ' • '}
+                          <span style={{ color: '#00aaff' }}>🎨 Скин</span>
+                        </>
+                      )}
+                      {quest.rewardTickets && quest.rewardTickets > 0 && (
+                        <>
+                          {(quest.rewardNarCoin > 0 || quest.rewardXP > 0 || quest.rewardSkin) && ' • '}
+                          <span style={{ color: '#ff6b6b' }}>🎫 {quest.rewardTickets} билет{quest.rewardTickets > 1 ? 'ов' : ''}</span>
+                        </>
+                      )}
                     </div>
                     <div className="quest-progress-section">
                       <div className="quest-progress-bar">

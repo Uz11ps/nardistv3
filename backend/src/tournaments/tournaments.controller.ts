@@ -34,5 +34,25 @@ export class TournamentsController {
   async getResults(@Param('id') id: string) {
     return this.tournamentsService.getTournamentResults(id);
   }
+
+  @Get('tickets/my')
+  @UseGuards(JwtAuthGuard)
+  async getMyTickets(@CurrentUser() user: any) {
+    const ticketsService = this.tournamentsService['ticketsService'];
+    const tickets = await ticketsService.getUserTickets(user.id);
+    const availableCount = await ticketsService.getAvailableTicketsCount(user.id);
+    return {
+      total: tickets.length,
+      available: availableCount,
+      used: tickets.filter(t => t.used).length,
+      tickets: tickets.map(t => ({
+        id: t.id,
+        used: t.used,
+        usedAt: t.usedAt,
+        source: t.source,
+        createdAt: t.createdAt,
+      })),
+    };
+  }
 }
 

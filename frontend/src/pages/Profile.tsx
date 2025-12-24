@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
+import SkillPointsModal from '../components/SkillPointsModal'
+import EnhancementModal from '../components/EnhancementModal'
 import { apiClient } from '../api/client'
 import './Profile.css'
 
@@ -11,6 +13,18 @@ export default function Profile() {
   const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1 })
   const [hasPremium, setHasPremium] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showSkillPointsModal, setShowSkillPointsModal] = useState(false)
+  const [showEnhancementModal, setShowEnhancementModal] = useState(false)
+  const [skillPoints, setSkillPoints] = useState({
+    total: 0,
+    free: 0,
+    economy: 0,
+    energy: 0,
+    lives: 0,
+    power: 0,
+  })
+  const [enhancements, setEnhancements] = useState<any[]>([])
+  const [canChooseEnhancement, setCanChooseEnhancement] = useState(false)
   const [editFormData, setEditFormData] = useState({
     nickname: '',
     country: '',
@@ -26,6 +40,9 @@ export default function Profile() {
         level: user.level || 1,
       })
       checkPremium()
+      loadSkillPoints()
+      loadEnhancements()
+      checkEnhancementAvailability()
       
       // Проверяем, завершена ли настройка профиля (первичное создание)
       // Если нет - перенаправляем на создание профиля
@@ -41,6 +58,36 @@ export default function Profile() {
         })
     }
   }, [user, navigate])
+
+  const loadSkillPoints = async () => {
+    try {
+      const response = await apiClient.get('/progress/skill-points').catch(() => ({ data: skillPoints }))
+      setSkillPoints(response.data || skillPoints)
+    } catch (error) {
+      console.error('Failed to load skill points:', error)
+    }
+  }
+
+  const loadEnhancements = async () => {
+    try {
+      const response = await apiClient.get('/progress/enhancements').catch(() => ({ data: [] }))
+      setEnhancements(response.data || [])
+    } catch (error) {
+      console.error('Failed to load enhancements:', error)
+    }
+  }
+
+  const checkEnhancementAvailability = async () => {
+    try {
+      const response = await apiClient.get('/progress/enhancement/availability').catch(() => ({ data: { canChoose: false } }))
+      setCanChooseEnhancement(response.data?.canChoose || false)
+      if (response.data?.canChoose) {
+        setShowEnhancementModal(true)
+      }
+    } catch (error) {
+      console.error('Failed to check enhancement availability:', error)
+    }
+  }
 
   const checkPremium = async () => {
     try {
@@ -346,6 +393,30 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* Модальное окно Skill Points */}
+      <SkillPointsModal
+        isOpen={showSkillPointsModal}
+        onClose={() => setShowSkillPointsModal(false)}
+        skillPoints={skillPoints}
+        onUpdate={() => {
+          loadSkillPoints()
+          const userResponse = apiClient.get('/users/me')
+          userResponse.then((res) => updateUser(res.data))
+        }}
+      />
+
+      {/* Модальное окно выбора усиления */}
+      <EnhancementModal
+        isOpen={showEnhancementModal}
+        onClose={() => setShowEnhancementModal(false)}
+        onUpdate={() => {
+          loadEnhancements()
+          checkEnhancementAvailability()
+          const userResponse = apiClient.get('/users/me')
+          userResponse.then((res) => updateUser(res.data))
+        }}
+      />
     </PageLayout>
   )
 }

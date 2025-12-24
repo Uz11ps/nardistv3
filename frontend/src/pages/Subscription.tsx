@@ -4,6 +4,7 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Icon from '../components/Icon'
+import TonPaymentModal from '../components/TonPaymentModal'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import './Subscription.css'
@@ -60,6 +61,14 @@ export default function Subscription() {
   const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
   const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
   const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentData, setPaymentData] = useState<{
+    transactionId: string
+    walletAddress: string
+    amount: number
+    comment: string
+    method: 'TON' | 'USDT'
+  } | null>(null)
 
   useEffect(() => {
     loadPlans()
@@ -92,18 +101,40 @@ export default function Subscription() {
   const handleSubscribe = async () => {
     try {
       setLoading(true)
-      // TODO: интеграция с платежной системой TON
-      await apiClient.post('/subscription/purchase', { plan: selectedPlan })
-      alert('Подписка успешно оформлена!')
-      // Обновляем данные пользователя
-      const userResponse = await apiClient.get('/users/me')
-      updateUser(userResponse.data)
-      navigate('/')
+      // Создаем платежную транзакцию
+      const response = await apiClient.post('/subscription/payment/create', {
+        plan: selectedPlan,
+        method: 'TON',
+      })
+      
+      const { transactionId, walletAddress, amount, comment, method } = response.data
+      
+      // Показываем модальное окно оплаты
+      setPaymentData({
+        transactionId,
+        walletAddress,
+        amount,
+        comment,
+        method: method === 'TON' ? 'TON' : 'USDT',
+      })
+      setShowPaymentModal(true)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при оформлении подписки')
-      console.error('Failed to subscribe:', error)
+      alert(error.response?.data?.message || 'Ошибка при создании платежа')
+      console.error('Failed to create payment:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePaymentSuccess = async () => {
+    // Обновляем данные пользователя после успешной оплаты
+    try {
+      const userResponse = await apiClient.get('/users/me')
+      updateUser(userResponse.data)
+      alert('Подписка успешно активирована!')
+      navigate('/')
+    } catch (error) {
+      console.error('Failed to update user:', error)
     }
   }
 
@@ -229,6 +260,23 @@ export default function Subscription() {
           )}
         </Card>
       </div>
+
+      {/* Модальное окно оплаты TON */}
+      {showPaymentModal && paymentData && (
+        <TonPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false)
+            setPaymentData(null)
+          }}
+          transactionId={paymentData.transactionId}
+          walletAddress={paymentData.walletAddress}
+          amount={paymentData.amount}
+          comment={paymentData.comment}
+          method={paymentData.method}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   )
 }
