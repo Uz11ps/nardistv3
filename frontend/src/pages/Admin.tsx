@@ -129,13 +129,22 @@ export default function Admin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      console.log('🔐 Попытка входа в админку:', { login, password: password ? '***' : 'empty' })
       const response = await apiClient.post('/admin/login', { login, password })
-      localStorage.setItem('admin_token', response.data.access_token)
-      // Токен будет автоматически добавлен через interceptor
-      setIsAuthenticated(true)
-      await loadStats()
+      console.log('✅ Ответ от сервера:', response.data)
+      if (response.data?.access_token) {
+        localStorage.setItem('admin_token', response.data.access_token)
+        setIsAuthenticated(true)
+        await loadStats()
+      } else {
+        console.error('❌ Токен не получен в ответе')
+        alert('Ошибка: токен не получен')
+      }
     } catch (error: any) {
-      alert('Неверный логин или пароль')
+      console.error('❌ Ошибка входа:', error)
+      console.error('Статус:', error.response?.status)
+      console.error('Данные ответа:', error.response?.data)
+      alert(error.response?.data?.message || 'Неверный логин или пароль')
     }
   }
 
@@ -547,34 +556,35 @@ export default function Admin() {
       </div>
 
       <div className="admin-content">
-        {activeTab === 'stats' && stats && (
+        {activeTab === 'stats' && (
+          stats ? (
           <div className="admin-stats">
             <div className="stats-grid">
               <div className="stat-card">
                 <h3>Пользователи</h3>
-                <div className="stat-value">{stats.users.total}</div>
+                <div className="stat-value">{stats?.users?.total || 0}</div>
                 <div className="stat-details">
-                  <div>Активных: {stats.users.active}</div>
-                  <div>Забанено: {stats.users.banned}</div>
-                  <div>Админов: {stats.users.admins}</div>
+                  <div>Активных: {stats?.users?.active || 0}</div>
+                  <div>Забанено: {stats?.users?.banned || 0}</div>
+                  <div>Админов: {stats?.users?.admins || 0}</div>
                 </div>
               </div>
 
               <div className="stat-card">
                 <h3>Игры</h3>
-                <div className="stat-value">{stats.games.total}</div>
+                <div className="stat-value">{stats?.games?.total || 0}</div>
                 <div className="stat-details">
-                  <div>Завершено: {stats.games.finished}</div>
-                  <div>В процессе: {stats.games.inProgress}</div>
-                  <div>Всего ходов: {stats.games.totalMoves}</div>
+                  <div>Завершено: {stats?.games?.finished || 0}</div>
+                  <div>В процессе: {stats?.games?.inProgress || 0}</div>
+                  <div>Всего ходов: {stats?.games?.totalMoves || 0}</div>
                 </div>
               </div>
 
               <div className="stat-card">
                 <h3>Экономика</h3>
-                <div className="stat-value">{Number(stats.economy.totalNarCoin).toLocaleString()} NAR</div>
+                <div className="stat-value">{Number(stats?.economy?.totalNarCoin || 0).toLocaleString()} NAR</div>
                 <div className="stat-details">
-                  <div>Всего XP: {Number(stats.economy.totalXp).toLocaleString()}</div>
+                  <div>Всего XP: {Number(stats?.economy?.totalXp || 0).toLocaleString()}</div>
                 </div>
               </div>
             </div>
@@ -582,14 +592,14 @@ export default function Admin() {
             <div className="stats-chart">
               <h3>Распределение по уровням</h3>
               <div className="level-chart">
-                {stats.users.levelDistribution.map((item) => (
+                {stats?.users?.levelDistribution?.map((item) => (
                   <div key={item.level} className="level-bar">
                     <div className="level-label">Уровень {item.level}</div>
                     <div className="level-progress">
                       <div
                         className="level-fill"
                         style={{
-                          width: `${(Number(item.count) / stats.users.total) * 100}%`,
+                          width: `${stats?.users?.total ? (Number(item.count) / (stats?.users?.total || 1)) * 100 : 0}%`,
                         }}
                       >
                         {item.count}
@@ -603,7 +613,7 @@ export default function Admin() {
             <div className="stats-chart">
               <h3>Игры за последние 7 дней</h3>
               <div className="games-chart">
-                {stats.games.last7Days.map((item) => (
+                {stats?.games?.last7Days?.map((item) => (
                   <div key={item.date} className="games-bar">
                     <div className="games-date">{new Date(item.date).toLocaleDateString()}</div>
                     <div className="games-count">{item.count}</div>
