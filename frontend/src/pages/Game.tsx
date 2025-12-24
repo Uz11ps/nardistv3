@@ -666,13 +666,37 @@ export default function Game() {
       if (data.gameId === gameId) {
         const timeRemaining = data.timeRemaining !== undefined ? data.timeRemaining : Math.max(0, 60 - (data.timeElapsed || 0))
         const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 60
+        const normalTimeLimit = 30 // Обычное время 30 секунд
+        const overtimeLimit = 60 // Овертайм 60 секунд
         
         if (data.currentPlayer === 0) {
           setPlayer1Timer(timeRemaining)
-          setPlayer2Timer(timeLimitSeconds)
+          // Вычисляем прогресс и овертайм для player1
+          if (timeRemaining <= normalTimeLimit) {
+            // Обычное время
+            setTimerProgress(timeRemaining / normalTimeLimit)
+            setIsInOvertime(false)
+          } else {
+            // Овертайм (время больше 30 секунд означает, что мы в овертайме)
+            const overtimeRemaining = timeRemaining - normalTimeLimit
+            setTimerProgress(overtimeRemaining / overtimeLimit)
+            setIsInOvertime(true)
+          }
+          setPlayer2Timer(timeLimitSeconds) // Соперник имеет полное время
         } else {
           setPlayer2Timer(timeRemaining)
-          setPlayer1Timer(timeLimitSeconds)
+          // Вычисляем прогресс и овертайм для player2
+          if (timeRemaining <= normalTimeLimit) {
+            // Обычное время
+            setTimerProgress(timeRemaining / normalTimeLimit)
+            setIsInOvertime(false)
+          } else {
+            // Овертайм
+            const overtimeRemaining = timeRemaining - normalTimeLimit
+            setTimerProgress(overtimeRemaining / overtimeLimit)
+            setIsInOvertime(true)
+          }
+          setPlayer1Timer(timeLimitSeconds) // Соперник имеет полное время
         }
       }
     })
@@ -1000,16 +1024,16 @@ export default function Game() {
                       strokeWidth="6"
                     />
                     <circle
-                      className={`game-player-timer-ring-progress ${isInOvertime && gameState?.currentPlayer === 1 ? 'overtime' : 'normal'}`}
+                      className={`game-player-timer-ring-progress ${player2Timer <= 30 && player2Timer < 60 ? 'overtime' : 'normal'}`}
                       cx="50"
                       cy="50"
                       r="45"
                       fill="none"
-                      stroke={isInOvertime && gameState?.currentPlayer === 1 ? '#FF9800' : '#4caf50'}
+                      stroke={player2Timer <= 30 && player2Timer < 60 ? '#FF9800' : '#4caf50'}
                       strokeWidth="6"
                       strokeLinecap="round"
                       strokeDasharray={2 * Math.PI * 45}
-                      strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, timerProgress)))}
+                      strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, player2Timer <= 30 ? player2Timer / 30 : (player2Timer - 30) / 60)))}
                       transform="rotate(-90 50 50)"
                     />
                   </svg>
@@ -1043,16 +1067,16 @@ export default function Game() {
                         strokeWidth="6"
                       />
                       <circle
-                        className={`game-player-timer-ring-progress ${isInOvertime && gameState?.currentPlayer === 1 ? 'overtime' : 'normal'}`}
+                        className={`game-player-timer-ring-progress ${player2Timer <= 30 && player2Timer < 60 ? 'overtime' : 'normal'}`}
                         cx="50"
                         cy="50"
                         r="45"
                         fill="none"
-                        stroke={isInOvertime && gameState?.currentPlayer === 1 ? '#FF9800' : '#4caf50'}
+                        stroke={player2Timer <= 30 && player2Timer < 60 ? '#FF9800' : '#4caf50'}
                         strokeWidth="6"
                         strokeLinecap="round"
                         strokeDasharray={2 * Math.PI * 45}
-                        strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, timerProgress)))}
+                        strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, player2Timer <= 30 ? player2Timer / 30 : (player2Timer - 30) / 60)))}
                         transform="rotate(-90 50 50)"
                       />
                     </svg>
@@ -1079,16 +1103,16 @@ export default function Game() {
                         strokeWidth="6"
                       />
                       <circle
-                        className={`game-player-timer-ring-progress ${isInOvertime && gameState?.currentPlayer === 0 ? 'overtime' : 'normal'}`}
+                        className={`game-player-timer-ring-progress ${player1Timer <= 30 && player1Timer < 60 ? 'overtime' : 'normal'}`}
                         cx="50"
                         cy="50"
                         r="45"
                         fill="none"
-                        stroke={isInOvertime && gameState?.currentPlayer === 0 ? '#FF9800' : '#4caf50'}
+                        stroke={player1Timer <= 30 && player1Timer < 60 ? '#FF9800' : '#4caf50'}
                         strokeWidth="6"
                         strokeLinecap="round"
                         strokeDasharray={2 * Math.PI * 45}
-                        strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, timerProgress)))}
+                        strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, player1Timer <= 30 ? player1Timer / 30 : (player1Timer - 30) / 60)))}
                         transform="rotate(-90 50 50)"
                       />
                     </svg>
@@ -1214,16 +1238,16 @@ export default function Game() {
                       strokeWidth="6"
                     />
                     <circle
-                      className={`game-player-timer-ring-progress ${isInOvertime && gameState?.currentPlayer === 0 ? 'overtime' : 'normal'}`}
+                      className={`game-player-timer-ring-progress ${player1Timer <= 30 && player1Timer < 60 ? 'overtime' : 'normal'}`}
                       cx="50"
                       cy="50"
                       r="45"
                       fill="none"
-                      stroke={isInOvertime && gameState?.currentPlayer === 0 ? '#FF9800' : '#4caf50'}
+                      stroke={player1Timer <= 30 && player1Timer < 60 ? '#FF9800' : '#4caf50'}
                       strokeWidth="6"
                       strokeLinecap="round"
                       strokeDasharray={2 * Math.PI * 45}
-                      strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, timerProgress)))}
+                      strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, player1Timer <= 30 ? player1Timer / 30 : (player1Timer - 30) / 60)))}
                       transform="rotate(-90 50 50)"
                     />
                   </svg>

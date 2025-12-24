@@ -86,14 +86,20 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
 
       const now = new Date();
       const timeSinceLastMove = Math.floor((now.getTime() - game.lastMoveAt.getTime()) / 1000);
-      const timeLimitSeconds = Math.floor((game.moveTimeLimit || 60000) / 1000); // Конвертируем миллисекунды в секунды
+      const normalTimeLimit = 30; // Обычное время 30 секунд
+      const overtimeLimit = 60; // Овертайм 60 секунд
+      const totalTimeLimit = normalTimeLimit + overtimeLimit; // Всего 90 секунд
+      
+      // Вычисляем оставшееся время (90 секунд максимум)
+      const timeRemaining = Math.max(0, totalTimeLimit - timeSinceLastMove);
       
       // Отправляем таймер всем участникам игры
       this.server.to(`game:${gameId}`).emit('timer_update', {
         gameId: game.id,
         currentPlayer: game.currentPlayer,
         timeElapsed: timeSinceLastMove,
-        timeRemaining: Math.max(0, timeLimitSeconds - timeSinceLastMove),
+        timeRemaining: timeRemaining,
+        isOvertime: timeSinceLastMove > normalTimeLimit,
       });
     } catch (error) {
       this.logger.error(`❌ Error sending timer update for game ${gameId}:`, error);
@@ -122,14 +128,20 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           // Убеждаемся, что lastMoveAt это Date объект
           const lastMoveAt = game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt);
           const timeSinceLastMove = Math.floor((now.getTime() - lastMoveAt.getTime()) / 1000);
-          const timeLimitSeconds = Math.floor((game.moveTimeLimit || 60000) / 1000); // Конвертируем миллисекунды в секунды
+          const normalTimeLimit = 30; // Обычное время 30 секунд
+          const overtimeLimit = 60; // Овертайм 60 секунд
+          const totalTimeLimit = normalTimeLimit + overtimeLimit; // Всего 90 секунд
+          
+          // Вычисляем оставшееся время (90 секунд максимум)
+          const timeRemaining = Math.max(0, totalTimeLimit - timeSinceLastMove);
           
           // Отправляем таймер всем участникам игры
           this.server.to(`game:${game.id}`).emit('timer_update', {
             gameId: game.id,
             currentPlayer: game.currentPlayer,
             timeElapsed: timeSinceLastMove,
-            timeRemaining: Math.max(0, timeLimitSeconds - timeSinceLastMove),
+            timeRemaining: timeRemaining,
+            isOvertime: timeSinceLastMove > normalTimeLimit,
           });
         } catch (gameError) {
           this.logger.warn(`Error sending timer update for game ${game.id}:`, gameError);
@@ -170,10 +182,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         }
 
         const timeSinceLastMove = now.getTime() - game.lastMoveAt.getTime();
-        const moveTimeLimit = game.moveTimeLimit || 60000; // Используем moveTimeLimit из игры
+        const normalTimeLimit = 30000; // 30 секунд обычное время
+        const overtimeLimit = 60000; // 60 секунд овертайм
+        const totalTimeLimit = normalTimeLimit + overtimeLimit; // Всего 90 секунд
 
-        // Если прошло больше времени на ход, завершаем игру в пользу противника
-        if (timeSinceLastMove > moveTimeLimit) {
+        // Если прошло больше времени на ход (90 секунд), завершаем игру в пользу противника
+        if (timeSinceLastMove > totalTimeLimit) {
           this.logger.warn(`⏱️ Move timeout detected for game ${game.id}, currentPlayer: ${game.currentPlayer}`);
           
           try {
