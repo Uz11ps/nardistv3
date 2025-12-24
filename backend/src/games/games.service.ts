@@ -615,7 +615,9 @@ export class GamesService {
         if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
           const remainingMoves = engine.getAllValidMoves(currentState, remainingDice);
           // getAllValidMoves возвращает последовательности. Если есть хотя бы одна непустая - ходы есть.
+          // Также проверяем, что не вернулся только пустой массив [[]]
           hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
+          this.logger.log(`🔍 Checking remaining moves: dice=[${remainingDice.join(', ')}], found ${remainingMoves.length} sequences, hasValidMoves=${hasValidMoves}`);
         }
         
         if (hasValidMoves) {
@@ -627,7 +629,7 @@ export class GamesService {
           currentState.dice = [];
           currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
           currentState.movesFromHead = 0;
-        currentState.movesFromPoint = {};
+          currentState.movesFromPoint = {};
           this.logger.log(`🔄 Turn switched: no valid moves remain with [${remainingDice.join(', ')}]. New player: ${currentState.currentPlayer}`);
         }
       }

@@ -545,11 +545,13 @@ export default function Game() {
     socket.on('move_made', (data: any) => {
       setPendingMoves([])
       const diceData = data.gameState?.dice
-      const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
-        ? { die1: diceData[0], die2: diceData[1] } 
-        : (Array.isArray(diceData) && diceData.length === 0) || !diceData
-        ? null
-        : diceData
+      // Для дублей может быть массив из 4 элементов, для обычных - из 2
+      // Сохраняем весь массив, если он есть
+      const formattedDice = Array.isArray(diceData) && diceData.length > 0
+        ? diceData.length === 2
+          ? { die1: diceData[0], die2: diceData[1] }
+          : diceData // Для дублей (4 элемента) или других случаев сохраняем массив
+        : null
       
       const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
       const isMyTurnNow = canMove

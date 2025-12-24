@@ -253,7 +253,8 @@ export class LongBackgammonEngine {
     if (state.points[to] < 0) return false;
     
     // Проверяем правило дублей для ЛЮБОЙ точки (не только головы)
-    const isDoubles = state.dice && state.dice.length === 2 && state.dice[0] === state.dice[1];
+    // Дубль определяется по тому, что все кубики одинаковые (может быть 2, 3 или 4 кубика)
+    const isDoubles = state.dice && state.dice.length >= 2 && state.dice.every(d => d === state.dice[0]);
     if (isDoubles) {
       const movesFromThisPoint = (state.movesFromPoint || {})[from] || 0;
       if (movesFromThisPoint >= 2) {
@@ -316,7 +317,8 @@ export class LongBackgammonEngine {
     if (state.points[to] > 0) return false;
     
     // Проверяем правило дублей для ЛЮБОЙ точки (не только головы)
-    const isDoubles = state.dice && state.dice.length === 2 && state.dice[0] === state.dice[1];
+    // Дубль определяется по тому, что все кубики одинаковые (может быть 2, 3 или 4 кубика)
+    const isDoubles = state.dice && state.dice.length >= 2 && state.dice.every(d => d === state.dice[0]);
     if (isDoubles) {
       const movesFromThisPoint = (state.movesFromPoint || {})[from] || 0;
       if (movesFromThisPoint >= 2) {
@@ -485,7 +487,9 @@ export class LongBackgammonEngine {
     if (dice.length === 0) return [];
 
     const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
-    const isDoubles = dice.length === 4 && dice.every(d => d === dice[0]);
+    // Дубль определяется по тому, что все кубики одинаковые (может быть 2, 3 или 4 кубика)
+    // Изначально дубль - это 4 одинаковых кубика, но после использования одного может остаться 3
+    const isDoubles = dice.length >= 2 && dice.every(d => d === dice[0]);
     
     const generateMoves = (
       currentState: LongBoardState,

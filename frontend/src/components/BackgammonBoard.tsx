@@ -179,10 +179,10 @@ export default function BackgammonBoard({
       }
     }
     
-    // Debounce для предотвращения частых запросов
+    // Debounce для предотвращения частых запросов (увеличиваем для уменьшения лагов)
     timeoutId = window.setTimeout(() => {
       fetchPossibleMoves()
-    }, 150)
+    }, 300)
     
     return () => {
       cancelled = true
@@ -265,10 +265,16 @@ export default function BackgammonBoard({
       }
     }
     
-    const y = isTopRow ? 0 : height
+    let y = isTopRow ? 0 : height
+    
+    // Для player2 инвертируем координаты точек, так как доска инвертирована на 180 градусов
+    if (!isPlayer1) {
+      x = width - x
+      y = height - y
+    }
     
     return { x, y, isTopRow, pointWidth, pointHeight, pointNumber }
-  }, [])
+  }, [isPlayer1])
   
   // Функция для определения точки по координатам
   const getPointAtPosition = useCallback((x: number, y: number, canvas: HTMLCanvasElement): number | null => {
