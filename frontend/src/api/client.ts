@@ -34,24 +34,40 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Обрабатываем только ошибки 401 для пользовательских токенов (не админских)
-    if (error.response?.status === 401 && !localStorage.getItem('admin_token')) {
-      const errorMessage = error.response?.data?.message || ''
-      
-      // Проверяем, является ли ошибка баном
-      if (errorMessage.includes('забанены') || errorMessage.includes('забанен')) {
-        // Импортируем store динамически чтобы избежать циклических зависимостей
-        import('../store/authStore').then(({ useAuthStore }) => {
-          const { setBanReason } = useAuthStore.getState()
-          
-          // Извлекаем причину из сообщения
-          const banMatch = errorMessage.match(/по причине:\s*(.+)/i)
-          const reason = banMatch ? banMatch[1] : errorMessage.replace(/Вы были забанены\s*/i, '')
-          
-          // Удаляем токен и устанавливаем причину бана
-          localStorage.removeItem('token')
-          setBanReason(reason)
-        })
+    // Проверяем, является ли это админским эндпоинтом
+    const isAdminEndpoint = error.config?.url?.startsWith('/admin') || false
+    
+    if (error.response?.status === 401) {
+      if (isAdminEndpoint) {
+        // Для админских эндпоинтов просто удаляем токен при 401
+        // Не показываем ошибку в консоли, так как это нормально для неавторизованных запросов
+        if (localStorage.getItem('admin_token')) {
+          localStorage.removeItem('admin_token')
+        }
+        // Не логируем ошибку для админских эндпоинтов, если токена нет
+        if (!localStorage.getItem('admin_token')) {
+          // Подавляем ошибку для неавторизованных админских запросов
+          return Promise.reject(error)
+        }
+      } else {
+        // Обрабатываем только ошибки 401 для пользовательских токенов (не админских)
+        const errorMessage = error.response?.data?.message || ''
+        
+        // Проверяем, является ли ошибка баном
+        if (errorMessage.includes('забанены') || errorMessage.includes('забанен')) {
+          // Импортируем store динамически чтобы избежать циклических зависимостей
+          import('../store/authStore').then(({ useAuthStore }) => {
+            const { setBanReason } = useAuthStore.getState()
+            
+            // Извлекаем причину из сообщения
+            const banMatch = errorMessage.match(/по причине:\s*(.+)/i)
+            const reason = banMatch ? banMatch[1] : errorMessage.replace(/Вы были забанены\s*/i, '')
+            
+            // Удаляем токен и устанавливаем причину бана
+            localStorage.removeItem('token')
+            setBanReason(reason)
+          })
+        }
       }
     }
     

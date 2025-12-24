@@ -141,19 +141,98 @@ export default function Admin() {
 
   const loadStats = async () => {
     try {
+      // Проверяем авторизацию перед загрузкой данных
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        setIsAuthenticated(false)
+        return
+      }
+      
       const [statsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, buildingsRes, policiesRes, templatesRes] = await Promise.all([
-        apiClient.get('/admin/stats'),
-        apiClient.get('/admin/users'),
-        apiClient.get('/admin/games'),
-        apiClient.get('/admin/tournaments').catch(() => ({ data: [] })),
-        apiClient.get('/admin/academy').catch(() => ({ data: [] })),
-        apiClient.get('/admin/city/rewards').catch(() => ({ data: null })),
-        apiClient.get('/admin/skins').catch(() => ({ data: [] })),
-        apiClient.get('/admin/quests').catch(() => ({ data: [] })),
-        apiClient.get('/admin/clans').catch(() => ({ data: [] })),
-        apiClient.get('/admin/buildings').catch(() => ({ data: [] })),
-        apiClient.get('/policy/admin/all').catch(() => ({ data: [] })),
-        apiClient.get('/admin/notification-templates').catch(() => ({ data: [] })),
+        apiClient.get('/admin/stats').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: {} }
+        }),
+        apiClient.get('/admin/users').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/admin/games').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/admin/tournaments').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/admin/academy').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/admin/city/rewards').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: null }
+        }),
+        apiClient.get('/admin/skins').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/admin/quests').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/admin/clans').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/admin/buildings').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/policy/admin/all').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
+        apiClient.get('/admin/notification-templates').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: [] }
+        }),
       ])
       setStats(statsRes.data)
       setUsers(usersRes.data)
@@ -176,8 +255,16 @@ export default function Admin() {
         })
       }
       setPolicies(policiesData)
-    } catch (error) {
-      console.error('Ошибка загрузки данных:', error)
+    } catch (error: any) {
+      // Не показываем ошибки в консоли для неавторизованных запросов
+      if (error.response?.status !== 401) {
+        console.error('Ошибка загрузки данных:', error)
+      }
+      // Если получили 401, сбрасываем авторизацию
+      if (error.response?.status === 401) {
+        localStorage.removeItem('admin_token')
+        setIsAuthenticated(false)
+      }
     }
   }
 
