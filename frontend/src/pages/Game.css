@@ -207,7 +207,7 @@
 }
 
 .game-player-timer-ring-progress {
-  transition: stroke-dashoffset 0.1s linear, stroke 0.3s;
+  transition: stroke-dashoffset 0.05s linear, stroke 0.3s;
 }
 
 .game-player-timer-ring-progress.normal {
