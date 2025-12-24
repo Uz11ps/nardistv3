@@ -326,7 +326,10 @@ export class GamesService {
         relations: [], // Не загружаем relations для производительности
       });
     } catch (error) {
-      this.logger.error(`Error fetching active in-progress games:`, error);
+      this.logger.error(`Error fetching active in-progress games:`, error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.stack) {
+        this.logger.debug(`Error stack:`, error.stack);
+      }
       return []; // Возвращаем пустой массив при ошибке
     }
   }

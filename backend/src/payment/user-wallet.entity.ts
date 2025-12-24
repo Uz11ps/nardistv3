@@ -26,7 +26,6 @@ export class UserWallet {
   user: User;
 
   @Column()
-  @Index()
   userId: string;
 
   /**
