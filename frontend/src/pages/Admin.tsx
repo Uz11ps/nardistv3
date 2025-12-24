@@ -135,6 +135,8 @@ export default function Admin() {
       if (response.data?.access_token) {
         localStorage.setItem('admin_token', response.data.access_token)
         setIsAuthenticated(true)
+        // Небольшая задержка, чтобы токен успел сохраниться и interceptor успел его подхватить
+        await new Promise(resolve => setTimeout(resolve, 100))
         await loadStats()
       } else {
         console.error('❌ Токен не получен в ответе')

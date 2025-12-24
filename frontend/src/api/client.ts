@@ -12,13 +12,16 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   // Проверяем, является ли это админским эндпоинтом
-  const isAdminEndpoint = config.url?.startsWith('/admin') || false
+  const isAdminEndpoint = config.url?.startsWith('/admin') || config.url?.startsWith('/policy/admin') || false
   
   if (isAdminEndpoint) {
     // Для админ-запросов используем admin_token
     const adminToken = localStorage.getItem('admin_token')
     if (adminToken) {
       config.headers.Authorization = `Bearer ${adminToken}`
+      console.log('🔑 Добавлен админский токен в заголовок для:', config.url)
+    } else {
+      console.warn('⚠️ Админский токен не найден для:', config.url)
     }
   } else {
     // Для обычных запросов используем user token (НЕ admin_token!)
