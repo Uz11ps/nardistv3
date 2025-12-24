@@ -5,6 +5,7 @@ import { AdminService } from './admin.service';
 import { ImageProcessorService } from './image-processor.service';
 import { AcademyService } from '../academy/academy.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { AdminAuthGuard } from '../common/guards/admin-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { CreateSkinDto } from './dto/create-skin.dto';
@@ -74,92 +75,65 @@ export class AdminController {
   }
 
   @Get('stats')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getStats(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getStats();
   }
 
   @Get('users')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getUsers(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllUsers();
   }
 
   @Get('users/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getUser(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getUserDetails(id);
   }
 
   @Post('users/:id/ban')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async banUser(@CurrentUser() user: any, @Param('id') id: string, @Body('reason') reason: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.banUser(id, reason);
   }
 
   @Post('users/:id/unban')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async unbanUser(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.unbanUser(id);
   }
 
   @Delete('users/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteUser(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteUser(id);
   }
 
   @Post('users/:id/subscription')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async giveSubscription(
     @CurrentUser() user: any,
     @Param('id') id: string,
     @Body() body: { plan: string; months?: number },
   ) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.giveSubscription(id, body.plan, body.months);
   }
 
   @Get('games')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getGames(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllGames();
   }
 
   @Get('games/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getGame(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getGameDetails(id);
   }
 
   @Post('notifications')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @UseInterceptors(FileInterceptor('image', {
     storage: diskStorage({
       destination: (req, file, cb) => {
@@ -182,9 +156,6 @@ export class AdminController {
     @Body() body: { userId?: string; message: string; all?: boolean },
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     
     let imageUrl: string | undefined;
     if (file) {
@@ -196,106 +167,73 @@ export class AdminController {
   }
 
   @Delete('notifications/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteNotification(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteNotification(id);
   }
 
   @Delete('notifications/user/:userId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteUserNotifications(@CurrentUser() user: any, @Param('userId') userId: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteUserNotifications(userId);
   }
 
   @Delete('notifications/all')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteAllNotifications(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteAllNotifications();
   }
 
   @Post('games/create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async createGame(@CurrentUser() user: any, @Body() body: { player1Id: string; player2Id?: string; mode: string; type: string }) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.createGame(body);
   }
 
   @Post('tournaments/create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async createTournament(@CurrentUser() user: any, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.createTournament(body);
   }
 
   @Get('tournaments')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getTournaments(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllTournaments();
   }
 
   @Get('tournaments/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getTournament(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getTournament(id);
   }
 
   @Put('tournaments/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateTournament(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateTournament(id, body);
   }
 
   @Delete('tournaments/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteTournament(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteTournament(id);
   }
 
   @Post('academy/create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async createArticle(@CurrentUser() user: any, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.createArticle(body);
   }
 
   @Get('academy')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getArticles(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllArticles();
   }
 
   @Get('courses/pending')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getPendingCourses(@CurrentUser() user: any) {
     if (!user.isAdmin && !user.isTrainer) {
       throw new UnauthorizedException('Недостаточно прав');
@@ -304,7 +242,7 @@ export class AdminController {
   }
 
   @Post('courses/:id/verify')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async verifyCourse(@CurrentUser() user: any, @Param('id') id: string) {
     if (!user.isAdmin && !user.isTrainer) {
       throw new UnauthorizedException('Недостаточно прав');
@@ -313,7 +251,7 @@ export class AdminController {
   }
 
   @Post('courses/:id/reject')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async rejectCourse(@CurrentUser() user: any, @Param('id') id: string) {
     if (!user.isAdmin && !user.isTrainer) {
       throw new UnauthorizedException('Недостаточно прав');
@@ -323,129 +261,90 @@ export class AdminController {
   }
 
   @Get('settings')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getSystemSettings(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllSystemSettings();
   }
 
   @Post('settings')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async setSystemSetting(
     @CurrentUser() user: any,
     @Body() body: { key: string; value: string; description?: string },
   ) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.setSystemSetting(body.key, body.value, body.description);
   }
 
   @Put('academy/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateArticle(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateArticle(id, body);
   }
 
   @Delete('academy/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteArticle(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteArticle(id);
   }
 
   @Get('city/rewards')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getCityRewards(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getCityRewards();
   }
 
   @Put('city/rewards')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateCityRewards(@CurrentUser() user: any, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateCityRewards(body);
   }
 
   // CRUD для территорий
   @Get('districts')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getAllDistricts(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllDistricts();
   }
 
   @Get('districts/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getDistrict(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getDistrict(id);
   }
 
   @Post('districts')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async createDistrict(@CurrentUser() user: any, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.createDistrict(body);
   }
 
   @Put('districts/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateDistrict(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateDistrict(id, body);
   }
 
   @Delete('districts/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteDistrict(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteDistrict(id);
   }
 
   // CRUD для конфигураций строений
   @Get('buildings')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getAllBuildings(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllBuildingConfigs();
   }
 
   @Get('buildings/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getBuilding(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getBuildingConfig(id);
   }
 
   @Post('buildings')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @UseInterceptors(
     AnyFilesInterceptor({
       storage: diskStorage({
@@ -469,9 +368,6 @@ export class AdminController {
     @Body() body: any,
     @UploadedFiles() files?: Array<{ fieldname: string; filename: string; originalname: string; mimetype: string; size: number }>,
   ) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     
     // Обрабатываем загруженные файлы
     let iconUrl = body.icon || null;
@@ -498,7 +394,7 @@ export class AdminController {
   }
 
   @Put('buildings/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @UseInterceptors(
     AnyFilesInterceptor({
       storage: diskStorage({
@@ -523,9 +419,6 @@ export class AdminController {
     @Body() body: any,
     @UploadedFiles() files?: Array<{ fieldname: string; filename: string; originalname: string; mimetype: string; size: number }>,
   ) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     
     const updateData: any = { ...body };
     
@@ -545,73 +438,52 @@ export class AdminController {
   }
 
   @Delete('buildings/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteBuilding(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteBuildingConfig(id);
   }
 
   // CRUD для шаблонов уведомлений Telegram
   @Get('notification-templates')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getAllNotificationTemplates(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllNotificationTemplates();
   }
 
   @Get('notification-templates/:type')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getNotificationTemplate(@CurrentUser() user: any, @Param('type') type: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getNotificationTemplate(type as any);
   }
 
   @Post('notification-templates')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async createNotificationTemplate(@CurrentUser() user: any, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.createNotificationTemplate(body);
   }
 
   @Put('notification-templates/:type')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateNotificationTemplate(@CurrentUser() user: any, @Param('type') type: string, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateNotificationTemplate(type as any, body);
   }
 
   @Delete('notification-templates/:type')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteNotificationTemplate(@CurrentUser() user: any, @Param('type') type: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     await this.adminService.deleteNotificationTemplate(type as any);
     return { message: 'Шаблон удален' };
   }
 
   // CRUD для скинов
   @Get('skins')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getSkins(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllSkins();
   }
 
   @Post('skins')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @UseInterceptors(
     AnyFilesInterceptor({ // Принимаем файлы с любыми именами полей: preview, boardTexture, diceTexture1-6, checkersTexture
       storage: diskStorage({
@@ -647,9 +519,6 @@ export class AdminController {
     @Body() body: any,
     @UploadedFiles() files?: Array<{ fieldname: string; filename: string; originalname: string; mimetype: string; size: number }>,
   ) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     
     const skinType = body.type || 'board';
     
@@ -778,25 +647,19 @@ export class AdminController {
   }
 
   @Put('skins/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateSkin(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateSkin(id, body);
   }
 
   @Delete('skins/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteSkin(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteSkin(id);
   }
 
   @Post('skins/:id/upload-image')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @UseInterceptors(
     FileInterceptor('image', {
       storage: diskStorage({
@@ -828,9 +691,6 @@ export class AdminController {
     @Param('id') id: string,
     @UploadedFile() file?: { fieldname: string; filename: string; originalname: string; mimetype: string; size: number },
   ) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     
     if (!file) {
       throw new BadRequestException('Файл не загружен');
@@ -860,7 +720,7 @@ export class AdminController {
   }
 
   @Post('skins/:id/upload-textures')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @UseInterceptors(
     AnyFilesInterceptor({ // preview, boardTexture/diceTexture1-6/checkersTexture (до 10 файлов для кубиков)
       storage: diskStorage({
@@ -893,9 +753,6 @@ export class AdminController {
     @Param('id') id: string,
     @UploadedFiles() files?: Array<{ fieldname: string; filename: string; originalname: string; mimetype: string; size: number }>,
   ) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     
     if (!files || files.length === 0) {
       throw new BadRequestException('Файлы не загружены');
@@ -967,152 +824,104 @@ export class AdminController {
 
   // CRUD для квестов
   @Get('quests')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getQuests(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllQuests();
   }
 
   @Get('quests/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getQuest(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getQuest(id);
   }
 
   @Post('quests')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async createQuest(@CurrentUser() user: any, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.createQuest(body);
   }
 
   @Put('quests/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateQuest(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateQuest(id, body);
   }
 
   @Delete('quests/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteQuest(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteQuest(id);
   }
 
   // CRUD для кланов
   @Get('clans')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getClans(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getAllClans();
   }
 
   @Get('clans/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getClan(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.getClan(id);
   }
 
   @Put('clans/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateClan(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateClan(id, body);
   }
 
   @Delete('clans/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async deleteClan(@CurrentUser() user: any, @Param('id') id: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.deleteClan(id);
   }
 
   @Delete('clans/:clanId/members/:userId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async removeClanMember(@CurrentUser() user: any, @Param('clanId') clanId: string, @Param('userId') userId: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.removeClanMember(clanId, userId);
   }
 
   // Расширенное управление пользователями
   @Put('users/:id/balance')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateUserBalance(@CurrentUser() user: any, @Param('id') userId: string, @Body() body: { narCoin: number; xp?: number }) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateUserBalance(userId, body.narCoin, body.xp);
   }
 
   @Put('users/:id/level')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async setUserLevel(@CurrentUser() user: any, @Param('id') userId: string, @Body() body: { level: number }) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.setUserLevel(userId, body.level);
   }
 
   @Post('users/:id/sync-level')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async syncUserLevelFromXP(@CurrentUser() user: any, @Param('id') userId: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.syncUserLevelFromXP(userId);
   }
 
   @Put('users/:id/role')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async setUserRole(@CurrentUser() user: any, @Param('id') userId: string, @Body() body: { isAdmin: boolean; isTrainer: boolean }) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.setUserRole(userId, body.isAdmin, body.isTrainer);
   }
 
   @Post('users/:id/reset-progress')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async resetUserProgress(@CurrentUser() user: any, @Param('id') userId: string) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.resetUserProgress(userId);
   }
 
   @Put('users/:id/referral-settings')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async updateUserReferralSettings(
     @CurrentUser() user: any,
     @Param('id') userId: string,
     @Body() body: { referralPercent?: number; referralBaseBonus?: number },
   ) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.adminService.updateUserReferralSettings(userId, body);
   }
 }

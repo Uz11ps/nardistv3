@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
 import { PolicyService } from './policy.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { AdminAuthGuard } from '../common/guards/admin-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UnauthorizedException } from '@nestjs/common';
 
@@ -43,11 +44,8 @@ export class PolicyController {
   }
 
   @Get('admin/all')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async getAllPolicies(@CurrentUser() user: any) {
-    if (!user.isAdmin) {
-      throw new UnauthorizedException('Недостаточно прав');
-    }
     return this.policyService.getAllPolicies();
   }
 }
