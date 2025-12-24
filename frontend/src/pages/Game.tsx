@@ -1185,7 +1185,7 @@ export default function Game() {
           {(gameStatus === 'in_progress' || gameStatus === 'finished') && (
             <div className="board-wrapper">
               <BackgammonBoard
-                key={`board-${gameId}-${gameState?.currentPlayer}`}
+                key={`board-${gameId}`}
                 player1Skins={playerSkins.player1}
                 player2Skins={playerSkins.player2}
                 mySkins={playerSkins.mySkins}

@@ -115,19 +115,38 @@ export default function BackgammonBoard({
     }
   }, [gameState, pendingMoves, isPlayer1, gameMode])
 
+  // Стабилизируем dice для сравнения
+  const diceKey = useMemo(() => {
+    if (!dice) return null
+    if (Array.isArray(dice)) {
+      return dice.sort().join(',')
+    }
+    if (typeof dice === 'object' && 'die1' in dice && 'die2' in dice) {
+      return [dice.die1, dice.die2].sort().join(',')
+    }
+    return null
+  }, [dice])
+
+  // Стабилизируем pendingMoves для сравнения
+  const pendingMovesKey = useMemo(() => {
+    return JSON.stringify(pendingMoves.map(m => ({ from: m.from, to: m.to, die: m.die })))
+  }, [pendingMoves])
+
   // Получение возможных ходов
   useEffect(() => {
-    // Проверяем наличие кубиков (может быть массив или объект {die1, die2})
-    const hasDice = dice && (
-      (Array.isArray(dice) && dice.length > 0) || 
-      (typeof dice === 'object' && !Array.isArray(dice) && 'die1' in dice && 'die2' in dice && (dice.die1 || dice.die2))
-    )
+    // Проверяем наличие кубиков
+    const hasDice = diceKey !== null
     
     if (!gameId || !isMyTurn || !canMove || !hasDice) {
-      setPossibleMoves([])
-      setHighlightedPoints(new Set())
+      // Не сбрасываем подсветку если это просто обновление состояния, а не смена хода
+      if (!isMyTurn || !canMove) {
+        setPossibleMoves([])
+        setHighlightedPoints(new Set())
+      }
       return
     }
+    
+    let timeoutId: NodeJS.Timeout | null = null
     
     const fetchPossibleMoves = async () => {
       try {
@@ -153,8 +172,15 @@ export default function BackgammonBoard({
       }
     }
     
-    fetchPossibleMoves()
-  }, [gameId, isMyTurn, canMove, dice, pendingMoves]) // Убрали зависимости от gameState, чтобы подсветка не сбрасывалась при обновлении состояния
+    // Debounce для предотвращения частых запросов
+    timeoutId = setTimeout(() => {
+      fetchPossibleMoves()
+    }, 100)
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey]) // Используем стабилизированные ключи
   
   // Определение позиции для кубиков
   useEffect(() => {
