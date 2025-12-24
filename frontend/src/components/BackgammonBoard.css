@@ -22,30 +22,28 @@
   opacity: 0.95;
 }
 
-.bear-off-overlay-btn {
-  background: #ffcc00;
-  color: #000;
-  border: 2px solid #000;
-  border-radius: 20px;
-  padding: 8px 16px;
-  font-weight: bold;
-  font-size: 14px;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  white-space: nowrap;
-  animation: bearOffPulse 1.5s infinite;
+.bear-off-panel {
+  width: 60px;
+  height: 8px;
+  background: #4caf50;
+  border-radius: 4px;
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.8), 0 0 24px rgba(76, 175, 80, 0.4);
+  animation: bearOffGlow 1.5s infinite;
   transition: all 0.2s;
 }
 
-.bear-off-overlay-btn:hover {
-  background: #ffd633;
-  transform: translate(-50%, -50%) scale(1.1);
+.bear-off-panel:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 0 16px rgba(76, 175, 80, 1), 0 0 32px rgba(76, 175, 80, 0.6);
 }
 
-@keyframes bearOffPulse {
-  0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-  50% { transform: translate(-50%, -50%) scale(1.05); box-shadow: 0 4px 20px rgba(255, 204, 0, 0.5); }
-  100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+@keyframes bearOffGlow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.8), 0 0 24px rgba(76, 175, 80, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(76, 175, 80, 1), 0 0 32px rgba(76, 175, 80, 0.6);
+  }
 }
 
 /* Адаптивность */

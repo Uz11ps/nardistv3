@@ -187,14 +187,14 @@ export default function Game() {
             setIsInOvertime(true)
             if (!overtimeRef.current) {
               overtimeRef.current = setInterval(() => {
-                setOvertimeTimer((prevOvertime) => {
+                  setOvertimeTimer((prevOvertime) => {
                   if (prevOvertime <= 1) {
                     // Овертайм закончился - техническое поражение
-                    handleAutoMove()
                     if (overtimeRef.current) {
                       clearInterval(overtimeRef.current)
                       overtimeRef.current = null
                     }
+                    handleAutoMove()
                     return 0
                   }
                   return prevOvertime - 1
@@ -919,7 +919,7 @@ export default function Game() {
           {(gameStatus === 'in_progress' || gameStatus === 'finished') && (
             <div className="board-wrapper">
               <BackgammonBoard
-                key={`board-${gameState?.points?.join(',')}-${gameState?.currentPlayer}-${pendingMoves.length}`}
+                key={`board-${gameId}-${gameState?.currentPlayer}`}
                 player1Skins={playerSkins.player1}
                 player2Skins={playerSkins.player2}
                 mySkins={playerSkins.mySkins}
@@ -943,8 +943,8 @@ export default function Game() {
             </div>
           )}
 
-          {/* Подтверждение хода (только в портрете) */}
-          {!isLandscape && gameStatus === 'in_progress' && isMyTurn && gameState?.dice && (
+          {/* Подтверждение хода (только в портрете, только если есть pendingMoves) */}
+          {!isLandscape && gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
             <div className="game-confirm-section">
               <div style={{ textAlign: 'center', marginBottom: '8px' }}>
                 {!isInOvertime ? (
@@ -954,18 +954,15 @@ export default function Game() {
                 )}
               </div>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                {pendingMoves.length > 0 && (
-                  <Button variant="secondary" onClick={handleUndo} style={{ flex: 1 }}>
-                    Отменить
-                  </Button>
-                )}
+                <Button variant="secondary" onClick={handleUndo} style={{ flex: 1 }}>
+                  Отменить
+                </Button>
                 <Button 
                   variant="primary" 
                   onClick={handleConfirm}
-                  disabled={pendingMoves.length === 0}
                   style={{ flex: 2 }}
                 >
-                  {pendingMoves.length > 0 ? `Подтвердить (${pendingMoves.length})` : 'Подтвердить ход'}
+                  Подтвердить ({pendingMoves.length})
                 </Button>
               </div>
             </div>
@@ -995,8 +992,8 @@ export default function Game() {
               </div>
             </div>
 
-            {/* Подтверждение хода в сайдбаре */}
-            {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && (
+            {/* Подтверждение хода в сайдбаре (только если есть pendingMoves) */}
+            {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
               <div className="game-confirm-sidebar">
                 <div className="sidebar-timers">
                   {!isInOvertime ? (
@@ -1009,14 +1006,11 @@ export default function Game() {
                   <Button 
                     variant="primary" 
                     onClick={handleConfirm}
-                    disabled={pendingMoves.length === 0}
                     className="sidebar-ok-btn"
                   >
-                    OK {pendingMoves.length > 0 ? `(${pendingMoves.length})` : ''}
+                    OK ({pendingMoves.length})
                   </Button>
-                  {pendingMoves.length > 0 && (
-                    <Button variant="secondary" onClick={handleUndo} className="sidebar-undo-btn">↩️</Button>
-                  )}
+                  <Button variant="secondary" onClick={handleUndo} className="sidebar-undo-btn">↩️</Button>
                 </div>
               </div>
             )}

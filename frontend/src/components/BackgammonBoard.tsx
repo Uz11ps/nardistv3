@@ -416,8 +416,8 @@ export default function BackgammonBoard({
         }
       }
 
-      // 2. Подсветка возможных исходных точек (когда не перетаскиваем)
-      if (!dragging && highlightedPoints.has(pointIndex)) {
+      // 2. Подсветка возможных исходных точек (только после выбора шашки)
+      if (!dragging && selectedPoint !== null && highlightedPoints.has(pointIndex)) {
         ctx.save()
         ctx.shadowBlur = 15
         ctx.shadowColor = 'rgba(0, 255, 0, 0.8)'
@@ -1116,37 +1116,36 @@ export default function BackgammonBoard({
         style={{ touchAction: 'none' }} // Отключаем стандартные жесты браузера на канвасе
       />
       
-      {/* Кнопка сброса шашки */}
+      {/* Панель сброса шашки */}
       {showBearOffButton && canvasRef.current && (
         (() => {
           const coords = getPointCoordinates(showBearOffButton.pointIndex, canvasRef.current)
           const isTop = coords.isTopRow
           const btnX = coords.x
-          const btnY = isTop ? coords.pointHeight + 40 : containerHeight - coords.pointHeight - 40
+          const btnY = isTop ? coords.pointHeight + 20 : containerHeight - coords.pointHeight - 20
           
           return (
-            <button
-              className="bear-off-overlay-btn"
+            <div
+              className="bear-off-panel"
               style={{
                 position: 'absolute',
                 left: `${btnX}px`,
                 top: `${btnY}px`,
                 transform: 'translate(-50%, -50%)',
                 zIndex: 100,
+                cursor: 'pointer',
               }}
               onClick={(e) => {
                 e.stopPropagation()
                 startMoveAnimation(showBearOffButton.pointIndex, -1, showBearOffButton.die, showBearOffButton.steps)
               }}
-            >
-              СБРОСИТЬ
-            </button>
+            />
           )
         })()
       )}
       
       {/* Кубики */}
-      {diceArray && dice3DPosition && (
+      {diceArray && diceArray.length > 0 && dice3DPosition && (
         <div
           style={{
             position: 'absolute',

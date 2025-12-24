@@ -789,6 +789,7 @@ export class GamesService {
 
       // 2. Добавляем комбинированные ходы (одна шашка идет по цепочке)
       // Мы берем цепочки шагов одной и той же шашки
+      // Это позволяет использовать все кубики из дубля одной шашкой (например, 3/3 = 4 кубика по 3, можно походить на 12)
       let currentFrom = seq[0].from;
       let totalDie = seq[0].die;
       let steps = [seq[0]];
@@ -811,7 +812,39 @@ export class GamesService {
           }
         } else {
           // Цепочка прервалась (другая шашка начала ходить)
-          break;
+          // Сохраняем текущую цепочку, если она содержит более одного шага
+          if (steps.length > 1) {
+            const lastStep = steps[steps.length - 1];
+            const key = `${currentFrom}-${lastStep.to}-${totalDie}`;
+            if (!seen.has(key)) {
+              flatMoves.push({
+                from: currentFrom,
+                to: lastStep.to,
+                die: totalDie,
+                steps: [...steps]
+              });
+              seen.add(key);
+            }
+          }
+          // Начинаем новую цепочку
+          currentFrom = next.from;
+          totalDie = next.die;
+          steps = [next];
+        }
+      }
+      
+      // Сохраняем последнюю цепочку, если она содержит более одного шага
+      if (steps.length > 1) {
+        const lastStep = steps[steps.length - 1];
+        const key = `${currentFrom}-${lastStep.to}-${totalDie}`;
+        if (!seen.has(key)) {
+          flatMoves.push({
+            from: currentFrom,
+            to: lastStep.to,
+            die: totalDie,
+            steps: [...steps]
+          });
+          seen.add(key);
         }
       }
     }
