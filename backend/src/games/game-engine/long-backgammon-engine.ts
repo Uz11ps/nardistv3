@@ -302,7 +302,7 @@ export class LongBackgammonEngine {
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] >= 0) return false;
 
-    const distanceTraveled = (this.BLACK_HEAD - from + this.BOARD_SIZE) % this.BOARD_SIZE;
+    const distanceTraveled = (from - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
     
     if (distanceTraveled + die >= this.BOARD_SIZE) {
       if (!this.canBearOff(state, 1)) return false;
@@ -315,15 +315,16 @@ export class LongBackgammonEngine {
       }
       
       if (die > pToFinish) {
-        // "Дальше" в доме черных - это большие индексы (например, если идем 12 -> 11 -> ... -> 6)
-        // Но в нашем коде движение -12 -> -11...
-        // Для черных: дом 6-11. Выход после 11. "Дальше" - это 6, 7, 8...
-        // Расстояние для черных: 12(0) -> 11(1) ... -> 6(6) ... -> 11(23)
-        // На самом деле проще использовать distanceTraveled
+        // "Дальше" в доме черных - это меньшие distanceTraveled.
+        // Дом черных: Point 13-18 (indices 6-11).
+        // Distance traveled: 
+        // Index 6: (6-12+24)%24 = 18
+        // Index 11: (11-12+24)%24 = 23
+        // "Дальше" от выхода значит МЕНЬШЕЕ расстояние.
         for (let i = 0; i < this.BOARD_SIZE; i++) {
           if (state.points[i] < 0) {
-            const d = (this.BLACK_HEAD - i + this.BOARD_SIZE) % this.BOARD_SIZE;
-            if (d < distanceTraveled) return false; // Есть кто-то дальше от выхода
+            const d = (i - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
+            if (d < distanceTraveled) return false; 
           }
         }
         return to === -1 || to < 0 || to >= this.BOARD_SIZE;
@@ -331,7 +332,7 @@ export class LongBackgammonEngine {
       return false;
     }
 
-    const calculatedTo = (from - die + this.BOARD_SIZE) % this.BOARD_SIZE;
+    const calculatedTo = (from + die) % this.BOARD_SIZE;
     if (to !== calculatedTo) return false;
     if (state.points[to] > 0) return false;
     if (!this.checkHeadRule(state, from, state.dice)) return false;

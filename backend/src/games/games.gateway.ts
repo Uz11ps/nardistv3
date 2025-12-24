@@ -316,8 +316,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       
       // Check if it's a bot game and bot's turn
       if (game.type === 'vs_bot' && game.player2Id === null && game.currentPlayer === 1 && game.status === 'in_progress') {
+        const botPlayerId = null; // Use null for bot
+        
         // Roll dice for bot
-        const botDice = await this.gamesService.rollDice(gameId, game.player1Id);
+        const botDice = await this.gamesService.rollDice(gameId, botPlayerId);
         const gameStateAfterDice = await this.gamesService.getGameState(gameId);
         
         // Emit dice rolled event
@@ -340,39 +342,42 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             
             this.logger.log(`🤖 Making bot move for gameId=${gameId}, updatedGame.id=${updatedGame.id}`);
             const botMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
+            
+            // Всегда вызываем makeMove, даже если ходов 0, чтобы сработала логика переключения хода
+            this.logger.log(`🤖 Bot moves: ${botMoves.length} moves, calling makeMove with gameId=${gameId}`);
+            const botMoveResult = await this.gamesService.makeMove(gameId, botPlayerId, botMoves);
+            const gameStateAfterMove = await this.gamesService.getGameState(gameId);
+            
+            // Emit move_made event (или просто game_state если ходов не было)
             if (botMoves.length > 0) {
-              this.logger.log(`🤖 Bot moves: ${botMoves.length} moves, calling makeMove with gameId=${gameId}`);
-              const botMoveResult = await this.gamesService.makeMove(gameId, game.player1Id, botMoves);
-              const gameStateAfterMove = await this.gamesService.getGameState(gameId);
-              
-              // Emit move_made event
               this.server.to(`game:${gameId}`).emit('move_made', gameStateAfterMove);
+            } else {
+              this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
+            }
+            
+            // Check if game finished
+            if (botMoveResult.status === 'finished') {
+              this.server.to(`game:${gameId}`).emit('game_finished', {
+                winnerId: botMoveResult.winnerId,
+                player1Score: botMoveResult.player1Score,
+                player2Score: botMoveResult.player2Score,
+                gameState: gameStateAfterMove,
+              });
+            } else {
+              // After bot move, check if it's still bot's turn or player's turn
+              const finalGame = await this.gamesService.findOne(gameId);
+              if (finalGame.status === 'finished') return;
               
-              // Check if game finished
-              if (botMoveResult.status === 'finished') {
-                this.server.to(`game:${gameId}`).emit('game_finished', {
-                  winnerId: botMoveResult.winnerId,
-                  player1Score: botMoveResult.player1Score,
-                  player2Score: botMoveResult.player2Score,
-                  gameState: gameStateAfterMove,
-                });
+              if (finalGame.currentPlayer === 0) {
+                this.logger.log(`👤 Player's turn after bot move, emitting game_state for gameId=${gameId}`);
+                const playerGameState = await this.gamesService.getGameState(gameId);
+                this.server.to(`game:${gameId}`).emit('game_state', playerGameState);
               } else {
-                // After bot move, check if it's still bot's turn or player's turn
-                const finalGame = await this.gamesService.findOne(gameId);
-                if (finalGame.status === 'finished') return;
-                
-                // If it's now player's turn (currentPlayer === 0), emit game_state
-                // Frontend should show button to roll dice
-                if (finalGame.currentPlayer === 0) {
-                  this.logger.log(`👤 Player's turn after bot move, emitting game_state for gameId=${gameId}`);
-                  const playerGameState = await this.gamesService.getGameState(gameId);
-                  this.logger.log(`📊 Player game state: currentPlayer=${playerGameState.currentPlayer}, dice=${JSON.stringify(playerGameState.gameState?.dice)}`);
-                  this.server.to(`game:${gameId}`).emit('game_state', playerGameState);
-                } else {
-                  // Recursively check if bot needs to move again (if it's still bot's turn)
-                  this.logger.log(`🤖 Still bot's turn, recursively calling handleBotTurnIfNeeded for gameId=${gameId}`);
-                  await this.handleBotTurnIfNeeded(gameId);
-                }
+                // Если все еще ход бота (например, в длинных нардах не все кубики использованы),
+                // но ходов больше нет - makeMove уже должен был переключить ход.
+                // Если не переключил - значит бот должен ходить дальше.
+                this.logger.log(`🤖 Still bot's turn, recursively calling handleBotTurnIfNeeded for gameId=${gameId}`);
+                await this.handleBotTurnIfNeeded(gameId);
               }
             }
           } catch (error) {

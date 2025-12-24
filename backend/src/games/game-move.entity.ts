@@ -21,10 +21,10 @@ export class GameMove {
   @Index()
   gameId: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   player: User;
 
-  @Column()
+  @Column({ nullable: true })
   playerId: string;
 
   @Column({ type: 'int' })

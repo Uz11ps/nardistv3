@@ -357,7 +357,7 @@ export class GamesService {
     }
   }
 
-  async rollDice(gameId: string, playerId: string): Promise<number[]> {
+  async rollDice(gameId: string, playerId: string | null): Promise<number[]> {
     const game = await this.findOne(gameId);
     
     if (game.status !== GameStatus.IN_PROGRESS && game.status !== GameStatus.WAITING) {
@@ -419,7 +419,7 @@ export class GamesService {
 
   async makeMove(
     gameId: string,
-    playerId: string,
+    playerId: string | null,
     moves: Array<{ from: number; to: number; die: number }>,
   ): Promise<Game> {
     if (!gameId) {
