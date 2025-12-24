@@ -1032,11 +1032,21 @@ export default function BackgammonBoard({
   const handlePointClick = (pointIndex: number) => {
     if (!canMove || !isMyTurn) return
     
+    // Если уже была выбрана точка, и мы кликнули на неё же - отменяем выбор
+    if (selectedPoint === pointIndex) {
+      setSelectedPoint(null)
+      setValidTargetPoints(new Set())
+      setShowBearOffButton(null)
+      return
+    }
+
+    // Проверяем, есть ли ходы из этой точки
+    const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+    
     if (selectedPoint === null) {
-      const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+      // Если ничего не выбрано, выбираем текущую точку (если из неё есть ходы)
       if (pointMoves.length > 0) {
         setSelectedPoint(pointIndex)
-        // Устанавливаем валидные точки назначения для подсветки
         const targets = new Set<number>()
         let bearOffDie: number | null = null
         pointMoves.forEach(m => {
@@ -1044,27 +1054,19 @@ export default function BackgammonBoard({
           if (m.to === -1) bearOffDie = m.die
         })
         setValidTargetPoints(targets)
-        
-        // Если есть ход на вынос, показываем кнопку
         if (bearOffDie !== null) {
           setShowBearOffButton({ pointIndex, die: bearOffDie })
         } else {
           setShowBearOffButton(null)
         }
       }
-    } else if (selectedPoint === pointIndex) {
-      // Отмена выбора при повторном клике
-      setSelectedPoint(null)
-      setValidTargetPoints(new Set())
-      setShowBearOffButton(null)
     } else {
+      // Если точка уже была выбрана, пытаемся сделать ход
       const move = possibleMoves.find(m => m.from === selectedPoint && m.to === pointIndex)
       if (move) {
         startMoveAnimation(move.from, move.to, move.die)
-        setShowBearOffButton(null)
       } else {
-        // Если кликнули на другую свою шашку, переключаем выбор
-        const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+        // Если ход невозможен, но кликнули на другую свою шашку - переключаем выбор на неё
         if (pointMoves.length > 0) {
           setSelectedPoint(pointIndex)
           const targets = new Set<number>()
@@ -1074,13 +1076,13 @@ export default function BackgammonBoard({
             if (m.to === -1) bearOffDie = m.die
           })
           setValidTargetPoints(targets)
-          
           if (bearOffDie !== null) {
             setShowBearOffButton({ pointIndex, die: bearOffDie })
           } else {
             setShowBearOffButton(null)
           }
         } else {
+          // Иначе просто сбрасываем выбор
           setSelectedPoint(null)
           setValidTargetPoints(new Set())
           setShowBearOffButton(null)

@@ -709,9 +709,28 @@ export class GamesService {
     if (pendingMoves && pendingMoves.length > 0) {
       const diceCopy = [...(state.dice || [])];
       for (const move of pendingMoves) {
+        // Пытаемся найти кубик или комбинацию кубиков
+        let used = false;
         const dieIndex = diceCopy.indexOf(move.die);
         if (dieIndex !== -1) {
           diceCopy.splice(dieIndex, 1);
+          used = true;
+        } else if (game.mode === GameMode.LONG) {
+          // Для длинных нард проверяем сумму (комбинированный ход)
+          for (let i = 0; i < diceCopy.length; i++) {
+            for (let j = i + 1; j < diceCopy.length; j++) {
+              if (diceCopy[i] + diceCopy[j] === move.die) {
+                diceCopy.splice(j, 1);
+                diceCopy.splice(i, 1);
+                used = true;
+                break;
+              }
+            }
+            if (used) break;
+          }
+        }
+        
+        if (used) {
           state = engine.applyMove(state, move.from, move.to, move.die);
         }
       }

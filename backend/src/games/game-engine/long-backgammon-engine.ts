@@ -246,15 +246,10 @@ export class LongBackgammonEngine {
   }
 
   private validateMovePlayer1(state: LongBoardState, from: number, to: number, die: number): boolean {
-    // Handle bar entry
+    // Handle bar entry (though not really used in Long)
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      // White enters from bar: starts at Point 24 (index 0), moves counter-clockwise
-      // With die value, enters on point (24 - die) = index die (moving counter-clockwise from head)
-      // White head is at index 0 (Point 24), so with die=1, enters at index 1 (Point 23), etc.
       const enterPoint = (this.WHITE_HEAD + die) % this.BOARD_SIZE;
-      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
-      // Cannot enter on opponent's point
       if (state.points[enterPoint] < 0) return false;
       return to === enterPoint || to === -1;
     }
@@ -262,76 +257,44 @@ export class LongBackgammonEngine {
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] <= 0) return false;
 
-    // Calculate target point
-    const calculatedTo = this.calculateTargetPoint(0, from, die);
+    // Расчет расстояния
     const distanceTraveled = (from - this.WHITE_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
     
-    // Handle bearing off
-    // White home: indices 18-23 (Points 1-6)
-    // Journey: 0 -> 1 -> ... -> 23 -> OFF
+    // Проверка на вынос (bearing off)
     if (distanceTraveled + die >= this.BOARD_SIZE) {
-      if (!this.canBearOff(state, 0)) {
-        return false;
-      }
+      if (!this.canBearOff(state, 0)) return false;
+      if (!this.isInHome(0, from)) return false;
       
-      // Check if from point is in home
-      if (!this.isInHome(0, from)) {
-        return false;
-      }
-      
-      // Standard bearing off rules:
-      // 1. Can bear off if die exactly matches point distance to finish
-      // 2. Can bear off from further point if die is greater AND no checkers on points further from finish
-      
-      const pToFinish = this.BOARD_SIZE - distanceTraveled; // 1 to 6
+      const pToFinish = this.BOARD_SIZE - distanceTraveled; // 1-6
       
       if (die === pToFinish) {
         return to === -1 || to >= this.BOARD_SIZE;
       }
       
       if (die > pToFinish) {
-        // Check if there are any checkers further from finish (lower indices in white home)
+        // Можно сбросить только если дальше от края (в доме) никого нет
+        // "Дальше" в доме белых - это меньшие индексы (18, 19...)
         for (let i = this.WHITE_HOME_START; i < from; i++) {
-          if (state.points[i] > 0) return false; // Must move/bear off from further points first
+          if (state.points[i] > 0) return false;
         }
         return to === -1 || to >= this.BOARD_SIZE;
       }
-      
-      return false; // die < pToFinish, must move within home
+      return false; // die < pToFinish
     }
 
-    if (to !== calculatedTo) {
-      return false;
-    }
-
-    // Cannot move to opponent's point
+    const calculatedTo = (from + die) % this.BOARD_SIZE;
+    if (to !== calculatedTo) return false;
     if (state.points[to] < 0) return false;
-    
-    // Check Head Rule
-    if (!this.checkHeadRule(state, from, state.dice)) {
-      return false;
-    }
-    
-    // Check Block Rule
-    if (!this.checkBlockRule(state, to)) {
-      return false;
-    }
+    if (!this.checkHeadRule(state, from, state.dice)) return false;
+    if (!this.checkBlockRule(state, to)) return false;
     
     return true;
   }
 
   private validateMovePlayer2(state: LongBoardState, from: number, to: number, die: number): boolean {
-    // Handle bar entry
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      // Black enters from bar: starts at Point 12 (index 12), moves counter-clockwise
-      // With die value, enters on point (12 + die - 1) modulo 24, but we need to calculate from head
-      // Black head is at index 12 (Point 12), so with die=1, enters at index 11 (Point 13), etc.
-      // Actually, in Long Backgammon, bar entry uses die value to move from head counter-clockwise
-      // Black head is index 12, so die=1 → index 11, die=2 → index 10, etc.
       const enterPoint = (this.BLACK_HEAD - die + this.BOARD_SIZE) % this.BOARD_SIZE;
-      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
-      // Cannot enter on opponent's point
       if (state.points[enterPoint] > 0) return false;
       return to === enterPoint || to === -1;
     }
@@ -339,58 +302,40 @@ export class LongBackgammonEngine {
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] >= 0) return false;
 
-    // Calculate target point
-    const calculatedTo = this.calculateTargetPoint(1, from, die);
-    const distanceTraveled = (from - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
+    const distanceTraveled = (this.BLACK_HEAD - from + this.BOARD_SIZE) % this.BOARD_SIZE;
     
-    // Handle bearing off
-    // Black home: indices 6-11 (Points 13-18)
-    // Journey: 12 -> 13 -> ... -> 23 -> 0 -> ... -> 11 -> OFF
     if (distanceTraveled + die >= this.BOARD_SIZE) {
-      if (!this.canBearOff(state, 1)) {
-        return false;
-      }
+      if (!this.canBearOff(state, 1)) return false;
+      if (!this.isInHome(1, from)) return false;
       
-      // Check if from point is in home
-      if (!this.isInHome(1, from)) {
-        return false;
-      }
-      
-      // Standard bearing off rules:
-      const pToFinish = this.BOARD_SIZE - distanceTraveled; // 1 to 6
+      const pToFinish = this.BOARD_SIZE - distanceTraveled;
       
       if (die === pToFinish) {
-        return to === -1 || to >= this.BOARD_SIZE;
+        return to === -1 || to < 0 || to >= this.BOARD_SIZE;
       }
       
       if (die > pToFinish) {
-        // Check if there are any checkers further from finish (lower distances in black home)
-        // Indices 6, 7, 8, 9, 10, 11 (distanceTraveled 18, 19, 20, 21, 22, 23)
-        for (let i = this.BLACK_HOME_START; i < from; i++) {
-          if (state.points[i] < 0) return false;
+        // "Дальше" в доме черных - это большие индексы (например, если идем 12 -> 11 -> ... -> 6)
+        // Но в нашем коде движение -12 -> -11...
+        // Для черных: дом 6-11. Выход после 11. "Дальше" - это 6, 7, 8...
+        // Расстояние для черных: 12(0) -> 11(1) ... -> 6(6) ... -> 11(23)
+        // На самом деле проще использовать distanceTraveled
+        for (let i = 0; i < this.BOARD_SIZE; i++) {
+          if (state.points[i] < 0) {
+            const d = (this.BLACK_HEAD - i + this.BOARD_SIZE) % this.BOARD_SIZE;
+            if (d < distanceTraveled) return false; // Есть кто-то дальше от выхода
+          }
         }
-        return to === -1 || to >= this.BOARD_SIZE;
+        return to === -1 || to < 0 || to >= this.BOARD_SIZE;
       }
-      
       return false;
     }
 
-    if (to !== calculatedTo) {
-      return false;
-    }
-
-    // Cannot move to opponent's point
+    const calculatedTo = (from - die + this.BOARD_SIZE) % this.BOARD_SIZE;
+    if (to !== calculatedTo) return false;
     if (state.points[to] > 0) return false;
-    
-    // Check Head Rule
-    if (!this.checkHeadRule(state, from, state.dice)) {
-      return false;
-    }
-    
-    // Check Block Rule
-    if (!this.checkBlockRule(state, to)) {
-      return false;
-    }
+    if (!this.checkHeadRule(state, from, state.dice)) return false;
+    if (!this.checkBlockRule(state, to)) return false;
     
     return true;
   }

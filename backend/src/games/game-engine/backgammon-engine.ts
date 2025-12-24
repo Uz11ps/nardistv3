@@ -68,42 +68,37 @@ export class BackgammonEngine {
     // If checkers on bar, must enter from bar first
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      const enterPoint = die - 1; // Die 1 -> Index 0, Die 6 -> Index 5
+      const enterPoint = die - 1; 
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
-      // Cannot enter on opponent's point (2 or more opponent checkers)
       if (state.points[enterPoint] < -1) return false;
       return to === enterPoint || to === -1;
     }
 
-    // Regular move from board
     if (from < 0 || from >= this.BOARD_SIZE) return false;
-    if (state.points[from] <= 0) return false; // No white checker at from point
+    if (state.points[from] <= 0) return false;
 
+    // Расчет цели для обычного хода
     const toPoint = from + die;
     
-    // Bearing off
+    // Проверка на вынос (bearing off)
     if (toPoint >= this.BOARD_SIZE) {
       if (!this.canBearOff(state, 0)) return false;
       
-      const distanceToFinish = this.BOARD_SIZE - from; // 1 to 6
+      const distanceToFinish = this.BOARD_SIZE - from; // Расстояние до края
       if (die === distanceToFinish) {
         return to === -1 || to >= this.BOARD_SIZE;
       }
       if (die > distanceToFinish) {
-        // Can only bear off from a closer point if no checkers are further away
-        // Further away means LOWER indices (0 to from-1)
+        // Можно сбросить только если дальше от края никого нет
         for (let i = 0; i < from; i++) {
           if (state.points[i] > 0) return false;
         }
         return to === -1 || to >= this.BOARD_SIZE;
       }
-      return false; // die < distance, must move within home
+      return false;
     }
 
-    // Regular move on board
     if (to !== toPoint && to !== -1) return false;
-    
-    // Cannot move to opponent's point (2 or more opponent checkers)
     if (state.points[toPoint] < -1) return false;
     
     return true;
@@ -112,33 +107,27 @@ export class BackgammonEngine {
   private validateMovePlayer2(state: BoardState, from: number, to: number, die: number): boolean {
     // Player 2 (Black) moves from index 23 towards index 0 (Point 1 to 24)
     
-    // If checkers on bar, must enter from bar first
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      const enterPoint = this.BOARD_SIZE - die; // Die 1 -> Index 23, Die 6 -> Index 18
+      const enterPoint = this.BOARD_SIZE - die;
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
-      // Cannot enter on opponent's point (2 or more opponent checkers)
       if (state.points[enterPoint] > 1) return false;
       return to === enterPoint || to === -1;
     }
 
-    // Regular move from board
     if (from < 0 || from >= this.BOARD_SIZE) return false;
-    if (state.points[from] >= 0) return false; // No black checker at from point
+    if (state.points[from] >= 0) return false;
 
     const toPoint = from - die;
     
-    // Bearing off
     if (toPoint < 0) {
       if (!this.canBearOff(state, 1)) return false;
       
-      const distanceToFinish = from + 1; // 1 to 6
+      const distanceToFinish = from + 1;
       if (die === distanceToFinish) {
         return to === -1 || to < 0;
       }
       if (die > distanceToFinish) {
-        // Can only bear off from a closer point if no checkers are further away
-        // Further away means HIGHER indices (from+1 to 23)
         for (let i = this.BOARD_SIZE - 1; i > from; i--) {
           if (state.points[i] < 0) return false;
         }
@@ -147,10 +136,7 @@ export class BackgammonEngine {
       return false;
     }
 
-    // Regular move on board
     if (to !== toPoint && to !== -1) return false;
-    
-    // Cannot move to opponent's point (2 or more opponent checkers)
     if (state.points[toPoint] > 1) return false;
     
     return true;
