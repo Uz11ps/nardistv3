@@ -31,6 +31,7 @@ interface MaterialSection {
 
 interface MaterialDetail extends Course {
   sections?: MaterialSection[]
+  content?: string
 }
 
 export default function Academy() {
