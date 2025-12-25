@@ -954,6 +954,12 @@ export class AdminController {
     return this.adminService.setUserLevel(userId, body.level);
   }
 
+  @Post('users/:id/recalculate-skill-points')
+  @UseGuards(AdminAuthGuard)
+  async recalculateSkillPoints(@CurrentUser() user: any, @Param('id') userId: string) {
+    return this.adminService.recalculateSkillPoints(userId);
+  }
+
   @Post('users/:id/sync-level')
   @UseGuards(AdminAuthGuard)
   async syncUserLevelFromXP(@CurrentUser() user: any, @Param('id') userId: string) {

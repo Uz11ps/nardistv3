@@ -43,6 +43,7 @@ import { PaymentTransactionService } from '../payment/payment-transaction.servic
 import { UserWallet } from '../payment/user-wallet.entity';
 import { PaymentTransaction, PaymentStatus } from '../payment/payment-transaction.entity';
 import { HistoryService } from '../history/history.service';
+import { XpCalculatorService } from '../progress/xp-calculator.service';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -116,6 +117,7 @@ export class AdminService implements OnModuleInit {
     private paymentTransactionService: PaymentTransactionService,
     @Inject(forwardRef(() => HistoryService))
     private historyService: HistoryService,
+    private xpCalculator: XpCalculatorService,
   ) {}
 
   async getStats() {
@@ -1540,6 +1542,7 @@ export class AdminService implements OnModuleInit {
         throw new BadRequestException('Пользователь не найден');
       }
       
+      const oldLevel = user.level || 1;
       const finalLevel = Math.max(1, Math.min(50, Math.floor(Number(level)))); // Ограничиваем от 1 до 50
       
       // При установке уровня вручную, синхронизируем XP с уровнем
@@ -1551,6 +1554,20 @@ export class AdminService implements OnModuleInit {
       
       user.level = finalLevel;
       user.xp = BigInt(Math.max(0, Math.floor(totalXP)));
+      
+      // Рассчитываем и начисляем skill points за пропущенные уровни
+      if (finalLevel > oldLevel) {
+        let skillPointsToAdd = 0;
+        for (let lvl = oldLevel + 1; lvl <= finalLevel; lvl++) {
+          skillPointsToAdd += this.getSkillPointsForLevel(lvl);
+        }
+        
+        if (skillPointsToAdd > 0) {
+          user.skillPoints = (user.skillPoints || 0) + skillPointsToAdd;
+          user.freeSkillPoints = (user.freeSkillPoints || 0) + skillPointsToAdd;
+          this.logger.log(`✅ Начислено ${skillPointsToAdd} skill points пользователю ${userId} за уровни ${oldLevel + 1}-${finalLevel}`);
+        }
+      }
       
       const savedUser = await this.usersRepository.save(user);
       this.logger.log(`✅ Установлен уровень пользователя ${userId}: Level=${finalLevel}, XP=${totalXP}`);
@@ -1579,57 +1596,92 @@ export class AdminService implements OnModuleInit {
     // Убеждаемся, что уровень не меньше 1
     const finalLevel = Math.max(1, correctLevel);
     
+    const oldLevel = user.level || 1;
     if (user.level !== finalLevel) {
       user.level = finalLevel;
+      
+      // Если уровень повысился, начисляем skill points за пропущенные уровни
+      if (finalLevel > oldLevel) {
+        let skillPointsToAdd = 0;
+        for (let level = oldLevel + 1; level <= finalLevel; level++) {
+          skillPointsToAdd += this.getSkillPointsForLevel(level);
+        }
+        
+        if (skillPointsToAdd > 0) {
+          user.skillPoints = (user.skillPoints || 0) + skillPointsToAdd;
+          user.freeSkillPoints = (user.freeSkillPoints || 0) + skillPointsToAdd;
+          this.logger.log(`✅ Начислено ${skillPointsToAdd} skill points пользователю ${userId} за уровни ${oldLevel + 1}-${finalLevel}`);
+        }
+      }
+      
       await this.usersRepository.save(user);
       this.logger.log(`✅ Синхронизирован уровень пользователя ${userId}: XP=${totalXP} -> Level=${finalLevel}`);
     }
     return user;
   }
 
-  // Вспомогательные методы для расчета уровня (та же логика, что в ProgressService)
   /**
-   * Вычисляет требуемый XP для перехода с уровня (level-1) на level
+   * Пересчитать skill points для пользователя на основе его текущего уровня
+   * Начисляет skill points за все уровни от 2 до текущего уровня
    */
-  private getXPRequiredForLevel(level: number): number {
-    if (level <= 1) return 0;
-    if (level === 2) return 200;
-    // Для уровней 3-50: предыдущий переход * 1.25, округляем до кратных 10
-    let xp = 200;
-    for (let i = 3; i <= level; i++) {
-      xp = Math.floor(xp * 1.25);
-      // Округляем до кратных 10
-      xp = Math.round(xp / 10) * 10;
-    }
-    return xp;
-  }
-
-  /**
-   * Вычисляет общий XP для уровня (сумма всех переходов до этого уровня)
-   */
-  private getTotalXPForLevel(level: number): number {
-    if (level <= 1) return 0;
-    let totalXP = 0;
-    for (let i = 2; i <= level; i++) {
-      totalXP += this.getXPRequiredForLevel(i);
-    }
-    return totalXP;
-  }
-
-  private getLevelFromTotalXP(totalXP: number): number {
-    const MAX_LEVEL = 50;
-    if (totalXP <= 0) return 1;
-    
-    let level = 1;
-    while (level < MAX_LEVEL) {
-      const xpForNextLevel = this.getTotalXPForLevel(level + 1);
-      if (totalXP >= xpForNextLevel) {
-        level++;
-      } else {
-        break;
+  async recalculateSkillPoints(userId: string) {
+    try {
+      const user = await this.usersService.findOne(userId);
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
       }
+
+      const currentLevel = user.level || 1;
+      
+      // Рассчитываем сколько skill points должно быть у пользователя с таким уровнем
+      let totalSkillPoints = 0;
+      for (let level = 2; level <= currentLevel; level++) {
+        totalSkillPoints += this.getSkillPointsForLevel(level);
+      }
+      
+      // Учитываем уже потраченные skill points
+      const spentSkillPoints = (user.economySp || 0) + (user.energySp || 0) + (user.livesSp || 0) + (user.powerSp || 0);
+      const freeSkillPoints = totalSkillPoints - spentSkillPoints;
+      
+      // Обновляем skill points
+      user.skillPoints = totalSkillPoints;
+      user.freeSkillPoints = Math.max(0, freeSkillPoints);
+      
+      await this.usersRepository.save(user);
+      this.logger.log(`✅ Пересчитаны skill points для пользователя ${userId}: Level=${currentLevel}, Total SP=${totalSkillPoints}, Free SP=${user.freeSkillPoints}`);
+      
+      return {
+        id: user.id,
+        level: user.level,
+        skillPoints: user.skillPoints,
+        freeSkillPoints: user.freeSkillPoints,
+      };
+    } catch (error: any) {
+      this.logger.error(`Error recalculating skill points for user ${userId}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при пересчете skill points: ${error.message}`);
     }
-    return level;
+  }
+
+  // Используем XpCalculatorService для правильного расчета уровня
+  private getLevelFromTotalXP(totalXP: number): number {
+    return this.xpCalculator.getLevelFromTotalXP(totalXP);
+  }
+
+  private getTotalXPForLevel(level: number): number {
+    return this.xpCalculator.getTotalXPForLevel(level);
+  }
+
+  // Расчет skill points за уровень (та же логика что в ProgressService)
+  private getSkillPointsForLevel(level: number): number {
+    if (level >= 2 && level <= 5) {
+      return 1;
+    } else if (level >= 6 && level <= 50) {
+      return 2;
+    }
+    return 0;
   }
 
   async setUserRole(userId: string, isAdmin: boolean, isTrainer: boolean) {
@@ -2194,6 +2246,9 @@ export class AdminService implements OnModuleInit {
         throw new NotFoundException('Пользователь не найден');
       }
 
+      // Сохраняем старый уровень для расчета skill points
+      const oldLevel = user.level || 1;
+
       if (data.narCoin !== undefined && data.narCoin !== null) {
         const narCoinValue = typeof data.narCoin === 'number' ? data.narCoin : parseInt(String(data.narCoin)) || 0;
         user.narCoin = BigInt(Math.max(0, Math.floor(narCoinValue)));
@@ -2216,6 +2271,21 @@ export class AdminService implements OnModuleInit {
       if (data.level !== undefined && data.level !== null) {
         const levelValue = typeof data.level === 'number' ? data.level : parseInt(String(data.level)) || 1;
         user.level = Math.max(1, Math.min(50, Math.floor(levelValue)));
+      }
+
+      // Рассчитываем и начисляем skill points за пропущенные уровни
+      const newLevel = user.level || 1;
+      if (newLevel > oldLevel) {
+        let skillPointsToAdd = 0;
+        for (let level = oldLevel + 1; level <= newLevel; level++) {
+          skillPointsToAdd += this.getSkillPointsForLevel(level);
+        }
+        
+        if (skillPointsToAdd > 0) {
+          user.skillPoints = (user.skillPoints || 0) + skillPointsToAdd;
+          user.freeSkillPoints = (user.freeSkillPoints || 0) + skillPointsToAdd;
+          this.logger.log(`✅ Начислено ${skillPointsToAdd} skill points пользователю ${userId} за уровни ${oldLevel + 1}-${newLevel}`);
+        }
       }
 
       await this.usersRepository.save(user);
