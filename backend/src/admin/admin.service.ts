@@ -105,9 +105,11 @@ export class AdminService implements OnModuleInit {
     @InjectRepository(ProgressionConfig)
     private progressionConfigRepository: Repository<ProgressionConfig>,
     private usersService: UsersService,
+    @Inject(forwardRef(() => TournamentsService))
     private tournamentsService: TournamentsService,
     @Inject(forwardRef(() => AcademyService))
     private academyService: AcademyService,
+    @Inject(forwardRef(() => SkinsService))
     private skinsService: SkinsService,
     @Inject(forwardRef(() => GamesService))
     private gamesService: GamesService,
@@ -117,9 +119,12 @@ export class AdminService implements OnModuleInit {
     private clansService: ClansService,
     @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
+    @Inject(forwardRef(() => ProgressService))
     private progressService: ProgressService,
     private configService: ConfigService,
+    @Inject(forwardRef(() => NotificationsService))
     private notificationsService: NotificationsService,
+    @Inject(forwardRef(() => WalletService))
     private walletService: WalletService,
     @Inject(forwardRef(() => PaymentTransactionService))
     private paymentTransactionService: PaymentTransactionService,

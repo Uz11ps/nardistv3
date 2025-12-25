@@ -49,9 +49,10 @@ import { ProgressionConfig } from '../progress/progression-config.entity';
 
 @Module({
   imports: [
+    forwardRef(() => GamesModule),
     TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, CourseTask, CourseTaskProgress, SystemSettings, NotificationTemplate, UserWallet, PaymentTransaction, ProgressionConfig]),
     ScheduleModule.forRoot(),
-    AuthModule,
+    forwardRef(() => AuthModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -62,17 +63,16 @@ import { ProgressionConfig } from '../progress/progression-config.entity';
       }),
       inject: [ConfigService],
     }),
-    UsersModule,
-    TournamentsModule,
+    forwardRef(() => UsersModule),
+    forwardRef(() => TournamentsModule),
     forwardRef(() => AcademyModule),
-    SkinsModule,
-    GamesModule,
-    QuestsModule,
-    ClansModule,
-    SubscriptionModule,
-    NotificationsModule,
-    ProgressModule,
-    HistoryModule,
+    forwardRef(() => SkinsModule),
+    forwardRef(() => QuestsModule),
+    forwardRef(() => ClansModule),
+    forwardRef(() => SubscriptionModule),
+    forwardRef(() => NotificationsModule),
+    forwardRef(() => ProgressModule),
+    forwardRef(() => HistoryModule),
     forwardRef(() => PaymentModule),
   ],
   controllers: [AdminController],
