@@ -44,6 +44,7 @@ import { UserWallet } from '../payment/user-wallet.entity';
 import { PaymentTransaction, PaymentStatus } from '../payment/payment-transaction.entity';
 import { HistoryService } from '../history/history.service';
 import { XpCalculatorService } from '../progress/xp-calculator.service';
+import { ProgressionConfig } from '../progress/progression-config.entity';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -100,6 +101,8 @@ export class AdminService implements OnModuleInit {
     private walletsRepository: Repository<UserWallet>,
     @InjectRepository(PaymentTransaction)
     private paymentTransactionsRepository: Repository<PaymentTransaction>,
+    @InjectRepository(ProgressionConfig)
+    private progressionConfigRepository: Repository<ProgressionConfig>,
     private usersService: UsersService,
     private tournamentsService: TournamentsService,
     @Inject(forwardRef(() => AcademyService))
@@ -118,6 +121,7 @@ export class AdminService implements OnModuleInit {
     @Inject(forwardRef(() => HistoryService))
     private historyService: HistoryService,
     private xpCalculator: XpCalculatorService,
+    private progressionBranches: ProgressionBranchesService,
   ) {}
 
   async getStats() {
@@ -2649,6 +2653,185 @@ export class AdminService implements OnModuleInit {
     }
     
     return { message: 'Последние сообщения бота удалены' };
+  }
+
+  // ==================== PROGRESSION CONFIG MANAGEMENT ====================
+
+  async getProgressionConfig() {
+    let config = await this.progressionConfigRepository.findOne({ where: {} });
+    if (!config) {
+      // Инициализируем дефолтными значениями из спецификации
+      config = this.progressionConfigRepository.create({
+        config: {
+          skillPoints: {
+            levels2To5: 1,
+            levels6To50: 2,
+          },
+          license: {
+            requiredLevel: 5,
+            costNar: 10000,
+          },
+          commission: {
+            base: 0.15,
+            min: 0.05,
+            statsMin: 0.07,
+            gearBonusCap: 0.02,
+          },
+          economyBranch: {
+            step1Sp: 20,
+            step1K: 0.0025,
+            step2Sp: 20,
+            step2K: 0.0015,
+            reductionCap: 0.08,
+            passiveK: 0.015,
+            passiveSpCap: 40,
+          },
+          energyBranch: {
+            baseMax: 100,
+            maxStep1Sp: 30,
+            maxStep1K: 4,
+            maxStep2K: 2,
+            regenBasePerH: 10,
+            regenStep1Sp: 20,
+            regenStep1K: 1.0,
+            regenStep2Sp: 20,
+            regenStep2K: 0.5,
+            refill: {
+              amount: 50,
+              baseCostNar: 120,
+              growth: 1.35,
+            },
+          },
+          livesBranch: {
+            baseMax: 100,
+            maxStep1Sp: 30,
+            maxStep1K: 4,
+            maxStep2K: 2,
+            regenBasePerH: 1,
+            regenSpCap: 30,
+            regenSpStep: 10,
+            lifeLossProtectCap: 0.25,
+            lifeLossProtectSpCap: 10,
+            refill: {
+              amount: 5,
+              baseCostNar: 200,
+              growth: 1.40,
+            },
+          },
+          powerBranch: {
+            weightBase: 10,
+            weightK: 2.5,
+          },
+          caps: {
+            gearXpMultCap: 1.50,
+          },
+          xpCurve: {
+            A: 350,
+          },
+          maxLevel: 50,
+          levelRewards: {
+            1: 1000, 2: 2000, 3: 3000, 4: 4000, 5: 10000,
+            6: 6000, 7: 7000, 8: 8000, 9: 9000, 10: 10000,
+            11: 11000, 12: 12000, 13: 13000, 14: 14000, 15: 15000,
+            16: 16000, 17: 17000, 18: 18000, 19: 19000, 20: 20000,
+            21: 21000, 22: 22000, 23: 23000, 24: 24000, 25: 25000,
+            26: 26000, 27: 27000, 28: 28000, 29: 29000, 30: 30000,
+            31: 31000, 32: 32000, 33: 33000, 34: 34000, 35: 35000,
+            36: 36000, 37: 37000, 38: 38000, 39: 39000, 40: 40000,
+            41: 41000, 42: 42000, 43: 43000, 44: 44000, 45: 45000,
+            46: 46000, 47: 47000, 48: 48000, 49: 49000, 50: 50000,
+          },
+          xp: {
+            baseXp: {
+              pvpRanked: 2800,
+              pvpBatalia: 3100,
+              tournament: 4500,
+              friendly: 1200,
+              ai: 250,
+            },
+            multipliers: {
+              win: 1.00,
+              loss: 0.70,
+              marsWin: 1.50,
+              repeatOpponent: [1.00, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50],
+            },
+            caps: {
+              maxMatchXpMult: 2.50,
+            },
+            thresholds: {
+              1: 1750,
+              2: 5250,
+              3: 12950,
+              4: 26600,
+              5: 50050,
+              6: 76513,
+              7: 111146,
+              8: 155133,
+              9: 223947,
+              10: 274745,
+              11: 352439,
+              12: 443095,
+              13: 547630,
+              14: 666572,
+              15: 800499,
+              16: 949816,
+              17: 1114974,
+              18: 1295961,
+              19: 1493088,
+              20: 1706122,
+              21: 1934944,
+              22: 2179337,
+              23: 2438855,
+              24: 2712961,
+              25: 3001086,
+              26: 3302515,
+              27: 3616468,
+              28: 3942042,
+              29: 4278291,
+              30: 4624199,
+              31: 4978683,
+              32: 5340636,
+              33: 5873467,
+              34: 6082246,
+              35: 6459491,
+              36: 6839392,
+              37: 7220716,
+              38: 7602217,
+              39: 7982686,
+              40: 8360902,
+              41: 8789105,
+              42: 9331625,
+              43: 10064568,
+              44: 11087641,
+              45: 12541240,
+              46: 14633038,
+              47: 17681154,
+              48: 22186326,
+              49: 28955279,
+              50: 39315825,
+            },
+          },
+        },
+      });
+      await this.progressionConfigRepository.save(config);
+    }
+    return config;
+  }
+
+  async updateProgressionConfig(data: any) {
+    let config = await this.progressionConfigRepository.findOne({ where: {} });
+    if (!config) {
+      config = this.progressionConfigRepository.create({ config: data });
+    } else {
+      config.config = { ...config.config, ...data };
+    }
+    const saved = await this.progressionConfigRepository.save(config);
+    
+    // Обновляем конфиг в сервисах
+    await this.xpCalculator.refreshConfig();
+    await this.progressionBranches.refreshConfig();
+    
+    return saved;
   }
 }
 

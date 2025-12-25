@@ -87,6 +87,33 @@ export class ProgressionConfig {
     caps: {
       gearXpMultCap: number; // Максимальный множитель XP от экипировки (1.50)
     };
+    // Общие параметры XP кривой
+    xpCurve: {
+      A: number; // 350
+    };
+    maxLevel: number; // 50
+    // Награды за уровень
+    levelRewards: { [key: number]: number }; // Награда NAR за уровень L
+    // XP и уровни
+    xp: {
+      baseXp: {
+        pvpRanked: number; // PvP рейтинговый (2800)
+        pvpBatalia: number; // PvP "баталия" на NAR (3100)
+        tournament: number; // Турнирный матч (4500)
+        friendly: number; // Дружеский матч (1200)
+        ai: number; // Тренировка vs AI (250)
+      };
+      multipliers: {
+        win: number; // Победа (1.00)
+        loss: number; // Поражение (0.70)
+        marsWin: number; // Победа Марсом (1.50)
+        repeatOpponent: number[]; // Множители за повторные игры [1.0, 0.9, 0.85, ...]
+      };
+      caps: {
+        maxMatchXpMult: number; // Максимальный XP за матч (BaseXP * 2.50)
+      };
+      thresholds: { [key: number]: number }; // Пороги XP для уровней 1-50
+    };
   };
 
   @CreateDateColumn()

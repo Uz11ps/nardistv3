@@ -1,4 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ProgressionConfig } from './progression-config.entity';
 import { EnhancementType } from './enhancement.entity';
 
 /**
@@ -6,9 +9,22 @@ import { EnhancementType } from './enhancement.entity';
  * Согласно спецификации Nardist_Progression_Branches_Spec_v1_1
  */
 @Injectable()
-export class ProgressionBranchesService {
+export class ProgressionBranchesService implements OnModuleInit {
+  constructor(
+    @InjectRepository(ProgressionConfig)
+    private readonly progressionConfigRepository: Repository<ProgressionConfig>,
+  ) {}
+
   // Конфигурация по умолчанию (из документа)
-  private readonly config = {
+  private config = {
+    skillPoints: {
+      levels2To5: 1,
+      levels6To50: 2,
+    },
+    license: {
+      requiredLevel: 5,
+      costNar: 10000,
+    },
     commission: {
       base: 0.15, // 15%
       min: 0.05, // 5%
@@ -34,6 +50,11 @@ export class ProgressionBranchesService {
       regenStep1K: 1.0,
       regenStep2Sp: 20,
       regenStep2K: 0.5,
+      refill: {
+        amount: 50,
+        baseCostNar: 120,
+        growth: 1.35,
+      },
     },
     livesBranch: {
       baseMax: 100,
@@ -45,12 +66,45 @@ export class ProgressionBranchesService {
       regenSpStep: 10,
       lifeLossProtectCap: 0.25, // 25%
       lifeLossProtectSpCap: 10,
+      refill: {
+        amount: 5,
+        baseCostNar: 200,
+        growth: 1.40,
+      },
     },
     powerBranch: {
       weightBase: 10,
       weightK: 2.5,
     },
+    caps: {
+      gearXpMultCap: 1.50,
+    },
   };
+
+  async onModuleInit() {
+    await this.refreshConfig();
+  }
+
+  /**
+   * Обновить конфигурацию из базы данных
+   */
+  async refreshConfig() {
+    try {
+      const dbConfig = await this.progressionConfigRepository.findOne({ where: {} });
+      if (dbConfig && dbConfig.config) {
+        this.config = { ...this.config, ...dbConfig.config };
+      }
+    } catch (error) {
+      console.error('Error refreshing progression config:', error);
+    }
+  }
+
+  /**
+   * Получить текущую конфигурацию
+   */
+  getConfig() {
+    return this.config;
+  }
 
   /**
    * ЭКОНОМИКА: Рассчитать снижение комиссии от ветки

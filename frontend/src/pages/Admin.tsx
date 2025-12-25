@@ -49,9 +49,11 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression'>('stats')
   const [onboardingTasks, setOnboardingTasks] = useState<any[]>([])
   const [onboardingStats, setOnboardingStats] = useState<any>(null)
+  const [progressionConfig, setProgressionConfig] = useState<any>(null)
+  const [isSavingProgression, setIsSavingProgression] = useState(false)
   const [editingOnboardingTask, setEditingOnboardingTask] = useState<any>(null)
   const [newOnboardingTask, setNewOnboardingTask] = useState({
     type: 'train_with_bot',
@@ -226,7 +228,7 @@ export default function Admin() {
         return
       }
       
-      const [statsRes, statisticsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, buildingsRes, policiesRes, templatesRes, onboardingTasksRes, onboardingStatsRes] = await Promise.all([
+      const [statsRes, statisticsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, buildingsRes, policiesRes, templatesRes, onboardingTasksRes, onboardingStatsRes, progressionRes] = await Promise.all([
         apiClient.get('/admin/stats').catch((err) => {
           if (err.response?.status === 401) {
             localStorage.removeItem('admin_token')
@@ -332,6 +334,13 @@ export default function Admin() {
           }
           return { data: null }
         }),
+        apiClient.get('/admin/progression/config').catch((err) => {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('admin_token')
+            setIsAuthenticated(false)
+          }
+          return { data: null }
+        }),
       ])
       // Объединяем базовую статистику с расширенной
       const mergedStats = { ...statsRes.data, ...statisticsRes.data }
@@ -348,6 +357,7 @@ export default function Admin() {
       setNotificationTemplates(templatesRes.data || [])
       setOnboardingTasks(onboardingTasksRes.data || [])
       setOnboardingStats(onboardingStatsRes.data || null)
+      setProgressionConfig(progressionRes.data?.config || progressionRes.data)
       
       // Загружаем политики
       const policiesData: { privacy?: string; agreement?: string } = {}
@@ -497,6 +507,27 @@ export default function Admin() {
       setSystemSettings(response.data || [])
     } catch (error) {
       console.error('Failed to load system settings:', error)
+    }
+  }
+
+  const loadProgressionConfig = async () => {
+    try {
+      const response = await apiClient.get('/admin/progression/config')
+      setProgressionConfig(response.data?.config || response.data)
+    } catch (error) {
+      console.error('Failed to load progression config:', error)
+    }
+  }
+
+  const handleSaveProgressionConfig = async () => {
+    try {
+      setIsSavingProgression(true)
+      await apiClient.put('/admin/progression/config', progressionConfig)
+      alert('Настройки прогрессии сохранены')
+    } catch (error: any) {
+      alert('Ошибка при сохранении: ' + (error.response?.data?.message || error.message))
+    } finally {
+      setIsSavingProgression(false)
     }
   }
 
@@ -728,6 +759,15 @@ export default function Admin() {
           }}
         >
           Политика
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'progression' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('progression')
+            loadProgressionConfig()
+          }}
+        >
+          Прогрессия
         </button>
       </div>
 
@@ -5360,6 +5400,465 @@ export default function Admin() {
                 + Добавить настройку
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* РАЗДЕЛ ПРОГРЕССИИ */}
+      {activeTab === 'progression' && progressionConfig && (
+        <div className="admin-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2>Настройки прогрессии</h2>
+            <button 
+              className="admin-btn primary"
+              onClick={handleSaveProgressionConfig}
+              disabled={isSavingProgression}
+            >
+              {isSavingProgression ? 'Сохранение...' : '💾 Сохранить все настройки'}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gap: '32px' }}>
+            {/* XP и уровни */}
+            <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+              <h3 style={{ color: '#4a9eff', marginBottom: '20px' }}>XP и Уровни</h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+                <div>
+                  <h4 style={{ marginBottom: '12px' }}>Параметры XP-кривой</h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Коэффициент A (для уровня 1-5)</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.xpCurve?.A || 350} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xpCurve: { ...progressionConfig.xpCurve, A: parseInt(e.target.value) || 0 }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Максимальный уровень</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.maxLevel || 50} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        maxLevel: parseInt(e.target.value) || 0
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                <div>
+                  <h4 style={{ marginBottom: '12px' }}>Базовый XP</h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>PvP рейтинговый</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.xp.baseXp.pvpRanked} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, baseXp: { ...progressionConfig.xp.baseXp, pvpRanked: parseInt(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>PvP Баталия (на NAR)</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.xp.baseXp.pvpBatalia} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, baseXp: { ...progressionConfig.xp.baseXp, pvpBatalia: parseInt(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Турнир</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.xp.baseXp.tournament} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, baseXp: { ...progressionConfig.xp.baseXp, tournament: parseInt(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Дружеский матч</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.xp.baseXp.friendly} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, baseXp: { ...progressionConfig.xp.baseXp, friendly: parseInt(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>vs AI</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.xp.baseXp.ai} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, baseXp: { ...progressionConfig.xp.baseXp, ai: parseInt(e.target.value) || 0 } }
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style={{ marginBottom: '12px' }}>Множители</h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Победа</label>
+                    <input 
+                      type="number" step="0.1"
+                      value={progressionConfig.xp.multipliers.win} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, multipliers: { ...progressionConfig.xp.multipliers, win: parseFloat(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Поражение</label>
+                    <input 
+                      type="number" step="0.1"
+                      value={progressionConfig.xp.multipliers.loss} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, multipliers: { ...progressionConfig.xp.multipliers, loss: parseFloat(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Марс (разгром)</label>
+                    <input 
+                      type="number" step="0.1"
+                      value={progressionConfig.xp.multipliers.marsWin} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, multipliers: { ...progressionConfig.xp.multipliers, marsWin: parseFloat(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Кап XP (множитель от базы)</label>
+                    <input 
+                      type="number" step="0.1"
+                      value={progressionConfig.xp.caps.maxMatchXpMult} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, caps: { ...progressionConfig.xp.caps, maxMatchXpMult: parseFloat(e.target.value) || 0 } }
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style={{ marginBottom: '12px' }}>Анти-фарм (повторы)</h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {progressionConfig.xp.multipliers.repeatOpponent.map((mult: number, idx: number) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label style={{ fontSize: '12px', color: '#aaa', minWidth: '60px' }}>Игра {idx + 1}</label>
+                        <input 
+                          type="number" step="0.01"
+                          value={mult} 
+                          style={{ flex: 1, padding: '4px' }}
+                          onChange={(e) => {
+                            const newRepeat = [...progressionConfig.xp.multipliers.repeatOpponent];
+                            newRepeat[idx] = parseFloat(e.target.value) || 0;
+                            setProgressionConfig({
+                              ...progressionConfig,
+                              xp: { ...progressionConfig.xp, multipliers: { ...progressionConfig.xp.multipliers, repeatOpponent: newRepeat } }
+                            });
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style={{ marginBottom: '12px' }}>Skill Points (SP)</h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>За уровни 2-5</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.skillPoints.levels2To5} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        skillPoints: { ...progressionConfig.skillPoints, levels2To5: parseInt(e.target.value) || 0 }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>За уровни 6-50</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.skillPoints.levels6To50} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        skillPoints: { ...progressionConfig.skillPoints, levels6To50: parseInt(e.target.value) || 0 }
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '32px' }}>
+                <h4 style={{ marginBottom: '16px' }}>Пороги XP для уровней (Total XP)</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
+                  {Object.entries(progressionConfig.xp.thresholds).map(([level, xp]: [any, any]) => (
+                    <div key={level}>
+                      <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>Уровень {level}</label>
+                      <input 
+                        type="number" 
+                        value={xp} 
+                        style={{ width: '100%', fontSize: '13px', padding: '6px' }}
+                        onChange={(e) => {
+                          const newThresholds = { ...progressionConfig.xp.thresholds };
+                          newThresholds[level] = parseInt(e.target.value) || 0;
+                          setProgressionConfig({
+                            ...progressionConfig,
+                            xp: { ...progressionConfig.xp, thresholds: newThresholds }
+                          });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: '32px' }}>
+                <h4 style={{ marginBottom: '16px' }}>Награды NAR за повышение уровня</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
+                  {progressionConfig.levelRewards && Object.entries(progressionConfig.levelRewards).map(([level, reward]: [any, any]) => (
+                    <div key={level}>
+                      <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>Уровень {level}</label>
+                      <input 
+                        type="number" 
+                        value={reward} 
+                        style={{ width: '100%', fontSize: '13px', padding: '6px' }}
+                        onChange={(e) => {
+                          const newRewards = { ...progressionConfig.levelRewards };
+                          newRewards[level] = parseInt(e.target.value) || 0;
+                          setProgressionConfig({
+                            ...progressionConfig,
+                            levelRewards: newRewards
+                          });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Ветки прокачки */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+              {/* Экономика */}
+              <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+                <h3 style={{ color: '#4caf50', marginBottom: '20px' }}>Ветка: Экономика</h3>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Шаг 1 (SP)</label>
+                      <input type="number" value={progressionConfig.economyBranch.step1Sp} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, economyBranch: { ...progressionConfig.economyBranch, step1Sp: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Коэф. 1</label>
+                      <input type="number" step="0.0001" value={progressionConfig.economyBranch.step1K} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, economyBranch: { ...progressionConfig.economyBranch, step1K: parseFloat(e.target.value) || 0 }})} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Шаг 2 (SP)</label>
+                      <input type="number" value={progressionConfig.economyBranch.step2Sp} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, economyBranch: { ...progressionConfig.economyBranch, step2Sp: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Коэф. 2</label>
+                      <input type="number" step="0.0001" value={progressionConfig.economyBranch.step2K} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, economyBranch: { ...progressionConfig.economyBranch, step2K: parseFloat(e.target.value) || 0 }})} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Макс. снижение комиссии (0.08 = 8%)</label>
+                    <input type="number" step="0.01" value={progressionConfig.economyBranch.reductionCap} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, economyBranch: { ...progressionConfig.economyBranch, reductionCap: parseFloat(e.target.value) || 0 }})} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Коэф. пассива</label>
+                      <input type="number" step="0.001" value={progressionConfig.economyBranch.passiveK} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, economyBranch: { ...progressionConfig.economyBranch, passiveK: parseFloat(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Кап пассива (SP)</label>
+                      <input type="number" value={progressionConfig.economyBranch.passiveSpCap} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, economyBranch: { ...progressionConfig.economyBranch, passiveSpCap: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Энергия */}
+              <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+                <h3 style={{ color: '#ffeb3b', marginBottom: '20px' }}>Ветка: Энергия</h3>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>База макс</label>
+                      <input type="number" value={progressionConfig.energyBranch.baseMax} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, baseMax: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Шаг 1 (SP)</label>
+                      <input type="number" value={progressionConfig.energyBranch.maxStep1Sp} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, maxStep1Sp: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Коэф. 1</label>
+                      <input type="number" value={progressionConfig.energyBranch.maxStep1K} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, maxStep1K: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Коэф. 2 (после шага 1)</label>
+                    <input type="number" value={progressionConfig.energyBranch.maxStep2K} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, maxStep2K: parseInt(e.target.value) || 0 }})} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Реген база/ч</label>
+                      <input type="number" value={progressionConfig.energyBranch.regenBasePerH} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, regenBasePerH: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Реген Шаг 1</label>
+                      <input type="number" value={progressionConfig.energyBranch.regenStep1Sp} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, regenStep1Sp: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Реген Коэф 1</label>
+                      <input type="number" step="0.1" value={progressionConfig.energyBranch.regenStep1K} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, regenStep1K: parseFloat(e.target.value) || 0 }})} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Восполнение</label>
+                      <input type="number" value={progressionConfig.energyBranch.refill.amount} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, refill: { ...progressionConfig.energyBranch.refill, amount: parseInt(e.target.value) || 0 } }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Баз. цена (NAR)</label>
+                      <input type="number" value={progressionConfig.energyBranch.refill.baseCostNar} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, refill: { ...progressionConfig.energyBranch.refill, baseCostNar: parseInt(e.target.value) || 0 } }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Рост цены</label>
+                      <input type="number" step="0.01" value={progressionConfig.energyBranch.refill.growth} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, refill: { ...progressionConfig.energyBranch.refill, growth: parseFloat(e.target.value) || 0 } }})} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Жизни */}
+              <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+                <h3 style={{ color: '#f44336', marginBottom: '20px' }}>Ветка: Жизни</h3>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>База макс</label>
+                      <input type="number" value={progressionConfig.livesBranch.baseMax} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, baseMax: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Шаг 1 (SP)</label>
+                      <input type="number" value={progressionConfig.livesBranch.maxStep1Sp} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, maxStep1Sp: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Коэф. 1</label>
+                      <input type="number" value={progressionConfig.livesBranch.maxStep1K} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, maxStep1K: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Защита кап (%)</label>
+                      <input type="number" step="0.01" value={progressionConfig.livesBranch.lifeLossProtectCap} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, lifeLossProtectCap: parseFloat(e.target.value) || 0 }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Защита кап (SP)</label>
+                      <input type="number" value={progressionConfig.livesBranch.lifeLossProtectSpCap} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, lifeLossProtectSpCap: parseInt(e.target.value) || 0 }})} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Восполнение</label>
+                      <input type="number" value={progressionConfig.livesBranch.refill.amount} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, refill: { ...progressionConfig.livesBranch.refill, amount: parseInt(e.target.value) || 0 } }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Баз. цена (NAR)</label>
+                      <input type="number" value={progressionConfig.livesBranch.refill.baseCostNar} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, refill: { ...progressionConfig.livesBranch.refill, baseCostNar: parseInt(e.target.value) || 0 } }})} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', color: '#aaa' }}>Рост цены</label>
+                      <input type="number" step="0.01" value={progressionConfig.livesBranch.refill.growth} 
+                        onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, refill: { ...progressionConfig.livesBranch.refill, growth: parseFloat(e.target.value) || 0 } }})} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Сила */}
+              <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+                <h3 style={{ color: '#9c27b0', marginBottom: '20px' }}>Ветка: Сила</h3>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Базовый вес</label>
+                    <input type="number" value={progressionConfig.powerBranch.weightBase} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, powerBranch: { ...progressionConfig.powerBranch, weightBase: parseInt(e.target.value) || 0 }})} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Коэф. веса (на SP)</label>
+                    <input type="number" step="0.1" value={progressionConfig.powerBranch.weightK} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, powerBranch: { ...progressionConfig.powerBranch, weightK: parseFloat(e.target.value) || 0 }})} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Прочее */}
+            <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+              <h3 style={{ color: '#aaa', marginBottom: '20px' }}>Прочие параметры</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                <div>
+                  <h4 style={{ marginBottom: '12px' }}>Лицензия предпринимателя</h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Требуемый уровень</label>
+                    <input type="number" value={progressionConfig.license.requiredLevel} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, license: { ...progressionConfig.license, requiredLevel: parseInt(e.target.value) || 0 }})} />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Стоимость (NAR)</label>
+                    <input type="number" value={progressionConfig.license.costNar} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, license: { ...progressionConfig.license, costNar: parseInt(e.target.value) || 0 }})} />
+                  </div>
+                </div>
+                <div>
+                  <h4 style={{ marginBottom: '12px' }}>Комиссия системы</h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Базовая комиссия (0.15 = 15%)</label>
+                    <input type="number" step="0.01" value={progressionConfig.commission.base} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, commission: { ...progressionConfig.commission, base: parseFloat(e.target.value) || 0 }})} />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Абсолютный минимум (0.05 = 5%)</label>
+                    <input type="number" step="0.01" value={progressionConfig.commission.min} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, commission: { ...progressionConfig.commission, min: parseFloat(e.target.value) || 0 }})} />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Мин. от статов (0.07 = 7%)</label>
+                    <input type="number" step="0.01" value={progressionConfig.commission.statsMin} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, commission: { ...progressionConfig.commission, statsMin: parseFloat(e.target.value) || 0 }})} />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Кап бонуса вещей (0.02 = 2%)</label>
+                    <input type="number" step="0.01" value={progressionConfig.commission.gearBonusCap} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, commission: { ...progressionConfig.commission, gearBonusCap: parseFloat(e.target.value) || 0 }})} />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

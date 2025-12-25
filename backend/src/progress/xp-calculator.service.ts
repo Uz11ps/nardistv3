@@ -1,14 +1,82 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ProgressionConfig } from './progression-config.entity';
 import { GameMode, GameType } from '../games/game.entity';
 
 /**
  * Сервис для расчёта XP согласно спецификации Nardist_XP_Leveling_Spec_v1_2
  */
 @Injectable()
-export class XpCalculatorService {
-  // Параметр кривой для уровней 1-5
-  private readonly A = 350;
-  private readonly MAX_LEVEL = 50;
+export class XpCalculatorService implements OnModuleInit {
+  constructor(
+    @InjectRepository(ProgressionConfig)
+    private readonly progressionConfigRepository: Repository<ProgressionConfig>,
+  ) {}
+
+  // Параметр кривой для уровней 1-5 (теперь через config)
+  private A = 350;
+  private MAX_LEVEL = 50;
+
+  // Конфигурация по умолчанию
+  private config = {
+    xp: {
+      baseXp: {
+        pvpRanked: 2800,
+        pvpBatalia: 3100,
+        tournament: 4500,
+        friendly: 1200,
+        ai: 250,
+      },
+      multipliers: {
+        win: 1.00,
+        loss: 0.70,
+        marsWin: 1.50,
+        repeatOpponent: [1.00, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50],
+      },
+      caps: {
+        maxMatchXpMult: 2.50,
+      },
+      thresholds: {
+        1: 1750, 2: 5250, 3: 12950, 4: 26600, 5: 50050,
+        6: 76513, 7: 111146, 8: 155133, 9: 223947, 10: 274745,
+        11: 352439, 12: 443095, 13: 547630, 14: 666572, 15: 800499,
+        16: 949816, 17: 1114974, 18: 1295961, 19: 1493088, 20: 1706122,
+        21: 1934944, 22: 2179337, 23: 2438855, 24: 2712961, 25: 3001086,
+        26: 3302515, 27: 3616468, 28: 3942042, 29: 4278291, 30: 4624199,
+        31: 4978683, 32: 5340636, 33: 5873467, 34: 6082246, 35: 6459491,
+        36: 6839392, 37: 7220716, 38: 7602217, 39: 7982686, 40: 8360902,
+        41: 8789105, 42: 9331625, 43: 10064568, 44: 11087641, 45: 12541240,
+        46: 14633038, 47: 17681154, 48: 22186326, 49: 28955279, 50: 39315825,
+      },
+    },
+  };
+
+  async onModuleInit() {
+    await this.refreshConfig();
+  }
+
+  /**
+   * Обновить конфигурацию из базы данных
+   */
+  async refreshConfig() {
+    try {
+      const dbConfig = await this.progressionConfigRepository.findOne({ where: {} });
+      if (dbConfig && dbConfig.config) {
+        if (dbConfig.config.xp) {
+          this.config.xp = { ...this.config.xp, ...dbConfig.config.xp };
+        }
+        if (dbConfig.config.xpCurve && dbConfig.config.xpCurve.A) {
+          this.A = dbConfig.config.xpCurve.A;
+        }
+        if (dbConfig.config.maxLevel) {
+          this.MAX_LEVEL = dbConfig.config.maxLevel;
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing XP calculator config:', error);
+    }
+  }
 
   /**
    * Вычисляет множитель для уровня согласно формуле GWars-style
@@ -16,10 +84,10 @@ export class XpCalculatorService {
   private getLevelFactor(level: number): number {
     if (level <= 5) {
       return this.A;
-    } else if (level >= 50) {
+    } else if (level >= this.MAX_LEVEL) {
       return 1;
     } else {
-      const t = (level - 5) / 45;
+      const t = (level - 5) / (this.MAX_LEVEL - 5);
       return Math.exp(Math.log(this.A) * (1 - t));
     }
   }
@@ -27,76 +95,11 @@ export class XpCalculatorService {
   /**
    * Вычисляет порог XP для уровня используя GWars-style кривую
    * Формула: XP_threshold[L] = round( XP_GWars_threshold[L] * factor(L) )
-   * Использует точную таблицу порогов из Приложения A спецификации
+   * Использует таблицу порогов из конфигурации
    */
   getXPThresholdForLevel(level: number): number {
     if (level <= 1) return 0;
-    
-    // Используем точную таблицу порогов из спецификации (таблица 11)
-    // Пороги уже рассчитаны с учетом фактора, поэтому просто возвращаем значение
-    return this.getGWarsThreshold(level);
-  }
-
-  /**
-   * Точная таблица порогов XP из Приложения A спецификации
-   * Таблица 11: Пороги XP для уровней 1-50
-   */
-  private getGWarsThreshold(level: number): number {
-    // Точная таблица порогов XP_total из таблицы 11 спецификации
-    const xpThresholds: { [key: number]: number } = {
-      1: 1750,
-      2: 5250,
-      3: 12950,
-      4: 26600,
-      5: 50050,
-      6: 76513,
-      7: 111146,
-      8: 155133,
-      9: 223947,
-      10: 274745,
-      11: 352439,
-      12: 443095,
-      13: 547630,
-      14: 666572,
-      15: 800499,
-      16: 949816,
-      17: 1114974,
-      18: 1295961,
-      19: 1493088,
-      20: 1706122,
-      21: 1934944,
-      22: 2179337,
-      23: 2438855,
-      24: 2712961,
-      25: 3001086,
-      26: 3302515,
-      27: 3616468,
-      28: 3942042,
-      29: 4278291,
-      30: 4624199,
-      31: 4978683,
-      32: 5340636,
-      33: 5873467,
-      34: 6082246,
-      35: 6459491,
-      36: 6839392,
-      37: 7220716,
-      38: 7602217,
-      39: 7982686,
-      40: 8360902,
-      41: 8789105,
-      42: 9331625,
-      43: 10064568,
-      44: 11087641,
-      45: 12541240,
-      46: 14633038,
-      47: 17681154,
-      48: 22186326,
-      49: 28955279,
-      50: 39315825,
-    };
-    
-    return xpThresholds[level] || 0;
+    return this.config.xp.thresholds[level] || 0;
   }
 
   /**
@@ -118,8 +121,9 @@ export class XpCalculatorService {
   getLevelFromTotalXP(totalXP: number): number {
     if (totalXP <= 0) return 1;
     
+    const maxLevel = (this as any).MAX_LEVEL || 50;
     let level = 1;
-    while (level < this.MAX_LEVEL) {
+    while (level < maxLevel) {
       const xpForNextLevel = this.getTotalXPForLevel(level + 1);
       if (totalXP >= xpForNextLevel) {
         level++;
@@ -132,35 +136,31 @@ export class XpCalculatorService {
 
   /**
    * Базовый XP по режимам игры
-   * Согласно таблице 3 из спецификации Nardist_XP_Leveling_Spec_v1_2
    */
   getBaseXP(mode: GameMode, gameType: GameType, stake?: number): number {
-    // Если есть ставка (игра на NAR-coin), используем "баталию" на NAR
+    const { baseXp } = this.config.xp;
+    
     if (stake && stake > 0) {
-      return 3100; // PvP "баталия" на NAR (из таблицы 3)
+      return baseXp.pvpBatalia;
     }
     
-    // Базовые значения XP согласно таблице 3 спецификации
-    const baseXP: { [key: string]: number } = {
-      'SHORT_VS_PLAYER': 2800,      // PvP рейтинговый
-      'LONG_VS_PLAYER': 2800,       // PvP рейтинговый
-      'SHORT_VS_BOT': 250,          // Тренировка vs AI
-      'LONG_VS_BOT': 250,           // Тренировка vs AI
-      'SHORT_TOURNAMENT': 4500,     // Турнирный матч
-      'LONG_TOURNAMENT': 4500,      // Турнирный матч
-      // Дружеский матч: 1200 (пока не реализован как отдельный режим)
-    };
-
-    const key = `${mode}_${gameType}`;
-    return baseXP[key] || 250; // По умолчанию минимальный XP (тренировка)
+    if (gameType === GameType.VS_BOT) {
+      return baseXp.ai;
+    }
+    
+    if (gameType === GameType.TOURNAMENT) {
+      return baseXp.tournament;
+    }
+    
+    return baseXp.pvpRanked;
   }
 
   /**
    * ResultMult - множитель исхода матча
-   * Победа: 1.0, Поражение: 0.7
    */
   getResultMultiplier(playerWon: boolean): number {
-    return playerWon ? 1.0 : 0.7;
+    const { multipliers } = this.config.xp;
+    return playerWon ? multipliers.win : multipliers.loss;
   }
 
   /**
@@ -174,30 +174,17 @@ export class XpCalculatorService {
 
   /**
    * RepeatOpponentMult - анти-фарм за 24 часа
-   * Согласно таблице 5 из спецификации Nardist_XP_Leveling_Spec_v1_2
    */
   getRepeatOpponentMultiplier(
     matchesCount: number, // Количество матчей с этим соперником за 24 часа
   ): number {
-    // Точная таблица из спецификации (таблица 5)
-    const multipliers: { [key: number]: number } = {
-      1: 1.00,
-      2: 0.90,
-      3: 0.85,
-      4: 0.80,
-      5: 0.75,
-      6: 0.70,
-      7: 0.65,
-      8: 0.60,
-      9: 0.55,
-    };
+    const { repeatOpponent } = this.config.xp.multipliers;
     
-    // Для 10+ матчей множитель = 0.50 (пол)
-    if (matchesCount >= 10) {
-      return 0.50;
+    if (matchesCount >= repeatOpponent.length) {
+      return repeatOpponent[repeatOpponent.length - 1];
     }
     
-    return multipliers[matchesCount] || 1.00;
+    return repeatOpponent[matchesCount - 1] || 1.00;
   }
 
   /**
@@ -211,15 +198,14 @@ export class XpCalculatorService {
 
   /**
    * MarsMult - победа "Марсом" (разгром)
-   * Множитель 1.50 для разгромной победы
    */
   getMarsMultiplier(isMarsWin: boolean): number {
-    return isMarsWin ? 1.50 : 1.00;
+    const { multipliers } = this.config.xp;
+    return isMarsWin ? multipliers.marsWin : 1.00;
   }
 
   /**
    * CleanPlayMult - античит/доверие
-   * Возвращает множитель в зависимости от доверия к игроку
    */
   getCleanPlayMultiplier(trustLevel: 'high' | 'medium' | 'low' | 'banned'): number {
     const multipliers = {
@@ -257,8 +243,8 @@ export class XpCalculatorService {
 
     let xp = baseXP * resultMult * opponentMult * repeatMult * gearMult * marsMult * cleanMult;
     
-    // Защитный кап: XP_final = min(XP, BaseXP(mode) * 2.50)
-    xp = Math.min(xp, baseXP * 2.50);
+    // Защитный кап: XP_final = min(XP, BaseXP(mode) * maxMatchXpMult)
+    xp = Math.min(xp, baseXP * this.config.xp.caps.maxMatchXpMult);
     
     return Math.floor(xp);
   }

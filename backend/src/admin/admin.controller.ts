@@ -1292,5 +1292,19 @@ export class AdminController {
   ) {
     return this.adminService.getGameReplay(gameId, step ? parseInt(step, 10) : undefined);
   }
+
+  // ==================== PROGRESSION CONFIG MANAGEMENT ====================
+
+  @Get('progression/config')
+  @UseGuards(AdminAuthGuard)
+  async getProgressionConfig(@CurrentUser() user: any) {
+    return this.adminService.getProgressionConfig();
+  }
+
+  @Put('progression/config')
+  @UseGuards(AdminAuthGuard)
+  async updateProgressionConfig(@CurrentUser() user: any, @Body() body: any) {
+    return this.adminService.updateProgressionConfig(body);
+  }
 }
 

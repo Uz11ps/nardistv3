@@ -150,10 +150,11 @@ export class ProgressService {
    * Уровни 2-5: +1 SP, уровни 6-50: +2 SP
    */
   private getSkillPointsForLevel(level: number): number {
+    const config = this.branchesService.getConfig().skillPoints;
     if (level >= 2 && level <= 5) {
-      return 1;
+      return config.levels2To5;
     } else if (level >= 6 && level <= 50) {
-      return 2;
+      return config.levels6To50;
     }
     return 0;
   }
@@ -206,27 +207,21 @@ export class ProgressService {
 
   /**
    * Получить награду NAR за уровень
-   * TODO: Вынести в конфиг или таблицу
    */
   private getLevelRewardNAR(level: number): number {
-    // Примерные награды (нужно вынести в конфиг)
-    const rewards: { [key: number]: number } = {
-      2: 500,
-      3: 1000,
-      4: 2000,
-      5: 10000, // На уровне 5 достаточно для лицензии
-      10: 5000,
-      15: 7500,
-      20: 10000,
-      25: 15000,
-      30: 20000,
-      35: 25000,
-      40: 30000,
-      45: 35000,
-      50: 50000,
-    };
+    const config = this.branchesService.getConfig().xp;
+    // Используем порог XP как базу для награды или отдельную таблицу
+    // В спецификации 3.2 указано: Таблица награды за уровень L (конфиг)
+    // Пока берем из таблицы порогов, если нет отдельной
+    const rewards = config.thresholds;
     
-    return rewards[level] || 1000; // По умолчанию 1000 NAR
+    // Но на уровне 5 должна быть спец награда 10000 для лицензии
+    if (level === 5) {
+      const licenseConfig = this.branchesService.getConfig().license;
+      return licenseConfig.costNar;
+    }
+    
+    return rewards[level] || 1000;
   }
 
   /**
@@ -555,15 +550,16 @@ export class ProgressService {
     }
 
     // Получаем количество покупок жизней сегодня
+    const config = this.branchesService.getConfig().livesBranch;
     const purchasesToday = await this.getLifePurchasesToday(userId);
-    const cost = Math.floor(200 * Math.pow(1.40, purchasesToday));
+    const cost = Math.floor(config.refill.baseCostNar * Math.pow(config.refill.growth, purchasesToday));
     
     if (Number(user.narCoin) < cost) {
       throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${cost}`);
     }
 
     user.narCoin = BigInt(user.narCoin) - BigInt(cost);
-    user.lives = Math.min(user.lives + 5, user.maxLives); // +5 жизней согласно спецификации
+    user.lives = Math.min(user.lives + config.refill.amount, user.maxLives); 
     await this.usersService['usersRepository'].save(user);
     
     // Сохраняем запись о покупке
@@ -572,7 +568,7 @@ export class ProgressService {
 
   /**
    * ЭНЕРГИЯ: Купить энергию за NAR-coin с прогрессивной ценой
-   * Цена растёт по числу покупок в текущие сутки: EnergyRefillCost(k) = 120 NAR * (1.35^k)
+   * Цена растёт по числу покупок в текущие сутки
    */
   async buyEnergy(userId: string): Promise<void> {
     await this.restoreEnergy(userId);
@@ -584,15 +580,16 @@ export class ProgressService {
     }
 
     // Получаем количество покупок энергии сегодня
+    const config = this.branchesService.getConfig().energyBranch;
     const purchasesToday = await this.getEnergyPurchasesToday(userId);
-    const cost = Math.floor(120 * Math.pow(1.35, purchasesToday));
+    const cost = Math.floor(config.refill.baseCostNar * Math.pow(config.refill.growth, purchasesToday));
     
     if (Number(user.narCoin) < cost) {
       throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${cost}`);
     }
 
     user.narCoin = BigInt(user.narCoin) - BigInt(cost);
-    user.energy = Math.min(user.energy + 50, user.maxEnergy); // +50 энергии согласно спецификации
+    user.energy = Math.min(user.energy + config.refill.amount, user.maxEnergy);
     await this.usersService['usersRepository'].save(user);
     
     // Сохраняем запись о покупке

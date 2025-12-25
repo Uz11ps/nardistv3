@@ -45,10 +45,11 @@ import { QuestProgress } from '../quests/quest-progress.entity';
 import { PaymentModule } from '../payment/payment.module';
 import { UserWallet } from '../payment/user-wallet.entity';
 import { PaymentTransaction } from '../payment/payment-transaction.entity';
+import { ProgressionConfig } from '../progress/progression-config.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, CourseTask, CourseTaskProgress, SystemSettings, NotificationTemplate, UserWallet, PaymentTransaction]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, CourseTask, CourseTaskProgress, SystemSettings, NotificationTemplate, UserWallet, PaymentTransaction, ProgressionConfig]),
     ScheduleModule.forRoot(),
     AuthModule,
     JwtModule.registerAsync({
