@@ -846,7 +846,7 @@ export class GamesService {
       let steps = [seq[0]];
       
       // Проверяем доступность всех кубиков в цепочке
-      const tempDiceCounts = new Map(diceCounts);
+      let tempDiceCounts = new Map(diceCounts);
       let allDiceAvailable = true;
       
       // Проверяем первый кубик
@@ -883,7 +883,7 @@ export class GamesService {
         } else {
           // Цепочка прервалась (другая шашка начала ходить)
           // Сохраняем текущую цепочку, если она содержит более одного шага
-          if (steps.length > 1) {
+          if (steps.length > 1 && allDiceAvailable) {
             const lastStep = steps[steps.length - 1];
             const key = `${currentFrom}-${lastStep.to}-${totalDie}`;
             if (!seen.has(key)) {
@@ -900,6 +900,16 @@ export class GamesService {
           currentFrom = next.from;
           totalDie = next.die;
           steps = [next];
+          // Сбрасываем проверку доступности для новой цепочки
+          allDiceAvailable = true;
+          tempDiceCounts = new Map(diceCounts);
+          // Проверяем доступность первого кубика новой цепочки
+          const newFirstDieCount = tempDiceCounts.get(next.die) || 0;
+          if (newFirstDieCount === 0) {
+            allDiceAvailable = false;
+          } else {
+            tempDiceCounts.set(next.die, newFirstDieCount - 1);
+          }
         }
       }
       

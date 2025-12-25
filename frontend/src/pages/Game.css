@@ -5,6 +5,11 @@
   overflow: hidden;
 }
 
+/* В landscape режиме учитываем уменьшенный header */
+.landscape-mode.game-container {
+  height: 100vh;
+}
+
 /* Game Players Section (Portrait only) */
 .game-players-section {
   display: flex;
@@ -26,6 +31,13 @@
   height: 100%;
   overflow: hidden;
   position: relative;
+  min-height: 0;
+}
+
+/* В landscape режиме убираем лишние отступы */
+.landscape-mode .game-main-layout {
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .game-center-content {
@@ -181,6 +193,9 @@
   padding: 0;
   height: 100%;
   width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 /* Очистка старых стилей ландшафта */
@@ -524,18 +539,35 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
 }
 
 .game-result {
   background: #2a2a2a;
-  padding: 32px;
+  padding: 24px;
   border-radius: 16px;
   text-align: center;
+  max-width: 400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Адаптация для landscape режима */
+.landscape-mode .game-overlay {
+  padding: 12px;
+}
+
+.landscape-mode .game-result {
+  padding: 20px;
+  max-width: 500px;
+  max-height: 85vh;
 }
 
 .game-result h2 {
@@ -544,13 +576,23 @@
   color: #ffffff;
 }
 
+.landscape-mode .game-result h2 {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
 .fair-play-verification {
   background: rgba(0, 0, 0, 0.4);
   border-radius: 12px;
   padding: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   border: 1px solid rgba(255, 215, 0, 0.2);
   text-align: left;
+}
+
+.landscape-mode .fair-play-verification {
+  padding: 12px;
+  margin-bottom: 16px;
 }
 
 .fair-play-verification h4 {
@@ -565,6 +607,11 @@
   justify-content: space-between;
   margin-bottom: 8px;
   font-size: 13px;
+}
+
+.landscape-mode .verification-item {
+  margin-bottom: 6px;
+  font-size: 12px;
 }
 
 .verification-item span {
@@ -672,6 +719,18 @@
   margin-bottom: 24px;
   color: #B6B6B6;
   line-height: 1.5;
+}
+
+.game-result p {
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: #B6B6B6;
+  line-height: 1.5;
+}
+
+.landscape-mode .game-result p {
+  font-size: 16px;
+  margin-bottom: 16px;
 }
 
 .game-move-timer {

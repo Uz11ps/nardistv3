@@ -303,6 +303,7 @@ input, textarea, select {
   position: sticky;
   top: 0;
   z-index: 100;
+  flex-shrink: 0;
 }
 
 .page-header-title {
@@ -311,6 +312,20 @@ input, textarea, select {
   font-weight: 600;
   color: #ffffff;
   text-align: center;
+}
+
+/* Уменьшаем header в landscape режиме */
+.landscape-mode .page-header {
+  padding: 8px 12px;
+}
+
+.landscape-mode .page-header-title {
+  font-size: 14px;
+}
+
+.landscape-mode .back-button {
+  font-size: 18px;
+  width: 28px;
 }
 
 .back-button {
