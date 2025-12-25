@@ -132,29 +132,25 @@ export default function BackgammonBoard({
       img.src = url
     }
 
-    // Загрузка текстуры доски
+    // Загрузка текстуры доски из админки
+    // Для кастомных скинов - загружаем из админки (текстура содержит треугольники)
+    // Для дефолтных - используем текущую отрисовку кодом
     const loadBoardTexture = () => {
-      const textureUrl = boardSkin?.boardTextureUrl || DEFAULT_BOARD_TEXTURE
+      const textureUrl = boardSkin?.boardTextureUrl
       
-      loadImage(
-        textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
-        (img) => setBoardTexture(img),
-        () => {
-          // Fallback на дефолтную текстуру, если загрузка не удалась
-          if (textureUrl !== DEFAULT_BOARD_TEXTURE) {
-            loadImage(
-              `${window.location.origin}${DEFAULT_BOARD_TEXTURE}`,
-              (img) => setBoardTexture(img),
-              () => {
-                console.warn('Failed to load default board texture')
-                setBoardTexture(null)
-              }
-            )
-          } else {
+      if (textureUrl) {
+        loadImage(
+          textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
+          (img) => setBoardTexture(img),
+          () => {
+            console.warn('Failed to load board texture from admin')
             setBoardTexture(null)
           }
-        }
-      )
+        )
+      } else {
+        // Если нет текстуры из админки - null (будем рисовать кодом)
+        setBoardTexture(null)
+      }
     }
 
     loadBoardTexture()
@@ -451,7 +447,7 @@ export default function BackgammonBoard({
     
     for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
       // Для player2 используем визуальный индекс для вычисления координат (как в getPointCoordinates)
-      const visualPointIndex = isPlayer1 ? pointIndex : (23 - pointIndex)
+      const visualPointIndex = isPlayer1 ? pointIndex : ((pointIndex + 12) % 24)
       const isTopRow = visualPointIndex < 12
       let columnXStart: number
       let columnXEnd: number
@@ -534,14 +530,14 @@ export default function BackgammonBoard({
     const boardWidth = width - (bearOffWidth * 2)
     const boardStartX = bearOffWidth
     
-    // Фон доски - используем текстуру если есть, иначе цветной фон
-    if (boardTexture && boardTexture.complete && boardTexture.width > 0 && boardTexture.height > 0) {
-      // Рисуем текстуру доски с сохранением пропорций
-      ctx.save()
+    // Фон доски
+    const hasCustomBoardTexture = boardTexture && boardTexture.complete && (boardTexture.width > 0 || boardTexture.height > 0 || boardTexture.src?.endsWith('.svg'))
+    
+    if (hasCustomBoardTexture) {
+      // Для кастомных скинов - рисуем текстуру (она уже содержит треугольники)
       ctx.drawImage(boardTexture, boardStartX, 0, boardWidth, height)
-      ctx.restore()
     } else {
-      // Fallback на цветной фон если текстура не загрузилась
+      // Для дефолтных - используем цветной фон (треугольники будут нарисованы кодом ниже)
       ctx.fillStyle = '#8B4513'
       ctx.fillRect(boardStartX, 0, boardWidth, height)
     }
@@ -566,7 +562,7 @@ export default function BackgammonBoard({
       
       // Используем текстуру если есть, иначе цветной круг
       const texture = isWhite ? whiteCheckerTexture : blackCheckerTexture
-      if (texture && texture.complete && texture.width > 0 && texture.height > 0) {
+      if (texture && texture.complete && (texture.width > 0 || texture.height > 0 || texture.src?.endsWith('.svg'))) {
         // Рисуем текстуру шашки
         ctx.save()
         ctx.beginPath()
@@ -631,69 +627,36 @@ export default function BackgammonBoard({
       ctx.stroke()
     }
     
-    // Сначала рисуем все треугольники и их подсветку
-    points.forEach((_value: number, pointIndex: number) => {
-      const { x, y, isTopRow, pointWidth: pW, pointHeight: pH, pointNumber } = getPointCoordinates(pointIndex, canvas)
-      
-      const triangleWidth = pW * 0.95
-      const triangleHeight = pH * 0.95
-      
-      // Используем визуальный индекс для определения цвета (как в getPointCoordinates)
-      const visualPointIndex = isPlayer1 ? pointIndex : (23 - pointIndex)
-      const pointInRow = isTopRow ? visualPointIndex : visualPointIndex - 12
-      const isLight = pointInRow % 2 === 0
-      const triangleColor = isLight ? '#D4A574' : '#8B4513'
-      
-      // 1. Подсветка точки под курсором (самый нижний слой подсветки)
-      if (hoveredPoint === pointIndex) {
-        ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
+    // Рисуем треугольники кодом ТОЛЬКО для дефолтных скинов (без кастомной текстуры)
+    if (!hasCustomBoardTexture) {
+      points.forEach((_value: number, pointIndex: number) => {
+        const { x, y, isTopRow, pointWidth: pW, pointHeight: pH, pointNumber } = getPointCoordinates(pointIndex, canvas)
+        
+        const triangleWidth = pW * 0.95
+        const triangleHeight = pH * 0.95
+        
+        // Используем визуальный индекс для определения цвета (как в getPointCoordinates)
+        const visualPointIndex = isPlayer1 ? pointIndex : ((pointIndex + 12) % 24)
+        const pointInRow = isTopRow ? visualPointIndex : visualPointIndex - 12
+        const isLight = pointInRow % 2 === 0
+        const triangleColor = isLight ? '#D4A574' : '#8B4513'
+        
+        // Рисуем сам треугольник
+        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
+        
+        // Отрисовка нумерации точек (1-24)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+        ctx.font = 'bold 12px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        
         if (isTopRow) {
-          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
+          ctx.fillText(pointNumber.toString(), x, y + 15)
         } else {
-          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
+          ctx.fillText(pointNumber.toString(), x, y - 15)
         }
-      }
-
-      // 2. Подсветка возможных исходных точек - убрана, подсвечиваем только выбранную точку
-
-      // 3. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
-      if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
-        if (isTopRow) {
-          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
-        } else {
-          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
-        }
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
-        ctx.lineWidth = 2
-        ctx.strokeRect(x - pW / 2 + 2, isTopRow ? 2 : height / 2 + 2, pW - 4, height / 2 - 4)
-      }
-      
-      // 4. Подсветка выбранной точки
-      if (selectedPoint === pointIndex) {
-        ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
-        if (isTopRow) {
-          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
-        } else {
-          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
-        }
-      }
-      
-      // Рисуем сам треугольник
-      drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
-      
-      // Отрисовка нумерации точек (1-24)
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
-      ctx.font = 'bold 12px Arial'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      
-      if (isTopRow) {
-        ctx.fillText(pointNumber.toString(), x, y + 15)
-      } else {
-        ctx.fillText(pointNumber.toString(), x, y - 15)
-      }
-    })
+      })
+    }
 
     // Вторым проходом рисуем все шашки (чтобы они были поверх всех треугольников)
     points.forEach((pointValue: number, pointIndex: number) => {
@@ -738,6 +701,44 @@ export default function BackgammonBoard({
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(checkerCount.toString(), x, lastCheckerY)
+      }
+    })
+    
+    // Подсветка рисуется ПОВЕРХ треугольников и шашек
+    points.forEach((_value: number, pointIndex: number) => {
+      const { x, y, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
+      
+      // 1. Подсветка точки под курсором
+      if (hoveredPoint === pointIndex) {
+        ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
+        if (isTopRow) {
+          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
+        } else {
+          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
+        }
+      }
+
+      // 2. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
+      if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
+        if (isTopRow) {
+          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
+        } else {
+          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
+        }
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
+        ctx.lineWidth = 2
+        ctx.strokeRect(x - pW / 2 + 2, isTopRow ? 2 : height / 2 + 2, pW - 4, height / 2 - 4)
+      }
+      
+      // 3. Подсветка выбранной точки
+      if (selectedPoint === pointIndex) {
+        ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
+        if (isTopRow) {
+          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
+        } else {
+          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
+        }
       }
     })
     
