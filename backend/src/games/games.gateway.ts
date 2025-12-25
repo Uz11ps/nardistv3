@@ -316,6 +316,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       const gameState = await this.gamesService.getGameState(data.gameId);
       this.logger.log(`✅ Emitting move_made event for gameId=${data.gameId}`);
       this.server.to(`game:${data.gameId}`).emit('move_made', gameState);
+      // Также отправляем game_state для гарантированного обновления доски
+      this.server.to(`game:${data.gameId}`).emit('game_state', gameState);
       
       // Отправляем обновление таймера сразу после хода
       await this.sendTimerUpdateForGame(data.gameId);
@@ -365,7 +367,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         });
         this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
         
-        // Wait and make bot move
+        // Wait for dice animation and make bot move
         setTimeout(async () => {
           try {
             const updatedGame = await this.gamesService.findOne(gameId);
@@ -387,6 +389,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             // Emit move_made event (или просто game_state если ходов не было)
             if (botMoves.length > 0) {
               this.server.to(`game:${gameId}`).emit('move_made', gameStateAfterMove);
+              // Также отправляем game_state для гарантированного обновления доски
+              this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
             } else {
               this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
             }

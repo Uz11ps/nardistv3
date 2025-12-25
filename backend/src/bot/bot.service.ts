@@ -8,8 +8,6 @@ import { ImprovedBotService } from './improved-bot.service';
 @Injectable()
 export class BotService {
   private readonly logger = new Logger(BotService.name);
-  private readonly BOT_MOVE_DELAY_MIN = 1000; // Минимальная задержка 1 секунда
-  private readonly BOT_MOVE_DELAY_MAX = 3000; // Максимальная задержка 3 секунды
 
   constructor(
     private backgammonEngine: BackgammonEngine,
@@ -19,11 +17,6 @@ export class BotService {
   ) {}
 
   async makeBotMove(gameState: any, mode: GameMode): Promise<Array<{ from: number; to: number; die: number }>> {
-    // Добавляем реалистичную задержку для бота (имитация размышления)
-    const delay = this.BOT_MOVE_DELAY_MIN + 
-                  Math.random() * (this.BOT_MOVE_DELAY_MAX - this.BOT_MOVE_DELAY_MIN);
-    await new Promise(resolve => setTimeout(resolve, delay));
-
     const engine = mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     const dice = gameState.dice || [];
 
