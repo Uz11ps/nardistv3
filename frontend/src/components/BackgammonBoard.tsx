@@ -366,13 +366,9 @@ export default function BackgammonBoard({
     const width = canvas.width
     const height = canvas.height
     
-    // Для player2 инвертируем координаты клика, так как доска инвертирована
-    let actualX = x
-    let actualY = y
-    if (!isPlayer1) {
-      actualX = width - x
-      actualY = height - y
-    }
+    // Координаты клика не инвертируем, так как доска больше не поворачивается
+    const actualX = x
+    const actualY = y
     
     // Параметры области выноса (Контейнеры)
     const bearOffWidth = width * 0.06
@@ -392,29 +388,31 @@ export default function BackgammonBoard({
     const points = gameState?.points || []
     
     for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
-      const isTopRow = pointIndex < 12
+      // Для player2 используем визуальный индекс для вычисления координат (как в getPointCoordinates)
+      const visualPointIndex = isPlayer1 ? pointIndex : (23 - pointIndex)
+      const isTopRow = visualPointIndex < 12
       let columnXStart: number
       let columnXEnd: number
       
       if (isTopRow) {
-        const isRightSide = pointIndex < 6
+        const isRightSide = visualPointIndex < 6
         if (isRightSide) {
-          const pointInHalf = pointIndex
+          const pointInHalf = visualPointIndex
           columnXEnd = boardEndX - pointInHalf * pointWidth
           columnXStart = boardEndX - (pointInHalf + 1) * pointWidth
         } else {
-          const pointInHalf = pointIndex - 6
+          const pointInHalf = visualPointIndex - 6
           columnXEnd = barX - pointInHalf * pointWidth
           columnXStart = barX - (pointInHalf + 1) * pointWidth
         }
       } else {
-        const isLeftSide = pointIndex < 18
+        const isLeftSide = visualPointIndex < 18
         if (isLeftSide) {
-          const pointInHalf = pointIndex - 12
+          const pointInHalf = visualPointIndex - 12
           columnXStart = boardStartX + pointInHalf * pointWidth
           columnXEnd = boardStartX + (pointInHalf + 1) * pointWidth
         } else {
-          const pointInHalf = pointIndex - 18
+          const pointInHalf = visualPointIndex - 18
           columnXStart = barX + barWidth + pointInHalf * pointWidth
           columnXEnd = barX + barWidth + (pointInHalf + 1) * pointWidth
         }
@@ -422,9 +420,9 @@ export default function BackgammonBoard({
       
       if (actualX >= columnXStart && actualX <= columnXEnd) {
         if (isTopRow) {
-          if (actualY <= height / 2) return pointIndex
+          if (actualY <= height / 2) return pointIndex // Возвращаем реальный индекс
         } else {
-          if (actualY > height / 2) return pointIndex
+          if (actualY > height / 2) return pointIndex // Возвращаем реальный индекс
         }
       }
     }
@@ -466,12 +464,8 @@ export default function BackgammonBoard({
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, width, height)
     
-    // Для player2 инвертируем доску на 180 градусов (чтобы свои шашки были слева)
-    // Но цвета шашек остаются изначальными
-    if (!isPlayer1) {
-      ctx.translate(width, height)
-      ctx.scale(-1, -1)
-    }
+    // Убрали поворот на 180 градусов - теперь доска всегда отображается одинаково
+    // Для player2 координаты точек будут инвертированы в getPointCoordinates
     
     // Параметры области выноса (Контейнеры)
     const bearOffWidth = width * 0.06
@@ -582,7 +576,9 @@ export default function BackgammonBoard({
       const triangleWidth = pW * 0.95
       const triangleHeight = pH * 0.95
       
-      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
+      // Используем визуальный индекс для определения цвета (как в getPointCoordinates)
+      const visualPointIndex = isPlayer1 ? pointIndex : (23 - pointIndex)
+      const pointInRow = isTopRow ? visualPointIndex : visualPointIndex - 12
       const isLight = pointInRow % 2 === 0
       const triangleColor = isLight ? '#D4A574' : '#8B4513'
       

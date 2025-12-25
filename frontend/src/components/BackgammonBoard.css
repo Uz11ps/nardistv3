@@ -12,11 +12,39 @@
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* В landscape режиме убираем min-height, чтобы доска влезала */
 .landscape-mode .backgammon-board-container {
   min-height: 0;
+}
+
+/* В реплее убираем min-height */
+.replay-board .backgammon-board-container {
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .backgammon-board-container {
+    min-height: 400px;
+  }
+  
+  .replay-board .backgammon-board-container {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .backgammon-board-container {
+    min-height: 300px;
+  }
+  
+  .replay-board .backgammon-board-container {
+    min-height: 0;
+  }
 }
 
 .backgammon-board-canvas {
