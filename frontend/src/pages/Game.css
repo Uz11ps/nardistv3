@@ -13,6 +13,21 @@
   z-index: 100;
 }
 
+/* Кнопки для ландшафтного режима - позиционируются в верхней части экрана */
+.landscape-mode .game-action-btn-header {
+  position: fixed;
+  top: 56px; /* Высота page-header (16px padding * 2 + 24px высота контента) */
+  z-index: 101;
+}
+
+.landscape-mode .game-action-btn-header:hover {
+  transform: scale(1.1);
+}
+
+.landscape-mode .game-action-btn-header:active {
+  transform: scale(0.95);
+}
+
 /* Game Players Section (Portrait only) */
 .game-players-section {
   display: flex;
