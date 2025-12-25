@@ -12,6 +12,7 @@ import { GamesService } from './games.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { BotService } from '../bot/bot.service';
+import { SkinsService } from '../skins/skins.service';
 import { Inject, forwardRef, Logger, OnModuleDestroy } from '@nestjs/common';
 import { GameType } from './game.entity';
 
@@ -35,6 +36,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     private configService: ConfigService,
     @Inject(forwardRef(() => BotService))
     private botService: BotService,
+    private skinsService: SkinsService,
   ) {
     // Запускаем периодическую проверку таймаутов ходов каждые 10 секунд
     this.startMoveTimeoutChecker();
@@ -261,6 +263,18 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     const userId = client.data.userId;
     try {
       const dice = await this.gamesService.rollDice(data.gameId, userId);
+      
+      // Применяем износ к кубикам после броска (Equipment Spec v2.0 - PER_ROLL)
+      try {
+        // Применяем износ к обоим кубикам (DIE_1 и DIE_2)
+        // Если дубль, все равно применяем к обоим кубикам (каждый кубик изнашивается отдельно)
+        // Применяем износ к обоим кубикам (Equipment Spec v2.0 - PER_ROLL)
+        await this.skinsService.applyWearToDieAfterRoll(userId, 'DIE_1');
+        await this.skinsService.applyWearToDieAfterRoll(userId, 'DIE_2');
+      } catch (error) {
+        this.logger.error(`Ошибка при применении износа к кубикам: ${error.message}`);
+      }
+      
       let gameState = await this.gamesService.getGameState(data.gameId);
       this.server.to(`game:${data.gameId}`).emit('dice_rolled', { dice, playerId: userId });
       
@@ -358,6 +372,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         
         // Roll dice for bot
         const botDice = await this.gamesService.rollDice(gameId, botPlayerId);
+        
+        // Применяем износ к кубикам бота после броска (Equipment Spec v2.0 - PER_ROLL)
+        // Бот-игры обычно не тратят износ, но для консистентности можно оставить
+        // TODO: Решить, нужно ли применять износ для бот-игр
+        
         const gameStateAfterDice = await this.gamesService.getGameState(gameId);
         
         // Emit dice rolled event

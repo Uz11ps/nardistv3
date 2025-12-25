@@ -663,32 +663,27 @@ export class GamesService {
       updatedGame.status = GameStatus.FINISHED;
       updatedGame.winnerId = winner === 0 ? updatedGame.player1Id : updatedGame.player2Id;
       
-      // Уменьшаем износ скинов после завершения игры
+      // Применяем износ экипировки после завершения игры (Equipment Spec v2.0)
       try {
-        if (updatedGame.skinData?.player1) {
-          if (updatedGame.skinData.player1.board) {
-            await this.skinsService.decreaseSkinDurability(updatedGame.player1Id, updatedGame.skinData.player1.board);
-          }
-          if (updatedGame.skinData.player1.dice) {
-            await this.skinsService.decreaseSkinDurability(updatedGame.player1Id, updatedGame.skinData.player1.dice);
-          }
-          if (updatedGame.skinData.player1.checkers) {
-            await this.skinsService.decreaseSkinDurability(updatedGame.player1Id, updatedGame.skinData.player1.checkers);
-          }
-        }
-        if (updatedGame.skinData?.player2 && updatedGame.player2Id) {
-          if (updatedGame.skinData.player2.board) {
-            await this.skinsService.decreaseSkinDurability(updatedGame.player2Id, updatedGame.skinData.player2.board);
-          }
-          if (updatedGame.skinData.player2.dice) {
-            await this.skinsService.decreaseSkinDurability(updatedGame.player2Id, updatedGame.skinData.player2.dice);
-          }
-          if (updatedGame.skinData.player2.checkers) {
-            await this.skinsService.decreaseSkinDurability(updatedGame.player2Id, updatedGame.skinData.player2.checkers);
-          }
+        const isTournament = updatedGame.type === GameType.TOURNAMENT;
+        
+        // Для игрока 1: применяем износ ко всем PER_MATCH предметам (BOARD, CHECKERS, CUP, CLOCK, CASE)
+        await this.skinsService.applyWearToEquipmentAfterMatch(
+          updatedGame.player1Id,
+          null, // null = все PER_MATCH предметы
+          isTournament,
+        );
+        
+        // Для игрока 2 (если есть): применяем износ ко всем PER_MATCH предметам
+        if (updatedGame.player2Id) {
+          await this.skinsService.applyWearToEquipmentAfterMatch(
+            updatedGame.player2Id,
+            null,
+            isTournament,
+          );
         }
       } catch (error) {
-        this.logger.error('Ошибка при уменьшении износа скинов:', error);
+        this.logger.error('Ошибка при применении износа экипировки:', error);
       }
       
       if (winner === 0) {

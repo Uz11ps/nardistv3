@@ -46,51 +46,91 @@ export class SkinsService implements OnModuleInit {
           name: 'Классическая доска',
           description: 'Классическая доска для нардов',
           type: 'board',
+          slot: 'BOARD',
           theme: 'classic',
           isDefault: true,
           isPremium: false,
+          is_premium_shop: false,
           weight: 1,
           price: null, // Бесплатный
-          rarity: 'common',
-          imageUrl: '/img/доска.jpg', // Превью для магазина
-          boardTextureUrl: '/img/доска.jpg', // Текстура для игры
+          rarity: 'COMMON',
+          required_level: 1,
+          required_power_sp: null,
+          wear_mode: 'PER_MATCH',
+          wear_amount: 1,
+          tournament_wear_mult: 2.0,
+          durability_max: getDurabilityMax('COMMON', 'PER_MATCH'), // 100
+          repair_currency: 'NAR',
+          repair_base_cost: 0, // Бесплатный ремонт для дефолтного скина
+          bonuses: null,
+          imageUrl: '/img/доска.jpg',
+          boardTextureUrl: '/img/доска.jpg',
         },
         {
           name: 'Классические кубики',
           description: 'Классические кубики для нардов',
           type: 'dice',
+          slot: 'DIE_1', // Первый кубик
           theme: 'classic',
           isDefault: true,
           isPremium: false,
+          is_premium_shop: false,
           weight: 1,
-          price: null, // Бесплатный
-          rarity: 'common',
-          imageUrl: '/skins/default-dice.svg', // Превью для магазина
-          diceTextureUrl: '/skins/default-dice.svg', // Текстура для игры
+          price: null,
+          rarity: 'COMMON',
+          required_level: 1,
+          required_power_sp: null,
+          wear_mode: 'PER_ROLL',
+          wear_amount: 1,
+          tournament_wear_mult: 2.0,
+          durability_max: getDurabilityMax('COMMON', 'PER_ROLL'), // 1800
+          repair_currency: 'NAR',
+          repair_base_cost: 0,
+          bonuses: null,
+          imageUrl: '/skins/default-dice.svg',
+          diceTextureUrl: '/skins/default-dice.svg',
         },
         {
           name: 'Классические шашки',
           description: 'Классические шашки для нардов',
           type: 'checkers',
+          slot: 'CHECKERS',
           theme: 'classic',
           isDefault: true,
           isPremium: false,
+          is_premium_shop: false,
           weight: 1,
-          price: null, // Бесплатный
-          rarity: 'common',
-          imageUrl: '/skins/default-checkers.svg', // Превью для магазина
-          whiteCheckersTextureUrl: '/skins/default-checkers-white.svg', // Текстура для игры
-          blackCheckersTextureUrl: '/skins/default-checkers-black.svg', // Текстура для игры
-          checkersTextureUrl: '/skins/default-checkers.svg', // Для обратной совместимости
+          price: null,
+          rarity: 'COMMON',
+          required_level: 1,
+          required_power_sp: null,
+          wear_mode: 'PER_MATCH',
+          wear_amount: 1,
+          tournament_wear_mult: 2.0,
+          durability_max: getDurabilityMax('COMMON', 'PER_MATCH'), // 100
+          repair_currency: 'NAR',
+          repair_base_cost: 0,
+          bonuses: null,
+          imageUrl: '/skins/default-checkers.svg',
+          whiteCheckersTextureUrl: '/skins/default-checkers-white.svg',
+          blackCheckersTextureUrl: '/skins/default-checkers-black.svg',
+          checkersTextureUrl: '/skins/default-checkers.svg',
         },
       ];
 
       if (existingDefaultSkins.length === 0) {
         // Создаем дефолтные скины
         for (const skinData of defaultSkinsData) {
+          // Убеждаемся, что durability_max установлен
+          if (!skinData.durability_max) {
+            const slot = skinData.slot || typeToSlot(skinData.type);
+            const wearMode = getWearModeBySlot(slot);
+            skinData.durability_max = getDurabilityMax(skinData.rarity || 'COMMON', wearMode);
+          }
+          
           const skin = this.skinsRepository.create(skinData);
           await this.skinsRepository.save(skin);
-          this.logger.log(`✅ Создан дефолтный скин: ${skinData.name} (${skinData.type})`);
+          this.logger.log(`✅ Создан дефолтный скин: ${skinData.name} (${skinData.slot || skinData.type}), durability_max=${skinData.durability_max}`);
         }
       } else {
         // Обновляем существующие дефолтные скины
@@ -131,15 +171,40 @@ export class SkinsService implements OnModuleInit {
               }
             }
             
+            // Обновляем поля Equipment Spec, если они отсутствуют
+            if (!existingSkin.slot && skinData.slot) {
+              existingSkin.slot = skinData.slot;
+              needsUpdate = true;
+            }
+            if (!existingSkin.durability_max && skinData.durability_max) {
+              existingSkin.durability_max = skinData.durability_max;
+              needsUpdate = true;
+            }
+            if (!existingSkin.wear_mode && skinData.wear_mode) {
+              existingSkin.wear_mode = skinData.wear_mode;
+              needsUpdate = true;
+            }
+            if (existingSkin.rarity && existingSkin.rarity.toLowerCase() === 'common' && !existingSkin.rarity.startsWith('COMMON')) {
+              existingSkin.rarity = 'COMMON';
+              needsUpdate = true;
+            }
+            
             if (needsUpdate) {
               await this.skinsRepository.save(existingSkin);
-              this.logger.log(`✅ Обновлен дефолтный скин: ${skinData.name} (${skinData.type})`);
+              this.logger.log(`✅ Обновлен дефолтный скин: ${skinData.name} (${skinData.slot || skinData.type})`);
             }
           } else {
             // Если скина нет, создаем его
+            // Убеждаемся, что durability_max установлен
+            if (!skinData.durability_max) {
+              const slot = skinData.slot || typeToSlot(skinData.type);
+              const wearMode = getWearModeBySlot(slot);
+              skinData.durability_max = getDurabilityMax(skinData.rarity || 'COMMON', wearMode);
+            }
+            
             const skin = this.skinsRepository.create(skinData);
             await this.skinsRepository.save(skin);
-            this.logger.log(`✅ Создан дефолтный скин: ${skinData.name} (${skinData.type})`);
+            this.logger.log(`✅ Создан дефолтный скин: ${skinData.name} (${skinData.slot || skinData.type}), durability_max=${skinData.durability_max}`);
           }
         }
       }
@@ -347,16 +412,28 @@ export class SkinsService implements OnModuleInit {
     });
 
     if (!existingUserSkin) {
+      // Определяем максимальную прочность для нового предмета (Equipment Spec v2.0)
+      const durabilityMax = skin.durability_max || getDurabilityMax(
+        skin.rarity || 'COMMON',
+        skin.wear_mode || getWearModeBySlot(skin.slot || typeToSlot(skin.type || 'board')),
+      );
+
       const userSkin = this.userSkinsRepository.create({
         userId,
         skinId,
         isSelected: false,
+        durability_current: durabilityMax, // Инициализируем максимальной прочностью
+        currentDurability: durabilityMax, // Для обратной совместимости
       });
       await this.userSkinsRepository.save(userSkin);
     }
   }
 
-  async decreaseSkinDurability(userId: string, skinId: string): Promise<void> {
+  /**
+   * УСТАРЕЛО: Используйте applyWearToEquipment
+   * Применяет износ к предмету после матча (Equipment Spec v2.0)
+   */
+  async decreaseSkinDurability(userId: string, skinId: string, isTournament: boolean = false): Promise<void> {
     const userSkin = await this.userSkinsRepository.findOne({
       where: { userId, skinId },
       relations: ['skin'],
@@ -366,17 +443,107 @@ export class SkinsService implements OnModuleInit {
       return;
     }
 
-    const maxDurability = userSkin.skin.maxDurability || 100;
-    const currentDurability = userSkin.currentDurability ?? maxDurability;
+    const skin = userSkin.skin;
+    const durabilityMax = skin.durability_max || skin.maxDurability || 100;
+    const durabilityCurrent = userSkin.durability_current ?? userSkin.currentDurability ?? durabilityMax;
 
-    if (currentDurability > 0) {
-      userSkin.currentDurability = currentDurability - 1;
+    // Используем новую систему износа или старую для совместимости
+    const wearMode = skin.wear_mode || 'PER_MATCH';
+    const wearAmount = skin.wear_amount || 1;
+    const tournamentWearMult = skin.tournament_wear_mult || 2.0;
+
+    if (durabilityCurrent > 0) {
+      // Применяем износ по новой системе
+      const newDurability = applyWear(
+        durabilityCurrent,
+        durabilityMax,
+        wearAmount,
+        isTournament,
+        tournamentWearMult,
+      );
+
+      userSkin.durability_current = newDurability;
+      userSkin.currentDurability = newDurability; // Для обратной совместимости
       await this.userSkinsRepository.save(userSkin);
 
-      // Если износ достиг нуля, снимаем скины с выбора
-      if (userSkin.currentDurability === 0 && userSkin.isSelected) {
+      // Если предмет уничтожен (durability <= 0), снимаем с выбора
+      if (newDurability <= 0 && userSkin.isSelected) {
         userSkin.isSelected = false;
         await this.userSkinsRepository.save(userSkin);
+        this.logger.warn(`⚠️ Предмет ${skinId} уничтожен из-за износа у пользователя ${userId}`);
+      }
+    }
+  }
+
+  /**
+   * Применяет износ к экипировке после матча (Equipment Spec v2.0)
+   * @param userId ID пользователя
+   * @param slot Слот экипировки (BOARD, CHECKERS, CUP, CLOCK, CASE) или null для всех PER_MATCH предметов
+   * @param isTournament Является ли это турниром
+   */
+  async applyWearToEquipmentAfterMatch(userId: string, slot: string | null = null, isTournament: boolean = false): Promise<void> {
+    const selectedSkins = await this.userSkinsRepository.find({
+      where: { userId, isSelected: true },
+      relations: ['skin'],
+    });
+
+    for (const userSkin of selectedSkins) {
+      if (!userSkin.skin) continue;
+
+      const skin = userSkin.skin;
+      const equipmentSlot = skin.slot || typeToSlot(skin.type || 'board');
+      
+      // Применяем износ только к PER_MATCH предметам
+      const wearMode = skin.wear_mode || 'PER_MATCH';
+      if (wearMode !== 'PER_MATCH') continue;
+
+      // Если указан конкретный слот, применяем только к нему
+      if (slot && equipmentSlot !== slot) continue;
+
+      await this.decreaseSkinDurability(userId, skin.id, isTournament);
+    }
+  }
+
+  /**
+   * Применяет износ к кубику после броска (Equipment Spec v2.0)
+   * @param userId ID пользователя
+   * @param dieSlot Слот кубика (DIE_1 или DIE_2)
+   */
+  async applyWearToDieAfterRoll(userId: string, dieSlot: 'DIE_1' | 'DIE_2'): Promise<void> {
+    const selectedSkins = await this.userSkinsRepository.find({
+      where: { userId, isSelected: true },
+      relations: ['skin'],
+    });
+
+    for (const userSkin of selectedSkins) {
+      if (!userSkin.skin) continue;
+
+      const skin = userSkin.skin;
+      const equipmentSlot = skin.slot || typeToSlot(skin.type || 'board');
+      
+      // Применяем износ только к указанному кубику с PER_ROLL режимом
+      if (equipmentSlot !== dieSlot) continue;
+
+      const wearMode = skin.wear_mode || 'PER_ROLL';
+      if (wearMode !== 'PER_ROLL') continue;
+
+      const durabilityMax = skin.durability_max || getDurabilityMax(skin.rarity || 'COMMON', 'PER_ROLL');
+      const durabilityCurrent = userSkin.durability_current ?? userSkin.currentDurability ?? durabilityMax;
+      const wearAmount = skin.wear_amount || 1;
+
+      if (durabilityCurrent > 0) {
+        const newDurability = applyWear(durabilityCurrent, durabilityMax, wearAmount, false, 1.0);
+
+        userSkin.durability_current = newDurability;
+        userSkin.currentDurability = newDurability;
+        await this.userSkinsRepository.save(userSkin);
+
+        // Если предмет уничтожен, снимаем с выбора
+        if (newDurability <= 0 && userSkin.isSelected) {
+          userSkin.isSelected = false;
+          await this.userSkinsRepository.save(userSkin);
+          this.logger.warn(`⚠️ Кубик ${dieSlot} уничтожен из-за износа у пользователя ${userId}`);
+        }
       }
     }
   }
