@@ -363,8 +363,6 @@ export class AdminService implements OnModuleInit {
     }
   }
 
-  }
-
   async sendNotification(data: { userId?: string; message: string; all?: boolean; imageUrl?: string }) {
     const botToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
     const title = 'Уведомление от администратора';
@@ -556,8 +554,8 @@ export class AdminService implements OnModuleInit {
 
       // Если указана ставка, обновляем игру
       if (data.stake && data.stake > 0) {
-        await this.gamesRepository.update(game.id, { stake: BigInt(data.stake) });
-        game.stake = BigInt(data.stake);
+        await this.gamesRepository.update(game.id, { stake: data.stake });
+        game.stake = data.stake;
       }
 
       // Если указана длительность хода, сохраняем в настройках игры (если есть поле moveTimeout)
@@ -2161,11 +2159,8 @@ export class AdminService implements OnModuleInit {
 
     if (data.isBanned !== undefined) {
       user.isBanned = data.isBanned;
-      if (data.isBanned) {
-        user.bannedAt = new Date();
-      } else {
+      if (!data.isBanned) {
         user.banReason = null;
-        user.bannedAt = null;
       }
     }
     if (data.banReason !== undefined) user.banReason = data.banReason;
@@ -2332,9 +2327,8 @@ export class AdminService implements OnModuleInit {
   }
 
   async deleteAllBotNotifications() {
-    // Удаляем все уведомления, отправленные ботом (type = 'info' или 'bot')
+    // Удаляем все уведомления типа 'info', которые обычно отправляются ботом
     await this.notificationsRepository.delete({ type: 'info' });
-    await this.notificationsRepository.delete({ type: 'bot' });
     return { message: 'Все сообщения бота удалены' };
   }
 
