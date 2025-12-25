@@ -35,6 +35,65 @@ export class CityService {
   ) {}
 
   /**
+   * Получить полную структуру города (районы и строения)
+   */
+  async getCityData(userId: string) {
+    const districts = await this.districtConfigsRepository.find({
+      where: { isActive: true },
+      order: { order: 'ASC' },
+    });
+
+    const buildingConfigs = await this.buildingConfigsRepository.find();
+    const userBuildings = await this.buildingsRepository.find({
+      where: { userId },
+    });
+
+    const user = await this.usersService.findOne(userId);
+
+    return districts.map(district => {
+      const buildingsInDistrict = buildingConfigs.filter(bc => bc.districtId === district.id);
+      
+      const districtBuildings = buildingsInDistrict.map(config => {
+        const userBuilding = userBuildings.find(ub => ub.type === config.type);
+        
+        return {
+          config: {
+            id: config.id,
+            type: config.type,
+            name: config.name,
+            icon: config.icon,
+            image: config.image,
+            basePrice: Number(config.basePrice),
+            baseIncomePerHour: Number(config.baseIncomePerHour),
+            maxAccumulation: Number(config.maxAccumulation),
+            maxLevel: config.maxLevel,
+            upgradeMultiplier: config.upgradeMultiplier || 1.4,
+          },
+          userBuilding: userBuilding ? {
+            id: userBuilding.id,
+            level: userBuilding.level,
+            accumulatedIncome: Number(userBuilding.accumulatedIncome),
+            incomePerHour: Number(userBuilding.incomePerHour),
+            lastIncomeCollection: userBuilding.lastIncomeCollection,
+          } : null,
+        };
+      });
+
+      return {
+        id: district.id,
+        code: district.code,
+        name: district.name,
+        description: district.description,
+        icon: district.icon,
+        image: district.image,
+        requiredLevel: district.requiredLevel,
+        isUnlocked: user.level >= (district.requiredLevel || 0),
+        buildings: districtBuildings,
+      };
+    });
+  }
+
+  /**
    * Получить все доступные конфигурации строений
    */
   async getAvailableBuildings(userId?: string) {

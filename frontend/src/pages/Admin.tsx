@@ -4121,6 +4121,71 @@ export default function Admin() {
                 <h4 style={{ marginTop: 0, color: '#fff' }}>Создать новый район</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название района</label>
+                    <input
+                      type="text"
+                      placeholder="Название района"
+                      id="new-district-name"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Доступ с уровня</label>
+                    <input
+                      type="number"
+                      placeholder="1"
+                      id="new-district-required-level"
+                      defaultValue={1}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Описание района</label>
+                    <textarea
+                      placeholder="Описание района"
+                      id="new-district-description"
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Фото района (URL)</label>
+                    <input
+                      type="text"
+                      placeholder="/img/district_default.jpg"
+                      id="new-district-image"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
                     <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Код района (уникальный)</label>
                     <input
                       type="text"
@@ -4137,39 +4202,7 @@ export default function Admin() {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название</label>
-                    <input
-                      type="text"
-                      placeholder="Название района"
-                      id="new-district-name"
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Описание</label>
-                    <textarea
-                      placeholder="Описание района"
-                      id="new-district-description"
-                      rows={3}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Порядок</label>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Порядок отображения</label>
                     <input
                       type="number"
                       placeholder="1"
@@ -4186,24 +4219,7 @@ export default function Admin() {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Требуемый уровень</label>
-                    <input
-                      type="number"
-                      placeholder="1"
-                      id="new-district-required-level"
-                      defaultValue={1}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовый доход в день (NAR)</label>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Доход района в день (NAR)</label>
                     <input
                       type="number"
                       placeholder="0"
@@ -4240,6 +4256,7 @@ export default function Admin() {
                         code,
                         name,
                         description: (document.getElementById('new-district-description') as HTMLTextAreaElement).value || '',
+                        image: (document.getElementById('new-district-image') as HTMLInputElement).value || '',
                         order: parseInt((document.getElementById('new-district-order') as HTMLInputElement).value) || 1,
                         requiredLevel: parseInt((document.getElementById('new-district-required-level') as HTMLInputElement).value) || 1,
                         baseIncomePerDay: parseInt((document.getElementById('new-district-income') as HTMLInputElement).value) || 0,
@@ -4255,6 +4272,7 @@ export default function Admin() {
                       ;(document.getElementById('new-district-order') as HTMLInputElement).value = '1'
                       ;(document.getElementById('new-district-required-level') as HTMLInputElement).value = '1'
                       ;(document.getElementById('new-district-income') as HTMLInputElement).value = '0'
+                      ;(document.getElementById('new-district-image') as HTMLInputElement).value = ''
                       ;(document.getElementById('new-district-active') as HTMLInputElement).checked = true
                     } catch (error: any) {
                       alert('Ошибка: ' + (error.response?.data?.message || error.message))
@@ -4359,6 +4377,22 @@ export default function Admin() {
                               type="number"
                               value={editingDistrict.requiredLevel || 1}
                               onChange={(e) => setEditingDistrict({ ...editingDistrict, requiredLevel: parseInt(e.target.value) || 1 })}
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: '#1a1a1a',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                color: '#fff',
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Фото (URL)</label>
+                            <input
+                              type="text"
+                              value={editingDistrict.image || ''}
+                              onChange={(e) => setEditingDistrict({ ...editingDistrict, image: e.target.value })}
                               style={{
                                 width: '100%',
                                 padding: '8px',
@@ -4514,7 +4548,24 @@ export default function Admin() {
                               <div id={`district-${district.id}-building-form`} style={{ display: 'none', marginBottom: '16px', padding: '12px', background: '#1a1a1a', borderRadius: '8px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                                   <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Тип строения</label>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Название (города)</label>
+                                    <input
+                                      type="text"
+                                      placeholder="Название города"
+                                      id={`district-${district.id}-building-name`}
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        fontSize: '12px',
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Тип (shop, factory, etc.)</label>
                                     <input
                                       type="text"
                                       placeholder="shop, factory, etc."
@@ -4531,28 +4582,11 @@ export default function Admin() {
                                     />
                                   </div>
                                   <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Название</label>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Иконка (города) URL</label>
                                     <input
                                       type="text"
-                                      placeholder="Название строения"
-                                      id={`district-${district.id}-building-name`}
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: '#2a2a2a',
-                                        border: '1px solid #444',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Базовая цена (NAR)</label>
-                                    <input
-                                      type="number"
-                                      id={`district-${district.id}-building-price`}
-                                      min="0"
+                                      id={`district-${district.id}-building-icon`}
+                                      placeholder="/img/building_icon.png"
                                       style={{
                                         width: '100%',
                                         padding: '6px',
@@ -4616,6 +4650,40 @@ export default function Admin() {
                                       }}
                                     />
                                   </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Базовая цена (NAR)</label>
+                                    <input
+                                      type="number"
+                                      id={`district-${district.id}-building-price`}
+                                      min="0"
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        fontSize: '12px',
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Фото строения (URL)</label>
+                                    <input
+                                      type="text"
+                                      id={`district-${district.id}-building-image`}
+                                      placeholder="/img/building_image.jpg"
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        fontSize: '12px',
+                                      }}
+                                    />
+                                  </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                   <button
@@ -4627,6 +4695,8 @@ export default function Admin() {
                                         const income = parseInt((document.getElementById(`district-${district.id}-building-income`) as HTMLInputElement).value || '0')
                                         const accumulation = parseInt((document.getElementById(`district-${district.id}-building-accumulation`) as HTMLInputElement).value || '0')
                                         const maxLevel = parseInt((document.getElementById(`district-${district.id}-building-maxlevel`) as HTMLInputElement).value || '10')
+                                        const icon = (document.getElementById(`district-${district.id}-building-icon`) as HTMLInputElement).value || ''
+                                        const image = (document.getElementById(`district-${district.id}-building-image`) as HTMLInputElement).value || ''
 
                                         if (!type || !name) {
                                           alert('Заполните тип и название строения')
@@ -4640,6 +4710,8 @@ export default function Admin() {
                                           baseIncomePerHour: income,
                                           maxAccumulation: accumulation,
                                           maxLevel,
+                                          icon,
+                                          image,
                                           districtId: district.id,
                                         })
 
@@ -4656,6 +4728,8 @@ export default function Admin() {
                                         ;(document.getElementById(`district-${district.id}-building-income`) as HTMLInputElement).value = ''
                                         ;(document.getElementById(`district-${district.id}-building-accumulation`) as HTMLInputElement).value = ''
                                         ;(document.getElementById(`district-${district.id}-building-maxlevel`) as HTMLInputElement).value = '10'
+                                        ;(document.getElementById(`district-${district.id}-building-icon`) as HTMLInputElement).value = ''
+                                        ;(document.getElementById(`district-${district.id}-building-image`) as HTMLInputElement).value = ''
                                       } catch (error: any) {
                                         alert('Ошибка: ' + (error.response?.data?.message || error.message))
                                       }
@@ -5758,6 +5832,156 @@ export default function Admin() {
                       alert('Скин обновлен')
                       setEditingSkin(null)
                       await loadStats()
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}
+                  style={{ padding: '10px 20px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Сохранить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ СТРОЕНИЯ */}
+      {selectedBuilding && (
+        <div className="admin-modal-overlay" onClick={() => setSelectedBuilding(null)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h3>Редактирование строения: {selectedBuilding.name}</h3>
+              <button className="admin-modal-close" onClick={() => setSelectedBuilding(null)}>×</button>
+            </div>
+            <div className="admin-modal-content">
+              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                <div>
+                  <label>Название</label>
+                  <input
+                    type="text"
+                    value={selectedBuilding.name || ''}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label>Тип (shop, factory, etc.)</label>
+                  <input
+                    type="text"
+                    value={selectedBuilding.type || ''}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, type: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label>Доход в час (NAR)</label>
+                  <input
+                    type="number"
+                    value={selectedBuilding.baseIncomePerHour || 0}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, baseIncomePerHour: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>Базовая цена (NAR)</label>
+                  <input
+                    type="number"
+                    value={selectedBuilding.basePrice || 0}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, basePrice: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>Макс. накопление (NAR)</label>
+                  <input
+                    type="number"
+                    value={selectedBuilding.maxAccumulation || 0}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, maxAccumulation: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label>Макс. уровень</label>
+                  <input
+                    type="number"
+                    value={selectedBuilding.maxLevel || 10}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, maxLevel: parseInt(e.target.value) || 10 })}
+                  />
+                </div>
+                <div>
+                  <label>Множитель улучшения</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={selectedBuilding.upgradeMultiplier || 1.4}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, upgradeMultiplier: parseFloat(e.target.value) || 1.4 })}
+                  />
+                </div>
+                <div>
+                  <label>Район (ID)</label>
+                  <select
+                    value={selectedBuilding.districtId || ''}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, districtId: e.target.value })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  >
+                    <option value="">Без района</option>
+                    {districts.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label>Иконка (URL)</label>
+                  <input
+                    type="text"
+                    value={selectedBuilding.icon || ''}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, icon: e.target.value })}
+                  />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label>Фото строения (URL)</label>
+                  <input
+                    type="text"
+                    value={selectedBuilding.image || ''}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, image: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div style={{ marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  className="btn btn-danger"
+                  onClick={async () => {
+                    if (confirm(`Удалить конфигурацию строения "${selectedBuilding.name}"? Это удалит все такие строения у игроков!`)) {
+                      try {
+                        await apiClient.delete(`/admin/buildings/${selectedBuilding.id}`)
+                        alert('Конфигурация удалена')
+                        setSelectedBuilding(null)
+                        loadBuildings()
+                        loadDistricts()
+                      } catch (error: any) {
+                        alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                      }
+                    }
+                  }}
+                  style={{ marginRight: 'auto' }}
+                >
+                  Удалить
+                </button>
+                <button
+                  onClick={() => setSelectedBuilding(null)}
+                  style={{ padding: '10px 20px', background: '#666', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiClient.put(`/admin/buildings/${selectedBuilding.id}`, {
+                        ...selectedBuilding,
+                        basePrice: Number(selectedBuilding.basePrice),
+                        baseIncomePerHour: Number(selectedBuilding.baseIncomePerHour),
+                        maxAccumulation: Number(selectedBuilding.maxAccumulation),
+                      })
+                      alert('Строение обновлено')
+                      setSelectedBuilding(null)
+                      loadBuildings()
+                      loadDistricts()
                     } catch (error: any) {
                       alert('Ошибка: ' + (error.response?.data?.message || error.message))
                     }

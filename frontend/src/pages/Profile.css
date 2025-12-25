@@ -130,6 +130,32 @@
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-enhancement-info-btn {
+  background: none;
+  border: 1px solid rgba(74, 144, 226, 0.5);
+  color: #4a90e2;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.profile-enhancement-info-btn:hover {
+  background: #4a90e2;
+  color: #fff;
+  border-color: #4a90e2;
 }
 
 .profile-enhancement-progress {

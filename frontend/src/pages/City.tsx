@@ -33,19 +33,36 @@ interface BuildingConfig {
 }
 
 
+interface DistrictData {
+  id: string
+  code: string
+  name: string
+  description: string
+  icon?: string
+  image?: string
+  requiredLevel: number
+  isUnlocked: boolean
+  buildings: {
+    config: BuildingConfig
+    userBuilding: Building | null
+  }[]
+}
+
 export default function City() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuthStore()
   const [loading, setLoading] = useState(true)
-  const [buildings, setBuildings] = useState<Building[]>([])
-  const [availableBuildings, setAvailableBuildings] = useState<BuildingConfig[]>([])
+  const [cityData, setCityData] = useState<DistrictData[]>([])
   const [collecting, setCollecting] = useState<string | null>(null)
   const [purchasing, setPurchasing] = useState<string | null>(null)
   const [clanMode, setClanMode] = useState(false)
   const [clanId, setClanId] = useState<string | null>(null)
   const [clanBuildings, setClanBuildings] = useState<any[]>([])
   const [capturing, setCapturing] = useState<string | null>(null)
+  const [expandedDistricts, setExpandedDistricts] = useState<Set<string>>(new Set())
+  const [showBuildingModal, setShowBuildingModal] = useState<BuildingConfig | null>(null)
+  const [showDistrictModal, setShowDistrictModal] = useState<DistrictData | null>(null)
 
   useEffect(() => {
     // Проверяем, пришли ли мы из клана
@@ -73,18 +90,19 @@ export default function City() {
         // Режим клана: загружаем доступные строения для захвата
         const availableRes = await apiClient.get(`/clans/${clanId}/territories/available`).catch(() => ({ data: [] }))
         setClanBuildings(availableRes.data || [])
-        setAvailableBuildings([]) // Не показываем личные строения
-        setBuildings([]) // Не показываем личные строения
+        setCityData([])
       } else {
-        // Обычный режим: загружаем личные строения и доступные для покупки
-        const [buildingsRes, availableRes] = await Promise.all([
-          apiClient.get('/city/my-buildings').catch(() => ({ data: [] })),
-          apiClient.get('/city/buildings').catch(() => ({ data: [] })),
-        ])
-
-        setBuildings(buildingsRes.data || [])
-        setAvailableBuildings(availableRes.data || [])
-        setClanBuildings([])
+        // Обычный режим: загружаем полную структуру города
+        const response = await apiClient.get('/city/data')
+        setCityData(response.data || [])
+        
+        // По умолчанию разворачиваем первый открытый район
+        if (response.data && response.data.length > 0) {
+          const firstUnlocked = response.data.find((d: DistrictData) => d.isUnlocked)
+          if (firstUnlocked) {
+            setExpandedDistricts(new Set([firstUnlocked.id]))
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load city data:', error)
@@ -93,12 +111,25 @@ export default function City() {
     }
   }
 
+  const toggleDistrict = (districtId: string) => {
+    const newExpanded = new Set(expandedDistricts)
+    if (newExpanded.has(districtId)) {
+      newExpanded.delete(districtId)
+    } else {
+      newExpanded.add(districtId)
+    }
+    setExpandedDistricts(newExpanded)
+  }
+
   const handlePurchaseBuilding = async (buildingConfigId: string) => {
     try {
       setPurchasing(buildingConfigId)
       await apiClient.post('/city/buildings/purchase', { buildingConfigId })
       alert('Строение успешно куплено!')
       await loadData()
+      // Обновляем данные пользователя
+      const userResponse = await apiClient.get('/users/me')
+      useAuthStore.setState({ user: userResponse.data })
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при покупке строения')
       console.error('Failed to purchase building:', error)
@@ -138,7 +169,7 @@ export default function City() {
     }
   }
 
-  const calculateAccumulatedIncome = (building: Building): number => {
+  const calculateAccumulatedIncome = (building: Building, config: BuildingConfig): number => {
     if (!building.lastIncomeCollection) return building.accumulatedIncome
 
     const now = new Date()
@@ -149,40 +180,8 @@ export default function City() {
     const incomeMultiplier = building.capturedByClanId ? 0.5 : 1.0
     const incomeToAdd = Math.floor(building.incomePerHour * incomeMultiplier * hoursPassed)
     
-    return Math.min(building.accumulatedIncome + incomeToAdd, 1000000) // Максимальное накопление
+    return Math.min(building.accumulatedIncome + incomeToAdd, config.maxAccumulation || 1000000)
   }
-
-  const getBuildingName = (building: Building): string => {
-    const config = availableBuildings.find(c => c.type === building.type)
-    return config?.name || building.type
-  }
-
-  const getBuildingIcon = (building: Building): string | undefined => {
-    const config = availableBuildings.find(c => c.type === building.type)
-    if (config?.icon) {
-      const iconUrl = getImageUrl(config.icon) || config.icon
-      // Если это относительный путь, добавляем базовый URL
-      if (iconUrl && !iconUrl.startsWith('http') && !iconUrl.startsWith('/')) {
-        return `/${iconUrl}`
-      }
-      return iconUrl
-    }
-    return undefined
-  }
-
-  const getBuildingImage = (building: Building): string | undefined => {
-    const config = availableBuildings.find(c => c.type === building.type)
-    return config?.image ? getImageUrl(config.image) || config.image : undefined
-  }
-
-  // Группируем строения по типу, а не по району
-  const myBuildingsByType = buildings.reduce((acc, building) => {
-    if (!acc[building.type]) {
-      acc[building.type] = []
-    }
-    acc[building.type].push(building)
-    return acc
-  }, {} as Record<string, Building[]>)
 
   if (!user) {
     return null
@@ -213,215 +212,256 @@ export default function City() {
   }
 
   return (
-    <PageLayout title={clanMode ? "Районы" : "Город"} showBack={true}>
+    <PageLayout title={clanMode ? "Захват районов" : "Город"} showBack={true}>
       <div className="city-content">
         {clanMode ? (
-          <>
-            {/* Режим клана: доступные строения для захвата */}
-            <div className="city-section">
-              <h2 className="city-section-title">Доступные строения для захвата</h2>
-              <div className="city-available-buildings">
-                {clanBuildings.length === 0 ? (
-                  <div className="city-empty">Нет доступных строений для захвата</div>
-                ) : (
-                  clanBuildings.map((building: any) => (
-                    <div key={building.id || building.type} className="city-building-card">
-                      <div className="city-building-header">
-                        {building.icon && (
-                          <img
-                            src={getImageUrl(building.icon) || building.icon}
-                            alt={building.name}
-                            className="city-building-icon"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        )}
-                        <div className="city-building-info">
-                          <div className="city-building-name">{building.name}</div>
-                          <div className="city-building-owner">
-                            Доступно: {building.availableCount} строений
-                          </div>
-                          <div className="city-building-status">
-                            <span className="city-building-status-dot free"></span>
-                            <span className="city-building-status-text">доступен для захвата</span>
-                          </div>
-                        </div>
-                        <div className="city-building-right">
-                          <div className="city-building-income">
-                            {building.totalPotentialIncome.toLocaleString()} NAR / час
-                          </div>
-                          <div className="city-building-actions">
-                            <Button
-                              variant="primary"
-                              onClick={() => handleCaptureBuilding(building.type)}
-                              disabled={capturing === building.type || building.availableCount === 0}
-                              className="city-building-action-btn"
-                            >
-                              {capturing === building.type ? 'Захват...' : building.availableCount === 0 ? 'Нет доступных' : 'Захватить'}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-        {/* Мои строения */}
-        {buildings.length > 0 && (
           <div className="city-section">
-            <h2 className="city-section-title">Мои строения</h2>
-            <div className="city-buildings-list">
-              {Object.entries(myBuildingsByType).map(([buildingType, typeBuildings]) => (
-                <div key={buildingType} className="city-district-buildings">
-                  {typeBuildings.map((building) => {
-                    const accumulated = calculateAccumulatedIncome(building)
-                    const config = availableBuildings.find(
-                      c => c.type === building.type
-                    )
-                    const multiplier = config?.upgradeMultiplier || 1.4
-                    const upgradePrice = config
-                      ? Math.floor(config.basePrice * Math.pow(multiplier, building.level))
-                      : 0
-
-                    return (
-                      <div key={building.id} className="city-building-card">
-                        <div className="city-building-header">
-                          {getBuildingIcon(building) && (
-                            <img
-                              src={getBuildingIcon(building)!}
-                              alt={getBuildingName(building)}
-                              className="city-building-icon"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none'
-                              }}
-                            />
-                          )}
-                          <div className="city-building-info">
-                            <div className="city-building-name">{getBuildingName(building)}</div>
-                            <div className="city-building-owner">
-                              Владелец: {user?.nickname || user?.username || 'Вы'}
-                            </div>
-                            <div className="city-building-status">
-                              <span className="city-building-status-dot stable"></span>
-                              <span className="city-building-status-text">Уровень {building.level}</span>
-                            </div>
-                          </div>
-                          <div className="city-building-right">
-                            <div className="city-building-income">
-                              {building.incomePerHour} NAR / час
-                            </div>
-                            <div className="city-building-actions">
-                              {accumulated > 0 && (
-                                <Button
-                                  variant="primary"
-                                  onClick={() => handleCollectIncome(building.id)}
-                                  disabled={collecting === building.id}
-                                  className="city-building-action-btn"
-                                >
-                                  {collecting === building.id ? 'Сбор...' : `Собрать ${accumulated} NAR`}
-                                </Button>
-                              )}
-                              {config && building.level < (config.maxLevel || 10) && (
-                                <Button
-                                  variant="secondary"
-                                  onClick={() => handleUpgradeBuilding(building.id)}
-                                  disabled={purchasing === building.id}
-                                  className="city-building-action-btn"
-                                >
-                                  {purchasing === building.id ? 'Улучшение...' : `Улучшить (${upgradePrice.toLocaleString()} NAR)`}
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Доступные строения для покупки */}
-        <div className="city-section">
-          <h2 className="city-section-title">Доступные строения</h2>
-
-          <div className="city-available-buildings">
-            {availableBuildings
-              .filter((config) => {
-                // Фильтруем строения, которые уже куплены
-                return !buildings.some(b => b.type === config.type)
-              })
-              .map((config) => {
-              return (
-                <div key={config.id} className="city-building-card">
-                  <div className="city-building-header">
-                    {config.icon && (() => {
-                      const iconUrl = getImageUrl(config.icon) || config.icon
-                      const finalIconUrl = iconUrl && !iconUrl.startsWith('http') && !iconUrl.startsWith('/') 
-                        ? `/${iconUrl}` 
-                        : iconUrl
-                      return (
+            <h2 className="city-section-title">Доступные строения для захвата</h2>
+            <div className="city-available-buildings">
+              {clanBuildings.length === 0 ? (
+                <div className="city-empty">Нет доступных строений для захвата</div>
+              ) : (
+                clanBuildings.map((building: any) => (
+                  <div key={building.id || building.type} className="city-building-card">
+                    <div className="city-building-header">
+                      {building.icon && (
                         <img
-                          src={finalIconUrl}
-                          alt={config.name}
+                          src={getImageUrl(building.icon) || building.icon}
+                          alt={building.name}
                           className="city-building-icon"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'
                           }}
                         />
-                      )
-                    })()}
-                    <div className="city-building-info">
-                      <div className="city-building-name">{config.name}</div>
-                      <div className="city-building-owner">
-                        Владелец: -
+                      )}
+                      <div className="city-building-info">
+                        <div className="city-building-name">{building.name}</div>
+                        <div className="city-building-owner">
+                          Доступно: {building.availableCount} строений
+                        </div>
+                        <div className="city-building-status">
+                          <span className="city-building-status-dot free"></span>
+                          <span className="city-building-status-text">доступен для захвата</span>
+                        </div>
                       </div>
-                      <div className="city-building-status">
-                        <span className="city-building-status-dot free"></span>
-                        <span className="city-building-status-text">свободен</span>
-                      </div>
-                    </div>
-                    <div className="city-building-right">
-                      <div className="city-building-income">
-                        {config.baseIncomePerHour} NAR / час
-                      </div>
-                      <div className="city-building-actions">
-                        <Button
-                          variant="primary"
-                          onClick={() => handlePurchaseBuilding(config.id)}
-                          disabled={purchasing === config.id}
-                          className="city-building-action-btn"
-                        >
-                          {purchasing === config.id ? 'Покупка...' : `Купить`}
-                        </Button>
+                      <div className="city-building-right">
+                        <div className="city-building-income">
+                          {building.totalPotentialIncome.toLocaleString()} NAR / час
+                        </div>
+                        <div className="city-building-actions">
+                          <Button
+                            variant="primary"
+                            onClick={() => handleCaptureBuilding(building.type)}
+                            disabled={capturing === building.type || building.availableCount === 0}
+                            className="city-building-action-btn"
+                          >
+                            {capturing === building.type ? 'Захват...' : building.availableCount === 0 ? 'Нет доступных' : 'Захватить'}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="city-districts-list">
+            {cityData.length === 0 ? (
+              <div className="city-empty">Город пока не застроен</div>
+            ) : (
+              cityData.map(district => (
+                <div key={district.id} className={`city-district-card ${!district.isUnlocked ? 'locked' : ''}`}>
+                  <div 
+                    className="city-district-header" 
+                    onClick={() => district.isUnlocked && toggleDistrict(district.id)}
+                    style={district.image ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${getImageUrl(district.image)})` } : {}}
+                  >
+                    <div className="city-district-info">
+                      <h3 className="city-district-name">
+                        {district.name}
+                        {!district.isUnlocked && <span className="city-district-lock">🔒 (ур. {district.requiredLevel})</span>}
+                        <button 
+                          className="city-info-icon-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShowDistrictModal(district)
+                          }}
+                        >
+                          ⓘ
+                        </button>
+                      </h3>
+                      {district.description && <p className="city-district-desc">{district.description}</p>}
+                    </div>
+                    {district.isUnlocked && (
+                      <div className={`city-district-arrow ${expandedDistricts.has(district.id) ? 'expanded' : ''}`}>
+                        ▼
+                      </div>
+                    )}
+                  </div>
 
-        {availableBuildings.length === 0 && buildings.length === 0 && (
-          <div className="city-unavailable">
-            <img src="/img/город.png" alt="City" className="city-unavailable-icon" />
-            <h2 className="city-unavailable-title">Город недоступен</h2>
-            <p className="city-unavailable-text">
-              Строения пока не настроены администратором. Обратитесь к администратору для настройки города.
-            </p>
+                  {district.isUnlocked && expandedDistricts.has(district.id) && (
+                    <div className="city-district-content">
+                      <div className="city-buildings-list">
+                        {district.buildings.map(({ config, userBuilding }) => (
+                          <div key={config.id} className="city-building-card">
+                            <div className="city-building-header">
+                              {(getImageUrl(config.icon) || config.icon) && (
+                                <img
+                                  src={getImageUrl(config.icon) || config.icon}
+                                  alt={config.name}
+                                  className="city-building-icon"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none'
+                                  }}
+                                />
+                              )}
+                              <div className="city-building-info">
+                                <div className="city-building-name">
+                                  {config.name}
+                                  <button 
+                                    className="city-building-info-btn"
+                                    onClick={() => setShowBuildingModal(config)}
+                                  >
+                                    ⓘ
+                                  </button>
+                                </div>
+                                <div className="city-building-status">
+                                  {userBuilding ? (
+                                    <>
+                                      <span className="city-building-status-dot stable"></span>
+                                      <span className="city-building-status-text">Уровень {userBuilding.level}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="city-building-status-dot free"></span>
+                                      <span className="city-building-status-text">Доступно</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="city-building-right">
+                                <div className="city-building-income">
+                                  {userBuilding ? userBuilding.incomePerHour : config.baseIncomePerHour} NAR / час
+                                </div>
+                                <div className="city-building-actions">
+                                  {userBuilding ? (
+                                    <>
+                                      {calculateAccumulatedIncome(userBuilding, config) > 0 && (
+                                        <Button
+                                          variant="primary"
+                                          onClick={() => handleCollectIncome(userBuilding.id)}
+                                          disabled={collecting === userBuilding.id}
+                                          className="city-building-action-btn"
+                                        >
+                                          {collecting === userBuilding.id ? '...' : `Собрать ${calculateAccumulatedIncome(userBuilding, config)}`}
+                                        </Button>
+                                      )}
+                                      {userBuilding.level < config.maxLevel && (
+                                        <Button
+                                          variant="secondary"
+                                          onClick={() => handleUpgradeBuilding(userBuilding.id)}
+                                          disabled={purchasing === userBuilding.id}
+                                          className="city-building-action-btn"
+                                        >
+                                          {purchasing === userBuilding.id ? '...' : `Улучшить (${Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.4, userBuilding.level)).toLocaleString()})`}
+                                        </Button>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <Button
+                                      variant="primary"
+                                      onClick={() => handlePurchaseBuilding(config.id)}
+                                      disabled={purchasing === config.id}
+                                      className="city-building-action-btn"
+                                    >
+                                      {purchasing === config.id ? '...' : `Купить (${config.basePrice.toLocaleString()})`}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
-        )}
-          </>
         )}
       </div>
+
+      {/* Модальное окно района */}
+      {showDistrictModal && (
+        <div className="city-modal-overlay" onClick={() => setShowDistrictModal(null)}>
+          <div className="city-modal" onClick={e => e.stopPropagation()}>
+            <div className="city-modal-header">
+              <h3>{showDistrictModal.name}</h3>
+              <button onClick={() => setShowDistrictModal(null)}>×</button>
+            </div>
+            <div className="city-modal-content">
+              {showDistrictModal.image && (
+                <img src={getImageUrl(showDistrictModal.image)} alt={showDistrictModal.name} className="city-modal-image" />
+              )}
+              <p className="city-modal-desc">{showDistrictModal.description || 'Описание отсутствует'}</p>
+              <div className="city-modal-stats">
+                <div className="city-modal-stat">
+                  <span className="label">Доступ с уровня:</span>
+                  <span className="value">{showDistrictModal.requiredLevel}</span>
+                </div>
+                <div className="city-modal-stat">
+                  <span className="label">Статус:</span>
+                  <span className={`value ${showDistrictModal.isUnlocked ? 'unlocked' : 'locked'}`}>
+                    {showDistrictModal.isUnlocked ? 'Открыт' : 'Закрыт'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="city-modal-footer">
+              <Button variant="primary" onClick={() => setShowDistrictModal(null)}>Понятно</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно строения */}
+      {showBuildingModal && (
+        <div className="city-modal-overlay" onClick={() => setShowBuildingModal(null)}>
+          <div className="city-modal" onClick={e => e.stopPropagation()}>
+            <div className="city-modal-header">
+              <h3>{showBuildingModal.name}</h3>
+              <button onClick={() => setShowBuildingModal(null)}>×</button>
+            </div>
+            <div className="city-modal-content">
+              {showBuildingModal.image && (
+                <img src={getImageUrl(showBuildingModal.image)} alt={showBuildingModal.name} className="city-modal-image" />
+              )}
+              <div className="city-modal-stats">
+                <div className="city-modal-stat">
+                  <span className="label">Базовый доход:</span>
+                  <span className="value">{showBuildingModal.baseIncomePerHour} NAR/час</span>
+                </div>
+                <div className="city-modal-stat">
+                  <span className="label">Макс. уровень:</span>
+                  <span className="value">{showBuildingModal.maxLevel}</span>
+                </div>
+                <div className="city-modal-stat">
+                  <span className="label">Макс. накопление:</span>
+                  <span className="value">{showBuildingModal.maxAccumulation.toLocaleString()} NAR</span>
+                </div>
+              </div>
+              <div className="city-modal-info-text">
+                <p>Улучшайте строение, чтобы увеличить доход в час. С каждым уровнем стоимость улучшения растет, но и ваша прибыль становится больше!</p>
+              </div>
+            </div>
+            <div className="city-modal-footer">
+              <Button variant="primary" onClick={() => setShowBuildingModal(null)}>Закрыть</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   )
 }

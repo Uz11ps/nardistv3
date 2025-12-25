@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import SkillPointsModal from '../components/SkillPointsModal'
+import EnhancementDetailModal from '../components/EnhancementDetailModal'
 import { apiClient } from '../api/client'
 import './Profile.css'
 
@@ -22,6 +23,8 @@ export default function Profile() {
     power: 0,
   })
   const [upgrading, setUpgrading] = useState<string | null>(null)
+  const [selectedEnhancement, setSelectedEnhancement] = useState<any>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
   const [editFormData, setEditFormData] = useState({
     nickname: '',
     country: '',
@@ -265,10 +268,54 @@ export default function Profile() {
           <div className="profile-enhancements-title">Усиления</div>
           <div className="profile-enhancements-list">
             {[
-              { id: 'economy' as const, name: 'Экономика', icon: '💰', description: 'Снижение комиссии, пассивный доход' },
-              { id: 'energy' as const, name: 'Энергия', icon: '⚡', description: 'Лимит боев, восстановление' },
-              { id: 'lives' as const, name: 'Жизни', icon: '❤️', description: 'Запас поражений, регенерация' },
-              { id: 'power' as const, name: 'Сила', icon: '💪', description: 'Лимит веса скинов' },
+              { 
+                id: 'economy' as const, 
+                name: 'Экономика', 
+                icon: '💰', 
+                description: 'Снижение комиссии, пассивный доход и выгода в городе',
+                details: [
+                  'Снижение комиссии в играх на NAR-coin (до -10%)',
+                  'Увеличение дохода от ваших зданий в городе (до +50%)',
+                  'Дополнительные бонусы при сборе прибыли (шанс x2)',
+                  'Уменьшение стоимости улучшения зданий (до -30%)'
+                ]
+              },
+              { 
+                id: 'energy' as const, 
+                name: 'Энергия', 
+                icon: '⚡', 
+                description: 'Лимит боев, скорость восстановления и выносливость',
+                details: [
+                  'Увеличение максимального запаса энергии (до 200 ед.)',
+                  'Ускоренное восстановление энергии в час (+50%)',
+                  'Уменьшение расхода энергии на игры (-20%)',
+                  'Возможность проводить больше матчей в день'
+                ]
+              },
+              { 
+                id: 'lives' as const, 
+                name: 'Жизни', 
+                icon: '❤️', 
+                description: 'Запас поражений, регенерация и защита рейтинга',
+                details: [
+                  'Увеличение количества доступных жизней (до 10)',
+                  'Ускоренное восстановление жизней после поражений',
+                  'Шанс сохранить жизнь при проигрыше в матче (до 25%)',
+                  'Дополнительная защита в турнирных играх'
+                ]
+              },
+              { 
+                id: 'power' as const, 
+                name: 'Сила', 
+                icon: '💪', 
+                description: 'Лимит веса скинов и бонусы от экипировки',
+                details: [
+                  'Позволяет использовать более тяжелые и редкие скины',
+                  'Увеличивает бонус к опыту от надетых скинов (до +100%)',
+                  'Увеличивает бонус к доходу от надетых скинов (до +100%)',
+                  'Открывает доступ к эксклюзивному снаряжению'
+                ]
+              },
             ].map((enh) => {
               const currentSp = (skillPoints[enh.id] as number) || 0
               const maxSp = 10
@@ -279,7 +326,18 @@ export default function Profile() {
                   <div className="profile-enhancement-left">
                     <div className="profile-enhancement-icon">{enh.icon}</div>
                     <div className="profile-enhancement-info">
-                      <div className="profile-enhancement-name">{enh.name}</div>
+                      <div className="profile-enhancement-name">
+                        {enh.name}
+                        <button 
+                          className="profile-enhancement-info-btn"
+                          onClick={() => {
+                            setSelectedEnhancement(enh)
+                            setShowDetailModal(true)
+                          }}
+                        >
+                          ⓘ
+                        </button>
+                      </div>
                       <div className="profile-enhancement-progress">
                         {currentSp}/{maxSp}
                       </div>
@@ -441,6 +499,11 @@ export default function Profile() {
         }}
       />
 
+      <EnhancementDetailModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        enhancement={selectedEnhancement}
+      />
     </PageLayout>
   )
 }

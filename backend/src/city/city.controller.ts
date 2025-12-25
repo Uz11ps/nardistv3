@@ -7,6 +7,12 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 export class CityController {
   constructor(private readonly cityService: CityService) {}
 
+  @Get('data')
+  @UseGuards(JwtAuthGuard)
+  async getCityData(@CurrentUser() user: any) {
+    return this.cityService.getCityData(user.id);
+  }
+
   @Get('buildings')
   @UseGuards(JwtAuthGuard)
   async getAvailableBuildings(@CurrentUser() user: any) {

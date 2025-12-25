@@ -1,5 +1,207 @@
 /* City Page Styles */
 
+.city-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 16px 40px;
+}
+
+.city-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+}
+
+.city-empty {
+  text-align: center;
+  padding: 40px;
+  color: #888;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+}
+
+/* Районы */
+.city-districts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.city-district-card {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #1a1a1a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s;
+}
+
+.city-district-card.locked {
+  opacity: 0.7;
+}
+
+.city-district-header {
+  height: 120px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.locked .city-district-header {
+  cursor: default;
+  filter: grayscale(1);
+}
+
+.city-district-info {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+
+.city-district-name {
+  color: #fff;
+  font-size: 20px;
+  font-weight: bold;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.city-district-lock {
+  font-size: 14px;
+  color: #ff9800;
+  font-weight: normal;
+}
+
+.city-district-desc {
+  color: #ccc;
+  font-size: 13px;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.city-district-arrow {
+  color: #fff;
+  font-size: 14px;
+  transition: transform 0.3s;
+  background: rgba(0, 0, 0, 0.3);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.city-district-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+.city-district-content {
+  padding: 16px;
+  background: #111;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Строения */
+.city-buildings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.city-building-card {
+  background: #222;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.city-building-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.city-building-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #333;
+  object-fit: cover;
+}
+
+.city-building-info {
+  flex: 1;
+}
+
+.city-building-name {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.city-building-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.city-building-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.city-building-status-dot.stable { background: #4CAF50; }
+.city-building-status-dot.free { background: #E84142; }
+
+.city-building-status-text {
+  color: #888;
+  font-size: 12px;
+}
+
+.city-building-right {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.city-building-income {
+  color: #4CAF50;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.city-building-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.city-building-action-btn {
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  height: auto !important;
+  border-radius: 6px !important;
+}
+
 .city-unavailable {
   display: flex;
   flex-direction: column;
@@ -19,7 +221,6 @@
 
 .city-unavailable-title {
   color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 24px;
   font-weight: 600;
   margin-bottom: 16px;
@@ -27,445 +228,167 @@
 
 .city-unavailable-text {
   color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  margin-bottom: 32px;
   max-width: 300px;
-}
-
-.city-play-button,
-.city-find-clan-button {
-  width: 100%;
-  max-width: 300px;
-  height: 52px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
-  border: 0.1px solid #C93C3D;
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.city-play-button:hover,
-.city-find-clan-button:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
-}
-
-.city-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
-}
-
-.city-districts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.city-district-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 12px;
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
-}
-
-.city-district-icon {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.city-district-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.city-district-name {
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.city-district-owner {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.city-district-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.city-district-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.city-district-status-dot.stable {
-  background: #4CAF50;
-}
-
-.city-district-status-dot.vulnerable {
-  background: #FF9800;
-}
-
-.city-district-status-dot.free {
-  background: #F44336;
-}
-
-.city-district-status-text {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.city-district-status-text.stable {
-  color: #4CAF50;
-}
-
-.city-district-status-text.vulnerable {
-  color: #FF9800;
-}
-
-.city-district-status-text.free {
-  color: #F44336;
-}
-
-.city-district-income {
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.city-district-actions {
-  display: flex;
-  align-items: center;
-}
-
-.city-district-button {
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  white-space: nowrap;
-  transition: all 0.2s;
-}
-
-.city-district-button-capture {
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
-  color: #FFF;
-  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
-}
-
-.city-district-button-capture:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
-}
-
-.city-district-button-details {
-  background: #3a3a3a;
-  color: #FFF;
-}
-
-.city-district-button-details:hover {
-  background: #4a4a4a;
-}
-
-/* Контент страницы */
-.city-content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 0 16px 40px;
-}
-
-.city-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.city-section-title {
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-/* Список строений */
-.city-buildings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.city-district-buildings {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.city-district-title {
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  padding: 0 4px;
-}
-
-/* Карточка строения */
-.city-building-card {
-  padding: 16px;
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 12px;
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
-  display: flex;
-  flex-direction: column;
-}
-
-.city-building-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.city-building-icon {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  flex-shrink: 0;
-  border-radius: 8px;
-}
-
-.city-building-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.city-building-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.city-building-owner {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  font-weight: 400;
-}
-
-.city-building-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.city-building-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.city-building-status-dot.stable {
-  background: #4CAF50;
-}
-
-.city-building-status-dot.free {
-  background: #E84142;
-}
-
-.city-building-status-dot.vulnerable {
-  background: #FF9800;
-}
-
-.city-building-status-text {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  font-weight: 400;
-}
-
-.city-building-action-btn {
-  white-space: nowrap;
-  min-width: 100px;
-}
-
-.city-building-name {
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.city-building-level {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.city-building-district {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.city-building-income {
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.city-building-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.city-building-stats > div {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  font-weight: 400;
-}
-
-.city-building-captured {
-  color: #FF9800;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  margin-top: 4px;
-  padding: 4px 8px;
-  background: rgba(255, 152, 0, 0.1);
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.city-building-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.city-building-owned {
-  color: #4CAF50;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 8px 16px;
-  background: rgba(76, 175, 80, 0.1);
-  border-radius: 8px;
-  text-align: center;
-}
-
-/* Фильтры районов */
-.city-district-filters {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;
-}
-
-.city-district-filters::-webkit-scrollbar {
-  display: none;
-}
-
-.city-district-filter {
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.city-district-filter:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #FFF;
-}
-
-.city-district-filter.active {
-  background: rgba(201, 60, 61, 0.2);
-  border-color: #C93C3D;
-  color: #FFF;
-}
-
-/* Доступные строения */
-.city-available-buildings {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 @media (max-width: 480px) {
-  .city-content {
-    padding: 0 12px 40px;
+  .city-building-header {
+    flex-wrap: wrap;
   }
-
-  .city-building-card {
-    padding: 12px;
-  }
-
-  .city-building-actions {
-    flex-direction: column;
-  }
-
-  .city-building-actions > * {
+  .city-building-right {
     width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
   }
+}
+
+/* Модальные окна */
+.city-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.city-modal {
+  background: #1a1a1a;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  animation: modalAppear 0.3s ease-out;
+}
+
+@keyframes modalAppear {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.city-modal-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.city-modal-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+}
+
+.city-modal-header button {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.city-modal-content {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.city-modal-image {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.city-modal-desc {
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.city-modal-stats {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.city-modal-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.city-modal-stat .label {
+  color: #888;
+}
+
+.city-modal-stat .value {
+  color: #fff;
+  font-weight: 500;
+}
+
+.city-modal-stat .value.unlocked { color: #4CAF50; }
+.city-modal-stat .value.locked { color: #E84142; }
+
+.city-modal-info-text {
+  color: #999;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.city-modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: center;
+}
+
+/* Инфо кнопки */
+.city-info-icon-btn, .city-building-info-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #4a90e2;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: background 0.2s;
+}
+
+.city-info-icon-btn:hover, .city-building-info-btn:hover {
+  background: rgba(74, 144, 226, 0.2);
+}
+
+.city-building-name {
+  display: flex;
+  align-items: center;
 }

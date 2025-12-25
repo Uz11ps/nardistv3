@@ -883,6 +883,7 @@ export class AdminService implements OnModuleInit {
     code: string;
     name: string;
     description?: string;
+    image?: string;
     order?: number;
     isActive?: boolean;
     baseIncomePerDay?: number;
@@ -898,6 +899,7 @@ export class AdminService implements OnModuleInit {
       code: data.code,
       name: data.name,
       description: data.description || null,
+      image: data.image || null,
       order: data.order || 1,
       isActive: data.isActive !== undefined ? data.isActive : true,
       baseIncomePerDay: (data.baseIncomePerDay || 0).toString(),
@@ -918,6 +920,7 @@ export class AdminService implements OnModuleInit {
     code: string;
     name: string;
     description: string;
+    image: string;
     order: number;
     isActive: boolean;
     baseIncomePerDay: number;
@@ -941,6 +944,7 @@ export class AdminService implements OnModuleInit {
       ...data,
       baseIncomePerDay: data.baseIncomePerDay !== undefined ? data.baseIncomePerDay.toString() : district.baseIncomePerDay,
       requiredLevel: data.requiredLevel !== undefined ? data.requiredLevel : district.requiredLevel,
+      image: data.image !== undefined ? data.image : district.image,
     });
 
     const savedDistrict = await this.districtConfigsRepository.save(district);
