@@ -104,7 +104,7 @@ export class LongBackgammonEngine {
   /**
    * Check Head Rule: Only 1 checker can be moved from head per complete turn (using all dice)
    * This rule applies only to non-doubles moves
-   * Exception: First move of the game with doubles 3:3, 4:4, or 6:6 allows 2 checkers from head
+   * Exception (Правило Минспорта 20.3): Only the SECOND player's first move with doubles 3:3, 4:4, or 6:6 allows 2 checkers from head
    */
   private checkHeadRule(state: LongBoardState, from: number, die: number, isFirstMoveOfGame: boolean = false): boolean {
     const player = state.currentPlayer;
@@ -118,12 +118,13 @@ export class LongBackgammonEngine {
     const movedThisTurn = state.movesFromHead || 0;
     
     // Check for the first move exception
-    // In Long Backgammon, if the FIRST roll of the game is a double (3:3, 4:4, 6:6),
-    // the player can move 2 checkers from the head.
+    // По правилам Минспорта 20.3: только второй спортсмен при первом броске с дублем 3:3, 4:4, 6:6
+    // может взять 2 шашки с головы
     const diceArray = state.dice || [];
     const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0]);
     
-    if (isFirstMoveOfGame && isDoubles && (die === 3 || die === 4 || die === 6)) {
+    // Исключение только для второго игрока (currentPlayer === 1, черные)
+    if (isFirstMoveOfGame && player === 1 && isDoubles && (die === 3 || die === 4 || die === 6)) {
       return movedThisTurn < 2;
     }
     

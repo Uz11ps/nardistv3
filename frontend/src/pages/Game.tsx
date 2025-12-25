@@ -796,9 +796,10 @@ export default function Game() {
     // После подтверждения первых 2 ходов из дубля, остаются 2 кубика, которые тоже являются дублем
     const isDoubles = (diceArray.length === 4 || diceArray.length === 2) && diceArray.every(d => d === diceArray[0])
     
-    // Для дублей (и изначально 4 кубика, и после подтверждения осталось 2) ограничиваем количество ходов до 2
+    // UI ограничение: для дублей ограничиваем количество ходов до 2 перед подтверждением
+    // По правилам Минспорта все 4 хода должны быть доступны, но для удобства UI мы ограничиваем до 2
     if (isDoubles && pendingMoves.length >= 2) {
-      return // Не позволяем добавить больше 2 ходов без подтверждения
+      return // UI решение: не позволяем добавить больше 2 ходов без подтверждения
     }
     
     // Если есть steps, значит это комбинированный ход
@@ -1084,7 +1085,7 @@ export default function Game() {
         <div className="game-center-content">
           {!isLandscape && (
             <div className="game-players-section">
-              {/* Кнопки подтверждения и отмены поверх header'а */}
+              {/* Кнопки подтверждения и отмены в портретном режиме */}
               {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
                 <>
                   <button 

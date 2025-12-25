@@ -71,15 +71,17 @@
 .game-sidebar-actions {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   margin-bottom: 20px;
   width: 100%;
 }
 
 .game-sidebar-btn {
-  flex: 1;
   width: 48px;
   height: 48px;
+  min-width: 48px;
+  min-height: 48px;
   border-radius: 50%;
   border: none;
   font-size: 20px;
@@ -91,6 +93,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s, box-shadow 0.2s;
   user-select: none;
+  flex-shrink: 0;
+  padding: 0;
 }
 
 .game-sidebar-btn:hover {
@@ -312,34 +316,34 @@
   line-height: 1;
 }
 
-/* Game Confirm Section (Portrait) */
-/* Кнопки действий в header'е */
+/* Кнопки действий в header'е (портретный режим) */
 .game-action-btn-header {
-  position: fixed;
+  position: absolute;
   z-index: 100;
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: none;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   user-select: none;
-  top: 70px; /* Под PageHeader */
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .game-action-btn-header:hover {
-  transform: scale(1.1);
+  transform: translateY(-50%) scale(1.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .game-action-btn-header:active {
-  transform: scale(0.95);
+  transform: translateY(-50%) scale(0.95);
 }
 
 .game-action-btn-header.game-action-btn-cancel {
@@ -352,21 +356,6 @@
   right: 12px;
   background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
   color: white;
-}
-
-/* Для портретного режима - кнопки внутри game-players-section */
-:not(.landscape-mode) .game-action-btn-header {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-:not(.landscape-mode) .game-action-btn-header:hover {
-  transform: translateY(-50%) scale(1.1);
-}
-
-:not(.landscape-mode) .game-action-btn-header:active {
-  transform: translateY(-50%) scale(0.95);
 }
 
 .game-confirm-btn {

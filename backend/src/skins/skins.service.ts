@@ -5,6 +5,15 @@ import { Skin } from './skin.entity';
 import { UserSkin } from './user-skin.entity';
 import { ProgressService } from '../progress/progress.service';
 import { UsersService } from '../users/users.service';
+import {
+  getDurabilityMax,
+  getWearModeBySlot,
+  calculateRepairCost as calculateRepairCostUtil,
+  applyWear,
+  typeToSlot,
+} from './equipment-spec.utils';
+import { BonusType, EQUIPMENT_CAPS } from './equipment-spec.constants';
+import { BonusType as BonusTypeEnum } from './equipment-spec.constants';
 
 @Injectable()
 export class SkinsService implements OnModuleInit {
@@ -150,36 +159,83 @@ export class SkinsService implements OnModuleInit {
     await this.initializeDefaultSkins();
   }
 
-  async getSkinBonuses(userId: string): Promise<{ xpBonusPercent: number; moneyBonusPercent: number }> {
-    // Получаем выбранные скины пользователя
+  /**
+   * Получает бонусы от экипировки пользователя (новая система Equipment Spec v2.0 + обратная совместимость)
+   */
+  async getSkinBonuses(userId: string): Promise<{ xpBonusPercent: number; moneyBonusPercent: number; bonuses?: any }> {
     const selectedSkins = await this.userSkinsRepository.find({
       where: { userId, isSelected: true },
       relations: ['skin'],
     });
 
+    // Новая система бонусов (Equipment Spec v2.0)
+    const bonuses: any = {
+      xpMult: 1.0,
+      commissionReduction: 0,
+      energyRefillDiscount: 0,
+      lifeRefillDiscount: 0,
+      wearReduction: 0,
+      repairDiscount: 0,
+      lifeLossProtectChance: 0,
+    };
+
+    // Старая система (для обратной совместимости)
     let totalXpBonus = 0;
     let totalMoneyBonus = 0;
 
     for (const userSkin of selectedSkins) {
       if (userSkin.skin) {
-        // Проверяем, что скин не изношен
-        const maxDurability = userSkin.skin.maxDurability || 100;
-        const currentDurability = userSkin.currentDurability ?? maxDurability;
+        const durabilityMax = userSkin.skin.durability_max || userSkin.skin.maxDurability || 100;
+        const durabilityCurrent = userSkin.durability_current ?? userSkin.currentDurability ?? durabilityMax;
         
-        if (currentDurability > 0) {
+        if (durabilityCurrent > 0) {
+          // Новая система бонусов (массив bonuses)
+          if (userSkin.skin.bonuses && Array.isArray(userSkin.skin.bonuses)) {
+            for (const bonus of userSkin.skin.bonuses) {
+              switch (bonus.type) {
+                case BonusType.XP_MULT:
+                  bonuses.xpMult *= bonus.value || 1.0;
+                  break;
+                case BonusType.COMMISSION_REDUCTION:
+                  bonuses.commissionReduction += bonus.value || 0;
+                  break;
+                case BonusType.ENERGY_REFILL_DISCOUNT:
+                  bonuses.energyRefillDiscount += bonus.value || 0;
+                  break;
+                case BonusType.LIFE_REFILL_DISCOUNT:
+                  bonuses.lifeRefillDiscount += bonus.value || 0;
+                  break;
+                case BonusType.WEAR_REDUCTION:
+                  bonuses.wearReduction += bonus.value || 0;
+                  break;
+                case BonusType.REPAIR_DISCOUNT:
+                  bonuses.repairDiscount += bonus.value || 0;
+                  break;
+                case BonusType.LIFE_LOSS_PROTECT_CHANCE:
+                  bonuses.lifeLossProtectChance += bonus.value || 0;
+                  break;
+              }
+            }
+          }
+
+          // Старая система (обратная совместимость)
           totalXpBonus += userSkin.skin.xpBonusPercent || 0;
           totalMoneyBonus += userSkin.skin.moneyBonusPercent || 0;
         }
       }
     }
 
-    // Также проверяем дефолтные скины, если они выбраны
-    const allSkins = await this.skinsRepository.find({
-      where: { isDefault: true },
-    });
+    // Применяем потолки (caps)
+    bonuses.xpMult = Math.min(bonuses.xpMult, EQUIPMENT_CAPS.XP_MULT.GEAR_CAP);
+    bonuses.lifeLossProtectChance = Math.min(bonuses.lifeLossProtectChance, EQUIPMENT_CAPS.LIFE_LOSS_PROTECT.MAX);
+    bonuses.commissionReduction = Math.min(bonuses.commissionReduction, EQUIPMENT_CAPS.COMMISSION.BASE - EQUIPMENT_CAPS.COMMISSION.MIN_FINAL);
 
-    // Если у пользователя нет выбранных скинов, используем дефолтные
+    // Дефолтные скины (если нет выбранных)
     if (selectedSkins.length === 0) {
+      const allSkins = await this.skinsRepository.find({
+        where: { isDefault: true },
+      });
+
       for (const skin of allSkins) {
         totalXpBonus += skin.xpBonusPercent || 0;
         totalMoneyBonus += skin.moneyBonusPercent || 0;
@@ -189,6 +245,7 @@ export class SkinsService implements OnModuleInit {
     return {
       xpBonusPercent: totalXpBonus,
       moneyBonusPercent: totalMoneyBonus,
+      bonuses, // Новые бонусы
     };
   }
 
@@ -503,6 +560,9 @@ export class SkinsService implements OnModuleInit {
    * @param skinId ID скина
    * @returns Стоимость ремонта в NAR-coin
    */
+  /**
+   * Вычисляет стоимость ремонта скина по формуле Equipment Spec v2.0
+   */
   async calculateRepairCost(userId: string, skinId: string): Promise<number> {
     const userSkin = await this.userSkinsRepository.findOne({
       where: { userId, skinId },
@@ -514,22 +574,25 @@ export class SkinsService implements OnModuleInit {
     }
 
     const skin = userSkin.skin;
-    const maxDurability = skin.maxDurability || 100;
-    const currentDurability = userSkin.currentDurability ?? maxDurability;
-    const skinPrice = skin.price ? Number(skin.price) : 0;
+    const user = await this.usersService.findOne(userId);
 
-    // Если скин бесплатный или полностью исправен, ремонт не требуется
-    if (skinPrice === 0 || currentDurability >= maxDurability) {
+    // Используем новую систему или старую для обратной совместимости
+    const durabilityMax = skin.durability_max || skin.maxDurability || 100;
+    const durabilityCurrent = userSkin.durability_current ?? userSkin.currentDurability ?? durabilityMax;
+    const repairBaseCost = skin.repair_base_cost || (skin.price ? Number(skin.price) * 0.75 : 0);
+
+    // Если скин полностью исправен или нет базовой стоимости, ремонт не требуется
+    if (repairBaseCost === 0 || durabilityCurrent >= durabilityMax) {
       return 0;
     }
 
-    // Вычисляем потерянную прочность
-    const lostDurability = maxDurability - currentDurability;
-    
-    // Формула: 75% от цены скина * (потерянная прочность / максимальная прочность)
-    const repairCost = Math.floor(skinPrice * 0.75 * (lostDurability / maxDurability));
-
-    return repairCost;
+    // Используем новую формулу из спецификации
+    return calculateRepairCostUtil(
+      durabilityMax,
+      durabilityCurrent,
+      repairBaseCost,
+      user.level || 1,
+    );
   }
 
   /**
@@ -548,11 +611,16 @@ export class SkinsService implements OnModuleInit {
     }
 
     const skin = userSkin.skin;
-    const maxDurability = skin.maxDurability || 100;
-    const currentDurability = userSkin.currentDurability ?? maxDurability;
+    const durabilityMax = skin.durability_max || skin.maxDurability || 100;
+    const durabilityCurrent = userSkin.durability_current ?? userSkin.currentDurability ?? durabilityMax;
+
+    // Проверяем, что предмет не уничтожен (durability_current > 0)
+    if (durabilityCurrent <= 0) {
+      throw new BadRequestException('Предмет уничтожен, ремонт невозможен');
+    }
 
     // Если скин полностью исправен, ремонт не требуется
-    if (currentDurability >= maxDurability) {
+    if (durabilityCurrent >= durabilityMax) {
       throw new BadRequestException('Скин не требует ремонта');
     }
 
@@ -560,21 +628,28 @@ export class SkinsService implements OnModuleInit {
     const repairCost = await this.calculateRepairCost(userId, skinId);
 
     if (repairCost > 0) {
-      // Проверяем баланс пользователя
       const user = await this.usersService.findOne(userId);
-      const userBalance = Number(user.narCoin);
+      const repairCurrency = skin.repair_currency || 'NAR';
 
-      if (userBalance < repairCost) {
-        throw new BadRequestException(`Недостаточно NAR-coin для ремонта. Требуется: ${repairCost}, у вас: ${userBalance}`);
+      if (repairCurrency === 'USDT') {
+        // TODO: Реализовать списание USDT
+        throw new BadRequestException('Ремонт за USDT пока не реализован');
+      } else {
+        // Ремонт за NAR
+        const userBalance = Number(user.narCoin);
+
+        if (userBalance < repairCost) {
+          throw new BadRequestException(`Недостаточно NAR-coin для ремонта. Требуется: ${repairCost}, у вас: ${userBalance}`);
+        }
+
+        const newBalance = userBalance - repairCost;
+        await this.usersService.update(userId, { narCoin: newBalance });
       }
-
-      // Списываем средства
-      const newBalance = userBalance - repairCost;
-      await this.usersService.update(userId, { narCoin: newBalance });
     }
 
     // Восстанавливаем прочность до максимума
-    userSkin.currentDurability = maxDurability;
+    userSkin.durability_current = durabilityMax;
+    userSkin.currentDurability = durabilityMax; // Для обратной совместимости
     await this.userSkinsRepository.save(userSkin);
   }
 }

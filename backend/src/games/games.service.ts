@@ -472,7 +472,7 @@ export class GamesService {
     const dice = game.gameState.dice;
     
     // Определяем, является ли этот ход первым в игре для этого режима (Long)
-    // В Long Backgammon первый ход с дублями 3:3, 4:4 или 6:6 позволяет снять 2 шашки с головы
+    // Правило Минспорта 20.3: только второй игрок (черные) при первом ходе с дублями 3:3, 4:4 или 6:6 может снять 2 шашки с головы
     const isFirstMoveOfGame = game.mode === GameMode.LONG && (game.moves || []).length < 2;
 
     // Проверяем валидность всех ходов
@@ -791,12 +791,13 @@ export class GamesService {
       state.dice = diceCopy;
     }
 
-    // Для дублей без pendingMoves ограничиваем до 2 кубиков
+    // Для дублей без pendingMoves ограничиваем до 2 кубиков (UI решение для удобства)
+    // По правилам Минспорта все 4 хода должны быть доступны, но мы ограничиваем UI до 2 для удобства
     let diceForMoves = state.dice || [];
     if (isDoubles && !hasPendingMoves && diceForMoves.length === 4) {
-      // Ограничиваем до первых 2 кубиков
+      // Ограничиваем до первых 2 кубиков (UI решение)
       diceForMoves = diceForMoves.slice(0, 2);
-      this.logger.log(`🔒 Doubles detected, limiting possible moves to first 2 dice: [${diceForMoves.join(', ')}]`);
+      this.logger.log(`🔒 Doubles detected (UI limitation), limiting possible moves to first 2 dice: [${diceForMoves.join(', ')}]`);
     }
 
     if (!diceForMoves || diceForMoves.length === 0) {

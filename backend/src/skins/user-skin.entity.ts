@@ -30,6 +30,9 @@ export class UserSkin {
   isSelected: boolean;
 
   @Column({ type: 'int', nullable: true })
-  currentDurability: number; // Текущая прочность скина (null = полная прочность)
+  currentDurability: number; // УСТАРЕЛО: используйте durability_current
+  
+  @Column({ type: 'int', nullable: true })
+  durability_current: number; // Текущая прочность предмета (null = полная прочность)
 }
 
