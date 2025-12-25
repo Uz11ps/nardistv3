@@ -14,7 +14,7 @@ import { Subscription, SubscriptionPlan } from '../subscription/subscription.ent
 import { User } from '../users/user.entity';
 import { Game, GameMode, GameType, GameStatus } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
-import { Tournament } from '../tournaments/tournament.entity';
+import { Tournament, TournamentStatus } from '../tournaments/tournament.entity';
 import { Article } from '../academy/article.entity';
 import { Skin } from '../skins/skin.entity';
 import { UserSkin } from '../skins/user-skin.entity';
@@ -2093,11 +2093,11 @@ export class AdminService implements OnModuleInit {
       totalXp,
     ] = await Promise.all([
       this.usersRepository.count(),
-      this.usersRepository.count({ where: { banned: false } }),
+      this.usersRepository.count({ where: { isBanned: false } }),
       this.gamesRepository.count(),
       this.gamesRepository.count({ where: { status: GameStatus.FINISHED } }),
       this.tournamentsRepository.count(),
-      this.tournamentsRepository.count({ where: { status: 'in_progress' } }),
+      this.tournamentsRepository.count({ where: { status: TournamentStatus.IN_PROGRESS } }),
       this.questsRepository.count(),
       this.questsRepository.count({ where: { startDate: LessThan(new Date()), endDate: MoreThan(new Date()) } }),
       this.skinsRepository.count(),

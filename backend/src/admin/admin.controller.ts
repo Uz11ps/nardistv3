@@ -9,6 +9,7 @@ import { AdminAuthGuard } from '../common/guards/admin-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { CreateSkinDto } from './dto/create-skin.dto';
+import { CourseTask } from '../academy/course-task.entity';
 import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -258,12 +259,6 @@ export class AdminController {
     }
     await this.academyService.rejectCourse(id);
     return { message: 'Курс отклонен' };
-  }
-
-  @Get('settings')
-  @UseGuards(AdminAuthGuard)
-  async getSystemSettings(@CurrentUser() user: any) {
-    return this.adminService.getAllSystemSettings();
   }
 
   @Post('settings')
