@@ -27,7 +27,7 @@ export class AcademyService {
     });
   }
 
-  async findOne(id: string, userId?: string): Promise<Article & { purchased?: boolean }> {
+  async findOne(id: string, userId?: string): Promise<Article & { purchased?: boolean; sections?: any[] }> {
     const article = await this.articlesRepository.findOne({ where: { id } });
     if (!article) {
       throw new NotFoundException('Статья не найдена');
@@ -48,7 +48,21 @@ export class AcademyService {
     article.views++;
     await this.articlesRepository.save(article);
 
-    return { ...article, purchased };
+    // Формируем результат с content и sections
+    const result: any = { ...article, purchased };
+    
+    // Если есть content, добавляем его в результат
+    if (article.content) {
+      result.content = article.content;
+    }
+
+    // Если это курс, загружаем задания как sections
+    if (article.type === 'course') {
+      // Можно добавить загрузку CourseTask и преобразовать их в sections
+      // Пока просто возвращаем content
+    }
+
+    return result;
   }
 
   async create(articleData: Partial<Article>, isAdmin: boolean = false): Promise<Article> {

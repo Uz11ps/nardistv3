@@ -160,17 +160,21 @@ export default function Academy() {
     
     return (
       <PageLayout title={mainTitle} subtitle={subtitle} showBack={true}>
-        <div className="academy-material-author">{materialDetail.author}</div>
-        <div className="academy-material-sections">
-          {materialDetail.sections?.map((section) => (
-            <div key={section.id} className="academy-material-section">
-              <div className="academy-material-section-header">
-                {section.icon && <span className="academy-material-section-icon">{section.icon}</span>}
-                <h3 className="academy-material-section-title">{section.title}</h3>
+        <div className="academy-material-author">{materialDetail.author || 'Администратор'}</div>
+        <div className="academy-material-content">
+          {materialDetail.sections && materialDetail.sections.length > 0 ? (
+            materialDetail.sections.map((section) => (
+              <div key={section.id} className="academy-material-section">
+                <div className="academy-material-section-header">
+                  {section.icon && <span className="academy-material-section-icon">{section.icon}</span>}
+                  <h3 className="academy-material-section-title">{section.title}</h3>
+                </div>
+                <div className="academy-material-section-content" dangerouslySetInnerHTML={{ __html: section.content }} />
               </div>
-              <p className="academy-material-section-content">{section.content}</p>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="academy-material-content-text" dangerouslySetInnerHTML={{ __html: materialDetail.content || 'Содержание отсутствует' }} />
+          )}
         </div>
       </PageLayout>
     )

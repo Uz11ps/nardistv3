@@ -49,7 +49,7 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'onboarding' | 'prices' | 'system-settings'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings'>('stats')
   const [onboardingTasks, setOnboardingTasks] = useState<any[]>([])
   const [onboardingStats, setOnboardingStats] = useState<any>(null)
   const [editingOnboardingTask, setEditingOnboardingTask] = useState<any>(null)
@@ -93,7 +93,7 @@ export default function Admin() {
   const loadReplayStep = async (step: number) => {
     if (!selectedGame) return
     try {
-      const response = await apiClient.get(`/history/replay/${selectedGame.id}?step=${step}`)
+      const response = await apiClient.get(`/admin/games/${selectedGame.id}/replay?step=${step}`)
       if (response.data) {
         setGameReplay(response.data)
       }
@@ -129,7 +129,15 @@ export default function Admin() {
   const [clanFilters, setClanFilters] = useState({ search: '', level: '' })
   
   // Формы создания
-  const [newGame, setNewGame] = useState({ player1Id: '', player2Id: '', mode: 'short', type: 'vs_player' })
+  const [newGame, setNewGame] = useState({ 
+    player1Id: '', 
+    player2Id: '', 
+    mode: 'short', 
+    type: 'vs_player',
+    stake: 0,
+    moveTimeout: 60,
+    tournamentId: '',
+  })
   const [newTournament, setNewTournament] = useState({ 
     name: '', 
     mode: 'short', 
@@ -138,9 +146,17 @@ export default function Admin() {
     registrationStart: '',
     registrationEnd: '',
     maxParticipants: 16, 
-    entryFee: 0 
+    entryFee: 0,
+    prizes: '' // JSON строка с наградами
   })
-  const [newArticle, setNewArticle] = useState({ title: '', content: '', type: 'course', isPaid: false, price: 0 })
+  const [newArticle, setNewArticle] = useState({ 
+    title: '', 
+    content: '', 
+    type: 'course', 
+    isPaid: false, 
+    price: 0,
+    rewards: '', // JSON строка с наградами (может быть несколько)
+  })
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -661,7 +677,10 @@ export default function Admin() {
         </button>
         <button
           className={`admin-tab-btn ${activeTab === 'academy' ? 'active' : ''}`}
-          onClick={() => setActiveTab('academy')}
+          onClick={() => {
+            setActiveTab('academy')
+            loadOnboardingTasks()
+          }}
         >
           Обучение
         </button>
@@ -669,6 +688,7 @@ export default function Admin() {
           className={`admin-tab-btn ${activeTab === 'city' ? 'active' : ''}`}
           onClick={() => {
             setActiveTab('city')
+            loadBuildings()
             loadDistricts()
           }}
         >
@@ -700,15 +720,6 @@ export default function Admin() {
           }}
         >
           Политика
-        </button>
-        <button
-          className={`admin-tab-btn ${activeTab === 'onboarding' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('onboarding')
-            loadOnboardingTasks()
-          }}
-        >
-          Онбординг
         </button>
       </div>
 
@@ -778,33 +789,47 @@ export default function Admin() {
             <div className="stats-chart">
               <h3>Распределение по уровням</h3>
               <div className="level-chart">
-                {stats?.users?.levelDistribution?.map((item) => (
-                  <div key={item.level} className="level-bar">
-                    <div className="level-label">Уровень {item.level}</div>
-                    <div className="level-progress">
-                      <div
-                        className="level-fill"
-                        style={{
-                          width: `${stats?.users?.total ? (Number(item.count) / (stats?.users?.total || 1)) * 100 : 0}%`,
-                        }}
-                      >
-                        {item.count}
+                {stats?.users?.levelDistribution && stats.users.levelDistribution.length > 0 ? (
+                  stats.users.levelDistribution.map((item) => (
+                    <div key={item.level} className="level-bar">
+                      <div className="level-label">Уровень {item.level}</div>
+                      <div className="level-progress">
+                        <div
+                          className="level-fill"
+                          style={{
+                            width: `${stats?.users?.total ? (Number(item.count) / (stats.users.total || 1)) * 100 : 0}%`,
+                          }}
+                        >
+                          {item.count}
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#aaaaaa' }}>
+                    Нет данных
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
             <div className="stats-chart">
               <h3>Игры за последние 7 дней</h3>
               <div className="games-chart">
-                {stats?.games?.last7Days?.map((item) => (
-                  <div key={item.date} className="games-bar">
-                    <div className="games-date">{new Date(item.date).toLocaleDateString()}</div>
-                    <div className="games-count">{item.count}</div>
+                {stats?.games?.last7Days && stats.games.last7Days.length > 0 ? (
+                  stats.games.last7Days.map((item) => (
+                    <div key={item.date} className="games-bar">
+                      <div className="games-date">
+                        {item.date ? new Date(item.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) : 'N/A'}
+                      </div>
+                      <div className="games-count">{item.count}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#aaaaaa' }}>
+                    Нет данных
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -1277,8 +1302,8 @@ export default function Admin() {
                         <div className="btn-group">
                           <button onClick={async () => {
                             try {
-                              // Загружаем полные данные реплея
-                              const replayResponse = await apiClient.get(`/history/replay/${game.id}`)
+                              // Загружаем полные данные реплея через админский эндпоинт
+                              const replayResponse = await apiClient.get(`/admin/games/${game.id}/replay`)
                               setSelectedGame(game)
                               setGameReplay(replayResponse.data)
                               setReplayStep(0)
@@ -1359,10 +1384,11 @@ export default function Admin() {
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <button
                   onClick={async () => {
-                    if (confirm('Удалить все уведомления? Это действие необратимо!')) {
+                    if (confirm('Удалить все сообщения бота? Это действие необратимо!')) {
                       try {
-                        await apiClient.delete('/admin/notifications/all')
-                        alert('Все уведомления удалены')
+                        await apiClient.delete('/admin/notifications/bot/all')
+                        alert('Все сообщения бота удалены')
+                        loadStats()
                       } catch (error: any) {
                         alert('Ошибка: ' + (error.response?.data?.message || error.message))
                       }
@@ -1377,7 +1403,30 @@ export default function Admin() {
                     cursor: 'pointer',
                   }}
                 >
-                  Удалить все уведомления
+                  Удалить все сообщения бота
+                </button>
+                <button
+                  onClick={async () => {
+                    if (confirm('Удалить последнее сообщение бота у каждого пользователя? Это действие необратимо!')) {
+                      try {
+                        await apiClient.delete('/admin/notifications/bot/last')
+                        alert('Последние сообщения бота удалены')
+                        loadStats()
+                      } catch (error: any) {
+                        alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                      }
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#e67e22',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Удалить последнее
                 </button>
                 {notificationUserId && (
                   <button
@@ -1667,21 +1716,21 @@ export default function Admin() {
             <div className="create-form">
               <h3>Создать игру</h3>
               <div className="form-group">
-                <label>ID игрока 1 (обязательно)</label>
+                <label>Игрок 1 (UUID, ник в тг, nickname или userId)</label>
                 <input
                   type="text"
                   value={newGame.player1Id}
                   onChange={(e) => setNewGame({ ...newGame, player1Id: e.target.value })}
-                  placeholder="UUID игрока"
+                  placeholder="UUID, username, nickname или telegramId"
                 />
               </div>
               <div className="form-group">
-                <label>ID игрока 2 (опционально, если пусто - игра с ботом)</label>
+                <label>Игрок 2 (опционально, если пусто - игра с ботом)</label>
                 <input
                   type="text"
                   value={newGame.player2Id}
                   onChange={(e) => setNewGame({ ...newGame, player2Id: e.target.value })}
-                  placeholder="UUID игрока или оставить пустым"
+                  placeholder="UUID, username, nickname или telegramId"
                 />
               </div>
               <div className="form-group">
@@ -1705,11 +1754,56 @@ export default function Admin() {
                   <option value="tournament">Турнир</option>
                 </select>
               </div>
+              <div className="form-group">
+                <label>Ставка (NAR-coin, 0 = без ставки)</label>
+                <input
+                  type="number"
+                  value={newGame.stake}
+                  onChange={(e) => setNewGame({ ...newGame, stake: parseInt(e.target.value) || 0 })}
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+              <div className="form-group">
+                <label>Длительность хода (секунды)</label>
+                <input
+                  type="number"
+                  value={newGame.moveTimeout}
+                  onChange={(e) => setNewGame({ ...newGame, moveTimeout: parseInt(e.target.value) || 60 })}
+                  min="10"
+                  max="3600"
+                  placeholder="60"
+                />
+              </div>
+              {newGame.type === 'tournament' && (
+                <div className="form-group">
+                  <label>ID турнира (опционально)</label>
+                  <input
+                    type="text"
+                    value={newGame.tournamentId}
+                    onChange={(e) => setNewGame({ ...newGame, tournamentId: e.target.value })}
+                    placeholder="UUID турнира"
+                  />
+                </div>
+              )}
               <button onClick={async () => {
                 try {
-                  const res = await apiClient.post('/admin/games/create', newGame)
+                  const res = await apiClient.post('/admin/games/create', {
+                    ...newGame,
+                    stake: newGame.stake || undefined,
+                    moveTimeout: newGame.moveTimeout || undefined,
+                    tournamentId: newGame.tournamentId || undefined,
+                  })
                   alert(`Игра создана! ID: ${res.data.id}`)
-                  setNewGame({ player1Id: '', player2Id: '', mode: 'short', type: 'vs_player' })
+                  setNewGame({ 
+                    player1Id: '', 
+                    player2Id: '', 
+                    mode: 'short', 
+                    type: 'vs_player',
+                    stake: 0,
+                    moveTimeout: 60,
+                    tournamentId: '',
+                  })
                   loadStats()
                 } catch (error: any) {
                   alert('Ошибка: ' + (error.response?.data?.message || error.message))
@@ -1798,6 +1892,16 @@ export default function Admin() {
                   min="0"
                 />
               </div>
+              <div className="form-group">
+                <label>Награды (JSON, например: {'{"1": {"narCoin": 1000, "xp": 500}, "2": {"narCoin": 500, "xp": 250}, "3": {"narCoin": 250, "xp": 100}}'})</label>
+                <textarea
+                  value={newTournament.prizes}
+                  onChange={(e) => setNewTournament({ ...newTournament, prizes: e.target.value })}
+                  rows={4}
+                  placeholder='{"1": {"narCoin": 1000, "xp": 500}, "2": {"narCoin": 500, "xp": 250}}'
+                  style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff', fontFamily: 'monospace' }}
+                />
+              </div>
               <button onClick={async () => {
                 try {
                   if (!newTournament.registrationStart || !newTournament.registrationEnd || !newTournament.startDate) {
@@ -1805,12 +1909,23 @@ export default function Admin() {
                     return
                   }
                   
+                  let prizes = null;
+                  if (newTournament.prizes && newTournament.prizes.trim()) {
+                    try {
+                      prizes = JSON.parse(newTournament.prizes);
+                    } catch (e) {
+                      alert('Ошибка в формате наград. Используйте валидный JSON.');
+                      return;
+                    }
+                  }
+
                   await apiClient.post('/admin/tournaments/create', {
                     ...newTournament,
                     registrationStart: new Date(newTournament.registrationStart).toISOString(),
                     registrationEnd: new Date(newTournament.registrationEnd).toISOString(),
                     startDate: new Date(newTournament.startDate).toISOString(),
                     status: 'registration',
+                    prizes: prizes,
                   })
                   alert('Турнир создан!')
                   setNewTournament({ 
@@ -1821,7 +1936,8 @@ export default function Admin() {
                     registrationStart: '',
                     registrationEnd: '',
                     maxParticipants: 16, 
-                    entryFee: 0 
+                    entryFee: 0,
+                    prizes: '',
                   })
                   loadStats()
                 } catch (error: any) {
@@ -2071,16 +2187,44 @@ export default function Admin() {
                   />
                 </div>
               )}
+              <div className="form-group">
+                <label>Награды (JSON, может быть несколько, например: [{'{"narCoin": 1000, "xp": 500}'}, {'{"skinId": "uuid", "narCoin": 500}'}])</label>
+                <textarea
+                  value={newArticle.rewards}
+                  onChange={(e) => setNewArticle({ ...newArticle, rewards: e.target.value })}
+                  rows={4}
+                  placeholder='[{"narCoin": 1000, "xp": 500}, {"skinId": "uuid", "narCoin": 500}]'
+                  style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff', fontFamily: 'monospace' }}
+                />
+              </div>
               <button onClick={async () => {
                 try {
+                  let rewards = null;
+                  if (newArticle.rewards && newArticle.rewards.trim()) {
+                    try {
+                      rewards = JSON.parse(newArticle.rewards);
+                    } catch (e) {
+                      alert('Ошибка в формате наград. Используйте валидный JSON.');
+                      return;
+                    }
+                  }
+
                   await apiClient.post('/admin/academy/create', {
                     ...newArticle,
                     type: 'course', // Курсы создаются только админами
                     authorId: null, // null означает, что это курс от админа
                     isVerified: true, // Курсы от админов сразу верифицированы
+                    rewards: rewards, // Награды (может быть массив)
                   })
                   alert('Курс создан!')
-                  setNewArticle({ title: '', content: '', type: 'course', isPaid: false, price: 0 })
+                  setNewArticle({ 
+                    title: '', 
+                    content: '', 
+                    type: 'course', 
+                    isPaid: false, 
+                    price: 0,
+                    rewards: '',
+                  })
                   // Перезагружаем данные
                   const response = await apiClient.get('/admin/academy')
                   setArticles(response.data || [])
@@ -3362,6 +3506,20 @@ export default function Admin() {
                   <label>Награда XP:</label>
                   <input type="number" placeholder="Награда XP" id="quest-reward-xp" />
                 </div>
+                <div className="form-group">
+                  <label>Награда - ID скина (опционально):</label>
+                  <input type="text" placeholder="UUID скина" id="quest-reward-skin" />
+                  <small style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                    Можно указать ID скина из раздела "Скины" для награды скином
+                  </small>
+                </div>
+                <div className="form-group">
+                  <label>Награда - ID статьи (опционально):</label>
+                  <input type="text" placeholder="UUID статьи" id="quest-reward-article" />
+                  <small style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                    Можно указать ID статьи из раздела "Обучение" для награды статьей
+                  </small>
+                </div>
                 <div className="form-group checkbox-group">
                   <label className="checkbox-label">
                     <input type="checkbox" id="quest-premium" /> Премиум квест
@@ -3398,6 +3556,18 @@ export default function Admin() {
                         alert('Введите username канала для задания на подписку')
                         return
                       }
+                    }
+
+                    // Если указана награда скином, добавляем rewardSkin
+                    const rewardSkinId = (document.getElementById('quest-reward-skin') as HTMLInputElement).value
+                    if (rewardSkinId && rewardSkinId.trim()) {
+                      questData.rewardSkin = { id: rewardSkinId.trim() }
+                    }
+
+                    // Если указана награда статьей, добавляем rewardArticle
+                    const rewardArticleId = (document.getElementById('quest-reward-article') as HTMLInputElement).value
+                    if (rewardArticleId && rewardArticleId.trim()) {
+                      questData.rewardArticle = { id: rewardArticleId.trim() }
                     }
                     
                     await apiClient.post('/admin/quests', questData)
@@ -3685,142 +3855,6 @@ export default function Admin() {
           </div>
         )}
 
-        {activeTab === 'onboarding' && (
-          <div className="admin-onboarding">
-            <h3>Управление онбордингом</h3>
-            
-            {onboardingStats && (
-              <div className="onboarding-stats" style={{ marginBottom: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Всего заданий</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.totalTasks}</div>
-                </div>
-                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Активных</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.activeTasks}</div>
-                </div>
-                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Прогрессов</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.totalProgress}</div>
-                </div>
-                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Завершено</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.completedProgress}</div>
-                </div>
-                <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Процент завершения</div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{onboardingStats.completionRate?.toFixed(1) || 0}%</div>
-                </div>
-              </div>
-            )}
-
-            <div style={{ marginBottom: '24px' }}>
-              <h4>Создать задание</h4>
-              <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr' }}>
-                <div>
-                  <label>Тип задания</label>
-                  <select value={newOnboardingTask.type} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, type: e.target.value})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}>
-                    <option value="train_with_bot">Тренировка с ботом</option>
-                    <option value="online_match">Онлайн-партия</option>
-                    <option value="view_city">Просмотр города</option>
-                    <option value="play_short_match">Быстрая партия</option>
-                    <option value="play_long_match">Длинная партия</option>
-                    <option value="win_match">Победа в матче</option>
-                    <option value="complete_training_position">Тренировочная позиция</option>
-                    <option value="join_clan">Вступить в клан</option>
-                    <option value="purchase_building">Купить строение</option>
-                    <option value="upgrade_building">Улучшить строение</option>
-                    <option value="custom">Кастомное</option>
-                  </select>
-                </div>
-                <div>
-                  <label>Порядок</label>
-                  <input type="number" value={newOnboardingTask.order} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, order: parseInt(e.target.value)})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label>Название</label>
-                  <input type="text" value={newOnboardingTask.title} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, title: e.target.value})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label>Описание</label>
-                  <textarea value={newOnboardingTask.description} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, description: e.target.value})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff', minHeight: '80px' }} />
-                </div>
-                <div>
-                  <label>Награда NAR-coin</label>
-                  <input type="number" value={newOnboardingTask.rewardNarCoin} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, rewardNarCoin: parseInt(e.target.value)})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
-                </div>
-                <div>
-                  <label>Награда XP</label>
-                  <input type="number" value={newOnboardingTask.rewardXP} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, rewardXP: parseInt(e.target.value)})} style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
-                </div>
-                <div>
-                  <label>
-                    <input type="checkbox" checked={newOnboardingTask.isRequired} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, isRequired: e.target.checked})} />
-                    Обязательное
-                  </label>
-                </div>
-                <div>
-                  <label>
-                    <input type="checkbox" checked={newOnboardingTask.isActive} onChange={(e) => setNewOnboardingTask({...newOnboardingTask, isActive: e.target.checked})} />
-                    Активно
-                  </label>
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <button onClick={handleCreateOnboardingTask} style={{ padding: '12px 24px', background: '#ff3333', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: '600' }}>Создать задание</button>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4>Задания онбординга</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {onboardingTasks.map((task: any) => (
-                  <div key={task.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px', border: '1px solid #3a3a3a' }}>
-                    {editingOnboardingTask?.id === task.id ? (
-                      <div style={{ display: 'grid', gap: '12px' }}>
-                        <input type="text" value={editingOnboardingTask.title} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, title: e.target.value})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
-                        <textarea value={editingOnboardingTask.description} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, description: e.target.value})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff', minHeight: '60px' }} />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                          <input type="number" placeholder="Порядок" value={editingOnboardingTask.order} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, order: parseInt(e.target.value)})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
-                          <input type="number" placeholder="NAR-coin" value={editingOnboardingTask.rewardNarCoin} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, rewardNarCoin: parseInt(e.target.value)})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
-                          <input type="number" placeholder="XP" value={editingOnboardingTask.rewardXP} onChange={(e) => setEditingOnboardingTask({...editingOnboardingTask, rewardXP: parseInt(e.target.value)})} style={{ padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }} />
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={() => handleUpdateOnboardingTask(task.id, editingOnboardingTask)} style={{ padding: '8px 16px', background: '#ff3333', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer' }}>Сохранить</button>
-                          <button onClick={() => setEditingOnboardingTask(null)} style={{ padding: '8px 16px', background: '#555', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer' }}>Отмена</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                          <div>
-                            <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>{task.title}</div>
-                            <div style={{ fontSize: '14px', color: '#aaa', marginBottom: '8px' }}>{task.description}</div>
-                            <div style={{ fontSize: '12px', color: '#888', display: 'flex', gap: '16px' }}>
-                              <span>Тип: {task.type}</span>
-                              <span>Порядок: {task.order}</span>
-                              <span>NAR: {task.rewardNarCoin}</span>
-                              <span>XP: {task.rewardXP}</span>
-                              <span style={{ color: task.isActive ? '#4caf50' : '#f44336' }}>{task.isActive ? 'Активно' : 'Неактивно'}</span>
-                              {task.isRequired && <span>Обязательное</span>}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={() => setEditingOnboardingTask({...task})} style={{ padding: '6px 12px', background: '#4a4a4a', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '12px' }}>Редактировать</button>
-                            <button onClick={() => handleDeleteOnboardingTask(task.id)} style={{ padding: '6px 12px', background: '#f44336', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '12px' }}>Удалить</button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {onboardingTasks.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>Нет заданий онбординга</div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {activeTab === 'city' && (
           <div className="admin-city">
@@ -4337,6 +4371,423 @@ export default function Admin() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Управление районами */}
+            <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '2px solid #3a3a3a' }}>
+              <h3>Управление районами</h3>
+              
+              {/* Форма создания нового района */}
+              <div style={{
+                background: '#2a2a2a',
+                padding: '16px',
+                borderRadius: '8px',
+                marginBottom: '16px',
+              }}>
+                <h4 style={{ marginTop: 0, color: '#fff' }}>Создать новый район</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Код района (уникальный)</label>
+                    <input
+                      type="text"
+                      placeholder="district_1"
+                      id="new-district-code"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название</label>
+                    <input
+                      type="text"
+                      placeholder="Название района"
+                      id="new-district-name"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Описание</label>
+                    <textarea
+                      placeholder="Описание района"
+                      id="new-district-description"
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Порядок</label>
+                    <input
+                      type="number"
+                      placeholder="1"
+                      id="new-district-order"
+                      defaultValue={1}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Требуемый уровень</label>
+                    <input
+                      type="number"
+                      placeholder="1"
+                      id="new-district-required-level"
+                      defaultValue={1}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовый доход в день (NAR)</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      id="new-district-income"
+                      defaultValue={0}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>
+                      <input type="checkbox" id="new-district-active" defaultChecked style={{ marginRight: '8px' }} />
+                      Активен
+                    </label>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const code = (document.getElementById('new-district-code') as HTMLInputElement).value
+                      const name = (document.getElementById('new-district-name') as HTMLInputElement).value
+                      if (!code || !name) {
+                        alert('Заполните код и название района')
+                        return
+                      }
+                      
+                      await apiClient.post('/admin/districts', {
+                        code,
+                        name,
+                        description: (document.getElementById('new-district-description') as HTMLTextAreaElement).value || '',
+                        order: parseInt((document.getElementById('new-district-order') as HTMLInputElement).value) || 1,
+                        requiredLevel: parseInt((document.getElementById('new-district-required-level') as HTMLInputElement).value) || 1,
+                        baseIncomePerDay: parseInt((document.getElementById('new-district-income') as HTMLInputElement).value) || 0,
+                        isActive: (document.getElementById('new-district-active') as HTMLInputElement).checked,
+                      })
+                      
+                      alert('Район создан!')
+                      loadDistricts()
+                      // Очищаем форму
+                      ;(document.getElementById('new-district-code') as HTMLInputElement).value = ''
+                      ;(document.getElementById('new-district-name') as HTMLInputElement).value = ''
+                      ;(document.getElementById('new-district-description') as HTMLTextAreaElement).value = ''
+                      ;(document.getElementById('new-district-order') as HTMLInputElement).value = '1'
+                      ;(document.getElementById('new-district-required-level') as HTMLInputElement).value = '1'
+                      ;(document.getElementById('new-district-income') as HTMLInputElement).value = '0'
+                      ;(document.getElementById('new-district-active') as HTMLInputElement).checked = true
+                    } catch (error: any) {
+                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                    }
+                  }}
+                  style={{
+                    marginTop: '12px',
+                    padding: '8px 16px',
+                    background: '#4a90e2',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Создать район
+                </button>
+              </div>
+
+              {/* Список районов */}
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {districts.map((district) => (
+                  <div
+                    key={district.id}
+                    style={{
+                      background: '#2a2a2a',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      border: editingDistrict?.id === district.id ? '2px solid #4a90e2' : '1px solid #3a3a3a',
+                    }}
+                  >
+                    {editingDistrict?.id === district.id ? (
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Код</label>
+                            <input
+                              type="text"
+                              value={editingDistrict.code}
+                              onChange={(e) => setEditingDistrict({ ...editingDistrict, code: e.target.value })}
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: '#1a1a1a',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                color: '#fff',
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название</label>
+                            <input
+                              type="text"
+                              value={editingDistrict.name}
+                              onChange={(e) => setEditingDistrict({ ...editingDistrict, name: e.target.value })}
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: '#1a1a1a',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                color: '#fff',
+                              }}
+                            />
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Описание</label>
+                            <textarea
+                              value={editingDistrict.description || ''}
+                              onChange={(e) => setEditingDistrict({ ...editingDistrict, description: e.target.value })}
+                              rows={3}
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: '#1a1a1a',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                color: '#fff',
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Порядок</label>
+                            <input
+                              type="number"
+                              value={editingDistrict.order}
+                              onChange={(e) => setEditingDistrict({ ...editingDistrict, order: parseInt(e.target.value) || 0 })}
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: '#1a1a1a',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                color: '#fff',
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Требуемый уровень</label>
+                            <input
+                              type="number"
+                              value={editingDistrict.requiredLevel || 1}
+                              onChange={(e) => setEditingDistrict({ ...editingDistrict, requiredLevel: parseInt(e.target.value) || 1 })}
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: '#1a1a1a',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                color: '#fff',
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Доход в день (NAR)</label>
+                            <input
+                              type="number"
+                              value={editingDistrict.baseIncomePerDay || 0}
+                              onChange={(e) => setEditingDistrict({ ...editingDistrict, baseIncomePerDay: parseInt(e.target.value) || 0 })}
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: '#1a1a1a',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                color: '#fff',
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>
+                              <input
+                                type="checkbox"
+                                checked={editingDistrict.isActive}
+                                onChange={(e) => setEditingDistrict({ ...editingDistrict, isActive: e.target.checked })}
+                                style={{ marginRight: '8px' }}
+                              />
+                              Активен
+                            </label>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await apiClient.put(`/admin/districts/${district.id}`, {
+                                  code: editingDistrict.code,
+                                  name: editingDistrict.name,
+                                  description: editingDistrict.description,
+                                  order: editingDistrict.order,
+                                  requiredLevel: editingDistrict.requiredLevel,
+                                  baseIncomePerDay: editingDistrict.baseIncomePerDay,
+                                  isActive: editingDistrict.isActive,
+                                })
+                                alert('Район обновлен!')
+                                setEditingDistrict(null)
+                                loadDistricts()
+                              } catch (error: any) {
+                                alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                              }
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              background: '#4a90e2',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Сохранить
+                          </button>
+                          <button
+                            onClick={() => setEditingDistrict(null)}
+                            style={{
+                              padding: '8px 16px',
+                              background: '#666',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
+                              <h4 style={{ margin: 0, color: '#fff' }}>{district.name}</h4>
+                              <span style={{
+                                padding: '2px 8px',
+                                background: '#4a90e2',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                color: '#fff',
+                              }}>
+                                {district.code}
+                              </span>
+                              {!district.isActive && (
+                                <span style={{
+                                  padding: '2px 8px',
+                                  background: '#666',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  color: '#fff',
+                                }}>
+                                  Неактивен
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ color: '#999', fontSize: '14px' }}>
+                              {district.description && <div style={{ marginBottom: '4px' }}>{district.description}</div>}
+                              <div>Порядок: {district.order} | Уровень: {district.requiredLevel || 1} | Доход: {Number(district.baseIncomePerDay || 0).toLocaleString()} NAR/день</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => setEditingDistrict({ ...district })}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#4a90e2',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Редактировать
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (confirm(`Удалить район "${district.name}"?`)) {
+                                  try {
+                                    await apiClient.delete(`/admin/districts/${district.id}`)
+                                    alert('Район удален!')
+                                    loadDistricts()
+                                  } catch (error: any) {
+                                    alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                                  }
+                                }
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#e24a4a',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Удалить
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {districts.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>Нет районов</div>
+                )}
+              </div>
             </div>
           </div>
         )}

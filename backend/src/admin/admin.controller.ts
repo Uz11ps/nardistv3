@@ -185,9 +185,32 @@ export class AdminController {
     return this.adminService.deleteAllNotifications();
   }
 
+  @Delete('notifications/bot/all')
+  @UseGuards(AdminAuthGuard)
+  async deleteAllBotNotifications(@CurrentUser() user: any) {
+    return this.adminService.deleteAllBotNotifications();
+  }
+
+  @Delete('notifications/bot/last')
+  @UseGuards(AdminAuthGuard)
+  async deleteLastBotNotifications(@CurrentUser() user: any) {
+    return this.adminService.deleteLastBotNotifications();
+  }
+
   @Post('games/create')
   @UseGuards(AdminAuthGuard)
-  async createGame(@CurrentUser() user: any, @Body() body: { player1Id: string; player2Id?: string; mode: string; type: string }) {
+  async createGame(
+    @CurrentUser() user: any, 
+    @Body() body: { 
+      player1Id: string; 
+      player2Id?: string; 
+      mode: string; 
+      type: string;
+      stake?: number;
+      moveTimeout?: number;
+      tournamentId?: string;
+    }
+  ) {
     return this.adminService.createGame(body);
   }
 
@@ -1030,6 +1053,160 @@ export class AdminController {
     return this.adminService.updateUserFull(userId, body);
   }
 
+  // ========== ОТДЕЛЬНЫЕ ЭНДПОИНТЫ ДЛЯ РЕДАКТИРОВАНИЯ ПОЛЬЗОВАТЕЛЕЙ ==========
+  
+  // Базовая информация
+  @Put('users/:id/profile')
+  @UseGuards(AdminAuthGuard)
+  async updateUserProfile(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      username?: string;
+      nickname?: string;
+      firstName?: string;
+      lastName?: string;
+      country?: string;
+      languageCode?: string;
+      avatarUrl?: string;
+    },
+  ) {
+    return this.adminService.updateUserProfile(userId, body);
+  }
+
+  // Telegram данные
+  @Put('users/:id/telegram')
+  @UseGuards(AdminAuthGuard)
+  async updateUserTelegram(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      telegramId?: string;
+    },
+  ) {
+    return this.adminService.updateUserTelegram(userId, body);
+  }
+
+  // Реферальная программа
+  @Put('users/:id/referral')
+  @UseGuards(AdminAuthGuard)
+  async updateUserReferral(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      referralCode?: string;
+      referredBy?: string;
+      referralPercent?: number;
+      referralBaseBonus?: number;
+      totalReferralEarnings?: number;
+    },
+  ) {
+    return this.adminService.updateUserReferral(userId, body);
+  }
+
+  // Экономика
+  @Put('users/:id/economy')
+  @UseGuards(AdminAuthGuard)
+  async updateUserEconomy(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      narCoin?: number;
+      xp?: number;
+      level?: number;
+    },
+  ) {
+    return this.adminService.updateUserEconomy(userId, body);
+  }
+
+  // Энергия
+  @Put('users/:id/energy')
+  @UseGuards(AdminAuthGuard)
+  async updateUserEnergy(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      energy?: number;
+      maxEnergy?: number;
+    },
+  ) {
+    return this.adminService.updateUserEnergy(userId, body);
+  }
+
+  // Жизни
+  @Put('users/:id/lives')
+  @UseGuards(AdminAuthGuard)
+  async updateUserLives(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      lives?: number;
+      maxLives?: number;
+    },
+  ) {
+    return this.adminService.updateUserLives(userId, body);
+  }
+
+  // Skill Points
+  @Put('users/:id/skill-points')
+  @UseGuards(AdminAuthGuard)
+  async updateUserSkillPoints(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      skillPoints?: number;
+      freeSkillPoints?: number;
+      economySp?: number;
+      energySp?: number;
+      livesSp?: number;
+      powerSp?: number;
+    },
+  ) {
+    return this.adminService.updateUserSkillPoints(userId, body);
+  }
+
+  // Усиления
+  @Put('users/:id/enhancement')
+  @UseGuards(AdminAuthGuard)
+  async updateUserEnhancement(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      enhancement?: string;
+    },
+  ) {
+    return this.adminService.updateUserEnhancement(userId, body);
+  }
+
+  // Лицензия
+  @Put('users/:id/business-license')
+  @UseGuards(AdminAuthGuard)
+  async updateUserBusinessLicense(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      hasBusinessLicense?: boolean;
+    },
+  ) {
+    return this.adminService.updateUserBusinessLicense(userId, body);
+  }
+
+  // Статус (бан, админ, гость)
+  @Put('users/:id/status')
+  @UseGuards(AdminAuthGuard)
+  async updateUserStatus(
+    @CurrentUser() user: any,
+    @Param('id') userId: string,
+    @Body() body: {
+      isBanned?: boolean;
+      banReason?: string;
+      isAdmin?: boolean;
+      isGuest?: boolean;
+    },
+  ) {
+    return this.adminService.updateUserStatus(userId, body);
+  }
+
   // ========== УПРАВЛЕНИЕ ЦЕНАМИ ==========
   @Get('prices/subscription')
   @UseGuards(AdminAuthGuard)
@@ -1097,6 +1274,17 @@ export class AdminController {
   @UseGuards(AdminAuthGuard)
   async getStatistics(@CurrentUser() user: any) {
     return this.adminService.getStatistics();
+  }
+
+  // ========== РЕПЛЕЙ ИГРЫ ==========
+  @Get('games/:gameId/replay')
+  @UseGuards(AdminAuthGuard)
+  async getGameReplay(
+    @CurrentUser() user: any,
+    @Param('gameId') gameId: string,
+    @Query('step') step?: string,
+  ) {
+    return this.adminService.getGameReplay(gameId, step ? parseInt(step, 10) : undefined);
   }
 }
 

@@ -60,12 +60,16 @@ export class Article {
   @Column({ type: 'timestamp', nullable: true })
   approvedAt: Date; // Дата одобрения
 
-  // Награда за прохождение курса
+  // Награда за прохождение курса (старые поля для обратной совместимости)
   @Column({ type: 'bigint', nullable: true, default: 0 })
   rewardNarCoin: number; // Награда в NAR-coin
 
   @Column({ type: 'int', nullable: true, default: 0 })
   rewardXP: number; // Награда в XP
+
+  // Награды (может быть несколько) - массив объектов {narCoin, xp, skinId, etc}
+  @Column({ type: 'jsonb', nullable: true })
+  rewards: any[]; // Массив наград за прохождение курса
 
   // Задание для курса (JSON описание задания, которое нужно выполнить)
   @Column({ type: 'jsonb', nullable: true })

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import SkillPointsModal from '../components/SkillPointsModal'
-import EnhancementModal from '../components/EnhancementModal'
 import { apiClient } from '../api/client'
 import './Profile.css'
 
@@ -14,7 +13,6 @@ export default function Profile() {
   const [hasPremium, setHasPremium] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showSkillPointsModal, setShowSkillPointsModal] = useState(false)
-  const [showEnhancementModal, setShowEnhancementModal] = useState(false)
   const [skillPoints, setSkillPoints] = useState({
     total: 0,
     free: 0,
@@ -23,8 +21,7 @@ export default function Profile() {
     lives: 0,
     power: 0,
   })
-  const [enhancements, setEnhancements] = useState<any[]>([])
-  const [canChooseEnhancement, setCanChooseEnhancement] = useState(false)
+  const [upgrading, setUpgrading] = useState<string | null>(null)
   const [editFormData, setEditFormData] = useState({
     nickname: '',
     country: '',
@@ -41,8 +38,6 @@ export default function Profile() {
       })
       checkPremium()
       loadSkillPoints()
-      loadEnhancements()
-      checkEnhancementAvailability()
       
       // Проверяем, завершена ли настройка профиля (первичное создание)
       // Если нет - перенаправляем на создание профиля
@@ -68,24 +63,26 @@ export default function Profile() {
     }
   }
 
-  const loadEnhancements = async () => {
-    try {
-      const response = await apiClient.get('/progress/enhancements').catch(() => ({ data: [] }))
-      setEnhancements(response.data || [])
-    } catch (error) {
-      console.error('Failed to load enhancements:', error)
+  const handleUpgrade = async (type: 'economy' | 'energy' | 'lives' | 'power') => {
+    if (upgrading || skillPoints.free < 1) return
+    
+    // Проверяем максимальный уровень (10)
+    const currentSp = (skillPoints[type] as number) || 0
+    if (currentSp >= 10) {
+      alert('Достигнут максимальный уровень прокачки')
+      return
     }
-  }
 
-  const checkEnhancementAvailability = async () => {
     try {
-      const response = await apiClient.get('/progress/enhancement/availability').catch(() => ({ data: { canChoose: false } }))
-      setCanChooseEnhancement(response.data?.canChoose || false)
-      if (response.data?.canChoose) {
-        setShowEnhancementModal(true)
-      }
-    } catch (error) {
-      console.error('Failed to check enhancement availability:', error)
+      setUpgrading(type)
+      await apiClient.post('/progress/skill-points/distribute', { type, amount: 1 })
+      await loadSkillPoints()
+      const userResponse = await apiClient.get('/users/me')
+      updateUser(userResponse.data)
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при прокачке')
+    } finally {
+      setUpgrading(null)
     }
   }
 
@@ -263,6 +260,44 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* Усиления */}
+        <div className="profile-enhancements-card">
+          <div className="profile-enhancements-title">Усиления</div>
+          <div className="profile-enhancements-list">
+            {[
+              { id: 'economy' as const, name: 'Экономика', icon: '💰', description: 'Снижение комиссии, пассивный доход' },
+              { id: 'energy' as const, name: 'Энергия', icon: '⚡', description: 'Лимит боев, восстановление' },
+              { id: 'lives' as const, name: 'Жизни', icon: '❤️', description: 'Запас поражений, регенерация' },
+              { id: 'power' as const, name: 'Сила', icon: '💪', description: 'Лимит веса скинов' },
+            ].map((enh) => {
+              const currentSp = (skillPoints[enh.id] as number) || 0
+              const maxSp = 10
+              const canUpgrade = skillPoints.free > 0 && currentSp < maxSp && !upgrading
+              
+              return (
+                <div key={enh.id} className="profile-enhancement-item">
+                  <div className="profile-enhancement-left">
+                    <div className="profile-enhancement-icon">{enh.icon}</div>
+                    <div className="profile-enhancement-info">
+                      <div className="profile-enhancement-name">{enh.name}</div>
+                      <div className="profile-enhancement-progress">
+                        {currentSp}/{maxSp}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    className={`profile-enhancement-upgrade-btn ${canUpgrade ? 'active' : 'disabled'}`}
+                    onClick={() => handleUpgrade(enh.id)}
+                    disabled={!canUpgrade}
+                  >
+                    {upgrading === enh.id ? '...' : 'Прокачать'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Валюта */}
         <div className="profile-currency-card">
           <div className="profile-currency-content">
@@ -406,17 +441,6 @@ export default function Profile() {
         }}
       />
 
-      {/* Модальное окно выбора усиления */}
-      <EnhancementModal
-        isOpen={showEnhancementModal}
-        onClose={() => setShowEnhancementModal(false)}
-        onUpdate={() => {
-          loadEnhancements()
-          checkEnhancementAvailability()
-          const userResponse = apiClient.get('/users/me')
-          userResponse.then((res) => updateUser(res.data))
-        }}
-      />
     </PageLayout>
   )
 }

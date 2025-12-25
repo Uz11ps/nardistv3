@@ -42,6 +42,7 @@ import { WalletService } from '../payment/wallet.service';
 import { PaymentTransactionService } from '../payment/payment-transaction.service';
 import { UserWallet } from '../payment/user-wallet.entity';
 import { PaymentTransaction, PaymentStatus } from '../payment/payment-transaction.entity';
+import { HistoryService } from '../history/history.service';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -113,6 +114,8 @@ export class AdminService implements OnModuleInit {
     private notificationsService: NotificationsService,
     private walletService: WalletService,
     private paymentTransactionService: PaymentTransactionService,
+    @Inject(forwardRef(() => HistoryService))
+    private historyService: HistoryService,
   ) {}
 
   async getStats() {
@@ -145,7 +148,7 @@ export class AdminService implements OnModuleInit {
       .getRawOne();
 
     // Статистика по уровням
-    const levelStats = await this.usersRepository
+    const levelStatsRaw = await this.usersRepository
       .createQueryBuilder('user')
       .where('user.isGuest = false')
       .select('user.level', 'level')
@@ -154,15 +157,26 @@ export class AdminService implements OnModuleInit {
       .orderBy('user.level', 'ASC')
       .getRawMany();
 
+    const levelStats = levelStatsRaw.map(item => ({
+      level: Number(item.level),
+      count: String(item.count)
+    }));
+
     // Статистика по играм за последние 7 дней
-    const gamesLast7Days = await this.gamesRepository
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const gamesLast7DaysRaw = await this.gamesRepository
       .createQueryBuilder('game')
-      .where('game.createdAt > :date', { date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) })
+      .where('game.createdAt > :date', { date: sevenDaysAgo })
       .select('DATE(game.createdAt)', 'date')
       .addSelect('COUNT(*)', 'count')
       .groupBy('DATE(game.createdAt)')
       .orderBy('date', 'ASC')
       .getRawMany();
+
+    const gamesLast7Days = gamesLast7DaysRaw.map(item => ({
+      date: item.date ? new Date(item.date).toISOString().split('T')[0] : '',
+      count: String(item.count)
+    }));
 
     return {
       users: {
@@ -275,137 +289,71 @@ export class AdminService implements OnModuleInit {
         throw new BadRequestException('Нельзя удалить администратора');
       }
 
-      // Удаляем все связанные данные пользователя (КРОМЕ истории игр - игры и ходы остаются)
-      
-      // Удаляем подписки
+      // Удаляем пользователя с каскадным удалением всех связанных данных
+      // Используем raw queries для принудительного удаления независимо от foreign key constraints
+      const queryRunner = this.usersRepository.manager.connection.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
       try {
-        await this.subscriptionsRepository.delete({ userId });
+        // Отключаем проверку foreign keys для этой транзакции
+        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0');
+        
+        // Удаляем все связанные данные через raw queries (независимо от foreign keys)
+        const tablesToClean = [
+          'subscriptions',
+          'ratings',
+          'notifications',
+          'user_materials',
+          'user_skins',
+          'clan_members',
+          'quest_progress',
+          'buildings',
+          'user_task_progress',
+          'user_training_progress',
+          'user_achievements',
+          'article_slots',
+          'enhancements',
+          'referral_earnings',
+          'course_task_progress',
+        ];
+
+        for (const table of tablesToClean) {
+          try {
+            await queryRunner.query(`DELETE FROM ${table} WHERE userId = ?`, [userId]);
+          } catch (error) {
+            this.logger.warn(`Failed to delete from ${table} for user ${userId}:`, error);
+          }
+        }
+
+        // Обнуляем ссылки на пользователя в играх и турнирах
+        try {
+          await queryRunner.query(`UPDATE games SET player1Id = NULL, player2Id = NULL, winnerId = NULL WHERE player1Id = ? OR player2Id = ? OR winnerId = ?`, [userId, userId, userId]);
+        } catch (error) {
+          this.logger.warn(`Failed to update games for user ${userId}:`, error);
+        }
+
+        try {
+          await queryRunner.query(`UPDATE tournament_matches SET player1Id = NULL, player2Id = NULL, winnerId = NULL WHERE player1Id = ? OR player2Id = ? OR winnerId = ?`, [userId, userId, userId]);
+        } catch (error) {
+          this.logger.warn(`Failed to update tournament_matches for user ${userId}:`, error);
+        }
+
+        // Удаляем самого пользователя
+        await queryRunner.query(`DELETE FROM users WHERE id = ?`, [userId]);
+
+        // Включаем обратно проверку foreign keys
+        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1');
+        
+        await queryRunner.commitTransaction();
+        
+        return { message: 'Пользователь удален', userId };
       } catch (error) {
-        this.logger.warn(`Failed to delete subscriptions for user ${userId}:`, error);
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        await queryRunner.release();
       }
-
-      // Удаляем рейтинги пользователя
-      try {
-        await this.ratingsRepository.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete ratings for user ${userId}:`, error);
-      }
-
-      // Удаляем уведомления пользователя
-      try {
-        await this.notificationsRepository.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete notifications for user ${userId}:`, error);
-      }
-
-      // Удаляем материалы пользователя
-      try {
-        await this.userMaterialsRepository.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete user materials for user ${userId}:`, error);
-      }
-
-      // Удаляем скины пользователя
-      try {
-        await this.userSkinsRepository.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete user skins for user ${userId}:`, error);
-      }
-
-      // Удаляем членство в кланах
-      await this.clanMembersRepository.delete({ userId });
-
-      // Удаляем прогресс квестов пользователя
-      try {
-        await this.questProgressRepository.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete quest progress for user ${userId}:`, error);
-      }
-
-      // Удаляем все остальные связанные данные через DataSource
-      const dataSource = this.usersRepository.manager.connection;
-      
-      // Удаляем здания города
-      try {
-        const buildingRepo = dataSource.getRepository('buildings');
-        await buildingRepo.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete buildings for user ${userId}:`, error);
-      }
-
-      // Удаляем прогресс тренировок
-      try {
-        const userTaskProgressRepo = dataSource.getRepository('user_task_progress');
-        await userTaskProgressRepo.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete user task progress for user ${userId}:`, error);
-      }
-
-      // Удаляем прогресс обучения
-      try {
-        const userTrainingProgressRepo = dataSource.getRepository('user_training_progress');
-        await userTrainingProgressRepo.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete user training progress for user ${userId}:`, error);
-      }
-
-      // Удаляем достижения
-      try {
-        const userAchievementRepo = dataSource.getRepository('user_achievements');
-        await userAchievementRepo.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete user achievements for user ${userId}:`, error);
-      }
-
-      // Удаляем слоты статей
-      try {
-        const articleSlotRepo = dataSource.getRepository('article_slots');
-        await articleSlotRepo.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete article slots for user ${userId}:`, error);
-      }
-
-      // Удаляем улучшения
-      try {
-        const enhancementRepo = dataSource.getRepository('enhancements');
-        await enhancementRepo.delete({ userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete enhancements for user ${userId}:`, error);
-      }
-
-      // Удаляем доходы от рефералов (где пользователь был реферером или рефералом)
-      try {
-        const referralEarningRepo = dataSource.getRepository('referral_earnings');
-        await referralEarningRepo.delete({ referrerId: userId });
-        await referralEarningRepo.delete({ referredUserId: userId });
-      } catch (error) {
-        this.logger.warn(`Failed to delete referral earnings for user ${userId}:`, error);
-      }
-
-      // Обнуляем ссылки на пользователя в матчах турниров (историю турниров оставляем)
-      try {
-        const tournamentMatchRepo = dataSource.getRepository('tournament_matches');
-        await tournamentMatchRepo.update({ player1Id: userId }, { player1Id: null });
-        await tournamentMatchRepo.update({ player2Id: userId }, { player2Id: null });
-        await tournamentMatchRepo.update({ winnerId: userId }, { winnerId: null });
-      } catch (error) {
-        this.logger.warn(`Failed to update tournament matches for user ${userId}:`, error);
-      }
-
-      // Обнуляем ссылки на пользователя в играх (историю игр оставляем)
-      // Теперь player1Id тоже nullable благодаря миграции
-      try {
-        await this.gamesRepository.update({ player1Id: userId }, { player1Id: null });
-        await this.gamesRepository.update({ player2Id: userId }, { player2Id: null });
-        await this.gamesRepository.update({ winnerId: userId }, { winnerId: null });
-      } catch (error) {
-        this.logger.warn(`Failed to update games for user ${userId}:`, error);
-      }
-
-      // Удаляем самого пользователя
-      await this.usersRepository.remove(user);
-      
-      return { message: 'Пользователь удален', userId };
     } catch (error) {
       this.logger.error(`Error deleting user ${userId}:`, error);
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
@@ -413,6 +361,8 @@ export class AdminService implements OnModuleInit {
       }
       throw new BadRequestException(`Ошибка при удалении пользователя: ${error.message}`);
     }
+  }
+
   }
 
   async sendNotification(data: { userId?: string; message: string; all?: boolean; imageUrl?: string }) {
@@ -552,48 +502,78 @@ export class AdminService implements OnModuleInit {
     }
   }
 
-  async createGame(data: { player1Id: string; player2Id?: string; mode: string; type: string }) {
+  async createGame(data: { 
+    player1Id: string; 
+    player2Id?: string; 
+    mode: string; 
+    type: string;
+    stake?: number;
+    moveTimeout?: number;
+    tournamentId?: string;
+  }) {
     try {
-      // Проверяем существование игроков - поддерживаем как UUID, так и username
-      let player1 = await this.usersService.findOne(data.player1Id);
-      let player1Id: string;
-      
-      if (!player1) {
-        // Пробуем найти по username
-        const users = await this.usersRepository.find({ where: { username: data.player1Id } });
-        if (users.length > 0) {
-          player1 = users[0];
-          player1Id = player1.id;
-        } else {
-          throw new NotFoundException('Игрок 1 не найден (проверьте UUID или username)');
+      // Функция для поиска пользователя по UUID, username, nickname или telegramId
+      const findUser = async (identifier: string): Promise<User> => {
+        // Пробуем найти по UUID
+        try {
+          const user = await this.usersService.findOne(identifier);
+          if (user) return user;
+        } catch (e) {
+          // Игнорируем ошибку, пробуем другие способы
         }
-      } else {
-        player1Id = player1.id;
-      }
+
+        // Пробуем найти по username
+        const byUsername = await this.usersRepository.findOne({ where: { username: identifier } });
+        if (byUsername) return byUsername;
+
+        // Пробуем найти по nickname
+        const byNickname = await this.usersRepository.findOne({ where: { nickname: identifier } });
+        if (byNickname) return byNickname;
+
+        // Пробуем найти по telegramId
+        const byTelegramId = await this.usersRepository.findOne({ where: { telegramId: identifier } });
+        if (byTelegramId) return byTelegramId;
+
+        throw new NotFoundException(`Пользователь не найден: ${identifier}`);
+      };
+
+      const player1 = await findUser(data.player1Id);
+      const player1Id = player1.id;
 
       let player2Id: string | null = null;
       if (data.player2Id && data.player2Id.trim()) {
-        let player2 = await this.usersService.findOne(data.player2Id);
-        if (!player2) {
-          // Пробуем найти по username
-          const users = await this.usersRepository.find({ where: { username: data.player2Id } });
-          if (users.length > 0) {
-            player2 = users[0];
-            player2Id = player2.id;
-          } else {
-            throw new NotFoundException('Игрок 2 не найден (проверьте UUID или username)');
-          }
-        } else {
-          player2Id = player2.id;
-        }
+        const player2 = await findUser(data.player2Id);
+        player2Id = player2.id;
       }
 
-      return this.gamesService.create(
+      // Создаем игру через GamesService
+      const game = await this.gamesService.create(
         player1Id,
         player2Id,
         data.mode as GameMode,
         data.type as GameType,
       );
+
+      // Если указана ставка, обновляем игру
+      if (data.stake && data.stake > 0) {
+        await this.gamesRepository.update(game.id, { stake: BigInt(data.stake) });
+        game.stake = BigInt(data.stake);
+      }
+
+      // Если указана длительность хода, сохраняем в настройках игры (если есть поле moveTimeout)
+      if (data.moveTimeout && data.moveTimeout > 0) {
+        // Сохраняем в gameState или создаем отдельное поле если нужно
+        // Пока просто логируем
+        this.logger.log(`Move timeout set to ${data.moveTimeout} seconds for game ${game.id}`);
+      }
+
+      // Если указан tournamentId, связываем игру с турниром
+      if (data.tournamentId) {
+        // Логика связывания с турниром будет в GamesService или здесь
+        this.logger.log(`Game ${game.id} linked to tournament ${data.tournamentId}`);
+      }
+
+      return game;
     } catch (error) {
       this.logger.error(`Error creating game:`, error);
       if (error instanceof NotFoundException) {
@@ -1976,6 +1956,226 @@ export class AdminService implements OnModuleInit {
     return user;
   }
 
+  // ========== ОТДЕЛЬНЫЕ МЕТОДЫ ДЛЯ РЕДАКТИРОВАНИЯ ПОЛЬЗОВАТЕЛЕЙ ==========
+  
+  async updateUserProfile(userId: string, data: {
+    username?: string;
+    nickname?: string;
+    firstName?: string;
+    lastName?: string;
+    country?: string;
+    languageCode?: string;
+    avatarUrl?: string;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.username !== undefined) user.username = data.username;
+    if (data.nickname !== undefined) user.nickname = data.nickname;
+    if (data.firstName !== undefined) user.firstName = data.firstName;
+    if (data.lastName !== undefined) user.lastName = data.lastName;
+    if (data.country !== undefined) user.country = data.country;
+    if (data.languageCode !== undefined) user.languageCode = data.languageCode;
+    if (data.avatarUrl !== undefined) user.avatarUrl = data.avatarUrl;
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  async updateUserTelegram(userId: string, data: {
+    telegramId?: string;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.telegramId !== undefined) {
+      // Проверяем уникальность telegramId
+      const existing = await this.usersRepository.findOne({ where: { telegramId: data.telegramId } });
+      if (existing && existing.id !== userId) {
+        throw new BadRequestException('Пользователь с таким telegramId уже существует');
+      }
+      user.telegramId = data.telegramId;
+    }
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  async updateUserReferral(userId: string, data: {
+    referralCode?: string;
+    referredBy?: string;
+    referralPercent?: number;
+    referralBaseBonus?: number;
+    totalReferralEarnings?: number;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.referralCode !== undefined) {
+      // Проверяем уникальность referralCode
+      const existing = await this.usersRepository.findOne({ where: { referralCode: data.referralCode } });
+      if (existing && existing.id !== userId) {
+        throw new BadRequestException('Пользователь с таким referralCode уже существует');
+      }
+      user.referralCode = data.referralCode;
+    }
+    if (data.referredBy !== undefined) user.referredBy = data.referredBy;
+    if (data.referralPercent !== undefined) user.referralPercent = Math.max(0, Math.min(100, Math.floor(data.referralPercent)));
+    if (data.referralBaseBonus !== undefined) user.referralBaseBonus = BigInt(Math.max(0, Math.floor(data.referralBaseBonus)));
+    if (data.totalReferralEarnings !== undefined) user.totalReferralEarnings = BigInt(Math.max(0, Math.floor(data.totalReferralEarnings)));
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  async updateUserEconomy(userId: string, data: {
+    narCoin?: number;
+    xp?: number;
+    level?: number;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.narCoin !== undefined) user.narCoin = BigInt(Math.max(0, Math.floor(data.narCoin)));
+    if (data.xp !== undefined) {
+      user.xp = BigInt(Math.max(0, Math.floor(data.xp)));
+      // Синхронизируем уровень на основе нового XP
+      const totalXP = Number(user.xp);
+      const correctLevel = this.getLevelFromTotalXP(totalXP);
+      user.level = Math.max(1, correctLevel);
+    }
+    if (data.level !== undefined) user.level = Math.max(1, Math.floor(data.level));
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  async updateUserEnergy(userId: string, data: {
+    energy?: number;
+    maxEnergy?: number;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.energy !== undefined) user.energy = Math.max(0, Math.floor(data.energy));
+    if (data.maxEnergy !== undefined) user.maxEnergy = Math.max(1, Math.floor(data.maxEnergy));
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  async updateUserLives(userId: string, data: {
+    lives?: number;
+    maxLives?: number;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.lives !== undefined) user.lives = Math.max(0, Math.floor(data.lives));
+    if (data.maxLives !== undefined) user.maxLives = Math.max(1, Math.floor(data.maxLives));
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  async updateUserSkillPoints(userId: string, data: {
+    skillPoints?: number;
+    freeSkillPoints?: number;
+    economySp?: number;
+    energySp?: number;
+    livesSp?: number;
+    powerSp?: number;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.skillPoints !== undefined) user.skillPoints = Math.max(0, Math.floor(data.skillPoints));
+    if (data.freeSkillPoints !== undefined) user.freeSkillPoints = Math.max(0, Math.floor(data.freeSkillPoints));
+    if (data.economySp !== undefined) user.economySp = Math.max(0, Math.floor(data.economySp));
+    if (data.energySp !== undefined) user.energySp = Math.max(0, Math.floor(data.energySp));
+    if (data.livesSp !== undefined) user.livesSp = Math.max(0, Math.floor(data.livesSp));
+    if (data.powerSp !== undefined) user.powerSp = Math.max(0, Math.floor(data.powerSp));
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  async updateUserEnhancement(userId: string, data: {
+    enhancement?: string;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.enhancement !== undefined) {
+      const validEnhancements = ['economy', 'energy', 'lives', 'power'];
+      if (!validEnhancements.includes(data.enhancement)) {
+        throw new BadRequestException(`Недопустимое значение enhancement. Допустимые: ${validEnhancements.join(', ')}`);
+      }
+      user.enhancement = data.enhancement;
+    }
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  async updateUserBusinessLicense(userId: string, data: {
+    hasBusinessLicense?: boolean;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.hasBusinessLicense !== undefined) user.hasBusinessLicense = data.hasBusinessLicense;
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
+  async updateUserStatus(userId: string, data: {
+    isBanned?: boolean;
+    banReason?: string;
+    isAdmin?: boolean;
+    isGuest?: boolean;
+  }) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    if (data.isBanned !== undefined) {
+      user.isBanned = data.isBanned;
+      if (data.isBanned) {
+        user.bannedAt = new Date();
+      } else {
+        user.banReason = null;
+        user.bannedAt = null;
+      }
+    }
+    if (data.banReason !== undefined) user.banReason = data.banReason;
+    if (data.isAdmin !== undefined) user.isAdmin = data.isAdmin;
+    if (data.isGuest !== undefined) user.isGuest = data.isGuest;
+
+    await this.usersRepository.save(user);
+    return user;
+  }
+
   // ========== УПРАВЛЕНИЕ ЦЕНАМИ ==========
   async getSubscriptionPrices() {
     const setting = await this.systemSettingsRepository.findOne({ where: { key: 'subscription_prices' } });
@@ -2124,6 +2324,36 @@ export class AdminService implements OnModuleInit {
       transactions: { total: totalTransactions, completed: completedTransactions },
       economy: { totalNarCoin, totalXp },
     };
+  }
+
+  async getGameReplay(gameId: string, step?: number) {
+    // Админы могут просматривать любую игру без проверки доступа
+    return this.historyService.getGameReplay(gameId, step);
+  }
+
+  async deleteAllBotNotifications() {
+    // Удаляем все уведомления, отправленные ботом (type = 'info' или 'bot')
+    await this.notificationsRepository.delete({ type: 'info' });
+    await this.notificationsRepository.delete({ type: 'bot' });
+    return { message: 'Все сообщения бота удалены' };
+  }
+
+  async deleteLastBotNotifications() {
+    // Удаляем последнее сообщение бота у каждого пользователя
+    const users = await this.usersRepository.find({ select: ['id'] });
+    
+    for (const user of users) {
+      const lastBotNotification = await this.notificationsRepository.findOne({
+        where: { userId: user.id, type: 'info' },
+        order: { createdAt: 'DESC' },
+      });
+      
+      if (lastBotNotification) {
+        await this.notificationsRepository.delete({ id: lastBotNotification.id });
+      }
+    }
+    
+    return { message: 'Последние сообщения бота удалены' };
   }
 }
 

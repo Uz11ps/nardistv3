@@ -57,6 +57,9 @@ export class Quest {
   @Column({ type: 'jsonb', nullable: true })
   rewardSkin: any; // ID скина или объект с данными скина
 
+  @Column({ type: 'jsonb', nullable: true })
+  rewardArticle: any; // ID статьи или объект с данными статьи
+
   @Column({ type: 'int', default: 0 })
   rewardTickets: number; // Количество билетов на турнир
 

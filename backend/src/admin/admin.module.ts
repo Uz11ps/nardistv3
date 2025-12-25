@@ -16,6 +16,7 @@ import { ClansModule } from '../clans/clans.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ProgressModule } from '../progress/progress.module';
+import { HistoryModule } from '../history/history.module';
 import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
@@ -70,6 +71,7 @@ import { PaymentTransaction } from '../payment/payment-transaction.entity';
     SubscriptionModule,
     NotificationsModule,
     ProgressModule,
+    HistoryModule,
     forwardRef(() => PaymentModule),
   ],
   controllers: [AdminController],
