@@ -118,6 +118,7 @@ export class AdminService implements OnModuleInit {
     private configService: ConfigService,
     private notificationsService: NotificationsService,
     private walletService: WalletService,
+    @Inject(forwardRef(() => PaymentTransactionService))
     private paymentTransactionService: PaymentTransactionService,
     @Inject(forwardRef(() => HistoryService))
     private historyService: HistoryService,
