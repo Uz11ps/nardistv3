@@ -531,11 +531,19 @@ export default function BackgammonBoard({
     const boardStartX = bearOffWidth
     
     // Фон доски
-    const hasCustomBoardTexture = boardTexture && boardTexture.complete && (boardTexture.width > 0 || boardTexture.height > 0 || boardTexture.src?.endsWith('.svg'))
+    // Проверяем есть ли кастомная текстура из админки (не дефолтная)
+    const hasCustomBoardTexture = boardSkin?.boardTextureUrl && boardTexture && boardTexture.complete
     
     if (hasCustomBoardTexture) {
       // Для кастомных скинов - рисуем текстуру (она уже содержит треугольники)
-      ctx.drawImage(boardTexture, boardStartX, 0, boardWidth, height)
+      try {
+        ctx.drawImage(boardTexture, boardStartX, 0, boardWidth, height)
+      } catch (e) {
+        console.error('Failed to draw board texture:', e)
+        // Fallback на дефолтную отрисовку
+        ctx.fillStyle = '#8B4513'
+        ctx.fillRect(boardStartX, 0, boardWidth, height)
+      }
     } else {
       // Для дефолтных - используем цветной фон (треугольники будут нарисованы кодом ниже)
       ctx.fillStyle = '#8B4513'
@@ -603,7 +611,10 @@ export default function BackgammonBoard({
       ctx.restore()
     }
 
-    const points = virtualGameState.points || []
+    // Получаем points из virtualGameState, если его нет - создаем массив из 24 нулей
+    const points = virtualGameState?.points && virtualGameState.points.length === 24 
+      ? virtualGameState.points 
+      : Array(24).fill(0)
     
     // Функция для отрисовки треугольной точки (Классический вид)
     const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, color: string) => {
@@ -628,8 +639,10 @@ export default function BackgammonBoard({
     }
     
     // Рисуем треугольники кодом ТОЛЬКО для дефолтных скинов (без кастомной текстуры)
+    // ВСЕГДА рисуем треугольники если нет кастомной текстуры, даже если points пустой
     if (!hasCustomBoardTexture) {
-      points.forEach((_value: number, pointIndex: number) => {
+      // Рисуем 24 треугольника (точки доски)
+      for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
         const { x, y, isTopRow, pointWidth: pW, pointHeight: pH, pointNumber } = getPointCoordinates(pointIndex, canvas)
         
         const triangleWidth = pW * 0.95
@@ -655,12 +668,16 @@ export default function BackgammonBoard({
         } else {
           ctx.fillText(pointNumber.toString(), x, y - 15)
         }
-      })
+      }
     }
 
     // Вторым проходом рисуем все шашки (чтобы они были поверх всех треугольников)
-    points.forEach((pointValue: number, pointIndex: number) => {
-      if (pointValue === 0) return
+    // Используем points из virtualGameState если есть, иначе пустой массив
+    const checkersPoints = virtualGameState?.points && virtualGameState.points.length === 24 
+      ? virtualGameState.points 
+      : []
+    checkersPoints.forEach((pointValue: number, pointIndex: number) => {
+      if (pointValue === 0 || pointIndex >= 24) return
       
       const { x, y, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       const checkerCount = Math.abs(pointValue)
@@ -705,7 +722,8 @@ export default function BackgammonBoard({
     })
     
     // Подсветка рисуется ПОВЕРХ треугольников и шашек
-    points.forEach((_value: number, pointIndex: number) => {
+    // Используем цикл for для всех 24 точек
+    for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
       const { x, y, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       
       // 1. Подсветка точки под курсором
@@ -740,7 +758,7 @@ export default function BackgammonBoard({
           ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
         }
       }
-    })
+    }
     
     // Отрисовка перетаскиваемой шашки (самый верхний слой)
     if (dragging && dragPosition) {
