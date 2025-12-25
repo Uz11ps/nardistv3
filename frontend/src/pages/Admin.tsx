@@ -5878,7 +5878,7 @@ export default function Admin() {
                   <input
                     type="number"
                     value={Number(editingUser.narCoin || 0)}
-                    onChange={(e) => setEditingUser({ ...editingUser, narCoin: BigInt(parseInt(e.target.value) || 0) })}
+                    onChange={(e) => setEditingUser({ ...editingUser, narCoin: parseInt(e.target.value) || 0 })}
                   />
                 </div>
                 <div>
@@ -5886,7 +5886,7 @@ export default function Admin() {
                   <input
                     type="number"
                     value={Number(editingUser.xp || 0)}
-                    onChange={(e) => setEditingUser({ ...editingUser, xp: BigInt(parseInt(e.target.value) || 0) })}
+                    onChange={(e) => setEditingUser({ ...editingUser, xp: parseInt(e.target.value) || 0 })}
                   />
                 </div>
                 <div>
@@ -6006,7 +6006,7 @@ export default function Admin() {
                     type="number"
                     min="0"
                     value={Number(editingUser.referralBaseBonus || 100)}
-                    onChange={(e) => setEditingUser({ ...editingUser, referralBaseBonus: BigInt(parseInt(e.target.value) || 100) })}
+                    onChange={(e) => setEditingUser({ ...editingUser, referralBaseBonus: parseInt(e.target.value) || 100 })}
                   />
                 </div>
               </div>
@@ -6576,7 +6576,7 @@ export default function Admin() {
                       type="number"
                       min="0"
                       value={Number(editingQuest.rewardNarCoin || 0)}
-                      onChange={(e) => setEditingQuest({ ...editingQuest, rewardNarCoin: BigInt(parseInt(e.target.value) || 0) })}
+                      onChange={(e) => setEditingQuest({ ...editingQuest, rewardNarCoin: parseInt(e.target.value) || 0 })}
                     />
                   </div>
                   <div>

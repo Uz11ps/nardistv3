@@ -240,7 +240,7 @@ export class AdminService implements OnModuleInit {
   async getUserDetails(id: string) {
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) {
-      throw new Error('Пользователь не найден');
+      throw new NotFoundException('Пользователь не найден');
     }
 
     const userGames = await this.gamesRepository.find({
@@ -285,7 +285,7 @@ export class AdminService implements OnModuleInit {
     });
     
     if (!game) {
-      throw new Error('Игра не найдена');
+      throw new NotFoundException('Игра не найдена');
     }
 
     const moves = await this.movesRepository.find({
@@ -1383,6 +1383,14 @@ export class AdminService implements OnModuleInit {
     if (!quest) {
       throw new Error('Квест не найден');
     }
+    
+    // Удаляем прогресс пользователей по этому квесту перед удалением самого квеста
+    try {
+      await this.questProgressRepository.delete({ questId: id });
+    } catch (error) {
+      this.logger.error(`Error deleting quest progress for quest ${id}:`, error);
+    }
+    
     await this.questsRepository.remove(quest);
     return { message: 'Квест удален' };
   }
@@ -1401,7 +1409,7 @@ export class AdminService implements OnModuleInit {
       relations: ['members'],
     });
     if (!clan) {
-      throw new Error('Клан не найден');
+      throw new NotFoundException('Клан не найден');
     }
     return clan;
   }
@@ -1420,7 +1428,7 @@ export class AdminService implements OnModuleInit {
   }>) {
     const clan = await this.clansRepository.findOne({ where: { id } });
     if (!clan) {
-      throw new Error('Клан не найден');
+      throw new NotFoundException('Клан не найден');
     }
     Object.assign(clan, data);
     return this.clansRepository.save(clan);
@@ -1459,7 +1467,7 @@ export class AdminService implements OnModuleInit {
       where: { clanId, userId },
     });
     if (!member) {
-      throw new Error('Член клана не найден');
+      throw new NotFoundException('Член федерации не найден');
     }
 
     await this.clanMembersRepository.remove(member);
@@ -1683,12 +1691,15 @@ export class AdminService implements OnModuleInit {
     return this.xpCalculator.getTotalXPForLevel(level);
   }
 
-  // Расчет skill points за уровень (та же логика что в ProgressService)
+  // Расчет skill points за уровень (теперь из конфига)
   private getSkillPointsForLevel(level: number): number {
+    const config = this.progressionBranches.getConfig();
+    const spRules = config.skillPoints || { levels2To5: 1, levels6To50: 2 };
+    
     if (level >= 2 && level <= 5) {
-      return 1;
-    } else if (level >= 6 && level <= 50) {
-      return 2;
+      return spRules.levels2To5;
+    } else if (level >= 6) {
+      return spRules.levels6To50;
     }
     return 0;
   }

@@ -7,6 +7,15 @@ import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 
 async function bootstrap() {
+  // Фикс для сериализации BigInt в JSON
+  (BigInt.prototype as any).toJSON = function () {
+    const num = Number(this);
+    if (num > Number.MAX_SAFE_INTEGER || num < Number.MIN_SAFE_INTEGER) {
+      return this.toString();
+    }
+    return num;
+  };
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
