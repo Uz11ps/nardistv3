@@ -529,6 +529,24 @@ export default function Admin() {
     }
   }
 
+  const loadSubscriptionPrices = async () => {
+    try {
+      const response = await apiClient.get('/admin/prices/subscription')
+      setSubscriptionPrices(response.data)
+    } catch (error) {
+      console.error('Failed to load subscription prices:', error)
+    }
+  }
+
+  const loadNarCoinPrices = async () => {
+    try {
+      const response = await apiClient.get('/admin/prices/nar-coin')
+      setNarCoinPackages(response.data)
+    } catch (error) {
+      console.error('Failed to load nar-coin prices:', error)
+    }
+  }
+
   const handleSaveProgressionConfig = async () => {
     try {
       setIsSavingProgression(true)
@@ -798,6 +816,25 @@ export default function Admin() {
           }}
         >
           Платежи
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'prices' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('prices')
+            loadSubscriptionPrices()
+            loadNarCoinPrices()
+          }}
+        >
+          Цены
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'system-settings' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('system-settings')
+            loadSystemSettings()
+          }}
+        >
+          Настройки
         </button>
       </div>
 

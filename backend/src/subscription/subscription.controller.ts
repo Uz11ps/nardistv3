@@ -6,6 +6,8 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SubscriptionPlan } from './subscription.entity';
 import { PaymentMethod } from '../payment/payment-transaction.entity';
+import { AdminService } from '../admin/admin.service';
+import { Inject, forwardRef } from '@nestjs/common';
 
 @Controller('subscription')
 export class SubscriptionController {
@@ -13,6 +15,8 @@ export class SubscriptionController {
     private readonly subscriptionService: SubscriptionService,
     private readonly paymentTransactionService: PaymentTransactionService,
     private readonly walletService: WalletService,
+    @Inject(forwardRef(() => AdminService))
+    private readonly adminService: AdminService,
   ) {}
 
   @Get('status')
@@ -33,11 +37,24 @@ export class SubscriptionController {
 
   @Get('plans')
   async getPlans() {
+    const prices = await this.adminService.getSubscriptionPrices();
     return [
-      { id: 'month_1', name: '1 месяц', price: 3, currency: 'TON', badge: 'Попробовать' },
-      { id: 'month_3', name: '3 месяца', price: 7, currency: 'TON', badge: 'Оптимально', popular: true },
-      { id: 'month_12', name: '1 год', price: 22, currency: 'TON', badge: 'Выгоднее' },
+      { id: 'month_1', name: '1 месяц', price: Number(prices.month_1), currency: 'TON', badge: 'Попробовать' },
+      { id: 'month_3', name: '3 месяца', price: Number(prices.month_3), currency: 'TON', badge: 'Оптимально', popular: true },
+      { id: 'month_12', name: '1 год', price: Number(prices.month_12), currency: 'TON', badge: 'Выгоднее' },
     ];
+  }
+
+  /**
+   * Получить пакеты NAR-coin (используется в Shop.tsx)
+   */
+  @Get('nar-coin-packages')
+  async getNarCoinPackages() {
+    const packages = await this.adminService.getNarCoinPrices();
+    return packages.map(pkg => ({
+      ...pkg,
+      currency: 'TON'
+    }));
   }
 
   @Post('purchase')
@@ -179,6 +196,9 @@ export class SubscriptionController {
       throw new NotFoundException('Кошелек не найден. Пожалуйста, попробуйте еще раз.');
     }
 
+    const settings = await this.adminService.getSystemSettings();
+    const tonRate = Number(settings.ton_exchange_rate) || 1000;
+
     return {
       transactionId: transaction.id,
       walletAddress: wallet.address,
@@ -186,7 +206,7 @@ export class SubscriptionController {
       comment: transaction.comment,
       method: transaction.method,
       status: transaction.status,
-      narAmount: transaction.amount * 1000, // 1 TON = 1000 NAR
+      narAmount: transaction.amount * tonRate,
     };
   }
 }

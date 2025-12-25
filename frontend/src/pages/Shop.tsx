@@ -61,7 +61,7 @@ export default function Shop() {
     try {
       setLoading(true)
       // Загружаем пакеты NAR-coin с сервера
-      const response = await apiClient.get('/shop/nar-coin-packages').catch(() => {
+      const response = await apiClient.get('/subscription/nar-coin-packages').catch(() => {
         // Если endpoint не существует, используем дефолтные значения
         return { data: [
           { amount: 1000, price: 1, currency: 'TON' },
