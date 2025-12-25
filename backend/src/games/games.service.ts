@@ -735,9 +735,14 @@ export class GamesService {
 
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     let state = game.gameState;
+    
+    // Проверяем, является ли это дублем (4 одинаковых кубика) и нет pendingMoves
+    const originalDice = state.dice || [];
+    const isDoubles = originalDice.length === 4 && originalDice.every(d => d === originalDice[0]);
+    const hasPendingMoves = pendingMoves && pendingMoves.length > 0;
 
     // Применяем локальные ходы к состоянию перед расчетом возможных ходов
-    if (pendingMoves && pendingMoves.length > 0) {
+    if (hasPendingMoves) {
       const diceCopy = [...(state.dice || [])];
       // Создаем глубокую копию состояния для применения pendingMoves
       state = JSON.parse(JSON.stringify(state));
@@ -786,15 +791,23 @@ export class GamesService {
       state.dice = diceCopy;
     }
 
-    if (!state.dice || state.dice.length === 0) {
+    // Для дублей без pendingMoves ограничиваем до 2 кубиков
+    let diceForMoves = state.dice || [];
+    if (isDoubles && !hasPendingMoves && diceForMoves.length === 4) {
+      // Ограничиваем до первых 2 кубиков
+      diceForMoves = diceForMoves.slice(0, 2);
+      this.logger.log(`🔒 Doubles detected, limiting possible moves to first 2 dice: [${diceForMoves.join(', ')}]`);
+    }
+
+    if (!diceForMoves || diceForMoves.length === 0) {
       return { allMoves: [] };
     }
 
     // Получаем все возможные комбинации ходов ТОЛЬКО с оставшимися кубиками
     let allMoves: Array<Array<{ from: number; to: number; die: number }>> = [];
     if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
-      // Важно: передаем только оставшиеся кубики (state.dice уже обновлен после pendingMoves)
-      allMoves = engine.getAllValidMoves(state, state.dice || []);
+      // Важно: для дублей передаем только первые 2 кубика (если нет pendingMoves)
+      allMoves = engine.getAllValidMoves(state, diceForMoves);
     }
     
     // Преобразуем последовательности в плоский список доступных ходов,
@@ -802,8 +815,8 @@ export class GamesService {
     const flatMoves: Array<{ from: number; to: number; die: number; steps?: any[] }> = [];
     const seen = new Set<string>();
     
-    // Получаем список доступных кубиков для фильтрации
-    const availableDice = state.dice || [];
+    // Получаем список доступных кубиков для фильтрации (используем ограниченные кубики для дублей)
+    const availableDice = diceForMoves;
     const diceCounts = new Map<number, number>();
     availableDice.forEach(d => diceCounts.set(d, (diceCounts.get(d) || 0) + 1));
 
