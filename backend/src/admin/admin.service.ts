@@ -113,14 +113,12 @@ export class AdminService implements OnModuleInit {
     private questsService: QuestsService,
     private clansService: ClansService,
     private subscriptionService: SubscriptionService,
-    @Inject(forwardRef(() => ProgressService))
     private progressService: ProgressService,
     private configService: ConfigService,
     private notificationsService: NotificationsService,
     private walletService: WalletService,
     @Inject(forwardRef(() => PaymentTransactionService))
     private paymentTransactionService: PaymentTransactionService,
-    @Inject(forwardRef(() => HistoryService))
     private historyService: HistoryService,
     private xpCalculator: XpCalculatorService,
     private progressionBranches: ProgressionBranchesService,
