@@ -470,6 +470,10 @@ export class GamesService {
 
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     const dice = game.gameState.dice;
+    
+    // Определяем, является ли этот ход первым в игре для этого режима (Long)
+    // В Long Backgammon первый ход с дублями 3:3, 4:4 или 6:6 позволяет снять 2 шашки с головы
+    const isFirstMoveOfGame = game.mode === GameMode.LONG && (game.moves || []).length < 2;
 
     // Проверяем валидность всех ходов
     let currentState = JSON.parse(JSON.stringify(game.gameState));
@@ -489,7 +493,7 @@ export class GamesService {
       console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       console.log(`  Текущее состояние: movesFromHead=${currentState.movesFromHead || 0}, dice=[${currentState.dice?.join(', ') || 'none'}]`);
       
-      const isValid = engine.validateMove(currentState, move.from, move.to, move.die);
+      const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
       
       if (!isValid) {
         console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);

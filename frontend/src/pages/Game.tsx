@@ -843,6 +843,12 @@ export default function Game() {
     }
   }
 
+  const handleSwapDice = () => {
+    if (!gameState?.dice || gameState.dice.length < 2) return
+    const newDice = [...gameState.dice].reverse()
+    setGameState(prev => prev ? { ...prev, dice: newDice } : null)
+  }
+
   const handleRollDice = async () => {
     if (!gameId) return
     const socket = getSocket()
@@ -1276,6 +1282,7 @@ export default function Game() {
                   >
                     OK ({pendingMoves.length})
                   </Button>
+                  <Button variant="secondary" onClick={handleSwapDice} className="sidebar-swap-btn">🔄</Button>
                   <Button variant="secondary" onClick={handleUndo} className="sidebar-undo-btn">↩️</Button>
                 </div>
               </div>

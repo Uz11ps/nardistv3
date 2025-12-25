@@ -216,43 +216,69 @@ export class ImprovedBotService {
     let score = 0;
     const player = state.currentPlayer;
     const isPlayer1 = player === 0;
+    const headIndex = isPlayer1 ? 0 : 12;
 
-    // 1. Вынос шашек - высший приоритет
-    if (move.to < 0 || move.to >= 24) {
-      score += 100;
+    // 1. Приоритет выноса шашек - ВЫСШИЙ (1000+)
+    if (move.to === -1 || move.to < 0 || move.to >= 24) {
+      score += 5000; // Огромный приоритет на вынос
     }
 
-    // 2. Движение к дому
-    if (move.to >= 0 && move.to < 24) {
-      if (isPlayer1 && move.to >= 18) {
-        score += 15;
-      } else if (!isPlayer1 && move.to >= 6 && move.to < 12) {
-        score += 15;
+    // 2. Приоритет освобождения головы (особенно в начале игры)
+    if (move.from === headIndex) {
+      const checkersInHead = Math.abs(state.points[headIndex]);
+      if (checkersInHead > 10) {
+        score += 500; // В начале игры важно вывести шашки из головы
+      } else if (checkersInHead > 5) {
+        score += 200;
+      } else if (checkersInHead > 1) {
+        score += 50;
       }
     }
 
-    // 3. Создание блоков (защита)
+    // 3. Продвижение к дому
+    // Для белых дом в пунктах 18-23. Для черных в пунктах 6-11.
+    if (move.to >= 0 && move.to < 24) {
+      const distFromHeadBefore = isPlayer1 
+        ? move.from 
+        : (move.from - headIndex + 24) % 24;
+      const distFromHeadAfter = isPlayer1
+        ? move.to
+        : (move.to - headIndex + 24) % 24;
+      
+      score += (distFromHeadAfter - distFromHeadBefore) * 10;
+
+      // Бонус за вход в дом
+      if (isPlayer1 && move.to >= 18) {
+        score += 100;
+      } else if (!isPlayer1 && move.to >= 6 && move.to < 12) {
+        score += 100;
+      }
+    }
+
+    // 4. Построение блоков (занятие пустых пунктов)
+    if (move.to >= 0 && move.to < 24 && state.points[move.to] === 0) {
+      score += 50; // Бонус за занятие нового пункта
+      
+      // Дополнительный бонус за блокировку соперника (6 подряд)
+      // (Упрощенно: бонус за соседство со своими шашками)
+      for (let i = 1; i <= 6; i++) {
+        const neighborIdx = (move.to - i + 24) % 24;
+        const neighborValue = state.points[neighborIdx];
+        if (isPlayer1 ? neighborValue > 0 : neighborValue < 0) {
+          score += 20;
+        } else {
+          break;
+        }
+      }
+    }
+
+    // 5. Укрепление существующих пунктов
     if (move.to >= 0 && move.to < 24) {
       const targetPoint = state.points[move.to];
-      if (isPlayer1 && targetPoint >= 2) {
-        score += 20; // Укрепляем блок
-      } else if (!isPlayer1 && targetPoint <= -2) {
-        score += 20;
-      }
-    }
-
-    // 4. Избегаем оставлять шашки далеко от дома
-    if (move.from >= 0 && move.from < 24) {
-      if (isPlayer1) {
-        const distance = (move.from - 0 + 24) % 24;
-        if (distance > 12) {
-          score += 10; // Убираем дальнюю шашку
-        }
-      } else {
-        const distance = (move.from - 12 + 24) % 24;
-        if (distance > 12) {
-          score += 10;
-        }
+      if (isPlayer1 && targetPoint > 0) {
+        score += 30;
+      } else if (!isPlayer1 && targetPoint < 0) {
+        score += 30;
       }
     }
 

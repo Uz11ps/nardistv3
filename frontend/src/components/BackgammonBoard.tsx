@@ -200,27 +200,21 @@ export default function BackgammonBoard({
     const width = rect.width
     const height = rect.height
     
-    // Для player1 (белые): кубики внизу слева
-    // Для player2 (черные): кубики вверху справа
+    // Для player1 (белые): кубики внизу справа
+    // Для player2 (черные): кубики вверху слева
     // Показываем кубики текущего игрока на его части доски
     
     const currentPlayerIsMe = (currentPlayer === 0 && isPlayer1) || (currentPlayer === 1 && !isPlayer1)
     
-    if (isPlayer1) {
-      // Мои кубики (player1) - внизу слева, его кубики (player2) - вверху справа
-      setDice3DPosition({
-        x: currentPlayerIsMe ? width * 0.15 : width * 0.85,
-        y: currentPlayerIsMe ? height * 0.85 : height * 0.15,
-        size: Math.min(width, height) * 0.08,
-      })
-    } else {
-      // Мои кубики (player2) - вверху справа, его кубики (player1) - внизу слева
-      setDice3DPosition({
-        x: currentPlayerIsMe ? width * 0.85 : width * 0.15,
-        y: currentPlayerIsMe ? height * 0.15 : height * 0.85,
-        size: Math.min(width, height) * 0.08,
-      })
-    }
+    // Новая логика: Мои кубики всегда справа, кубики соперника всегда слева
+    const xPos = currentPlayerIsMe ? width * 0.85 : width * 0.15;
+    const yPos = currentPlayerIsMe ? height * 0.85 : height * 0.15;
+
+    setDice3DPosition({
+      x: xPos,
+      y: yPos,
+      size: Math.min(width, height) * 0.08,
+    })
   }, [isPlayer1, currentPlayer, isMyTurn, canMove])
   
   // Вспомогательная функция для получения координат точки
@@ -703,7 +697,26 @@ export default function BackgammonBoard({
     ctx.strokeRect(leftContainerX, 0, bearOffWidth, height)
     ctx.strokeRect(rightContainerX, 0, bearOffWidth, height)
 
-    // Отрисовка выброшенных шашек в контейнерах
+    // Отрисовка номеров точек
+    ctx.font = 'bold 12px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    
+    for (let i = 0; i < 24; i++) {
+      const { x, y, isTopRow, pointNumber } = getPointCoordinates(i, canvas)
+      
+      // Определяем номер точки относительно игрока
+      // Для игрока его дом всегда 1-6
+      let displayNum = pointNumber
+      
+      // Если доска инвертирована для Player 2, номера тоже должны быть инвертированы
+      // Но пользователь хочет систему "координаты ячеек": на моей стороне 1 2 3...
+      // В классических нардах у каждого игрока своя нумерация от 1 до 24
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
+      const textY = isTopRow ? y + pointHeight + 15 : y - pointHeight - 15
+      ctx.fillText(displayNum.toString(), x, textY)
+    }
     if (virtualGameState.bearOff) {
       const bOff = virtualGameState.bearOff
       const whiteBearOffCount = bOff.white || 0
@@ -1139,6 +1152,13 @@ export default function BackgammonBoard({
     if (selectedPoint === null) {
       // Если ничего не выбрано, выбираем текущую точку (если из неё есть ходы)
       if (pointMoves.length > 0) {
+        // АВТОХОД: Если есть только ОДИН вариант хода из этой точки - делаем его сразу
+        if (pointMoves.length === 1) {
+          const move = pointMoves[0]
+          startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
+          return
+        }
+
         setSelectedPoint(pointIndex)
         const targets = new Set<number>()
         let bearOffDie: number | null = null
@@ -1165,6 +1185,13 @@ export default function BackgammonBoard({
       } else {
         // Если ход невозможен, но кликнули на другую свою шашку - переключаем выбор на неё
         if (pointMoves.length > 0) {
+          // АВТОХОД для новой точки
+          if (pointMoves.length === 1) {
+            const move = pointMoves[0]
+            startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
+            return
+          }
+
           setSelectedPoint(pointIndex)
           const targets = new Set<number>()
           let bearOffDie: number | null = null

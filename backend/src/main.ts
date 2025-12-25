@@ -51,8 +51,14 @@ async function bootstrap() {
   });
 
   const port = process.env.BACKEND_PORT || 3000;
-  await app.listen(port);
-  console.log(`🚀 Backend запущен на порту ${port}`);
+  try {
+    console.log(`📡 Attempting to start server on port ${port}...`);
+    await app.listen(port);
+    console.log(`🚀 Backend successfully started on port ${port}`);
+  } catch (err) {
+    console.error(`❌ Critical error during startup:`, err);
+    process.exit(1);
+  }
 }
 
 bootstrap();

@@ -53,7 +53,7 @@ export class LongBackgammonEngine {
     const rng = seed ? this.createSeededRNG(seed) : Math.random;
     const die1 = Math.floor(rng() * 6) + 1;
     const die2 = Math.floor(rng() * 6) + 1;
-    return [die1, die2];
+    return die1 === die2 ? [die1, die1, die1, die1] : [die1, die2];
   }
 
   createSeededRNG(seed: string): () => number {
@@ -81,6 +81,7 @@ export class LongBackgammonEngine {
    */
   private calculateTargetPoint(player: number, from: number, die: number): number {
     // Both players move by INCREASING index (decreasing Point Number)
+    // Movement is circular: 0->1->...->23->0
     let to = (from + die) % this.BOARD_SIZE;
     return to;
   }
@@ -103,8 +104,9 @@ export class LongBackgammonEngine {
   /**
    * Check Head Rule: Only 1 checker can be moved from head per complete turn (using all dice)
    * This rule applies only to non-doubles moves
+   * Exception: First move of the game with doubles 3:3, 4:4, or 6:6 allows 2 checkers from head
    */
-  private checkHeadRule(state: LongBoardState, from: number, dice: number[]): boolean {
+  private checkHeadRule(state: LongBoardState, from: number, die: number, isFirstMoveOfGame: boolean = false): boolean {
     const player = state.currentPlayer;
     const headIndex = player === 0 ? this.WHITE_HEAD : this.BLACK_HEAD;
     
@@ -115,7 +117,17 @@ export class LongBackgammonEngine {
     
     const movedThisTurn = state.movesFromHead || 0;
     
-    // For non-doubles: only 1 checker per turn from head
+    // Check for the first move exception
+    // In Long Backgammon, if the FIRST roll of the game is a double (3:3, 4:4, 6:6),
+    // the player can move 2 checkers from the head.
+    const diceArray = state.dice || [];
+    const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0]);
+    
+    if (isFirstMoveOfGame && isDoubles && (die === 3 || die === 4 || die === 6)) {
+      return movedThisTurn < 2;
+    }
+    
+    // Normal rule: only 1 checker per turn from head
     return movedThisTurn === 0;
   }
 
@@ -193,11 +205,11 @@ export class LongBackgammonEngine {
     return true;
   }
 
-  validateMove(state: LongBoardState, from: number, to: number, die: number): boolean {
+  validateMove(state: LongBoardState, from: number, to: number, die: number, isFirstMoveOfGame: boolean = false): boolean {
     if (state.currentPlayer === 0) {
-      return this.validateMovePlayer1(state, from, to, die);
+      return this.validateMovePlayer1(state, from, to, die, isFirstMoveOfGame);
     } else {
-      return this.validateMovePlayer2(state, from, to, die);
+      return this.validateMovePlayer2(state, from, to, die, isFirstMoveOfGame);
     }
   }
 
@@ -205,13 +217,13 @@ export class LongBackgammonEngine {
    * Validate move using sum of two dice (for combined moves)
    * This is used when player wants to combine two dice into one move
    */
-  private validateMoveWithSum(state: LongBoardState, from: number, to: number, die1: number, die2: number): boolean {
+  private validateMoveWithSum(state: LongBoardState, from: number, to: number, die1: number, die2: number, isFirstMoveOfGame: boolean = false): boolean {
     const sumDie = die1 + die2;
     // Use regular validation with the sum
-    return this.validateMove(state, from, to, sumDie);
+    return this.validateMove(state, from, to, sumDie, isFirstMoveOfGame);
   }
 
-  private validateMovePlayer1(state: LongBoardState, from: number, to: number, die: number): boolean {
+  private validateMovePlayer1(state: LongBoardState, from: number, to: number, die: number, isFirstMoveOfGame: boolean = false): boolean {
     // Handle bar entry (though not really used in Long)
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
@@ -252,29 +264,20 @@ export class LongBackgammonEngine {
     if (to !== calculatedTo) return false;
     if (state.points[to] < 0) return false;
     
-    // Проверяем правило дублей для ЛЮБОЙ точки (не только головы)
-    // Дубль определяется по тому, что все кубики одинаковые (может быть 2, 3 или 4 кубика)
-    const isDoubles = state.dice && state.dice.length >= 2 && state.dice.every(d => d === state.dice[0]);
-    if (isDoubles) {
-      const movesFromThisPoint = (state.movesFromPoint || {})[from] || 0;
-      if (movesFromThisPoint >= 2) {
-        // Больше двух шашек из одной точки нельзя
-        return false;
-      }
-    } else {
-      // Для обычных ходов проверяем правило головы
-      if (!this.checkHeadRule(state, from, state.dice)) return false;
-    }
+    // Проверяем правило головы
+    if (!this.checkHeadRule(state, from, die, isFirstMoveOfGame)) return false;
+    
+    // В длинных нард нет ограничения на количество шашек из одной точки (кроме головы)
     
     if (!this.checkBlockRule(state, to)) return false;
     
     return true;
   }
 
-  private validateMovePlayer2(state: LongBoardState, from: number, to: number, die: number): boolean {
+  private validateMovePlayer2(state: LongBoardState, from: number, to: number, die: number, isFirstMoveOfGame: boolean = false): boolean {
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      const enterPoint = (this.BLACK_HEAD - die + this.BOARD_SIZE) % this.BOARD_SIZE;
+      const enterPoint = (this.BLACK_HEAD + die) % this.BOARD_SIZE; // Player 2 moves same direction
       if (state.points[enterPoint] > 0) return false;
       return to === enterPoint || to === -1;
     }
@@ -297,15 +300,9 @@ export class LongBackgammonEngine {
       if (die > pToFinish) {
         // "Дальше" в доме черных - это меньшие distanceTraveled.
         // Дом черных: Point 13-18 (indices 6-11).
-        // Distance traveled: 
-        // Index 6: (6-12+24)%24 = 18
-        // Index 11: (11-12+24)%24 = 23
-        // "Дальше" от выхода значит МЕНЬШЕЕ расстояние.
-        for (let i = 0; i < this.BOARD_SIZE; i++) {
-          if (state.points[i] < 0) {
-            const d = (i - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
-            if (d < distanceTraveled) return false; 
-          }
+        for (let i = 0; i < distanceTraveled; i++) {
+          const checkIdx = (this.BLACK_HEAD + i) % this.BOARD_SIZE;
+          if (state.points[checkIdx] < 0) return false;
         }
         return to === -1 || to < 0 || to >= this.BOARD_SIZE;
       }
@@ -316,19 +313,8 @@ export class LongBackgammonEngine {
     if (to !== calculatedTo) return false;
     if (state.points[to] > 0) return false;
     
-    // Проверяем правило дублей для ЛЮБОЙ точки (не только головы)
-    // Дубль определяется по тому, что все кубики одинаковые (может быть 2, 3 или 4 кубика)
-    const isDoubles = state.dice && state.dice.length >= 2 && state.dice.every(d => d === state.dice[0]);
-    if (isDoubles) {
-      const movesFromThisPoint = (state.movesFromPoint || {})[from] || 0;
-      if (movesFromThisPoint >= 2) {
-        // Больше двух шашек из одной точки нельзя
-        return false;
-      }
-    } else {
-      // Для обычных ходов проверяем правило головы
-      if (!this.checkHeadRule(state, from, state.dice)) return false;
-    }
+    // Проверяем правило головы
+    if (!this.checkHeadRule(state, from, die, isFirstMoveOfGame)) return false;
     
     if (!this.checkBlockRule(state, to)) return false;
     
@@ -483,7 +469,7 @@ export class LongBackgammonEngine {
     return null;
   }
 
-  getAllValidMoves(state: LongBoardState, dice: number[]): Array<Array<{ from: number; to: number; die: number }>> {
+  getAllValidMoves(state: LongBoardState, dice: number[], isFirstMoveOfGame: boolean = false): Array<Array<{ from: number; to: number; die: number }>> {
     if (dice.length === 0) return [];
 
     const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
@@ -514,13 +500,6 @@ export class LongBackgammonEngine {
         
         if (!hasMyCheckers) continue;
 
-        // Для дублей: проверяем, сколько шашек уже вышло из этой точки
-        const movesFromThisPoint = (currentState.movesFromPoint || {})[from] || 0;
-        if (isDoubles && movesFromThisPoint >= 2) {
-          // Уже выведено 2 шашки из этой точки - больше нельзя
-          continue;
-        }
-
         // Для дублей используем ВСЕ кубики по порядку (не пропускаем дубликаты)
         // Для обычных ходов можем оптимизировать
         const isRemainingDoubles = remainingDice.length >= 2 && remainingDice.every(d => d === remainingDice[0]);
@@ -543,7 +522,7 @@ export class LongBackgammonEngine {
           const isBearingOffMove = (distanceTraveled + die) >= this.BOARD_SIZE;
           const to = isBearingOffMove ? -1 : toPoint;
 
-          if (this.validateMove(currentState, from, to, die)) {
+          if (this.validateMove(currentState, from, to, die, isFirstMoveOfGame)) {
             foundAnyMove = true;
             const newState = this.applyMove(currentState, from, to, die);
             const newDice = [...remainingDice];
@@ -567,7 +546,7 @@ export class LongBackgammonEngine {
               const isBearingOffMoveSum = (distanceTraveledSum + sumDie) >= this.BOARD_SIZE;
               const toSum = isBearingOffMoveSum ? -1 : toPointSum;
               
-              if (this.validateMove(currentState, from, toSum, sumDie)) {
+              if (this.validateMove(currentState, from, toSum, sumDie, isFirstMoveOfGame)) {
                 foundAnyMove = true;
                 const newStateSum = this.applyMove(currentState, from, toSum, sumDie);
                 const newDiceSum = [...remainingDice];

@@ -109,9 +109,13 @@ export class AdminService implements OnModuleInit {
     @Inject(forwardRef(() => AcademyService))
     private academyService: AcademyService,
     private skinsService: SkinsService,
+    @Inject(forwardRef(() => GamesService))
     private gamesService: GamesService,
+    @Inject(forwardRef(() => QuestsService))
     private questsService: QuestsService,
+    @Inject(forwardRef(() => ClansService))
     private clansService: ClansService,
+    @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
     private progressService: ProgressService,
     private configService: ConfigService,
@@ -119,6 +123,7 @@ export class AdminService implements OnModuleInit {
     private walletService: WalletService,
     @Inject(forwardRef(() => PaymentTransactionService))
     private paymentTransactionService: PaymentTransactionService,
+    @Inject(forwardRef(() => HistoryService))
     private historyService: HistoryService,
     private xpCalculator: XpCalculatorService,
     private progressionBranches: ProgressionBranchesService,

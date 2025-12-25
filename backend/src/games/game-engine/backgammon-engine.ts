@@ -99,6 +99,8 @@ export class BackgammonEngine {
     }
 
     if (to !== toPoint && to !== -1) return false;
+    
+    // Нельзя вставать на пункт, занятый 2+ шашками соперника
     if (state.points[toPoint] < -1) return false;
     
     return true;
@@ -109,10 +111,11 @@ export class BackgammonEngine {
     
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      const enterPoint = this.BOARD_SIZE - die;
-      if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
-      if (state.points[enterPoint] > 1) return false;
-      return to === enterPoint || to === -1;
+      const enterPointIndex = this.BOARD_SIZE - die;
+      if (enterPointIndex < 0 || enterPointIndex >= this.BOARD_SIZE) return false;
+      // Нельзя вставать на пункт, занятый 2+ шашками соперника
+      if (state.points[enterPointIndex] > 1) return false;
+      return to === enterPointIndex || to === -1;
     }
 
     if (from < 0 || from >= this.BOARD_SIZE) return false;
@@ -128,7 +131,9 @@ export class BackgammonEngine {
         return to === -1 || to < 0;
       }
       if (die > distanceToFinish) {
-        for (let i = this.BOARD_SIZE - 1; i > from; i--) {
+        // Можно сбросить только если дальше от края никого нет (от Point 19 до current)
+        // Для черных "дальше" это бОльшие индексы (ближе к центру)
+        for (let i = from + 1; i < 6; i++) {
           if (state.points[i] < 0) return false;
         }
         return to === -1 || to < 0;
@@ -137,6 +142,8 @@ export class BackgammonEngine {
     }
 
     if (to !== toPoint && to !== -1) return false;
+    
+    // Нельзя вставать на пункт, занятый 2+ шашками соперника
     if (state.points[toPoint] > 1) return false;
     
     return true;
@@ -176,7 +183,7 @@ export class BackgammonEngine {
       state.bar[0]--;
       const enterPointIndex = die - 1;
       
-      // Hit opponent's single checker
+      // Hit opponent's single checker (Blot)
       if (state.points[enterPointIndex] === -1) {
         state.points[enterPointIndex] = 1;
         state.bar[1]++;
@@ -199,7 +206,7 @@ export class BackgammonEngine {
     if (state.points[from] > 0) {
       state.points[from]--;
       
-      // Hit opponent's single checker
+      // Hit opponent's single checker (Blot)
       if (state.points[to] === -1) {
         state.points[to] = 1;
         state.bar[1]++;
@@ -215,7 +222,7 @@ export class BackgammonEngine {
       state.bar[1]--;
       const enterPointIndex = this.BOARD_SIZE - die;
       
-      // Hit opponent's single checker
+      // Hit opponent's single checker (Blot)
       if (state.points[enterPointIndex] === 1) {
         state.points[enterPointIndex] = -1;
         state.bar[0]++;
@@ -238,7 +245,7 @@ export class BackgammonEngine {
     if (state.points[from] < 0) {
       state.points[from]++;
       
-      // Hit opponent's single checker
+      // Hit opponent's single checker (Blot)
       if (state.points[to] === 1) {
         state.points[to] = -1;
         state.bar[0]++;
@@ -274,39 +281,36 @@ export class BackgammonEngine {
       remainingDice: number[],
       path: Array<{ from: number; to: number; die: number }>,
     ): void => {
-      // Если нет оставшихся кубиков, это валидный набор ходов
-      if (remainingDice.length === 0) {
+      // Сохраняем текущую последовательность как возможную
+      if (path.length > 0) {
         moves.push([...path]);
+      }
+
+      // Если нет оставшихся кубиков, мы закончили
+      if (remainingDice.length === 0) {
         return;
       }
 
       // Пробуем использовать каждый доступный кубик
-      // ВАЖНО: При дубле (4 одинаковых кубика) нужно использовать ВСЕ 4, не пропуская дубликаты
       const isDoubles = remainingDice.length >= 2 && remainingDice.every(d => d === remainingDice[0]);
       
-      // Для дублей используем все кубики по порядку (не пропускаем дубликаты)
-      // Для обычных ходов можем оптимизировать, пропуская одинаковые значения
-      const triedDice = isDoubles ? new Set<number>() : new Set<number>();
+      const triedDice = new Set<number>();
       
       for (let i = 0; i < remainingDice.length; i++) {
         const die = remainingDice[i];
         
-        // Для обычных ходов пропускаем дубликаты в рамках одной итерации
-        // Для дублей НЕ пропускаем - используем каждый кубик отдельно
+        // Для обычных ходов пропускаем дубликаты
         if (!isDoubles && triedDice.has(die)) {
           continue;
         }
-        if (!isDoubles) {
-          triedDice.add(die);
-        }
+        triedDice.add(die);
         
         const possibleMoves = this.getPossibleMovesForDie(currentState, die);
         
         if (possibleMoves.length > 0) {
-          // Удаляем этот кубик из оставшихся
-          const newRemainingDice = remainingDice.filter((_, idx) => idx !== i);
+          const newRemainingDice = [...remainingDice];
+          newRemainingDice.splice(i, 1);
           
-          // Пробуем каждый возможный ход с этим кубиком
           for (const move of possibleMoves) {
             const newState = this.applyMove(currentState, move.from, move.to, die);
             findMoves(newState, newRemainingDice, [...path, { ...move, die }]);
