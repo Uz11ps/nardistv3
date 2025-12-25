@@ -82,25 +82,79 @@ export default function BackgammonBoard({
 
   // Загружаем текстуры при изменении скинов с fallback на дефолтные SVG
   useEffect(() => {
+    // Улучшенная функция загрузки изображения с поддержкой SVG и обработкой ошибок
+    const loadImage = (url: string, onSuccess: (img: HTMLImageElement) => void, onError: () => void) => {
+      const img = new Image()
+      
+      // Для SVG на мобильных устройствах может потребоваться другой подход
+      // Убираем crossOrigin для локальных файлов, так как это может вызывать проблемы с SVG
+      if (url.startsWith('http') && !url.includes(window.location.hostname)) {
+        img.crossOrigin = 'anonymous'
+      }
+      
+      // Добавляем таймаут для случаев, когда onerror не срабатывает
+      let timeout: number | null = null
+      
+      const cleanup = () => {
+        if (timeout) {
+          clearTimeout(timeout)
+          timeout = null
+        }
+      }
+      
+      img.onload = () => {
+        cleanup()
+        // Проверяем, что изображение действительно загрузилось
+        // Для SVG может быть width/height = 0, но это нормально, проверяем complete
+        if (img.complete && (img.width > 0 || img.height > 0 || url.endsWith('.svg'))) {
+          onSuccess(img)
+        } else {
+          // Если размеры 0 и это не SVG, значит изображение не загрузилось корректно
+          onError()
+        }
+      }
+      
+      img.onerror = () => {
+        cleanup()
+        console.warn(`Failed to load image: ${url}`)
+        onError()
+      }
+      
+      // Таймаут для случаев, когда события не срабатывают
+      timeout = setTimeout(() => {
+        if (!img.complete) {
+          console.warn(`Image load timeout: ${url}`)
+          onError()
+        }
+      }, 5000)
+      
+      // Устанавливаем src в конце, чтобы обработчики были готовы
+      img.src = url
+    }
+
     // Загрузка текстуры доски
     const loadBoardTexture = () => {
       const textureUrl = boardSkin?.boardTextureUrl || DEFAULT_BOARD_TEXTURE
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => setBoardTexture(img)
-      img.onerror = () => {
-        // Fallback на дефолтную текстуру, если загрузка не удалась
-        if (textureUrl !== DEFAULT_BOARD_TEXTURE) {
-          const fallbackImg = new Image()
-          fallbackImg.crossOrigin = 'anonymous'
-          fallbackImg.onload = () => setBoardTexture(fallbackImg)
-          fallbackImg.onerror = () => setBoardTexture(null)
-          fallbackImg.src = DEFAULT_BOARD_TEXTURE
-        } else {
-          setBoardTexture(null)
+      
+      loadImage(
+        textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
+        (img) => setBoardTexture(img),
+        () => {
+          // Fallback на дефолтную текстуру, если загрузка не удалась
+          if (textureUrl !== DEFAULT_BOARD_TEXTURE) {
+            loadImage(
+              `${window.location.origin}${DEFAULT_BOARD_TEXTURE}`,
+              (img) => setBoardTexture(img),
+              () => {
+                console.warn('Failed to load default board texture')
+                setBoardTexture(null)
+              }
+            )
+          } else {
+            setBoardTexture(null)
+          }
         }
-      }
-      img.src = textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`
+      )
     }
 
     loadBoardTexture()
@@ -108,22 +162,26 @@ export default function BackgammonBoard({
     // Загрузка текстуры белых шашек
     const loadWhiteCheckerTexture = () => {
       const textureUrl = checkerSkin?.whiteCheckersTextureUrl || DEFAULT_WHITE_CHECKER_TEXTURE
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => setWhiteCheckerTexture(img)
-      img.onerror = () => {
-        // Fallback на дефолтную текстуру
-        if (textureUrl !== DEFAULT_WHITE_CHECKER_TEXTURE) {
-          const fallbackImg = new Image()
-          fallbackImg.crossOrigin = 'anonymous'
-          fallbackImg.onload = () => setWhiteCheckerTexture(fallbackImg)
-          fallbackImg.onerror = () => setWhiteCheckerTexture(null)
-          fallbackImg.src = DEFAULT_WHITE_CHECKER_TEXTURE
-        } else {
-          setWhiteCheckerTexture(null)
+      
+      loadImage(
+        textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
+        (img) => setWhiteCheckerTexture(img),
+        () => {
+          // Fallback на дефолтную текстуру
+          if (textureUrl !== DEFAULT_WHITE_CHECKER_TEXTURE) {
+            loadImage(
+              `${window.location.origin}${DEFAULT_WHITE_CHECKER_TEXTURE}`,
+              (img) => setWhiteCheckerTexture(img),
+              () => {
+                console.warn('Failed to load default white checker texture')
+                setWhiteCheckerTexture(null)
+              }
+            )
+          } else {
+            setWhiteCheckerTexture(null)
+          }
         }
-      }
-      img.src = textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`
+      )
     }
 
     loadWhiteCheckerTexture()
@@ -131,22 +189,26 @@ export default function BackgammonBoard({
     // Загрузка текстуры черных шашек
     const loadBlackCheckerTexture = () => {
       const textureUrl = checkerSkin?.blackCheckersTextureUrl || DEFAULT_BLACK_CHECKER_TEXTURE
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => setBlackCheckerTexture(img)
-      img.onerror = () => {
-        // Fallback на дефолтную текстуру
-        if (textureUrl !== DEFAULT_BLACK_CHECKER_TEXTURE) {
-          const fallbackImg = new Image()
-          fallbackImg.crossOrigin = 'anonymous'
-          fallbackImg.onload = () => setBlackCheckerTexture(fallbackImg)
-          fallbackImg.onerror = () => setBlackCheckerTexture(null)
-          fallbackImg.src = DEFAULT_BLACK_CHECKER_TEXTURE
-        } else {
-          setBlackCheckerTexture(null)
+      
+      loadImage(
+        textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
+        (img) => setBlackCheckerTexture(img),
+        () => {
+          // Fallback на дефолтную текстуру
+          if (textureUrl !== DEFAULT_BLACK_CHECKER_TEXTURE) {
+            loadImage(
+              `${window.location.origin}${DEFAULT_BLACK_CHECKER_TEXTURE}`,
+              (img) => setBlackCheckerTexture(img),
+              () => {
+                console.warn('Failed to load default black checker texture')
+                setBlackCheckerTexture(null)
+              }
+            )
+          } else {
+            setBlackCheckerTexture(null)
+          }
         }
-      }
-      img.src = textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`
+      )
     }
 
     loadBlackCheckerTexture()
