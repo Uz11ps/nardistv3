@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import axios from 'axios';
 import { Address } from '@ton/core';
-import { mnemonicToWalletKey, mnemonicToPrivateKey } from '@ton/crypto';
+import { mnemonicToWalletKey, mnemonicToPrivateKey, mnemonicNew } from '@ton/crypto';
 import { WalletContractV4, TonClient } from '@ton/ton';
 
 /**
@@ -97,38 +97,31 @@ export class TonService {
 
   /**
    * Генерирует мнемоническую фразу (24 слова)
-   * Использует прямое создание ключа без мнемоники для упрощения
    */
   private async generateMnemonic(): Promise<string[]> {
-    // Для продакшена генерируем ключ напрямую
-    // Мнемоника не обязательна для работы кошелька, но может быть полезна для восстановления
-    // В данном случае генерируем случайные слова (в продакшене лучше использовать bip39)
-    const words: string[] = [];
-    const wordlist = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 24; i++) {
-      let word = '';
-      for (let j = 0; j < 8; j++) {
-        word += wordlist[Math.floor(Math.random() * wordlist.length)];
-      }
-      words.push(word);
-    }
-    return words;
+    return mnemonicNew();
   }
 
   /**
    * Шифрует приватный ключ для хранения в БД
    */
   encryptPrivateKey(privateKey: string): { encrypted: string; iv: string } {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(this.ENCRYPTION_KEY, 'hex'), iv);
-    
-    let encrypted = cipher.update(privateKey, 'utf8', 'base64');
-    encrypted += cipher.final('base64');
-    
-    return {
-      encrypted,
-      iv: iv.toString('base64'),
-    };
+    try {
+      const iv = crypto.randomBytes(16);
+      const key = crypto.scryptSync(this.ENCRYPTION_KEY, 'salt', 32); // Гарантируем 32 байта для ключа
+      const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+      
+      let encrypted = cipher.update(privateKey, 'utf8', 'base64');
+      encrypted += cipher.final('base64');
+      
+      return {
+        encrypted,
+        iv: iv.toString('base64'),
+      };
+    } catch (error: any) {
+      this.logger.error('Ошибка шифрования приватного ключа:', error);
+      throw new BadRequestException(`Ошибка шифрования: ${error.message}`);
+    }
   }
 
   /**
@@ -136,9 +129,10 @@ export class TonService {
    */
   decryptPrivateKey(encryptedPrivateKey: string, iv: string): string {
     try {
+      const key = crypto.scryptSync(this.ENCRYPTION_KEY, 'salt', 32); // Гарантируем 32 байта для ключа
       const decipher = crypto.createDecipheriv(
         'aes-256-cbc',
-        Buffer.from(this.ENCRYPTION_KEY, 'hex'),
+        key,
         Buffer.from(iv, 'base64'),
       );
       
@@ -146,9 +140,9 @@ export class TonService {
       decrypted += decipher.final('utf8');
       
       return decrypted;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Ошибка расшифровки приватного ключа:', error);
-      throw new BadRequestException('Не удалось расшифровать приватный ключ');
+      throw new BadRequestException(`Не удалось расшифровать приватный ключ: ${error.message}`);
     }
   }
 

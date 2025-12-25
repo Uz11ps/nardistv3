@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { PaymentTransactionService } from '../payment/payment-transaction.service';
 import { WalletService } from '../payment/wallet.service';
@@ -52,6 +52,10 @@ export class SubscriptionController {
   @Post('payment/create')
   @UseGuards(JwtAuthGuard)
   async createPayment(@CurrentUser() user: any, @Body() body: { plan: SubscriptionPlan; method?: PaymentMethod }) {
+    if (!body.plan) {
+      throw new BadRequestException('Не выбрана подписка');
+    }
+
     const method = body.method || PaymentMethod.TON;
     const transaction = await this.paymentTransactionService.createSubscriptionTransaction(
       user.id,
@@ -62,7 +66,7 @@ export class SubscriptionController {
     // Получаем кошелек пользователя
     const wallet = await this.walletService.getWallet(user.id);
     if (!wallet) {
-      throw new Error('Кошелек не найден');
+      throw new NotFoundException('Кошелек не найден. Пожалуйста, попробуйте еще раз.');
     }
 
     return {
@@ -112,7 +116,7 @@ export class SubscriptionController {
 
     // Проверяем, что транзакция принадлежит пользователю
     if (transaction.userId !== user.id) {
-      throw new Error('Транзакция не принадлежит пользователю');
+      throw new BadRequestException('Транзакция не принадлежит пользователю');
     }
 
     // Проверяем статус в блокчейне (если еще не завершена)
@@ -158,6 +162,10 @@ export class SubscriptionController {
   @Post('nar-coin/payment/create')
   @UseGuards(JwtAuthGuard)
   async createNarCoinPayment(@CurrentUser() user: any, @Body() body: { amount: number; method?: PaymentMethod }) {
+    if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
+      throw new BadRequestException('Некорректная сумма платежа');
+    }
+
     const method = body.method || PaymentMethod.TON;
     const transaction = await this.paymentTransactionService.createNarCoinTransaction(
       user.id,
@@ -168,7 +176,7 @@ export class SubscriptionController {
     // Получаем кошелек пользователя
     const wallet = await this.walletService.getWallet(user.id);
     if (!wallet) {
-      throw new Error('Кошелек не найден');
+      throw new NotFoundException('Кошелек не найден. Пожалуйста, попробуйте еще раз.');
     }
 
     return {
