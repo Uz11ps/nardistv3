@@ -826,8 +826,8 @@ export default function Game() {
       return
     }
 
-    // Для обычного хода
-    if (die <= 6) {
+    // Для обычного хода (die <= 6 и нет steps)
+    if (die <= 6 && (!steps || steps.length === 0)) {
       const currentDiceUsage = new Map<number, number>();
       pendingMoves.forEach(m => {
         if (m.steps) {
@@ -844,12 +844,13 @@ export default function Game() {
         alert(`Кубик ${die} уже использован максимальное количество раз`)
         return
       }
-    } else {
-      // Для хода > 6 (комбинированный) без steps - это ошибка
+    } else if (die > 6) {
+      // Для хода > 6 (комбинированный) должен быть steps
       if (!steps || steps.length === 0) {
         console.warn(`Move with die=${die} but no steps provided`);
         return; // Не добавляем такой ход
       }
+      // Проверка комбинированных ходов уже выполнена выше (строки 806-826)
     }
 
     setPendingMoves(prev => [...prev, { from, to, die, steps }])
@@ -987,7 +988,8 @@ export default function Game() {
   }
 
   const getGameModeName = (mode: string) => {
-    return mode === 'LONG' ? 'Длинные' : 'Короткие'
+    const modeUpper = (mode || '').toUpperCase()
+    return modeUpper === 'LONG' ? 'Длинные' : 'Короткие'
   }
 
   const tableNumber = gameId?.slice(-2) || '0'

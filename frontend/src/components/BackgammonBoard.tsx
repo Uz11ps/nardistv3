@@ -1064,9 +1064,16 @@ export default function BackgammonBoard({
 
   // Обработка начала касания (мобильные устройства)
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // Предотвращаем конфликт с Telegram приложением
+    // Предотвращаем конфликт с Telegram приложением и стандартное поведение браузера
     e.stopPropagation()
-    if (e.cancelable) e.preventDefault()
+    if (e.cancelable) {
+      e.preventDefault()
+    }
+    // Предотвращаем zoom и выделение
+    if (e.touches.length > 1) {
+      // Множественное касание - предотвращаем zoom
+      return
+    }
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
     // Предотвращаем прокрутку страницы при перетаскивании шашки
@@ -1117,8 +1124,19 @@ export default function BackgammonBoard({
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (!dragging || !canvasRef.current) return
     
-    // Предотвращаем прокрутку
-    if (e.cancelable) e.preventDefault()
+    // Предотвращаем прокрутку, zoom и другие стандартные жесты
+    if (e.cancelable) {
+      e.preventDefault()
+    }
+    e.stopPropagation()
+    
+    // Если множественное касание - прерываем перетаскивание
+    if (e.touches.length > 1) {
+      setDragging(null)
+      setSelectedPoint(null)
+      setValidTargetPoints(new Set())
+      return
+    }
     
     const touch = e.touches[0]
     const canvas = canvasRef.current
@@ -1132,6 +1150,11 @@ export default function BackgammonBoard({
   }
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // Предотвращаем стандартное поведение
+    if (e.cancelable) {
+      e.preventDefault()
+    }
+    e.stopPropagation()
     if (!dragging || !canvasRef.current) return
     
     const canvas = canvasRef.current
