@@ -9,6 +9,7 @@ import { Inject, forwardRef } from '@nestjs/common';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { UsersService } from '../users/users.service';
 import { ReferralsService } from '../referrals/referrals.service';
+import { AdminService } from '../admin/admin.service';
 
 /**
  * Сервис для управления транзакциями платежей
@@ -17,13 +18,6 @@ import { ReferralsService } from '../referrals/referrals.service';
 export class PaymentTransactionService {
   private readonly logger = new Logger(PaymentTransactionService.name);
   
-  // Цены подписок в TON
-  private readonly SUBSCRIPTION_PRICES: { [key in SubscriptionPlan]: number } = {
-    [SubscriptionPlan.MONTH_1]: 3,
-    [SubscriptionPlan.MONTH_3]: 7,
-    [SubscriptionPlan.MONTH_12]: 22,
-  };
-
   constructor(
     @InjectRepository(PaymentTransaction)
     private transactionRepository: Repository<PaymentTransaction>,
@@ -34,7 +28,29 @@ export class PaymentTransactionService {
     private usersService: UsersService,
     @Inject(forwardRef(() => ReferralsService))
     private referralsService: ReferralsService,
+    @Inject(forwardRef(() => AdminService))
+    private adminService: AdminService,
   ) {}
+
+  /**
+   * Получить курс TON к NAR из настроек
+   */
+  private async getTonRate(): Promise<number> {
+    const settings = await this.adminService.getSystemSettings();
+    return Number(settings.ton_exchange_rate) || 1000;
+  }
+
+  /**
+   * Получить цены подписок из настроек
+   */
+  private async getSubscriptionPrices(): Promise<{ [key in SubscriptionPlan]: number }> {
+    const prices = await this.adminService.getSubscriptionPrices();
+    return {
+      [SubscriptionPlan.MONTH_1]: Number(prices.month_1) || 3,
+      [SubscriptionPlan.MONTH_3]: Number(prices.month_3) || 7,
+      [SubscriptionPlan.MONTH_12]: Number(prices.month_12) || 22,
+    };
+  }
 
   /**
    * Создать транзакцию для оплаты подписки
@@ -47,8 +63,9 @@ export class PaymentTransactionService {
     // Получаем или создаем кошелек пользователя
     const wallet = await this.walletService.getOrCreateWallet(userId);
     
-    // Определяем сумму платежа
-    const amount = this.SUBSCRIPTION_PRICES[plan];
+    // Определяем сумму платежа из настроек
+    const prices = await this.getSubscriptionPrices();
+    const amount = prices[plan];
     
     // Генерируем комментарий для идентификации платежа
     const transactionId = `sub_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -93,6 +110,9 @@ export class PaymentTransactionService {
     const transactionId = `nar_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const comment = this.tonService.generatePaymentComment(userId, transactionId);
 
+    // Получаем текущий курс
+    const tonRate = await this.getTonRate();
+
     // Создаем транзакцию
     const transaction = this.transactionRepository.create({
       userId,
@@ -106,7 +126,8 @@ export class PaymentTransactionService {
       metadata: {
         userId,
         transactionId,
-        narAmount: amount * 1000, // 1 TON = 1000 NAR
+        narAmount: Math.floor(amount * tonRate),
+        rate: tonRate,
       },
     });
 
@@ -208,6 +229,8 @@ export class PaymentTransactionService {
    * Обработать завершенную транзакцию
    */
   private async processCompletedTransaction(transaction: PaymentTransaction): Promise<void> {
+    const tonRate = await this.getTonRate();
+
     if (transaction.type === PaymentType.SUBSCRIPTION && transaction.subscriptionPlan) {
       // Создаем подписку
       const subscription = await this.subscriptionService.createSubscription(
@@ -220,7 +243,7 @@ export class PaymentTransactionService {
       await this.transactionRepository.save(transaction);
 
       // Начисляем реферальный бонус
-      const narAmount = transaction.amount * 1000; // 1 TON = 1000 NAR
+      const narAmount = Math.floor(transaction.amount * tonRate);
       await this.referralsService.processReferralBonus(
         transaction.userId,
         narAmount,
@@ -231,7 +254,9 @@ export class PaymentTransactionService {
     } else if (transaction.type === PaymentType.NAR_COIN) {
       // Начисляем NAR-coin
       const user = await this.usersService.findOne(transaction.userId);
-      const narAmount = transaction.amount * 1000; // 1 TON = 1000 NAR
+      // Используем narAmount из метаданных (зафиксированный при создании) или текущий курс
+      const narAmount = transaction.metadata?.narAmount || Math.floor(transaction.amount * tonRate);
+      
       const currentBalance = Number(user.narCoin || 0);
       await this.usersService.update(transaction.userId, {
         narCoin: currentBalance + narAmount,

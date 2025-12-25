@@ -126,6 +126,10 @@ export class AdminService implements OnModuleInit {
   ) {}
 
   async getStats() {
+    // Получаем курс TON из настроек или используем дефолтный 1000
+    const settings = await this.getSystemSettings();
+    const tonRate = Number(settings.ton_exchange_rate) || 1000;
+
     const totalUsers = await this.usersRepository.count({ where: { isGuest: false } });
     const activeUsers = await this.usersRepository
       .createQueryBuilder('user')
@@ -2635,6 +2639,82 @@ export class AdminService implements OnModuleInit {
       skins: { total: totalSkins },
       transactions: { total: totalTransactions, completed: completedTransactions },
       economy: { totalNarCoin, totalXp },
+    };
+  }
+
+  async getPaymentStats() {
+    const stats = await this.paymentTransactionsRepository
+      .createQueryBuilder('tx')
+      .select('status')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('SUM(amount)', 'totalAmount')
+      .groupBy('status')
+      .getRawMany();
+
+    const byMethod = await this.paymentTransactionsRepository
+      .createQueryBuilder('tx')
+      .select('method')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('SUM(amount)', 'totalAmount')
+      .where('status = :status', { status: PaymentStatus.COMPLETED })
+      .groupBy('method')
+      .getRawMany();
+
+    const byType = await this.paymentTransactionsRepository
+      .createQueryBuilder('tx')
+      .select('type')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('SUM(amount)', 'totalAmount')
+      .where('status = :status', { status: PaymentStatus.COMPLETED })
+      .groupBy('type')
+      .getRawMany();
+
+    const latestTransactions = await this.paymentTransactionsRepository.find({
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
+
+    // Группировка по кошелькам (toAddress)
+    const byWallet = await this.paymentTransactionsRepository
+      .createQueryBuilder('tx')
+      .select('tx.toAddress', 'address')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('SUM(amount)', 'totalAmount')
+      .where('status = :status', { status: PaymentStatus.COMPLETED })
+      .groupBy('tx.toAddress')
+      .getRawMany();
+
+    return {
+      summary: stats.map(s => ({
+        status: s.status,
+        count: parseInt(s.count),
+        totalAmount: parseFloat(s.totalAmount || 0),
+      })),
+      byMethod: byMethod.map(m => ({
+        method: m.method,
+        count: parseInt(m.count),
+        totalAmount: parseFloat(m.totalAmount || 0),
+      })),
+      byType: byType.map(t => ({
+        type: t.type,
+        count: parseInt(t.count),
+        totalAmount: parseFloat(t.totalAmount || 0),
+      })),
+      byWallet: byWallet.map(w => ({
+        address: w.address,
+        count: parseInt(w.count),
+        totalAmount: parseFloat(w.totalAmount || 0),
+      })),
+      transactions: latestTransactions.map(tx => ({
+        ...tx,
+        amount: parseFloat(tx.amount.toString()),
+        user: tx.user ? {
+          id: tx.user.id,
+          username: tx.user.username,
+          nickname: tx.user.nickname,
+        } : null,
+      })),
     };
   }
 

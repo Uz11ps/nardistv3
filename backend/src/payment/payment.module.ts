@@ -11,6 +11,7 @@ import { PaymentTransaction } from './payment-transaction.entity';
 import { UsersModule } from '../users/users.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { ReferralsModule } from '../referrals/referrals.module';
+import { AdminModule } from '../admin/admin.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ReferralsModule } from '../referrals/referrals.module';
     UsersModule,
     forwardRef(() => SubscriptionModule),
     forwardRef(() => ReferralsModule),
+    forwardRef(() => AdminModule),
   ],
   controllers: [PaymentController],
   providers: [PaymentService, TonService, WalletService, PaymentTransactionService],

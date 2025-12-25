@@ -1282,6 +1282,12 @@ export class AdminController {
     return this.adminService.getStatistics();
   }
 
+  @Get('payment-stats')
+  @UseGuards(AdminAuthGuard)
+  async getPaymentStats(@CurrentUser() user: any) {
+    return this.adminService.getPaymentStats();
+  }
+
   // ========== РЕПЛЕЙ ИГРЫ ==========
   @Get('games/:gameId/replay')
   @UseGuards(AdminAuthGuard)

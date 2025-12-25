@@ -49,10 +49,12 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments'>('stats')
   const [onboardingTasks, setOnboardingTasks] = useState<any[]>([])
   const [onboardingStats, setOnboardingStats] = useState<any>(null)
   const [progressionConfig, setProgressionConfig] = useState<any>(null)
+  const [paymentStats, setPaymentStats] = useState<any>(null)
+  const [systemSettings, setSystemSettings] = useState<any>({})
   const [isSavingProgression, setIsSavingProgression] = useState(false)
   const [editingOnboardingTask, setEditingOnboardingTask] = useState<any>(null)
   const [newOnboardingTask, setNewOnboardingTask] = useState({
@@ -519,6 +521,15 @@ export default function Admin() {
     }
   }
 
+  const loadPaymentStats = async () => {
+    try {
+      const response = await apiClient.get('/admin/payment-stats')
+      setPaymentStats(response.data)
+    } catch (error) {
+      console.error('Failed to load payment stats:', error)
+    }
+  }
+
   const handleSaveProgressionConfig = async () => {
     try {
       setIsSavingProgression(true)
@@ -528,6 +539,16 @@ export default function Admin() {
       alert('Ошибка при сохранении: ' + (error.response?.data?.message || error.message))
     } finally {
       setIsSavingProgression(false)
+    }
+  }
+
+  const handleUpdateSystemSettings = async (settings: any) => {
+    try {
+      await apiClient.put('/admin/system-settings', settings)
+      alert('Настройки сохранены')
+      loadSystemSettings()
+    } catch (error: any) {
+      alert('Ошибка при сохранении: ' + (error.response?.data?.message || error.message))
     }
   }
 
@@ -768,6 +789,16 @@ export default function Admin() {
           }}
         >
           Прогрессия
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'payments' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('payments')
+            loadPaymentStats()
+            loadSystemSettings()
+          }}
+        >
+          Платежи
         </button>
       </div>
 
@@ -5858,6 +5889,165 @@ export default function Admin() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'payments' && paymentStats && (
+        <div className="admin-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2>Статистика платежей</h2>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: '#2a2a2a', padding: '12px 20px', borderRadius: '12px' }}>
+              <label style={{ color: '#aaa', fontSize: '14px' }}>Курс 1 TON =</label>
+              <input 
+                type="number" 
+                value={systemSettings.ton_exchange_rate || 1000} 
+                style={{ width: '100px', textAlign: 'center' }}
+                onChange={(e) => {
+                  setSystemSettings({ ...systemSettings, ton_exchange_rate: parseInt(e.target.value) || 0 })
+                }}
+              />
+              <span style={{ color: '#aaa', fontSize: '14px' }}>NAR</span>
+              <button 
+                className="admin-btn primary" 
+                style={{ marginLeft: '12px' }}
+                onClick={() => handleUpdateSystemSettings({ ton_exchange_rate: systemSettings.ton_exchange_rate })}
+              >
+                💾
+              </button>
+            </div>
+          </div>
+
+          <div className="stats-grid" style={{ marginBottom: '32px' }}>
+            <div className="stat-card">
+              <h3>Итоги (Completed)</h3>
+              <div className="stat-value">
+                {paymentStats.summary
+                  .filter((s: any) => s.status === 'completed')
+                  .reduce((acc: number, s: any) => acc + s.totalAmount, 0)
+                  .toFixed(2)} TON
+              </div>
+              <div className="stat-details">
+                {paymentStats.summary.map((s: any) => (
+                  <div key={s.status} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{s.status.toUpperCase()}:</span>
+                    <span>{s.count} ({s.totalAmount.toFixed(2)} TON)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <h3>По методам</h3>
+              <div className="stat-details">
+                {paymentStats.byMethod.map((m: any) => (
+                  <div key={m.method} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 'bold' }}>{m.method.toUpperCase()}:</span>
+                    <span>{m.count} транз. ({m.totalAmount.toFixed(2)} {m.method.toUpperCase()})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <h3>По типам</h3>
+              <div className="stat-details">
+                {paymentStats.byType.map((t: any) => (
+                  <div key={t.type} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 'bold' }}>{t.type === 'nar_coin' ? 'Покупка NAR' : 'Подписка'}:</span>
+                    <span>{t.count} транз. ({t.totalAmount.toFixed(2)} TON)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px', marginBottom: '32px' }}>
+            <h3 style={{ marginBottom: '20px' }}>Статистика по кошелькам получателям</h3>
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Адрес кошелька</th>
+                    <th>Кол-во транзакций</th>
+                    <th>Сумма (TON)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentStats.byWallet.map((w: any) => (
+                    <tr key={w.address}>
+                      <td style={{ fontFamily: 'monospace', fontSize: '12px' }}>{w.address}</td>
+                      <td>{w.count}</td>
+                      <td style={{ fontWeight: 'bold', color: '#4caf50' }}>{w.totalAmount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+            <h3 style={{ marginBottom: '20px' }}>Последние 50 транзакций</h3>
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>ID / Дата</th>
+                    <th>Пользователь</th>
+                    <th>Тип / Метод</th>
+                    <th>Сумма</th>
+                    <th>Статус</th>
+                    <th>Детали</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentStats.transactions.map((tx: any) => (
+                    <tr key={tx.id}>
+                      <td>
+                        <div style={{ fontSize: '12px', color: '#aaa' }}>{tx.id.substring(0, 8)}...</div>
+                        <div>{new Date(tx.createdAt).toLocaleString()}</div>
+                      </td>
+                      <td>
+                        {tx.user ? (
+                          <>
+                            <div style={{ fontWeight: 'bold' }}>{tx.user.nickname || tx.user.username}</div>
+                            <div style={{ fontSize: '11px', color: '#aaa' }}>{tx.user.id.substring(0, 8)}...</div>
+                          </>
+                        ) : (
+                          <span style={{ color: '#666' }}>Удален</span>
+                        )}
+                      </td>
+                      <td>
+                        <div>{tx.type === 'nar_coin' ? '💰 NAR' : '💎 Sub'}</div>
+                        <div style={{ fontSize: '12px', color: '#aaa' }}>{tx.method.toUpperCase()}</div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 'bold', color: tx.status === 'completed' ? '#4caf50' : '#aaa' }}>
+                          {tx.amount.toFixed(2)} {tx.method.toUpperCase()}
+                        </div>
+                        {tx.type === 'nar_coin' && tx.metadata?.narAmount && (
+                          <div style={{ fontSize: '11px', color: '#aaa' }}>
+                            ≈ {tx.metadata.narAmount.toLocaleString()} NAR
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`status-badge ${tx.status}`}>
+                          {tx.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '11px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div><span style={{ color: '#aaa' }}>To:</span> {tx.toAddress.substring(0, 8)}...</div>
+                          {tx.txHash && <div><span style={{ color: '#aaa' }}>Hash:</span> {tx.txHash.substring(0, 8)}...</div>}
+                          {tx.comment && <div><span style={{ color: '#aaa' }}>Comm:</span> {tx.comment}</div>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
