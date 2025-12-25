@@ -1002,11 +1002,12 @@ export default function BackgammonBoard({
       return
     }
     
-    const points = gameState?.points || []
+    // Используем virtualGameState для проверки наличия шашки с учетом уже сделанных ходов
+    const points = virtualGameState?.points || []
     let pointValue = 0
     
     if (pointIndex === 24 || pointIndex === 25) {
-      const bar = gameState?.bar || { white: 0, black: 0 }
+      const bar = virtualGameState?.bar || { white: 0, black: 0 }
       pointValue = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1) 
         ? (isPlayer1 ? bar.white : bar.black)
         : 0
