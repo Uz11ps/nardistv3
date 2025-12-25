@@ -15,6 +15,7 @@
   border-bottom: 1px solid var(--color-border);
   position: relative;
   z-index: 10;
+  width: 100%;
 }
 
 /* Game Main Layout */
@@ -267,54 +268,46 @@
 }
 
 /* Game Confirm Section (Portrait) */
-/* Fixed кнопки действий на доске */
-.game-action-btn {
-  position: fixed;
-  z-index: 100;
-  width: 56px;
-  height: 56px;
+/* Кнопки действий в header'е */
+.game-action-btn-header {
+  position: absolute;
+  z-index: 15;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
-  font-size: 28px;
+  font-size: 18px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
   user-select: none;
-  bottom: 20px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-.game-action-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+.game-action-btn-header:hover {
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.game-action-btn:active {
-  transform: scale(0.95);
+.game-action-btn-header:active {
+  transform: translateY(-50%) scale(0.95);
 }
 
-.game-action-btn-cancel {
-  left: 20px;
+.game-action-btn-header.game-action-btn-cancel {
+  left: 12px;
   background: linear-gradient(180deg, #f44336 0%, #c62828 100%);
   color: white;
 }
 
-.game-action-btn-confirm {
-  right: 20px;
+.game-action-btn-header.game-action-btn-confirm {
+  right: 12px;
   background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
   color: white;
-}
-
-/* В ландшафтном режиме учитываем сайдбары */
-.landscape-mode .game-action-btn-cancel {
-  left: calc(17.5% + 20px);
-}
-
-.landscape-mode .game-action-btn-confirm {
-  right: calc(17.5% + 20px);
 }
 
 .game-confirm-btn {

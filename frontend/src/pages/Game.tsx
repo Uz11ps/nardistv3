@@ -1075,6 +1075,25 @@ export default function Game() {
         <div className="game-center-content">
           {!isLandscape && (
             <div className="game-players-section">
+              {/* Кнопки подтверждения и отмены поверх header'а */}
+              {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
+                <>
+                  <button 
+                    className="game-action-btn-header game-action-btn-cancel"
+                    onClick={handleUndo}
+                    title="Отменить ход"
+                  >
+                    ✕
+                  </button>
+                  <button 
+                    className="game-action-btn-header game-action-btn-confirm"
+                    onClick={handleConfirm}
+                    title={`Подтвердить (${pendingMoves.length})`}
+                  >
+                    ✓
+                  </button>
+                </>
+              )}
               <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
                 <div className={`game-player-avatar ${!isPlayer1 && gameState?.currentPlayer === 1 ? 'game-player-active' : ''}`}>
@@ -1188,27 +1207,7 @@ export default function Game() {
 
           {/* Доска */}
           {(gameStatus === 'in_progress' || gameStatus === 'finished') && (
-            <>
-              {/* Fixed кнопки подтверждения и отмены */}
-              {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
-                <>
-                  <button 
-                    className="game-action-btn game-action-btn-cancel"
-                    onClick={handleUndo}
-                    title="Отменить ход"
-                  >
-                    ✕
-                  </button>
-                  <button 
-                    className="game-action-btn game-action-btn-confirm"
-                    onClick={handleConfirm}
-                    title={`Подтвердить (${pendingMoves.length})`}
-                  >
-                    ✓
-                  </button>
-                </>
-              )}
-              <div className="board-wrapper">
+            <div className="board-wrapper">
               <BackgammonBoard
                 key={`board-${gameId}`}
                 player1Skins={playerSkins.player1}
@@ -1231,8 +1230,7 @@ export default function Game() {
                 player1Name={gameInfo?.player1?.nickname || gameInfo?.player1?.username}
                 player2Name={gameInfo?.player2?.nickname || gameInfo?.player2?.username || 'Бот'}
               />
-              </div>
-            </>
+            </div>
           )}
         </div>
 
