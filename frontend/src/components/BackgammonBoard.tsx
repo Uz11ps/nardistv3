@@ -139,9 +139,9 @@ export default function BackgammonBoard({
     
     if (!gameId || !isMyTurn || !canMove || !hasDice) {
       // Не сбрасываем подсветку если это просто обновление состояния, а не смена хода
-      if (!isMyTurn || !canMove) {
+        if (!isMyTurn || !canMove) {
         setPossibleMoves([])
-        setHighlightedPoints(new Set())
+        // Не сбрасываем highlightedPoints, так как они не используются для автоматической подсветки
       }
       return
     }
@@ -161,21 +161,16 @@ export default function BackgammonBoard({
         if (cancelled) return
         
         const flatMoves = response.data?.movesFromPoint || []
-        const highlighted = new Set<number>()
         
-        flatMoves.forEach((move: any) => {
-          if (move.from !== undefined && move.from !== null && move.from !== -1) {
-            highlighted.add(move.from)
-          }
-        })
-        
+        // Не подсвечиваем все возможные точки автоматически
+        // Подсветка будет только для выбранной точки (selectedPoint)
         setPossibleMoves(flatMoves)
-        setHighlightedPoints(highlighted)
+        // highlightedPoints будет заполняться только при выборе точки
       } catch (error) {
         if (cancelled) return
         console.error('Ошибка получения возможных ходов:', error)
         setPossibleMoves([])
-        setHighlightedPoints(new Set())
+        // Не сбрасываем highlightedPoints, так как они не используются для автоматической подсветки
       }
     }
     
@@ -482,14 +477,7 @@ export default function BackgammonBoard({
         }
       }
 
-      // 2. Подсветка возможных исходных точек (только после выбора шашки)
-      if (!dragging && selectedPoint !== null && highlightedPoints.has(pointIndex)) {
-        ctx.save()
-        ctx.shadowBlur = 15
-        ctx.shadowColor = 'rgba(0, 255, 0, 0.8)'
-        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
-        ctx.restore()
-      }
+      // 2. Подсветка возможных исходных точек - убрана, подсвечиваем только выбранную точку
 
       // 3. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
       if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
@@ -761,7 +749,7 @@ export default function BackgammonBoard({
         ctx.fillRect(targetX, 0, bearOffWidth, height)
       }
     }
-  }, [virtualGameState, selectedPoint, highlightedPoints, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates, animatingChecker])
+  }, [virtualGameState, selectedPoint, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates, animatingChecker])
   
   // Перерисовка при изменении состояния
   useEffect(() => {

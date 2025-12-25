@@ -792,10 +792,11 @@ export default function Game() {
       ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2])
       : []
     
-    // Проверяем, является ли это дублем (4 одинаковых кубика)
-    const isDoubles = diceArray.length === 4 && diceArray.every(d => d === diceArray[0])
+    // Проверяем, является ли это дублем (2 или 4 одинаковых кубика)
+    // После подтверждения первых 2 ходов из дубля, остаются 2 кубика, которые тоже являются дублем
+    const isDoubles = (diceArray.length === 4 || diceArray.length === 2) && diceArray.every(d => d === diceArray[0])
     
-    // Для дублей ограничиваем количество ходов до 2 перед обязательным подтверждением
+    // Для дублей (и изначально 4 кубика, и после подтверждения осталось 2) ограничиваем количество ходов до 2
     if (isDoubles && pendingMoves.length >= 2) {
       return // Не позволяем добавить больше 2 ходов без подтверждения
     }
@@ -1025,6 +1026,31 @@ export default function Game() {
         title={`Table ${tableNumber} - ${getGameModeName(gameMode)}${stake > 0 ? ` - ${stake} NAR` : ''}`}
         onBack={handleBack}
       />
+      
+      {/* Header с кнопками для ландшафтного режима */}
+      {isLandscape && (
+        <div className="game-landscape-header">
+          {/* Кнопки подтверждения и отмены */}
+          {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
+            <>
+              <button 
+                className="game-action-btn-header game-action-btn-cancel"
+                onClick={handleUndo}
+                title="Отменить ход"
+              >
+                ✕
+              </button>
+              <button 
+                className="game-action-btn-header game-action-btn-confirm"
+                onClick={handleConfirm}
+                title={`Подтвердить (${pendingMoves.length})`}
+              >
+                ✓
+              </button>
+            </>
+          )}
+        </div>
+      )}
       
       <div className="game-main-layout">
         {/* Левая панель (ландшафт) */}
@@ -1288,29 +1314,6 @@ export default function Game() {
               </div>
             </div>
 
-            {/* Подтверждение хода в сайдбаре (только если есть pendingMoves) */}
-            {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
-              <div className="game-confirm-sidebar">
-                <div className="sidebar-timers">
-                  {!isInOvertime ? (
-                    <div className="game-move-timer-sidebar">⏱️ {moveTimer}с</div>
-                  ) : (
-                    <div className="game-overtime-timer-sidebar">⚠️ {overtimeTimer}с</div>
-                  )}
-                </div>
-                <div className="sidebar-buttons">
-                  <Button 
-                    variant="primary" 
-                    onClick={handleConfirm}
-                    className="sidebar-ok-btn"
-                  >
-                    OK ({pendingMoves.length})
-                  </Button>
-                  <Button variant="secondary" onClick={handleSwapDice} className="sidebar-swap-btn">🔄</Button>
-                  <Button variant="secondary" onClick={handleUndo} className="sidebar-undo-btn">↩️</Button>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
