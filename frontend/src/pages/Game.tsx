@@ -500,8 +500,13 @@ export default function Game() {
         ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
         : bearOffRaw
       
+      // Создаем новый массив points для гарантированного обновления React
+      const points = Array.isArray(data.gameState?.points) 
+        ? [...data.gameState.points] 
+        : []
+      
       setGameState({
-        points: data.gameState?.points || [],
+        points,
         bar,
         bearOff,
         currentPlayer: data.currentPlayer || 0,
@@ -576,8 +581,13 @@ export default function Game() {
         ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
         : bearOffRaw
       
+      // Создаем новый массив points для гарантированного обновления React
+      const points = Array.isArray(data.gameState?.points) 
+        ? [...data.gameState.points] 
+        : []
+      
       setGameState({
-        points: data.gameState?.points || [],
+        points,
         bar,
         bearOff,
         currentPlayer: data.currentPlayer || 0,
@@ -936,7 +946,7 @@ export default function Game() {
         setTimeout(() => socket.off('error', onMoveError), 3000)
         
         socket.emit('make_move', { gameId, moves: pendingMoves })
-        setPendingMoves([])
+        // Не очищаем pendingMoves здесь - дождемся события move_made, которое обновит gameState
       } catch (error) {
         alert('Ошибка отправки ходов: ' + (error as Error).message)
       }
