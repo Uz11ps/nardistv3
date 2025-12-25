@@ -832,7 +832,7 @@ export default function Game() {
       }
     }
 
-    setPendingMoves(prev => [...prev, { from, to, die }])
+    setPendingMoves(prev => [...prev, { from, to, die, steps }])
   }
 
   const handleUndo = () => {
