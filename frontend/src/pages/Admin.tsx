@@ -127,7 +127,6 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState<any>(null)
   const [subscriptionPrices, setSubscriptionPrices] = useState({ month_1: 3, month_3: 7, month_12: 22 })
   const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; price: number }>>([])
-  const [systemSettings, setSystemSettings] = useState<any[]>([])
   const [editingSetting, setEditingSetting] = useState<{ key: string; value: any } | null>(null)
   const [districts, setDistricts] = useState<any[]>([])
   const [editingDistrict, setEditingDistrict] = useState<any>(null)
@@ -506,7 +505,7 @@ export default function Admin() {
   const loadSystemSettings = async () => {
     try {
       const response = await apiClient.get('/admin/system-settings')
-      setSystemSettings(response.data || [])
+      setSystemSettings(response.data || {})
     } catch (error) {
       console.error('Failed to load system settings:', error)
     }
