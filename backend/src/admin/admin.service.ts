@@ -2303,7 +2303,21 @@ export class AdminService implements OnModuleInit {
 
       if (data.level !== undefined && data.level !== null) {
         const levelValue = typeof data.level === 'number' ? data.level : parseInt(String(data.level)) || 1;
-        user.level = Math.max(1, Math.min(50, Math.floor(levelValue)));
+        const finalLevel = Math.max(1, Math.min(50, Math.floor(levelValue)));
+        user.level = finalLevel;
+        
+        // При изменении уровня обновляем XP до минимума этого уровня
+        try {
+          const totalXP = this.getTotalXPForLevel(finalLevel);
+          if (isNaN(totalXP) || totalXP < 0 || !isFinite(totalXP)) {
+            this.logger.warn(`Failed to calculate XP for level ${finalLevel}: totalXP=${totalXP}`);
+          } else {
+            user.xp = BigInt(Math.max(0, Math.floor(totalXP)));
+            this.logger.log(`✅ Синхронизирован XP до минимума уровня ${finalLevel}: XP=${totalXP}`);
+          }
+        } catch (error: any) {
+          this.logger.warn(`Failed to sync XP for level ${finalLevel}:`, error.message);
+        }
       }
 
       // Рассчитываем и начисляем skill points за пропущенные уровни

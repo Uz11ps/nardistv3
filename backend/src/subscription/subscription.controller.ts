@@ -80,11 +80,8 @@ export class SubscriptionController {
       method,
     );
 
-    // Получаем кошелек пользователя
-    const wallet = await this.walletService.getWallet(user.id);
-    if (!wallet) {
-      throw new NotFoundException('Кошелек не найден. Пожалуйста, попробуйте еще раз.');
-    }
+    // Получаем или создаем кошелек пользователя
+    const wallet = await this.walletService.getOrCreateWallet(user.id);
 
     return {
       transactionId: transaction.id,
@@ -190,11 +187,8 @@ export class SubscriptionController {
       method,
     );
 
-    // Получаем кошелек пользователя
-    const wallet = await this.walletService.getWallet(user.id);
-    if (!wallet) {
-      throw new NotFoundException('Кошелек не найден. Пожалуйста, попробуйте еще раз.');
-    }
+    // Получаем или создаем кошелек пользователя
+    const wallet = await this.walletService.getOrCreateWallet(user.id);
 
     const settings = await this.adminService.getSystemSettings();
     const tonRate = Number(settings.ton_exchange_rate) || 1000;
