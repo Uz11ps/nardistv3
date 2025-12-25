@@ -5,29 +5,6 @@
   overflow: hidden;
 }
 
-/* Header для ландшафтного режима */
-.game-landscape-header {
-  position: relative;
-  width: 100%;
-  height: 0;
-  z-index: 100;
-}
-
-/* Кнопки для ландшафтного режима - позиционируются в верхней части экрана */
-.landscape-mode .game-action-btn-header {
-  position: fixed;
-  top: 56px; /* Высота page-header (16px padding * 2 + 24px высота контента) */
-  z-index: 101;
-}
-
-.landscape-mode .game-action-btn-header:hover {
-  transform: scale(1.1);
-}
-
-.landscape-mode .game-action-btn-header:active {
-  transform: scale(0.95);
-}
-
 /* Game Players Section (Portrait only) */
 .game-players-section {
   display: flex;
@@ -88,6 +65,51 @@
 .game-side-panel.right {
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   justify-content: flex-start;
+}
+
+/* Кнопки действий в сайдбаре (ландшафт) */
+.game-sidebar-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.game-sidebar-btn {
+  flex: 1;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+  user-select: none;
+}
+
+.game-sidebar-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.game-sidebar-btn:active {
+  transform: scale(0.95);
+}
+
+.game-sidebar-btn-cancel {
+  background: linear-gradient(180deg, #f44336 0%, #c62828 100%);
+  color: white;
+}
+
+.game-sidebar-btn-confirm {
+  background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
+  color: white;
 }
 
 /* Сайдбар игроки */

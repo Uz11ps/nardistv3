@@ -1027,31 +1027,6 @@ export default function Game() {
         onBack={handleBack}
       />
       
-      {/* Header с кнопками для ландшафтного режима */}
-      {isLandscape && (
-        <div className="game-landscape-header">
-          {/* Кнопки подтверждения и отмены */}
-          {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
-            <>
-              <button 
-                className="game-action-btn-header game-action-btn-cancel"
-                onClick={handleUndo}
-                title="Отменить ход"
-              >
-                ✕
-              </button>
-              <button 
-                className="game-action-btn-header game-action-btn-confirm"
-                onClick={handleConfirm}
-                title={`Подтвердить (${pendingMoves.length})`}
-              >
-                ✓
-              </button>
-            </>
-          )}
-        </div>
-      )}
-      
       <div className="game-main-layout">
         {/* Левая панель (ландшафт) */}
         {isLandscape && (
@@ -1271,6 +1246,26 @@ export default function Game() {
         {/* Правая панель (ландшафт) */}
         {isLandscape && (
           <div className="game-side-panel right">
+            {/* Кнопки подтверждения и отмены в сайдбаре */}
+            {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
+              <div className="game-sidebar-actions">
+                <button 
+                  className="game-sidebar-btn game-sidebar-btn-cancel"
+                  onClick={handleUndo}
+                  title="Отменить ход"
+                >
+                  ✕
+                </button>
+                <button 
+                  className="game-sidebar-btn game-sidebar-btn-confirm"
+                  onClick={handleConfirm}
+                  title={`Подтвердить (${pendingMoves.length})`}
+                >
+                  ✓
+                </button>
+              </div>
+            )}
+            
             <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
               <div className="game-player-name">
                 {myPlayer?.nickname || myPlayer?.username || 'Вы'}
