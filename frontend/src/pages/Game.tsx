@@ -792,6 +792,14 @@ export default function Game() {
       ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2])
       : []
     
+    // Проверяем, является ли это дублем (4 одинаковых кубика)
+    const isDoubles = diceArray.length === 4 && diceArray.every(d => d === diceArray[0])
+    
+    // Для дублей ограничиваем количество ходов до 2 перед обязательным подтверждением
+    if (isDoubles && pendingMoves.length >= 2) {
+      return // Не позволяем добавить больше 2 ходов без подтверждения
+    }
+    
     // Если есть steps, значит это комбинированный ход
     if (steps && steps.length > 0) {
       // Проверяем доступность всех кубиков в комбинации

@@ -634,6 +634,7 @@ export class GamesService {
       
       if (hasValidMoves) {
         // Есть еще ходы - оставляем того же игрока
+        // После подтверждения части дубля (если использовано 2 из 4), оставшиеся 2 кубика обрабатываются как обычный ход
         currentState.dice = remainingDice;
         this.logger.log(`🟡 Keeping same player: valid moves remain with dice [${remainingDice.join(', ')}]`);
       } else {
