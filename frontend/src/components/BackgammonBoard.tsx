@@ -1152,13 +1152,6 @@ export default function BackgammonBoard({
     if (selectedPoint === null) {
       // Если ничего не выбрано, выбираем текущую точку (если из неё есть ходы)
       if (pointMoves.length > 0) {
-        // АВТОХОД: Если есть только ОДИН вариант хода из этой точки - делаем его сразу
-        if (pointMoves.length === 1) {
-          const move = pointMoves[0]
-          startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
-          return
-        }
-
         setSelectedPoint(pointIndex)
         const targets = new Set<number>()
         let bearOffDie: number | null = null
@@ -1185,23 +1178,20 @@ export default function BackgammonBoard({
       } else {
         // Если ход невозможен, но кликнули на другую свою шашку - переключаем выбор на неё
         if (pointMoves.length > 0) {
-          // АВТОХОД для новой точки
-          if (pointMoves.length === 1) {
-            const move = pointMoves[0]
-            startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
-            return
-          }
-
           setSelectedPoint(pointIndex)
           const targets = new Set<number>()
           let bearOffDie: number | null = null
+          let bearOffSteps: any[] | undefined = undefined
           pointMoves.forEach(m => {
             targets.add(m.to)
-            if (m.to === -1) bearOffDie = m.die
+            if (m.to === -1) {
+              bearOffDie = m.die
+              bearOffSteps = (m as any).steps
+            }
           })
           setValidTargetPoints(targets)
           if (bearOffDie !== null) {
-            setShowBearOffButton({ pointIndex, die: bearOffDie })
+            setShowBearOffButton({ pointIndex, die: bearOffDie, steps: bearOffSteps })
           } else {
             setShowBearOffButton(null)
           }

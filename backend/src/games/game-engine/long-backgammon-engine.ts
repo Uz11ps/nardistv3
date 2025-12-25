@@ -529,33 +529,6 @@ export class LongBackgammonEngine {
             newDice.splice(i, 1);
             generateMoves(newState, newDice, [...currentMoves, { from, to, die }]);
           }
-          
-          // Для длинных нард: также пробуем комбинированные ходы (сумма двух кубиков)
-          // Это позволяет ходить через доски (например, 1+1=2 через доску)
-          if (remainingDice.length >= 2 && !isRemainingDoubles) {
-            for (let j = i + 1; j < remainingDice.length; j++) {
-              const die2 = remainingDice[j];
-              const sumDie = die + die2;
-              
-              // Пробуем ход с суммой кубиков
-              const toPointSum = this.calculateTargetPoint(player, from, sumDie);
-              const distanceTraveledSum = player === 0 
-                ? (from - this.WHITE_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE
-                : (from - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
-              
-              const isBearingOffMoveSum = (distanceTraveledSum + sumDie) >= this.BOARD_SIZE;
-              const toSum = isBearingOffMoveSum ? -1 : toPointSum;
-              
-              if (this.validateMove(currentState, from, toSum, sumDie, isFirstMoveOfGame)) {
-                foundAnyMove = true;
-                const newStateSum = this.applyMove(currentState, from, toSum, sumDie);
-                const newDiceSum = [...remainingDice];
-                newDiceSum.splice(j, 1);
-                newDiceSum.splice(i, 1);
-                generateMoves(newStateSum, newDiceSum, [...currentMoves, { from, to: toSum, die: sumDie }]);
-              }
-            }
-          }
         }
       }
       
