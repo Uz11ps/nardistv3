@@ -79,6 +79,26 @@ export class ProgressionBranchesService implements OnModuleInit {
     caps: {
       gearXpMultCap: 1.50,
     },
+    levelRewards: {} as Record<number, number>,
+    xp: {
+      baseXp: {
+        pvpRanked: 2800,
+        pvpBatalia: 3100,
+        tournament: 4500,
+        friendly: 1200,
+        ai: 250,
+      },
+      multipliers: {
+        win: 1.00,
+        loss: 0.70,
+        marsWin: 1.50,
+        repeatOpponent: [1.00, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50],
+      },
+      caps: {
+        maxMatchXpMult: 2.50,
+      },
+      thresholds: {} as Record<number, number>,
+    },
   };
 
   async onModuleInit() {

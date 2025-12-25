@@ -209,19 +209,26 @@ export class ProgressService {
    * Получить награду NAR за уровень
    */
   private getLevelRewardNAR(level: number): number {
-    const config = this.branchesService.getConfig().xp;
-    // Используем порог XP как базу для награды или отдельную таблицу
-    // В спецификации 3.2 указано: Таблица награды за уровень L (конфиг)
-    // Пока берем из таблицы порогов, если нет отдельной
-    const rewards = config.thresholds;
+    const config = this.branchesService.getConfig();
+    
+    // Используем таблицу наград за уровень, если она есть
+    if (config.levelRewards && config.levelRewards[level]) {
+      return config.levelRewards[level];
+    }
     
     // Но на уровне 5 должна быть спец награда 10000 для лицензии
     if (level === 5) {
-      const licenseConfig = this.branchesService.getConfig().license;
+      const licenseConfig = config.license;
       return licenseConfig.costNar;
     }
     
-    return rewards[level] || 1000;
+    // Фолбэк на порог XP или дефолт
+    const xpThresholds = config.xp?.thresholds;
+    if (xpThresholds && xpThresholds[level]) {
+      return Math.floor(xpThresholds[level] / 10); // Условная награда от порога XP
+    }
+    
+    return 1000;
   }
 
   /**

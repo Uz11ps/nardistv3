@@ -44,6 +44,7 @@ import { UserWallet } from '../payment/user-wallet.entity';
 import { PaymentTransaction, PaymentStatus } from '../payment/payment-transaction.entity';
 import { HistoryService } from '../history/history.service';
 import { XpCalculatorService } from '../progress/xp-calculator.service';
+import { ProgressionBranchesService } from '../progress/progression-branches.service';
 import { ProgressionConfig } from '../progress/progression-config.entity';
 
 @Injectable()
