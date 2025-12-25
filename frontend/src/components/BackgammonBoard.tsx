@@ -411,12 +411,15 @@ export default function BackgammonBoard({
     let y = isTopRow ? 0 : height
     
     // Для player2 инвертируем координаты точек, так как доска инвертирована на 180 градусов
+    let finalIsTopRow = isTopRow
     if (!isPlayer1) {
       x = width - x
       y = height - y
+      // Инвертируем isTopRow для player2, так как координаты инвертированы
+      finalIsTopRow = !isTopRow
     }
     
-    return { x, y, isTopRow, pointWidth, pointHeight, pointNumber }
+    return { x, y, isTopRow: finalIsTopRow, pointWidth, pointHeight, pointNumber }
   }, [isPlayer1])
   
   // Функция для определения точки по координатам
@@ -648,9 +651,9 @@ export default function BackgammonBoard({
         const triangleWidth = pW * 0.95
         const triangleHeight = pH * 0.95
         
-        // Используем визуальный индекс для определения цвета (как в getPointCoordinates)
-        const visualPointIndex = isPlayer1 ? pointIndex : ((pointIndex + 12) % 24)
-        const pointInRow = isTopRow ? visualPointIndex : visualPointIndex - 12
+        // Используем визуальный индекс для определения цвета
+        // После инверсии координат для player2, isTopRow уже инвертирован, используем его напрямую
+        const pointInRow = isTopRow ? pointIndex : pointIndex - 12
         const isLight = pointInRow % 2 === 0
         const triangleColor = isLight ? '#D4A574' : '#8B4513'
         
