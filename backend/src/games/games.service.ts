@@ -375,18 +375,21 @@ export class GamesService {
     }
   }
 
-  async rollDice(gameId: string, playerId: string | null): Promise<number[]> {
+  async rollDice(gameId: string, playerId: string | null, skipPlayerCheck: boolean = false): Promise<number[]> {
     const game = await this.findOne(gameId);
     
     if (game.status !== GameStatus.IN_PROGRESS && game.status !== GameStatus.WAITING) {
       throw new BadRequestException('Игра не активна');
     }
 
-    const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
-    // For bot games, player2Id is null, so we skip the check if it's a bot turn
-    const isBotTurn = game.type === GameType.VS_BOT && game.player2Id === null && game.currentPlayer === 1;
-    if (!isBotTurn && currentPlayerId !== playerId) {
-      throw new BadRequestException('Не ваш ход');
+    // Пропускаем проверку игрока только при начальном броске (skipPlayerCheck = true)
+    if (!skipPlayerCheck) {
+      const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
+      // For bot games, player2Id is null, so we skip the check if it's a bot turn
+      const isBotTurn = game.type === GameType.VS_BOT && game.player2Id === null && game.currentPlayer === 1;
+      if (!isBotTurn && currentPlayerId !== playerId) {
+        throw new BadRequestException('Не ваш ход');
+      }
     }
 
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, MoreThan } from 'typeorm';
+import { Repository, LessThan, MoreThan, In } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { AcademyService } from '../academy/academy.service';
@@ -332,54 +332,106 @@ export class AdminService implements OnModuleInit {
       await queryRunner.startTransaction();
 
       try {
-        // Отключаем проверку foreign keys для этой транзакции
-        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0');
+        // Используем queryRunner.manager для всех операций в рамках одной транзакции (PostgreSQL)
         
-        // Удаляем все связанные данные через raw queries (независимо от foreign keys)
-        const tablesToClean = [
-          'subscriptions',
-          'ratings',
-          'notifications',
-          'user_materials',
-          'user_skins',
-          'clan_members',
-          'quest_progress',
-          'buildings',
-          'user_task_progress',
-          'user_training_progress',
-          'user_achievements',
-          'article_slots',
-          'enhancements',
-          'referral_earnings',
-          'course_task_progress',
-        ];
+        // Удаляем все связанные данные через queryRunner.manager
+        try {
+          await queryRunner.manager.delete(Subscription, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete subscriptions for user ${userId}:`, error.message);
+        }
 
-        for (const table of tablesToClean) {
-          try {
-            await queryRunner.query(`DELETE FROM ${table} WHERE userId = ?`, [userId]);
-          } catch (error) {
-            this.logger.warn(`Failed to delete from ${table} for user ${userId}:`, error);
+        try {
+          await queryRunner.manager.delete(Rating, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete ratings for user ${userId}:`, error.message);
+        }
+
+        try {
+          await queryRunner.manager.delete(Notification, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete notifications for user ${userId}:`, error.message);
+        }
+
+        try {
+          await queryRunner.manager.delete(UserMaterial, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete user_materials for user ${userId}:`, error.message);
+        }
+
+        try {
+          await queryRunner.manager.delete(UserSkin, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete user_skins for user ${userId}:`, error.message);
+        }
+
+        try {
+          await queryRunner.manager.delete(ClanMember, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete clan_members for user ${userId}:`, error.message);
+        }
+
+        try {
+          await queryRunner.manager.delete(QuestProgress, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete quest_progress for user ${userId}:`, error.message);
+        }
+
+        try {
+          await queryRunner.manager.delete(Building, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete buildings for user ${userId}:`, error.message);
+        }
+
+        try {
+          await queryRunner.manager.delete(CourseTaskProgress, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete course_task_progress for user ${userId}:`, error.message);
+        }
+
+        try {
+          await queryRunner.manager.delete(PaymentTransaction, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete payment_transactions for user ${userId}:`, error.message);
+        }
+
+        try {
+          await queryRunner.manager.delete(UserWallet, { userId });
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete wallets for user ${userId}:`, error.message);
+        }
+
+        // Удаляем ходы игр пользователя (через raw query, так как нужно найти игры сначала)
+        try {
+          const userGames = await queryRunner.manager.find(Game, {
+            where: [
+              { player1Id: userId },
+              { player2Id: userId }
+            ],
+            select: ['id']
+          });
+          const gameIds = userGames.map(g => g.id);
+          if (gameIds.length > 0) {
+            await queryRunner.manager.delete(GameMove, { gameId: In(gameIds) });
           }
+        } catch (error: any) {
+          this.logger.warn(`Failed to delete game moves for user ${userId}:`, error.message);
         }
 
-        // Обнуляем ссылки на пользователя в играх и турнирах
+        // Обнуляем ссылки на пользователя в играх (через query builder)
         try {
-          await queryRunner.query(`UPDATE games SET player1Id = NULL, player2Id = NULL, winnerId = NULL WHERE player1Id = ? OR player2Id = ? OR winnerId = ?`, [userId, userId, userId]);
-        } catch (error) {
-          this.logger.warn(`Failed to update games for user ${userId}:`, error);
-        }
-
-        try {
-          await queryRunner.query(`UPDATE tournament_matches SET player1Id = NULL, player2Id = NULL, winnerId = NULL WHERE player1Id = ? OR player2Id = ? OR winnerId = ?`, [userId, userId, userId]);
-        } catch (error) {
-          this.logger.warn(`Failed to update tournament_matches for user ${userId}:`, error);
+          await queryRunner.manager
+            .createQueryBuilder()
+            .update(Game)
+            .set({ player1Id: null, player2Id: null, winnerId: null })
+            .where('player1Id = :userId OR player2Id = :userId OR winnerId = :userId', { userId })
+            .execute();
+        } catch (error: any) {
+          this.logger.warn(`Failed to update games for user ${userId}:`, error.message);
         }
 
         // Удаляем самого пользователя
-        await queryRunner.query(`DELETE FROM users WHERE id = ?`, [userId]);
-
-        // Включаем обратно проверку foreign keys
-        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1');
+        await queryRunner.manager.delete(User, { id: userId });
         
         await queryRunner.commitTransaction();
         
@@ -580,25 +632,63 @@ export class AdminService implements OnModuleInit {
         player2Id = player2.id;
       }
 
+      // Вычисляем moveTimeLimit из moveTimeout (если указан в секундах, конвертируем в миллисекунды)
+      const moveTimeLimit = data.moveTimeout ? data.moveTimeout * 1000 : 60000;
+
       // Создаем игру через GamesService
       const game = await this.gamesService.create(
         player1Id,
         player2Id,
         data.mode as GameMode,
         data.type as GameType,
+        data.stake || 0,
+        moveTimeLimit,
       );
 
-      // Если указана ставка, обновляем игру
-      if (data.stake && data.stake > 0) {
+      // Если указана ставка, обновляем игру (если не передана в create)
+      if (data.stake && data.stake > 0 && game.stake !== data.stake) {
         await this.gamesRepository.update(game.id, { stake: data.stake });
         game.stake = data.stake;
       }
 
-      // Если указана длительность хода, сохраняем в настройках игры (если есть поле moveTimeout)
-      if (data.moveTimeout && data.moveTimeout > 0) {
-        // Сохраняем в gameState или создаем отдельное поле если нужно
-        // Пока просто логируем
-        this.logger.log(`Move timeout set to ${data.moveTimeout} seconds for game ${game.id}`);
+      // Если оба игрока есть, автоматически делаем начальный бросок кубиков для определения первого ходящего
+      if (player2Id && game.status === GameStatus.IN_PROGRESS) {
+        try {
+          // Используем ту же формулу что и в rollDice для определения индекса начального броска
+          // Формула: (Смещение игрока - 1) * 2 + Смещение соперника
+          const p1Offset = game.p1Offset || 1;
+          const p2Offset = game.p2Offset || 1;
+          
+          // Для player1: (p1Offset - 1) * 2 + p2Offset
+          const p1StartIdx = ((p1Offset - 1) * 2 + p2Offset) % (game.p1Rolls?.length || 1000);
+          // Для player2: (p2Offset - 1) * 2 + p1Offset
+          const p2StartIdx = ((p2Offset - 1) * 2 + p1Offset) % (game.p2Rolls?.length || 1000);
+          
+          // Берем начальный бросок каждого игрока для определения первого ходящего
+          const p1FirstRoll = game.p1Rolls && game.p1Rolls.length > p1StartIdx ? game.p1Rolls[p1StartIdx] : [Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1];
+          const p2FirstRoll = game.p2Rolls && game.p2Rolls.length > p2StartIdx ? game.p2Rolls[p2StartIdx] : [Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1];
+          
+          // Определяем кто ходит первым по сумме кубиков
+          const sum1 = p1FirstRoll[0] + p1FirstRoll[1];
+          const sum2 = p2FirstRoll[0] + p2FirstRoll[1];
+          
+          // Если суммы равны, выбираем player1 (можно доработать чтобы бросать еще раз)
+          const firstPlayerId = sum1 >= sum2 ? player1Id : player2Id;
+          const firstPlayer = firstPlayerId === player1Id ? 0 : 1;
+          
+          // Устанавливаем первого ходящего
+          await this.gamesRepository.update(game.id, { currentPlayer: firstPlayer });
+          
+          // Теперь делаем рабочий бросок для первого ходящего (это его первый ход)
+          // rollDice автоматически использует правильный индекс на основе playerMovesCount (который будет 0 для первого хода)
+          // Это означает что он возьмет тот же индекс что и для начального броска, но это ОК т.к. начальный бросок был только для определения первого ходящего и не сохранялся
+          await this.gamesService.rollDice(game.id, firstPlayerId, false);
+          
+          this.logger.log(`Game ${game.id} started with initial dice roll. P1: [${p1FirstRoll.join(', ')}] (sum=${sum1}, idx=${p1StartIdx}), P2: [${p2FirstRoll.join(', ')}] (sum=${sum2}, idx=${p2StartIdx}). First player: ${firstPlayerId} (player ${firstPlayer})`);
+        } catch (error) {
+          this.logger.error(`Error during initial dice roll for game ${game.id}:`, error);
+          // Не падаем, игра уже создана
+        }
       }
 
       // Если указан tournamentId, связываем игру с турниром
@@ -607,7 +697,8 @@ export class AdminService implements OnModuleInit {
         this.logger.log(`Game ${game.id} linked to tournament ${data.tournamentId}`);
       }
 
-      return game;
+      // Перезагружаем игру чтобы получить актуальное состояние
+      return await this.gamesService.findOne(game.id);
     } catch (error) {
       this.logger.error(`Error creating game:`, error);
       if (error instanceof NotFoundException) {
@@ -2053,26 +2144,43 @@ export class AdminService implements OnModuleInit {
     referralBaseBonus?: number;
     totalReferralEarnings?: number;
   }) {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден');
-    }
-
-    if (data.referralCode !== undefined) {
-      // Проверяем уникальность referralCode
-      const existing = await this.usersRepository.findOne({ where: { referralCode: data.referralCode } });
-      if (existing && existing.id !== userId) {
-        throw new BadRequestException('Пользователь с таким referralCode уже существует');
+    try {
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
       }
-      user.referralCode = data.referralCode;
-    }
-    if (data.referredBy !== undefined) user.referredBy = data.referredBy;
-    if (data.referralPercent !== undefined) user.referralPercent = Math.max(0, Math.min(100, Math.floor(data.referralPercent)));
-    if (data.referralBaseBonus !== undefined) user.referralBaseBonus = BigInt(Math.max(0, Math.floor(data.referralBaseBonus)));
-    if (data.totalReferralEarnings !== undefined) user.totalReferralEarnings = BigInt(Math.max(0, Math.floor(data.totalReferralEarnings)));
 
-    await this.usersRepository.save(user);
-    return user;
+      if (data.referralCode !== undefined && data.referralCode !== null) {
+        // Проверяем уникальность referralCode
+        const existing = await this.usersRepository.findOne({ where: { referralCode: data.referralCode } });
+        if (existing && existing.id !== userId) {
+          throw new BadRequestException('Пользователь с таким referralCode уже существует');
+        }
+        user.referralCode = data.referralCode;
+      }
+      if (data.referredBy !== undefined) user.referredBy = data.referredBy;
+      if (data.referralPercent !== undefined && data.referralPercent !== null) {
+        const value = typeof data.referralPercent === 'number' ? data.referralPercent : parseInt(String(data.referralPercent)) || 5;
+        user.referralPercent = Math.max(0, Math.min(100, Math.floor(value)));
+      }
+      if (data.referralBaseBonus !== undefined && data.referralBaseBonus !== null) {
+        const value = typeof data.referralBaseBonus === 'number' ? data.referralBaseBonus : parseInt(String(data.referralBaseBonus)) || 100;
+        user.referralBaseBonus = BigInt(Math.max(0, Math.floor(value)));
+      }
+      if (data.totalReferralEarnings !== undefined && data.totalReferralEarnings !== null) {
+        const value = typeof data.totalReferralEarnings === 'number' ? data.totalReferralEarnings : parseInt(String(data.totalReferralEarnings)) || 0;
+        user.totalReferralEarnings = BigInt(Math.max(0, Math.floor(value)));
+      }
+
+      await this.usersRepository.save(user);
+      return user;
+    } catch (error: any) {
+      this.logger.error(`Error updating user referral for ${userId}:`, error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при обновлении реферальных данных пользователя: ${error.message}`);
+    }
   }
 
   async updateUserEconomy(userId: string, data: {
@@ -2080,55 +2188,105 @@ export class AdminService implements OnModuleInit {
     xp?: number;
     level?: number;
   }) {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден');
-    }
+    try {
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
+      }
 
-    if (data.narCoin !== undefined) user.narCoin = BigInt(Math.max(0, Math.floor(data.narCoin)));
-    if (data.xp !== undefined) {
-      user.xp = BigInt(Math.max(0, Math.floor(data.xp)));
-      // Синхронизируем уровень на основе нового XP
-      const totalXP = Number(user.xp);
-      const correctLevel = this.getLevelFromTotalXP(totalXP);
-      user.level = Math.max(1, correctLevel);
-    }
-    if (data.level !== undefined) user.level = Math.max(1, Math.floor(data.level));
+      if (data.narCoin !== undefined && data.narCoin !== null) {
+        const narCoinValue = typeof data.narCoin === 'number' ? data.narCoin : parseInt(String(data.narCoin)) || 0;
+        user.narCoin = BigInt(Math.max(0, Math.floor(narCoinValue)));
+      }
 
-    await this.usersRepository.save(user);
-    return user;
+      if (data.xp !== undefined && data.xp !== null) {
+        const xpValue = typeof data.xp === 'number' ? data.xp : parseInt(String(data.xp)) || 0;
+        user.xp = BigInt(Math.max(0, Math.floor(xpValue)));
+        // Синхронизируем уровень на основе нового XP
+        try {
+          const totalXP = Number(user.xp);
+          const correctLevel = this.getLevelFromTotalXP(totalXP);
+          user.level = Math.max(1, correctLevel);
+        } catch (error: any) {
+          this.logger.warn(`Failed to calculate level from XP ${user.xp}:`, error.message);
+          // Если не удалось рассчитать уровень, оставляем текущий
+        }
+      }
+
+      if (data.level !== undefined && data.level !== null) {
+        const levelValue = typeof data.level === 'number' ? data.level : parseInt(String(data.level)) || 1;
+        user.level = Math.max(1, Math.min(50, Math.floor(levelValue)));
+      }
+
+      await this.usersRepository.save(user);
+      return user;
+    } catch (error: any) {
+      this.logger.error(`Error updating user economy for ${userId}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при обновлении экономики пользователя: ${error.message}`);
+    }
   }
 
   async updateUserEnergy(userId: string, data: {
     energy?: number;
     maxEnergy?: number;
   }) {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден');
+    try {
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
+      }
+
+      if (data.energy !== undefined && data.energy !== null) {
+        const energyValue = typeof data.energy === 'number' ? data.energy : parseInt(String(data.energy)) || 0;
+        user.energy = Math.max(0, Math.floor(energyValue));
+      }
+      if (data.maxEnergy !== undefined && data.maxEnergy !== null) {
+        const maxEnergyValue = typeof data.maxEnergy === 'number' ? data.maxEnergy : parseInt(String(data.maxEnergy)) || 100;
+        user.maxEnergy = Math.max(1, Math.floor(maxEnergyValue));
+      }
+
+      await this.usersRepository.save(user);
+      return user;
+    } catch (error: any) {
+      this.logger.error(`Error updating user energy for ${userId}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при обновлении энергии пользователя: ${error.message}`);
     }
-
-    if (data.energy !== undefined) user.energy = Math.max(0, Math.floor(data.energy));
-    if (data.maxEnergy !== undefined) user.maxEnergy = Math.max(1, Math.floor(data.maxEnergy));
-
-    await this.usersRepository.save(user);
-    return user;
   }
 
   async updateUserLives(userId: string, data: {
     lives?: number;
     maxLives?: number;
   }) {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден');
+    try {
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
+      }
+
+      if (data.lives !== undefined && data.lives !== null) {
+        const livesValue = typeof data.lives === 'number' ? data.lives : parseInt(String(data.lives)) || 0;
+        user.lives = Math.max(0, Math.floor(livesValue));
+      }
+      if (data.maxLives !== undefined && data.maxLives !== null) {
+        const maxLivesValue = typeof data.maxLives === 'number' ? data.maxLives : parseInt(String(data.maxLives)) || 100;
+        user.maxLives = Math.max(1, Math.floor(maxLivesValue));
+      }
+
+      await this.usersRepository.save(user);
+      return user;
+    } catch (error: any) {
+      this.logger.error(`Error updating user lives for ${userId}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при обновлении жизней пользователя: ${error.message}`);
     }
-
-    if (data.lives !== undefined) user.lives = Math.max(0, Math.floor(data.lives));
-    if (data.maxLives !== undefined) user.maxLives = Math.max(1, Math.floor(data.maxLives));
-
-    await this.usersRepository.save(user);
-    return user;
   }
 
   async updateUserSkillPoints(userId: string, data: {
@@ -2139,20 +2297,46 @@ export class AdminService implements OnModuleInit {
     livesSp?: number;
     powerSp?: number;
   }) {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден');
+    try {
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
+      }
+
+      if (data.skillPoints !== undefined && data.skillPoints !== null) {
+        const value = typeof data.skillPoints === 'number' ? data.skillPoints : parseInt(String(data.skillPoints)) || 0;
+        user.skillPoints = Math.max(0, Math.floor(value));
+      }
+      if (data.freeSkillPoints !== undefined && data.freeSkillPoints !== null) {
+        const value = typeof data.freeSkillPoints === 'number' ? data.freeSkillPoints : parseInt(String(data.freeSkillPoints)) || 0;
+        user.freeSkillPoints = Math.max(0, Math.floor(value));
+      }
+      if (data.economySp !== undefined && data.economySp !== null) {
+        const value = typeof data.economySp === 'number' ? data.economySp : parseInt(String(data.economySp)) || 0;
+        user.economySp = Math.max(0, Math.floor(value));
+      }
+      if (data.energySp !== undefined && data.energySp !== null) {
+        const value = typeof data.energySp === 'number' ? data.energySp : parseInt(String(data.energySp)) || 0;
+        user.energySp = Math.max(0, Math.floor(value));
+      }
+      if (data.livesSp !== undefined && data.livesSp !== null) {
+        const value = typeof data.livesSp === 'number' ? data.livesSp : parseInt(String(data.livesSp)) || 0;
+        user.livesSp = Math.max(0, Math.floor(value));
+      }
+      if (data.powerSp !== undefined && data.powerSp !== null) {
+        const value = typeof data.powerSp === 'number' ? data.powerSp : parseInt(String(data.powerSp)) || 0;
+        user.powerSp = Math.max(0, Math.floor(value));
+      }
+
+      await this.usersRepository.save(user);
+      return user;
+    } catch (error: any) {
+      this.logger.error(`Error updating user skill points for ${userId}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Ошибка при обновлении skill points пользователя: ${error.message}`);
     }
-
-    if (data.skillPoints !== undefined) user.skillPoints = Math.max(0, Math.floor(data.skillPoints));
-    if (data.freeSkillPoints !== undefined) user.freeSkillPoints = Math.max(0, Math.floor(data.freeSkillPoints));
-    if (data.economySp !== undefined) user.economySp = Math.max(0, Math.floor(data.economySp));
-    if (data.energySp !== undefined) user.energySp = Math.max(0, Math.floor(data.energySp));
-    if (data.livesSp !== undefined) user.livesSp = Math.max(0, Math.floor(data.livesSp));
-    if (data.powerSp !== undefined) user.powerSp = Math.max(0, Math.floor(data.powerSp));
-
-    await this.usersRepository.save(user);
-    return user;
   }
 
   async updateUserEnhancement(userId: string, data: {

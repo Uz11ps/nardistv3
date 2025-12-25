@@ -96,10 +96,16 @@ export default function Admin() {
     try {
       const response = await apiClient.get(`/admin/games/${selectedGame.id}/replay`, { params: { step } })
       if (response.data) {
-        setGameReplay(response.data)
+        // Обновляем gameReplay с новым состоянием
+        setGameReplay((prev: any) => ({
+          ...prev,
+          ...response.data,
+          currentGameState: response.data.currentGameState || response.data.game?.gameState,
+        }))
       }
     } catch (error) {
       console.error('Failed to load replay step:', error)
+      alert('Ошибка загрузки шага реплея: ' + (error as any)?.response?.data?.message || (error as Error)?.message)
     }
   }
   const [quests, setQuests] = useState<any[]>([])
@@ -925,16 +931,16 @@ export default function Admin() {
                               Забанить
                             </button>
                           )}
-                          <button
-                            onClick={() => {
-                              setEditingUser(user)
-                            }}
-                            style={{ padding: '4px 8px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-                          >
-                            Редактировать
-                          </button>
                           {!user.isAdmin && (
                             <>
+                              <button
+                                onClick={() => {
+                                  setEditingUser(user)
+                                }}
+                                style={{ padding: '4px 8px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                              >
+                                Редактировать
+                              </button>
                               <button
                                 className="btn btn-danger btn-sm"
                                 onClick={() => {
@@ -950,15 +956,17 @@ export default function Admin() {
                               >
                                 Удалить
                               </button>
-                              <button
-                          className="btn btn-info btn-sm"
-                          onClick={() => {
-                                  setEditingUser({ ...user })
-                                }}
-                              >
-                                Полное редактирование
-                              </button>
                             </>
+                          )}
+                          {user.isAdmin && (
+                            <button
+                              onClick={() => {
+                                setEditingUser(user)
+                              }}
+                              style={{ padding: '4px 8px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                            >
+                              Редактировать
+                            </button>
                           )}
                         </div>
                       </td>
@@ -1302,15 +1310,20 @@ export default function Admin() {
                       <td>{new Date(game.createdAt).toLocaleString()}</td>
                       <td>
                         <div className="btn-group">
-                          <button onClick={async () => {
+                          <button                           onClick={async () => {
                             try {
                               // Загружаем полные данные реплея через админский эндпоинт
                               const replayResponse = await apiClient.get(`/admin/games/${game.id}/replay`, { params: { step: 0 } })
+                              if (!replayResponse.data) {
+                                alert('Реплей недоступен для этой игры')
+                                return
+                              }
                               setSelectedGame(game)
                               setGameReplay(replayResponse.data)
                               setReplayStep(0)
                             } catch (error: any) {
-                              alert('Ошибка загрузки реплея: ' + (error.response?.data?.message || error.message))
+                              console.error('Replay error:', error)
+                              alert('Ошибка загрузки реплея: ' + (error.response?.data?.message || error.message || 'Неизвестная ошибка'))
                             }
                           }}>Просмотр</button>
                         </div>
@@ -4093,505 +4106,6 @@ export default function Admin() {
               </button>
             </div>
 
-            {/* Управление строениями (только для строений без района) */}
-            <div style={{ marginBottom: '32px' }}>
-              <h3>Управление строениями (без района)</h3>
-              <p style={{ color: '#999', fontSize: '14px', marginBottom: '16px' }}>
-                Строения создаются ВНУТРИ районов. Здесь только строения, не привязанные к району.
-              </p>
-              
-              {/* Форма создания нового строения (только если не в районе) */}
-              <div style={{
-                background: '#2a2a2a',
-                padding: '16px',
-                borderRadius: '8px',
-                marginBottom: '16px',
-              }}>
-                <h4 style={{ marginTop: 0, color: '#fff' }}>Создать строение без района</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Тип строения</label>
-                    <input
-                      type="text"
-                      value={newBuilding.type}
-                      onChange={(e) => setNewBuilding({ ...newBuilding, type: e.target.value })}
-                      placeholder="shop, factory, etc."
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название</label>
-                    <input
-                      type="text"
-                      value={newBuilding.name}
-                      onChange={(e) => setNewBuilding({ ...newBuilding, name: e.target.value })}
-                      placeholder="Название строения"
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Иконка (файл)</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      id="building-icon-file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          const reader = new FileReader()
-                          reader.onload = (event) => {
-                            const preview = document.getElementById('building-icon-preview')
-                            if (preview) {
-                              preview.innerHTML = `<img src="${event.target?.result}" alt="Иконка" style="max-width: 64px; max-height: 64px; border-radius: 4px; margin-top: 4px;" />`
-                            }
-                          }
-                          reader.readAsDataURL(file)
-                        }
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                    <div id="building-icon-preview" style={{ marginTop: '4px' }}></div>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Изображение (файл)</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      id="building-image-file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          const reader = new FileReader()
-                          reader.onload = (event) => {
-                            const preview = document.getElementById('building-image-preview')
-                            if (preview) {
-                              preview.innerHTML = `<img src="${event.target?.result}" alt="Изображение" style="max-width: 200px; max-height: 200px; border-radius: 4px; margin-top: 4px;" />`
-                            }
-                          }
-                          reader.readAsDataURL(file)
-                        }
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                    <div id="building-image-preview" style={{ marginTop: '4px' }}></div>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовая цена (NAR)</label>
-                    <input
-                      type="number"
-                      value={newBuilding.basePrice}
-                      onChange={(e) => setNewBuilding({ ...newBuilding, basePrice: parseInt(e.target.value) || 0 })}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Доход в час (NAR)</label>
-                    <input
-                      type="number"
-                      value={newBuilding.baseIncomePerHour}
-                      onChange={(e) => setNewBuilding({ ...newBuilding, baseIncomePerHour: parseInt(e.target.value) || 0 })}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Макс. накопление (NAR)</label>
-                    <input
-                      type="number"
-                      value={newBuilding.maxAccumulation}
-                      onChange={(e) => setNewBuilding({ ...newBuilding, maxAccumulation: parseInt(e.target.value) || 0 })}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Макс. уровень</label>
-                    <input
-                      type="number"
-                      value={newBuilding.maxLevel}
-                      onChange={(e) => setNewBuilding({ ...newBuilding, maxLevel: parseInt(e.target.value) || 10 })}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={handleCreateBuilding}
-                  style={{
-                    marginTop: '12px',
-                    padding: '8px 16px',
-                    background: '#4a90e2',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Создать строение
-                </button>
-              </div>
-
-              {/* Список строений (только без района) */}
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {buildings.filter(b => !b.districtId).map((building) => (
-                  <div
-                    key={building.id}
-                    style={{
-                      background: '#2a2a2a',
-                      padding: '16px',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
-                        <h4 style={{ margin: 0, color: '#fff' }}>{building.name}</h4>
-                        <span style={{
-                          padding: '2px 8px',
-                          background: '#4a90e2',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          color: '#fff',
-                        }}>
-                          {building.type}
-                        </span>
-                      </div>
-                      <div style={{ color: '#999', fontSize: '14px' }}>
-                        <div>Цена: {Number(building.basePrice).toLocaleString()} NAR</div>
-                        <div>Доход: {Number(building.baseIncomePerHour).toLocaleString()} NAR/час</div>
-                        <div>Макс. накопление: {Number(building.maxAccumulation).toLocaleString()} NAR</div>
-                        <div>Макс. уровень: {building.maxLevel}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => setSelectedBuilding(building)}
-                        style={{
-                          padding: '6px 12px',
-                          background: '#4a90e2',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Редактировать
-                      </button>
-                      <button
-                        onClick={() => handleDeleteBuilding(building.id)}
-                        style={{
-                          padding: '6px 12px',
-                          background: '#e24a4a',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Удалить
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Модальное окно редактирования */}
-              {selectedBuilding && (
-                <div
-                  style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.8)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10000,
-                  }}
-                  onClick={() => setSelectedBuilding(null)}
-                >
-                  <div
-                    style={{
-                      background: '#2a2a2a',
-                      padding: '24px',
-                      borderRadius: '8px',
-                      maxWidth: '500px',
-                      width: '90%',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <h3 style={{ marginTop: 0, color: '#fff' }}>Редактировать строение</h3>
-                    <div style={{ display: 'grid', gap: '12px' }}>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Тип строения</label>
-                        <input
-                          type="text"
-                          value={selectedBuilding.type}
-                          onChange={(e) => setSelectedBuilding({ ...selectedBuilding, type: e.target.value })}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#1a1a1a',
-                            border: '1px solid #444',
-                            borderRadius: '4px',
-                            color: '#fff',
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название</label>
-                        <input
-                          type="text"
-                          value={selectedBuilding.name}
-                          onChange={(e) => setSelectedBuilding({ ...selectedBuilding, name: e.target.value })}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#1a1a1a',
-                            border: '1px solid #444',
-                            borderRadius: '4px',
-                            color: '#fff',
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Иконка (файл)</label>
-                        {selectedBuilding.icon && (
-                          <div style={{ marginBottom: '8px' }}>
-                            <img 
-                              src={getImageUrl(selectedBuilding.icon) || selectedBuilding.icon} 
-                              alt="Иконка"
-                              style={{ maxWidth: '64px', maxHeight: '64px', borderRadius: '4px' }}
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none'
-                              }}
-                            />
-                          </div>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          id="edit-building-icon-file"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) {
-                              const reader = new FileReader()
-                              reader.onload = (event) => {
-                                const preview = document.getElementById('edit-building-icon-preview')
-                                if (preview) {
-                                  preview.innerHTML = `<img src="${event.target?.result}" alt="Иконка" style="max-width: 64px; max-height: 64px; border-radius: 4px; margin-top: 4px;" />`
-                                }
-                              }
-                              reader.readAsDataURL(file)
-                            }
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#1a1a1a',
-                            border: '1px solid #444',
-                            borderRadius: '4px',
-                            color: '#fff',
-                          }}
-                        />
-                        <div id="edit-building-icon-preview" style={{ marginTop: '4px' }}></div>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Изображение (файл)</label>
-                        {selectedBuilding.image && (
-                          <div style={{ marginBottom: '8px' }}>
-                            <img 
-                              src={getImageUrl(selectedBuilding.image) || selectedBuilding.image} 
-                              alt="Изображение"
-                              style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px' }}
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none'
-                              }}
-                            />
-                          </div>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          id="edit-building-image-file"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) {
-                              const reader = new FileReader()
-                              reader.onload = (event) => {
-                                const preview = document.getElementById('edit-building-image-preview')
-                                if (preview) {
-                                  preview.innerHTML = `<img src="${event.target?.result}" alt="Изображение" style="max-width: 200px; max-height: 200px; border-radius: 4px; margin-top: 4px;" />`
-                                }
-                              }
-                              reader.readAsDataURL(file)
-                            }
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#1a1a1a',
-                            border: '1px solid #444',
-                            borderRadius: '4px',
-                            color: '#fff',
-                          }}
-                        />
-                        <div id="edit-building-image-preview" style={{ marginTop: '4px' }}></div>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Базовая цена (NAR)</label>
-                        <input
-                          type="number"
-                          value={Number(selectedBuilding.basePrice)}
-                          onChange={(e) => setSelectedBuilding({ ...selectedBuilding, basePrice: parseInt(e.target.value) || 0 })}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#1a1a1a',
-                            border: '1px solid #444',
-                            borderRadius: '4px',
-                            color: '#fff',
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Доход в час (NAR)</label>
-                        <input
-                          type="number"
-                          value={Number(selectedBuilding.baseIncomePerHour)}
-                          onChange={(e) => setSelectedBuilding({ ...selectedBuilding, baseIncomePerHour: parseInt(e.target.value) || 0 })}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#1a1a1a',
-                            border: '1px solid #444',
-                            borderRadius: '4px',
-                            color: '#fff',
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Макс. накопление (NAR)</label>
-                        <input
-                          type="number"
-                          value={Number(selectedBuilding.maxAccumulation)}
-                          onChange={(e) => setSelectedBuilding({ ...selectedBuilding, maxAccumulation: parseInt(e.target.value) || 0 })}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#1a1a1a',
-                            border: '1px solid #444',
-                            borderRadius: '4px',
-                            color: '#fff',
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Макс. уровень</label>
-                        <input
-                          type="number"
-                          value={selectedBuilding.maxLevel}
-                          onChange={(e) => setSelectedBuilding({ ...selectedBuilding, maxLevel: parseInt(e.target.value) || 10 })}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#1a1a1a',
-                            border: '1px solid #444',
-                            borderRadius: '4px',
-                            color: '#fff',
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                      <button
-                        onClick={() => handleUpdateBuilding(selectedBuilding.id, selectedBuilding)}
-                        style={{
-                          padding: '8px 16px',
-                          background: '#4a90e2',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Сохранить
-                      </button>
-                      <button
-                        onClick={() => setSelectedBuilding(null)}
-                        style={{
-                          padding: '8px 16px',
-                          background: '#666',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Управление районами */}
             <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '2px solid #3a3a3a' }}>
@@ -5325,31 +4839,52 @@ export default function Admin() {
                 const convertGameStateForBoard = (gameState: any) => {
                   if (!gameState) return null
                   
-                  const points = gameState.points || []
-                  const convertedPoints = points.map((pointValue: number, index: number) => {
-                    const checkers: number[] = []
-                    const absValue = Math.abs(pointValue)
-                    
-                    for (let i = 0; i < absValue; i++) {
-                      checkers.push(pointValue > 0 ? 0 : 1)
-                    }
-                    
-                    return {
-                      index,
-                      checkers,
-                      color: pointValue > 0 ? 'white' : pointValue < 0 ? 'black' : null,
-                    }
-                  })
+                  // points должен быть массивом чисел (положительные = белые, отрицательные = черные)
+                  let points = gameState.points || []
+                  
+                  // Если points это массив объектов, преобразуем в массив чисел
+                  if (Array.isArray(points) && points.length > 0 && typeof points[0] === 'object') {
+                    points = points.map((point: any) => {
+                      if (typeof point === 'number') return point
+                      // Если это объект с checkers или value
+                      if (point.checkers && Array.isArray(point.checkers)) {
+                        const count = point.checkers.length
+                        return point.color === 'white' || point.checkers[0] === 0 ? count : -count
+                      }
+                      if (typeof point.value === 'number') return point.value
+                      return 0
+                    })
+                  }
+                  
+                  // Убеждаемся, что points это массив из 24 элементов
+                  if (!Array.isArray(points) || points.length !== 24) {
+                    points = new Array(24).fill(0)
+                  }
+                  
+                  // Нормализуем bar и bearOff
+                  let bar = { white: 0, black: 0 }
+                  if (Array.isArray(gameState.bar)) {
+                    bar = { white: gameState.bar[0] || 0, black: gameState.bar[1] || 0 }
+                  } else if (gameState.bar && typeof gameState.bar === 'object') {
+                    bar = { white: gameState.bar.white || 0, black: gameState.bar.black || 0 }
+                  }
+                  
+                  let bearOff = { white: 0, black: 0 }
+                  if (Array.isArray(gameState.borneOff)) {
+                    bearOff = { white: gameState.borneOff[0] || 0, black: gameState.borneOff[1] || 0 }
+                  } else if (Array.isArray(gameState.bearOff)) {
+                    bearOff = { white: gameState.bearOff[0] || 0, black: gameState.bearOff[1] || 0 }
+                  } else if (gameState.bearOff && typeof gameState.bearOff === 'object') {
+                    bearOff = { white: gameState.bearOff.white || 0, black: gameState.bearOff.black || 0 }
+                  } else if (gameState.borneOff && typeof gameState.borneOff === 'object') {
+                    bearOff = { white: gameState.borneOff.white || 0, black: gameState.borneOff.black || 0 }
+                  }
                   
                   return {
                     ...gameState,
-                    points: convertedPoints,
-                    bar: Array.isArray(gameState.bar) 
-                      ? { white: gameState.bar[0] || 0, black: gameState.bar[1] || 0 }
-                      : gameState.bar || { white: 0, black: 0 },
-                    bearOff: Array.isArray(gameState.borneOff)
-                      ? { white: gameState.borneOff[0] || 0, black: gameState.borneOff[1] || 0 }
-                      : gameState.bearOff || { white: 0, black: 0 },
+                    points,
+                    bar,
+                    bearOff,
                   }
                 }
                 
@@ -5912,24 +5447,89 @@ export default function Admin() {
                 <button
                   onClick={async () => {
                     try {
-                      await apiClient.put(`/admin/users/${editingUser.id}/full`, {
-                        narCoin: Number(editingUser.narCoin),
-                        xp: Number(editingUser.xp),
-                        level: editingUser.level,
-                        energy: editingUser.energy,
-                        maxEnergy: editingUser.maxEnergy,
-                        lives: editingUser.lives,
-                        maxLives: editingUser.maxLives,
-                        skillPoints: editingUser.skillPoints,
-                        freeSkillPoints: editingUser.freeSkillPoints,
-                        economySp: editingUser.economySp,
-                        energySp: editingUser.energySp,
-                        livesSp: editingUser.livesSp,
-                        powerSp: editingUser.powerSp,
-                        hasBusinessLicense: editingUser.hasBusinessLicense,
-                        referralPercent: editingUser.referralPercent,
-                        referralBaseBonus: Number(editingUser.referralBaseBonus),
-                      })
+                      // Используем отдельные эндпоинты для каждого раздела
+                      const promises = []
+
+                      // Экономика (NAR, XP, Level) - проверяем что значение изменилось или определено
+                      const economyData: any = {}
+                      if (editingUser.narCoin !== undefined) economyData.narCoin = Number(editingUser.narCoin)
+                      if (editingUser.xp !== undefined) economyData.xp = Number(editingUser.xp)
+                      if (editingUser.level !== undefined) economyData.level = editingUser.level
+                      if (Object.keys(economyData).length > 0) {
+                        promises.push(
+                          apiClient.put(`/admin/users/${editingUser.id}/economy`, economyData)
+                            .catch(err => ({ error: err.response?.data?.message || err.message, section: 'economy' }))
+                        )
+                      }
+
+                      // Энергия
+                      const energyData: any = {}
+                      if (editingUser.energy !== undefined) energyData.energy = editingUser.energy
+                      if (editingUser.maxEnergy !== undefined) energyData.maxEnergy = editingUser.maxEnergy
+                      if (Object.keys(energyData).length > 0) {
+                        promises.push(
+                          apiClient.put(`/admin/users/${editingUser.id}/energy`, energyData)
+                            .catch(err => ({ error: err.response?.data?.message || err.message, section: 'energy' }))
+                        )
+                      }
+
+                      // Жизни
+                      const livesData: any = {}
+                      if (editingUser.lives !== undefined) livesData.lives = editingUser.lives
+                      if (editingUser.maxLives !== undefined) livesData.maxLives = editingUser.maxLives
+                      if (Object.keys(livesData).length > 0) {
+                        promises.push(
+                          apiClient.put(`/admin/users/${editingUser.id}/lives`, livesData)
+                            .catch(err => ({ error: err.response?.data?.message || err.message, section: 'lives' }))
+                        )
+                      }
+
+                      // Skill Points
+                      const skillPointsData: any = {}
+                      if (editingUser.skillPoints !== undefined) skillPointsData.skillPoints = editingUser.skillPoints
+                      if (editingUser.freeSkillPoints !== undefined) skillPointsData.freeSkillPoints = editingUser.freeSkillPoints
+                      if (editingUser.economySp !== undefined) skillPointsData.economySp = editingUser.economySp
+                      if (editingUser.energySp !== undefined) skillPointsData.energySp = editingUser.energySp
+                      if (editingUser.livesSp !== undefined) skillPointsData.livesSp = editingUser.livesSp
+                      if (editingUser.powerSp !== undefined) skillPointsData.powerSp = editingUser.powerSp
+                      if (Object.keys(skillPointsData).length > 0) {
+                        promises.push(
+                          apiClient.put(`/admin/users/${editingUser.id}/skill-points`, skillPointsData)
+                            .catch(err => ({ error: err.response?.data?.message || err.message, section: 'skill-points' }))
+                        )
+                      }
+
+                      // Лицензия
+                      if (editingUser.hasBusinessLicense !== undefined) {
+                        promises.push(
+                          apiClient.put(`/admin/users/${editingUser.id}/business-license`, {
+                            hasBusinessLicense: editingUser.hasBusinessLicense,
+                          }).catch(err => ({ error: err.response?.data?.message || err.message, section: 'business-license' }))
+                        )
+                      }
+
+                      // Реферальная программа
+                      const referralData: any = {}
+                      if (editingUser.referralPercent !== undefined) referralData.referralPercent = editingUser.referralPercent
+                      if (editingUser.referralBaseBonus !== undefined) referralData.referralBaseBonus = Number(editingUser.referralBaseBonus)
+                      if (Object.keys(referralData).length > 0) {
+                        promises.push(
+                          apiClient.put(`/admin/users/${editingUser.id}/referral`, referralData)
+                            .catch(err => ({ error: err.response?.data?.message || err.message, section: 'referral' }))
+                        )
+                      }
+
+                      // Выполняем все запросы параллельно
+                      const results = await Promise.all(promises)
+                      
+                      // Проверяем ошибки
+                      const errors = results.filter(r => r && r.error)
+                      if (errors.length > 0) {
+                        const errorMessages = errors.map(e => `${e.section}: ${e.error}`).join('\n')
+                        alert('Ошибки при сохранении:\n' + errorMessages)
+                        return
+                      }
+
                       alert('Пользователь обновлен')
                       setEditingUser(null)
                       await loadStats()
@@ -5939,7 +5539,7 @@ export default function Admin() {
                   }}
                   style={{ padding: '10px 20px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                 >
-                  Сохранить
+                  Сохранить все изменения
                 </button>
               </div>
             </div>
