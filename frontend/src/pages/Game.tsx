@@ -1186,27 +1186,29 @@ export default function Game() {
             </div>
           )}
 
-          {/* Подтверждение хода (только в портрете, только если есть pendingMoves) - выше поля */}
-          {!isLandscape && gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
-            <div className="game-confirm-section">
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', padding: '8px 16px' }}>
-                <Button variant="secondary" onClick={handleUndo} style={{ flex: 1 }}>
-                  Отменить
-                </Button>
-                <Button 
-                  variant="primary" 
-                  onClick={handleConfirm}
-                  style={{ flex: 2 }}
-                >
-                  Подтвердить ({pendingMoves.length})
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Доска */}
           {(gameStatus === 'in_progress' || gameStatus === 'finished') && (
-            <div className="board-wrapper">
+            <>
+              {/* Fixed кнопки подтверждения и отмены */}
+              {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
+                <>
+                  <button 
+                    className="game-action-btn game-action-btn-cancel"
+                    onClick={handleUndo}
+                    title="Отменить ход"
+                  >
+                    ✕
+                  </button>
+                  <button 
+                    className="game-action-btn game-action-btn-confirm"
+                    onClick={handleConfirm}
+                    title={`Подтвердить (${pendingMoves.length})`}
+                  >
+                    ✓
+                  </button>
+                </>
+              )}
+              <div className="board-wrapper">
               <BackgammonBoard
                 key={`board-${gameId}`}
                 player1Skins={playerSkins.player1}
@@ -1229,7 +1231,8 @@ export default function Game() {
                 player1Name={gameInfo?.player1?.nickname || gameInfo?.player1?.username}
                 player2Name={gameInfo?.player2?.nickname || gameInfo?.player2?.username || 'Бот'}
               />
-            </div>
+              </div>
+            </>
           )}
         </div>
 
