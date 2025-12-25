@@ -63,8 +63,9 @@ export class SkinsService implements OnModuleInit {
           repair_currency: 'NAR',
           repair_base_cost: 0, // Бесплатный ремонт для дефолтного скина
           bonuses: null,
-          imageUrl: '/img/доска.jpg',
-          boardTextureUrl: '/img/доска.jpg',
+          // imageUrl и boardTextureUrl оставляем null - загружаются через админку
+          imageUrl: null,
+          boardTextureUrl: null,
         },
         {
           name: 'Классические кубики',
@@ -87,8 +88,10 @@ export class SkinsService implements OnModuleInit {
           repair_currency: 'NAR',
           repair_base_cost: 0,
           bonuses: null,
-          imageUrl: '/skins/default-dice.svg',
-          diceTextureUrl: '/skins/default-dice.svg',
+          // imageUrl и diceTextureUrls оставляем null - загружаются через админку
+          imageUrl: null,
+          diceTextureUrl: null,
+          diceTextureUrls: null, // Объект {1: url, 2: url, ..., 6: url} - загружается через админку
         },
         {
           name: 'Классические шашки',
@@ -111,10 +114,11 @@ export class SkinsService implements OnModuleInit {
           repair_currency: 'NAR',
           repair_base_cost: 0,
           bonuses: null,
-          imageUrl: '/skins/default-checkers.svg',
-          whiteCheckersTextureUrl: '/skins/default-checkers-white.svg',
-          blackCheckersTextureUrl: '/skins/default-checkers-black.svg',
-          checkersTextureUrl: '/skins/default-checkers.svg',
+          // imageUrl и текстуры шашек оставляем null - загружаются через админку
+          imageUrl: null,
+          whiteCheckersTextureUrl: null,
+          blackCheckersTextureUrl: null,
+          checkersTextureUrl: null, // Устаревшее поле, для обратной совместимости
         },
       ];
 
@@ -139,36 +143,13 @@ export class SkinsService implements OnModuleInit {
           if (existingSkin) {
             let needsUpdate = false;
             
-            // Для дефолтной доски всегда обновляем на новую текстуру
+            // Для дефолтной доски не перезаписываем текстуры, если они уже загружены через админку
             if (skinData.type === 'board') {
-              if (existingSkin.boardTextureUrl !== skinData.boardTextureUrl) {
-                existingSkin.boardTextureUrl = skinData.boardTextureUrl;
-                needsUpdate = true;
-              }
-              if (existingSkin.imageUrl !== skinData.imageUrl) {
-                existingSkin.imageUrl = skinData.imageUrl;
-                needsUpdate = true;
-              }
+              // Не обновляем, если текстура уже загружена через админку
+              // Только обновляем Equipment Spec поля если они отсутствуют
             } else {
-              // Для других скинов обновляем только если поля отсутствуют
-              if (!existingSkin.imageUrl && skinData.imageUrl) {
-                existingSkin.imageUrl = skinData.imageUrl;
-                needsUpdate = true;
-              }
-              if (skinData.type === 'dice' && !existingSkin.diceTextureUrl) {
-                existingSkin.diceTextureUrl = skinData.diceTextureUrl;
-                needsUpdate = true;
-              }
-              if (skinData.type === 'checkers') {
-                if (!existingSkin.whiteCheckersTextureUrl) {
-                  existingSkin.whiteCheckersTextureUrl = skinData.whiteCheckersTextureUrl;
-                  needsUpdate = true;
-                }
-                if (!existingSkin.blackCheckersTextureUrl) {
-                  existingSkin.blackCheckersTextureUrl = skinData.blackCheckersTextureUrl;
-                  needsUpdate = true;
-                }
-              }
+              // Для других скинов не перезаписываем текстуры, если они уже загружены через админку
+              // Только обновляем Equipment Spec поля если они отсутствуют
             }
             
             // Обновляем поля Equipment Spec, если они отсутствуют

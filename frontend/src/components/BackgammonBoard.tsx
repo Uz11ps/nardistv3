@@ -39,9 +39,17 @@ export default function BackgammonBoard({
   diceAnimating = false,
   myPlayerId,
   player1Id,
+  player1Skins,
+  player2Skins,
+  mySkins,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  
+  // Загружаем текстуры для скинов
+  const [boardTexture, setBoardTexture] = useState<HTMLImageElement | null>(null)
+  const [whiteCheckerTexture, setWhiteCheckerTexture] = useState<HTMLImageElement | null>(null)
+  const [blackCheckerTexture, setBlackCheckerTexture] = useState<HTMLImageElement | null>(null)
   
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
@@ -62,6 +70,87 @@ export default function BackgammonBoard({
   } | null>(null)
   
   const isPlayer1 = myPlayerId === player1Id
+
+  // Определяем какие скины использовать (доска всегда одинаковая для обоих игроков, шашки - разные)
+  const boardSkin = player1Skins?.board || mySkins?.board
+  const checkerSkin = isPlayer1 ? (player1Skins?.checkers || mySkins?.checkers) : (player2Skins?.checkers || mySkins?.checkers)
+
+  // Fallback пути к дефолтным SVG файлам
+  const DEFAULT_BOARD_TEXTURE = '/skins/default-board.svg'
+  const DEFAULT_WHITE_CHECKER_TEXTURE = '/skins/default-checkers-white.svg'
+  const DEFAULT_BLACK_CHECKER_TEXTURE = '/skins/default-checkers-black.svg'
+
+  // Загружаем текстуры при изменении скинов с fallback на дефолтные SVG
+  useEffect(() => {
+    // Загрузка текстуры доски
+    const loadBoardTexture = () => {
+      const textureUrl = boardSkin?.boardTextureUrl || DEFAULT_BOARD_TEXTURE
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => setBoardTexture(img)
+      img.onerror = () => {
+        // Fallback на дефолтную текстуру, если загрузка не удалась
+        if (textureUrl !== DEFAULT_BOARD_TEXTURE) {
+          const fallbackImg = new Image()
+          fallbackImg.crossOrigin = 'anonymous'
+          fallbackImg.onload = () => setBoardTexture(fallbackImg)
+          fallbackImg.onerror = () => setBoardTexture(null)
+          fallbackImg.src = DEFAULT_BOARD_TEXTURE
+        } else {
+          setBoardTexture(null)
+        }
+      }
+      img.src = textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`
+    }
+
+    loadBoardTexture()
+
+    // Загрузка текстуры белых шашек
+    const loadWhiteCheckerTexture = () => {
+      const textureUrl = checkerSkin?.whiteCheckersTextureUrl || DEFAULT_WHITE_CHECKER_TEXTURE
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => setWhiteCheckerTexture(img)
+      img.onerror = () => {
+        // Fallback на дефолтную текстуру
+        if (textureUrl !== DEFAULT_WHITE_CHECKER_TEXTURE) {
+          const fallbackImg = new Image()
+          fallbackImg.crossOrigin = 'anonymous'
+          fallbackImg.onload = () => setWhiteCheckerTexture(fallbackImg)
+          fallbackImg.onerror = () => setWhiteCheckerTexture(null)
+          fallbackImg.src = DEFAULT_WHITE_CHECKER_TEXTURE
+        } else {
+          setWhiteCheckerTexture(null)
+        }
+      }
+      img.src = textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`
+    }
+
+    loadWhiteCheckerTexture()
+
+    // Загрузка текстуры черных шашек
+    const loadBlackCheckerTexture = () => {
+      const textureUrl = checkerSkin?.blackCheckersTextureUrl || DEFAULT_BLACK_CHECKER_TEXTURE
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => setBlackCheckerTexture(img)
+      img.onerror = () => {
+        // Fallback на дефолтную текстуру
+        if (textureUrl !== DEFAULT_BLACK_CHECKER_TEXTURE) {
+          const fallbackImg = new Image()
+          fallbackImg.crossOrigin = 'anonymous'
+          fallbackImg.onload = () => setBlackCheckerTexture(fallbackImg)
+          fallbackImg.onerror = () => setBlackCheckerTexture(null)
+          fallbackImg.src = DEFAULT_BLACK_CHECKER_TEXTURE
+        } else {
+          setBlackCheckerTexture(null)
+        }
+      }
+      img.src = textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`
+    }
+
+    loadBlackCheckerTexture()
+  }, [boardSkin?.boardTextureUrl, checkerSkin?.whiteCheckersTextureUrl, checkerSkin?.blackCheckersTextureUrl])
 
   // Виртуальное состояние доски с учетом локальных ходов (очереди)
   const virtualGameState = useMemo(() => {
@@ -389,9 +478,17 @@ export default function BackgammonBoard({
     const boardWidth = width - (bearOffWidth * 2)
     const boardStartX = bearOffWidth
     
-    // Фон доски
-    ctx.fillStyle = '#8B4513'
-    ctx.fillRect(boardStartX, 0, boardWidth, height)
+    // Фон доски - используем текстуру если есть, иначе цветной фон
+    if (boardTexture && boardTexture.complete && boardTexture.width > 0 && boardTexture.height > 0) {
+      // Рисуем текстуру доски с сохранением пропорций
+      ctx.save()
+      ctx.drawImage(boardTexture, boardStartX, 0, boardWidth, height)
+      ctx.restore()
+    } else {
+      // Fallback на цветной фон если текстура не загрузилась
+      ctx.fillStyle = '#8B4513'
+      ctx.fillRect(boardStartX, 0, boardWidth, height)
+    }
     
     // Центральная полоса (бар)
     const barWidth = boardWidth * 0.08
@@ -405,28 +502,50 @@ export default function BackgammonBoard({
     const pointHeight = height * 0.45
     
     // Вспомогательная функция для отрисовки шашки
-    const drawChecker = (cX: number, cY: number, size: number, color: string, isMy: boolean, alpha: number = 1) => {
+    const drawChecker = (cX: number, cY: number, size: number, isWhite: boolean, isMy: boolean, alpha: number = 1) => {
       ctx.save()
       ctx.globalAlpha = alpha
       
-      // Тень для объема
-      ctx.shadowBlur = size * 0.2
-      ctx.shadowColor = 'rgba(0,0,0,0.4)'
-      ctx.shadowOffsetY = 2
+      const radius = size / 2
       
-      ctx.fillStyle = color
-      ctx.beginPath()
-      ctx.arc(cX, cY, size / 2, 0, Math.PI * 2)
-      ctx.fill()
+      // Используем текстуру если есть, иначе цветной круг
+      const texture = isWhite ? whiteCheckerTexture : blackCheckerTexture
+      if (texture && texture.complete && texture.width > 0 && texture.height > 0) {
+        // Рисуем текстуру шашки
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(cX, cY, radius, 0, Math.PI * 2)
+        ctx.clip()
+        ctx.drawImage(texture, cX - radius, cY - radius, size, size)
+        ctx.restore()
+        ctx.save()
+        ctx.globalAlpha = alpha
+      } else {
+        // Фолбэк на цветной круг
+        // Тень для объема
+        ctx.shadowBlur = size * 0.2
+        ctx.shadowColor = 'rgba(0,0,0,0.4)'
+        ctx.shadowOffsetY = 2
+        
+        const color = isWhite ? '#F0F0F0' : '#333333'
+        ctx.fillStyle = color
+        ctx.beginPath()
+        ctx.arc(cX, cY, radius, 0, Math.PI * 2)
+        ctx.fill()
+        
+        // Внутренний декор шашки
+        ctx.beginPath()
+        ctx.arc(cX, cY, size * 0.35, 0, Math.PI * 2)
+        ctx.strokeStyle = isMy ? (isWhite ? '#DDD' : '#555') : (isWhite ? '#AAA' : '#222')
+        ctx.lineWidth = 1
+        ctx.stroke()
+      }
       
+      // Обводка шашки
       ctx.strokeStyle = isMy ? '#999' : '#000'
       ctx.lineWidth = 1.5
-      ctx.stroke()
-      
-      // Внутренний декор шашки
       ctx.beginPath()
-      ctx.arc(cX, cY, size * 0.35, 0, Math.PI * 2)
-      ctx.strokeStyle = isMy ? '#DDD' : '#555'
+      ctx.arc(cX, cY, radius, 0, Math.PI * 2)
       ctx.stroke()
       
       ctx.restore()
@@ -545,9 +664,8 @@ export default function BackgammonBoard({
           ? checkerBaseY + yOffset 
           : checkerBaseY - yOffset
         
-        // Цвета остаются изначальными: белые = #F0F0F0, черные = #333333
-        // isMyPoint определяет только обводку шашки
-        drawChecker(x, checkerY, checkerSize, isWhiteChecker ? '#F0F0F0' : '#333333', isMyPoint)
+        // Используем текстуры шашек если есть
+        drawChecker(x, checkerY, checkerSize, isWhiteChecker, isMyPoint)
       }
       
       // Если шашек больше 5, показываем число на последней шашке
@@ -572,7 +690,7 @@ export default function BackgammonBoard({
       const dragX = dragPosition.x - dragging.offsetX
       const dragY = dragPosition.y - dragging.offsetY
       
-      drawChecker(dragX, dragY, checkerSize, isPlayer1 ? '#F0F0F0' : '#333333', isPlayer1, 0.9)
+      drawChecker(dragX, dragY, checkerSize, isPlayer1, isPlayer1, 0.9)
     }
 
     // Отрисовка анимируемой шашки
@@ -635,7 +753,7 @@ export default function BackgammonBoard({
       const isWhiteChecker = fromPointValue > 0
       const isMyChecker = (isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker)
       
-      drawChecker(curX, curY, checkerSize, isWhiteChecker ? '#F0F0F0' : '#333333', isMyChecker)
+      drawChecker(curX, curY, checkerSize, isWhiteChecker, isMyChecker)
     }
     
     // Отрисовка бара
@@ -654,7 +772,7 @@ export default function BackgammonBoard({
         const isMyBar = isPlayer1
         for (let i = 0; i < countToDraw; i++) {
           const barY = barStartY - (i * checkerSize * 0.6)
-          drawChecker(barX - 25, barY, checkerSize, '#F0F0F0', isMyBar)
+          drawChecker(barX - 25, barY, checkerSize, true, isMyBar)
         }
       }
       
@@ -666,7 +784,7 @@ export default function BackgammonBoard({
         const isMyBar = !isPlayer1
         for (let i = 0; i < countToDraw; i++) {
           const barY = barStartY + (i * checkerSize * 0.6)
-          drawChecker(barX + 25, barY, checkerSize, '#333333', isMyBar)
+          drawChecker(barX + 25, barY, checkerSize, false, isMyBar)
         }
       }
     }
@@ -749,7 +867,7 @@ export default function BackgammonBoard({
         ctx.fillRect(targetX, 0, bearOffWidth, height)
       }
     }
-  }, [virtualGameState, selectedPoint, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates, animatingChecker])
+  }, [virtualGameState, selectedPoint, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates, animatingChecker, boardTexture, whiteCheckerTexture, blackCheckerTexture])
   
   // Перерисовка при изменении состояния
   useEffect(() => {
@@ -1305,8 +1423,8 @@ export default function BackgammonBoard({
         })()
       )}
       
-      {/* Кубики */}
-      {diceArray && diceArray.length > 0 && dice3DPosition && (
+      {/* Кубики - скрываем если все использованы (после подтверждения хода) */}
+      {diceArray && diceArray.length > 0 && dice3DPosition && usedDiceIndices.size < diceArray.length && (
         <div
           style={{
             position: 'absolute',
@@ -1324,23 +1442,23 @@ export default function BackgammonBoard({
             const isUsed = usedDiceIndices.has(index)
             const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0])
             
+            // Не показываем использованные кубики
+            if (isUsed) return null
+            
             return (
               <div
                 key={index}
                 style={{
                   position: 'relative',
-                  opacity: isUsed ? 0.4 : 1,
-                  filter: isUsed ? 'grayscale(100%) brightness(0.5)' : 'none',
-                  transition: 'opacity 0.3s, filter 0.3s',
                 }}
               >
                 <Dice3D
                   values={[dieValue]}
-                  animating={diceAnimating && !isUsed}
+                  animating={diceAnimating}
                   diceTextures={undefined}
                 />
                 {/* Показываем сколько ходов осталось при дубле на каждом неиспользованном кубике */}
-                {isDoubles && !isUsed && remainingMoves > 0 && (
+                {isDoubles && remainingMoves > 0 && (
                   <div
                     style={{
                       position: 'absolute',

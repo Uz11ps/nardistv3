@@ -14,14 +14,12 @@ export default function Dice3D({ values, animating = false, diceTextures, used =
   const lastValues = useRef<number[]>(values)
 
   useEffect(() => {
+    // Обновляем значения если они изменились, но не запускаем внутреннюю анимацию
+    // Внутренняя анимация запускается только при реальном изменении значений (новый бросок)
+    // Внешняя анимация (animating prop) управляется родительским компонентом
     if (JSON.stringify(values) !== JSON.stringify(lastValues.current)) {
-      setInternalAnimating(true)
-      const timer = setTimeout(() => {
-        setDisplayValues(values)
-        setInternalAnimating(false)
-        lastValues.current = values
-      }, 1000)
-      return () => clearTimeout(timer)
+      setDisplayValues(values)
+      lastValues.current = values
     }
   }, [values])
 

@@ -737,8 +737,8 @@ export class GamesService {
     const hasPendingMoves = pendingMoves && pendingMoves.length > 0;
 
     // Применяем локальные ходы к состоянию перед расчетом возможных ходов
+    let remainingDice = [...(state.dice || [])];
     if (hasPendingMoves) {
-      const diceCopy = [...(state.dice || [])];
       // Создаем глубокую копию состояния для применения pendingMoves
       state = JSON.parse(JSON.stringify(state));
       
@@ -748,9 +748,9 @@ export class GamesService {
         // 1. Если есть конкретные шаги, используем их
         if ((move as any).steps && Array.isArray((move as any).steps)) {
           for (const step of (move as any).steps) {
-            const idx = diceCopy.indexOf(step.die);
+            const idx = remainingDice.indexOf(step.die);
             if (idx !== -1) {
-              diceCopy.splice(idx, 1);
+              remainingDice.splice(idx, 1);
               state = engine.applyMove(state, step.from, step.to, step.die);
             }
           }
@@ -759,18 +759,20 @@ export class GamesService {
 
         // 2. Иначе ищем одиночный кубик
         let used = false;
-        const dieIndex = diceCopy.indexOf(move.die);
+        const dieIndex = remainingDice.indexOf(move.die);
         if (dieIndex !== -1) {
-          diceCopy.splice(dieIndex, 1);
+          remainingDice.splice(dieIndex, 1);
           used = true;
+          state = engine.applyMove(state, move.from, move.to, move.die);
         } else if (game.mode === GameMode.LONG) {
           // 3. Или ищем сумму для длинных нард (fallback)
-          for (let i = 0; i < diceCopy.length; i++) {
-            for (let j = i + 1; j < diceCopy.length; j++) {
-              if (diceCopy[i] + diceCopy[j] === move.die) {
-                diceCopy.splice(j, 1);
-                diceCopy.splice(i, 1);
+          for (let i = 0; i < remainingDice.length; i++) {
+            for (let j = i + 1; j < remainingDice.length; j++) {
+              if (remainingDice[i] + remainingDice[j] === move.die) {
+                remainingDice.splice(j, 1);
+                remainingDice.splice(i, 1);
                 used = true;
+                state = engine.applyMove(state, move.from, move.to, move.die);
                 break;
               }
             }
@@ -778,17 +780,17 @@ export class GamesService {
           }
         }
         
-        if (used) {
-          state = engine.applyMove(state, move.from, move.to, move.die);
+        if (!used) {
+          this.logger.warn(`⚠️ Не удалось найти кубик для хода: ${JSON.stringify(move)}. Доступные кубики: [${remainingDice.join(', ')}]`);
         }
       }
       // Обновляем кубики в состоянии после применения всех ходов
-      state.dice = diceCopy;
+      state.dice = remainingDice;
     }
 
+    // Используем оставшиеся кубики для расчета возможных ходов
     // Для дублей без pendingMoves ограничиваем до 2 кубиков (UI решение для удобства)
-    // По правилам Минспорта все 4 хода должны быть доступны, но мы ограничиваем UI до 2 для удобства
-    let diceForMoves = state.dice || [];
+    let diceForMoves = remainingDice;
     if (isDoubles && !hasPendingMoves && diceForMoves.length === 4) {
       // Ограничиваем до первых 2 кубиков (UI решение)
       diceForMoves = diceForMoves.slice(0, 2);
