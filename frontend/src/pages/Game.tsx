@@ -844,8 +844,13 @@ export default function Game() {
   }
 
   const handleSwapDice = () => {
-    if (!gameState?.dice || gameState.dice.length < 2) return
-    const newDice = [...gameState.dice].reverse()
+    if (!gameState?.dice) return
+    const diceArray = Array.isArray(gameState.dice) 
+      ? gameState.dice 
+      : [gameState.dice.die1, gameState.dice.die2]
+    
+    if (diceArray.length < 2) return
+    const newDice = [...diceArray].reverse()
     setGameState(prev => prev ? { ...prev, dice: newDice } : null)
   }
 
