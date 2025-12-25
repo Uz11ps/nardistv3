@@ -158,24 +158,47 @@ export class AdminService implements OnModuleInit {
       .getRawMany();
 
     const levelStats = levelStatsRaw.map(item => ({
-      level: Number(item.level),
-      count: String(item.count)
+      level: Number(item.level || 0),
+      count: String(item.count || 0)
     }));
 
-    // Статистика по играм за последние 7 дней
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Статистика по играм за последние 7 дней - исправлено для PostgreSQL
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // Создаем массив всех дат за последние 7 дней
+    const dateArray: { date: string; count: string }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      dateArray.push({
+        date: date.toISOString().split('T')[0],
+        count: '0'
+      });
+    }
+
+    // Получаем данные из БД
     const gamesLast7DaysRaw = await this.gamesRepository
       .createQueryBuilder('game')
-      .where('game.createdAt > :date', { date: sevenDaysAgo })
-      .select('DATE(game.createdAt)', 'date')
+      .where('game.createdAt >= :date', { date: sevenDaysAgo })
+      .select("TO_CHAR(game.createdAt, 'YYYY-MM-DD')", 'date')
       .addSelect('COUNT(*)', 'count')
-      .groupBy('DATE(game.createdAt)')
-      .orderBy('date', 'ASC')
+      .groupBy("TO_CHAR(game.createdAt, 'YYYY-MM-DD')")
+      .orderBy("TO_CHAR(game.createdAt, 'YYYY-MM-DD')", 'ASC')
       .getRawMany();
 
-    const gamesLast7Days = gamesLast7DaysRaw.map(item => ({
-      date: item.date ? new Date(item.date).toISOString().split('T')[0] : '',
-      count: String(item.count)
+    // Объединяем данные: заполняем реальные значения и оставляем нули для дат без игр
+    const gamesMap = new Map<string, string>();
+    gamesLast7DaysRaw.forEach(item => {
+      if (item.date) {
+        gamesMap.set(item.date, String(item.count || 0));
+      }
+    });
+
+    const gamesLast7Days = dateArray.map(item => ({
+      date: item.date,
+      count: gamesMap.get(item.date) || '0'
     }));
 
     return {
@@ -270,7 +293,20 @@ export class AdminService implements OnModuleInit {
   }
 
   async banUser(userId: string, reason: string) {
-    return this.usersService.banUser(userId, reason);
+    // Баним пользователя независимо от связанных объектов
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    // Нельзя забанить админа
+    if (user.isAdmin) {
+      throw new BadRequestException('Нельзя забанить администратора');
+    }
+
+    user.isBanned = true;
+    user.banReason = reason || 'Бан администратором';
+    return this.usersRepository.save(user);
   }
 
   async unbanUser(userId: string) {
@@ -837,8 +873,10 @@ export class AdminService implements OnModuleInit {
   }
 
   // CRUD для конфигураций строений
-  async getAllBuildingConfigs() {
+  async getAllBuildingConfigs(districtId?: string) {
+    const where = districtId ? { districtId } : {};
     const configs = await this.buildingConfigsRepository.find({
+      where,
       order: { type: 'ASC' },
     });
     
@@ -854,6 +892,7 @@ export class AdminService implements OnModuleInit {
       maxLevel: c.maxLevel,
       upgradeMultiplier: c.upgradeMultiplier || 1.4,
       upgradeCosts: c.upgradeCosts,
+      districtId: c.districtId,
     }));
   }
 
@@ -875,6 +914,7 @@ export class AdminService implements OnModuleInit {
       maxLevel: config.maxLevel,
       upgradeMultiplier: config.upgradeMultiplier || 1.4,
       upgradeCosts: config.upgradeCosts,
+      districtId: config.districtId,
     };
   }
 
@@ -889,6 +929,7 @@ export class AdminService implements OnModuleInit {
     maxLevel?: number;
     upgradeMultiplier?: number;
     upgradeCosts?: any;
+    districtId?: string;
   }) {
     const config = this.buildingConfigsRepository.create({
       type: data.type,
@@ -899,6 +940,7 @@ export class AdminService implements OnModuleInit {
       baseIncomePerHour: data.baseIncomePerHour.toString(),
       maxAccumulation: (data.maxAccumulation || 0).toString(),
       maxLevel: data.maxLevel || 10,
+      districtId: data.districtId || null,
       upgradeMultiplier: data.upgradeMultiplier || 1.4,
       upgradeCosts: data.upgradeCosts || null,
     });
@@ -931,6 +973,7 @@ export class AdminService implements OnModuleInit {
     maxLevel: number;
     upgradeMultiplier: number;
     upgradeCosts: any;
+    districtId: string;
   }>) {
     const config = await this.buildingConfigsRepository.findOne({ where: { id } });
     if (!config) {

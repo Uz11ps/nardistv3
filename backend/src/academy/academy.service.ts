@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Article } from './article.entity';
 import { UserMaterial } from './user-material.entity';
 import { ArticleSlot } from './article-slot.entity';
+import { CourseTask } from './course-task.entity';
 import { UsersService } from '../users/users.service';
 import { AdminService } from '../admin/admin.service';
 
@@ -16,6 +17,8 @@ export class AcademyService {
     private userMaterialsRepository: Repository<UserMaterial>,
     @InjectRepository(ArticleSlot)
     private articleSlotsRepository: Repository<ArticleSlot>,
+    @InjectRepository(CourseTask)
+    private courseTasksRepository: Repository<CourseTask>,
     private usersService: UsersService,
     @Inject(forwardRef(() => AdminService))
     private adminService: AdminService,
@@ -58,11 +61,55 @@ export class AcademyService {
 
     // Если это курс, загружаем задания как sections
     if (article.type === 'course') {
-      // Можно добавить загрузку CourseTask и преобразовать их в sections
-      // Пока просто возвращаем content
+      const tasks = await this.courseTasksRepository.find({
+        where: { courseId: id, isActive: true },
+        order: { order: 'ASC' },
+      });
+
+      // Преобразуем задания в sections
+      result.sections = tasks.map((task, index) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description || '',
+        content: task.description || '', // Используем description как content для отображения
+        icon: this.getTaskIcon(task.type),
+        order: task.order || index,
+        type: task.type,
+        requirements: task.requirements,
+        rewardNarCoin: Number(task.rewardNarCoin || 0),
+        rewardXP: task.rewardXP || 0,
+        isRequired: task.isRequired,
+      }));
+
+      // Если sections пустые, используем content как fallback
+      if (result.sections.length === 0 && article.content) {
+        result.sections = [{
+          id: 'main',
+          title: 'Содержание курса',
+          content: article.content,
+          order: 0,
+        }];
+      }
     }
 
     return result;
+  }
+
+  private getTaskIcon(taskType: string): string {
+    const icons: Record<string, string> = {
+      'train_with_bot': '🤖',
+      'online_match': '🎮',
+      'view_city': '🏙️',
+      'play_short_match': '⚡',
+      'play_long_match': '🎲',
+      'win_match': '🏆',
+      'complete_training_position': '✅',
+      'join_clan': '👥',
+      'purchase_building': '🏗️',
+      'upgrade_building': '⬆️',
+      'custom': '📝',
+    };
+    return icons[taskType] || '📋';
   }
 
   async create(articleData: Partial<Article>, isAdmin: boolean = false): Promise<Article> {

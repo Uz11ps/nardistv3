@@ -41,6 +41,9 @@ export class BuildingConfig {
   @Column({ type: 'jsonb', nullable: true })
   upgradeCosts: any; // Стоимость улучшения по уровням (опционально, если не используется формула)
 
+  @Column({ nullable: true })
+  districtId: string; // ID района, к которому привязано строение
+
   @CreateDateColumn()
   createdAt: Date;
 

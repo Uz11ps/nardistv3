@@ -83,6 +83,7 @@ export default function Admin() {
     baseIncomePerHour: 0,
     maxAccumulation: 0,
     maxLevel: 10,
+    districtId: '',
   })
   const [skins, setSkins] = useState<any[]>([])
   const [selectedGame, setSelectedGame] = useState<any>(null)
@@ -93,7 +94,7 @@ export default function Admin() {
   const loadReplayStep = async (step: number) => {
     if (!selectedGame) return
     try {
-      const response = await apiClient.get(`/admin/games/${selectedGame.id}/replay?step=${step}`)
+      const response = await apiClient.get(`/admin/games/${selectedGame.id}/replay`, { params: { step } })
       if (response.data) {
         setGameReplay(response.data)
       }
@@ -497,16 +498,17 @@ export default function Admin() {
     try {
       await apiClient.post('/admin/buildings', newBuilding)
       alert('Строение создано!')
-      setNewBuilding({
-        type: '',
-        name: '',
-        icon: '',
-        image: '',
-        basePrice: 0,
-        baseIncomePerHour: 0,
-        maxAccumulation: 0,
-        maxLevel: 10,
-      })
+                  setNewBuilding({
+                    type: '',
+                    name: '',
+                    icon: '',
+                    image: '',
+                    basePrice: 0,
+                    baseIncomePerHour: 0,
+                    maxAccumulation: 0,
+                    maxLevel: 10,
+                    districtId: '',
+                  })
       
       // Очистить файлы
       const iconInput = document.getElementById('building-icon-file') as HTMLInputElement
@@ -1303,7 +1305,7 @@ export default function Admin() {
                           <button onClick={async () => {
                             try {
                               // Загружаем полные данные реплея через админский эндпоинт
-                              const replayResponse = await apiClient.get(`/admin/games/${game.id}/replay`)
+                              const replayResponse = await apiClient.get(`/admin/games/${game.id}/replay`, { params: { step: 0 } })
                               setSelectedGame(game)
                               setGameReplay(replayResponse.data)
                               setReplayStep(0)
@@ -1383,6 +1385,7 @@ export default function Admin() {
               <h3>Управление уведомлениями</h3>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <button
+                  className="btn btn-danger"
                   onClick={async () => {
                     if (confirm('Удалить все сообщения бота? Это действие необратимо!')) {
                       try {
@@ -1394,18 +1397,11 @@ export default function Admin() {
                       }
                     }
                   }}
-                  style={{
-                    padding: '8px 16px',
-                    background: '#e74c3c',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
                 >
                   Удалить все сообщения бота
                 </button>
                 <button
+                  className="btn btn-warning"
                   onClick={async () => {
                     if (confirm('Удалить последнее сообщение бота у каждого пользователя? Это действие необратимо!')) {
                       try {
@@ -1416,14 +1412,6 @@ export default function Admin() {
                         alert('Ошибка: ' + (error.response?.data?.message || error.message))
                       }
                     }
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    background: '#e67e22',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
                   }}
                 >
                   Удалить последнее
@@ -2235,8 +2223,220 @@ export default function Admin() {
               }}>Создать курс</button>
             </div>
 
+            {/* Онбординговые задания */}
+            <div className="create-form" style={{ marginTop: '32px' }}>
+              <h3>Онбординговые задания</h3>
+              <p style={{ color: '#999', fontSize: '14px', marginBottom: '20px' }}>
+                Онбординговые задания доступны сразу без покупок и идут в "Мои материалы" автоматически.
+              </p>
+              <div className="form-group">
+                <label>Тип задания</label>
+                <select
+                  value={newOnboardingTask.type}
+                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, type: e.target.value })}
+                >
+                  <option value="train_with_bot">Тренировка с ботом</option>
+                  <option value="online_match">Онлайн-партия</option>
+                  <option value="view_city">Просмотр города</option>
+                  <option value="play_short_match">Быстрая партия</option>
+                  <option value="play_long_match">Длинная партия</option>
+                  <option value="win_match">Победа в матче</option>
+                  <option value="complete_training_position">Тренировочная позиция</option>
+                  <option value="join_clan">Вступить в клан</option>
+                  <option value="purchase_building">Купить строение</option>
+                  <option value="upgrade_building">Улучшить строение</option>
+                  <option value="custom">Кастомное</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Название</label>
+                <input
+                  type="text"
+                  value={newOnboardingTask.title}
+                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, title: e.target.value })}
+                  placeholder="Название задания"
+                />
+              </div>
+              <div className="form-group">
+                <label>Описание</label>
+                <textarea
+                  value={newOnboardingTask.description}
+                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, description: e.target.value })}
+                  rows={3}
+                  placeholder="Описание задания"
+                />
+              </div>
+              <div className="form-group">
+                <label>Порядок</label>
+                <input
+                  type="number"
+                  value={newOnboardingTask.order}
+                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, order: parseInt(e.target.value) || 1 })}
+                  min="1"
+                />
+              </div>
+              <div className="form-group">
+                <label>Награда NAR-coin</label>
+                <input
+                  type="number"
+                  value={newOnboardingTask.rewardNarCoin}
+                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, rewardNarCoin: parseInt(e.target.value) || 0 })}
+                  min="0"
+                />
+              </div>
+              <div className="form-group">
+                <label>Награда XP</label>
+                <input
+                  type="number"
+                  value={newOnboardingTask.rewardXP}
+                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, rewardXP: parseInt(e.target.value) || 0 })}
+                  min="0"
+                />
+              </div>
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={newOnboardingTask.isRequired}
+                    onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, isRequired: e.target.checked })}
+                  />
+                  Обязательное задание
+                </label>
+              </div>
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={newOnboardingTask.isActive}
+                    onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, isActive: e.target.checked })}
+                  />
+                  Активно
+                </label>
+              </div>
+              <button onClick={handleCreateOnboardingTask} className="btn btn-primary">Создать задание</button>
+            </div>
+
+            <div style={{ marginTop: '32px' }}>
+              <h3>Список онбординговых заданий</h3>
+              <div className="admin-table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Порядок</th>
+                      <th>Название</th>
+                      <th>Тип</th>
+                      <th>Награда NAR</th>
+                      <th>Награда XP</th>
+                      <th>Обязательное</th>
+                      <th>Активно</th>
+                      <th>Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {onboardingTasks.map((task) => (
+                      <tr key={task.id}>
+                        <td>{task.order}</td>
+                        <td>{task.title}</td>
+                        <td>{task.type}</td>
+                        <td>{Number(task.rewardNarCoin || 0).toLocaleString()}</td>
+                        <td>{task.rewardXP || 0}</td>
+                        <td>{task.isRequired ? 'Да' : 'Нет'}</td>
+                        <td>{task.isActive ? 'Да' : 'Нет'}</td>
+                        <td>
+                          <div className="btn-group">
+                            <button className="btn btn-secondary btn-sm" onClick={() => setEditingOnboardingTask({ ...task })}>Редактировать</button>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleDeleteOnboardingTask(task.id)}>Удалить</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {editingOnboardingTask && (
+              <div className="admin-modal-overlay" onClick={() => setEditingOnboardingTask(null)}>
+                <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="admin-modal-header">
+                    <h3>Редактировать онбординговое задание</h3>
+                    <button className="admin-modal-close" onClick={() => setEditingOnboardingTask(null)}>×</button>
+                  </div>
+                  <div className="admin-modal-content">
+                    <div className="form-group">
+                      <label>Название</label>
+                      <input
+                        type="text"
+                        value={editingOnboardingTask.title}
+                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, title: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Описание</label>
+                      <textarea
+                        value={editingOnboardingTask.description || ''}
+                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, description: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Порядок</label>
+                      <input
+                        type="number"
+                        value={editingOnboardingTask.order}
+                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, order: parseInt(e.target.value) || 1 })}
+                        min="1"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Награда NAR-coin</label>
+                      <input
+                        type="number"
+                        value={editingOnboardingTask.rewardNarCoin || 0}
+                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, rewardNarCoin: parseInt(e.target.value) || 0 })}
+                        min="0"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Награда XP</label>
+                      <input
+                        type="number"
+                        value={editingOnboardingTask.rewardXP || 0}
+                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, rewardXP: parseInt(e.target.value) || 0 })}
+                        min="0"
+                      />
+                    </div>
+                    <div className="form-group checkbox-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={editingOnboardingTask.isRequired}
+                          onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, isRequired: e.target.checked })}
+                        />
+                        Обязательное
+                      </label>
+                    </div>
+                    <div className="form-group checkbox-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={editingOnboardingTask.isActive}
+                          onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, isActive: e.target.checked })}
+                        />
+                        Активно
+                      </label>
+                    </div>
+                    <div className="edit-form-actions">
+                      <button className="btn btn-primary" onClick={() => handleUpdateOnboardingTask(editingOnboardingTask.id, editingOnboardingTask)}>Сохранить</button>
+                      <button className="btn btn-secondary" onClick={() => setEditingOnboardingTask(null)}>Отмена</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="articles-list">
-              <h3>Все материалы</h3>
+              <h3>Все материалы (Курсы и Статьи)</h3>
               <p style={{ color: '#999', fontSize: '14px', marginBottom: '20px' }}>
                 <strong>Курсы</strong> - создаются администраторами, сразу опубликованы. <strong>Статьи</strong> - создаются игроками, требуют верификации.
               </p>
@@ -3465,12 +3665,23 @@ export default function Admin() {
                   <textarea placeholder="Описание" id="quest-description" rows={3}></textarea>
                 </div>
                 <div className="form-group">
-                  <label>Тип:</label>
+                  <label>Тип квеста:</label>
                   <select id="quest-type">
                     <option value="daily">Ежедневный</option>
                     <option value="weekly">Еженедельный</option>
                     <option value="special">Особый</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label>Категория (для мини-квестов с текстом):</label>
+                  <select id="quest-category">
+                    <option value="">Обычный квест</option>
+                    <option value="course">Курс (мини-квест с текстом)</option>
+                    <option value="onboarding">Онбординг (мини-квест с текстом)</option>
+                  </select>
+                  <small style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                    Мини-квесты с текстом - это квесты с описанием, которые можно привязать к курсу или онбордингу
+                  </small>
                 </div>
                 <div className="form-group">
                   <label>Цель:</label>
@@ -3568,6 +3779,12 @@ export default function Admin() {
                     const rewardArticleId = (document.getElementById('quest-reward-article') as HTMLInputElement).value
                     if (rewardArticleId && rewardArticleId.trim()) {
                       questData.rewardArticle = { id: rewardArticleId.trim() }
+                    }
+
+                    // Добавляем категорию (для мини-квестов с текстом)
+                    const category = (document.getElementById('quest-category') as HTMLSelectElement).value
+                    if (category) {
+                      questData.category = category
                     }
                     
                     await apiClient.post('/admin/quests', questData)
@@ -3876,18 +4093,21 @@ export default function Admin() {
               </button>
             </div>
 
-            {/* Управление строениями */}
+            {/* Управление строениями (только для строений без района) */}
             <div style={{ marginBottom: '32px' }}>
-              <h3>Управление строениями</h3>
+              <h3>Управление строениями (без района)</h3>
+              <p style={{ color: '#999', fontSize: '14px', marginBottom: '16px' }}>
+                Строения создаются ВНУТРИ районов. Здесь только строения, не привязанные к району.
+              </p>
               
-              {/* Форма создания нового строения */}
+              {/* Форма создания нового строения (только если не в районе) */}
               <div style={{
                 background: '#2a2a2a',
                 padding: '16px',
                 borderRadius: '8px',
                 marginBottom: '16px',
               }}>
-                <h4 style={{ marginTop: 0, color: '#fff' }}>Создать новое строение</h4>
+                <h4 style={{ marginTop: 0, color: '#fff' }}>Создать строение без района</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Тип строения</label>
@@ -4064,9 +4284,9 @@ export default function Admin() {
                 </button>
               </div>
 
-              {/* Список строений */}
+              {/* Список строений (только без района) */}
               <div style={{ display: 'grid', gap: '12px' }}>
-                {buildings.map((building) => (
+                {buildings.filter(b => !b.districtId).map((building) => (
                   <div
                     key={building.id}
                     style={{
@@ -4739,6 +4959,257 @@ export default function Admin() {
                             <div style={{ color: '#999', fontSize: '14px' }}>
                               {district.description && <div style={{ marginBottom: '4px' }}>{district.description}</div>}
                               <div>Порядок: {district.order} | Уровень: {district.requiredLevel || 1} | Доход: {Number(district.baseIncomePerDay || 0).toLocaleString()} NAR/день</div>
+                            </div>
+                            {/* Строения в этом районе */}
+                            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #3a3a3a' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <h5 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>Строения в районе:</h5>
+                                <button
+                                  onClick={() => {
+                                    setNewBuilding({
+                                      type: '',
+                                      name: '',
+                                      icon: '',
+                                      image: '',
+                                      basePrice: 0,
+                                      baseIncomePerHour: 0,
+                                      maxAccumulation: 0,
+                                      maxLevel: 10,
+                                      districtId: district.id,
+                                    })
+                                    const formId = `district-${district.id}-building-form`
+                                    const form = document.getElementById(formId)
+                                    if (form) {
+                                      form.style.display = form.style.display === 'none' ? 'block' : 'none'
+                                    }
+                                  }}
+                                  style={{
+                                    padding: '6px 12px',
+                                    background: '#4CAF50',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                  }}
+                                >
+                                  + Добавить строение
+                                </button>
+                              </div>
+                              {/* Форма создания строения внутри района */}
+                              <div id={`district-${district.id}-building-form`} style={{ display: 'none', marginBottom: '16px', padding: '12px', background: '#1a1a1a', borderRadius: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Тип строения</label>
+                                    <input
+                                      type="text"
+                                      placeholder="shop, factory, etc."
+                                      id={`district-${district.id}-building-type`}
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        fontSize: '12px',
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Название</label>
+                                    <input
+                                      type="text"
+                                      placeholder="Название строения"
+                                      id={`district-${district.id}-building-name`}
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        fontSize: '12px',
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Базовая цена (NAR)</label>
+                                    <input
+                                      type="number"
+                                      id={`district-${district.id}-building-price`}
+                                      min="0"
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        fontSize: '12px',
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Доход в час (NAR)</label>
+                                    <input
+                                      type="number"
+                                      id={`district-${district.id}-building-income`}
+                                      min="0"
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        fontSize: '12px',
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Макс. накопление (NAR)</label>
+                                    <input
+                                      type="number"
+                                      id={`district-${district.id}-building-accumulation`}
+                                      min="0"
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        fontSize: '12px',
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Макс. уровень</label>
+                                    <input
+                                      type="number"
+                                      id={`district-${district.id}-building-maxlevel`}
+                                      min="1"
+                                      defaultValue="10"
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        color: '#fff',
+                                        fontSize: '12px',
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const type = (document.getElementById(`district-${district.id}-building-type`) as HTMLInputElement).value
+                                        const name = (document.getElementById(`district-${district.id}-building-name`) as HTMLInputElement).value
+                                        const price = parseInt((document.getElementById(`district-${district.id}-building-price`) as HTMLInputElement).value || '0')
+                                        const income = parseInt((document.getElementById(`district-${district.id}-building-income`) as HTMLInputElement).value || '0')
+                                        const accumulation = parseInt((document.getElementById(`district-${district.id}-building-accumulation`) as HTMLInputElement).value || '0')
+                                        const maxLevel = parseInt((document.getElementById(`district-${district.id}-building-maxlevel`) as HTMLInputElement).value || '10')
+
+                                        if (!type || !name) {
+                                          alert('Заполните тип и название строения')
+                                          return
+                                        }
+
+                                        await apiClient.post('/admin/buildings', {
+                                          type,
+                                          name,
+                                          basePrice: price,
+                                          baseIncomePerHour: income,
+                                          maxAccumulation: accumulation,
+                                          maxLevel,
+                                          districtId: district.id,
+                                        })
+
+                                        alert('Строение создано в районе!')
+                                        loadBuildings()
+                                        loadDistricts()
+                                        // Скрываем форму
+                                        const form = document.getElementById(`district-${district.id}-building-form`)
+                                        if (form) form.style.display = 'none'
+                                        // Очищаем поля
+                                        ;(document.getElementById(`district-${district.id}-building-type`) as HTMLInputElement).value = ''
+                                        ;(document.getElementById(`district-${district.id}-building-name`) as HTMLInputElement).value = ''
+                                        ;(document.getElementById(`district-${district.id}-building-price`) as HTMLInputElement).value = ''
+                                        ;(document.getElementById(`district-${district.id}-building-income`) as HTMLInputElement).value = ''
+                                        ;(document.getElementById(`district-${district.id}-building-accumulation`) as HTMLInputElement).value = ''
+                                        ;(document.getElementById(`district-${district.id}-building-maxlevel`) as HTMLInputElement).value = '10'
+                                      } catch (error: any) {
+                                        alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '6px 12px',
+                                      background: '#4CAF50',
+                                      color: '#fff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px',
+                                    }}
+                                  >
+                                    Создать строение
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const form = document.getElementById(`district-${district.id}-building-form`)
+                                      if (form) form.style.display = 'none'
+                                    }}
+                                    style={{
+                                      padding: '6px 12px',
+                                      background: '#666',
+                                      color: '#fff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px',
+                                    }}
+                                  >
+                                    Отмена
+                                  </button>
+                                </div>
+                              </div>
+                              {/* Список строений в этом районе */}
+                              <div>
+                                {buildings.filter(b => b.districtId === district.id).length === 0 ? (
+                                  <div style={{ color: '#666', fontSize: '12px', padding: '8px' }}>Нет строений в этом районе</div>
+                                ) : (
+                                  <div style={{ display: 'grid', gap: '8px' }}>
+                                    {buildings.filter(b => b.districtId === district.id).map((building) => (
+                                      <div key={building.id} style={{ padding: '8px', background: '#2a2a2a', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                          <div style={{ color: '#fff', fontSize: '13px', fontWeight: '500' }}>{building.name} ({building.type})</div>
+                                          <div style={{ color: '#999', fontSize: '11px' }}>
+                                            Цена: {Number(building.basePrice).toLocaleString()} NAR | Доход: {Number(building.baseIncomePerHour).toLocaleString()} NAR/час
+                                          </div>
+                                        </div>
+                                        <button
+                                          onClick={() => setSelectedBuilding(building)}
+                                          style={{
+                                            padding: '4px 8px',
+                                            background: '#4a90e2',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            fontSize: '11px',
+                                          }}
+                                        >
+                                          Редактировать
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: '8px' }}>
