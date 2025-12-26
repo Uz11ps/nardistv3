@@ -1109,23 +1109,11 @@ export class GamesService {
       try {
         const stake = Number(game.stake);
         const totalPot = stake * 2;
-        const baseCommission = Math.floor(totalPot * 0.15); // Базовая комиссия 15%
-        
-        // Применяем снижение комиссии через ветку Экономика и экипировку
-        const winnerUser = await this.usersService.findOne(game.winnerId);
-        const econSp = winnerUser.economySp || 0;
-        
-        // Получаем бонус комиссии от экипировки (TODO: реализовать получение из скинов)
-        const gearCommissionBonus = 0; // Пока нет реализации бонусов от экипировки
-        
-        const finalCommission = this.progressService.calculateFeeWithEconomy(
-          baseCommission,
-          econSp,
-          gearCommissionBonus,
-        );
+        const finalCommission = 15; // Фиксированная комиссия 15 нар за игру
         const winnerReward = totalPot - finalCommission;
 
-        // Получаем бонусы от скинов для денег
+        // Получаем пользователя и бонусы от скинов для денег
+        const winnerUser = await this.usersService.findOne(game.winnerId);
         const winnerBonuses = await this.skinsService.getSkinBonuses(game.winnerId);
         const moneyBonus = Math.floor(winnerReward * (winnerBonuses.moneyBonusPercent / 100));
         const finalWinnerReward = winnerReward + moneyBonus;

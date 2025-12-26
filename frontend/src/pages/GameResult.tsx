@@ -99,7 +99,7 @@ export default function GameResult() {
     if (game.stake && game.stake > 0 && isWinner && game.type !== 'vs_bot') {
       const stakeValue = Number(game.stake)
       const totalPot = stakeValue * 2
-      const commission = Math.floor(totalPot * 0.15) // 15% комиссия согласно бэкенду
+      const commission = 15 // Фиксированная комиссия 15 нар за игру
       narCoinReward = totalPot - commission
     }
 

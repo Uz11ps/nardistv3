@@ -10,20 +10,40 @@ interface Dice3DProps {
 
 export default function Dice3D({ values, animating = false, diceColor = '#FFFFFF', used = false }: Dice3DProps) {
   const [displayValues, setDisplayValues] = useState<number[]>(values)
-  const [internalAnimating, setInternalAnimating] = useState(false)
   const lastValues = useRef<number[]>(values)
+  const animationIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    // Обновляем значения если они изменились, но не запускаем внутреннюю анимацию
-    // Внутренняя анимация запускается только при реальном изменении значений (новый бросок)
-    // Внешняя анимация (animating prop) управляется родительским компонентом
-    if (JSON.stringify(values) !== JSON.stringify(lastValues.current)) {
+    // Если началась анимация, запускаем интервал для смены значений
+    if (animating) {
+      // Устанавливаем случайные значения для начала анимации
+      const randomValues = values.map(() => Math.floor(Math.random() * 6) + 1)
+      setDisplayValues(randomValues)
+      
+      // Запускаем интервал для смены значений во время анимации
+      animationIntervalRef.current = setInterval(() => {
+        setDisplayValues(prev => prev.map(() => Math.floor(Math.random() * 6) + 1))
+      }, 100) // Меняем значения каждые 100мс
+    } else {
+      // Анимация закончилась - устанавливаем финальные значения
+      if (animationIntervalRef.current) {
+        clearInterval(animationIntervalRef.current)
+        animationIntervalRef.current = null
+      }
       setDisplayValues(values)
       lastValues.current = values
     }
-  }, [values])
+    
+    // Очистка интервала при размонтировании
+    return () => {
+      if (animationIntervalRef.current) {
+        clearInterval(animationIntervalRef.current)
+        animationIntervalRef.current = null
+      }
+    }
+  }, [values, animating])
 
-  const isRolling = animating || internalAnimating
+  const isRolling = animating
 
   return (
     <div className="dice3d-scene">

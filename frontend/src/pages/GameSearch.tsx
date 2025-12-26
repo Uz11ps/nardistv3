@@ -139,8 +139,8 @@ export default function GameSearch() {
             </div>
             {stake > 0 && (
               <div className="stake-prize-info">
-                Приз за победу: {Math.floor(stake * 2 * 0.95)} NAR
-                <span className="stake-commission"> (комиссия 5%)</span>
+                Приз за победу: {stake * 2 - 15} NAR
+                <span className="stake-commission"> (комиссия 15 NAR)</span>
               </div>
             )}
           </div>

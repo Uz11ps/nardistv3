@@ -133,72 +133,83 @@ export class LongBackgammonEngine {
   }
 
   /**
-   * Check Block Rule: Cannot create a block of 6 consecutive points if no opponent checker is ahead
+   * Check Block Rule: Cannot create a block of 6 consecutive points if opponent has no checkers in home
    * According to Long Backgammon rules:
    * - You can build a "fence" of 6 consecutive points with your checkers
-   * - BUT: This is only allowed if there is at least one opponent checker AHEAD of the fence (in the direction of opponent's movement)
-   * - Building a fence of 6 points when opponent has no checkers ahead (i.e., locking them completely in their head) is forbidden
+   * - BUT: This is only allowed if opponent has at least one checker in their home (not on head)
+   * - Building a fence of 6 points when opponent has no checkers in home is forbidden
    */
   private checkBlockRule(state: LongBoardState, to: number): boolean {
     const player = state.currentPlayer;
     const opponentSign = player === 0 ? -1 : 1;
     
-    // Check if placing a checker here would create a 6-point block
-    // We need to check all possible 6-point sequences
-    for (let start = 0; start < this.BOARD_SIZE; start++) {
-      let blockCount = 0;
-      let hasOpponentInBlock = false;
-      let hasOpponentAhead = false;
-      
-      // Check 6 consecutive points (circular)
-      for (let i = 0; i < 6; i++) {
-        const pointIdx = (start + i) % this.BOARD_SIZE;
-        const pointValue = state.points[pointIdx] || 0;
-        
-        // Check if this point would be part of our block
-        const wouldBeOurs = (pointIdx === to && player === 0) || 
-                           (pointIdx === to && player === 1) ||
-                           (player === 0 && pointValue > 0) ||
-                           (player === 1 && pointValue < 0);
-        
-        if (wouldBeOurs) {
-          blockCount++;
-        }
-        
-        // Check if opponent has checkers in this block
-        if (pointValue * opponentSign > 0) {
-          hasOpponentInBlock = true;
+    // Check if opponent has at least one checker in their home
+    // White (player 0) home: Points 1-6 (indices 18-23)
+    // Black (player 1) home: Points 13-18 (indices 6-11)
+    let opponentHasCheckerInHome = false;
+    
+    if (player === 0) {
+      // Checking for black checkers in black home (indices 6-11)
+      for (let i = this.BLACK_HOME_START; i < this.BLACK_HEAD; i++) {
+        if (state.points[i] < 0) {
+          opponentHasCheckerInHome = true;
+          break;
         }
       }
-      
-      // Check points AHEAD of the block (in opponent's movement direction)
-      // Opponent moves counter-clockwise, so "ahead" means points after the block
-      for (let i = 6; i < this.BOARD_SIZE; i++) {
-        const pointIdx = (start + i) % this.BOARD_SIZE;
-        const pointValue = state.points[pointIdx] || 0;
-        
-        // Check if opponent has checkers ahead
-        if (pointValue * opponentSign > 0) {
-          hasOpponentAhead = true;
-          break; // Found at least one opponent checker ahead
+    } else {
+      // Checking for white checkers in white home (indices 18-23)
+      for (let i = this.WHITE_HOME_START; i < this.BOARD_SIZE; i++) {
+        if (state.points[i] > 0) {
+          opponentHasCheckerInHome = true;
+          break;
         }
       }
-      
-      // If we have a 6-point block and no opponent ahead (and no opponent in block), this is illegal
-      // The block must contain our checkers and the new position
-      if (blockCount === 6 && !hasOpponentAhead && !hasOpponentInBlock) {
-        // Check if 'to' is part of this block
-        let toInBlock = false;
+    }
+    
+    // If opponent has no checkers in home, we cannot create a 6-point block
+    if (!opponentHasCheckerInHome) {
+      // Check if placing a checker here would create a 6-point block
+      // We need to check all possible 6-point sequences
+      for (let start = 0; start < this.BOARD_SIZE; start++) {
+        let blockCount = 0;
+        let hasOpponentInBlock = false;
+        
+        // Check 6 consecutive points (circular)
         for (let i = 0; i < 6; i++) {
           const pointIdx = (start + i) % this.BOARD_SIZE;
-          if (pointIdx === to) {
-            toInBlock = true;
-            break;
+          const pointValue = state.points[pointIdx] || 0;
+          
+          // Check if this point would be part of our block
+          const wouldBeOurs = (pointIdx === to && player === 0) || 
+                             (pointIdx === to && player === 1) ||
+                             (player === 0 && pointValue > 0) ||
+                             (player === 1 && pointValue < 0);
+          
+          if (wouldBeOurs) {
+            blockCount++;
+          }
+          
+          // Check if opponent has checkers in this block
+          if (pointValue * opponentSign > 0) {
+            hasOpponentInBlock = true;
           }
         }
         
-        if (toInBlock) {
-          return false; // Illegal: creating a 6-point block with no opponent ahead
+        // If we have a 6-point block (and no opponent in block), this is illegal
+        if (blockCount === 6 && !hasOpponentInBlock) {
+          // Check if 'to' is part of this block
+          let toInBlock = false;
+          for (let i = 0; i < 6; i++) {
+            const pointIdx = (start + i) % this.BOARD_SIZE;
+            if (pointIdx === to) {
+              toInBlock = true;
+              break;
+            }
+          }
+          
+          if (toInBlock) {
+            return false; // Illegal: creating a 6-point block when opponent has no checkers in home
+          }
         }
       }
     }
