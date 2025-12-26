@@ -567,8 +567,6 @@ export default function Game() {
           ? { die1: diceData[0], die2: diceData[1] }
           : diceData // Для дублей (4 элемента) или других случаев сохраняем массив
         : null
-      
-      const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
       const isMyTurnNow = canMove
       const wasMyTurn = gameState?.canMove || false
       
