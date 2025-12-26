@@ -382,8 +382,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         });
         this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
         
-        // Делаем ход бота сразу без задержки
+        // Делаем ход бота с задержкой 0-5 секунд
         try {
+          // Случайная задержка от 0 до 5 секунд для более естественного поведения бота
+          const delay = Math.floor(Math.random() * 5000);
+          this.logger.log(`🤖 Bot move delay: ${delay}ms for gameId=${gameId}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
           const updatedGame = await this.gamesService.findOne(gameId);
           if (updatedGame.status === 'finished') return;
           
