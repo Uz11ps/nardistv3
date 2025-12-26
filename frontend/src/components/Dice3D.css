@@ -29,7 +29,7 @@
   height: 50px;
   background: #FFF;
   border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
+  border-radius: 10px !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,9 +100,7 @@
 }
 
 /* Стили для разных типов кубиков (из скинов) */
-.face-1, .face-2, .face-3, .face-4, .face-5, .face-6 {
-  background: linear-gradient(145deg, #ffffff, #f0f0f0);
-}
+/* Удалено - background теперь задается через inline style с diceColor */
 
 /* Если игрок P2, можно сделать кубики темными */
 .game-player-me .die-face {
