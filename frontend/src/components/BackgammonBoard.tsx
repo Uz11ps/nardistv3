@@ -1457,15 +1457,11 @@ export default function BackgammonBoard({
     
     setDragging(null)
     setDragPosition(null)
-    // Мы НЕ сбрасываем selectedPoint здесь, чтобы можно было увидеть кнопку "Сбросить" после перетаскивания
-    // Но нам нужно обновить showBearOffButton если мы отпустили шашку на том же месте
-    const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
-    if (bearOffMove) {
-      setShowBearOffButton({ pointIndex: dragging.pointIndex, die: bearOffMove.die })
-    }
-    
+    // Сбрасываем все выделения после перемещения - нужно ПОВТОРНО ВЫБРАТЬ ШАШКУ
+    setSelectedPoint(null)
+    setValidTargetPoints(new Set())
+    setShowBearOffButton(null)
     setHoveredPoint(null)
-    // setValidTargetPoints(new Set()) // Тоже не сбрасываем для select-эффекта
   }
   
   // Обработка клика

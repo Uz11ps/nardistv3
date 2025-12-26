@@ -284,20 +284,18 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       
       if (!hasMoves) {
         this.logger.log(`🔄 No possible moves for user ${userId}, switching turn automatically`);
-        // Делаем небольшую задержку перед переключением для визуального комфорта
-        setTimeout(async () => {
-          try {
-            await this.gamesService.makeMove(data.gameId, userId, []);
-            const updatedGameState = await this.gamesService.getGameState(data.gameId);
-            this.server.to(`game:${data.gameId}`).emit('game_state', updatedGameState);
-            await this.sendTimerUpdateForGame(data.gameId);
-            
-            // Если после переключения должен ходить бот
-            await this.handleBotTurnIfNeeded(data.gameId);
-          } catch (e) {
-            this.logger.error(`Error in auto-skip turn: ${e.message}`);
-          }
-        }, 1500);
+        // Переключаем ход сразу без задержки
+        try {
+          await this.gamesService.makeMove(data.gameId, userId, []);
+          const updatedGameState = await this.gamesService.getGameState(data.gameId);
+          this.server.to(`game:${data.gameId}`).emit('game_state', updatedGameState);
+          await this.sendTimerUpdateForGame(data.gameId);
+          
+          // Если после переключения должен ходить бот
+          await this.handleBotTurnIfNeeded(data.gameId);
+        } catch (e) {
+          this.logger.error(`Error in auto-skip turn: ${e.message}`);
+        }
       } else {
         this.server.to(`game:${data.gameId}`).emit('game_state', gameState);
         // Отправляем обновление таймера сразу после броска кубиков
@@ -347,10 +345,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       } else {
         // Check if next player is bot and trigger bot move
         this.logger.log(`🤖 Checking if bot turn needed for gameId=${data.gameId}`);
-        // Add delay before checking bot turn to ensure game state is updated
-        setTimeout(async () => {
-          await this.handleBotTurnIfNeeded(data.gameId);
-        }, 500);
+        // Проверяем бота сразу без задержки
+        await this.handleBotTurnIfNeeded(data.gameId);
       }
     } catch (error) {
       this.logger.error(`❌ Error in make_move:`, error);
@@ -386,18 +382,17 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         });
         this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
         
-        // Wait for dice animation and make bot move
-        setTimeout(async () => {
-          try {
-            const updatedGame = await this.gamesService.findOne(gameId);
-            if (updatedGame.status === 'finished') return;
-            
-            if (!updatedGame.id) {
-              this.logger.error(`❌ Bot move: updatedGame.id is missing! gameId=${gameId}`);
-              return;
-            }
-            
-            this.logger.log(`🤖 Making bot move for gameId=${gameId}, updatedGame.id=${updatedGame.id}`);
+        // Делаем ход бота сразу без задержки
+        try {
+          const updatedGame = await this.gamesService.findOne(gameId);
+          if (updatedGame.status === 'finished') return;
+          
+          if (!updatedGame.id) {
+            this.logger.error(`❌ Bot move: updatedGame.id is missing! gameId=${gameId}`);
+            return;
+          }
+          
+          this.logger.log(`🤖 Making bot move for gameId=${gameId}, updatedGame.id=${updatedGame.id}`);
             const botMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
             
             // Всегда вызываем makeMove, даже если ходов 0, чтобы сработала логика переключения хода
