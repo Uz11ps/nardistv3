@@ -812,6 +812,20 @@ export default function Game() {
   const handleMove = async (from: number, to: number, die: number, steps?: any[]) => {
     if (!gameId || !gameState?.canMove) return
 
+    // Проверка на бар для коротких нард: если есть шашки на баре, нельзя ходить с доски
+    if (gameInfo?.mode === 'short') {
+      const bar = gameState.bar || { white: 0, black: 0 }
+      const isPlayer1 = gameInfo.player1Id === user?.id
+      const hasBarCheckers = isPlayer1 ? bar.white > 0 : bar.black > 0
+      const isBarMove = from === 24 || from === 25
+      
+      if (hasBarCheckers && !isBarMove) {
+        // Есть шашки на баре, но пытаются ходить с доски
+        alert('Сначала выведите шашки с бара')
+        return
+      }
+    }
+
     const diceArray = gameState.dice 
       ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2])
       : []
@@ -970,6 +984,27 @@ export default function Game() {
     }
 
     if (gameStatus === 'in_progress' && gameState?.canMove && pendingMoves.length > 0) {
+      // Проверка на бар для коротких нард перед отправкой ходов
+      if (gameInfo?.mode === 'short') {
+        const bar = gameState.bar || { white: 0, black: 0 }
+        const isPlayer1 = gameInfo.player1Id === user?.id
+        const hasBarCheckers = isPlayer1 ? bar.white > 0 : bar.black > 0
+        
+        if (hasBarCheckers) {
+          // Проверяем, есть ли хотя бы один ход не с бара
+          const hasNonBarMove = pendingMoves.some(move => {
+            const from = move.from === 24 || move.from === 25 ? -1 : move.from
+            return from !== -1
+          })
+          
+          if (hasNonBarMove) {
+            alert('Сначала выведите шашки с бара')
+            setPendingMoves([])
+            return
+          }
+        }
+      }
+      
       const socket = getSocket()
       if (!socket) {
         alert('Ошибка подключения. Перезагрузите страницу.')
@@ -980,7 +1015,8 @@ export default function Game() {
         
         const onMoveError = (err: any) => {
           console.error('Move rejected:', err)
-          alert(`Ход отклонен: ${err.message || 'Ошибка'}`)
+          // Просто откатываем ходы без показа ошибки
+          setPendingMoves([])
           socket.off('error', onMoveError)
         }
         socket.on('error', onMoveError)
@@ -990,7 +1026,9 @@ export default function Game() {
         // Не очищаем pendingMoves здесь - дождемся события move_made, которое обновит gameState
         // pendingMoves будут очищены в обработчике move_made, чтобы избежать двойного применения в virtualGameState
       } catch (error) {
-        alert('Ошибка отправки ходов: ' + (error as Error).message)
+        // Просто откатываем ходы без показа ошибки
+        setPendingMoves([])
+        console.error('Ошибка отправки ходов:', error)
       }
     }
   }
