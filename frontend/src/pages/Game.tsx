@@ -44,6 +44,26 @@ export default function Game() {
   const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight)
   const animationFrameRef = useRef<number | null>(null)
 
+  // Отключаем вертикальный свайп в Telegram Web App при монтировании компонента игры
+  useEffect(() => {
+    // Дополнительная инициализация для игры - отключаем свайп еще раз на всякий случай
+    const telegramWebApp = (window as any).Telegram?.WebApp
+    if (telegramWebApp) {
+      try {
+        if (telegramWebApp.disableVerticalSwipes) {
+          telegramWebApp.disableVerticalSwipes()
+        } else if (telegramWebApp.setupSwipeBehavior) {
+          telegramWebApp.setupSwipeBehavior({ allow_vertical_swipe: false })
+        }
+        if (telegramWebApp.isClosingConfirmationEnabled !== undefined) {
+          telegramWebApp.isClosingConfirmationEnabled = true
+        }
+      } catch (error) {
+        console.warn('Ошибка при отключении вертикального свайпа:', error)
+      }
+    }
+  }, [])
+
   // Обновление ориентации
   useEffect(() => {
     const handleResize = () => {

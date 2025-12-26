@@ -36,6 +36,23 @@ export function initTelegram() {
       telegramWebApp.expand()
     }
     
+    // Отключаем вертикальный свайп для предотвращения закрытия приложения при игре
+    // Используем несколько методов для совместимости с разными версиями Telegram Web App
+    if (telegramWebApp.disableVerticalSwipes) {
+      telegramWebApp.disableVerticalSwipes()
+      console.log('✅ Вертикальный свайп отключен через disableVerticalSwipes()')
+    } else if (telegramWebApp.setupSwipeBehavior) {
+      // Для версии 7.7+ можно использовать setupSwipeBehavior
+      telegramWebApp.setupSwipeBehavior({ allow_vertical_swipe: false })
+      console.log('✅ Вертикальный свайп отключен через setupSwipeBehavior()')
+    }
+    
+    // Включаем подтверждение закрытия для дополнительной защиты
+    if (telegramWebApp.isClosingConfirmationEnabled !== undefined) {
+      telegramWebApp.isClosingConfirmationEnabled = true
+      console.log('✅ Подтверждение закрытия включено')
+    }
+    
     if (telegramWebApp.colorScheme === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark')
     }
