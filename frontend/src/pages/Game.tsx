@@ -798,8 +798,13 @@ export default function Game() {
     
     // UI ограничение: для дублей ограничиваем количество ходов до 2 перед подтверждением
     // По правилам Минспорта все 4 хода должны быть доступны, но для удобства UI мы ограничиваем до 2
-    if (isDoubles && pendingMoves.length >= 2) {
-      return // UI решение: не позволяем добавить больше 2 ходов без подтверждения
+    // После подтверждения первых 2 ходов, остаются еще 2 кубика, и можно сделать еще 2 хода
+    if (isDoubles && diceArray.length === 4 && pendingMoves.length >= 2) {
+      return // UI решение: не позволяем добавить больше 2 ходов без подтверждения (для 4 кубиков)
+    }
+    // Если осталось 2 кубика после подтверждения первых 2 ходов, можно сделать еще 2 хода
+    if (isDoubles && diceArray.length === 2 && pendingMoves.length >= 2) {
+      return // UI решение: не позволяем добавить больше 2 ходов без подтверждения (для оставшихся 2 кубиков)
     }
     
     // Если есть steps, значит это комбинированный ход
@@ -1220,6 +1225,25 @@ export default function Game() {
           {/* Доска */}
           {(gameStatus === 'in_progress' || gameStatus === 'finished') && (
             <div className="board-wrapper">
+              {/* Кнопки подтверждения и отмены в нижней части бара (ландшафт) */}
+              {isLandscape && gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
+                <>
+                  <button 
+                    className="game-bar-btn game-bar-btn-cancel"
+                    onClick={handleUndo}
+                    title="Отменить ход"
+                  >
+                    ✕
+                  </button>
+                  <button 
+                    className="game-bar-btn game-bar-btn-confirm"
+                    onClick={handleConfirm}
+                    title={`Подтвердить (${pendingMoves.length})`}
+                  >
+                    ✓
+                  </button>
+                </>
+              )}
               <BackgammonBoard
                 key={`board-${gameId}`}
                 player1Skins={playerSkins.player1}
@@ -1249,25 +1273,6 @@ export default function Game() {
         {/* Правая панель (ландшафт) */}
         {isLandscape && (
           <div className="game-side-panel right">
-            {/* Кнопки подтверждения и отмены в сайдбаре */}
-            {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
-              <div className="game-sidebar-actions">
-                <button 
-                  className="game-sidebar-btn game-sidebar-btn-cancel"
-                  onClick={handleUndo}
-                  title="Отменить ход"
-                >
-                  ✕
-                </button>
-                <button 
-                  className="game-sidebar-btn game-sidebar-btn-confirm"
-                  onClick={handleConfirm}
-                  title={`Подтвердить (${pendingMoves.length})`}
-                >
-                  ✓
-                </button>
-              </div>
-            )}
             
             <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
               <div className="game-player-name">

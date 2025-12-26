@@ -79,17 +79,9 @@
   justify-content: flex-start;
 }
 
-/* Кнопки действий в сайдбаре (ландшафт) */
-.game-sidebar-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  width: 100%;
-}
-
-.game-sidebar-btn {
+/* Кнопки действий в нижней части бара доски (ландшафт) */
+.game-bar-btn {
+  position: absolute;
   width: 48px;
   height: 48px;
   min-width: 48px;
@@ -102,30 +94,48 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   transition: transform 0.2s, box-shadow 0.2s;
   user-select: none;
-  flex-shrink: 0;
-  padding: 0;
+  z-index: 100;
+  bottom: 12px;
 }
 
-.game-sidebar-btn:hover {
+.game-bar-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
 }
 
-.game-sidebar-btn:active {
+.game-bar-btn:active {
   transform: scale(0.95);
 }
 
-.game-sidebar-btn-cancel {
+.game-bar-btn-cancel {
+  left: calc(50% - 54px); /* Крестик слева снизу в баре */
   background: linear-gradient(180deg, #f44336 0%, #c62828 100%);
   color: white;
 }
 
-.game-sidebar-btn-confirm {
+.game-bar-btn-cancel:hover {
+  transform: scale(1.1);
+}
+
+.game-bar-btn-cancel:active {
+  transform: scale(0.95);
+}
+
+.game-bar-btn-confirm {
+  left: calc(50% + 6px); /* Галочка справа снизу в баре */
   background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
   color: white;
+}
+
+.game-bar-btn-confirm:hover {
+  transform: scale(1.1);
+}
+
+.game-bar-btn-confirm:active {
+  transform: scale(0.95);
 }
 
 /* Сайдбар игроки */
