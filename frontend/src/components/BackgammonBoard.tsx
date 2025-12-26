@@ -1354,7 +1354,9 @@ export default function BackgammonBoard({
     if (!dragging || !canvasRef.current) return
     
     const canvas = canvasRef.current
-    const rect = canvas.getBoundingClientRect()
+    
+    // Сохраняем исходную точку перетаскивания
+    const fromPoint = dragging.pointIndex
     
     // У TouchEnd нет координат в e.touches, используем последнюю позицию dragPosition
     if (dragPosition) {
@@ -1363,23 +1365,30 @@ export default function BackgammonBoard({
       
       const targetPoint = getPointAtPosition(x, y, canvas)
       
-      if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
+      // Критически важно: проверяем, что целевая точка не является исходной точкой перетаскивания
+      // и что ход действительно существует для ИСХОДНОЙ точки (fromPoint)
+      if (targetPoint !== null && targetPoint !== fromPoint) {
         if (targetPoint === -1) {
-          const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
+          // Ход на вынос - проверяем, что ход есть именно из исходной точки
+          const bearOffMove = possibleMoves.find(m => m.from === fromPoint && m.to === -1)
           if (bearOffMove) {
             startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die, (bearOffMove as any).steps)
             return // startMoveAnimation сам все сбросит
           }
-        } else if (validTargetPoints.has(targetPoint)) {
-          const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
-          if (move) {
-            startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
-            return // startMoveAnimation сам все сбросит
+        } else {
+          // Обычный ход - проверяем, что целевая точка валидна и ход существует для исходной точки
+          if (validTargetPoints.has(targetPoint)) {
+            const move = possibleMoves.find(m => m.from === fromPoint && m.to === targetPoint)
+            if (move) {
+              startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
+              return // startMoveAnimation сам все сбросит
+            }
           }
         }
       }
     }
     
+    // Если ход не был выполнен, сбрасываем состояние перетаскивания
     setDragging(null)
     setDragPosition(null)
     setSelectedPoint(null)
@@ -1493,24 +1502,33 @@ export default function BackgammonBoard({
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
     
+    // Сохраняем исходную точку перетаскивания
+    const fromPoint = dragging.pointIndex
     const targetPoint = getPointAtPosition(x, y, canvas)
     
-    if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
+    // Критически важно: проверяем, что целевая точка не является исходной точкой перетаскивания
+    // и что ход действительно существует для ИСХОДНОЙ точки (fromPoint)
+    if (targetPoint !== null && targetPoint !== fromPoint) {
       if (targetPoint === -1) {
-        const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
-          if (bearOffMove) {
-            startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die, bearOffMove.steps)
-            return
-          }
-        } else if (validTargetPoints.has(targetPoint)) {
-          const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
+        // Ход на вынос - проверяем, что ход есть именно из исходной точки
+        const bearOffMove = possibleMoves.find(m => m.from === fromPoint && m.to === -1)
+        if (bearOffMove) {
+          startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die, bearOffMove.steps)
+          return
+        }
+      } else {
+        // Обычный ход - проверяем, что целевая точка валидна и ход существует для исходной точки
+        if (validTargetPoints.has(targetPoint)) {
+          const move = possibleMoves.find(m => m.from === fromPoint && m.to === targetPoint)
           if (move) {
             startMoveAnimation(move.from, move.to, move.die, move.steps)
             return
           }
         }
+      }
     }
     
+    // Если ход не был выполнен, сбрасываем состояние перетаскивания
     setDragging(null)
     setDragPosition(null)
     // Сбрасываем все выделения после перемещения - нужно ПОВТОРНО ВЫБРАТЬ ШАШКУ
