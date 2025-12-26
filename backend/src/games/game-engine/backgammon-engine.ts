@@ -84,9 +84,10 @@ export class BackgammonEngine {
     // Player 1 (White) moves from index 0 towards index 23 (Point 24 to 1)
     
     // If checkers on bar, must enter from bar first
+    // White enters on points 1-6 (indices 23,22,21,20,19,18) = BOARD_SIZE - die
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      const enterPoint = die - 1; 
+      const enterPoint = this.BOARD_SIZE - die; 
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
       if (state.points[enterPoint] < -1) return false;
       return to === enterPoint || to === -1;
@@ -118,20 +119,18 @@ export class BackgammonEngine {
 
     if (to !== toPoint && to !== -1) return false;
     
-    // Нельзя вставать на пункт, занятый 2+ шашками соперника
-    if (state.points[toPoint] < -1) return false;
-    
     return true;
   }
 
   private validateMovePlayer2(state: BoardState, from: number, to: number, die: number): boolean {
     // Player 2 (Black) moves from index 23 towards index 0 (Point 1 to 24)
     
+    // If checkers on bar, must enter from bar first
+    // Black enters on points 19-24 (indices 0,1,2,3,4,5) = die - 1
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      const enterPointIndex = this.BOARD_SIZE - die;
+      const enterPointIndex = die - 1;
       if (enterPointIndex < 0 || enterPointIndex >= this.BOARD_SIZE) return false;
-      // Нельзя вставать на пункт, занятый 2+ шашками соперника
       if (state.points[enterPointIndex] > 1) return false;
       return to === enterPointIndex || to === -1;
     }
@@ -161,9 +160,6 @@ export class BackgammonEngine {
     }
 
     if (to !== toPoint && to !== -1) return false;
-    
-    // Нельзя вставать на пункт, занятый 2+ шашками соперника
-    if (state.points[toPoint] > 1) return false;
     
     return true;
   }
@@ -198,9 +194,10 @@ export class BackgammonEngine {
 
   private applyMovePlayer1(state: BoardState, from: number, to: number, die: number): void {
     // Entering from bar
+    // White enters on points 1-6 (indices 23,22,21,20,19,18) = BOARD_SIZE - die
     if (state.bar[0] > 0 && from === -1) {
       state.bar[0]--;
-      const enterPointIndex = die - 1;
+      const enterPointIndex = this.BOARD_SIZE - die;
       
       // Hit opponent's single checker (Blot)
       if (state.points[enterPointIndex] === -1) {
@@ -237,9 +234,10 @@ export class BackgammonEngine {
 
   private applyMovePlayer2(state: BoardState, from: number, to: number, die: number): void {
     // Entering from bar
+    // Black enters on points 19-24 (indices 0,1,2,3,4,5) = die - 1
     if (state.bar[1] > 0 && from === -1) {
       state.bar[1]--;
-      const enterPointIndex = this.BOARD_SIZE - die;
+      const enterPointIndex = die - 1;
       
       // Hit opponent's single checker (Blot)
       if (state.points[enterPointIndex] === 1) {
@@ -365,7 +363,8 @@ export class BackgammonEngine {
       // Player 1 (White)
       if (state.bar[0] > 0) {
         // Must enter from bar
-        const enterPointIndex = die - 1;
+        // White enters on points 1-6 (indices 23,22,21,20,19,18) = BOARD_SIZE - die
+        const enterPointIndex = this.BOARD_SIZE - die;
         if (this.validateMove(state, -1, enterPointIndex, die)) {
           moves.push({ from: -1, to: enterPointIndex });
         }
@@ -389,7 +388,8 @@ export class BackgammonEngine {
       // Player 2 (Black)
       if (state.bar[1] > 0) {
         // Must enter from bar
-        const enterPointIndex = this.BOARD_SIZE - die;
+        // Black enters on points 19-24 (indices 0,1,2,3,4,5) = die - 1
+        const enterPointIndex = die - 1;
         if (this.validateMove(state, -1, enterPointIndex, die)) {
           moves.push({ from: -1, to: enterPointIndex });
         }
