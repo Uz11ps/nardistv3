@@ -97,7 +97,27 @@ export default function BackgammonBoard({
 
   // Получаем цвета из конфигураций скинов (материалы вместо текстур)
   const getBoardColors = (boardSkin: any) => {
-    const config = boardSkin?.boardConfig || {}
+    if (!boardSkin) {
+      return {
+        backgroundColor: '#8B4513',
+        triangleColor1: '#D4A574',
+        triangleColor2: '#8B4513',
+        borderColor: '#5c3a21',
+        outlineColor: '#654321',
+      }
+    }
+    
+    let config = boardSkin.boardConfig || {}
+    // Если boardConfig - строка, пытаемся распарсить JSON
+    if (typeof config === 'string') {
+      try {
+        config = JSON.parse(config)
+      } catch (e) {
+        console.warn('Failed to parse boardConfig:', e)
+        config = {}
+      }
+    }
+    
     return {
       backgroundColor: config.backgroundColor || '#8B4513',
       triangleColor1: config.triangleColor1 || '#D4A574',
@@ -125,7 +145,24 @@ export default function BackgammonBoard({
   }
 
   const getCheckerColors = (checkerSkin: any) => {
-    const config = checkerSkin?.checkersConfig || {}
+    if (!checkerSkin) {
+      return {
+        whiteColor: '#F0F0F0',
+        blackColor: '#333333',
+      }
+    }
+    
+    let config = checkerSkin.checkersConfig || {}
+    // Если checkersConfig - строка, пытаемся распарсить JSON
+    if (typeof config === 'string') {
+      try {
+        config = JSON.parse(config)
+      } catch (e) {
+        console.warn('Failed to parse checkersConfig:', e)
+        config = {}
+      }
+    }
+    
     return {
       whiteColor: config.whiteColor || '#F0F0F0',
       blackColor: config.blackColor || '#333333',
@@ -1642,7 +1679,7 @@ export default function BackgammonBoard({
                 <Dice3D
                   values={[dieValue]}
                   animating={diceAnimating}
-                  diceColor={currentPlayer === 0 ? diceColorPlayer2 : diceColorPlayer1}
+                  diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
                 />
                 {/* Показываем сколько ходов осталось при дубле на каждом неиспользованном кубике */}
                 {isDoubles && remainingMoves > 0 && (
