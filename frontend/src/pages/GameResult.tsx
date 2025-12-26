@@ -23,8 +23,15 @@ export default function GameResult() {
     } else {
       // Если нет gameId, используем данные из state
       const gameResult = location.state
-      if (gameResult) {
+      if (gameResult && gameResult.id) {
+        // Если есть ID игры, загружаем полные данные
+        loadGameDataById(gameResult.id)
+      } else if (gameResult) {
+        // Если есть данные, но нет ID - используем как есть
         setGameData(gameResult)
+        setMovesCount(gameResult.movesCount || 0)
+        setDuration(gameResult.duration || 0)
+        setRewards(gameResult.rewards || { xp: 0 })
         setLoading(false)
       } else {
         navigate('/')
@@ -32,13 +39,13 @@ export default function GameResult() {
     }
   }, [gameId])
 
-  const loadGameData = async () => {
+  const loadGameDataById = async (id: string) => {
     try {
       setLoading(true)
       // Загружаем данные игры
       const [gameResponse, replayResponse] = await Promise.all([
-        apiClient.get(`/games/${gameId}`).catch(() => ({ data: null })),
-        apiClient.get(`/history/replay/${gameId}`).catch(() => ({ data: null })),
+        apiClient.get(`/games/${id}`).catch(() => ({ data: null })),
+        apiClient.get(`/history/replay/${id}`).catch(() => ({ data: null })),
       ])
 
       const game = gameResponse.data
@@ -48,47 +55,7 @@ export default function GameResult() {
         return
       }
 
-      // Определяем результат для текущего пользователя
-      const isPlayer1 = game.player1Id === user?.id
-      const isWinner = game.winnerId === user?.id
-      const isDraw = !game.winnerId
-      
-      // Подсчитываем количество ходов
-      const moves = replayResponse.data?.moves || []
-      const movesCountValue = moves.length
-      
-      // Вычисляем продолжительность
-      const startTime = new Date(game.createdAt).getTime()
-      const endTime = game.updatedAt ? new Date(game.updatedAt).getTime() : Date.now()
-      const durationSeconds = Math.floor((endTime - startTime) / 1000)
-      
-      // Определяем награды (это приблизительные значения, так как награды начисляются на бэкенде)
-      const winXP = 100
-      const loseXP = 50
-      const xpReward = isWinner ? winXP : (isDraw ? 50 : loseXP)
-      
-      // Если была ставка, вычисляем выигрыш
-      let narCoinReward = undefined
-      if (game.stake && game.stake > 0 && isWinner) {
-        const stakeValue = Number(game.stake)
-        const totalPot = stakeValue * 2
-        const commission = Math.floor(totalPot * 0.05) // 5% комиссия
-        narCoinReward = totalPot - commission
-      }
-
-      setGameData({
-        ...game,
-        result: isWinner ? 'win' : isDraw ? 'draw' : 'loss',
-        isWinner,
-        isDraw,
-        score: {
-          player1: game.player1Score || 0,
-          player2: game.player2Score || 0,
-        },
-      })
-      setMovesCount(movesCountValue)
-      setDuration(durationSeconds)
-      setRewards({ xp: xpReward, narCoin: narCoinReward })
+      await processGameData(game, replayResponse.data)
     } catch (error) {
       console.error('Failed to load game data:', error)
       alert('Ошибка загрузки данных игры')
@@ -96,6 +63,68 @@ export default function GameResult() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadGameData = async () => {
+    if (!gameId) return
+    await loadGameDataById(gameId)
+  }
+
+  const processGameData = async (game: any, replayData: any) => {
+    // Определяем результат для текущего пользователя
+    const isPlayer1 = game.player1Id === user?.id
+    // Для игр с ботом: winnerId === null означает победу бота, winnerId === player1Id означает победу игрока
+    const isWinner = game.type === 'vs_bot' 
+      ? (game.winnerId === game.player1Id) 
+      : (game.winnerId === user?.id)
+    const isDraw = !game.winnerId && game.type !== 'vs_bot'
+    
+    // Подсчитываем количество ходов - загружаем реальные данные из реплея
+    const moves = replayData?.moves || []
+    const movesCountValue = Array.isArray(moves) ? moves.length : 0
+    
+    // Вычисляем продолжительность из реальных данных игры
+    let durationSeconds = 0
+    if (game.createdAt) {
+      const startTime = new Date(game.createdAt).getTime()
+      const endTime = game.updatedAt ? new Date(game.updatedAt).getTime() : Date.now()
+      durationSeconds = Math.max(0, Math.floor((endTime - startTime) / 1000))
+    }
+    
+    // Для игр с ботом награды не начисляются на бэкенде, показываем базовые значения
+    // В будущем можно добавить начисление XP для игр с ботом на бэкенде
+    let xpReward = 0
+    if (game.type === 'vs_bot') {
+      // Для игр с ботом: победа = 100 XP, поражение = 50 XP (базовые значения)
+      xpReward = isWinner ? 100 : 50
+    } else {
+      // Для обычных игр награды начисляются на бэкенде, но мы не можем их получить здесь
+      // Используем базовые значения для отображения
+      xpReward = isWinner ? 100 : (isDraw ? 50 : 50)
+    }
+    
+    // Если была ставка, вычисляем выигрыш
+    let narCoinReward = undefined
+    if (game.stake && game.stake > 0 && isWinner && game.type !== 'vs_bot') {
+      const stakeValue = Number(game.stake)
+      const totalPot = stakeValue * 2
+      const commission = Math.floor(totalPot * 0.15) // 15% комиссия согласно бэкенду
+      narCoinReward = totalPot - commission
+    }
+
+    setGameData({
+      ...game,
+      result: isWinner ? 'win' : isDraw ? 'draw' : 'loss',
+      isWinner,
+      isDraw,
+      score: {
+        player1: game.player1Score || 0,
+        player2: game.player2Score || 0,
+      },
+    })
+    setMovesCount(movesCountValue)
+    setDuration(durationSeconds)
+    setRewards({ xp: xpReward, narCoin: narCoinReward })
   }
 
   if (loading) {

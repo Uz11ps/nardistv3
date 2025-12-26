@@ -640,25 +640,35 @@ export class GamesService {
     } else {
       // Проверяем, есть ли валидные ходы с оставшимися кубиками
       let hasValidMoves = false;
-      if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
+      
+      // Для длинных нард всегда оставляем оставшиеся кубики (логика 8+8 для дублей обрабатывается на фронтенде)
+      if (game.mode === GameMode.LONG) {
+        // В длинных нардах оставляем оставшиеся кубики - игрок может продолжить ход
+        currentState.dice = remainingDice;
+        this.logger.log(`🟡 Long backgammon: keeping same player with remaining dice [${remainingDice.join(', ')}]`);
+      } else if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
+        // Для коротких нард проверяем валидность ходов
         const remainingMoves = engine.getAllValidMoves(currentState, remainingDice);
         // getAllValidMoves возвращает последовательности. Если есть хотя бы одна непустая - ходы есть.
         hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
         this.logger.log(`🔍 Checking remaining moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}`);
-      }
-      
-      if (hasValidMoves) {
-        // Есть еще ходы - оставляем того же игрока
-        // После подтверждения части дубля (если использовано 2 из 4), оставшиеся 2 кубика обрабатываются как обычный ход
-        currentState.dice = remainingDice;
-        this.logger.log(`🟡 Keeping same player: valid moves remain with dice [${remainingDice.join(', ')}]`);
+        
+        if (hasValidMoves) {
+          // Есть еще ходы - оставляем того же игрока
+          currentState.dice = remainingDice;
+          this.logger.log(`🟡 Keeping same player: valid moves remain with dice [${remainingDice.join(', ')}]`);
+        } else {
+          // Ходов больше нет - принудительная смена хода
+          currentState.dice = [];
+          currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
+          currentState.movesFromHead = 0;
+          currentState.movesFromPoint = {};
+          this.logger.log(`🔄 Turn switched: no valid moves remain with [${remainingDice.join(', ')}]. New player: ${currentState.currentPlayer}`);
+        }
       } else {
-        // Ходов больше нет - принудительная смена хода
-        currentState.dice = [];
-        currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
-        currentState.movesFromHead = 0;
-        currentState.movesFromPoint = {};
-        this.logger.log(`🔄 Turn switched: no valid moves remain with [${remainingDice.join(', ')}]. New player: ${currentState.currentPlayer}`);
+        // Если нет метода getAllValidMoves, оставляем кубики (для безопасности)
+        currentState.dice = remainingDice;
+        this.logger.log(`🟡 No getAllValidMoves method, keeping same player with remaining dice [${remainingDice.join(', ')}]`);
       }
     }
     
@@ -1133,6 +1143,7 @@ export class GamesService {
     }
 
     // Начисление опыта по новой системе с множителями
+    // Для игр с игроками
     if (game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
       try {
         // Получаем рейтинги игроков (нужен mode для получения рейтинга)
@@ -1231,6 +1242,67 @@ export class GamesService {
         }
       } catch (error) {
         this.logger.error(`❌ Ошибка при начислении XP: ${error.message}`, error.stack);
+      }
+    }
+    
+    // Начисление опыта для игр с ботом
+    if (game.type === GameType.VS_BOT && game.player1Id) {
+      try {
+        const playerId = game.player1Id;
+        const isWinner = game.winnerId === playerId;
+        
+        // Для игр с ботом используем фиксированный рейтинг бота (средний уровень)
+        const playerRating = await this.ratingsService.getRating(playerId, game.mode) || 1000;
+        const botRating = 1000; // Средний рейтинг бота
+        
+        // Получаем бонусы от скинов игрока
+        const playerBonuses = await this.skinsService.getSkinBonuses(playerId);
+        const playerItemsXPBonus = [playerBonuses.xpBonusPercent / 100];
+        
+        // Проверяем "Марс" (разгромная победа - противник не вывел ни одной шашки)
+        const isMarsWin = this.isMarsWin(game);
+        
+        // Рассчитываем XP для игрока (победитель или проигравший)
+        const playerXP = this.xpCalculator.calculateXP({
+          mode: game.mode,
+          gameType: GameType.VS_BOT,
+          playerWon: isWinner,
+          playerRating: playerRating,
+          opponentRating: botRating,
+          repeatMatchesCount: 1, // Игры с ботом не учитываются для анти-фарма
+          itemsXPBonus: playerItemsXPBonus,
+          isMarsWin: isMarsWin,
+          trustLevel: 'high',
+          stake: 0, // Игры с ботом без ставок
+        });
+        
+        // Начисляем XP
+        const playerResult = await this.progressService.addXP(playerId, playerXP);
+        
+        // Тратим энергию при завершении матча (бот-игры не тратят энергию согласно спецификации)
+        // Пропускаем трату энергии для игр с ботом
+        
+        // Не тратим жизни при поражении от бота
+        // Обновление истории матчей для анти-фарма не требуется для игр с ботом
+        
+        this.logger.log(`⭐ XP начислен игроку ${playerId} в игре с ботом: ${isWinner ? 'победа' : 'поражение'} +${playerXP} XP (Марс: ${isMarsWin})`);
+        
+        // Если уровень повысился, логируем
+        if (playerResult.levelUp) {
+          this.logger.log(`🎉 Игрок ${playerId} повысил уровень до ${playerResult.newLevel} в игре с ботом!`);
+        }
+        
+        // Обновляем прогресс заданий обучения
+        try {
+          await this.trainingService.updateTaskProgress(playerId, TaskType.PLAY_GAME, 1);
+          if (isWinner) {
+            await this.trainingService.updateTaskProgress(playerId, TaskType.WIN_GAME, 1);
+          }
+        } catch (error) {
+          this.logger.error(`❌ Ошибка при обновлении заданий обучения: ${error.message}`);
+        }
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при начислении XP за игру с ботом: ${error.message}`, error.stack);
       }
     }
     
