@@ -554,11 +554,11 @@ export class AdminController {
     
     try {
       if (skinType === 'board') {
-        boardConfig = body.boardConfig ? (typeof body.boardConfig === 'string' ? JSON.parse(body.boardConfig) : body.boardConfig) : {};
+        boardConfig = body.boardConfig ? (typeof body.boardConfig === 'string' ? JSON.parse(body.boardConfig) : body.boardConfig) : null;
       } else if (skinType === 'dice') {
-        diceConfig = body.diceConfig ? (typeof body.diceConfig === 'string' ? JSON.parse(body.diceConfig) : body.diceConfig) : {};
+        diceConfig = body.diceConfig ? (typeof body.diceConfig === 'string' ? JSON.parse(body.diceConfig) : body.diceConfig) : null;
       } else if (skinType === 'checkers') {
-        checkersConfig = body.checkersConfig ? (typeof body.checkersConfig === 'string' ? JSON.parse(body.checkersConfig) : body.checkersConfig) : {};
+        checkersConfig = body.checkersConfig ? (typeof body.checkersConfig === 'string' ? JSON.parse(body.checkersConfig) : body.checkersConfig) : null;
       }
     } catch (parseError) {
       throw new BadRequestException('Ошибка парсинга конфигурации: ' + (parseError as Error).message);

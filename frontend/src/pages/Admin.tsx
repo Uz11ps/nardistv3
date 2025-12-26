@@ -52,6 +52,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments'>('stats')
   const [onboardingTasks, setOnboardingTasks] = useState<any[]>([])
   const [onboardingStats, setOnboardingStats] = useState<any>(null)
+  const [selectedSkinType, setSelectedSkinType] = useState<string>('')
   const [progressionConfig, setProgressionConfig] = useState<any>(null)
   const [paymentStats, setPaymentStats] = useState<any>(null)
   const [systemSettings, setSystemSettings] = useState<any>({})
@@ -3161,7 +3162,12 @@ export default function Admin() {
                 <h4>Создать новый скин</h4>
               <div className="form-group">
                 <label>Тип скина:</label>
-                <select id="skin-type" required>
+                <select 
+                  id="skin-type" 
+                  required
+                  value={selectedSkinType}
+                  onChange={(e) => setSelectedSkinType(e.target.value)}
+                >
                   <option value="">-- Выберите тип --</option>
                   <option value="board">Доска (Board)</option>
                   <option value="dice">Кубики (Dice)</option>
@@ -3208,7 +3214,7 @@ export default function Admin() {
               {/* Поля для загрузки изображений удалены - скины теперь только на материалах (цветах) */}
               {/* Поля для загрузки текстур удалены - теперь используются только материалы (цвета) */}
               {/* Поля для конфигураций материалов */}
-              <div className="form-group" id="skin-config-board" style={{ display: 'none' }}>
+              <div className="form-group" id="skin-config-board" style={{ display: selectedSkinType === 'board' ? 'block' : 'none' }}>
                 <label>Конфигурация доски (цвета материалов):</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                   <div>
@@ -3234,7 +3240,7 @@ export default function Admin() {
                 </div>
                 <span className="field-hint">Цвета для отрисовки доски из материалов</span>
               </div>
-              <div className="form-group" id="skin-config-dice" style={{ display: 'none' }}>
+              <div className="form-group" id="skin-config-dice" style={{ display: selectedSkinType === 'dice' ? 'block' : 'none' }}>
                 <label>Конфигурация кубиков (цвет материалов):</label>
                 <div>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет кубика:</label>
@@ -3242,7 +3248,7 @@ export default function Admin() {
                 </div>
                 <span className="field-hint">Цвет кубика. Цифры 1-6 будут рисоваться поверх</span>
               </div>
-              <div className="form-group" id="skin-config-checkers" style={{ display: 'none' }}>
+              <div className="form-group" id="skin-config-checkers" style={{ display: selectedSkinType === 'checkers' ? 'block' : 'none' }}>
                 <label>Конфигурация шашек (цвета материалов):</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                   <div>
@@ -3256,102 +3262,65 @@ export default function Admin() {
                 </div>
                 <span className="field-hint">Цвета для отрисовки шашек из материалов</span>
               </div>
-              <script dangerouslySetInnerHTML={{__html: `
-                document.getElementById('skin-type').addEventListener('change', function() {
-                  const type = this.value;
-                  const configBoard = document.getElementById('skin-config-board');
-                  const configDice = document.getElementById('skin-config-dice');
-                  const configCheckers = document.getElementById('skin-config-checkers');
-                  
-                  if (type === 'board') {
-                      if (configBoard) configBoard.style.display = 'block';
-                      if (configDice) configDice.style.display = 'none';
-                      if (configCheckers) configCheckers.style.display = 'none';
-                    } else if (type === 'dice') {
-                      if (configBoard) configBoard.style.display = 'none';
-                      if (configDice) configDice.style.display = 'block';
-                      if (configCheckers) configCheckers.style.display = 'none';
-                    } else if (type === 'checkers') {
-                      if (configBoard) configBoard.style.display = 'none';
-                      if (configDice) configDice.style.display = 'none';
-                      if (configCheckers) configCheckers.style.display = 'block';
-                    } else {
-                      if (configBoard) configBoard.style.display = 'none';
-                      if (configDice) configDice.style.display = 'none';
-                      if (configCheckers) configCheckers.style.display = 'none';
-                    }
-                });
-              `}} />
               <button className="btn btn-primary" onClick={async () => {
-                const skinType = (document.getElementById('skin-type') as HTMLSelectElement).value
-                if (!skinType) {
+                if (!selectedSkinType) {
                   alert('Выберите тип скина!')
                   return
                 }
 
-                const formData = new FormData()
-                formData.append('type', skinType)
-                formData.append('name', (document.getElementById('skin-name') as HTMLInputElement).value)
-                formData.append('theme', (document.getElementById('skin-theme') as HTMLInputElement).value || skinType)
+                const name = (document.getElementById('skin-name') as HTMLInputElement).value
+                if (!name) {
+                  alert('Введите название скина!')
+                  return
+                }
+
+                const skinData: any = {
+                  type: selectedSkinType,
+                  name: name,
+                  theme: (document.getElementById('skin-theme') as HTMLInputElement).value || selectedSkinType,
+                  weight: parseInt((document.getElementById('skin-weight') as HTMLInputElement).value || '1'),
+                  rarity: (document.getElementById('skin-rarity') as HTMLSelectElement).value,
+                  isPremium: (document.getElementById('skin-premium') as HTMLInputElement).checked,
+                  isDefault: (document.getElementById('skin-default') as HTMLInputElement).checked,
+                }
                 
                 const priceValue = (document.getElementById('skin-price') as HTMLInputElement).value
                 if (priceValue) {
-                  formData.append('price', priceValue)
+                  skinData.price = parseFloat(priceValue)
                 }
                 
-                formData.append('weight', (document.getElementById('skin-weight') as HTMLInputElement).value || '1')
-                formData.append('rarity', (document.getElementById('skin-rarity') as HTMLSelectElement).value)
-                formData.append('isPremium', (document.getElementById('skin-premium') as HTMLInputElement).checked.toString())
-                formData.append('isDefault', (document.getElementById('skin-default') as HTMLInputElement).checked.toString())
-                
                 // Добавляем конфиги в зависимости от типа
-                if (skinType === 'board') {
-                  const boardConfig = {
+                if (selectedSkinType === 'board') {
+                  skinData.boardConfig = {
                     backgroundColor: (document.getElementById('skin-board-background-color') as HTMLInputElement).value,
                     triangleColor1: (document.getElementById('skin-board-triangle-color-1') as HTMLInputElement).value,
                     triangleColor2: (document.getElementById('skin-board-triangle-color-2') as HTMLInputElement).value,
                     borderColor: (document.getElementById('skin-board-border-color') as HTMLInputElement).value,
                     outlineColor: (document.getElementById('skin-board-outline-color') as HTMLInputElement).value,
                   }
-                  formData.append('boardConfig', JSON.stringify(boardConfig))
-                } else if (skinType === 'dice') {
-                  const diceConfig = {
+                } else if (selectedSkinType === 'dice') {
+                  skinData.diceConfig = {
                     color: (document.getElementById('skin-dice-color') as HTMLInputElement).value,
                   }
-                  formData.append('diceConfig', JSON.stringify(diceConfig))
-                } else if (skinType === 'checkers') {
-                  const checkersConfig = {
+                } else if (selectedSkinType === 'checkers') {
+                  skinData.checkersConfig = {
                     whiteColor: (document.getElementById('skin-checkers-white-color') as HTMLInputElement).value,
                     blackColor: (document.getElementById('skin-checkers-black-color') as HTMLInputElement).value,
                   }
-                  formData.append('checkersConfig', JSON.stringify(checkersConfig))
                 }
-                
-                // Изображения больше не используются - только материалы (цвета)
-                
-                // Текстуры больше не используются - только материалы (цвета)
 
                 try {
-                  await apiClient.post('/admin/skins', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                  })
+                  await apiClient.post('/admin/skins', skinData)
                   alert('Скин создан!')
                   loadStats()
                   // Очистить форму
-                  ;(document.getElementById('skin-type') as HTMLSelectElement).value = ''
+                  setSelectedSkinType('')
                   ;(document.getElementById('skin-name') as HTMLInputElement).value = ''
                   ;(document.getElementById('skin-theme') as HTMLInputElement).value = ''
                   ;(document.getElementById('skin-price') as HTMLInputElement).value = ''
                   ;(document.getElementById('skin-weight') as HTMLInputElement).value = '1'
                   ;(document.getElementById('skin-premium') as HTMLInputElement).checked = false
                   ;(document.getElementById('skin-default') as HTMLInputElement).checked = false
-                  // Очистить поля конфигураций
-                  const configBoard = document.getElementById('skin-config-board') as HTMLElement
-                  const configDice = document.getElementById('skin-config-dice') as HTMLElement
-                  const configCheckers = document.getElementById('skin-config-checkers') as HTMLElement
-                  if (configBoard) configBoard.style.display = 'none'
-                  if (configDice) configDice.style.display = 'none'
-                  if (configCheckers) configCheckers.style.display = 'none'
                 } catch (error: any) {
                   alert('Ошибка: ' + (error.response?.data?.message || error.message))
                 }
