@@ -3005,76 +3005,7 @@ export default function Admin() {
                     /> По умолчанию
                   </label>
                 </div>
-                <div className="form-group">
-                  <label>Превью (для инвентаря):</label>
-                  {selectedSkin.imageUrl && (
-                    <div style={{ marginBottom: '8px' }}>
-                      <img 
-                        src={getImageUrl(selectedSkin.imageUrl) || selectedSkin.imageUrl} 
-                        alt={selectedSkin.name}
-                        style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    </div>
-                  )}
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    id="edit-skin-image"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        const reader = new FileReader()
-                        reader.onload = (event) => {
-                          const preview = document.getElementById('edit-skin-image-preview')
-                          if (preview) {
-                            preview.innerHTML = `<img src="${event.target?.result}" alt="Превью" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
-                          }
-                        }
-                        reader.readAsDataURL(file)
-                      }
-                    }}
-                  />
-                  <div id="edit-skin-image-preview" style={{ marginTop: '8px' }}></div>
-                  <span className="field-hint">Превью для отображения в инвентаре</span>
-                </div>
-                <div className="form-group">
-                  <label>Изображение для магазина:</label>
-                  {selectedSkin.shopImageUrl && (
-                    <div style={{ marginBottom: '8px' }}>
-                      <img 
-                        src={getImageUrl(selectedSkin.shopImageUrl) || selectedSkin.shopImageUrl} 
-                        alt="Изображение для магазина"
-                        style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px' }}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    </div>
-                  )}
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    id="edit-skin-shop-image"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        const reader = new FileReader()
-                        reader.onload = (event) => {
-                          const preview = document.getElementById('edit-skin-shop-image-preview')
-                          if (preview) {
-                            preview.innerHTML = `<img src="${event.target?.result}" alt="Изображение для магазина" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
-                          }
-                        }
-                        reader.readAsDataURL(file)
-                      }
-                    }}
-                  />
-                  <div id="edit-skin-shop-image-preview" style={{ marginTop: '8px' }}></div>
-                  <span className="field-hint">Отдельное изображение для отображения в магазине</span>
-                </div>
+                {/* Поля для загрузки изображений удалены - скины теперь только на материалах (цветах) */}
                 {/* Поля для загрузки текстур удалены - теперь используются только материалы (цвета) */}
                 <div className="btn-group">
                   <button className="btn btn-primary" onClick={async () => {
@@ -3111,26 +3042,7 @@ export default function Admin() {
                       
                       await apiClient.put(`/admin/skins/${selectedSkin.id}`, updateData)
                       
-                      // Если есть новое изображение, загружаем его
-                      const fileInput = document.getElementById('edit-skin-image') as HTMLInputElement
-                      if (fileInput.files && fileInput.files[0]) {
-                        const imageFormData = new FormData()
-                        imageFormData.append('image', fileInput.files[0])
-                        await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-image`, imageFormData, {
-                          headers: { 'Content-Type': 'multipart/form-data' }
-                        })
-                      }
-                      
-                      const shopImageInput = document.getElementById('edit-skin-shop-image') as HTMLInputElement
-                      if (shopImageInput.files && shopImageInput.files[0]) {
-                        const shopImageFormData = new FormData()
-                        shopImageFormData.append('shopImage', shopImageInput.files[0])
-                        await apiClient.post(`/admin/skins/${selectedSkin.id}/upload-textures`, shopImageFormData, {
-                          headers: { 'Content-Type': 'multipart/form-data' }
-                        })
-                      }
-                      
-                      // Текстуры больше не используются - только материалы (цвета)
+                      // Изображения больше не используются - только материалы (цвета)
                       
                       alert('Скин обновлен!')
                       setSelectedSkin(null)
@@ -3191,52 +3103,7 @@ export default function Admin() {
                   <input type="checkbox" id="skin-default" /> По умолчанию
                 </label>
               </div>
-              <div className="form-group">
-                <label>Превью (для инвентаря):</label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  id="skin-image"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      const reader = new FileReader()
-                      reader.onload = (event) => {
-                        const preview = document.getElementById('skin-image-preview')
-                        if (preview) {
-                          preview.innerHTML = `<img src="${event.target?.result}" alt="Превью" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
-                        }
-                      }
-                      reader.readAsDataURL(file)
-                    }
-                  }}
-                />
-                <div id="skin-image-preview" style={{ marginTop: '8px' }}></div>
-                <span className="field-hint">Превью для отображения в инвентаре</span>
-              </div>
-              <div className="form-group">
-                <label>Изображение для магазина:</label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  id="skin-shop-image"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      const reader = new FileReader()
-                      reader.onload = (event) => {
-                        const preview = document.getElementById('skin-shop-image-preview')
-                        if (preview) {
-                          preview.innerHTML = `<img src="${event.target?.result}" alt="Изображение для магазина" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px;" />`
-                        }
-                      }
-                      reader.readAsDataURL(file)
-                    }
-                  }}
-                />
-                <div id="skin-shop-image-preview" style={{ marginTop: '8px' }}></div>
-                <span className="field-hint">Отдельное изображение для отображения в магазине</span>
-              </div>
+              {/* Поля для загрузки изображений удалены - скины теперь только на материалах (цветах) */}
               {/* Поля для загрузки текстур удалены - теперь используются только материалы (цвета) */}
               {/* Поля для конфигураций материалов */}
               <div className="form-group" id="skin-config-board" style={{ display: 'none' }}>
@@ -3358,15 +3225,7 @@ export default function Admin() {
                   formData.append('checkersConfig', JSON.stringify(checkersConfig))
                 }
                 
-                const fileInput = document.getElementById('skin-image') as HTMLInputElement
-                if (fileInput.files && fileInput.files[0]) {
-                  formData.append('preview', fileInput.files[0])
-                }
-                
-                const shopImageInput = document.getElementById('skin-shop-image') as HTMLInputElement
-                if (shopImageInput.files && shopImageInput.files[0]) {
-                  formData.append('shopImage', shopImageInput.files[0])
-                }
+                // Изображения больше не используются - только материалы (цвета)
                 
                 // Текстуры больше не используются - только материалы (цвета)
 
@@ -3384,11 +3243,6 @@ export default function Admin() {
                   ;(document.getElementById('skin-weight') as HTMLInputElement).value = '1'
                   ;(document.getElementById('skin-premium') as HTMLInputElement).checked = false
                   ;(document.getElementById('skin-default') as HTMLInputElement).checked = false
-                  fileInput.value = ''
-                  const shopImageInput = document.getElementById('skin-shop-image') as HTMLInputElement
-                  if (shopImageInput) shopImageInput.value = ''
-                  const shopImagePreview = document.getElementById('skin-shop-image-preview')
-                  if (shopImagePreview) shopImagePreview.innerHTML = ''
                   // Очистить поля конфигураций
                   const configBoard = document.getElementById('skin-config-board') as HTMLElement
                   const configDice = document.getElementById('skin-config-dice') as HTMLElement
@@ -3396,8 +3250,6 @@ export default function Admin() {
                   if (configBoard) configBoard.style.display = 'none'
                   if (configDice) configDice.style.display = 'none'
                   if (configCheckers) configCheckers.style.display = 'none'
-                  const imagePreview = document.getElementById('skin-image-preview')
-                  if (imagePreview) imagePreview.innerHTML = ''
                 } catch (error: any) {
                   alert('Ошибка: ' + (error.response?.data?.message || error.message))
                 }
