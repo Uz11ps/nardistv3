@@ -638,27 +638,23 @@ export class GamesService {
       currentState.movesFromPoint = {};
       this.logger.log(`🔄 Turn switched: all dice used. New player: ${currentState.currentPlayer}`);
     } else {
-      // Проверяем, есть ли валидные ходы с оставшимися кубиками
+      // ОБЯЗАТЕЛЬНАЯ проверка: есть ли валидные ходы с оставшимися кубиками после применения всех ходов
       let hasValidMoves = false;
       
-      // Для длинных нард всегда оставляем оставшиеся кубики (логика 8+8 для дублей обрабатывается на фронтенде)
-      if (game.mode === GameMode.LONG) {
-        // В длинных нардах оставляем оставшиеся кубики - игрок может продолжить ход
-        currentState.dice = remainingDice;
-        this.logger.log(`🟡 Long backgammon: keeping same player with remaining dice [${remainingDice.join(', ')}]`);
-      } else if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
-        // Для коротких нард проверяем валидность ходов
-        const remainingMoves = engine.getAllValidMoves(currentState, remainingDice);
+      // ВСЕГДА проверяем валидные ходы для всех режимов (и длинных, и коротких нард)
+      if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
+        // Проверяем валидность ходов с текущим состоянием после применения всех ходов
+        const remainingMoves = engine.getAllValidMoves(currentState, remainingDice, isFirstMoveOfGame);
         // getAllValidMoves возвращает последовательности. Если есть хотя бы одна непустая - ходы есть.
         hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
-        this.logger.log(`🔍 Checking remaining moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}`);
+        this.logger.log(`🔍 Checking remaining moves after ${finalMovesToSave.length} moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}, movesFound=${remainingMoves.length}`);
         
         if (hasValidMoves) {
           // Есть еще ходы - оставляем того же игрока
           currentState.dice = remainingDice;
           this.logger.log(`🟡 Keeping same player: valid moves remain with dice [${remainingDice.join(', ')}]`);
         } else {
-          // Ходов больше нет - принудительная смена хода
+          // Ходов больше нет - ПРИНУДИТЕЛЬНАЯ смена хода
           currentState.dice = [];
           currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
           currentState.movesFromHead = 0;
@@ -666,9 +662,12 @@ export class GamesService {
           this.logger.log(`🔄 Turn switched: no valid moves remain with [${remainingDice.join(', ')}]. New player: ${currentState.currentPlayer}`);
         }
       } else {
-        // Если нет метода getAllValidMoves, оставляем кубики (для безопасности)
-        currentState.dice = remainingDice;
-        this.logger.log(`🟡 No getAllValidMoves method, keeping same player with remaining dice [${remainingDice.join(', ')}]`);
+        // Если нет метода getAllValidMoves, НЕ оставляем кубики - переключаем ход (безопаснее)
+        currentState.dice = [];
+        currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
+        currentState.movesFromHead = 0;
+        currentState.movesFromPoint = {};
+        this.logger.log(`🔄 Turn switched: no getAllValidMoves method available, switching turn for safety`);
       }
     }
     
@@ -828,17 +827,17 @@ export class GamesService {
     // Для дублей работаем как 8+8: сначала первые 2 кубика (8 очков), затем после подтверждения - оставшиеся 2 кубика (еще 8 очков)
     let diceForMoves = remainingDice;
     if (isDoubles && originalDice.length === 4 && remainingDice.length === 4) {
-      // При выборе шашки (нет pendingMoves) или при наличии pendingMoves - ограничиваем до первых 2 кубиков
+      // При выборе шашки (нет pendingMoves) - ограничиваем до первых 2 кубиков (первая "8")
       // Это логика 8+8: сначала используем первую "8" (2 кубика), затем после подтверждения - вторую "8" (оставшиеся 2 кубика)
       if (!hasPendingMoves) {
         // Если нет pendingMoves (выбор шашки), ограничиваем до первых 2 кубиков (первая "8")
         diceForMoves = remainingDice.slice(0, 2);
         this.logger.log(`🔒 Doubles 4/4 (8+8 logic): No pending moves, limiting to first 2 dice: [${diceForMoves.join(', ')}]`);
       } else {
-        // Если есть pendingMoves, значит игрок уже сделал ходы из первой "8"
-        // НЕ предлагаем ходы с оставшимися кубиками ДО подтверждения первых ходов
-        diceForMoves = [];
-        this.logger.log(`🔒 Doubles 4/4 (8+8 logic): Pending moves exist (${pendingMoves.length}), blocking further moves until confirmation`);
+        // Если есть pendingMoves, проверяем оставшиеся кубики после первых ходов
+        // После применения pendingMoves должны остаться последние 2 кубика (вторая "8")
+        diceForMoves = remainingDice;
+        this.logger.log(`🔒 Doubles 4/4 (8+8 logic): Pending moves exist (${pendingMoves.length}), checking remaining dice: [${diceForMoves.join(', ')}]`);
       }
     }
 

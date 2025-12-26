@@ -105,8 +105,9 @@ function renderDots(value: number) {
       gridTemplateRows: 'repeat(3, 1fr)',
       width: '100%',
       height: '100%',
-      padding: '8px',
+      padding: '10px',
       boxSizing: 'border-box',
+      gap: 0,
     }}>
       {Array.from({ length: 9 }).map((_, index) => (
         <div
@@ -117,6 +118,8 @@ function renderDots(value: number) {
             justifyContent: 'center',
             margin: 0,
             padding: 0,
+            width: '100%',
+            height: '100%',
           }}
         >
           {dots.includes(index) && (
@@ -126,7 +129,8 @@ function renderDots(value: number) {
                 height: '7px',
                 background: '#222',
                 borderRadius: '50%',
-                margin: 0,
+                margin: '0 auto',
+                flexShrink: 0,
               }}
             />
           )}
