@@ -475,6 +475,22 @@ export class GamesService {
     // Правило Минспорта 20.3: только второй игрок (черные) при первом ходе с дублями 3:3, 4:4 или 6:6 может снять 2 шашки с головы
     const isFirstMoveOfGame = game.mode === GameMode.LONG && (game.moves || []).length < 2;
 
+    // Если moves пустой, это пропуск хода - переключаем игрока
+    if (moves.length === 0) {
+      const currentState = JSON.parse(JSON.stringify(game.gameState));
+      currentState.dice = [];
+      currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
+      currentState.movesFromHead = 0;
+      currentState.movesFromPoint = {};
+      
+      const updatedGame = await this.findOne(gameId);
+      updatedGame.gameState = currentState;
+      updatedGame.currentPlayer = currentState.currentPlayer;
+      updatedGame.lastMoveAt = new Date();
+      
+      return await this.gamesRepository.save(updatedGame);
+    }
+
     // Проверяем валидность всех ходов
     let currentState = JSON.parse(JSON.stringify(game.gameState));
     const diceCopy = [...dice];
@@ -489,7 +505,15 @@ export class GamesService {
       }
     }
 
-    for (const move of expandedMoves) {
+    // Нормализуем ходы с бара: фронтенд может отправлять 24 (белые) или 25 (черные) вместо -1
+    const normalizedMoves = expandedMoves.map(move => {
+      if (move.from === 24 || move.from === 25) {
+        return { ...move, from: -1 };
+      }
+      return move;
+    });
+
+    for (const move of normalizedMoves) {
       console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       console.log(`  Текущее состояние: movesFromHead=${currentState.movesFromHead || 0}, dice=[${currentState.dice?.join(', ') || 'none'}]`);
       
@@ -512,8 +536,8 @@ export class GamesService {
       currentState = engine.applyMove(currentState, move.from, move.to, move.die);
     }
 
-    // Для целей сохранения и истории используем развернутые ходы
-    const finalMovesToSave = expandedMoves;
+    // Для целей сохранения и истории используем нормализованные ходы
+    const finalMovesToSave = normalizedMoves;
 
     // Проверяем обязательность использования всех кубиков, если это возможно
     // getAllValidMoves доступен только для BackgammonEngine
