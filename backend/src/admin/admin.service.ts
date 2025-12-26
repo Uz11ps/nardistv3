@@ -1219,13 +1219,6 @@ export class AdminService implements OnModuleInit {
     isDefault: boolean;
     isPremium: boolean;
     weight: number;
-    imageUrl: string;
-    boardTextureUrl: string;
-    diceTextureUrl: string;
-    diceTextureUrls: any;
-    checkersTextureUrl: string;
-    whiteCheckersTextureUrl: string;
-    blackCheckersTextureUrl: string;
     price: number;
     rarity: string;
     maxDurability: number;
@@ -1248,24 +1241,7 @@ export class AdminService implements OnModuleInit {
     }
 
     try {
-      // Удаляем файл изображения с сервера, если он есть
-      if (skin.imageUrl) {
-        try {
-          // imageUrl хранится как /uploads/skins/filename.jpg
-          const filename = skin.imageUrl.split('/').pop();
-          if (filename) {
-            const filePath = join(process.cwd(), 'uploads', 'skins', filename);
-            await unlink(filePath).catch((err) => {
-              // Игнорируем ошибку если файл уже удален
-              console.warn(`File ${filePath} not found or already deleted:`, err.message);
-            });
-          }
-        } catch (fileError) {
-          // Логируем, но не прерываем удаление скина
-          console.warn('Error deleting skin image file:', fileError);
-        }
-      }
-
+      // Изображения больше не используются - только материалы (цвета)
       // Удаляем связанные записи user_skins сначала
       await this.userSkinsRepository.delete({ skinId: id });
       
@@ -1278,31 +1254,7 @@ export class AdminService implements OnModuleInit {
     }
   }
 
-  async updateSkinImage(id: string, imageUrl: string) {
-    const skin = await this.skinsRepository.findOne({ where: { id } });
-    if (!skin) {
-      throw new Error('Скин не найден');
-    }
-
-    // Удаляем старое изображение, если оно было
-    if (skin.imageUrl && skin.imageUrl !== imageUrl) {
-      try {
-        const oldFilename = skin.imageUrl.split('/').pop();
-        if (oldFilename) {
-          const oldFilePath = join(process.cwd(), 'uploads', 'skins', oldFilename);
-          await unlink(oldFilePath).catch((err) => {
-            // Игнорируем ошибку если файл уже удален
-            console.warn(`Old file ${oldFilePath} not found:`, err.message);
-          });
-        }
-      } catch (fileError) {
-        console.warn('Error deleting old skin image file:', fileError);
-      }
-    }
-
-    skin.imageUrl = imageUrl;
-    return this.skinsRepository.save(skin);
-  }
+  // Метод updateSkinImage удален - изображения больше не используются
 
   // CRUD для квестов
   async getAllQuests() {
