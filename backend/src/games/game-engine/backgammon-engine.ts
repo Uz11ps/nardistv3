@@ -84,10 +84,12 @@ export class BackgammonEngine {
     // Player 1 (White) moves from index 0 towards index 23 (Point 24 to 1)
     
     // If checkers on bar, must enter from bar first
-    // White enters on points 1-6 (indices 23,22,21,20,19,18) = BOARD_SIZE - die
+    // White enters on points 1-6 (their home)
+    // White home is visually bottom right: points 1-6 correspond to indices 18-23 (die=1 → index 18, die=6 → index 23)
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      const enterPoint = this.BOARD_SIZE - die; 
+      // White enters: die=1 → Point 1 → index 18, die=6 → Point 6 → index 23
+      const enterPoint = 17 + die; // die=1 → 18, die=6 → 23
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
       if (state.points[enterPoint] < -1) return false;
       return to === enterPoint || to === -1;
@@ -200,10 +202,12 @@ export class BackgammonEngine {
 
   private applyMovePlayer1(state: BoardState, from: number, to: number, die: number): void {
     // Entering from bar
-    // White enters on points 1-6 (indices 23,22,21,20,19,18) = BOARD_SIZE - die
+    // White enters on points 1-6 (their home)
+    // White home is visually bottom right: points 1-6 correspond to indices 18-23 (die=1 → index 18, die=6 → index 23)
     if (state.bar[0] > 0 && from === -1) {
       state.bar[0]--;
-      const enterPointIndex = this.BOARD_SIZE - die;
+      // White enters: die=1 → Point 1 → index 18, die=6 → Point 6 → index 23
+      const enterPointIndex = 17 + die; // die=1 → 18, die=6 → 23
       
       // Hit opponent's single checker (Blot)
       if (state.points[enterPointIndex] === -1) {
@@ -369,8 +373,9 @@ export class BackgammonEngine {
       // Player 1 (White)
       if (state.bar[0] > 0) {
         // Must enter from bar
-        // White enters on points 1-6 (indices 23,22,21,20,19,18) = BOARD_SIZE - die
-        const enterPointIndex = this.BOARD_SIZE - die;
+        // White enters on points 1-6 (their home)
+        // White home is visually bottom right: points 1-6 correspond to indices 18-23 (die=1 → index 18, die=6 → index 23)
+        const enterPointIndex = 17 + die; // die=1 → 18, die=6 → 23
         if (this.validateMove(state, -1, enterPointIndex, die)) {
           moves.push({ from: -1, to: enterPointIndex });
         }
