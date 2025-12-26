@@ -1102,7 +1102,7 @@ export default function BackgammonBoard({
         ctx.fillRect(targetX, 0, bearOffWidth, height)
       }
     }
-  }, [virtualGameState, selectedPoint, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, getPointCoordinates, animatingChecker, boardTexturePlayer1, boardTexturePlayer2, whiteCheckerTexture, blackCheckerTexture, currentPlayer])
+  }, [virtualGameState, selectedPoint, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, animatingChecker, boardTexturePlayer1, boardTexturePlayer2, whiteCheckerTexture, blackCheckerTexture, currentPlayer, getPointCoordinates])
   
   // Перерисовка при изменении состояния
   useEffect(() => {
