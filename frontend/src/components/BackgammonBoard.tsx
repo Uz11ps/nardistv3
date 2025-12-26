@@ -1311,13 +1311,13 @@ export default function BackgammonBoard({
         if (targetPoint === -1) {
           const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
           if (bearOffMove) {
-            startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die)
+            startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die, (bearOffMove as any).steps)
             return // startMoveAnimation сам все сбросит
           }
         } else if (validTargetPoints.has(targetPoint)) {
           const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
           if (move) {
-            startMoveAnimation(move.from, move.to, move.die)
+            startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
             return // startMoveAnimation сам все сбросит
           }
         }
