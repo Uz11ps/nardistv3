@@ -518,10 +518,10 @@ export default function BackgammonBoard({
       }
     }
     
-    // Debounce для предотвращения частых запросов (увеличиваем для уменьшения лагов)
+    // Минимальный debounce для предотвращения частых запросов, но быстрое обновление после ходов
     timeoutId = window.setTimeout(() => {
       fetchPossibleMoves()
-    }, 300)
+    }, 100)
     
     return () => {
       cancelled = true
@@ -1259,6 +1259,14 @@ export default function BackgammonBoard({
 
   // Вспомогательная функция для запуска анимации
   const startMoveAnimation = (from: number, to: number, die: number, steps?: any[]) => {
+    // Сразу обновляем selectedPoint на новую позицию, чтобы после хода подсветка обновилась
+    if (to !== -1 && to !== null && to !== undefined) {
+      setSelectedPoint(to)
+    } else {
+      // Если шашка вынесена, сбрасываем выбор
+      setSelectedPoint(null)
+    }
+    
     setAnimatingChecker({
       from,
       to,
@@ -1267,13 +1275,12 @@ export default function BackgammonBoard({
       progress: 0,
       startTime: performance.now()
     })
-    // Сбрасываем состояния взаимодействия, но НЕ сбрасываем selectedPoint
-    // чтобы можно было сразу сделать еще один ход той же шашкой
-    // selectedPoint будет обновлен после обновления possibleMoves
+    // Сбрасываем состояния взаимодействия
     setDragging(null)
     setDragPosition(null)
     setHoveredPoint(null)
-    // НЕ сбрасываем validTargetPoints и selectedPoint здесь - они обновятся после обновления possibleMoves
+    // Временно сбрасываем validTargetPoints - они обновятся после получения новых possibleMoves
+    setValidTargetPoints(new Set())
     setShowBearOffButton(null)
   }
 
