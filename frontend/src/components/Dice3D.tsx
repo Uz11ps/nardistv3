@@ -81,14 +81,18 @@ function Die({ value, isRolling, delay, diceColor }: DieProps) {
   )
 }
 
-// Рисуем точки на кубике
+// Рисуем точки на кубике (стандартное расположение точек на игральных костях)
 function renderDots(value: number) {
+  // Сетка 3x3 для точек (индексы):
+  // 0 1 2
+  // 3 4 5
+  // 6 7 8
   const patterns: { [key: number]: number[] } = {
-    1: [4], // Центр
-    2: [0, 8], // Диагональ: левый верхний, правый нижний
-    3: [0, 4, 8], // Диагональ: все три
-    4: [0, 2, 6, 8], // Углы
-    5: [0, 2, 4, 6, 8], // Углы + центр
+    1: [4], // Центр (одна точка точно по середине)
+    2: [2, 6], // Диагональ: правая верхняя, левая нижняя
+    3: [2, 4, 6], // Диагональ: правая верхняя, центр, левая нижняя
+    4: [0, 2, 6, 8], // Четыре угла
+    5: [0, 2, 4, 6, 8], // Четыре угла + центр
     6: [0, 3, 6, 2, 5, 8], // Две колонки: левая (0,3,6) и правая (2,5,8)
   }
   
@@ -101,20 +105,28 @@ function renderDots(value: number) {
       gridTemplateRows: 'repeat(3, 1fr)',
       width: '100%',
       height: '100%',
-      gap: '2px',
       padding: '8px',
     }}>
       {Array.from({ length: 9 }).map((_, index) => (
         <div
           key={index}
           style={{
-            width: '6px',
-            height: '6px',
-            background: dots.includes(index) ? '#222' : 'transparent',
-            borderRadius: '50%',
-            margin: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
-        />
+        >
+          {dots.includes(index) && (
+            <div
+              style={{
+                width: '7px',
+                height: '7px',
+                background: '#222',
+                borderRadius: '50%',
+              }}
+            />
+          )}
+        </div>
       ))}
     </div>
   )
