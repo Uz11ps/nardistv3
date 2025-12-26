@@ -789,12 +789,19 @@ export class GamesService {
     }
 
     // Используем оставшиеся кубики для расчета возможных ходов
-    // Для дублей без pendingMoves ограничиваем до 2 кубиков (UI решение для удобства)
+    // Для дублей работаем как 8+8: сначала первые 2 кубика (8 очков), затем после подтверждения - оставшиеся 2 кубика (еще 8 очков)
     let diceForMoves = remainingDice;
-    if (isDoubles && !hasPendingMoves && diceForMoves.length === 4) {
-      // Ограничиваем до первых 2 кубиков (UI решение)
-      diceForMoves = diceForMoves.slice(0, 2);
-      this.logger.log(`🔒 Doubles detected (UI limitation), limiting possible moves to first 2 dice: [${diceForMoves.join(', ')}]`);
+    if (isDoubles && originalDice.length === 4) {
+      if (!hasPendingMoves) {
+        // Если нет pendingMoves, ограничиваем до первых 2 кубиков (первая "8")
+        diceForMoves = remainingDice.slice(0, 2);
+        this.logger.log(`🔒 Doubles 4/4 (8+8 logic): No pending moves, limiting to first 2 dice: [${diceForMoves.join(', ')}]`);
+      } else {
+        // Если есть pendingMoves, значит игрок уже сделал ходы из первой "8"
+        // НЕ предлагаем ходы с оставшимися кубиками ДО подтверждения первых ходов
+        diceForMoves = [];
+        this.logger.log(`🔒 Doubles 4/4 (8+8 logic): Pending moves exist (${pendingMoves.length}), blocking further moves until confirmation`);
+      }
     }
 
     if (!diceForMoves || diceForMoves.length === 0) {
