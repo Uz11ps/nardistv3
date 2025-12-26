@@ -3290,51 +3290,27 @@ export default function Admin() {
               <script dangerouslySetInnerHTML={{__html: `
                 document.getElementById('skin-type').addEventListener('change', function() {
                   const type = this.value;
-                  const textureGroup = document.getElementById('skin-texture-group');
-                  const textureLabel = document.getElementById('skin-texture-label');
-                  const textureSingle = document.getElementById('skin-texture-single');
-                  const textureDice = document.getElementById('skin-texture-dice');
-                  const textureCheckers = document.getElementById('skin-texture-checkers');
-                  const textureHint = document.getElementById('skin-texture-hint');
-                  
-                  if (type) {
-                    textureGroup.style.display = 'block';
-                    const configBoard = document.getElementById('skin-config-board');
+                  const configBoard = document.getElementById('skin-config-board');
                   const configDice = document.getElementById('skin-config-dice');
                   const configCheckers = document.getElementById('skin-config-checkers');
                   
                   if (type === 'board') {
-                      textureLabel.textContent = 'Текстура доски (файл для игры):';
-                      textureSingle.style.display = 'block';
-                      textureDice.style.display = 'none';
-                      if (textureCheckers) textureCheckers.style.display = 'none';
-                      textureHint.textContent = 'Этот файл будет использоваться в игре';
-                      textureHint.style.display = 'block';
                       if (configBoard) configBoard.style.display = 'block';
                       if (configDice) configDice.style.display = 'none';
                       if (configCheckers) configCheckers.style.display = 'none';
                     } else if (type === 'dice') {
-                      textureLabel.textContent = 'Текстуры кубиков (6 файлов для игры - от 1 до 6):';
-                      textureSingle.style.display = 'none';
-                      textureDice.style.display = 'block';
-                      if (textureCheckers) textureCheckers.style.display = 'none';
-                      textureHint.style.display = 'none';
                       if (configBoard) configBoard.style.display = 'none';
                       if (configDice) configDice.style.display = 'block';
                       if (configCheckers) configCheckers.style.display = 'none';
                     } else if (type === 'checkers') {
-                      textureLabel.textContent = 'Текстуры шашек (2 файла для игры - белые и черные):';
-                      textureSingle.style.display = 'none';
-                      textureDice.style.display = 'none';
-                      if (textureCheckers) textureCheckers.style.display = 'block';
-                      textureHint.style.display = 'none';
                       if (configBoard) configBoard.style.display = 'none';
                       if (configDice) configDice.style.display = 'none';
                       if (configCheckers) configCheckers.style.display = 'block';
+                    } else {
+                      if (configBoard) configBoard.style.display = 'none';
+                      if (configDice) configDice.style.display = 'none';
+                      if (configCheckers) configCheckers.style.display = 'none';
                     }
-                  } else {
-                    textureGroup.style.display = 'none';
-                  }
                 });
               `}} />
               <button className="btn btn-primary" onClick={async () => {
@@ -3413,9 +3389,6 @@ export default function Admin() {
                   if (shopImageInput) shopImageInput.value = ''
                   const shopImagePreview = document.getElementById('skin-shop-image-preview')
                   if (shopImagePreview) shopImagePreview.innerHTML = ''
-                  // Очистить поля текстур
-                  const textureInput = document.getElementById('skin-texture') as HTMLInputElement
-                  if (textureInput) textureInput.value = ''
                   // Очистить поля конфигураций
                   const configBoard = document.getElementById('skin-config-board') as HTMLElement
                   const configDice = document.getElementById('skin-config-dice') as HTMLElement
@@ -3423,25 +3396,6 @@ export default function Admin() {
                   if (configBoard) configBoard.style.display = 'none'
                   if (configDice) configDice.style.display = 'none'
                   if (configCheckers) configCheckers.style.display = 'none'
-                  
-                  // Очистить поля кубиков (1-6)
-                  for (let i = 1; i <= 6; i++) {
-                    const diceInput = document.getElementById(`skin-dice-texture-${i}`) as HTMLInputElement
-                    if (diceInput) diceInput.value = ''
-                    const dicePreview = document.getElementById(`skin-dice-texture-${i}-preview`)
-                    if (dicePreview) dicePreview.innerHTML = ''
-                  }
-                  const texturePreview = document.getElementById('skin-texture-preview')
-                  if (texturePreview) texturePreview.innerHTML = ''
-                  // Очистить поля шашек
-                  const whiteCheckersInput = document.getElementById('skin-white-checkers-texture') as HTMLInputElement
-                  if (whiteCheckersInput) whiteCheckersInput.value = ''
-                  const blackCheckersInput = document.getElementById('skin-black-checkers-texture') as HTMLInputElement
-                  if (blackCheckersInput) blackCheckersInput.value = ''
-                  const whiteCheckersPreview = document.getElementById('skin-white-checkers-texture-preview')
-                  if (whiteCheckersPreview) whiteCheckersPreview.innerHTML = ''
-                  const blackCheckersPreview = document.getElementById('skin-black-checkers-texture-preview')
-                  if (blackCheckersPreview) blackCheckersPreview.innerHTML = ''
                   const imagePreview = document.getElementById('skin-image-preview')
                   if (imagePreview) imagePreview.innerHTML = ''
                 } catch (error: any) {
