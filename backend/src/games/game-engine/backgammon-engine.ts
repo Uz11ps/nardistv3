@@ -84,12 +84,12 @@ export class BackgammonEngine {
     // Player 1 (White) moves from index 0 towards index 23 (Point 24 to 1)
     
     // If checkers on bar, must enter from bar first
-    // White enters on points 1-6 (their home)
-    // White home is visually bottom right: points 1-6 correspond to indices 18-23 (die=1 → index 18, die=6 → index 23)
+    // White enters in BLACK's home (opponent's home)
+    // Black home is visually top right: Points 19-24 (indices 0-5)
+    // White enters: die=1 → Point 24 → index 0, die=6 → Point 19 → index 5
     if (state.bar[0] > 0) {
       if (from !== -1) return false;
-      // White enters: die=1 → Point 1 → index 18, die=6 → Point 6 → index 23
-      const enterPoint = 17 + die; // die=1 → 18, die=6 → 23
+      const enterPoint = die - 1; // die=1 → 0 (Point 24), die=6 → 5 (Point 19)
       if (enterPoint < 0 || enterPoint >= this.BOARD_SIZE) return false;
       if (state.points[enterPoint] < -1) return false;
       return to === enterPoint || to === -1;
@@ -131,10 +131,12 @@ export class BackgammonEngine {
     // Player 2 (Black) moves from index 23 towards index 0 (Point 1 to 24)
     
     // If checkers on bar, must enter from bar first
-    // Black enters on points 19-24 (indices 0,1,2,3,4,5) = die - 1
+    // Black enters in WHITE's home (opponent's home)
+    // White home is visually bottom right: Points 1-6 (indices 18-23)
+    // Black enters: die=1 → Point 1 → index 18, die=6 → Point 6 → index 23
     if (state.bar[1] > 0) {
       if (from !== -1) return false;
-      const enterPointIndex = die - 1;
+      const enterPointIndex = 17 + die; // die=1 → 18 (Point 1), die=6 → 23 (Point 6)
       if (enterPointIndex < 0 || enterPointIndex >= this.BOARD_SIZE) return false;
       if (state.points[enterPointIndex] > 1) return false;
       return to === enterPointIndex || to === -1;
@@ -202,12 +204,12 @@ export class BackgammonEngine {
 
   private applyMovePlayer1(state: BoardState, from: number, to: number, die: number): void {
     // Entering from bar
-    // White enters on points 1-6 (their home)
-    // White home is visually bottom right: points 1-6 correspond to indices 18-23 (die=1 → index 18, die=6 → index 23)
+    // White enters in BLACK's home (opponent's home)
+    // Black home is visually top right: Points 19-24 (indices 0-5)
+    // White enters: die=1 → Point 24 → index 0, die=6 → Point 19 → index 5
     if (state.bar[0] > 0 && from === -1) {
       state.bar[0]--;
-      // White enters: die=1 → Point 1 → index 18, die=6 → Point 6 → index 23
-      const enterPointIndex = 17 + die; // die=1 → 18, die=6 → 23
+      const enterPointIndex = die - 1; // die=1 → 0 (Point 24), die=6 → 5 (Point 19)
       
       // Hit opponent's single checker (Blot)
       if (state.points[enterPointIndex] === -1) {
@@ -244,10 +246,12 @@ export class BackgammonEngine {
 
   private applyMovePlayer2(state: BoardState, from: number, to: number, die: number): void {
     // Entering from bar
-    // Black enters on points 19-24 (indices 0,1,2,3,4,5) = die - 1
+    // Black enters in WHITE's home (opponent's home)
+    // White home is visually bottom right: Points 1-6 (indices 18-23)
+    // Black enters: die=1 → Point 1 → index 18, die=6 → Point 6 → index 23
     if (state.bar[1] > 0 && from === -1) {
       state.bar[1]--;
-      const enterPointIndex = die - 1;
+      const enterPointIndex = 17 + die; // die=1 → 18 (Point 1), die=6 → 23 (Point 6)
       
       // Hit opponent's single checker (Blot)
       if (state.points[enterPointIndex] === 1) {
@@ -373,9 +377,10 @@ export class BackgammonEngine {
       // Player 1 (White)
       if (state.bar[0] > 0) {
         // Must enter from bar
-        // White enters on points 1-6 (their home)
-        // White home is visually bottom right: points 1-6 correspond to indices 18-23 (die=1 → index 18, die=6 → index 23)
-        const enterPointIndex = 17 + die; // die=1 → 18, die=6 → 23
+        // White enters in BLACK's home (opponent's home)
+        // Black home is visually top right: Points 19-24 (indices 0-5)
+        // White enters: die=1 → Point 24 → index 0, die=6 → Point 19 → index 5
+        const enterPointIndex = die - 1; // die=1 → 0 (Point 24), die=6 → 5 (Point 19)
         if (this.validateMove(state, -1, enterPointIndex, die)) {
           moves.push({ from: -1, to: enterPointIndex });
         }
@@ -399,8 +404,10 @@ export class BackgammonEngine {
       // Player 2 (Black)
       if (state.bar[1] > 0) {
         // Must enter from bar
-        // Black enters on points 19-24 (indices 0,1,2,3,4,5) = die - 1
-        const enterPointIndex = die - 1;
+        // Black enters in WHITE's home (opponent's home)
+        // White home is visually bottom right: Points 1-6 (indices 18-23)
+        // Black enters: die=1 → Point 1 → index 18, die=6 → Point 6 → index 23
+        const enterPointIndex = 17 + die; // die=1 → 18 (Point 1), die=6 → 23 (Point 6)
         if (this.validateMove(state, -1, enterPointIndex, die)) {
           moves.push({ from: -1, to: enterPointIndex });
         }
