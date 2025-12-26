@@ -60,6 +60,12 @@ export class GamesController {
     return this.gamesService.getGameSkins(id);
   }
 
+  @Get(':id/rewards')
+  @UseGuards(JwtAuthGuard)
+  async getGameRewards(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.gamesService.getGameRewards(id, user.id);
+  }
+
   @Post('create-bot')
   @UseGuards(JwtAuthGuard)
   async createBotGame(@CurrentUser() user: any, @Body() body?: { mode?: string }) {

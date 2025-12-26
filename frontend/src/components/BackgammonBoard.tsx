@@ -415,6 +415,41 @@ export default function BackgammonBoard({
         // Не подсвечиваем все возможные точки автоматически
         // Подсветка будет только для выбранной точки (selectedPoint)
         setPossibleMoves(flatMoves)
+        
+        // Если есть selectedPoint, обновляем validTargetPoints для этой точки
+        // Это позволяет сразу сделать еще один ход той же шашкой после первого хода
+        if (selectedPoint !== null) {
+          const pointMoves = flatMoves.filter(m => m.from === selectedPoint)
+          if (pointMoves.length > 0) {
+            const targets = new Set<number>()
+            let bearOffDie: number | null = null
+            pointMoves.forEach(m => {
+              if (m.to !== undefined && m.to !== null) {
+                targets.add(m.to)
+                if (m.to === -1) bearOffDie = m.die
+              }
+              // Для комбинированных ходов добавляем конечную точку из steps
+              if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
+                const steps = (m as any).steps
+                const lastStep = steps[steps.length - 1]
+                if (lastStep.to !== undefined && lastStep.to !== null) {
+                  targets.add(lastStep.to)
+                }
+              }
+            })
+            setValidTargetPoints(targets)
+            if (bearOffDie !== null) {
+              setShowBearOffButton({ pointIndex: selectedPoint, die: bearOffDie })
+            } else {
+              setShowBearOffButton(null)
+            }
+          } else {
+            // Если больше нет ходов из этой точки, сбрасываем выбор
+            setSelectedPoint(null)
+            setValidTargetPoints(new Set())
+            setShowBearOffButton(null)
+          }
+        }
         // highlightedPoints будет заполняться только при выборе точки
       } catch (error) {
         if (cancelled) return
@@ -433,7 +468,7 @@ export default function BackgammonBoard({
       cancelled = true
       if (timeoutId !== null) window.clearTimeout(timeoutId)
     }
-  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey]) // Используем стабилизированные ключи
+  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, selectedPoint]) // Используем стабилизированные ключи и selectedPoint для обновления validTargetPoints
   
   // Определение позиции для кубиков
   // Мои кубики на моей части доски, его кубики на его части
@@ -1131,12 +1166,13 @@ export default function BackgammonBoard({
       progress: 0,
       startTime: performance.now()
     })
-    // Сбрасываем состояния взаимодействия
-    setSelectedPoint(null)
+    // Сбрасываем состояния взаимодействия, но НЕ сбрасываем selectedPoint
+    // чтобы можно было сразу сделать еще один ход той же шашкой
+    // selectedPoint будет обновлен после обновления possibleMoves
     setDragging(null)
     setDragPosition(null)
     setHoveredPoint(null)
-    setValidTargetPoints(new Set())
+    // НЕ сбрасываем validTargetPoints и selectedPoint здесь - они обновятся после обновления possibleMoves
     setShowBearOffButton(null)
   }
 

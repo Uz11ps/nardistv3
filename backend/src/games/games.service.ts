@@ -1460,6 +1460,89 @@ export class GamesService {
     }
   }
 
+  async getGameRewards(gameId: string, userId: string): Promise<{ xp: number; narCoin?: number }> {
+    const game = await this.findOne(gameId);
+    
+    if (game.status !== GameStatus.FINISHED) {
+      return { xp: 0 };
+    }
+
+    const isPlayer1 = game.player1Id === userId;
+    const isWinner = game.winnerId === userId;
+    const isDraw = !game.winnerId;
+    const opponentId = isPlayer1 ? game.player2Id : game.player1Id;
+
+    // Если игра с ботом или нет соперника
+    if (!opponentId || game.type === GameType.VS_BOT) {
+      // Для игр с ботом используем упрощенный расчет
+      const baseXP = game.mode === GameMode.SHORT ? 50 : 75;
+      const xp = isWinner ? baseXP : Math.floor(baseXP * 0.5);
+      return { xp };
+    }
+
+    // Для игр с игроком пересчитываем XP используя те же параметры, что и при завершении
+    try {
+      const winnerRating = await this.ratingsService.getRating(game.winnerId || '', game.mode) || 1000;
+      const loserRating = opponentId ? (await this.ratingsService.getRating(opponentId, game.mode) || 1000) : 1000;
+      
+      const repeatMatchesCount = await this.getRepeatMatchesCount(game.winnerId || '', opponentId);
+      
+      const playerBonuses = await this.skinsService.getSkinBonuses(userId);
+      const playerItemsXPBonus = [playerBonuses.xpBonusPercent / 100];
+      
+      const isMarsWin = this.isMarsWin(game);
+      
+      const xpGameType = game.stake && game.stake > 0 ? GameType.VS_PLAYER : game.type;
+      
+      const playerRating = isWinner ? winnerRating : loserRating;
+      const opponentRating = isWinner ? loserRating : winnerRating;
+      
+      const xp = this.xpCalculator.calculateXP({
+        mode: game.mode,
+        gameType: xpGameType,
+        playerWon: isWinner,
+        playerRating,
+        opponentRating,
+        repeatMatchesCount,
+        itemsXPBonus: playerItemsXPBonus,
+        isMarsWin: isWinner && isMarsWin,
+        trustLevel: 'high',
+        stake: Number(game.stake || 0),
+      });
+
+      // Вычисляем NAR-coin награду, если была ставка
+      let narCoinReward: number | undefined = undefined;
+      if (game.stake && game.stake > 0 && isWinner) {
+        const stakeValue = Number(game.stake);
+        const totalPot = stakeValue * 2;
+        const baseCommission = Math.floor(totalPot * 0.15);
+        
+        const winnerUser = await this.usersService.findOne(game.winnerId || '');
+        const econSp = winnerUser?.economySp || 0;
+        const gearCommissionBonus = 0; // TODO: получить из скинов
+        
+        const finalCommission = this.progressService.calculateFeeWithEconomy(
+          baseCommission,
+          econSp,
+          gearCommissionBonus,
+        );
+        
+        const winnerReward = totalPot - finalCommission;
+        const winnerBonuses = await this.skinsService.getSkinBonuses(game.winnerId || '');
+        const moneyBonus = Math.floor(winnerReward * (winnerBonuses.moneyBonusPercent / 100));
+        narCoinReward = winnerReward + moneyBonus;
+      }
+
+      return { xp, narCoin: narCoinReward };
+    } catch (error) {
+      this.logger.error(`Ошибка при расчете наград для игры ${gameId}:`, error);
+      // Fallback на базовые значения
+      const baseXP = game.mode === GameMode.SHORT ? 50 : 75;
+      const xp = isWinner ? baseXP : Math.floor(baseXP * 0.5);
+      return { xp };
+    }
+  }
+
   async getGameState(gameId: string): Promise<any> {
     const game = await this.findOne(gameId);
     return {
