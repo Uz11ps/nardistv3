@@ -72,17 +72,17 @@ export default function BackgammonBoard({
     startTime: number;
   } | null>(null)
   
-  // Защита от случайных двойных кликов
-  const lastClickRef = useRef<{ pointIndex: number; timestamp: number } | null>(null)
-  const doubleClickTimeoutRef = useRef<number | null>(null)
-  const isDoubleClickRef = useRef<boolean>(false)
+  // Защита от случайных тройных кликов
+  const clickHistoryRef = useRef<Array<{ pointIndex: number; timestamp: number }>>([])
+  const clickTimeoutRef = useRef<number | null>(null)
+  const isTripleClickRef = useRef<boolean>(false)
   
   // Очистка таймаутов при размонтировании
   useEffect(() => {
     return () => {
-      if (doubleClickTimeoutRef.current !== null) {
-        window.clearTimeout(doubleClickTimeoutRef.current)
-        doubleClickTimeoutRef.current = null
+      if (clickTimeoutRef.current !== null) {
+        window.clearTimeout(clickTimeoutRef.current)
+        clickTimeoutRef.current = null
       }
     }
   }, [])
@@ -1222,44 +1222,30 @@ export default function BackgammonBoard({
     return () => resizeObserver.disconnect()
   }, [drawBoard])
   
-  // Обработка двойного клика (быстрый ход) - явная обработка
-  const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
+  // Обработка тройного клика (быстрый ход) - через счетчик кликов
+  const handleTripleClick = (pointIndex: number) => {
+    if (!canMove || !isMyTurn) return
     
-    if (!canMove || !isMyTurn || !canvasRef.current) return
-    
-    // Устанавливаем флаг, что это двойной клик
-    isDoubleClickRef.current = true
+    // Устанавливаем флаг, что это тройной клик
+    isTripleClickRef.current = true
     
     // Отменяем таймаут одинарного клика
-    if (doubleClickTimeoutRef.current !== null) {
-      window.clearTimeout(doubleClickTimeoutRef.current)
-      doubleClickTimeoutRef.current = null
+    if (clickTimeoutRef.current !== null) {
+      window.clearTimeout(clickTimeoutRef.current)
+      clickTimeoutRef.current = null
     }
     
-    // Очищаем информацию о последнем клике
-    lastClickRef.current = null
-    
-    const canvas = canvasRef.current
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    
-    const pointIndex = getPointAtPosition(x, y, canvas)
-    if (pointIndex === null) {
-      isDoubleClickRef.current = false
-      return
-    }
+    // Очищаем историю кликов
+    clickHistoryRef.current = []
     
     // Ищем возможные ходы для этой точки
     const moves = possibleMoves.filter(m => m.from === pointIndex)
     if (moves.length === 0) {
-      isDoubleClickRef.current = false
+      isTripleClickRef.current = false
       return
     }
     
-    // Приоритет хода для двойного клика:
+    // Приоритет хода для тройного клика:
     // 1. Если есть ход на вынос (bearing off) - делаем его
     // 2. Если есть несколько ходов, берем тот, что использует большую кость (обычно выгоднее)
     // 3. Если есть комбинированный ход (steps) - приоритет ему
@@ -1292,7 +1278,7 @@ export default function BackgammonBoard({
     
     // Сбрасываем флаг через небольшую задержку
     setTimeout(() => {
-      isDoubleClickRef.current = false
+      isTripleClickRef.current = false
     }, 100)
   }
 
@@ -1619,9 +1605,9 @@ export default function BackgammonBoard({
     
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
-    // Если это двойной клик, игнорируем одинарный клик
-    if (isDoubleClickRef.current) {
-      isDoubleClickRef.current = false
+    // Если это тройной клик, игнорируем одинарный клик
+    if (isTripleClickRef.current) {
+      isTripleClickRef.current = false
       return
     }
     
@@ -1633,39 +1619,44 @@ export default function BackgammonBoard({
     const pointIndex = getPointAtPosition(x, y, canvas)
     if (pointIndex === null) return
     
-    // Проверяем, был ли это двойной клик на той же точке
+    // Проверяем тройной клик
     const now = Date.now()
-    const DOUBLE_CLICK_DELAY = 300 // мс
-    const lastClick = lastClickRef.current
+    const CLICK_DELAY = 400 // мс между кликами для тройного клика
+    const history = clickHistoryRef.current
     
-    if (lastClick && 
-        lastClick.pointIndex === pointIndex && 
-        (now - lastClick.timestamp) < DOUBLE_CLICK_DELAY) {
-      // Это потенциальный двойной клик - отменяем таймаут и не обрабатываем одинарный клик
-      if (doubleClickTimeoutRef.current !== null) {
-        window.clearTimeout(doubleClickTimeoutRef.current)
-        doubleClickTimeoutRef.current = null
+    // Удаляем старые клики (старше CLICK_DELAY)
+    const recentHistory = history.filter(click => (now - click.timestamp) < CLICK_DELAY)
+    
+    // Проверяем, является ли это третьим кликом подряд на той же точке
+    const samePointClicks = recentHistory.filter(click => click.pointIndex === pointIndex)
+    if (samePointClicks.length >= 2 && pointIndex === samePointClicks[0].pointIndex) {
+      // Это третий клик - выполняем быстрый ход
+      if (clickTimeoutRef.current !== null) {
+        window.clearTimeout(clickTimeoutRef.current)
+        clickTimeoutRef.current = null
       }
-      lastClickRef.current = null
+      clickHistoryRef.current = []
+      handleTripleClick(pointIndex)
       return
     }
     
-    // Сохраняем информацию о клике
-    lastClickRef.current = { pointIndex, timestamp: now }
+    // Добавляем текущий клик в историю
+    clickHistoryRef.current = [...recentHistory, { pointIndex, timestamp: now }]
     
     // Устанавливаем таймаут для обработки одинарного клика
-    if (doubleClickTimeoutRef.current !== null) {
-      window.clearTimeout(doubleClickTimeoutRef.current)
+    if (clickTimeoutRef.current !== null) {
+      window.clearTimeout(clickTimeoutRef.current)
     }
     
-    doubleClickTimeoutRef.current = window.setTimeout(() => {
+    clickTimeoutRef.current = window.setTimeout(() => {
       // Если таймаут истек, значит это был одинарный клик
-      if (lastClickRef.current && lastClickRef.current.pointIndex === pointIndex) {
+      const latestClick = clickHistoryRef.current[clickHistoryRef.current.length - 1]
+      if (latestClick && latestClick.pointIndex === pointIndex) {
         handlePointClick(pointIndex)
-        lastClickRef.current = null
+        clickHistoryRef.current = []
       }
-      doubleClickTimeoutRef.current = null
-    }, DOUBLE_CLICK_DELAY)
+      clickTimeoutRef.current = null
+    }, CLICK_DELAY)
   }
   
   const handlePointClick = (pointIndex: number) => {
@@ -1810,7 +1801,6 @@ export default function BackgammonBoard({
         ref={canvasRef}
         className="backgammon-board-canvas"
         onClick={handleCanvasClick}
-        onDoubleClick={handleDoubleClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
