@@ -88,19 +88,22 @@ export class OnboardingService {
           id: defaultBoard.id,
           name: defaultBoard.name,
           // Используем imageUrl для превью (как в инвентаре), если нет - fallback на shopImageUrl или boardTextureUrl
-          imageUrl: defaultBoard.imageUrl || defaultBoard.shopImageUrl || defaultBoard.boardTextureUrl,
+          // Изображения больше не используются - только материалы (цвета)
+          imageUrl: null,
         } : { id: '', name: 'Базовая доска' },
         dice: defaultDice ? {
           id: defaultDice.id,
           name: defaultDice.name,
           // Используем imageUrl для превью, если нет - fallback на shopImageUrl или diceTextureUrl
-          imageUrl: defaultDice.imageUrl || defaultDice.shopImageUrl || defaultDice.diceTextureUrl,
+          // Изображения больше не используются - только материалы (цвета)
+          imageUrl: null,
         } : { id: '', name: 'Базовые кости' },
         checkers: defaultCheckers ? {
           id: defaultCheckers.id,
           name: defaultCheckers.name,
           // Для шашек используем imageUrl (превью), если нет - fallback на shopImageUrl или whiteCheckersTextureUrl
-          imageUrl: defaultCheckers.imageUrl || defaultCheckers.shopImageUrl || defaultCheckers.whiteCheckersTextureUrl || defaultCheckers.checkersTextureUrl,
+          // Изображения больше не используются - только материалы (цвета)
+          imageUrl: null,
         } : { id: '', name: 'Базовые шашки' },
       },
     };

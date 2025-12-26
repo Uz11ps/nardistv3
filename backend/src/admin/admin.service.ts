@@ -1191,18 +1191,12 @@ export class AdminService implements OnModuleInit {
       isDefault: data.isDefault || false,
       isPremium: data.isPremium || false,
       weight: data.weight || 1,
-      imageUrl: data.imageUrl || null,
-      boardTextureUrl: data.boardTextureUrl || null,
-      diceTextureUrl: data.diceTextureUrl || null,
-      diceTextureUrls: data.diceTextureUrls || null,
-      checkersTextureUrl: data.checkersTextureUrl || null,
-      whiteCheckersTextureUrl: data.whiteCheckersTextureUrl || null,
-      blackCheckersTextureUrl: data.blackCheckersTextureUrl || null,
       price: data.price || null,
       rarity: data.rarity || 'common',
       maxDurability: data.maxDurability || 100,
       xpBonusPercent: data.xpBonusPercent || 0,
       moneyBonusPercent: data.moneyBonusPercent || 0,
+      // Все поля для изображений удалены - скины теперь только на материалах (цветах)
     });
 
     return this.skinsRepository.save(skin);
