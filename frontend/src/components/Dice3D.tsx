@@ -83,53 +83,39 @@ function Die({ value, isRolling, delay, diceColor }: DieProps) {
 
 // Рисуем точки на кубике
 function renderDots(value: number) {
-  // Паттерны для точек (индексы в сетке 3x3):
-  // 0 1 2
-  // 3 4 5
-  // 6 7 8
   const patterns: { [key: number]: number[] } = {
     1: [4], // Центр
     2: [0, 8], // Диагональ: левый верхний, правый нижний
     3: [0, 4, 8], // Диагональ: все три
-    4: [0, 2, 6, 8], // Четыре угла
-    5: [0, 2, 4, 6, 8], // Четыре угла + центр
+    4: [0, 2, 6, 8], // Углы
+    5: [0, 2, 4, 6, 8], // Углы + центр
     6: [0, 3, 6, 2, 5, 8], // Две колонки: левая (0,3,6) и правая (2,5,8)
   }
   
   const dots = patterns[value] || []
-  const dotSize = 7
-  const containerSize = 50
-  const padding = 10
-  const cellSize = (containerSize - padding * 2) / 3
-  const dotOffset = (cellSize - dotSize) / 2
   
   return (
     <div style={{
-      position: 'relative',
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      gridTemplateRows: 'repeat(3, 1fr)',
       width: '100%',
       height: '100%',
+      gap: '2px',
+      padding: '8px',
     }}>
-      {dots.map((index) => {
-        const row = Math.floor(index / 3)
-        const col = index % 3
-        const left = padding + col * cellSize + dotOffset
-        const top = padding + row * cellSize + dotOffset
-        
-        return (
-          <div
-            key={index}
-            style={{
-              position: 'absolute',
-              left: `${left}px`,
-              top: `${top}px`,
-              width: `${dotSize}px`,
-              height: `${dotSize}px`,
-              background: '#222',
-              borderRadius: '50%',
-            }}
-          />
-        )
-      })}
+      {Array.from({ length: 9 }).map((_, index) => (
+        <div
+          key={index}
+          style={{
+            width: '6px',
+            height: '6px',
+            background: dots.includes(index) ? '#222' : 'transparent',
+            borderRadius: '50%',
+            margin: 'auto',
+          }}
+        />
+      ))}
     </div>
   )
 }
