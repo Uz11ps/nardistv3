@@ -996,8 +996,8 @@ export default function BackgammonBoard({
       const bar = virtualGameState.bar
       const whiteBarCount = bar.white || 0
       const blackBarCount = bar.black || 0
-      const checkerSize = Math.min(pointWidth * 0.25, pointHeight * 0.3)
-      const barX = width / 2
+      const checkerSize = Math.min(pointWidth * 0.85, pointHeight * 0.15)
+      const barCenterX = barX + barWidth / 2
       
       // Белые шашки на баре (положительные значения)
       if (whiteBarCount > 0) {
@@ -1005,9 +1005,10 @@ export default function BackgammonBoard({
         const countToDraw = isAnimatingFromWhiteBar ? whiteBarCount - 1 : whiteBarCount
         const barStartY = height - pointHeight * 0.3
         const isMyBar = isPlayer1
+        const overlap = countToDraw > 5 ? (checkerSize * 0.8) : checkerSize
         for (let i = 0; i < countToDraw; i++) {
-          const barY = barStartY - (i * checkerSize * 0.6)
-          drawChecker(barX - 25, barY, checkerSize, true, isMyBar)
+          const barY = barStartY - (i * overlap)
+          drawChecker(barCenterX, barY, checkerSize, true, isMyBar)
         }
       }
       
@@ -1017,9 +1018,10 @@ export default function BackgammonBoard({
         const countToDraw = isAnimatingFromBlackBar ? blackBarCount - 1 : blackBarCount
         const barStartY = pointHeight * 0.3
         const isMyBar = !isPlayer1
+        const overlap = countToDraw > 5 ? (checkerSize * 0.8) : checkerSize
         for (let i = 0; i < countToDraw; i++) {
-          const barY = barStartY + (i * checkerSize * 0.6)
-          drawChecker(barX + 25, barY, checkerSize, false, isMyBar)
+          const barY = barStartY + (i * overlap)
+          drawChecker(barCenterX, barY, checkerSize, false, isMyBar)
         }
       }
     }

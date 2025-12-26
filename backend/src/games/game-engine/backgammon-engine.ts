@@ -119,6 +119,9 @@ export class BackgammonEngine {
 
     if (to !== toPoint && to !== -1) return false;
     
+    // Нельзя вставать на пункт, занятый 2+ шашками соперника (можно только на пустую или с 1 шашкой)
+    if (state.points[toPoint] < -1) return false;
+    
     return true;
   }
 
@@ -160,6 +163,9 @@ export class BackgammonEngine {
     }
 
     if (to !== toPoint && to !== -1) return false;
+    
+    // Нельзя вставать на пункт, занятый 2+ шашками соперника (можно только на пустую или с 1 шашкой)
+    if (state.points[toPoint] > 1) return false;
     
     return true;
   }

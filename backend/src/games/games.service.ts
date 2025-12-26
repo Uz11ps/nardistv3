@@ -652,7 +652,14 @@ export class GamesService {
     if (engine.isGameFinished(currentState)) {
       const winner = engine.getWinner(currentState);
       updatedGame.status = GameStatus.FINISHED;
-      updatedGame.winnerId = winner === 0 ? updatedGame.player1Id : updatedGame.player2Id;
+      if (winner === 0) {
+        updatedGame.winnerId = updatedGame.player1Id;
+      } else if (winner === 1) {
+        // Для игр с ботом player2Id равен null, но winnerId должен быть установлен
+        // Если winner === 1 (бот победил), winnerId = null (явное указание, что игрок проиграл)
+        // Для обычных игр winnerId = player2Id
+        updatedGame.winnerId = updatedGame.player2Id || null;
+      }
       
       // Применяем износ экипировки после завершения игры (Equipment Spec v2.0)
       try {
@@ -679,7 +686,9 @@ export class GamesService {
       
       if (winner === 0) {
         updatedGame.player1Score = 1;
-      } else {
+        updatedGame.player2Score = 0;
+      } else if (winner === 1) {
+        updatedGame.player1Score = 0;
         updatedGame.player2Score = 1;
       }
     }
@@ -1033,14 +1042,22 @@ export class GamesService {
       return;
     }
 
-    // Проверяем, что есть победитель
-    if (!game.winnerId) {
-      this.logger.warn(`⚠️ Игра ${game.id} завершена, но нет winnerId`);
+    // Для игр с ботом: winnerId может быть null, если бот победил (это поражение игрока)
+    const gameType: GameType = game.type;
+    let loserId: string | null = null;
+    
+    if (game.winnerId) {
+      // Игрок победил
+      loserId = game.winnerId === game.player1Id ? game.player2Id : game.player1Id;
+    } else if (gameType === GameType.VS_BOT) {
+      // Бот победил (winnerId === null) - это поражение игрока
+      loserId = game.player1Id;
+      this.logger.log(`🎮 Бот победил в игре ${game.id}, игрок ${game.player1Id} проиграл`);
+    } else {
+      // Для других типов игр должен быть winnerId
+      this.logger.warn(`⚠️ Игра ${game.id} завершена, но нет winnerId и это не игра с ботом`);
       return;
     }
-
-    const loserId = game.winnerId === game.player1Id ? game.player2Id : game.player1Id;
-    const gameType: GameType = game.type;
     
     // Проверяем, что есть проигравший (для игр с игроками)
     if (gameType === GameType.VS_PLAYER && !loserId) {
@@ -1048,7 +1065,9 @@ export class GamesService {
       return;
     }
     
-    this.logger.log(`🎮 Обработка наград: winnerId=${game.winnerId}, loserId=${loserId}, stake=${game.stake}`);
+    // Для игр с ботом: если winnerId === null, значит бот победил, игрок проиграл
+    const actualWinnerId = game.winnerId || (gameType === GameType.VS_BOT ? null : game.winnerId);
+    this.logger.log(`🎮 Обработка наград: winnerId=${actualWinnerId}, loserId=${loserId}, stake=${game.stake}, type=${gameType}`);
 
     // Обработка ставок - победитель получает обе ставки (с учетом комиссии)
     if (game.stake > 0 && game.type === GameType.VS_PLAYER && game.winnerId && loserId) {
