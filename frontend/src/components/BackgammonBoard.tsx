@@ -500,6 +500,14 @@ export default function BackgammonBoard({
             setValidTargetPoints(new Set())
             setShowBearOffButton(null)
           }
+        } else {
+          // Если selectedPoint === null, но есть possibleMoves, это значит, что нужно показать
+          // возможные ходы из всех точек, чтобы пользователь мог выбрать шашку
+          // Но мы НЕ устанавливаем selectedPoint автоматически - пользователь должен кликнуть
+          // ВАЖНО: validTargetPoints остается пустым, пока пользователь не выберет точку
+          // Это правильное поведение - подсветка только после выбора шашки
+          setValidTargetPoints(new Set())
+          setShowBearOffButton(null)
         }
         // highlightedPoints будет заполняться только при выборе точки
       } catch (error) {
@@ -1666,6 +1674,23 @@ export default function BackgammonBoard({
   const handlePointClick = (pointIndex: number) => {
     if (!canMove || !isMyTurn) return
     
+    // Используем virtualGameState для проверки наличия шашки
+    const points = virtualGameState?.points || []
+    let pointValue = 0
+    
+    if (pointIndex === 24 || pointIndex === 25) {
+      const bar = virtualGameState?.bar || { white: 0, black: 0 }
+      pointValue = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1) 
+        ? (isPlayer1 ? bar.white : bar.black)
+        : 0
+    } else if (pointIndex >= 0 && pointIndex < points.length) {
+      pointValue = points[pointIndex]
+    }
+    
+    // Проверяем, моя ли это шашка
+    const isMyChecker = isPlayer1 ? pointValue > 0 : pointValue < 0
+    const isMyBar = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
+    
     // Если уже была выбрана точка, и мы кликнули на неё же - отменяем выбор
     if (selectedPoint === pointIndex) {
       setSelectedPoint(null)
@@ -1678,33 +1703,40 @@ export default function BackgammonBoard({
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
     
     if (selectedPoint === null) {
-      // Если ничего не выбрано, выбираем текущую точку (если из неё есть ходы)
-      if (pointMoves.length > 0) {
+      // Если ничего не выбрано, выбираем текущую точку (если это наша шашка)
+      if (isMyChecker || isMyBar) {
         setSelectedPoint(pointIndex)
-        const targets = new Set<number>()
-        let bearOffDie: number | null = null
-        let bearOffSteps: any[] | undefined = undefined
-        pointMoves.forEach(m => {
-          if (m.to !== undefined && m.to !== null) {
-            targets.add(m.to)
-          }
-          if (m.to === -1) {
-            bearOffDie = m.die
-            bearOffSteps = (m as any).steps
-          }
-          // Для комбинированных ходов (steps) добавляем также конечную точку из последнего шага
-          if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
-            const steps = (m as any).steps
-            const lastStep = steps[steps.length - 1]
-            if (lastStep.to !== undefined && lastStep.to !== null) {
-              targets.add(lastStep.to)
+        // Обновляем validTargetPoints только если есть ходы
+        if (pointMoves.length > 0) {
+          const targets = new Set<number>()
+          let bearOffDie: number | null = null
+          let bearOffSteps: any[] | undefined = undefined
+          pointMoves.forEach(m => {
+            if (m.to !== undefined && m.to !== null) {
+              targets.add(m.to)
             }
+            if (m.to === -1) {
+              bearOffDie = m.die
+              bearOffSteps = (m as any).steps
+            }
+            // Для комбинированных ходов (steps) добавляем также конечную точку из последнего шага
+            if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
+              const steps = (m as any).steps
+              const lastStep = steps[steps.length - 1]
+              if (lastStep.to !== undefined && lastStep.to !== null) {
+                targets.add(lastStep.to)
+              }
+            }
+          })
+          setValidTargetPoints(targets)
+          if (bearOffDie !== null) {
+            setShowBearOffButton({ pointIndex, die: bearOffDie, steps: bearOffSteps })
+          } else {
+            setShowBearOffButton(null)
           }
-        })
-        setValidTargetPoints(targets)
-        if (bearOffDie !== null) {
-          setShowBearOffButton({ pointIndex, die: bearOffDie, steps: bearOffSteps })
         } else {
+          // Если ходов пока нет, validTargetPoints будет обновлен после загрузки possibleMoves через useEffect
+          setValidTargetPoints(new Set())
           setShowBearOffButton(null)
         }
       }
