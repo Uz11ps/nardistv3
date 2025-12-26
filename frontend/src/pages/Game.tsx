@@ -548,8 +548,19 @@ export default function Game() {
     })
 
     socket.on('move_made', (data: any) => {
-      setPendingMoves([])
       const diceData = data.gameState?.dice
+      const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
+      
+      // ВАЖНО: Очищаем pendingMoves только если:
+      // 1. Ход перешел к другому игроку (не мой ход)
+      // 2. Нет оставшихся кубиков (dice пустой)
+      // Иначе не обнуляем - позволяем продолжить ходить с оставшимися кубиками
+      const hasRemainingDice = Array.isArray(diceData) && diceData.length > 0
+      if (!canMove || !hasRemainingDice) {
+        setPendingMoves([])
+      }
+      // Если canMove && hasRemainingDice - НЕ обнуляем, чтобы можно было продолжить ходить
+      
       // Для дублей может быть массив из 4 элементов, для обычных - из 2
       // Сохраняем весь массив, если он есть
       const formattedDice = Array.isArray(diceData) && diceData.length > 0
@@ -557,8 +568,6 @@ export default function Game() {
           ? { die1: diceData[0], die2: diceData[1] }
           : diceData // Для дублей (4 элемента) или других случаев сохраняем массив
         : null
-      
-      const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
       const isMyTurnNow = canMove
       const wasMyTurn = gameState?.canMove || false
       
@@ -798,8 +807,14 @@ export default function Game() {
     
     // UI ограничение: для дублей ограничиваем количество ходов до 2 перед подтверждением
     // По правилам Минспорта все 4 хода должны быть доступны, но для удобства UI мы ограничиваем до 2
-    if (isDoubles && pendingMoves.length >= 2) {
-      return // UI решение: не позволяем добавить больше 2 ходов без подтверждения
+    // ВАЖНО: для коротких нард разрешаем подтверждение даже если не все кубики использованы
+    // (это UI решение для удобства, бэкенд сам обработает оставшиеся кубики)
+    if (isDoubles && diceArray.length === 4 && pendingMoves.length >= 2) {
+      return // UI решение: не позволяем добавить больше 2 ходов без подтверждения (для 4 кубиков)
+    }
+    // Если осталось 2 кубика после подтверждения первых 2 ходов, можно сделать еще 2 хода
+    if (isDoubles && diceArray.length === 2 && pendingMoves.length >= 2) {
+      return // UI решение: не позволяем добавить больше 2 ходов без подтверждения (для оставшихся 2 кубиков)
     }
     
     // Если есть steps, значит это комбинированный ход
