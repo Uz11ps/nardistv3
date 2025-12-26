@@ -67,10 +67,18 @@ export default function GameResult() {
       try {
         const rewardsResponse = await apiClient.get(`/games/${gameId}/rewards`)
         rewardsData = rewardsResponse.data || { xp: 0 }
+        // Убеждаемся, что XP это число
+        if (typeof rewardsData.xp !== 'number' || isNaN(rewardsData.xp)) {
+          console.warn('Получен некорректный XP, используем fallback:', rewardsData.xp)
+          const gameModeUpper = (game.mode || '').toUpperCase()
+          const baseXP = gameModeUpper === 'SHORT' ? 50 : 75
+          rewardsData.xp = isWinner ? baseXP : Math.floor(baseXP * 0.5)
+        }
       } catch (error) {
         console.error('Ошибка получения наград:', error)
         // Fallback на базовые значения, если не удалось получить награды
-        const baseXP = game.mode === 'short' ? 50 : 75
+        const gameModeUpper = (game.mode || '').toUpperCase()
+        const baseXP = gameModeUpper === 'SHORT' ? 50 : 75
         rewardsData.xp = isWinner ? baseXP : Math.floor(baseXP * 0.5)
       }
 

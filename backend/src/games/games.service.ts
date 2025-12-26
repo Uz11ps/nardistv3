@@ -556,9 +556,16 @@ export class GamesService {
       }
     } else if (allValidMoves.length > 0) {
       // Для коротких нард требуем использовать все кубики, если это возможно
+      // ИСКЛЮЧЕНИЕ: для дублей (4 одинаковых кубика) разрешаем подтверждение частичных ходов (2 из 4)
+      // Это UI решение для удобства - после подтверждения первых 2 ходов останутся еще 2 кубика
+      const isDoubles = dice.length === 4 && dice.every(d => d === dice[0]);
       const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
       
-      if (fullMoves.length > 0 && finalMovesToSave.length < dice.length) {
+      // Для дублей разрешаем подтверждение 2 ходов из 4 (UI решение)
+      if (isDoubles && finalMovesToSave.length === 2 && dice.length === 4) {
+        // Разрешаем подтверждение 2 ходов из дубля - оставшиеся 2 кубика обработаются как отдельный ход
+        this.logger.log(`✅ Разрешено частичное подтверждение дубля: ${finalMovesToSave.length} из ${dice.length} ходов`);
+      } else if (fullMoves.length > 0 && finalMovesToSave.length < dice.length) {
         throw new BadRequestException(
           `Необходимо использовать все кубики. Доступно ${dice.length} кубиков (${dice.join(', ')}), использовано ${finalMovesToSave.length}. Доступны ходы, использующие все кубики.`
         );
@@ -1533,12 +1540,14 @@ export class GamesService {
         narCoinReward = winnerReward + moneyBonus;
       }
 
+      this.logger.log(`✅ Рассчитаны награды для игры ${gameId}, userId=${userId}: XP=${xp}, NAR=${narCoinReward || 0}`);
       return { xp, narCoin: narCoinReward };
     } catch (error) {
-      this.logger.error(`Ошибка при расчете наград для игры ${gameId}:`, error);
+      this.logger.error(`Ошибка при расчете наград для игры ${gameId}, userId=${userId}:`, error);
       // Fallback на базовые значения
       const baseXP = game.mode === GameMode.SHORT ? 50 : 75;
       const xp = isWinner ? baseXP : Math.floor(baseXP * 0.5);
+      this.logger.log(`⚠️ Используется fallback XP для игры ${gameId}: ${xp}`);
       return { xp };
     }
   }
@@ -1562,6 +1571,8 @@ export class GamesService {
       rngHash: game.rngHash,
       p1Offset: game.p1Offset,
       p2Offset: game.p2Offset,
+      createdAt: game.createdAt ? game.createdAt.toISOString() : null,
+      updatedAt: game.updatedAt ? game.updatedAt.toISOString() : null,
       verificationSalt: game.status === GameStatus.FINISHED ? game.verificationSalt : undefined,
       p1Rolls: game.status === GameStatus.FINISHED ? game.p1Rolls : undefined,
       p2Rolls: game.status === GameStatus.FINISHED ? game.p2Rolls : undefined,

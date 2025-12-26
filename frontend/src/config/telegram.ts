@@ -29,6 +29,19 @@ export function initTelegram() {
   }
   
   try {
+    // Отключаем вертикальные свайпы для предотвращения сворачивания приложения
+    // Используем новый API Telegram Web App v7.7+
+    if (typeof telegramWebApp.disableVerticalSwipes === 'function') {
+      telegramWebApp.disableVerticalSwipes()
+      console.log('✅ Вертикальные свайпы отключены через disableVerticalSwipes()')
+    }
+    
+    // Альтернативный способ через настройки (если метод disableVerticalSwipes недоступен)
+    if (typeof telegramWebApp.setupSwipeBehavior === 'function') {
+      telegramWebApp.setupSwipeBehavior({ allow_vertical_swipe: false })
+      console.log('✅ Вертикальные свайпы отключены через setupSwipeBehavior()')
+    }
+    
     if (telegramWebApp.ready) {
       telegramWebApp.ready()
     }
