@@ -496,19 +496,8 @@ export class GamesService {
       const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
       
       if (!isValid) {
-        // Логируем для отладки
-        this.logger.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
-        this.logger.error(`  Текущий игрок: ${currentState.currentPlayer}, режим: ${game.mode}`);
-        this.logger.error(`  Доступные кубики: [${currentState.dice?.join(', ') || 'none'}]`);
-        
-        // Для коротких нард вычисляем правильный die для этого расстояния
-        let expectedDieMsg = '';
-        if (game.mode === GameMode.SHORT) {
-          const expectedDie = currentState.currentPlayer === 0 ? (move.to - move.from) : (move.from - move.to);
-          expectedDieMsg = ` Для этого расстояния нужен кубик ${expectedDie}.`;
-        }
-        
-        throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}.${expectedDieMsg} Доступные кубики: [${currentState.dice?.join(', ') || 'none'}]`);
+        console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+        throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       }
       
       // Удаляем использованный кубик
@@ -565,10 +554,16 @@ export class GamesService {
         // Разрешаем, но не требуем использовать все кубики в длинных нардах
         // Пользователь может сделать второй ход позже
       }
+    } else if (allValidMoves.length > 0) {
+      // Для коротких нард требуем использовать все кубики, если это возможно
+      const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
+      
+      if (fullMoves.length > 0 && finalMovesToSave.length < dice.length) {
+        throw new BadRequestException(
+          `Необходимо использовать все кубики. Доступно ${dice.length} кубиков (${dice.join(', ')}), использовано ${finalMovesToSave.length}. Доступны ходы, использующие все кубики.`
+        );
+      }
     }
-    // Убрана проверка на обязательное использование всех кубиков
-    // Теперь разрешаем подтверждение частичных ходов в коротких нардах
-    // Оставшиеся кубики будут обработаны как отдельный ход после подтверждения
 
     const moveNumber = (game.moves?.length || 0) + 1;
     
@@ -1465,91 +1460,6 @@ export class GamesService {
     }
   }
 
-  async getGameRewards(gameId: string, userId: string): Promise<{ xp: number; narCoin?: number }> {
-    const game = await this.findOne(gameId);
-    
-    if (game.status !== GameStatus.FINISHED) {
-      return { xp: 0 };
-    }
-
-    const isPlayer1 = game.player1Id === userId;
-    const isWinner = game.winnerId === userId;
-    const isDraw = !game.winnerId;
-    const opponentId = isPlayer1 ? game.player2Id : game.player1Id;
-
-    // Если игра с ботом или нет соперника
-    if (!opponentId || game.type === GameType.VS_BOT) {
-      // Для игр с ботом используем упрощенный расчет
-      const baseXP = game.mode === GameMode.SHORT ? 50 : 75;
-      const xp = isWinner ? baseXP : Math.floor(baseXP * 0.5);
-      return { xp };
-    }
-
-    // Для игр с игроком пересчитываем XP используя те же параметры, что и при завершении
-    try {
-      const winnerRating = await this.ratingsService.getRating(game.winnerId || '', game.mode) || 1000;
-      const loserRating = opponentId ? (await this.ratingsService.getRating(opponentId, game.mode) || 1000) : 1000;
-      
-      const repeatMatchesCount = await this.getRepeatMatchesCount(game.winnerId || '', opponentId);
-      
-      const playerBonuses = await this.skinsService.getSkinBonuses(userId);
-      const playerItemsXPBonus = [playerBonuses.xpBonusPercent / 100];
-      
-      const isMarsWin = this.isMarsWin(game);
-      
-      const xpGameType = game.stake && game.stake > 0 ? GameType.VS_PLAYER : game.type;
-      
-      const playerRating = isWinner ? winnerRating : loserRating;
-      const opponentRating = isWinner ? loserRating : winnerRating;
-      
-      const xp = this.xpCalculator.calculateXP({
-        mode: game.mode,
-        gameType: xpGameType,
-        playerWon: isWinner,
-        playerRating,
-        opponentRating,
-        repeatMatchesCount,
-        itemsXPBonus: playerItemsXPBonus,
-        isMarsWin: isWinner && isMarsWin,
-        trustLevel: 'high',
-        stake: Number(game.stake || 0),
-      });
-
-      // Вычисляем NAR-coin награду, если была ставка
-      let narCoinReward: number | undefined = undefined;
-      if (game.stake && game.stake > 0 && isWinner) {
-        const stakeValue = Number(game.stake);
-        const totalPot = stakeValue * 2;
-        const baseCommission = Math.floor(totalPot * 0.15);
-        
-        const winnerUser = await this.usersService.findOne(game.winnerId || '');
-        const econSp = winnerUser?.economySp || 0;
-        const gearCommissionBonus = 0; // TODO: получить из скинов
-        
-        const finalCommission = this.progressService.calculateFeeWithEconomy(
-          baseCommission,
-          econSp,
-          gearCommissionBonus,
-        );
-        
-        const winnerReward = totalPot - finalCommission;
-        const winnerBonuses = await this.skinsService.getSkinBonuses(game.winnerId || '');
-        const moneyBonus = Math.floor(winnerReward * (winnerBonuses.moneyBonusPercent / 100));
-        narCoinReward = winnerReward + moneyBonus;
-      }
-
-      this.logger.log(`✅ Рассчитаны награды для игры ${gameId}, userId=${userId}: XP=${xp}, NAR=${narCoinReward || 0}`);
-      return { xp, narCoin: narCoinReward };
-    } catch (error) {
-      this.logger.error(`Ошибка при расчете наград для игры ${gameId}, userId=${userId}:`, error);
-      // Fallback на базовые значения
-      const baseXP = game.mode === GameMode.SHORT ? 50 : 75;
-      const xp = isWinner ? baseXP : Math.floor(baseXP * 0.5);
-      this.logger.log(`⚠️ Используется fallback XP для игры ${gameId}: ${xp}`);
-      return { xp };
-    }
-  }
-
   async getGameState(gameId: string): Promise<any> {
     const game = await this.findOne(gameId);
     return {
@@ -1569,8 +1479,6 @@ export class GamesService {
       rngHash: game.rngHash,
       p1Offset: game.p1Offset,
       p2Offset: game.p2Offset,
-      createdAt: game.createdAt ? game.createdAt.toISOString() : null,
-      updatedAt: game.updatedAt ? game.updatedAt.toISOString() : null,
       verificationSalt: game.status === GameStatus.FINISHED ? game.verificationSalt : undefined,
       p1Rolls: game.status === GameStatus.FINISHED ? game.p1Rolls : undefined,
       p2Rolls: game.status === GameStatus.FINISHED ? game.p2Rolls : undefined,

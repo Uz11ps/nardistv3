@@ -13,10 +13,6 @@
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  /* Предотвращаем сворачивание Telegram мини-приложения при перетаскивании */
-  overscroll-behavior: none;
-  overscroll-behavior-y: none;
-  overscroll-behavior-x: none;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -63,10 +59,7 @@
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  /* Предотвращаем zoom при двойном касании и сворачивание Telegram мини-приложения */
-  overscroll-behavior: none;
-  overscroll-behavior-y: none;
-  overscroll-behavior-x: none;
+  /* Предотвращаем zoom при двойном касании */
 }
 
 .backgammon-board-canvas:hover {

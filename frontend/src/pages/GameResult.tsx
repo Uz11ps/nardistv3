@@ -58,28 +58,22 @@ export default function GameResult() {
       const movesCountValue = moves.length
       
       // Вычисляем продолжительность
-      const startTime = game.createdAt ? new Date(game.createdAt).getTime() : Date.now()
+      const startTime = new Date(game.createdAt).getTime()
       const endTime = game.updatedAt ? new Date(game.updatedAt).getTime() : Date.now()
-      const durationSeconds = Math.max(0, Math.floor((endTime - startTime) / 1000))
+      const durationSeconds = Math.floor((endTime - startTime) / 1000)
       
-      // Получаем реальные награды с бэкенда
-      let rewardsData = { xp: 0, narCoin: undefined as number | undefined }
-      try {
-        const rewardsResponse = await apiClient.get(`/games/${gameId}/rewards`)
-        rewardsData = rewardsResponse.data || { xp: 0 }
-        // Убеждаемся, что XP это число
-        if (typeof rewardsData.xp !== 'number' || isNaN(rewardsData.xp)) {
-          console.warn('Получен некорректный XP, используем fallback:', rewardsData.xp)
-          const gameModeUpper = (game.mode || '').toUpperCase()
-          const baseXP = gameModeUpper === 'SHORT' ? 50 : 75
-          rewardsData.xp = isWinner ? baseXP : Math.floor(baseXP * 0.5)
-        }
-      } catch (error) {
-        console.error('Ошибка получения наград:', error)
-        // Fallback на базовые значения, если не удалось получить награды
-        const gameModeUpper = (game.mode || '').toUpperCase()
-        const baseXP = gameModeUpper === 'SHORT' ? 50 : 75
-        rewardsData.xp = isWinner ? baseXP : Math.floor(baseXP * 0.5)
+      // Определяем награды (это приблизительные значения, так как награды начисляются на бэкенде)
+      const winXP = 100
+      const loseXP = 50
+      const xpReward = isWinner ? winXP : (isDraw ? 50 : loseXP)
+      
+      // Если была ставка, вычисляем выигрыш
+      let narCoinReward = undefined
+      if (game.stake && game.stake > 0 && isWinner) {
+        const stakeValue = Number(game.stake)
+        const totalPot = stakeValue * 2
+        const commission = Math.floor(totalPot * 0.05) // 5% комиссия
+        narCoinReward = totalPot - commission
       }
 
       setGameData({
@@ -94,7 +88,7 @@ export default function GameResult() {
       })
       setMovesCount(movesCountValue)
       setDuration(durationSeconds)
-      setRewards({ xp: rewardsData.xp, narCoin: rewardsData.narCoin })
+      setRewards({ xp: xpReward, narCoin: narCoinReward })
     } catch (error) {
       console.error('Failed to load game data:', error)
       alert('Ошибка загрузки данных игры')
@@ -145,11 +139,7 @@ export default function GameResult() {
           
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
             <span className="card-subtitle">Продолжительность:</span>
-            <span className="card-subtitle">
-              {isNaN(duration) || duration < 0 
-                ? '0:00' 
-                : `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`}
-            </span>
+            <span className="card-subtitle">{Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}</span>
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>

@@ -62,8 +62,6 @@ export default function BackgammonBoard({
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
-  const prevPendingMovesRef = useRef<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
-  const prevGameStatePointsRef = useRef<number[]>([])
   const [showBearOffButton, setShowBearOffButton] = useState<{ pointIndex: number; die: number; steps?: any[] } | null>(null)
   const [animatingChecker, setAnimatingChecker] = useState<{
     from: number;
@@ -417,98 +415,6 @@ export default function BackgammonBoard({
         // Не подсвечиваем все возможные точки автоматически
         // Подсветка будет только для выбранной точки (selectedPoint)
         setPossibleMoves(flatMoves)
-        
-        // ВАЖНО: Сначала проверяем pendingMoves - если есть ход, обновляем selectedPoint на новую позицию
-        // Это позволяет ходить той же шашкой дальше
-        if (pendingMoves.length > 0) {
-          const lastMove = pendingMoves[pendingMoves.length - 1]
-          if (lastMove && lastMove.to !== -1 && lastMove.to !== null && lastMove.to !== undefined) {
-            // Проверяем, есть ли ходы из новой позиции
-            const newPositionMoves = flatMoves.filter(m => m.from === lastMove.to)
-            if (newPositionMoves.length > 0) {
-              // Обновляем selectedPoint на новую позицию шашки
-              setSelectedPoint(lastMove.to)
-              const targets = new Set<number>()
-              let bearOffDie: number | null = null
-              newPositionMoves.forEach(m => {
-                if (m.to !== undefined && m.to !== null) {
-                  targets.add(m.to)
-                  if (m.to === -1) bearOffDie = m.die
-                }
-                // Для комбинированных ходов добавляем конечную точку из steps
-                if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
-                  const steps = (m as any).steps
-                  const lastStep = steps[steps.length - 1]
-                  if (lastStep.to !== undefined && lastStep.to !== null) {
-                    targets.add(lastStep.to)
-                  }
-                }
-              })
-              setValidTargetPoints(targets)
-              if (bearOffDie !== null) {
-                setShowBearOffButton({ pointIndex: lastMove.to, die: bearOffDie })
-              } else {
-                setShowBearOffButton(null)
-              }
-              // Выходим из функции - selectedPoint уже обновлен
-              return
-            } else {
-              // Если нет ходов из новой позиции, сбрасываем выбор
-              setSelectedPoint(null)
-              setValidTargetPoints(new Set())
-              setShowBearOffButton(null)
-              return
-            }
-          } else if (lastMove && lastMove.to === -1) {
-            // Если шашка вынесена, сбрасываем выбор
-            setSelectedPoint(null)
-            setValidTargetPoints(new Set())
-            setShowBearOffButton(null)
-            return
-          }
-        }
-        
-        // Если нет pendingMoves или selectedPoint не обновлен, проверяем текущий selectedPoint
-        if (selectedPoint !== null) {
-          const pointMoves = flatMoves.filter(m => m.from === selectedPoint)
-          if (pointMoves.length > 0) {
-            const targets = new Set<number>()
-            let bearOffDie: number | null = null
-            pointMoves.forEach(m => {
-              if (m.to !== undefined && m.to !== null) {
-                targets.add(m.to)
-                if (m.to === -1) bearOffDie = m.die
-              }
-              // Для комбинированных ходов добавляем конечную точку из steps
-              if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
-                const steps = (m as any).steps
-                const lastStep = steps[steps.length - 1]
-                if (lastStep.to !== undefined && lastStep.to !== null) {
-                  targets.add(lastStep.to)
-                }
-              }
-            })
-            setValidTargetPoints(targets)
-            if (bearOffDie !== null) {
-              setShowBearOffButton({ pointIndex: selectedPoint, die: bearOffDie })
-            } else {
-              setShowBearOffButton(null)
-            }
-          } else {
-            // Если больше нет ходов из этой точки, сбрасываем выбор
-            setSelectedPoint(null)
-            setValidTargetPoints(new Set())
-            setShowBearOffButton(null)
-          }
-        } else {
-          // Если selectedPoint === null, но есть possibleMoves, это значит, что нужно показать
-          // возможные ходы из всех точек, чтобы пользователь мог выбрать шашку
-          // Но мы НЕ устанавливаем selectedPoint автоматически - пользователь должен кликнуть
-          // ВАЖНО: validTargetPoints остается пустым, пока пользователь не выберет точку
-          // Это правильное поведение - подсветка только после выбора шашки
-          setValidTargetPoints(new Set())
-          setShowBearOffButton(null)
-        }
         // highlightedPoints будет заполняться только при выборе точки
       } catch (error) {
         if (cancelled) return
@@ -518,58 +424,16 @@ export default function BackgammonBoard({
       }
     }
     
-    // Минимальный debounce для предотвращения частых запросов, но быстрое обновление после ходов
+    // Debounce для предотвращения частых запросов (увеличиваем для уменьшения лагов)
     timeoutId = window.setTimeout(() => {
       fetchPossibleMoves()
-    }, 100)
+    }, 300)
     
     return () => {
       cancelled = true
       if (timeoutId !== null) window.clearTimeout(timeoutId)
     }
-  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, selectedPoint]) // Используем стабилизированные ключи и selectedPoint для обновления validTargetPoints
-
-  // ВАЖНО: Обновляем selectedPoint после подтверждения хода
-  // Отслеживаем два случая:
-  // 1. pendingMoves уменьшился (ход был подтвержден, но остались кубики)
-  // 2. gameState.points изменился, а pendingMoves остался (ход был подтвержден на сервере)
-  useEffect(() => {
-    const currentPoints = gameState?.points || []
-    const prevPoints = prevGameStatePointsRef.current
-    
-    // Проверяем, изменились ли points (ход был подтвержден на сервере)
-    const pointsChanged = prevPoints.length > 0 && 
-      JSON.stringify(currentPoints) !== JSON.stringify(prevPoints)
-    
-    // Проверяем, уменьшился ли pendingMoves (ход был подтвержден, но остались кубики)
-    const pendingMovesDecreased = pendingMoves.length < prevPendingMovesRef.current.length && 
-      prevPendingMovesRef.current.length > 0
-    
-    if (pointsChanged || pendingMovesDecreased) {
-      // Пытаемся найти последний подтвержденный ход
-      let lastConfirmedMove: { from: number; to: number; die: number; steps?: any[] } | null = null
-      
-      if (pendingMovesDecreased && prevPendingMovesRef.current.length > 0) {
-        // Если pendingMoves уменьшился, берем последний ход из предыдущего состояния
-        lastConfirmedMove = prevPendingMovesRef.current[prevPendingMovesRef.current.length - 1]
-      } else if (pointsChanged && prevPendingMovesRef.current.length > 0) {
-        // Если points изменились, но pendingMoves не уменьшился (возможно, был очищен и восстановлен),
-        // берем первый ход из предыдущего состояния, который должен был быть подтвержден
-        lastConfirmedMove = prevPendingMovesRef.current[0]
-      }
-      
-      if (lastConfirmedMove && lastConfirmedMove.to !== -1 && lastConfirmedMove.to !== null && lastConfirmedMove.to !== undefined) {
-        // Обновляем selectedPoint на новую позицию подтвержденного хода
-        // Это позволит продолжить ходить той же шашкой с новой позиции
-        setSelectedPoint(lastConfirmedMove.to)
-        // validTargetPoints обновится автоматически через useEffect для possibleMoves
-      }
-    }
-    
-    // Обновляем refs с текущим состоянием
-    prevPendingMovesRef.current = pendingMoves
-    prevGameStatePointsRef.current = currentPoints
-  }, [pendingMoves, gameState?.points])
+  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey]) // Используем стабилизированные ключи
   
   // Определение позиции для кубиков
   // Мои кубики на моей части доски, его кубики на его части
@@ -618,42 +482,48 @@ export default function BackgammonBoard({
     const pointWidth = halfBoardWidth / 6
     const pointHeight = height * 0.45
     
-    // Для длинных нардов и player2 используем визуальный индекс (инверсия на 12 точек)
-    // Для коротких нардов используем исходный индекс без инверсии
-    const visualPointIndex = (gameMode === 'long' && !isPlayer1) ? ((pointIndex + 12) % 24) : pointIndex
-    const isTopRow = visualPointIndex < 12
+    const isTopRow = pointIndex < 12
     
     let x = 0
     let pointNumber = 0
     
     if (isTopRow) {
-      pointNumber = 24 - visualPointIndex
-      const isRightSide = visualPointIndex < 6
+      pointNumber = 24 - pointIndex
+      const isRightSide = pointIndex < 6
       
       if (isRightSide) {
-        const pointInHalf = visualPointIndex
+        const pointInHalf = pointIndex
         x = boardEndX - (pointInHalf * pointWidth + pointWidth / 2)
       } else {
-        const pointInHalf = visualPointIndex - 6
+        const pointInHalf = pointIndex - 6
         x = barX - (pointInHalf * pointWidth + pointWidth / 2)
       }
     } else {
-      pointNumber = 12 - (visualPointIndex - 12)
-      const isLeftSide = visualPointIndex < 18
+      pointNumber = 12 - (pointIndex - 12)
+      const isLeftSide = pointIndex < 18
       
       if (isLeftSide) {
-        const pointInHalf = visualPointIndex - 12
+        const pointInHalf = pointIndex - 12
         x = boardStartX + (pointInHalf * pointWidth + pointWidth / 2)
       } else {
-        const pointInHalf = visualPointIndex - 18
+        const pointInHalf = pointIndex - 18
         x = barX + barWidth + (pointInHalf * pointWidth + pointWidth / 2)
       }
     }
     
     let y = isTopRow ? 0 : height
     
-    return { x, y, isTopRow, pointWidth, pointHeight, pointNumber }
-  }, [isPlayer1, gameMode])
+    // Для player2 инвертируем координаты точек, так как доска инвертирована на 180 градусов
+    let finalIsTopRow = isTopRow
+    if (!isPlayer1) {
+      x = width - x
+      y = height - y
+      // Инвертируем isTopRow для player2, так как координаты инвертированы
+      finalIsTopRow = !isTopRow
+    }
+    
+    return { x, y, isTopRow: finalIsTopRow, pointWidth, pointHeight, pointNumber }
+  }, [isPlayer1])
   
   // Функция для определения точки по координатам
   const getPointAtPosition = useCallback((x: number, y: number, canvas: HTMLCanvasElement): number | null => {
@@ -682,9 +552,8 @@ export default function BackgammonBoard({
     const points = gameState?.points || []
     
     for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
-      // Для длинных нардов и player2 используем визуальный индекс для вычисления координат (как в getPointCoordinates)
-      // Для коротких нардов используем исходный индекс без инверсии
-      const visualPointIndex = (gameMode === 'long' && !isPlayer1) ? ((pointIndex + 12) % 24) : pointIndex
+      // Для player2 используем визуальный индекс для вычисления координат (как в getPointCoordinates)
+      const visualPointIndex = isPlayer1 ? pointIndex : ((pointIndex + 12) % 24)
       const isTopRow = visualPointIndex < 12
       let columnXStart: number
       let columnXEnd: number
@@ -923,9 +792,8 @@ export default function BackgammonBoard({
         const triangleHeight = pH * 0.95
         
         // Используем визуальный индекс для определения цвета
-        // visualPointIndex уже используется в getPointCoordinates для правильного отображения
-        const visualPointIndexForColor = (gameMode === 'long' && !isPlayer1) ? ((pointIndex + 12) % 24) : pointIndex
-        const pointInRow = isTopRow ? visualPointIndexForColor : visualPointIndexForColor - 12
+        // После инверсии координат для player2, isTopRow уже инвертирован, используем его напрямую
+        const pointInRow = isTopRow ? pointIndex : pointIndex - 12
         const isLight = pointInRow % 2 === 0
         const triangleColor = isLight ? '#D4A574' : '#8B4513'
         
@@ -1259,14 +1127,6 @@ export default function BackgammonBoard({
 
   // Вспомогательная функция для запуска анимации
   const startMoveAnimation = (from: number, to: number, die: number, steps?: any[]) => {
-    // Сразу обновляем selectedPoint на новую позицию, чтобы после хода подсветка обновилась
-    if (to !== -1 && to !== null && to !== undefined) {
-      setSelectedPoint(to)
-    } else {
-      // Если шашка вынесена, сбрасываем выбор
-      setSelectedPoint(null)
-    }
-    
     setAnimatingChecker({
       from,
       to,
@@ -1276,10 +1136,10 @@ export default function BackgammonBoard({
       startTime: performance.now()
     })
     // Сбрасываем состояния взаимодействия
+    setSelectedPoint(null)
     setDragging(null)
     setDragPosition(null)
     setHoveredPoint(null)
-    // Временно сбрасываем validTargetPoints - они обновятся после получения новых possibleMoves
     setValidTargetPoints(new Set())
     setShowBearOffButton(null)
   }
@@ -1346,7 +1206,6 @@ export default function BackgammonBoard({
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     // Предотвращаем конфликт с Telegram приложением и стандартное поведение браузера
     e.stopPropagation()
-    // Всегда предотвращаем стандартное поведение для предотвращения сворачивания Telegram
     if (e.cancelable) {
       e.preventDefault()
     }
@@ -1395,14 +1254,6 @@ export default function BackgammonBoard({
             if (move.to !== undefined && move.to !== null) {
               validTargets.add(move.to)
             }
-            // Для комбинированных ходов (steps) добавляем также конечную точку из последнего шага
-            if ((move as any).steps && Array.isArray((move as any).steps) && (move as any).steps.length > 0) {
-              const steps = (move as any).steps
-              const lastStep = steps[steps.length - 1]
-              if (lastStep.to !== undefined && lastStep.to !== null) {
-                validTargets.add(lastStep.to)
-              }
-            }
           })
           setValidTargetPoints(validTargets)
         }
@@ -1411,14 +1262,13 @@ export default function BackgammonBoard({
   }
 
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // КРИТИЧЕСКИ ВАЖНО: всегда предотвращаем стандартное поведение при движении
-    // Это предотвращает сворачивание Telegram мини-приложения при перетаскивании сверху
+    if (!dragging || !canvasRef.current) return
+    
+    // Предотвращаем прокрутку, zoom и другие стандартные жесты
     if (e.cancelable) {
       e.preventDefault()
     }
     e.stopPropagation()
-    
-    if (!dragging || !canvasRef.current) return
     
     // Если множественное касание - прерываем перетаскивание
     if (e.touches.length > 1) {
@@ -1450,65 +1300,30 @@ export default function BackgammonBoard({
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
     
-    // Используем координаты из changedTouches (касание, которое закончилось) или последнюю позицию dragPosition
-    let x: number, y: number
-    if (e.changedTouches && e.changedTouches.length > 0) {
-      // Используем координаты из события, если доступны (более точные)
-      const touch = e.changedTouches[0]
-      x = touch.clientX - rect.left
-      y = touch.clientY - rect.top
-    } else if (dragPosition) {
-      // Fallback на последнюю позицию dragPosition
-      x = dragPosition.x
-      y = dragPosition.y
-    } else {
-      // Если нет координат, сбрасываем перетаскивание
-      setDragging(null)
-      setDragPosition(null)
-      setSelectedPoint(null)
-      setHoveredPoint(null)
-      setValidTargetPoints(new Set())
-      return
-    }
-    
-    const targetPoint = getPointAtPosition(x, y, canvas)
-    
-    if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
-      if (targetPoint === -1) {
-        // Вынос шашки
-        const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
-        if (bearOffMove) {
-          startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die, (bearOffMove as any).steps)
-          return // startMoveAnimation сам все сбросит
-        }
-      } else if (validTargetPoints.has(targetPoint)) {
-        // Обычный ход на точку
-        const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
-        if (move) {
-          startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
-          return // startMoveAnimation сам все сбросит
-        }
-      } else {
-        // Попытка найти комбинированный ход, который заканчивается на targetPoint
-        // Это может быть комбинированный ход (например, 4+6=10)
-        const combinedMove = possibleMoves.find(m => {
-          if (m.from !== dragging.pointIndex) return false
-          if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
-            // Комбинированный ход - проверяем последний шаг
-            const steps = (m as any).steps
-            const lastStep = steps[steps.length - 1]
-            return lastStep.to === targetPoint
+    // У TouchEnd нет координат в e.touches, используем последнюю позицию dragPosition
+    if (dragPosition) {
+      const x = dragPosition.x
+      const y = dragPosition.y
+      
+      const targetPoint = getPointAtPosition(x, y, canvas)
+      
+      if (targetPoint !== null && dragging.pointIndex !== targetPoint) {
+        if (targetPoint === -1) {
+          const bearOffMove = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === -1)
+          if (bearOffMove) {
+            startMoveAnimation(bearOffMove.from, bearOffMove.to, bearOffMove.die)
+            return // startMoveAnimation сам все сбросит
           }
-          return false
-        })
-        if (combinedMove) {
-          startMoveAnimation(combinedMove.from, targetPoint, combinedMove.die, (combinedMove as any).steps)
-          return
+        } else if (validTargetPoints.has(targetPoint)) {
+          const move = possibleMoves.find(m => m.from === dragging.pointIndex && m.to === targetPoint)
+          if (move) {
+            startMoveAnimation(move.from, move.to, move.die)
+            return // startMoveAnimation сам все сбросит
+          }
         }
       }
     }
     
-    // Если ход не выполнен, сбрасываем перетаскивание
     setDragging(null)
     setDragPosition(null)
     setSelectedPoint(null)
@@ -1584,14 +1399,6 @@ export default function BackgammonBoard({
       if (move.to !== undefined && move.to !== null) {
         validTargets.add(move.to)
         if (move.to === -1) bearOffDie = move.die
-      }
-      // Для комбинированных ходов (steps) добавляем также конечную точку из последнего шага
-      if ((move as any).steps && Array.isArray((move as any).steps) && (move as any).steps.length > 0) {
-        const steps = (move as any).steps
-        const lastStep = steps[steps.length - 1]
-        if (lastStep.to !== undefined && lastStep.to !== null) {
-          validTargets.add(lastStep.to)
-        }
       }
     })
     setValidTargetPoints(validTargets)
@@ -1681,23 +1488,6 @@ export default function BackgammonBoard({
   const handlePointClick = (pointIndex: number) => {
     if (!canMove || !isMyTurn) return
     
-    // Используем virtualGameState для проверки наличия шашки
-    const points = virtualGameState?.points || []
-    let pointValue = 0
-    
-    if (pointIndex === 24 || pointIndex === 25) {
-      const bar = virtualGameState?.bar || { white: 0, black: 0 }
-      pointValue = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1) 
-        ? (isPlayer1 ? bar.white : bar.black)
-        : 0
-    } else if (pointIndex >= 0 && pointIndex < points.length) {
-      pointValue = points[pointIndex]
-    }
-    
-    // Проверяем, моя ли это шашка
-    const isMyChecker = isPlayer1 ? pointValue > 0 : pointValue < 0
-    const isMyBar = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
-    
     // Если уже была выбрана точка, и мы кликнули на неё же - отменяем выбор
     if (selectedPoint === pointIndex) {
       setSelectedPoint(null)
@@ -1710,40 +1500,23 @@ export default function BackgammonBoard({
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
     
     if (selectedPoint === null) {
-      // Если ничего не выбрано, выбираем текущую точку (если это наша шашка)
-      if (isMyChecker || isMyBar) {
+      // Если ничего не выбрано, выбираем текущую точку (если из неё есть ходы)
+      if (pointMoves.length > 0) {
         setSelectedPoint(pointIndex)
-        // Обновляем validTargetPoints только если есть ходы
-        if (pointMoves.length > 0) {
-          const targets = new Set<number>()
-          let bearOffDie: number | null = null
-          let bearOffSteps: any[] | undefined = undefined
-          pointMoves.forEach(m => {
-            if (m.to !== undefined && m.to !== null) {
-              targets.add(m.to)
-            }
-            if (m.to === -1) {
-              bearOffDie = m.die
-              bearOffSteps = (m as any).steps
-            }
-            // Для комбинированных ходов (steps) добавляем также конечную точку из последнего шага
-            if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
-              const steps = (m as any).steps
-              const lastStep = steps[steps.length - 1]
-              if (lastStep.to !== undefined && lastStep.to !== null) {
-                targets.add(lastStep.to)
-              }
-            }
-          })
-          setValidTargetPoints(targets)
-          if (bearOffDie !== null) {
-            setShowBearOffButton({ pointIndex, die: bearOffDie, steps: bearOffSteps })
-          } else {
-            setShowBearOffButton(null)
+        const targets = new Set<number>()
+        let bearOffDie: number | null = null
+        let bearOffSteps: any[] | undefined = undefined
+        pointMoves.forEach(m => {
+          targets.add(m.to)
+          if (m.to === -1) {
+            bearOffDie = m.die
+            bearOffSteps = (m as any).steps
           }
+        })
+        setValidTargetPoints(targets)
+        if (bearOffDie !== null) {
+          setShowBearOffButton({ pointIndex, die: bearOffDie, steps: bearOffSteps })
         } else {
-          // Если ходов пока нет, validTargetPoints будет обновлен после загрузки possibleMoves через useEffect
-          setValidTargetPoints(new Set())
           setShowBearOffButton(null)
         }
       }
@@ -1836,16 +1609,16 @@ export default function BackgammonBoard({
     return usedIndices
   }, [diceArray, pendingMoves, gameMode])
 
-  // Определяем, нужно ли показывать "дубль" - пока первые 2 хода из 4 не использованы
-  const showDoublesLabel = useMemo(() => {
-    if (!diceArray || diceArray.length === 0) return false
+  // Подсчитываем сколько ходов осталось при дубле
+  const remainingMoves = useMemo(() => {
+    if (!diceArray || diceArray.length === 0) return 0
     
-    const isDoubles = diceArray.length === 4 && diceArray.every(d => d === diceArray[0])
-    if (!isDoubles) return false
+    const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0])
+    if (!isDoubles) return 0
     
-    // Показываем "дубль" пока использовано меньше 2 кубиков
+    const totalDice = diceArray.length
     const usedCount = usedDiceIndices.size
-    return usedCount < 2
+    return totalDice - usedCount
   }, [diceArray, usedDiceIndices])
   
   return (
@@ -1862,15 +1635,7 @@ export default function BackgammonBoard({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ 
-          touchAction: 'none', 
-          WebkitTouchCallout: 'none', 
-          WebkitUserSelect: 'none', 
-          userSelect: 'none',
-          overscrollBehavior: 'none',
-          overscrollBehaviorY: 'none',
-          overscrollBehaviorX: 'none'
-        }} // Отключаем стандартные жесты браузера и Telegram, предотвращаем сворачивание мини-приложения
+        style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} // Отключаем стандартные жесты браузера и Telegram
       />
       
       {/* Панель сброса шашки */}
@@ -1909,50 +1674,59 @@ export default function BackgammonBoard({
             left: `${dice3DPosition.x - dice3DPosition.size}px`,
             top: `${dice3DPosition.y - dice3DPosition.size / 2}px`,
             width: `${dice3DPosition.size * 2.5 * diceArray.length}px`,
+            height: `${dice3DPosition.size}px`,
             pointerEvents: 'none',
             display: 'flex',
-            flexDirection: 'column',
+            gap: '8px',
             alignItems: 'center',
-            gap: '4px',
           }}
         >
-          {/* Текст "дубль" сверху над кубиками, пока первые 2 хода из 4 не использованы */}
-          {showDoublesLabel && (
-            <div
-              style={{
-                color: 'white',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                textShadow: '0 0 4px rgba(0, 0, 0, 0.8)',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              дубль
-            </div>
-          )}
-          <div
-            style={{
-              display: 'flex',
-              gap: '8px',
-              alignItems: 'center',
-            }}
-          >
-            {diceArray.map((dieValue, index) => {
-              const isUsed = usedDiceIndices.has(index)
-              
-              // Не показываем использованные кубики
-              if (isUsed) return null
-              
-              return (
+          {diceArray.map((dieValue, index) => {
+            const isUsed = usedDiceIndices.has(index)
+            const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0])
+            
+            // Не показываем использованные кубики
+            if (isUsed) return null
+            
+            return (
+              <div
+                key={index}
+                style={{
+                  position: 'relative',
+                }}
+              >
                 <Dice3D
-                  key={index}
                   values={[dieValue]}
-                  animating={false}
+                  animating={diceAnimating}
                   diceTextures={currentPlayer === 0 ? diceTexturesPlayer1 : diceTexturesPlayer2}
                 />
-              )
-            })}
-          </div>
+                {/* Показываем сколько ходов осталось при дубле на каждом неиспользованном кубике */}
+                {isDoubles && remainingMoves > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '-20px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: 'rgba(255, 0, 0, 0.8)',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      zIndex: 10,
+                    }}
+                  >
+                    {remainingMoves}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
