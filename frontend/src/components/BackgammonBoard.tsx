@@ -108,7 +108,20 @@ export default function BackgammonBoard({
   }
 
   const getDiceColor = (diceSkin: any) => {
-    return diceSkin?.diceConfig?.color || '#FFFFFF'
+    if (!diceSkin) return '#FFFFFF'
+    
+    let diceConfig = diceSkin.diceConfig
+    // Если diceConfig - строка, пытаемся распарсить JSON
+    if (typeof diceConfig === 'string') {
+      try {
+        diceConfig = JSON.parse(diceConfig)
+      } catch (e) {
+        console.warn('Failed to parse diceConfig:', e)
+        return '#FFFFFF'
+      }
+    }
+    
+    return diceConfig?.color || '#FFFFFF'
   }
 
   const getCheckerColors = (checkerSkin: any) => {

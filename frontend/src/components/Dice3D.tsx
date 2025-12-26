@@ -106,6 +106,7 @@ function renderDots(value: number) {
       width: '100%',
       height: '100%',
       padding: '8px',
+      boxSizing: 'border-box',
     }}>
       {Array.from({ length: 9 }).map((_, index) => (
         <div
@@ -114,6 +115,8 @@ function renderDots(value: number) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            margin: 0,
+            padding: 0,
           }}
         >
           {dots.includes(index) && (
@@ -123,6 +126,7 @@ function renderDots(value: number) {
                 height: '7px',
                 background: '#222',
                 borderRadius: '50%',
+                margin: 0,
               }}
             />
           )}
