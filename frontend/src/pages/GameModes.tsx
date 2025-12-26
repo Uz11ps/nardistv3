@@ -29,7 +29,7 @@ export default function GameModes() {
       id: 'bot',
       name: 'Игра с AI',
       description: 'Тренируйся без ограничений',
-      path: '/game/new?mode=bot',
+      path: '/game/bot/mode',
     },
   ]
 

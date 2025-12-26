@@ -1,0 +1,113 @@
+.bot-game-mode-content {
+  padding: 20px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.bot-game-mode-card {
+  background: rgba(42, 42, 42, 0.8);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.bot-game-mode-field {
+  margin-bottom: 24px;
+}
+
+.bot-game-mode-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 12px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 12px 20px;
+  background: rgba(58, 58, 58, 0.8);
+  border: 2px solid rgba(100, 100, 100, 0.3);
+  border-radius: 8px;
+  color: #ccc;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover:not(:disabled) {
+  background: rgba(68, 68, 68, 0.9);
+  border-color: rgba(120, 120, 120, 0.5);
+}
+
+.toggle-btn.active {
+  background: linear-gradient(180deg, #4a9eff 0%, #357abd 100%);
+  border-color: #4a9eff;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bot-game-mode-description {
+  background: rgba(30, 30, 30, 0.6);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.bot-game-mode-description p {
+  margin: 0 0 8px 0;
+}
+
+.bot-game-mode-description p:last-child {
+  margin-bottom: 0;
+}
+
+.bot-game-mode-description strong {
+  color: #fff;
+  font-size: 16px;
+}
+
+.bot-game-mode-button {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(180deg, #4a9eff 0%, #357abd 100%);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+}
+
+.bot-game-mode-button:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5aaeff 0%, #458acd 100%);
+  box-shadow: 0 6px 16px rgba(74, 158, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.bot-game-mode-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.bot-game-mode-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+

@@ -470,9 +470,9 @@ export default function Game() {
     }
   }
 
-  const createBotGame = async () => {
+  const createBotGame = async (gameMode: 'short' | 'long' = 'long') => {
     try {
-      const response = await apiClient.post('/games/create-bot')
+      const response = await apiClient.post('/games/create-bot', { mode: gameMode })
       navigate(`/game/${response.data.id}`)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Неизвестная ошибка'

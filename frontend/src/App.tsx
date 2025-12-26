@@ -27,6 +27,7 @@ import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
 import Leaderboard from './pages/Leaderboard'
 import GameModes from './pages/GameModes'
+import BotGameMode from './pages/BotGameMode'
 import Achievements from './pages/Achievements'
 import GameResult from './pages/GameResult'
 import Welcome from './pages/Welcome'
@@ -250,6 +251,7 @@ function App() {
               <Route path="/game/tables" element={<GameTables />} />
               <Route path="/game/tables/create" element={<CreateTable />} />
               <Route path="/game/modes" element={<GameModes />} />
+              <Route path="/game/bot/mode" element={<BotGameMode />} />
               <Route path="/game/result" element={<GameResult />} />
               <Route path="/game/result/:gameId" element={<GameResult />} />
               <Route path="/profile" element={<Profile />} />
