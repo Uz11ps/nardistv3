@@ -1294,6 +1294,8 @@ export default function BackgammonBoard({
       // Множественное касание - предотвращаем zoom
       return
     }
+    // Блокируем ходы во время анимации хода
+    if (animatingChecker) return
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
     // Предотвращаем прокрутку страницы при перетаскивании шашки
@@ -1434,6 +1436,8 @@ export default function BackgammonBoard({
   // Обработка начала перетаскивания
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // console.log('MouseDown', { canMove, isMyTurn, dragging })
+    // Блокируем ходы во время анимации хода
+    if (animatingChecker) return
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
     const canvas = canvasRef.current
@@ -1602,6 +1606,8 @@ export default function BackgammonBoard({
   // Обработка клика с защитой от двойных кликов
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (dragging) return
+    // Блокируем ходы во время анимации хода
+    if (animatingChecker) return
     
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
