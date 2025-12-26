@@ -791,9 +791,11 @@ export class GamesService {
     // Используем оставшиеся кубики для расчета возможных ходов
     // Для дублей работаем как 8+8: сначала первые 2 кубика (8 очков), затем после подтверждения - оставшиеся 2 кубика (еще 8 очков)
     let diceForMoves = remainingDice;
-    if (isDoubles && originalDice.length === 4) {
+    if (isDoubles && originalDice.length === 4 && remainingDice.length === 4) {
+      // При выборе шашки (нет pendingMoves) или при наличии pendingMoves - ограничиваем до первых 2 кубиков
+      // Это логика 8+8: сначала используем первую "8" (2 кубика), затем после подтверждения - вторую "8" (оставшиеся 2 кубика)
       if (!hasPendingMoves) {
-        // Если нет pendingMoves, ограничиваем до первых 2 кубиков (первая "8")
+        // Если нет pendingMoves (выбор шашки), ограничиваем до первых 2 кубиков (первая "8")
         diceForMoves = remainingDice.slice(0, 2);
         this.logger.log(`🔒 Doubles 4/4 (8+8 logic): No pending moves, limiting to first 2 dice: [${diceForMoves.join(', ')}]`);
       } else {

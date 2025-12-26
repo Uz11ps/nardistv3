@@ -72,6 +72,21 @@ export default function BackgammonBoard({
     startTime: number;
   } | null>(null)
   
+  // Защита от случайных двойных кликов
+  const lastClickRef = useRef<{ pointIndex: number; timestamp: number } | null>(null)
+  const doubleClickTimeoutRef = useRef<number | null>(null)
+  const isDoubleClickRef = useRef<boolean>(false)
+  
+  // Очистка таймаутов при размонтировании
+  useEffect(() => {
+    return () => {
+      if (doubleClickTimeoutRef.current !== null) {
+        window.clearTimeout(doubleClickTimeoutRef.current)
+        doubleClickTimeoutRef.current = null
+      }
+    }
+  }, [])
+  
   const isPlayer1 = myPlayerId === player1Id
 
   // Определяем какие скины использовать
@@ -1169,10 +1184,24 @@ export default function BackgammonBoard({
     return () => resizeObserver.disconnect()
   }, [drawBoard])
   
-  // Обработка двойного клика (быстрый ход)
+  // Обработка двойного клика (быстрый ход) - явная обработка
   const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    // console.log('Double Click')
+    e.preventDefault()
+    e.stopPropagation()
+    
     if (!canMove || !isMyTurn || !canvasRef.current) return
+    
+    // Устанавливаем флаг, что это двойной клик
+    isDoubleClickRef.current = true
+    
+    // Отменяем таймаут одинарного клика
+    if (doubleClickTimeoutRef.current !== null) {
+      window.clearTimeout(doubleClickTimeoutRef.current)
+      doubleClickTimeoutRef.current = null
+    }
+    
+    // Очищаем информацию о последнем клике
+    lastClickRef.current = null
     
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
@@ -1180,29 +1209,53 @@ export default function BackgammonBoard({
     const y = e.clientY - rect.top
     
     const pointIndex = getPointAtPosition(x, y, canvas)
-    if (pointIndex === null) return
+    if (pointIndex === null) {
+      isDoubleClickRef.current = false
+      return
+    }
     
     // Ищем возможные ходы для этой точки
     const moves = possibleMoves.filter(m => m.from === pointIndex)
-    if (moves.length === 0) return
+    if (moves.length === 0) {
+      isDoubleClickRef.current = false
+      return
+    }
     
-    // Приоритет хода:
+    // Приоритет хода для двойного клика:
     // 1. Если есть ход на вынос (bearing off) - делаем его
     // 2. Если есть несколько ходов, берем тот, что использует большую кость (обычно выгоднее)
-    // 3. Иначе берем первый доступный
+    // 3. Если есть комбинированный ход (steps) - приоритет ему
+    // 4. Иначе берем первый доступный
     
     let bestMove = moves.find(m => m.to === -1) // Bearing off
     
     if (!bestMove) {
-      // Сортируем по значению кубика (по убыванию), чтобы использовать больший кубик
-      const sortedMoves = [...moves].sort((a, b) => b.die - a.die)
-      bestMove = sortedMoves[0]
+      // Ищем комбинированные ходы (с steps)
+      const combinedMoves = moves.filter(m => (m as any).steps && (m as any).steps.length > 1)
+      if (combinedMoves.length > 0) {
+        // Сортируем комбинированные ходы по сумме кубиков (по убыванию)
+        const sortedCombined = [...combinedMoves].sort((a, b) => {
+          const aSum = (a as any).steps?.reduce((sum: number, s: any) => sum + s.die, 0) || a.die
+          const bSum = (b as any).steps?.reduce((sum: number, s: any) => sum + s.die, 0) || b.die
+          return bSum - aSum
+        })
+        bestMove = sortedCombined[0]
+      } else {
+        // Сортируем по значению кубика (по убыванию), чтобы использовать больший кубик
+        const sortedMoves = [...moves].sort((a, b) => b.die - a.die)
+        bestMove = sortedMoves[0]
+      }
     }
     
     if (bestMove) {
-      // console.log('Fast move:', bestMove)
+      // Выполняем быстрый ход
       startMoveAnimation(bestMove.from, bestMove.to, bestMove.die, (bestMove as any).steps)
     }
+    
+    // Сбрасываем флаг через небольшую задержку
+    setTimeout(() => {
+      isDoubleClickRef.current = false
+    }, 100)
   }
 
   // Обработка начала касания (мобильные устройства)
@@ -1467,11 +1520,17 @@ export default function BackgammonBoard({
     setHoveredPoint(null)
   }
   
-  // Обработка клика
+  // Обработка клика с защитой от двойных кликов
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (dragging) return
     
     if (!canMove || !isMyTurn || !canvasRef.current) return
+    
+    // Если это двойной клик, игнорируем одинарный клик
+    if (isDoubleClickRef.current) {
+      isDoubleClickRef.current = false
+      return
+    }
     
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
@@ -1479,9 +1538,41 @@ export default function BackgammonBoard({
     const y = e.clientY - rect.top
     
     const pointIndex = getPointAtPosition(x, y, canvas)
-    if (pointIndex !== null) {
-      handlePointClick(pointIndex)
+    if (pointIndex === null) return
+    
+    // Проверяем, был ли это двойной клик на той же точке
+    const now = Date.now()
+    const DOUBLE_CLICK_DELAY = 300 // мс
+    const lastClick = lastClickRef.current
+    
+    if (lastClick && 
+        lastClick.pointIndex === pointIndex && 
+        (now - lastClick.timestamp) < DOUBLE_CLICK_DELAY) {
+      // Это потенциальный двойной клик - отменяем таймаут и не обрабатываем одинарный клик
+      if (doubleClickTimeoutRef.current !== null) {
+        window.clearTimeout(doubleClickTimeoutRef.current)
+        doubleClickTimeoutRef.current = null
+      }
+      lastClickRef.current = null
+      return
     }
+    
+    // Сохраняем информацию о клике
+    lastClickRef.current = { pointIndex, timestamp: now }
+    
+    // Устанавливаем таймаут для обработки одинарного клика
+    if (doubleClickTimeoutRef.current !== null) {
+      window.clearTimeout(doubleClickTimeoutRef.current)
+    }
+    
+    doubleClickTimeoutRef.current = window.setTimeout(() => {
+      // Если таймаут истек, значит это был одинарный клик
+      if (lastClickRef.current && lastClickRef.current.pointIndex === pointIndex) {
+        handlePointClick(pointIndex)
+        lastClickRef.current = null
+      }
+      doubleClickTimeoutRef.current = null
+    }, DOUBLE_CLICK_DELAY)
   }
   
   const handlePointClick = (pointIndex: number) => {
