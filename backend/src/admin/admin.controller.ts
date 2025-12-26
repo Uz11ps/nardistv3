@@ -552,27 +552,34 @@ export class AdminController {
     let diceConfig = null;
     let checkersConfig = null;
     
-    if (skinType === 'board') {
-      boardConfig = body.boardConfig ? (typeof body.boardConfig === 'string' ? JSON.parse(body.boardConfig) : body.boardConfig) : {};
-    } else if (skinType === 'dice') {
-      diceConfig = body.diceConfig ? (typeof body.diceConfig === 'string' ? JSON.parse(body.diceConfig) : body.diceConfig) : {};
-    } else if (skinType === 'checkers') {
-      checkersConfig = body.checkersConfig ? (typeof body.checkersConfig === 'string' ? JSON.parse(body.checkersConfig) : body.checkersConfig) : {};
+    try {
+      if (skinType === 'board') {
+        boardConfig = body.boardConfig ? (typeof body.boardConfig === 'string' ? JSON.parse(body.boardConfig) : body.boardConfig) : {};
+      } else if (skinType === 'dice') {
+        diceConfig = body.diceConfig ? (typeof body.diceConfig === 'string' ? JSON.parse(body.diceConfig) : body.diceConfig) : {};
+      } else if (skinType === 'checkers') {
+        checkersConfig = body.checkersConfig ? (typeof body.checkersConfig === 'string' ? JSON.parse(body.checkersConfig) : body.checkersConfig) : {};
+      }
+    } catch (parseError) {
+      throw new BadRequestException('Ошибка парсинга конфигурации: ' + (parseError as Error).message);
     }
+    
+    // Преобразуем rarity в верхний регистр (COMMON, RARE, EPIC, LEGENDARY)
+    const rarity = body.rarity ? body.rarity.toUpperCase() : 'COMMON';
     
     const skinData = {
       name: body.name,
       description: body.description || null,
       type: skinType,
       theme: body.theme || skinType,
-      boardConfig,
-      diceConfig,
-      checkersConfig,
+      boardConfig: boardConfig || null,
+      diceConfig: diceConfig || null,
+      checkersConfig: checkersConfig || null,
       isDefault: body.isDefault === 'true' || body.isDefault === true,
       isPremium: body.isPremium === 'true' || body.isPremium === true,
       weight: body.weight ? parseFloat(body.weight) : 1,
       price: body.price ? parseFloat(body.price) : null,
-      rarity: body.rarity || 'common',
+      rarity: rarity,
     };
     
     return this.adminService.createSkin(skinData);
