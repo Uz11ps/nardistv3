@@ -418,45 +418,9 @@ export default function BackgammonBoard({
         // Подсветка будет только для выбранной точки (selectedPoint)
         setPossibleMoves(flatMoves)
         
-        // Если есть selectedPoint, обновляем validTargetPoints для этой точки
-        // Это позволяет сразу сделать еще один ход той же шашкой после первого хода
-        if (selectedPoint !== null) {
-          const pointMoves = flatMoves.filter(m => m.from === selectedPoint)
-          if (pointMoves.length > 0) {
-            const targets = new Set<number>()
-            let bearOffDie: number | null = null
-            pointMoves.forEach(m => {
-              if (m.to !== undefined && m.to !== null) {
-                targets.add(m.to)
-                if (m.to === -1) bearOffDie = m.die
-              }
-              // Для комбинированных ходов добавляем конечную точку из steps
-              if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
-                const steps = (m as any).steps
-                const lastStep = steps[steps.length - 1]
-                if (lastStep.to !== undefined && lastStep.to !== null) {
-                  targets.add(lastStep.to)
-                }
-              }
-            })
-            setValidTargetPoints(targets)
-            if (bearOffDie !== null) {
-              setShowBearOffButton({ pointIndex: selectedPoint, die: bearOffDie })
-            } else {
-              setShowBearOffButton(null)
-            }
-          } else {
-            // Если больше нет ходов из этой точки, сбрасываем выбор
-            setSelectedPoint(null)
-            setValidTargetPoints(new Set())
-            setShowBearOffButton(null)
-          }
-        }
-        
-        // ВАЖНО: После добавления хода в pendingMoves обновляем selectedPoint на новую позицию шашки
+        // ВАЖНО: Сначала проверяем pendingMoves - если есть ход, обновляем selectedPoint на новую позицию
         // Это позволяет ходить той же шашкой дальше
-        // Обновляем только если нет selectedPoint или selectedPoint соответствует from последнего хода
-        if (pendingMoves.length > 0 && (selectedPoint === null || selectedPoint === pendingMoves[pendingMoves.length - 1]?.from)) {
+        if (pendingMoves.length > 0) {
           const lastMove = pendingMoves[pendingMoves.length - 1]
           if (lastMove && lastMove.to !== -1 && lastMove.to !== null && lastMove.to !== undefined) {
             // Проверяем, есть ли ходы из новой позиции
@@ -486,14 +450,52 @@ export default function BackgammonBoard({
               } else {
                 setShowBearOffButton(null)
               }
+              // Выходим из функции - selectedPoint уже обновлен
+              return
             } else {
               // Если нет ходов из новой позиции, сбрасываем выбор
               setSelectedPoint(null)
               setValidTargetPoints(new Set())
               setShowBearOffButton(null)
+              return
             }
           } else if (lastMove && lastMove.to === -1) {
             // Если шашка вынесена, сбрасываем выбор
+            setSelectedPoint(null)
+            setValidTargetPoints(new Set())
+            setShowBearOffButton(null)
+            return
+          }
+        }
+        
+        // Если нет pendingMoves или selectedPoint не обновлен, проверяем текущий selectedPoint
+        if (selectedPoint !== null) {
+          const pointMoves = flatMoves.filter(m => m.from === selectedPoint)
+          if (pointMoves.length > 0) {
+            const targets = new Set<number>()
+            let bearOffDie: number | null = null
+            pointMoves.forEach(m => {
+              if (m.to !== undefined && m.to !== null) {
+                targets.add(m.to)
+                if (m.to === -1) bearOffDie = m.die
+              }
+              // Для комбинированных ходов добавляем конечную точку из steps
+              if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
+                const steps = (m as any).steps
+                const lastStep = steps[steps.length - 1]
+                if (lastStep.to !== undefined && lastStep.to !== null) {
+                  targets.add(lastStep.to)
+                }
+              }
+            })
+            setValidTargetPoints(targets)
+            if (bearOffDie !== null) {
+              setShowBearOffButton({ pointIndex: selectedPoint, die: bearOffDie })
+            } else {
+              setShowBearOffButton(null)
+            }
+          } else {
+            // Если больше нет ходов из этой точки, сбрасываем выбор
             setSelectedPoint(null)
             setValidTargetPoints(new Set())
             setShowBearOffButton(null)

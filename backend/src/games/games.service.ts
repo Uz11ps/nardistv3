@@ -496,8 +496,19 @@ export class GamesService {
       const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
       
       if (!isValid) {
-        console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
-        throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+        // Логируем для отладки
+        this.logger.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+        this.logger.error(`  Текущий игрок: ${currentState.currentPlayer}, режим: ${game.mode}`);
+        this.logger.error(`  Доступные кубики: [${currentState.dice?.join(', ') || 'none'}]`);
+        
+        // Для коротких нард вычисляем правильный die для этого расстояния
+        let expectedDieMsg = '';
+        if (game.mode === GameMode.SHORT) {
+          const expectedDie = currentState.currentPlayer === 0 ? (move.to - move.from) : (move.from - move.to);
+          expectedDieMsg = ` Для этого расстояния нужен кубик ${expectedDie}.`;
+        }
+        
+        throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}.${expectedDieMsg} Доступные кубики: [${currentState.dice?.join(', ') || 'none'}]`);
       }
       
       // Удаляем использованный кубик
