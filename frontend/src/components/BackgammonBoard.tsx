@@ -397,6 +397,9 @@ export default function BackgammonBoard({
     return JSON.stringify(pendingMoves.map(m => ({ from: m.from, to: m.to, die: m.die })))
   }, [pendingMoves])
 
+  // Отслеживаем предыдущее состояние pendingMoves для определения момента выполнения хода
+  const prevPendingMovesRef = useRef<string>('[]')
+
   // Получение возможных ходов
   useEffect(() => {
     // Проверяем наличие кубиков
@@ -408,6 +411,7 @@ export default function BackgammonBoard({
         setPossibleMoves([])
         // Не сбрасываем highlightedPoints, так как они не используются для автоматической подсветки
       }
+      prevPendingMovesRef.current = pendingMovesKey
       return
     }
     
@@ -458,10 +462,20 @@ export default function BackgammonBoard({
       }
     }
     
+    // Определяем, был ли только что выполнен ход (pendingMoves очистились)
+    const wasMoveJustCompleted = prevPendingMovesRef.current !== '[]' && pendingMovesKey === '[]'
+    
+    // Если ход был только что выполнен, добавляем задержку для завершения анимации
+    // Длительность анимации - 300мс, добавляем еще 100мс для надежности
+    const animationDelay = wasMoveJustCompleted ? 400 : 300
+    
+    // Обновляем предыдущее состояние
+    prevPendingMovesRef.current = pendingMovesKey
+    
     // Debounce для предотвращения частых запросов (увеличиваем для уменьшения лагов)
     timeoutId = window.setTimeout(() => {
       fetchPossibleMoves()
-    }, 300)
+    }, animationDelay)
     
     return () => {
       cancelled = true
