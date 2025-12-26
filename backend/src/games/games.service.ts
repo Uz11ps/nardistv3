@@ -541,27 +541,18 @@ export class GamesService {
       }
     }
     
-    // Проверяем обязательность использования всех кубиков только если это длинные нарды
-    // В длинных нардах можно делать ходы по одному, если это валидно
-    if (game.mode === GameMode.LONG && allValidMoves.length > 0) {
+    // В обоих режимах можно делать ходы по одному, если это валидно
+    // Обработка ходов одинаковая, различаются только правила игры
+    if (allValidMoves.length > 0) {
       // Проверяем, есть ли ходы, которые используют все кубики
       const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
       
-      // В длинных нардах разрешаем делать один ход за раз, если он валиден
-      // Но если есть возможность использовать все кубики и пользователь использует только один - предупреждаем
+      // Разрешаем делать один ход за раз, если он валиден
+      // Пользователь может сделать второй ход позже
       if (fullMoves.length > 0 && finalMovesToSave.length < dice.length) {
         console.log(`⚠️ Пользователь использует только ${finalMovesToSave.length} из ${dice.length} кубиков, но есть возможность использовать все`);
-        // Разрешаем, но не требуем использовать все кубики в длинных нардах
+        // Разрешаем, но не требуем использовать все кубики
         // Пользователь может сделать второй ход позже
-      }
-    } else if (allValidMoves.length > 0) {
-      // Для коротких нард требуем использовать все кубики, если это возможно
-      const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
-      
-      if (fullMoves.length > 0 && finalMovesToSave.length < dice.length) {
-        throw new BadRequestException(
-          `Необходимо использовать все кубики. Доступно ${dice.length} кубиков (${dice.join(', ')}), использовано ${finalMovesToSave.length}. Доступны ходы, использующие все кубики.`
-        );
       }
     }
 
@@ -764,8 +755,8 @@ export class GamesService {
           remainingDice.splice(dieIndex, 1);
           used = true;
           state = engine.applyMove(state, move.from, move.to, move.die);
-        } else if (game.mode === GameMode.LONG) {
-          // 3. Или ищем сумму для длинных нард (fallback)
+        } else {
+          // 3. Или ищем сумму кубиков (fallback для обоих режимов)
           for (let i = 0; i < remainingDice.length; i++) {
             for (let j = i + 1; j < remainingDice.length; j++) {
               if (remainingDice[i] + remainingDice[j] === move.die) {
