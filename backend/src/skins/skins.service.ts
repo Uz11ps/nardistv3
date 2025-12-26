@@ -63,9 +63,7 @@ export class SkinsService implements OnModuleInit {
           repair_currency: 'NAR',
           repair_base_cost: 0, // Бесплатный ремонт для дефолтного скина
           bonuses: null,
-          // imageUrl и boardTextureUrl оставляем null - загружаются через админку
-          imageUrl: null,
-          boardTextureUrl: null,
+          // Изображения больше не используются - только материалы (цвета)
         },
         {
           name: 'Классические кубики',
@@ -88,10 +86,7 @@ export class SkinsService implements OnModuleInit {
           repair_currency: 'NAR',
           repair_base_cost: 0,
           bonuses: null,
-          // imageUrl и diceTextureUrls оставляем null - загружаются через админку
-          imageUrl: null,
-          diceTextureUrl: null,
-          diceTextureUrls: null, // Объект {1: url, 2: url, ..., 6: url} - загружается через админку
+          // Изображения больше не используются - только материалы (цвета)
         },
         {
           name: 'Классические шашки',
@@ -114,11 +109,7 @@ export class SkinsService implements OnModuleInit {
           repair_currency: 'NAR',
           repair_base_cost: 0,
           bonuses: null,
-          // imageUrl и текстуры шашек оставляем null - загружаются через админку
-          imageUrl: null,
-          whiteCheckersTextureUrl: null,
-          blackCheckersTextureUrl: null,
-          checkersTextureUrl: null, // Устаревшее поле, для обратной совместимости
+          // Изображения больше не используются - только материалы (цвета)
         },
       ];
 

@@ -541,40 +541,9 @@ export class AdminController {
 
   @Post('skins')
   @UseGuards(AdminAuthGuard)
-  @UseInterceptors(
-    AnyFilesInterceptor({ // Принимаем файлы с любыми именами полей: preview, boardTexture, diceTexture1-6, checkersTexture
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          // ВСЕ скины сохраняются в backend/uploads/skins - единый путь для всех
-          // Nginx отдает их напрямую из /app/uploads через /uploads/skins/
-          const uploadsDir = join(process.cwd(), 'uploads', 'skins');
-          // Создаем директорию если её нет
-          if (!existsSync(uploadsDir)) {
-            mkdirSync(uploadsDir, { recursive: true });
-          }
-          cb(null, uploadsDir);
-        },
-        filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const fieldName = file.fieldname || 'skin';
-          cb(null, `${fieldName}-${uniqueSuffix}${extname(file.originalname)}`);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        // Разрешаем изображения и другие файлы (для текстур могут быть разные форматы)
-        if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp|svg|json)$/) || file.fieldname) {
-          cb(null, true);
-        } else {
-          cb(new Error('Неподдерживаемый тип файла'), false);
-        }
-      },
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB для текстур
-    }),
-  )
   async createSkin(
     @CurrentUser() user: any,
     @Body() body: any,
-    @UploadedFiles() files?: Array<{ fieldname: string; filename: string; originalname: string; mimetype: string; size: number }>,
   ) {
     
     const skinType = body.type || 'board';

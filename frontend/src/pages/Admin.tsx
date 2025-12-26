@@ -3005,8 +3005,101 @@ export default function Admin() {
                     /> По умолчанию
                   </label>
                 </div>
-                {/* Поля для загрузки изображений удалены - скины теперь только на материалах (цветах) */}
-                {/* Поля для загрузки текстур удалены - теперь используются только материалы (цвета) */}
+                {/* Поля для конфигураций материалов */}
+                {selectedSkin.type === 'board' && (
+                  <div className="form-group">
+                    <label>Конфигурация доски (цвета материалов):</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Фон доски:</label>
+                        <input 
+                          type="color" 
+                          id="edit-skin-board-background-color" 
+                          defaultValue={selectedSkin.boardConfig?.backgroundColor || '#8B4513'} 
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Светлый треугольник:</label>
+                        <input 
+                          type="color" 
+                          id="edit-skin-board-triangle-color-1" 
+                          defaultValue={selectedSkin.boardConfig?.triangleColor1 || '#D4A574'} 
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Темный треугольник:</label>
+                        <input 
+                          type="color" 
+                          id="edit-skin-board-triangle-color-2" 
+                          defaultValue={selectedSkin.boardConfig?.triangleColor2 || '#8B4513'} 
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет границы:</label>
+                        <input 
+                          type="color" 
+                          id="edit-skin-board-border-color" 
+                          defaultValue={selectedSkin.boardConfig?.borderColor || '#5c3a21'} 
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет оконтовки (бар):</label>
+                        <input 
+                          type="color" 
+                          id="edit-skin-board-outline-color" 
+                          defaultValue={selectedSkin.boardConfig?.outlineColor || '#654321'} 
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                    </div>
+                    <span className="field-hint">Цвета для отрисовки доски из материалов</span>
+                  </div>
+                )}
+                {selectedSkin.type === 'dice' && (
+                  <div className="form-group">
+                    <label>Конфигурация кубиков (цвет материалов):</label>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет кубика:</label>
+                      <input 
+                        type="color" 
+                        id="edit-skin-dice-color" 
+                        defaultValue={selectedSkin.diceConfig?.color || '#FFFFFF'} 
+                        style={{ width: '100%', height: '40px' }} 
+                      />
+                    </div>
+                    <span className="field-hint">Цвет кубика. Цифры 1-6 будут рисоваться поверх</span>
+                  </div>
+                )}
+                {selectedSkin.type === 'checkers' && (
+                  <div className="form-group">
+                    <label>Конфигурация шашек (цвета материалов):</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет белых шашек:</label>
+                        <input 
+                          type="color" 
+                          id="edit-skin-checkers-white-color" 
+                          defaultValue={selectedSkin.checkersConfig?.whiteColor || '#F0F0F0'} 
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет черных шашек:</label>
+                        <input 
+                          type="color" 
+                          id="edit-skin-checkers-black-color" 
+                          defaultValue={selectedSkin.checkersConfig?.blackColor || '#333333'} 
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                    </div>
+                    <span className="field-hint">Цвета для отрисовки шашек из материалов</span>
+                  </div>
+                )}
                 <div className="btn-group">
                   <button className="btn btn-primary" onClick={async () => {
                     try {

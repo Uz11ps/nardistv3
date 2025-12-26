@@ -44,29 +44,8 @@ export class Skin {
   @Column({ type: 'int', default: 1 })
   weight: number; // Вес скина для лимита силы
 
-  @Column({ nullable: true })
-  imageUrl: string; // URL превью изображения скина (для инвентаря и общего отображения)
-  
-  @Column({ nullable: true })
-  shopImageUrl: string; // URL отдельного изображения для магазина
-
-  @Column({ nullable: true })
-  boardTextureUrl: string; // URL файла текстуры доски (для типа 'board')
-
-  @Column({ nullable: true })
-  diceTextureUrl: string; // URL файла текстуры кубиков (для типа 'dice') - устаревшее, используйте diceTextureUrls
-
-  @Column({ type: 'jsonb', nullable: true })
-  diceTextureUrls: any; // JSON объект с URL для каждого кубика: { 1: 'url1', 2: 'url2', 3: 'url3', 4: 'url4', 5: 'url5', 6: 'url6' }
-
-  @Column({ nullable: true })
-  checkersTextureUrl: string; // URL файла текстуры шашек (для типа 'checkers') - устаревшее, используйте whiteCheckersTextureUrl и blackCheckersTextureUrl
-  
-  @Column({ nullable: true })
-  whiteCheckersTextureUrl: string; // URL файла текстуры белых шашек (для типа 'checkers')
-  
-  @Column({ nullable: true })
-  blackCheckersTextureUrl: string; // URL файла текстуры черных шашек (для типа 'checkers')
+  // Все поля для изображений и текстур удалены - скины теперь работают только на материалах (цветах)
+  // Конфигурации цветов хранятся в boardConfig, diceConfig, checkersConfig
 
   @Column({ type: 'int', nullable: true })
   price: number; // Цена в NAR-coin (если null - бесплатный)
