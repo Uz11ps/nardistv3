@@ -116,6 +116,12 @@ export class Game {
   @Column({ type: 'bigint', default: 0 })
   stake: number; // Ставка в NAR-coin (0 = игра без ставок)
 
+  @Column({ type: 'integer', nullable: true })
+  player1XP: number; // Начисленный XP для игрока 1
+
+  @Column({ type: 'integer', nullable: true })
+  player2XP: number; // Начисленный XP для игрока 2
+
   @OneToMany(() => GameMove, (move) => move.game)
   moves: GameMove[];
 

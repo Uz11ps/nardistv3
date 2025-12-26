@@ -91,17 +91,8 @@ export default function GameResult() {
       durationSeconds = Math.max(0, Math.floor((endTime - startTime) / 1000))
     }
     
-    // Для игр с ботом награды не начисляются на бэкенде, показываем базовые значения
-    // В будущем можно добавить начисление XP для игр с ботом на бэкенде
-    let xpReward = 0
-    if (game.type === 'vs_bot') {
-      // Для игр с ботом: победа = 100 XP, поражение = 50 XP (базовые значения)
-      xpReward = isWinner ? 100 : 50
-    } else {
-      // Для обычных игр награды начисляются на бэкенде, но мы не можем их получить здесь
-      // Используем базовые значения для отображения
-      xpReward = isWinner ? 100 : (isDraw ? 50 : 50)
-    }
+    // Получаем начисленный XP из данных игры
+    const xpReward = isPlayer1 ? (game.player1XP || 0) : (game.player2XP || 0)
     
     // Если была ставка, вычисляем выигрыш
     let narCoinReward = undefined

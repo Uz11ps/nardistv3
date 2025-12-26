@@ -727,11 +727,13 @@ export class GamesService {
       }
     }
 
-    const savedGame = await this.gamesRepository.save(updatedGame);
+    let savedGame = await this.gamesRepository.save(updatedGame);
 
     // Применяем логику после завершения игры (после сохранения)
     if (savedGame.status === GameStatus.FINISHED) {
       await this.onGameFinished(savedGame);
+      // Перезагружаем игру, чтобы получить обновленные данные (например, player1XP, player2XP)
+      savedGame = await this.findOne(gameId);
     }
 
     // Bot moves are now handled by GamesGateway.handleBotTurnIfNeeded()
@@ -1199,6 +1201,15 @@ export class GamesService {
         const winnerResult = await this.progressService.addXP(game.winnerId, winnerXP);
         const loserResult = await this.progressService.addXP(loserId, loserXP);
         
+        // Сохраняем начисленный XP в игру
+        if (game.winnerId === game.player1Id) {
+          game.player1XP = winnerXP;
+          game.player2XP = loserXP;
+        } else {
+          game.player1XP = loserXP;
+          game.player2XP = winnerXP;
+        }
+        
         // Тратим энергию при завершении матча согласно таблице 9 спецификации
         const isTournament = gameType === GameType.TOURNAMENT;
         try {
@@ -1240,6 +1251,9 @@ export class GamesService {
         } catch (error) {
           this.logger.error(`❌ Ошибка при обновлении заданий обучения: ${error.message}`);
         }
+        
+        // Сохраняем игру с обновленным player1XP и player2XP
+        await this.gamesRepository.save(game);
       } catch (error) {
         this.logger.error(`❌ Ошибка при начислении XP: ${error.message}`, error.stack);
       }
@@ -1278,6 +1292,9 @@ export class GamesService {
         
         // Начисляем XP
         const playerResult = await this.progressService.addXP(playerId, playerXP);
+        
+        // Сохраняем начисленный XP в игру
+        game.player1XP = playerXP;
         
         // Тратим энергию при завершении матча (бот-игры не тратят энергию согласно спецификации)
         // Пропускаем трату энергии для игр с ботом
@@ -1448,10 +1465,13 @@ export class GamesService {
         game.player2Score = 1;
       }
 
-      const savedGame = await this.gamesRepository.save(game);
+      let savedGame = await this.gamesRepository.save(game);
 
       // Применяем логику после завершения игры (награды, рейтинги)
       await this.onGameFinished(savedGame);
+      
+      // Перезагружаем игру, чтобы получить обновленные данные (например, player1XP, player2XP)
+      savedGame = await this.findOne(gameId);
 
       return savedGame;
     }
@@ -1597,6 +1617,10 @@ export class GamesService {
       verificationSalt: game.status === GameStatus.FINISHED ? game.verificationSalt : undefined,
       p1Rolls: game.status === GameStatus.FINISHED ? game.p1Rolls : undefined,
       p2Rolls: game.status === GameStatus.FINISHED ? game.p2Rolls : undefined,
+      player1XP: game.player1XP || null,
+      player2XP: game.player2XP || null,
+      createdAt: game.createdAt,
+      updatedAt: game.updatedAt,
     };
   }
 
