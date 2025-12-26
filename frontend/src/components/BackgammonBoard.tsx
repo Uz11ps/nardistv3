@@ -396,6 +396,21 @@ export default function BackgammonBoard({
       return
     }
     
+    // Проверяем, является ли это дублем и достигнуто ли ограничение
+    const diceArray = dice
+      ? (Array.isArray(dice) ? dice : [dice.die1, dice.die2])
+      : []
+    const isDoubles = (diceArray.length === 4 || diceArray.length === 2) && diceArray.every(d => d === diceArray[0])
+    
+    // Если дубль и уже есть 2 хода - НЕ запрашиваем возможные ходы до подтверждения
+    if (isDoubles && pendingMoves.length >= 2) {
+      setPossibleMoves([])
+      setSelectedPoint(null)
+      setValidTargetPoints(new Set())
+      setShowBearOffButton(null)
+      return
+    }
+    
     let timeoutId: number | null = null
     let cancelled = false
     
@@ -433,7 +448,7 @@ export default function BackgammonBoard({
       cancelled = true
       if (timeoutId !== null) window.clearTimeout(timeoutId)
     }
-  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey]) // Используем стабилизированные ключи
+  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, dice, pendingMoves]) // Используем стабилизированные ключи
   
   // Определение позиции для кубиков
   // Мои кубики на моей части доски, его кубики на его части
@@ -1115,7 +1130,10 @@ export default function BackgammonBoard({
         setAnimatingChecker(prev => prev ? { ...prev, progress } : null)
         animationFrame = requestAnimationFrame(animate)
       } else {
-        // Анимация завершена
+        // Анимация завершена - сначала сбрасываем выбор, потом вызываем onMove
+        setSelectedPoint(null)
+        setValidTargetPoints(new Set())
+        setShowBearOffButton(null)
         onMove(animatingChecker.from, animatingChecker.to, animatingChecker.die, animatingChecker.steps)
         setAnimatingChecker(null)
       }
