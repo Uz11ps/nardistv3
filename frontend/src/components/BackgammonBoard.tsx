@@ -389,7 +389,7 @@ export default function BackgammonBoard({
     
     if (!gameId || !isMyTurn || !canMove || !hasDice) {
       // Не сбрасываем подсветку если это просто обновление состояния, а не смена хода
-        if (!isMyTurn || !canMove) {
+      if (!isMyTurn || !canMove) {
         setPossibleMoves([])
         // Не сбрасываем highlightedPoints, так как они не используются для автоматической подсветки
       }
@@ -433,7 +433,7 @@ export default function BackgammonBoard({
       cancelled = true
       if (timeoutId !== null) window.clearTimeout(timeoutId)
     }
-  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, dice, pendingMoves]) // Используем стабилизированные ключи
+  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, pendingMoves]) // pendingMoves нужен для использования в fetchPossibleMoves
   
   // Определение позиции для кубиков
   // Мои кубики на моей части доски, его кубики на его части
