@@ -54,6 +54,24 @@ export class BackgammonEngine {
     };
   }
 
+  /**
+   * Calculate target point for a move
+   * Coordinate system (matching frontend):
+   * Index 0 = Point 24 (Top Right) - White starting area
+   * Index 23 = Point 1 (Bottom Right) - Black starting area
+   * White moves: 0→1→...→23 (Point 24→23→...→1) - increasing index
+   * Black moves: 23→22→...→0 (Point 1→2→...→24) - decreasing index
+   */
+  private calculateTargetPoint(player: number, from: number, die: number): number {
+    if (player === 0) {
+      // White: moves by INCREASING index
+      return from + die;
+    } else {
+      // Black: moves by DECREASING index
+      return from - die;
+    }
+  }
+
   validateMove(state: BoardState, from: number, to: number, die: number): boolean {
     if (state.currentPlayer === 0) {
       return this.validateMovePlayer1(state, from, to, die);
@@ -78,7 +96,7 @@ export class BackgammonEngine {
     if (state.points[from] <= 0) return false;
 
     // Расчет цели для обычного хода
-    const toPoint = from + die;
+    const toPoint = this.calculateTargetPoint(0, from, die);
     
     // Проверка на вынос (bearing off)
     if (toPoint >= this.BOARD_SIZE) {
@@ -121,7 +139,8 @@ export class BackgammonEngine {
     if (from < 0 || from >= this.BOARD_SIZE) return false;
     if (state.points[from] >= 0) return false;
 
-    const toPoint = from - die;
+    // Расчет цели для обычного хода
+    const toPoint = this.calculateTargetPoint(1, from, die);
     
     if (toPoint < 0) {
       if (!this.canBearOff(state, 1)) return false;
@@ -354,7 +373,7 @@ export class BackgammonEngine {
         // Regular moves from board
         for (let from = 0; from < this.BOARD_SIZE; from++) {
           if (state.points[from] > 0) {
-            const to = from + die;
+            const to = this.calculateTargetPoint(0, from, die);
             // Handle bearing off
             if (to >= this.BOARD_SIZE) {
               if (this.canBearOff(state, 0) && this.validateMove(state, from, -1, die)) {
@@ -378,7 +397,7 @@ export class BackgammonEngine {
         // Regular moves from board
         for (let from = 0; from < this.BOARD_SIZE; from++) {
           if (state.points[from] < 0) {
-            const to = from - die;
+            const to = this.calculateTargetPoint(1, from, die);
             // Handle bearing off
             if (to < 0) {
               if (this.canBearOff(state, 1) && this.validateMove(state, from, -1, die)) {
