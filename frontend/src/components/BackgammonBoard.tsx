@@ -625,9 +625,12 @@ export default function BackgammonBoard({
       }
     }
     
-    // Проверяем бар
+    // Проверяем бар (для коротких нард - более широкая область)
     if (actualX >= barX && actualX <= barX + barWidth) {
-      if (actualY >= height * 0.25 && actualY <= height * 0.75) {
+      // Для коротких нард разрешаем клик в более широкой области бара
+      const barYMin = gameMode === 'short' ? height * 0.1 : height * 0.25
+      const barYMax = gameMode === 'short' ? height * 0.9 : height * 0.75
+      if (actualY >= barYMin && actualY <= barYMax) {
         return isPlayer1 ? 24 : 25
       }
     }
@@ -646,7 +649,7 @@ export default function BackgammonBoard({
     }
     
     return null
-  }, [virtualGameState, isPlayer1, gameMode])
+  }, [gameState, isPlayer1, gameMode])
   
   // Отрисовка доски
   const drawBoard = useCallback(() => {
@@ -1467,15 +1470,27 @@ export default function BackgammonBoard({
     let pointValue = 0
     
     if (pointIndex === 24 || pointIndex === 25) {
+      // Для бара проверяем наличие шашек на баре
       const bar = virtualGameState?.bar || { white: 0, black: 0 }
-      pointValue = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1) 
-        ? (isPlayer1 ? bar.white : bar.black)
-        : 0
+      const isMyBarIndex = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
+      if (isMyBarIndex) {
+        pointValue = isPlayer1 ? bar.white : bar.black
+      }
     } else if (pointIndex >= 0 && pointIndex < points.length) {
       pointValue = points[pointIndex]
     }
     
-    if (pointValue === 0) {
+    // Для бара проверяем не только pointValue, но и наличие шашек на баре
+    if (pointIndex === 24 || pointIndex === 25) {
+      const bar = virtualGameState?.bar || { white: 0, black: 0 }
+      const isMyBarIndex = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
+      if (!isMyBarIndex || pointValue === 0) {
+        setSelectedPoint(null)
+        setValidTargetPoints(new Set())
+        setShowBearOffButton(null)
+        return
+      }
+    } else if (pointValue === 0) {
       setSelectedPoint(null)
       setValidTargetPoints(new Set())
       setShowBearOffButton(null)
