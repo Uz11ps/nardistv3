@@ -396,22 +396,6 @@ export default function BackgammonBoard({
       return
     }
     
-    // Проверяем, является ли это дублем из 4 кубиков и достигнуто ли ограничение
-    const diceArray = dice
-      ? (Array.isArray(dice) ? dice : [dice.die1, dice.die2])
-      : []
-    const isDoubles4 = diceArray.length === 4 && diceArray.every(d => d === diceArray[0])
-    
-    // Если дубль из 4 кубиков и уже есть 2 хода - НЕ запрашиваем возможные ходы до подтверждения
-    // После подтверждения останется 2 кубика, и тогда возможные ходы будут запрашиваться
-    if (isDoubles4 && pendingMoves.length >= 2) {
-      setPossibleMoves([])
-      setSelectedPoint(null)
-      setValidTargetPoints(new Set())
-      setShowBearOffButton(null)
-      return
-    }
-    
     let timeoutId: number | null = null
     let cancelled = false
     
