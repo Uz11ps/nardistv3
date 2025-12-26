@@ -46,13 +46,7 @@ export default function BackgammonBoard({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   
-  // Загружаем текстуры для скинов
-  const [boardTexturePlayer1, setBoardTexturePlayer1] = useState<HTMLImageElement | null>(null)
-  const [boardTexturePlayer2, setBoardTexturePlayer2] = useState<HTMLImageElement | null>(null)
-  const [whiteCheckerTexture, setWhiteCheckerTexture] = useState<HTMLImageElement | null>(null)
-  const [blackCheckerTexture, setBlackCheckerTexture] = useState<HTMLImageElement | null>(null)
-  const [diceTexturesPlayer1, setDiceTexturesPlayer1] = useState<{ [face: number]: HTMLImageElement }>({})
-  const [diceTexturesPlayer2, setDiceTexturesPlayer2] = useState<{ [face: number]: HTMLImageElement }>({})
+  // Скины теперь используют материалы (цвета) вместо текстур
   
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
@@ -101,233 +95,41 @@ export default function BackgammonBoard({
   const diceSkinPlayer1 = player1Skins?.dice || mySkins?.dice
   const diceSkinPlayer2 = player2Skins?.dice || mySkins?.dice
 
-  // Fallback пути к дефолтным SVG файлам
-  const DEFAULT_BOARD_TEXTURE = '/skins/default-board.svg'
-  const DEFAULT_WHITE_CHECKER_TEXTURE = '/skins/default-checkers-white.svg'
-  const DEFAULT_BLACK_CHECKER_TEXTURE = '/skins/default-checkers-black.svg'
-
-  // Загружаем текстуры при изменении скинов с fallback на дефолтные SVG
-  useEffect(() => {
-    // Улучшенная функция загрузки изображения с поддержкой SVG и обработкой ошибок
-    const loadImage = (url: string, onSuccess: (img: HTMLImageElement) => void, onError: () => void) => {
-      const img = new Image()
-      
-      // Для SVG на мобильных устройствах может потребоваться другой подход
-      // Убираем crossOrigin для локальных файлов, так как это может вызывать проблемы с SVG
-      if (url.startsWith('http') && !url.includes(window.location.hostname)) {
-        img.crossOrigin = 'anonymous'
-      }
-      
-      // Добавляем таймаут для случаев, когда onerror не срабатывает
-      let timeout: number | null = null
-      
-      const cleanup = () => {
-        if (timeout) {
-          clearTimeout(timeout)
-          timeout = null
-        }
-      }
-      
-      img.onload = () => {
-        cleanup()
-        // Проверяем, что изображение действительно загрузилось
-        // Для SVG может быть width/height = 0, но это нормально, проверяем complete
-        if (img.complete && (img.width > 0 || img.height > 0 || url.endsWith('.svg'))) {
-          onSuccess(img)
-        } else {
-          // Если размеры 0 и это не SVG, значит изображение не загрузилось корректно
-          onError()
-        }
-      }
-      
-      img.onerror = () => {
-        cleanup()
-        console.warn(`Failed to load image: ${url}`)
-        onError()
-      }
-      
-      // Таймаут для случаев, когда события не срабатывают
-      timeout = setTimeout(() => {
-        if (!img.complete) {
-          console.warn(`Image load timeout: ${url}`)
-          onError()
-        }
-      }, 5000)
-      
-      // Устанавливаем src в конце, чтобы обработчики были готовы
-      img.src = url
+  // Получаем цвета из конфигураций скинов (материалы вместо текстур)
+  const getBoardColors = (boardSkin: any) => {
+    const config = boardSkin?.boardConfig || {}
+    return {
+      backgroundColor: config.backgroundColor || '#8B4513',
+      triangleColor1: config.triangleColor1 || '#D4A574',
+      triangleColor2: config.triangleColor2 || '#8B4513',
+      borderColor: config.borderColor || '#5c3a21',
+      outlineColor: config.outlineColor || '#654321',
     }
+  }
 
-    // Загрузка текстуры доски для player1 (левая половина)
-    const loadBoardTexturePlayer1 = () => {
-      const textureUrl = boardSkinPlayer1?.boardTextureUrl
-      
-      if (textureUrl) {
-        loadImage(
-          textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
-          (img) => setBoardTexturePlayer1(img),
-          () => {
-            console.warn('Failed to load board texture for player1 from admin')
-            setBoardTexturePlayer1(null)
-          }
-        )
-      } else {
-        setBoardTexturePlayer1(null)
-      }
+  const getDiceColor = (diceSkin: any) => {
+    return diceSkin?.diceConfig?.color || '#FFFFFF'
+  }
+
+  const getCheckerColors = (checkerSkin: any) => {
+    const config = checkerSkin?.checkersConfig || {}
+    return {
+      whiteColor: config.whiteColor || '#F0F0F0',
+      blackColor: config.blackColor || '#333333',
     }
+  }
 
-    // Загрузка текстуры доски для player2 (правая половина)
-    const loadBoardTexturePlayer2 = () => {
-      const textureUrl = boardSkinPlayer2?.boardTextureUrl
-      
-      if (textureUrl) {
-        loadImage(
-          textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
-          (img) => setBoardTexturePlayer2(img),
-          () => {
-            console.warn('Failed to load board texture for player2 from admin')
-            setBoardTexturePlayer2(null)
-          }
-        )
-      } else {
-        setBoardTexturePlayer2(null)
-      }
-    }
+  // Получаем цвета для каждого игрока
+  const opponentBoardColors = getBoardColors(isPlayer1 ? boardSkinPlayer2 : boardSkinPlayer1)
+  const myBoardColors = getBoardColors(isPlayer1 ? boardSkinPlayer1 : boardSkinPlayer2)
+  const diceColorPlayer1 = getDiceColor(diceSkinPlayer1)
+  const diceColorPlayer2 = getDiceColor(diceSkinPlayer2)
+  const checkerColorsPlayer1 = getCheckerColors(checkerSkinPlayer1)
+  const checkerColorsPlayer2 = getCheckerColors(checkerSkinPlayer2)
 
-    loadBoardTexturePlayer1()
-    loadBoardTexturePlayer2()
+  // Скины теперь используют только материалы (цвета), загрузка текстур не требуется
 
-    // Загрузка текстур шашек для player1 (белые)
-    const loadWhiteCheckerTexture = () => {
-      const textureUrl = checkerSkinPlayer1?.whiteCheckersTextureUrl || DEFAULT_WHITE_CHECKER_TEXTURE
-      
-      loadImage(
-        textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
-        (img) => setWhiteCheckerTexture(img),
-        () => {
-          // Fallback на дефолтную текстуру
-          if (textureUrl !== DEFAULT_WHITE_CHECKER_TEXTURE) {
-            loadImage(
-              `${window.location.origin}${DEFAULT_WHITE_CHECKER_TEXTURE}`,
-              (img) => setWhiteCheckerTexture(img),
-              () => {
-                console.warn('Failed to load default white checker texture')
-                setWhiteCheckerTexture(null)
-              }
-            )
-          } else {
-            setWhiteCheckerTexture(null)
-          }
-        }
-      )
-    }
-
-    loadWhiteCheckerTexture()
-
-    // Загрузка текстур шашек для player2 (черные)
-    const loadBlackCheckerTexture = () => {
-      const textureUrl = checkerSkinPlayer2?.blackCheckersTextureUrl || DEFAULT_BLACK_CHECKER_TEXTURE
-      
-      loadImage(
-        textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
-        (img) => setBlackCheckerTexture(img),
-        () => {
-          // Fallback на дефолтную текстуру
-          if (textureUrl !== DEFAULT_BLACK_CHECKER_TEXTURE) {
-            loadImage(
-              `${window.location.origin}${DEFAULT_BLACK_CHECKER_TEXTURE}`,
-              (img) => setBlackCheckerTexture(img),
-              () => {
-                console.warn('Failed to load default black checker texture')
-                setBlackCheckerTexture(null)
-              }
-            )
-          } else {
-            setBlackCheckerTexture(null)
-          }
-        }
-      )
-    }
-
-    loadBlackCheckerTexture()
-
-    // Загрузка текстур костей для player1
-    const loadDiceTexturesPlayer1 = async () => {
-      const diceSkin = diceSkinPlayer1
-      if (!diceSkin?.diceTextureUrls || typeof diceSkin.diceTextureUrls !== 'object') {
-        setDiceTexturesPlayer1({})
-        return
-      }
-
-      const textures: { [face: number]: HTMLImageElement } = {}
-      const loadPromises: Promise<void>[] = []
-
-      for (let face = 1; face <= 6; face++) {
-        const textureUrl = diceSkin.diceTextureUrls[face]
-        if (textureUrl) {
-          loadPromises.push(
-            new Promise<void>((resolve) => {
-              loadImage(
-                textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
-                (img) => {
-                  textures[face] = img
-                  resolve()
-                },
-                () => {
-                  console.warn(`Failed to load dice texture for player1, face ${face}`)
-                  resolve()
-                }
-              )
-            })
-          )
-        }
-      }
-
-      await Promise.all(loadPromises)
-      setDiceTexturesPlayer1(textures)
-    }
-
-    loadDiceTexturesPlayer1()
-
-    // Загрузка текстур костей для player2
-    const loadDiceTexturesPlayer2 = async () => {
-      const diceSkin = diceSkinPlayer2
-      if (!diceSkin?.diceTextureUrls || typeof diceSkin.diceTextureUrls !== 'object') {
-        setDiceTexturesPlayer2({})
-        return
-      }
-
-      const textures: { [face: number]: HTMLImageElement } = {}
-      const loadPromises: Promise<void>[] = []
-
-      for (let face = 1; face <= 6; face++) {
-        const textureUrl = diceSkin.diceTextureUrls[face]
-        if (textureUrl) {
-          loadPromises.push(
-            new Promise<void>((resolve) => {
-              loadImage(
-                textureUrl.startsWith('http') ? textureUrl : `${window.location.origin}${textureUrl}`,
-                (img) => {
-                  textures[face] = img
-                  resolve()
-                },
-                () => {
-                  console.warn(`Failed to load dice texture for player2, face ${face}`)
-                  resolve()
-                }
-              )
-            })
-          )
-        }
-      }
-
-      await Promise.all(loadPromises)
-      setDiceTexturesPlayer2(textures)
-    }
-
-    loadDiceTexturesPlayer2()
-  }, [boardSkinPlayer1?.boardTextureUrl, boardSkinPlayer2?.boardTextureUrl, checkerSkinPlayer1?.whiteCheckersTextureUrl, checkerSkinPlayer2?.blackCheckersTextureUrl, diceSkinPlayer1?.diceTextureUrls, diceSkinPlayer2?.diceTextureUrls])
-
+  // Виртуальное состояние доски с учетом локальных ходов (очереди)
   // Виртуальное состояние доски с учетом локальных ходов (очереди)
   const virtualGameState = useMemo(() => {
     if (!gameState?.points) return gameState
@@ -699,90 +501,51 @@ export default function BackgammonBoard({
     const rightHalfStartX = barX + barWidth
     const rightHalfWidth = (boardWidth - barWidth) / 2
     
-    // Левая половина доски (скины противника)
-    const opponentBoardSkin = isPlayer1 ? boardSkinPlayer2 : boardSkinPlayer1
-    const opponentBoardTexture = isPlayer1 ? boardTexturePlayer2 : boardTexturePlayer1
-    const hasCustomOpponentTexture = opponentBoardSkin?.boardTextureUrl && opponentBoardTexture && opponentBoardTexture.complete
+    // Левая половина доски (скины противника) - используем цвета из boardConfig
+    ctx.fillStyle = opponentBoardColors.backgroundColor
+    ctx.fillRect(boardStartX, 0, leftHalfWidth, height)
     
-    if (hasCustomOpponentTexture) {
-      try {
-        ctx.drawImage(opponentBoardTexture, boardStartX, 0, leftHalfWidth, height)
-      } catch (e) {
-        console.error('Failed to draw opponent board texture:', e)
-        ctx.fillStyle = '#8B4513'
-        ctx.fillRect(boardStartX, 0, leftHalfWidth, height)
-      }
-    } else {
-      ctx.fillStyle = '#8B4513'
-      ctx.fillRect(boardStartX, 0, leftHalfWidth, height)
-    }
-    
-    // Центральная полоса (бар)
-    ctx.fillStyle = '#654321'
+    // Центральная полоса (бар) - используем outlineColor из конфигурации
+    ctx.fillStyle = myBoardColors.outlineColor || '#654321'
     ctx.fillRect(barX, 0, barWidth, height)
     
-    // Правая половина доски (свои скины)
-    const myBoardSkin = isPlayer1 ? boardSkinPlayer1 : boardSkinPlayer2
-    const myBoardTexture = isPlayer1 ? boardTexturePlayer1 : boardTexturePlayer2
-    const hasCustomMyTexture = myBoardSkin?.boardTextureUrl && myBoardTexture && myBoardTexture.complete
-    
-    if (hasCustomMyTexture) {
-      try {
-        ctx.drawImage(myBoardTexture, rightHalfStartX, 0, rightHalfWidth, height)
-      } catch (e) {
-        console.error('Failed to draw my board texture:', e)
-        ctx.fillStyle = '#8B4513'
-        ctx.fillRect(rightHalfStartX, 0, rightHalfWidth, height)
-      }
-    } else {
-      ctx.fillStyle = '#8B4513'
-      ctx.fillRect(rightHalfStartX, 0, rightHalfWidth, height)
-    }
+    // Правая половина доски (свои скины) - используем цвета из boardConfig
+    ctx.fillStyle = myBoardColors.backgroundColor
+    ctx.fillRect(rightHalfStartX, 0, rightHalfWidth, height)
     
     // Параметры для точек
     const halfBoardWidth = (boardWidth - barWidth) / 2
     const pointWidth = halfBoardWidth / 6
     const pointHeight = height * 0.45
     
-    // Вспомогательная функция для отрисовки шашки
+    // Вспомогательная функция для отрисовки шашки с цветом из checkersConfig
     const drawChecker = (cX: number, cY: number, size: number, isWhite: boolean, isMy: boolean, alpha: number = 1) => {
       ctx.save()
       ctx.globalAlpha = alpha
       
       const radius = size / 2
       
-      // Используем текстуру если есть, иначе цветной круг
-      const texture = isWhite ? whiteCheckerTexture : blackCheckerTexture
-      if (texture && texture.complete && (texture.width > 0 || texture.height > 0 || texture.src?.endsWith('.svg'))) {
-        // Рисуем текстуру шашки
-        ctx.save()
-        ctx.beginPath()
-        ctx.arc(cX, cY, radius, 0, Math.PI * 2)
-        ctx.clip()
-        ctx.drawImage(texture, cX - radius, cY - radius, size, size)
-        ctx.restore()
-        ctx.save()
-        ctx.globalAlpha = alpha
-      } else {
-        // Фолбэк на цветной круг
-        // Тень для объема
-        ctx.shadowBlur = size * 0.2
-        ctx.shadowColor = 'rgba(0,0,0,0.4)'
-        ctx.shadowOffsetY = 2
-        
-        const color = isWhite ? '#F0F0F0' : '#333333'
-        ctx.fillStyle = color
-        ctx.beginPath()
-        ctx.arc(cX, cY, radius, 0, Math.PI * 2)
-        ctx.fill()
-        
-        // Внутренний декор шашки
-        ctx.beginPath()
-        ctx.arc(cX, cY, size * 0.35, 0, Math.PI * 2)
-        ctx.strokeStyle = isMy ? (isWhite ? '#DDD' : '#555') : (isWhite ? '#AAA' : '#222')
-        ctx.lineWidth = 1
-        ctx.stroke()
-      }
+      // Используем цвета из checkersConfig
+      const checkerColors = isMy ? checkerColorsPlayer1 : checkerColorsPlayer2
+      const color = isWhite ? checkerColors.whiteColor : checkerColors.blackColor
+      
+      // Тень для объема
+      ctx.shadowBlur = size * 0.2
+      ctx.shadowColor = 'rgba(0,0,0,0.4)'
+      ctx.shadowOffsetY = 2
+      
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.arc(cX, cY, radius, 0, Math.PI * 2)
+      ctx.fill()
+      
+      // Внутренний декор шашки
+      ctx.beginPath()
+      ctx.arc(cX, cY, size * 0.35, 0, Math.PI * 2)
+      const strokeColor = isMy ? (isWhite ? '#DDD' : '#555') : (isWhite ? '#AAA' : '#222')
+      ctx.strokeStyle = strokeColor
+      ctx.lineWidth = 1
+      ctx.stroke()
       
       // Обводка шашки
       ctx.strokeStyle = isMy ? '#999' : '#000'
@@ -799,8 +562,8 @@ export default function BackgammonBoard({
       ? virtualGameState.points 
       : Array(24).fill(0)
     
-    // Функция для отрисовки треугольной точки (Классический вид)
-    const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, color: string) => {
+    // Функция для отрисовки треугольной точки с цветами из boardConfig
+    const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, colors: typeof myBoardColors, isLight: boolean) => {
       ctx.beginPath()
       if (isTop) {
         // Верхний треугольник: основание вверху (y), острие вниз (y + h)
@@ -814,54 +577,43 @@ export default function BackgammonBoard({
         ctx.lineTo(x, y - h)           // Острие вверху
       }
       ctx.closePath()
-      ctx.fillStyle = color
+      // Используем triangleColor1 для светлых, triangleColor2 для темных
+      ctx.fillStyle = isLight ? colors.triangleColor1 : colors.triangleColor2
       ctx.fill()
-      ctx.strokeStyle = '#5c3a21' // Более темная обводка для контраста
+      // Используем borderColor для обводки
+      ctx.strokeStyle = colors.borderColor
       ctx.lineWidth = 1
       ctx.stroke()
     }
     
-    // Рисуем треугольники кодом ТОЛЬКО для дефолтных скинов (без кастомной текстуры)
-    // ВСЕГДА рисуем треугольники если нет кастомной текстуры для соответствующей половины
-    // Левая половина = противник, правая половина = свои
-    const needsTrianglesOpponent = !hasCustomOpponentTexture
-    const needsTrianglesMy = !hasCustomMyTexture
-    
-    if (needsTrianglesOpponent || needsTrianglesMy) {
-      // Рисуем 24 треугольника (точки доски)
-      for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
-        const { x, y, isTopRow, pointWidth: pW, pointHeight: pH, pointNumber } = getPointCoordinates(pointIndex, canvas)
-        
-        // Определяем, на какой половине доски находится точка
-        // Левая = противник, правая = свои (с учетом инверсии для player2)
-        const isLeftHalf = x < barX
-        const needsTriangle = isLeftHalf ? needsTrianglesOpponent : needsTrianglesMy
-        
-        if (!needsTriangle) continue // Пропускаем если для этой половины есть кастомная текстура
-        
-        const triangleWidth = pW * 0.95
-        const triangleHeight = pH * 0.95
-        
-        // Используем визуальный индекс для определения цвета
-        // После инверсии координат для player2, isTopRow уже инвертирован, используем его напрямую
-        const pointInRow = isTopRow ? pointIndex : pointIndex - 12
-        const isLight = pointInRow % 2 === 0
-        const triangleColor = isLight ? '#D4A574' : '#8B4513'
-        
-        // Рисуем сам треугольник
-        drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, triangleColor)
-        
-        // Отрисовка нумерации точек (1-24)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
-        ctx.font = 'bold 12px Arial'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        
-        if (isTopRow) {
-          ctx.fillText(pointNumber.toString(), x, y + 15)
-        } else {
-          ctx.fillText(pointNumber.toString(), x, y - 15)
-        }
+    // Рисуем треугольники с цветами из boardConfig
+    for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
+      const { x, y, isTopRow, pointWidth: pW, pointHeight: pH, pointNumber } = getPointCoordinates(pointIndex, canvas)
+      
+      // Определяем, на какой половине доски находится точка
+      const isLeftHalf = x < barX
+      const boardColors = isLeftHalf ? opponentBoardColors : myBoardColors
+      
+      const triangleWidth = pW * 0.95
+      const triangleHeight = pH * 0.95
+      
+      // Определяем цвет треугольника (чередование светлый/темный)
+      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
+      const isLight = pointInRow % 2 === 0
+      
+      // Рисуем сам треугольник с цветами из конфигурации
+      drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, boardColors, isLight)
+      
+      // Отрисовка нумерации точек (1-24)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+      ctx.font = 'bold 12px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      
+      if (isTopRow) {
+        ctx.fillText(pointNumber.toString(), x, y + 15)
+      } else {
+        ctx.fillText(pointNumber.toString(), x, y - 15)
       }
     }
 
@@ -1877,7 +1629,7 @@ export default function BackgammonBoard({
                 <Dice3D
                   values={[dieValue]}
                   animating={diceAnimating}
-                  diceTextures={currentPlayer === 0 ? diceTexturesPlayer1 : diceTexturesPlayer2}
+                  diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
                 />
                 {/* Показываем сколько ходов осталось при дубле на каждом неиспользованном кубике */}
                 {isDoubles && remainingMoves > 0 && (

@@ -4,11 +4,11 @@ import './Dice3D.css'
 interface Dice3DProps {
   values: number[]
   animating?: boolean
-  diceTextures?: { [face: number]: HTMLImageElement }
+  diceColor?: string // Цвет кости из diceConfig
   used?: boolean
 }
 
-export default function Dice3D({ values, animating = false, diceTextures, used = false }: Dice3DProps) {
+export default function Dice3D({ values, animating = false, diceColor = '#FFFFFF', used = false }: Dice3DProps) {
   const [displayValues, setDisplayValues] = useState<number[]>(values)
   const [internalAnimating, setInternalAnimating] = useState(false)
   const lastValues = useRef<number[]>(values)
@@ -33,6 +33,7 @@ export default function Dice3D({ values, animating = false, diceTextures, used =
           value={value} 
           isRolling={isRolling} 
           delay={index * 0.1}
+          diceColor={diceColor}
         />
       ))}
     </div>
@@ -43,9 +44,10 @@ interface DieProps {
   value: number
   isRolling: boolean
   delay: number
+  diceColor: string
 }
 
-function Die({ value, isRolling, delay }: DieProps) {
+function Die({ value, isRolling, delay, diceColor }: DieProps) {
   // Определяем вращение для каждой грани
   const getRotation = (v: number) => {
     switch (v) {
@@ -64,35 +66,36 @@ function Die({ value, isRolling, delay }: DieProps) {
       <div 
         className={`die ${isRolling ? 'die-rolling' : ''}`}
         style={{ 
-          transform: isRolling ? undefined : getRotation(value)
+          transform: isRolling ? undefined : getRotation(value),
+          backgroundColor: diceColor,
         }}
       >
-        <div className="die-face face-1">{renderDots(1)}</div>
-        <div className="die-face face-2">{renderDots(2)}</div>
-        <div className="die-face face-3">{renderDots(3)}</div>
-        <div className="die-face face-4">{renderDots(4)}</div>
-        <div className="die-face face-5">{renderDots(5)}</div>
-        <div className="die-face face-6">{renderDots(6)}</div>
+        <div className="die-face face-1" style={{ backgroundColor: diceColor }}>{renderNumber(1)}</div>
+        <div className="die-face face-2" style={{ backgroundColor: diceColor }}>{renderNumber(2)}</div>
+        <div className="die-face face-3" style={{ backgroundColor: diceColor }}>{renderNumber(3)}</div>
+        <div className="die-face face-4" style={{ backgroundColor: diceColor }}>{renderNumber(4)}</div>
+        <div className="die-face face-5" style={{ backgroundColor: diceColor }}>{renderNumber(5)}</div>
+        <div className="die-face face-6" style={{ backgroundColor: diceColor }}>{renderNumber(6)}</div>
       </div>
     </div>
   )
 }
 
-function renderDots(value: number) {
-  const patterns: { [key: number]: number[] } = {
-    1: [4],
-    2: [0, 8],
-    3: [0, 4, 8],
-    4: [0, 2, 6, 8],
-    5: [0, 2, 4, 6, 8],
-    6: [0, 1, 2, 6, 7, 8],
-  }
-  const dots = patterns[value] || []
+// Рисуем цифру вместо точек
+function renderNumber(value: number) {
   return (
-    <div className="die-dots">
-      {[...Array(9)].map((_, i) => (
-        <div key={i} className={`die-dot ${dots.includes(i) ? 'visible' : ''}`} />
-      ))}
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '24px',
+      fontWeight: 'bold',
+      color: '#000',
+      textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)',
+    }}>
+      {value}
     </div>
   )
 }

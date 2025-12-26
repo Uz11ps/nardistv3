@@ -3252,6 +3252,26 @@ export default function Admin() {
                         isDefault: (document.getElementById('edit-skin-default') as HTMLInputElement).checked,
                       }
                       
+                      // Добавляем конфиги в зависимости от типа
+                      if (selectedSkin.type === 'board') {
+                        updateData.boardConfig = {
+                          backgroundColor: (document.getElementById('edit-skin-board-background-color') as HTMLInputElement).value,
+                          triangleColor1: (document.getElementById('edit-skin-board-triangle-color-1') as HTMLInputElement).value,
+                          triangleColor2: (document.getElementById('edit-skin-board-triangle-color-2') as HTMLInputElement).value,
+                          borderColor: (document.getElementById('edit-skin-board-border-color') as HTMLInputElement).value,
+                          outlineColor: (document.getElementById('edit-skin-board-outline-color') as HTMLInputElement).value,
+                        }
+                      } else if (selectedSkin.type === 'dice') {
+                        updateData.diceConfig = {
+                          color: (document.getElementById('edit-skin-dice-color') as HTMLInputElement).value,
+                        }
+                      } else if (selectedSkin.type === 'checkers') {
+                        updateData.checkersConfig = {
+                          whiteColor: (document.getElementById('edit-skin-checkers-white-color') as HTMLInputElement).value,
+                          blackColor: (document.getElementById('edit-skin-checkers-black-color') as HTMLInputElement).value,
+                        }
+                      }
+                      
                       await apiClient.put(`/admin/skins/${selectedSkin.id}`, updateData)
                       
                       // Если есть новое изображение, загружаем его
@@ -3529,6 +3549,55 @@ export default function Admin() {
                 </div>
                 <span className="field-hint" id="skin-texture-hint">Этот файл будет использоваться в игре</span>
               </div>
+              {/* Поля для конфигураций материалов */}
+              <div className="form-group" id="skin-config-board" style={{ display: 'none' }}>
+                <label>Конфигурация доски (цвета материалов):</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Фон доски:</label>
+                    <input type="color" id="skin-board-background-color" defaultValue="#8B4513" style={{ width: '100%', height: '40px' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Светлый треугольник:</label>
+                    <input type="color" id="skin-board-triangle-color-1" defaultValue="#D4A574" style={{ width: '100%', height: '40px' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Темный треугольник:</label>
+                    <input type="color" id="skin-board-triangle-color-2" defaultValue="#8B4513" style={{ width: '100%', height: '40px' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет границы:</label>
+                    <input type="color" id="skin-board-border-color" defaultValue="#5c3a21" style={{ width: '100%', height: '40px' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет оконтовки (бар):</label>
+                    <input type="color" id="skin-board-outline-color" defaultValue="#654321" style={{ width: '100%', height: '40px' }} />
+                  </div>
+                </div>
+                <span className="field-hint">Цвета для отрисовки доски из материалов</span>
+              </div>
+              <div className="form-group" id="skin-config-dice" style={{ display: 'none' }}>
+                <label>Конфигурация кубиков (цвет материалов):</label>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет кубика:</label>
+                  <input type="color" id="skin-dice-color" defaultValue="#FFFFFF" style={{ width: '100%', height: '40px' }} />
+                </div>
+                <span className="field-hint">Цвет кубика. Цифры 1-6 будут рисоваться поверх</span>
+              </div>
+              <div className="form-group" id="skin-config-checkers" style={{ display: 'none' }}>
+                <label>Конфигурация шашек (цвета материалов):</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет белых шашек:</label>
+                    <input type="color" id="skin-checkers-white-color" defaultValue="#F0F0F0" style={{ width: '100%', height: '40px' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет черных шашек:</label>
+                    <input type="color" id="skin-checkers-black-color" defaultValue="#333333" style={{ width: '100%', height: '40px' }} />
+                  </div>
+                </div>
+                <span className="field-hint">Цвета для отрисовки шашек из материалов</span>
+              </div>
               <script dangerouslySetInnerHTML={{__html: `
                 document.getElementById('skin-type').addEventListener('change', function() {
                   const type = this.value;
@@ -3541,25 +3610,38 @@ export default function Admin() {
                   
                   if (type) {
                     textureGroup.style.display = 'block';
-                    if (type === 'board') {
+                    const configBoard = document.getElementById('skin-config-board');
+                  const configDice = document.getElementById('skin-config-dice');
+                  const configCheckers = document.getElementById('skin-config-checkers');
+                  
+                  if (type === 'board') {
                       textureLabel.textContent = 'Текстура доски (файл для игры):';
                       textureSingle.style.display = 'block';
                       textureDice.style.display = 'none';
                       if (textureCheckers) textureCheckers.style.display = 'none';
                       textureHint.textContent = 'Этот файл будет использоваться в игре';
                       textureHint.style.display = 'block';
+                      if (configBoard) configBoard.style.display = 'block';
+                      if (configDice) configDice.style.display = 'none';
+                      if (configCheckers) configCheckers.style.display = 'none';
                     } else if (type === 'dice') {
                       textureLabel.textContent = 'Текстуры кубиков (6 файлов для игры - от 1 до 6):';
                       textureSingle.style.display = 'none';
                       textureDice.style.display = 'block';
                       if (textureCheckers) textureCheckers.style.display = 'none';
                       textureHint.style.display = 'none';
+                      if (configBoard) configBoard.style.display = 'none';
+                      if (configDice) configDice.style.display = 'block';
+                      if (configCheckers) configCheckers.style.display = 'none';
                     } else if (type === 'checkers') {
                       textureLabel.textContent = 'Текстуры шашек (2 файла для игры - белые и черные):';
                       textureSingle.style.display = 'none';
                       textureDice.style.display = 'none';
                       if (textureCheckers) textureCheckers.style.display = 'block';
                       textureHint.style.display = 'none';
+                      if (configBoard) configBoard.style.display = 'none';
+                      if (configDice) configDice.style.display = 'none';
+                      if (configCheckers) configCheckers.style.display = 'block';
                     }
                   } else {
                     textureGroup.style.display = 'none';
@@ -3588,13 +3670,27 @@ export default function Admin() {
                 formData.append('isPremium', (document.getElementById('skin-premium') as HTMLInputElement).checked.toString())
                 formData.append('isDefault', (document.getElementById('skin-default') as HTMLInputElement).checked.toString())
                 
-                // Добавляем пустые конфиги в зависимости от типа
+                // Добавляем конфиги в зависимости от типа
                 if (skinType === 'board') {
-                  formData.append('boardConfig', JSON.stringify({}))
+                  const boardConfig = {
+                    backgroundColor: (document.getElementById('skin-board-background-color') as HTMLInputElement).value,
+                    triangleColor1: (document.getElementById('skin-board-triangle-color-1') as HTMLInputElement).value,
+                    triangleColor2: (document.getElementById('skin-board-triangle-color-2') as HTMLInputElement).value,
+                    borderColor: (document.getElementById('skin-board-border-color') as HTMLInputElement).value,
+                    outlineColor: (document.getElementById('skin-board-outline-color') as HTMLInputElement).value,
+                  }
+                  formData.append('boardConfig', JSON.stringify(boardConfig))
                 } else if (skinType === 'dice') {
-                  formData.append('diceConfig', JSON.stringify({}))
+                  const diceConfig = {
+                    color: (document.getElementById('skin-dice-color') as HTMLInputElement).value,
+                  }
+                  formData.append('diceConfig', JSON.stringify(diceConfig))
                 } else if (skinType === 'checkers') {
-                  formData.append('checkersConfig', JSON.stringify({}))
+                  const checkersConfig = {
+                    whiteColor: (document.getElementById('skin-checkers-white-color') as HTMLInputElement).value,
+                    blackColor: (document.getElementById('skin-checkers-black-color') as HTMLInputElement).value,
+                  }
+                  formData.append('checkersConfig', JSON.stringify(checkersConfig))
                 }
                 
                 const fileInput = document.getElementById('skin-image') as HTMLInputElement
@@ -3654,6 +3750,14 @@ export default function Admin() {
                   // Очистить поля текстур
                   const textureInput = document.getElementById('skin-texture') as HTMLInputElement
                   if (textureInput) textureInput.value = ''
+                  // Очистить поля конфигураций
+                  const configBoard = document.getElementById('skin-config-board') as HTMLElement
+                  const configDice = document.getElementById('skin-config-dice') as HTMLElement
+                  const configCheckers = document.getElementById('skin-config-checkers') as HTMLElement
+                  if (configBoard) configBoard.style.display = 'none'
+                  if (configDice) configDice.style.display = 'none'
+                  if (configCheckers) configCheckers.style.display = 'none'
+                  
                   // Очистить поля кубиков (1-6)
                   for (let i = 1; i <= 6; i++) {
                     const diceInput = document.getElementById(`skin-dice-texture-${i}`) as HTMLInputElement
