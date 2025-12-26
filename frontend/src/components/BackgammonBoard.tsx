@@ -1629,7 +1629,7 @@ export default function BackgammonBoard({
                 <Dice3D
                   values={[dieValue]}
                   animating={diceAnimating}
-                  diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                  diceColor={currentPlayer === 0 ? diceColorPlayer2 : diceColorPlayer1}
                 />
                 {/* Показываем сколько ходов осталось при дубле на каждом неиспользованном кубике */}
                 {isDoubles && remainingMoves > 0 && (

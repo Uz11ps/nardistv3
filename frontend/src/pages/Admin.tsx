@@ -2903,7 +2903,16 @@ export default function Admin() {
                       <td>{skin.isDefault ? 'Да' : 'Нет'}</td>
                       <td>
                         <div className="btn-group">
-                          <button className="btn btn-secondary btn-sm" onClick={() => setEditingSkin({ ...skin })}>Полное редактирование</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => {
+                            // Парсим JSON конфиги если они пришли как строки
+                            const parsedSkin = {
+                              ...skin,
+                              boardConfig: typeof skin.boardConfig === 'string' ? JSON.parse(skin.boardConfig) : (skin.boardConfig || {}),
+                              diceConfig: typeof skin.diceConfig === 'string' ? JSON.parse(skin.diceConfig) : (skin.diceConfig || {}),
+                              checkersConfig: typeof skin.checkersConfig === 'string' ? JSON.parse(skin.checkersConfig) : (skin.checkersConfig || {}),
+                            }
+                            setEditingSkin(parsedSkin)
+                          }}>Полное редактирование</button>
                           <button className="btn btn-danger btn-sm" onClick={() => {
                             if (confirm('Удалить скин?')) {
                               apiClient.delete(`/admin/skins/${skin.id}`).then(() => {
@@ -6116,78 +6125,145 @@ export default function Admin() {
                     onChange={(e) => setEditingSkin({ ...editingSkin, moneyBonusPercent: parseInt(e.target.value) || 0 })}
                   />
                 </div>
-                <div>
-                  <label>URL изображения</label>
-                  <input
-                    type="text"
-                    value={editingSkin.imageUrl || ''}
-                    onChange={(e) => setEditingSkin({ ...editingSkin, imageUrl: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label>URL изображения для магазина</label>
-                  <input
-                    type="text"
-                    value={editingSkin.shopImageUrl || ''}
-                    onChange={(e) => setEditingSkin({ ...editingSkin, shopImageUrl: e.target.value })}
-                  />
-                </div>
+                {/* Поля для конфигураций материалов (цветов) */}
                 {editingSkin.type === 'board' && (
-                  <div>
-                    <label>URL текстуры доски</label>
-                    <input
-                      type="text"
-                      value={editingSkin.boardTextureUrl || ''}
-                      onChange={(e) => setEditingSkin({ ...editingSkin, boardTextureUrl: e.target.value })}
-                    />
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ marginBottom: '8px', display: 'block', fontSize: '14px', fontWeight: 'bold' }}>Конфигурация доски (цвета материалов):</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Фон доски:</label>
+                        <input 
+                          type="color" 
+                          value={editingSkin.boardConfig?.backgroundColor || '#8B4513'}
+                          onChange={(e) => setEditingSkin({ 
+                            ...editingSkin, 
+                            boardConfig: { 
+                              ...(editingSkin.boardConfig || {}), 
+                              backgroundColor: e.target.value 
+                            } 
+                          })}
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Светлый треугольник:</label>
+                        <input 
+                          type="color" 
+                          value={editingSkin.boardConfig?.triangleColor1 || '#D4A574'}
+                          onChange={(e) => setEditingSkin({ 
+                            ...editingSkin, 
+                            boardConfig: { 
+                              ...(editingSkin.boardConfig || {}), 
+                              triangleColor1: e.target.value 
+                            } 
+                          })}
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Темный треугольник:</label>
+                        <input 
+                          type="color" 
+                          value={editingSkin.boardConfig?.triangleColor2 || '#8B4513'}
+                          onChange={(e) => setEditingSkin({ 
+                            ...editingSkin, 
+                            boardConfig: { 
+                              ...(editingSkin.boardConfig || {}), 
+                              triangleColor2: e.target.value 
+                            } 
+                          })}
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет границы:</label>
+                        <input 
+                          type="color" 
+                          value={editingSkin.boardConfig?.borderColor || '#5c3a21'}
+                          onChange={(e) => setEditingSkin({ 
+                            ...editingSkin, 
+                            boardConfig: { 
+                              ...(editingSkin.boardConfig || {}), 
+                              borderColor: e.target.value 
+                            } 
+                          })}
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет оконтовки (бар):</label>
+                        <input 
+                          type="color" 
+                          value={editingSkin.boardConfig?.outlineColor || '#654321'}
+                          onChange={(e) => setEditingSkin({ 
+                            ...editingSkin, 
+                            boardConfig: { 
+                              ...(editingSkin.boardConfig || {}), 
+                              outlineColor: e.target.value 
+                            } 
+                          })}
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
                 {editingSkin.type === 'dice' && (
-                  <>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ marginBottom: '8px', display: 'block', fontSize: '14px', fontWeight: 'bold' }}>Конфигурация кубиков (цвет материалов):</label>
                     <div>
-                      <label>URL текстуры кубиков (старое)</label>
-                      <input
-                        type="text"
-                        value={editingSkin.diceTextureUrl || ''}
-                        onChange={(e) => setEditingSkin({ ...editingSkin, diceTextureUrl: e.target.value })}
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет кубика:</label>
+                      <input 
+                        type="color" 
+                        value={editingSkin.diceConfig?.color || '#FFFFFF'}
+                        onChange={(e) => setEditingSkin({ 
+                          ...editingSkin, 
+                          diceConfig: { 
+                            ...(editingSkin.diceConfig || {}), 
+                            color: e.target.value 
+                          } 
+                        })}
+                        style={{ width: '100%', height: '40px' }} 
                       />
                     </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label>URL текстуры кубиков (JSON: {'{"1": "url1", "2": "url2", ...}'})</label>
-                      <textarea
-                        value={editingSkin.diceTextureUrls ? JSON.stringify(editingSkin.diceTextureUrls, null, 2) : ''}
-                        onChange={(e) => {
-                          try {
-                            const parsed = JSON.parse(e.target.value)
-                            setEditingSkin({ ...editingSkin, diceTextureUrls: parsed })
-                          } catch {
-                            // Игнорируем ошибки парсинга
-                          }
-                        }}
-                        style={{ minHeight: '100px' }}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
                 {editingSkin.type === 'checkers' && (
-                  <>
-                    <div>
-                      <label>URL текстуры белых шашек</label>
-                      <input
-                        type="text"
-                        value={editingSkin.whiteCheckersTextureUrl || ''}
-                        onChange={(e) => setEditingSkin({ ...editingSkin, whiteCheckersTextureUrl: e.target.value })}
-                      />
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ marginBottom: '8px', display: 'block', fontSize: '14px', fontWeight: 'bold' }}>Конфигурация шашек (цвета материалов):</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет белых шашек:</label>
+                        <input 
+                          type="color" 
+                          value={editingSkin.checkersConfig?.whiteColor || '#F0F0F0'}
+                          onChange={(e) => setEditingSkin({ 
+                            ...editingSkin, 
+                            checkersConfig: { 
+                              ...(editingSkin.checkersConfig || {}), 
+                              whiteColor: e.target.value 
+                            } 
+                          })}
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Цвет черных шашек:</label>
+                        <input 
+                          type="color" 
+                          value={editingSkin.checkersConfig?.blackColor || '#333333'}
+                          onChange={(e) => setEditingSkin({ 
+                            ...editingSkin, 
+                            checkersConfig: { 
+                              ...(editingSkin.checkersConfig || {}), 
+                              blackColor: e.target.value 
+                            } 
+                          })}
+                          style={{ width: '100%', height: '40px' }} 
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label>URL текстуры черных шашек</label>
-                      <input
-                        type="text"
-                        value={editingSkin.blackCheckersTextureUrl || ''}
-                        onChange={(e) => setEditingSkin({ ...editingSkin, blackCheckersTextureUrl: e.target.value })}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
                 <div>
                   <label>

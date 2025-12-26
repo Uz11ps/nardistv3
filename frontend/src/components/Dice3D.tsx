@@ -70,32 +70,52 @@ function Die({ value, isRolling, delay, diceColor }: DieProps) {
           backgroundColor: diceColor,
         }}
       >
-        <div className="die-face face-1" style={{ backgroundColor: diceColor }}>{renderNumber(1)}</div>
-        <div className="die-face face-2" style={{ backgroundColor: diceColor }}>{renderNumber(2)}</div>
-        <div className="die-face face-3" style={{ backgroundColor: diceColor }}>{renderNumber(3)}</div>
-        <div className="die-face face-4" style={{ backgroundColor: diceColor }}>{renderNumber(4)}</div>
-        <div className="die-face face-5" style={{ backgroundColor: diceColor }}>{renderNumber(5)}</div>
-        <div className="die-face face-6" style={{ backgroundColor: diceColor }}>{renderNumber(6)}</div>
+        <div className="die-face face-1" style={{ backgroundColor: diceColor }}>{renderDots(1)}</div>
+        <div className="die-face face-2" style={{ backgroundColor: diceColor }}>{renderDots(2)}</div>
+        <div className="die-face face-3" style={{ backgroundColor: diceColor }}>{renderDots(3)}</div>
+        <div className="die-face face-4" style={{ backgroundColor: diceColor }}>{renderDots(4)}</div>
+        <div className="die-face face-5" style={{ backgroundColor: diceColor }}>{renderDots(5)}</div>
+        <div className="die-face face-6" style={{ backgroundColor: diceColor }}>{renderDots(6)}</div>
       </div>
     </div>
   )
 }
 
-// Рисуем цифру вместо точек
-function renderNumber(value: number) {
+// Рисуем точки на кубике
+function renderDots(value: number) {
+  const patterns: { [key: number]: number[] } = {
+    1: [4], // Центр
+    2: [0, 8], // Диагональ: левый верхний, правый нижний
+    3: [0, 4, 8], // Диагональ: все три
+    4: [0, 2, 6, 8], // Углы
+    5: [0, 2, 4, 6, 8], // Углы + центр
+    6: [0, 1, 2, 6, 7, 8], // Две колонки
+  }
+  
+  const dots = patterns[value] || []
+  
   return (
     <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      gridTemplateRows: 'repeat(3, 1fr)',
       width: '100%',
       height: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '24px',
-      fontWeight: 'bold',
-      color: '#000',
-      textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)',
+      gap: '2px',
+      padding: '8px',
     }}>
-      {value}
+      {Array.from({ length: 9 }).map((_, index) => (
+        <div
+          key={index}
+          style={{
+            width: '6px',
+            height: '6px',
+            background: dots.includes(index) ? '#222' : 'transparent',
+            borderRadius: '50%',
+            margin: 'auto',
+          }}
+        />
+      ))}
     </div>
   )
 }
