@@ -830,17 +830,14 @@ export default function Game() {
       ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2])
       : []
     
-    // Проверяем, является ли это дублем (2 или 4 одинаковых кубика)
-    // При дубле разрешаем до 4х ходов без принудительного подтверждения
-    const isDoubles = (diceArray.length === 4 || diceArray.length === 2) && diceArray.every(d => d === diceArray[0])
+    // Проверяем, является ли это дублем (4 одинаковых кубика)
+    // При дубле разрешаем все 4 хода сразу без принудительного подтверждения между ними
+    const isDoubles = diceArray.length === 4 && diceArray.every(d => d === diceArray[0])
     
-    // Для дублей разрешаем до 4х ходов без ограничения на подтверждение
+    // Для дублей разрешаем все 4 хода сразу без ограничения на подтверждение
     // Пользователь может сделать все 4 хода и отменить любое количество (до 4х отмен)
-    if (isDoubles && diceArray.length === 4 && pendingMoves.length >= 4) {
+    if (isDoubles && pendingMoves.length >= 4) {
       return // Максимум 4 хода для дубля
-    }
-    if (isDoubles && diceArray.length === 2 && pendingMoves.length >= 2) {
-      return // Максимум 2 хода для оставшихся 2 кубиков после подтверждения первых двух
     }
     
     // Если есть steps, значит это комбинированный ход
