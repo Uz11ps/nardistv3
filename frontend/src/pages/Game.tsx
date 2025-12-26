@@ -548,8 +548,18 @@ export default function Game() {
     })
 
     socket.on('move_made', (data: any) => {
-      setPendingMoves([])
       const diceData = data.gameState?.dice
+      const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
+      
+      // ВАЖНО: Очищаем pendingMoves только если:
+      // 1. Ход перешел к другому игроку (не мой ход)
+      // 2. Нет оставшихся кубиков (dice пустой)
+      // Иначе не обнуляем - позволяем продолжить ходить с оставшимися кубиками
+      const hasRemainingDice = Array.isArray(diceData) && diceData.length > 0
+      if (!canMove || !hasRemainingDice) {
+        setPendingMoves([])
+      }
+      // Если canMove && hasRemainingDice - НЕ обнуляем, чтобы можно было продолжить ходить
       // Для дублей может быть массив из 4 элементов, для обычных - из 2
       // Сохраняем весь массив, если он есть
       const formattedDice = Array.isArray(diceData) && diceData.length > 0

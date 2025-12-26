@@ -62,6 +62,8 @@ export default function BackgammonBoard({
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
+  const prevPendingMovesRef = useRef<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
+  const prevGameStatePointsRef = useRef<number[]>([])
   const [showBearOffButton, setShowBearOffButton] = useState<{ pointIndex: number; die: number; steps?: any[] } | null>(null)
   const [animatingChecker, setAnimatingChecker] = useState<{
     from: number;
@@ -450,6 +452,53 @@ export default function BackgammonBoard({
             setShowBearOffButton(null)
           }
         }
+        
+        // ВАЖНО: После добавления хода в pendingMoves обновляем selectedPoint на новую позицию шашки
+        // Это позволяет ходить той же шашкой дальше
+        // Обновляем только если нет selectedPoint или selectedPoint соответствует from последнего хода
+        if (pendingMoves.length > 0 && (selectedPoint === null || selectedPoint === pendingMoves[pendingMoves.length - 1]?.from)) {
+          const lastMove = pendingMoves[pendingMoves.length - 1]
+          if (lastMove && lastMove.to !== -1 && lastMove.to !== null && lastMove.to !== undefined) {
+            // Проверяем, есть ли ходы из новой позиции
+            const newPositionMoves = flatMoves.filter(m => m.from === lastMove.to)
+            if (newPositionMoves.length > 0) {
+              // Обновляем selectedPoint на новую позицию шашки
+              setSelectedPoint(lastMove.to)
+              const targets = new Set<number>()
+              let bearOffDie: number | null = null
+              newPositionMoves.forEach(m => {
+                if (m.to !== undefined && m.to !== null) {
+                  targets.add(m.to)
+                  if (m.to === -1) bearOffDie = m.die
+                }
+                // Для комбинированных ходов добавляем конечную точку из steps
+                if ((m as any).steps && Array.isArray((m as any).steps) && (m as any).steps.length > 0) {
+                  const steps = (m as any).steps
+                  const lastStep = steps[steps.length - 1]
+                  if (lastStep.to !== undefined && lastStep.to !== null) {
+                    targets.add(lastStep.to)
+                  }
+                }
+              })
+              setValidTargetPoints(targets)
+              if (bearOffDie !== null) {
+                setShowBearOffButton({ pointIndex: lastMove.to, die: bearOffDie })
+              } else {
+                setShowBearOffButton(null)
+              }
+            } else {
+              // Если нет ходов из новой позиции, сбрасываем выбор
+              setSelectedPoint(null)
+              setValidTargetPoints(new Set())
+              setShowBearOffButton(null)
+            }
+          } else if (lastMove && lastMove.to === -1) {
+            // Если шашка вынесена, сбрасываем выбор
+            setSelectedPoint(null)
+            setValidTargetPoints(new Set())
+            setShowBearOffButton(null)
+          }
+        }
         // highlightedPoints будет заполняться только при выборе точки
       } catch (error) {
         if (cancelled) return
@@ -469,6 +518,48 @@ export default function BackgammonBoard({
       if (timeoutId !== null) window.clearTimeout(timeoutId)
     }
   }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, selectedPoint]) // Используем стабилизированные ключи и selectedPoint для обновления validTargetPoints
+
+  // ВАЖНО: Обновляем selectedPoint после подтверждения хода
+  // Отслеживаем два случая:
+  // 1. pendingMoves уменьшился (ход был подтвержден, но остались кубики)
+  // 2. gameState.points изменился, а pendingMoves остался (ход был подтвержден на сервере)
+  useEffect(() => {
+    const currentPoints = gameState?.points || []
+    const prevPoints = prevGameStatePointsRef.current
+    
+    // Проверяем, изменились ли points (ход был подтвержден на сервере)
+    const pointsChanged = prevPoints.length > 0 && 
+      JSON.stringify(currentPoints) !== JSON.stringify(prevPoints)
+    
+    // Проверяем, уменьшился ли pendingMoves (ход был подтвержден, но остались кубики)
+    const pendingMovesDecreased = pendingMoves.length < prevPendingMovesRef.current.length && 
+      prevPendingMovesRef.current.length > 0
+    
+    if (pointsChanged || pendingMovesDecreased) {
+      // Пытаемся найти последний подтвержденный ход
+      let lastConfirmedMove: { from: number; to: number; die: number; steps?: any[] } | null = null
+      
+      if (pendingMovesDecreased && prevPendingMovesRef.current.length > 0) {
+        // Если pendingMoves уменьшился, берем последний ход из предыдущего состояния
+        lastConfirmedMove = prevPendingMovesRef.current[prevPendingMovesRef.current.length - 1]
+      } else if (pointsChanged && prevPendingMovesRef.current.length > 0) {
+        // Если points изменились, но pendingMoves не уменьшился (возможно, был очищен и восстановлен),
+        // берем первый ход из предыдущего состояния, который должен был быть подтвержден
+        lastConfirmedMove = prevPendingMovesRef.current[0]
+      }
+      
+      if (lastConfirmedMove && lastConfirmedMove.to !== -1 && lastConfirmedMove.to !== null && lastConfirmedMove.to !== undefined) {
+        // Обновляем selectedPoint на новую позицию подтвержденного хода
+        // Это позволит продолжить ходить той же шашкой с новой позиции
+        setSelectedPoint(lastConfirmedMove.to)
+        // validTargetPoints обновится автоматически через useEffect для possibleMoves
+      }
+    }
+    
+    // Обновляем refs с текущим состоянием
+    prevPendingMovesRef.current = pendingMoves
+    prevGameStatePointsRef.current = currentPoints
+  }, [pendingMoves, gameState?.points])
   
   // Определение позиции для кубиков
   // Мои кубики на моей части доски, его кубики на его части
@@ -1704,16 +1795,16 @@ export default function BackgammonBoard({
     return usedIndices
   }, [diceArray, pendingMoves, gameMode])
 
-  // Подсчитываем сколько ходов осталось при дубле
-  const remainingMoves = useMemo(() => {
-    if (!diceArray || diceArray.length === 0) return 0
+  // Определяем, нужно ли показывать "дубль" - пока первые 2 хода из 4 не использованы
+  const showDoublesLabel = useMemo(() => {
+    if (!diceArray || diceArray.length === 0) return false
     
-    const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0])
-    if (!isDoubles) return 0
+    const isDoubles = diceArray.length === 4 && diceArray.every(d => d === diceArray[0])
+    if (!isDoubles) return false
     
-    const totalDice = diceArray.length
+    // Показываем "дубль" пока использовано меньше 2 кубиков
     const usedCount = usedDiceIndices.size
-    return totalDice - usedCount
+    return usedCount < 2
   }, [diceArray, usedDiceIndices])
   
   return (
@@ -1777,59 +1868,50 @@ export default function BackgammonBoard({
             left: `${dice3DPosition.x - dice3DPosition.size}px`,
             top: `${dice3DPosition.y - dice3DPosition.size / 2}px`,
             width: `${dice3DPosition.size * 2.5 * diceArray.length}px`,
-            height: `${dice3DPosition.size}px`,
             pointerEvents: 'none',
             display: 'flex',
-            gap: '8px',
+            flexDirection: 'column',
             alignItems: 'center',
+            gap: '4px',
           }}
         >
-          {diceArray.map((dieValue, index) => {
-            const isUsed = usedDiceIndices.has(index)
-            const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0])
-            
-            // Не показываем использованные кубики
-            if (isUsed) return null
-            
-            return (
-              <div
-                key={index}
-                style={{
-                  position: 'relative',
-                }}
-              >
+          {/* Текст "дубль" сверху над кубиками, пока первые 2 хода из 4 не использованы */}
+          {showDoublesLabel && (
+            <div
+              style={{
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                textShadow: '0 0 4px rgba(0, 0, 0, 0.8)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              дубль
+            </div>
+          )}
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'center',
+            }}
+          >
+            {diceArray.map((dieValue, index) => {
+              const isUsed = usedDiceIndices.has(index)
+              
+              // Не показываем использованные кубики
+              if (isUsed) return null
+              
+              return (
                 <Dice3D
+                  key={index}
                   values={[dieValue]}
-                  animating={diceAnimating}
+                  animating={false}
                   diceTextures={currentPlayer === 0 ? diceTexturesPlayer1 : diceTexturesPlayer2}
                 />
-                {/* Показываем сколько ходов осталось при дубле на каждом неиспользованном кубике */}
-                {isDoubles && remainingMoves > 0 && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '-20px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: 'rgba(255, 0, 0, 0.8)',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: '20px',
-                      height: '20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '10px',
-                      fontWeight: 'bold',
-                      zIndex: 10,
-                    }}
-                  >
-                    {remainingMoves}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
