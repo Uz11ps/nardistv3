@@ -588,7 +588,6 @@ export default function Shop() {
               </div>
             </Card>
           </div>
-          </>
         )}
 
         {/* Скины */}
