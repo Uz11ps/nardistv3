@@ -968,7 +968,7 @@ export default function Game() {
                 </div>
               </div>
               <div className={`game-player-avatar ${!isPlayer1 && gameState?.currentPlayer === 1 ? 'game-player-active' : ''}`}>
-                {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && gameState?.dice && (() => {
+                {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && (() => {
                   // Время на ход ВСЕГДА 20 секунд
                   // Если player2Timer > 0, значит еще не начался овертайм (зеленая)
                   // Если player2Timer <= 0, значит овертайм - показываем общее время (желтая)
@@ -1075,7 +1075,7 @@ export default function Game() {
               <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
                 <div className={`game-player-avatar ${isPlayer1 && gameState?.currentPlayer === 0 ? 'game-player-active' : ''}`}>
-                  {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && gameState?.dice && (() => {
+                  {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && (() => {
                     // Время на ход ВСЕГДА 20 секунд
                     // Если player1Timer > 0, значит еще не начался овертайм (зеленая)
                     // Если player1Timer <= 0, значит овертайм - показываем общее время (желтая)
@@ -1221,7 +1221,7 @@ export default function Game() {
                 </div>
               </div>
               <div className={`game-player-avatar ${isPlayer1 && gameState?.currentPlayer === 0 ? 'game-player-active' : ''}`}>
-                {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && gameState?.dice && (() => {
+                {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && (() => {
                   // Время на ход ВСЕГДА 20 секунд
                   // Если player1Timer > 0, значит еще не начался овертайм (зеленая)
                   // Если player1Timer <= 0, значит овертайм - показываем общее время (желтая)
