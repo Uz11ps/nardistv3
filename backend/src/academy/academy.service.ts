@@ -19,6 +19,8 @@ export class AcademyService {
     private articleSlotsRepository: Repository<ArticleSlot>,
     @InjectRepository(CourseTask)
     private courseTasksRepository: Repository<CourseTask>,
+    @InjectRepository(CourseTaskProgress)
+    private courseTaskProgressRepository: Repository<CourseTaskProgress>,
     private usersService: UsersService,
     @Inject(forwardRef(() => AdminService))
     private adminService: AdminService,
@@ -153,16 +155,45 @@ export class AcademyService {
         })).map((um) => um.articleId)
       : [];
 
-    return visibleCourses.map((article) => ({
-      id: article.id,
-      title: article.title,
-      author: article.author,
-      price: Number(article.price || 0),
-      purchased: purchasedArticleIds.includes(article.id),
-      isPaid: article.isPaid,
-      views: article.views,
-      isVerified: article.isVerified,
-    }));
+    // Проверяем выполнение для каждого курса
+    const result = [];
+    for (const article of visibleCourses) {
+      const purchased = purchasedArticleIds.includes(article.id);
+      let isCompleted = false;
+
+      if (purchased && userId) {
+        // Проверяем, выполнены ли все задания курса
+        const tasks = await this.courseTasksRepository.find({
+          where: { courseId: article.id, isActive: true },
+        });
+
+        if (tasks.length > 0) {
+          const taskIds = tasks.map(t => t.id);
+          const completedTasks = await this.courseTaskProgressRepository.find({
+            where: {
+              userId,
+              taskId: In(taskIds),
+              isCompleted: true,
+            },
+          });
+          isCompleted = completedTasks.length === tasks.length;
+        }
+      }
+
+      result.push({
+        id: article.id,
+        title: article.title,
+        author: article.author,
+        price: Number(article.price || 0),
+        purchased,
+        isPaid: article.isPaid,
+        views: article.views,
+        isVerified: article.isVerified,
+        isCompleted,
+      });
+    }
+
+    return result;
   }
 
   async getArticles(userId?: string, includePending: boolean = false): Promise<any[]> {
@@ -194,7 +225,65 @@ export class AcademyService {
       purchased: purchasedArticleIds.includes(article.id),
       isPaid: article.isPaid,
       views: article.views,
+      isCompleted: false, // Статьи нельзя выполнить
     }));
+  }
+
+  async getOnboarding(userId?: string): Promise<any[]> {
+    // Онбординг всегда бесплатный, но проверяем доступ
+    const articles = await this.articlesRepository.find({
+      where: { type: 'onboarding' },
+      order: { createdAt: 'DESC' },
+    });
+
+    // Получаем купленные материалы пользователя (для онбординга это всегда true, т.к. бесплатный)
+    const purchasedArticleIds = userId
+      ? (await this.userMaterialsRepository.find({
+          where: { userId },
+          select: ['articleId'],
+        })).map((um) => um.articleId)
+      : [];
+
+    // Проверяем выполнение для каждого онбординга
+    const result = [];
+    for (const article of articles) {
+      // Онбординг всегда бесплатный, но проверяем запись в user_materials (если есть)
+      // Если онбординг бесплатный, он доступен всем (purchased = true)
+      const purchased = !article.isPaid || purchasedArticleIds.includes(article.id);
+      let isCompleted = false;
+
+      if (purchased && userId) {
+        // Проверяем, выполнены ли все задания онбординга
+        const tasks = await this.courseTasksRepository.find({
+          where: { courseId: article.id, isActive: true },
+        });
+
+        if (tasks.length > 0) {
+          const taskIds = tasks.map(t => t.id);
+          const completedTasks = await this.courseTaskProgressRepository.find({
+            where: {
+              userId,
+              taskId: In(taskIds),
+              isCompleted: true,
+            },
+          });
+          isCompleted = completedTasks.length === tasks.length;
+        }
+      }
+
+      result.push({
+        id: article.id,
+        title: article.title,
+        author: article.author,
+        price: 0, // Онбординг бесплатный
+        purchased,
+        isPaid: false,
+        views: article.views,
+        isCompleted,
+      });
+    }
+
+    return result;
   }
 
   async getUserMaterials(userId: string): Promise<any[]> {

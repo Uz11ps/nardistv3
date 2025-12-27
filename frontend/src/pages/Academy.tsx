@@ -11,6 +11,7 @@ interface Course {
   author: string
   price: number
   purchased: boolean
+  isCompleted?: boolean
   description?: string
 }
 
@@ -20,6 +21,16 @@ interface Article {
   author: string
   price: number
   purchased: boolean
+  isCompleted?: boolean
+}
+
+interface Onboarding {
+  id: string
+  title: string
+  author: string
+  price: number
+  purchased: boolean
+  isCompleted?: boolean
 }
 
 interface MaterialSection {
@@ -39,14 +50,15 @@ export default function Academy() {
   const location = useLocation()
   const { materialId } = useParams<{ materialId?: string }>()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'courses' | 'articles' | 'materials'>('courses')
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles'>('onboarding')
+  const [onboarding, setOnboarding] = useState<Onboarding[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [articles, setArticles] = useState<Article[]>([])
-  const [myMaterials, setMyMaterials] = useState<Course[]>([])
-  const [showPurchaseModal, setShowPurchaseModal] = useState<Course | null>(null)
+  const [showPurchaseModal, setShowPurchaseModal] = useState<Course | Article | Onboarding | null>(null)
   const [publishForm, setPublishForm] = useState({ title: '', description: '', type: 'article' as 'article' | 'course', price: 25, content: '' })
   const [publishing, setPublishing] = useState(false)
   const [materialDetail, setMaterialDetail] = useState<MaterialDetail | null>(null)
+  const [hidePurchased, setHidePurchased] = useState(false)
   
   const isPublishPage = location.pathname === '/academy/publish'
   const isMaterialPage = !!materialId
@@ -79,36 +91,69 @@ export default function Academy() {
 
   const loadData = async () => {
     try {
-      if (activeTab === 'courses') {
+      if (activeTab === 'onboarding') {
+        const response = await apiClient.get('/academy/onboarding')
+        setOnboarding(response.data || [])
+      } else if (activeTab === 'courses') {
         const response = await apiClient.get('/academy/courses')
         setCourses(response.data || [])
       } else if (activeTab === 'articles') {
         const response = await apiClient.get('/academy/articles')
         setArticles(response.data || [])
-      } else {
-        const response = await apiClient.get('/academy/my-materials')
-        setMyMaterials(response.data || [])
       }
     } catch (error) {
       console.error('Failed to load academy data:', error)
     }
   }
 
-  const handlePurchase = async (course: Course) => {
+  const handlePurchase = async (item: Course | Article | Onboarding) => {
     try {
-      await apiClient.post(`/academy/courses/${course.id}/purchase`)
-      alert('Курс успешно куплен!')
+      await apiClient.post(`/academy/courses/${item.id}/purchase`)
+      alert('Материал успешно куплен!')
       setShowPurchaseModal(null)
       loadData()
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Ошибка при покупке курса'
+      const errorMessage = error.response?.data?.message || error.message || 'Ошибка при покупке'
       alert(errorMessage)
-      console.error('Failed to purchase course:', error)
+      console.error('Failed to purchase:', error)
     }
   }
 
-  const handleOpen = (material: Course | Article) => {
+  const handleOpen = (material: Course | Article | Onboarding) => {
     navigate(`/academy/${material.id}`)
+  }
+
+  // Функция фильтрации и сортировки элементов
+  const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean }>(items: T[]): T[] => {
+    let filtered = items
+
+    // Если включена галочка "Не отображать купленные", скрываем купленные
+    if (hidePurchased) {
+      filtered = filtered.filter(item => !item.purchased)
+    }
+
+    // Сортируем по приоритету:
+    // 1. Купленные, но не выполненные - сверху
+    // 2. Выполненные (тоже купленные) - снизу от купленных, но выше не купленных
+    // 3. Не купленные - внизу
+    return filtered.sort((a, b) => {
+      // Купленные, но не выполненные - наверх
+      if (a.purchased && !a.isCompleted && (!b.purchased || b.isCompleted)) return -1
+      if (b.purchased && !b.isCompleted && (!a.purchased || a.isCompleted)) return 1
+
+      // Выполненные (купленные) - ниже купленных не выполненных, но выше не купленных
+      if (a.purchased && a.isCompleted && !b.purchased) return -1
+      if (b.purchased && b.isCompleted && !a.purchased) return 1
+
+      // Среди выполненных сортируем по порядку
+      if (a.purchased && a.isCompleted && b.purchased && b.isCompleted) return 0
+
+      // Не купленные - внизу
+      if (!a.purchased && b.purchased) return 1
+      if (a.purchased && !b.purchased) return -1
+
+      return 0
+    })
   }
 
   const canPublish = user?.isAdmin === true
@@ -284,9 +329,9 @@ export default function Academy() {
       title="Академия"
       subtitle="Повышай мастерство в нардах. Все материалы доступны к покупке"
       tabs={[
+        { id: 'onboarding', label: 'Онбординг', active: activeTab === 'onboarding', onClick: () => setActiveTab('onboarding') },
         { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
         { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
-        { id: 'materials', label: 'Мои материалы', active: activeTab === 'materials', onClick: () => setActiveTab('materials') },
       ]}
       rightAction={
         canCreateArticle && activeTab === 'articles' ? (
@@ -300,17 +345,64 @@ export default function Academy() {
         ) : undefined
       }
     >
+      {/* Галочка "Не отображать купленные" */}
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#B6B6B6', fontSize: '14px' }}>
+          <input
+            type="checkbox"
+            checked={hidePurchased}
+            onChange={(e) => setHidePurchased(e.target.checked)}
+            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+          />
+          Не отображать купленные
+        </label>
+      </div>
+
+      {/* Онбординг */}
+      {activeTab === 'onboarding' && (
+        <div className="academy-list">
+          {getFilteredAndSortedItems(onboarding).map((item) => (
+            <div key={item.id} className="academy-card">
+              <img src="/img/шляпа.png" alt="Onboarding" className="academy-card-icon" />
+              <div className="academy-card-content">
+                <div className="academy-card-header">
+                  <h3 className="academy-card-title">{item.title}</h3>
+                  {item.purchased ? (
+                    <span className="academy-card-status">
+                      {item.isCompleted ? 'Выполнено' : 'Куплено'}
+                    </span>
+                  ) : (
+                    <span className="academy-card-price">{item.price} NAR</span>
+                  )}
+                </div>
+                <p className="academy-card-author">{item.author}</p>
+              </div>
+              {item.purchased ? (
+                <button className="academy-card-button academy-card-button-open" onClick={() => handleOpen(item)}>
+                  Открыть
+                </button>
+              ) : (
+                <button className="academy-card-button academy-card-button-buy" onClick={() => setShowPurchaseModal(item)}>
+                  Купить
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       {/* Курсы */}
       {activeTab === 'courses' && (
         <div className="academy-list">
-          {courses.map((course) => (
+          {getFilteredAndSortedItems(courses).map((course) => (
             <div key={course.id} className="academy-card">
               <img src="/img/шляпа.png" alt="Course" className="academy-card-icon" />
               <div className="academy-card-content">
                 <div className="academy-card-header">
                   <h3 className="academy-card-title">{course.title}</h3>
                   {course.purchased ? (
-                    <span className="academy-card-status">Куплено</span>
+                    <span className="academy-card-status">
+                      {course.isCompleted ? 'Выполнено' : 'Куплено'}
+                    </span>
                   ) : (
                     <span className="academy-card-price">{course.price} NAR</span>
                   )}
@@ -340,7 +432,7 @@ export default function Academy() {
       {/* Статьи */}
       {activeTab === 'articles' && (
         <div className="academy-list">
-          {articles.map((article) => (
+          {getFilteredAndSortedItems(articles).map((article) => (
             <div key={article.id} className="academy-card">
               <img src="/img/шляпа.png" alt="Article" className="academy-card-icon" />
               <div className="academy-card-content">
@@ -359,7 +451,7 @@ export default function Academy() {
                   Открыть
                 </button>
               ) : (
-                <button className="academy-card-button academy-card-button-buy" onClick={() => handlePurchase(article as Course)}>
+                <button className="academy-card-button academy-card-button-buy" onClick={() => setShowPurchaseModal(article)}>
                   Купить
                 </button>
               )}
@@ -368,37 +460,11 @@ export default function Academy() {
         </div>
       )}
 
-      {/* Мои материалы */}
-      {activeTab === 'materials' && (
-        <div className="academy-list">
-          {myMaterials.map((material) => (
-            <div key={material.id} className="academy-card">
-              <img src="/img/шляпа.png" alt="Material" className="academy-card-icon" />
-              <div className="academy-card-content">
-                <div className="academy-card-header">
-                  <h3 className="academy-card-title">{material.title}</h3>
-                  <span className="academy-card-status">Куплено</span>
-                </div>
-                <p className="academy-card-author">{material.author}</p>
-              </div>
-              <button className="academy-card-button academy-card-button-open" onClick={() => handleOpen(material)}>
-                Открыть
-              </button>
-            </div>
-          ))}
-          {canPublish && (
-            <button className="academy-publish-button" onClick={() => navigate('/academy/publish')}>
-              Опубликовать свое
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Модальное окно покупки */}
       {showPurchaseModal && (
         <div className="academy-modal-overlay" onClick={() => setShowPurchaseModal(null)}>
           <div className="academy-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="academy-modal-title">Купить курс</h3>
+            <h3 className="academy-modal-title">Купить материал</h3>
             <p className="academy-modal-description">
               {showPurchaseModal.title} за {showPurchaseModal.price} NAR?
             </p>

@@ -23,6 +23,12 @@ export class AcademyController {
     return this.academyService.getArticles(user?.id, user?.isAdmin || false);
   }
 
+  @Get('onboarding')
+  @UseGuards(JwtAuthGuard)
+  async getOnboarding(@CurrentUser() user: any) {
+    return this.academyService.getOnboarding(user?.id);
+  }
+
   @Get('my-materials')
   @UseGuards(JwtAuthGuard)
   async getMyMaterials(@CurrentUser() user: any) {
