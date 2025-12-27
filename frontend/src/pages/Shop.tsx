@@ -454,7 +454,7 @@ export default function Shop() {
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       className="shop-subscription-buy-btn"
-                      onClick={() => handleBuySubscription('premium', 199)}
+                      onClick={handleBuySubscription}
                     >
                       Купить
                     </button>
