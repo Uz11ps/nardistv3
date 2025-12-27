@@ -220,14 +220,25 @@ export class PaymentTransactionService {
 
     try {
       // Проверяем транзакцию в блокчейне
+      // Передаем ожидаемую сумму и комментарий для более надежной проверки
       const txInfo = await this.tonService.checkTransaction(
         transaction.txHash,
         transaction.toAddress,
+        Number(transaction.amount),
+        transaction.comment || undefined,
       );
 
       transaction.checkAttempts += 1;
+      this.logger.log(`🔍 Проверка транзакции ${transactionId}: attempts=${transaction.checkAttempts}, found=${txInfo.found}`);
 
       if (txInfo.found) {
+        // Проверяем сумму (с небольшой погрешностью)
+        const amountDiff = Math.abs(txInfo.amount - Number(transaction.amount));
+        if (amountDiff > 0.01) {
+          this.logger.warn(`⚠️ Сумма транзакции не совпадает: ожидалось ${transaction.amount}, получено ${txInfo.amount}`);
+          // Все равно принимаем, но логируем предупреждение
+        }
+        
         // Транзакция найдена
         transaction.status = PaymentStatus.COMPLETED;
         transaction.lt = txInfo.lt;
@@ -244,13 +255,16 @@ export class PaymentTransactionService {
         if (transaction.expiresAt && now > transaction.expiresAt) {
           transaction.status = PaymentStatus.FAILED;
           transaction.lastError = 'Время на оплату истекло (15 минут)';
+          this.logger.warn(`⏰ Транзакция ${transactionId} истекла по времени`);
         } else {
           transaction.status = PaymentStatus.PROCESSING;
+          this.logger.log(`⏳ Транзакция ${transactionId} еще не найдена в блокчейне, статус: PROCESSING`);
         }
       }
 
       return await this.transactionRepository.save(transaction);
     } catch (error: any) {
+      this.logger.error(`❌ Ошибка при проверке транзакции ${transactionId}: ${error.message}`);
       transaction.lastError = error.message;
       transaction.checkAttempts += 1;
       
@@ -258,13 +272,21 @@ export class PaymentTransactionService {
       if (transaction.expiresAt && now > transaction.expiresAt) {
         transaction.status = PaymentStatus.FAILED;
         transaction.lastError = 'Время на оплату истекло (15 минут)';
-      } else if (transaction.checkAttempts >= 10) {
+        this.logger.warn(`⏰ Транзакция ${transactionId} истекла по времени`);
+      } else if (transaction.checkAttempts >= 20) {
+        // Увеличиваем лимит попыток до 20
         transaction.status = PaymentStatus.FAILED;
         transaction.lastError = 'Превышено количество попыток проверки транзакции';
+        this.logger.warn(`❌ Транзакция ${transactionId} провалена: превышен лимит попыток`);
+      } else {
+        // Продолжаем проверку при следующем запуске cron
+        transaction.status = PaymentStatus.PROCESSING;
+        this.logger.log(`⏳ Транзакция ${transactionId} будет проверена снова (попытка ${transaction.checkAttempts})`);
       }
 
       await this.transactionRepository.save(transaction);
-      throw error;
+      // Не бросаем исключение, чтобы не прерывать проверку других транзакций
+      return transaction;
     }
   }
 
@@ -322,11 +344,16 @@ export class PaymentTransactionService {
   async updateTransactionHash(transactionId: string, txHash: string): Promise<PaymentTransaction> {
     const transaction = await this.getTransaction(transactionId);
 
-    if (transaction.status !== PaymentStatus.PENDING) {
+    if (transaction.status !== PaymentStatus.PENDING && transaction.status !== PaymentStatus.PROCESSING) {
       throw new BadRequestException('Транзакция уже обработана');
     }
 
-    transaction.txHash = txHash;
+    // Нормализуем хеш (убираем префиксы, пробелы, приводим к нижнему регистру)
+    const normalizedHash = txHash.trim().toLowerCase().replace(/^0x/, '');
+    
+    this.logger.log(`📝 Обновление хеша транзакции ${transactionId}: ${normalizedHash}`);
+    
+    transaction.txHash = normalizedHash;
     transaction.status = PaymentStatus.PROCESSING;
     
     return await this.transactionRepository.save(transaction);

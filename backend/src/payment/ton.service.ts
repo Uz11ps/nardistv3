@@ -148,9 +148,9 @@ export class TonService {
 
   /**
    * Проверяет транзакцию в блокчейне TON
-   * Использует TON Center API или TonClient
+   * Проверяет ТОЛЬКО входящие транзакции на конкретный адрес кошелька
    */
-  async checkTransaction(txHash: string, address: string): Promise<{
+  async checkTransaction(txHash: string, address: string, expectedAmount?: number, expectedComment?: string): Promise<{
     found: boolean;
     amount: number;
     comment?: string;
@@ -158,59 +158,144 @@ export class TonService {
     lt?: bigint;
   }> {
     try {
-      // Используем TON Center API для проверки транзакций
+      // Нормализуем хеш (убираем префиксы, приводим к нижнему регистру)
+      const normalizedHash = txHash.toLowerCase().replace(/^0x/, '').trim();
+      
+      // Нормализуем адрес (убираем пробелы)
+      const normalizedAddress = address.trim();
+      
+      this.logger.log(`🔍 Проверка транзакции на кошельке ${normalizedAddress}: hash=${normalizedHash}, expectedAmount=${expectedAmount}, expectedComment=${expectedComment}`);
+      
+      // Используем TON Center API для проверки транзакций ТОЛЬКО на этом адресе
       const headers: any = {};
       if (this.TON_API_KEY) {
         headers['X-API-Key'] = this.TON_API_KEY;
       }
 
+      // Получаем транзакции ТОЛЬКО для этого адреса (входящие)
       const response = await axios.get(`${this.TON_API_URL}/getTransactions`, {
         params: {
-          address: address,
-          limit: 10,
+          address: normalizedAddress, // Адрес получателя (наш кошелек)
+          limit: 100, // Увеличиваем лимит для надежности
         },
         headers,
       });
 
-      if (response.data?.result) {
-        const transactions = response.data.result;
+      if (!response.data?.result || !Array.isArray(response.data.result)) {
+        this.logger.warn(`⚠️ API не вернул массив транзакций для адреса ${normalizedAddress}`);
+        return { found: false, amount: 0 };
+      }
+
+      const transactions = response.data.result;
+      this.logger.log(`📊 Найдено ${transactions.length} транзакций на кошельке ${normalizedAddress}`);
+      
+      // Фильтруем только входящие транзакции (где есть in_msg и destination совпадает с нашим адресом)
+      const incomingTransactions = transactions.filter((t: any) => {
+        // Проверяем, что это входящая транзакция
+        const hasInMsg = t.in_msg && t.in_msg.destination === normalizedAddress;
+        return hasInMsg;
+      });
+      
+      this.logger.log(`📥 Найдено ${incomingTransactions.length} входящих транзакций на кошельке ${normalizedAddress}`);
+      
+      // Ищем транзакцию по хешу (пробуем разные форматы)
+      let tx = incomingTransactions.find((t: any) => {
+        const hash = t.transaction_id?.hash;
+        if (!hash) return false;
+        const normalizedTxHash = String(hash).toLowerCase().replace(/^0x/, '').trim();
+        return normalizedTxHash === normalizedHash;
+      });
+      
+      // Если не нашли по хешу, ищем по сумме и комментарию (если указаны)
+      if (!tx && expectedAmount && expectedComment) {
+        this.logger.log(`🔍 Транзакция не найдена по хешу, ищем по сумме и комментарию на кошельке ${normalizedAddress}...`);
         
-        // Ищем транзакцию по хешу
-        const tx = transactions.find((t: any) => t.transaction_id?.hash === txHash);
-        
-        if (tx) {
-          // Парсим данные транзакции
-          const inMsg = tx.in_msg;
-          const amount = inMsg?.value ? parseInt(inMsg.value) / 1e9 : 0; // Конвертируем из nanotons
+        for (const t of incomingTransactions) {
+          const inMsg = t.in_msg;
+          if (!inMsg || inMsg.destination !== normalizedAddress) continue;
+          
+          const amount = inMsg?.value ? parseInt(inMsg.value) / 1e9 : 0;
+          
+          // Проверяем сумму (с небольшой погрешностью)
+          const amountDiff = Math.abs(amount - expectedAmount);
+          if (amountDiff > 0.01) continue; // Разница больше 0.01 TON
           
           // Парсим комментарий
           let comment: string | undefined;
           if (inMsg?.msg_data) {
             if (inMsg.msg_data['@type'] === 'msg.dataText') {
-              // Текст в base64
-              comment = Buffer.from(inMsg.msg_data.text, 'base64').toString('utf8');
+              try {
+                comment = Buffer.from(inMsg.msg_data.text, 'base64').toString('utf8');
+              } catch (e) {
+                // Игнорируем ошибки парсинга
+              }
             } else if (inMsg.msg_data.text) {
-              // Прямой текст
-              comment = Buffer.from(inMsg.msg_data.text, 'base64').toString('utf8');
+              try {
+                comment = Buffer.from(inMsg.msg_data.text, 'base64').toString('utf8');
+              } catch (e) {
+                // Игнорируем ошибки парсинга
+              }
             }
           }
           
-          const fromAddress = inMsg?.source;
-          const lt = BigInt(tx.transaction_id?.lt || 0);
-
-          return {
-            found: true,
-            amount,
-            comment,
-            fromAddress,
-            lt,
-          };
+          // Проверяем комментарий
+          if (comment && comment.includes(expectedComment)) {
+            this.logger.log(`✅ Транзакция найдена по сумме и комментарию на кошельке ${normalizedAddress}: amount=${amount}, comment=${comment}`);
+            tx = t;
+            break;
+          }
         }
+      }
+      
+      if (tx) {
+        // Парсим данные транзакции
+        const inMsg = tx.in_msg;
+        if (!inMsg || inMsg.destination !== normalizedAddress) {
+          this.logger.warn(`⚠️ Транзакция найдена, но destination не совпадает с адресом кошелька`);
+          return { found: false, amount: 0 };
+        }
+        
+        const amount = inMsg?.value ? parseInt(inMsg.value) / 1e9 : 0; // Конвертируем из nanotons
+        
+        // Парсим комментарий
+        let comment: string | undefined;
+        if (inMsg?.msg_data) {
+          if (inMsg.msg_data['@type'] === 'msg.dataText') {
+            try {
+              comment = Buffer.from(inMsg.msg_data.text, 'base64').toString('utf8');
+            } catch (e) {
+              this.logger.warn(`⚠️ Не удалось распарсить комментарий из msg.dataText`);
+            }
+          } else if (inMsg.msg_data.text) {
+            try {
+              comment = Buffer.from(inMsg.msg_data.text, 'base64').toString('utf8');
+            } catch (e) {
+              this.logger.warn(`⚠️ Не удалось распарсить комментарий из text`);
+            }
+          }
+        }
+        
+        const fromAddress = inMsg?.source;
+        const lt = BigInt(tx.transaction_id?.lt || 0);
+        const foundHash = tx.transaction_id?.hash;
+
+        this.logger.log(`✅ Транзакция найдена на кошельке ${normalizedAddress}: hash=${foundHash}, amount=${amount}, from=${fromAddress}, comment=${comment}`);
+
+        return {
+          found: true,
+          amount,
+          comment,
+          fromAddress,
+          lt,
+        };
+      } else {
+        this.logger.warn(`⚠️ Транзакция не найдена на кошельке ${normalizedAddress} по хешу ${normalizedHash}`);
       }
 
       return { found: false, amount: 0 };
     } catch (error: any) {
-      this.logger.error(`Ошибка проверки транзакции ${txHash}:`, error.message);
+      this.logger.error(`❌ Ошибка проверки транзакции ${txHash} на кошельке ${address}:`, error.message);
+      this.logger.error(`❌ Stack trace:`, error.stack);
       throw new BadRequestException(`Не удалось проверить транзакцию: ${error.message}`);
     }
   }

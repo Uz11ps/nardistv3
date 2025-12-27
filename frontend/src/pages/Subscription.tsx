@@ -111,27 +111,40 @@ export default function Subscription() {
   const handleSubscribe = async () => {
     try {
       setLoading(true)
+      console.log('Creating payment transaction:', { plan: selectedPlan, method: paymentMethod })
+      
       // Создаем платежную транзакцию
       const response = await apiClient.post('/subscription/payment/create', {
         plan: selectedPlan,
         method: paymentMethod,
       })
       
+      console.log('Payment transaction created:', response.data)
+      
       const { transactionId, walletAddress, amount, comment, method, expiresAt } = response.data
       
+      if (!transactionId || !walletAddress || !amount || !comment) {
+        throw new Error('Неполные данные транзакции')
+      }
+      
       // Показываем модальное окно оплаты
-      setPaymentData({
+      const paymentDataToSet = {
         transactionId,
         walletAddress,
         amount,
         comment,
-        method: method === 'TON' ? 'TON' : 'USDT',
+        method: (method?.toUpperCase() === 'TON' ? 'TON' : 'USDT') as 'TON' | 'USDT',
         expiresAt,
-      })
+      }
+      
+      console.log('Setting payment data:', paymentDataToSet)
+      setPaymentData(paymentDataToSet)
       setShowPaymentModal(true)
+      console.log('Payment modal should be open now')
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при создании платежа')
       console.error('Failed to create payment:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Ошибка при создании платежа'
+      alert(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -320,7 +333,7 @@ export default function Subscription() {
       </div>
 
       {/* Модальное окно оплаты TON */}
-      {showPaymentModal && paymentData && (
+      {paymentData && (
         <TonPaymentModal
           isOpen={showPaymentModal}
           onClose={() => {
