@@ -118,13 +118,8 @@ export class LongBackgammonEngine {
     const movedThisTurn = state.movesFromHead || 0;
     
     // Check for the first move exception
-    // По правилам Минспорта 20.3: только второй спортсмен при первом броске с дублем 3:3, 4:4, 6:6
-    // может взять 2 шашки с головы
-    const diceArray = state.dice || [];
-    const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0]);
-    
-    // Исключение только для второго игрока (currentPlayer === 1, черные)
-    if (isFirstMoveOfGame && player === 1 && isDoubles && (die === 3 || die === 4 || die === 6)) {
+    // Правило первого хода: разрешено снять две шашки с головы
+    if (isFirstMoveOfGame) {
       return movedThisTurn < 2;
     }
     

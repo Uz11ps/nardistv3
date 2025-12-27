@@ -1057,20 +1057,20 @@ export default function BackgammonBoard({
     let bestMove = moves.find(m => m.to === -1) // Bearing off
     
     if (!bestMove) {
-      // Ищем комбинированные ходы (с steps)
-      const combinedMoves = moves.filter(m => (m as any).steps && (m as any).steps.length > 1)
-      if (combinedMoves.length > 0) {
-        // Сортируем комбинированные ходы по сумме кубиков (по убыванию)
-        const sortedCombined = [...combinedMoves].sort((a, b) => {
+      // Ищем одиночные ходы сначала (не комбинированные)
+      const singleMoves = moves.filter(m => !(m as any).steps || (m as any).steps.length <= 1)
+      if (singleMoves.length > 0) {
+        // Сортируем по значению кубика (по убыванию), чтобы использовать больший кубик
+        const sortedMoves = [...singleMoves].sort((a, b) => b.die - a.die)
+        bestMove = sortedMoves[0]
+      } else {
+        // Если только комбинированные - берем с наибольшей суммой
+        const sortedCombined = [...moves].sort((a, b) => {
           const aSum = (a as any).steps?.reduce((sum: number, s: any) => sum + s.die, 0) || a.die
           const bSum = (b as any).steps?.reduce((sum: number, s: any) => sum + s.die, 0) || b.die
           return bSum - aSum
         })
         bestMove = sortedCombined[0]
-      } else {
-        // Сортируем по значению кубика (по убыванию), чтобы использовать больший кубик
-        const sortedMoves = [...moves].sort((a, b) => b.die - a.die)
-        bestMove = sortedMoves[0]
       }
     }
     

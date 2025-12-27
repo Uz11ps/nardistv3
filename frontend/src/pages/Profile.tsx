@@ -407,8 +407,9 @@ export default function Profile() {
               </div>
             </div>
           ))}
-          </>
-        ) : (
+        </div>
+      </>
+    ) : (
           <div className="profile-premium-tab">
             <div className={`premium-status-card ${hasPremium ? 'active' : 'inactive'}`}>
               <div className="premium-status-header">

@@ -888,6 +888,9 @@ export class GamesService {
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     let state = game.gameState;
     
+    // Определяем, является ли этот ход первым в игре для этого режима (Long)
+    const isFirstMoveOfGame = game.mode === GameMode.LONG && (game.moves || []).length < 2;
+
     // Проверяем, является ли это дублем (4 одинаковых кубика) и нет pendingMoves
     const originalDice = state.dice || [];
     const isDoubles = originalDice.length === 4 && originalDice.every(d => d === originalDice[0]);
@@ -946,22 +949,7 @@ export class GamesService {
     }
 
     // Используем оставшиеся кубики для расчета возможных ходов
-    // Для дублей работаем как 8+8: сначала первые 2 кубика (8 очков), затем после подтверждения - оставшиеся 2 кубика (еще 8 очков)
     let diceForMoves = remainingDice;
-    if (isDoubles && originalDice.length === 4 && remainingDice.length === 4) {
-      // При выборе шашки (нет pendingMoves) - ограничиваем до первых 2 кубиков (первая "8")
-      // Это логика 8+8: сначала используем первую "8" (2 кубика), затем после подтверждения - вторую "8" (оставшиеся 2 кубика)
-      if (!hasPendingMoves) {
-        // Если нет pendingMoves (выбор шашки), ограничиваем до первых 2 кубиков (первая "8")
-        diceForMoves = remainingDice.slice(0, 2);
-        this.logger.log(`🔒 Doubles 4/4 (8+8 logic): No pending moves, limiting to first 2 dice: [${diceForMoves.join(', ')}]`);
-      } else {
-        // Если есть pendingMoves, проверяем оставшиеся кубики после первых ходов
-        // После применения pendingMoves должны остаться последние 2 кубика (вторая "8")
-        diceForMoves = remainingDice;
-        this.logger.log(`🔒 Doubles 4/4 (8+8 logic): Pending moves exist (${pendingMoves.length}), checking remaining dice: [${diceForMoves.join(', ')}]`);
-      }
-    }
 
     if (!diceForMoves || diceForMoves.length === 0) {
       return { allMoves: [] };
@@ -971,7 +959,7 @@ export class GamesService {
     let allMoves: Array<Array<{ from: number; to: number; die: number }>> = [];
     if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
       // Важно: для дублей передаем только первые 2 кубика (если нет pendingMoves)
-      allMoves = engine.getAllValidMoves(state, diceForMoves);
+      allMoves = engine.getAllValidMoves(state, diceForMoves, isFirstMoveOfGame);
     }
     
     // Преобразуем последовательности в плоский список доступных ходов,
