@@ -40,6 +40,7 @@ import { NotificationTemplate, NotificationTemplateType } from './notification-t
 import { SystemSettings } from './system-settings.entity';
 import { WalletService } from '../payment/wallet.service';
 import { PaymentTransactionService } from '../payment/payment-transaction.service';
+import { TonService } from '../payment/ton.service';
 import { UserWallet } from '../payment/user-wallet.entity';
 import { PaymentTransaction, PaymentStatus } from '../payment/payment-transaction.entity';
 import { HistoryService } from '../history/history.service';
@@ -128,6 +129,8 @@ export class AdminService implements OnModuleInit {
     private walletService: WalletService,
     @Inject(forwardRef(() => PaymentTransactionService))
     private paymentTransactionService: PaymentTransactionService,
+    @Inject(forwardRef(() => TonService))
+    private tonService: TonService,
     @Inject(forwardRef(() => HistoryService))
     private historyService: HistoryService,
     private xpCalculator: XpCalculatorService,
