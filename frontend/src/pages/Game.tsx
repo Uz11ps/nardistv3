@@ -32,16 +32,21 @@ export default function Game() {
   const [opponent, setOpponent] = useState<any>(null)
   const [score, setScore] = useState({ player1: 0, player2: 0 })
   const [gameStatus, setGameStatus] = useState<string>('waiting')
-  const [player1Timer, setPlayer1Timer] = useState<number>(30)
-  const [player2Timer, setPlayer2Timer] = useState<number>(30)
+  const [player1Timer, setPlayer1Timer] = useState<number>(20)
+  const [player2Timer, setPlayer2Timer] = useState<number>(20)
   const [moveTimer, setMoveTimer] = useState<number>(20) // Таймер на ход (20 секунд)
   const [totalTimeRemaining, setTotalTimeRemaining] = useState<{ player1: number; player2: number }>({ player1: 60, player2: 60 }) // Общее время каждого игрока (60 секунд)
   const [isInOvertime, setIsInOvertime] = useState<boolean>(false) // Овертайм (прошло больше 20 секунд)
+  const lastTimerUpdateRef = useRef<number>(Date.now()) // Время последнего обновления таймера с сервера
+  const player1TimerRef = useRef<number>(20)
+  const player2TimerRef = useRef<number>(20)
+  const totalTimeRemainingRef = useRef<{ player1: number; player2: number }>({ player1: 60, player2: 60 })
   const [pipCounts, setPipCounts] = useState({ player1: 0, player2: 0 })
   const [pipDiff, setPipDiff] = useState<{ player1: number | null; player2: number | null }>({ player1: null, player2: null })
   const lastPipCounts = useRef({ player1: 0, player2: 0 })
   const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight)
   const animationFrameRef = useRef<number | null>(null)
+  const timerIntervalRef = useRef<number | null>(null)
 
   // Отключаем вертикальный свайп в Telegram Web App при монтировании компонента игры
   useEffect(() => {
@@ -183,7 +188,70 @@ export default function Game() {
     }
   }, [gameInfo?.player1Id, gameInfo?.player2Id])
 
-  // Таймер теперь обновляется через socket.on('timer_update') от бэкенда
+  // Синхронизируем ref с state
+  useEffect(() => {
+    player1TimerRef.current = player1Timer
+  }, [player1Timer])
+  
+  useEffect(() => {
+    player2TimerRef.current = player2Timer
+  }, [player2Timer])
+  
+  useEffect(() => {
+    totalTimeRemainingRef.current = totalTimeRemaining
+  }, [totalTimeRemaining])
+
+  // Локальный таймер для плавного обновления UI
+  useEffect(() => {
+    if (gameStatus !== 'in_progress') {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current)
+        timerIntervalRef.current = null
+      }
+      return
+    }
+
+    timerIntervalRef.current = window.setInterval(() => {
+      const now = Date.now()
+      const deltaSeconds = (now - lastTimerUpdateRef.current) / 1000
+      lastTimerUpdateRef.current = now
+
+      if (gameState?.currentPlayer === 0) {
+        // Ход игрока 1
+        if (player1TimerRef.current > 0) {
+          const newValue = Math.max(0, player1TimerRef.current - deltaSeconds)
+          setPlayer1Timer(newValue)
+          if (newValue === 0 && player1TimerRef.current > 0) {
+            setIsInOvertime(true)
+          }
+        } else {
+          // Овертайм - уменьшаем общее время
+          const newTotal = Math.max(0, totalTimeRemainingRef.current.player1 - deltaSeconds)
+          setTotalTimeRemaining(prev => ({ ...prev, player1: newTotal }))
+        }
+      } else if (gameState?.currentPlayer === 1) {
+        // Ход игрока 2
+        if (player2TimerRef.current > 0) {
+          const newValue = Math.max(0, player2TimerRef.current - deltaSeconds)
+          setPlayer2Timer(newValue)
+          if (newValue === 0 && player2TimerRef.current > 0) {
+            setIsInOvertime(true)
+          }
+        } else {
+          // Овертайм - уменьшаем общее время
+          const newTotal = Math.max(0, totalTimeRemainingRef.current.player2 - deltaSeconds)
+          setTotalTimeRemaining(prev => ({ ...prev, player2: newTotal }))
+        }
+      }
+    }, 100) // Обновляем каждые 100мс для плавности
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current)
+        timerIntervalRef.current = null
+      }
+    }
+  }, [gameStatus, gameState?.currentPlayer])
 
   // Функция автолуза
   const handleAutoMove = async () => {
@@ -576,18 +644,26 @@ export default function Game() {
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
         const isOvertime = data.isOvertime || false
         
+        lastTimerUpdateRef.current = Date.now() // Обновляем время последнего синхронизации
+        
         // Обновляем общее время игроков
-        setTotalTimeRemaining({ player1: totalTime1, player2: totalTime2 })
+        const newTotalTime = { player1: totalTime1, player2: totalTime2 }
+        setTotalTimeRemaining(newTotalTime)
+        totalTimeRemainingRef.current = newTotalTime
         setIsInOvertime(isOvertime)
         
         if (data.currentPlayer === 0) {
           // Ход игрока 1
           setPlayer1Timer(moveTimeRemaining)
+          player1TimerRef.current = moveTimeRemaining
           setPlayer2Timer(20) // Соперник имеет полное время на ход
+          player2TimerRef.current = 20
         } else {
           // Ход игрока 2
           setPlayer2Timer(moveTimeRemaining)
+          player2TimerRef.current = moveTimeRemaining
           setPlayer1Timer(20) // Соперник имеет полное время на ход
+          player1TimerRef.current = 20
         }
       }
     })
