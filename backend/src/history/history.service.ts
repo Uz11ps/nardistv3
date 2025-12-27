@@ -137,21 +137,22 @@ export class HistoryService {
     }
 
     // Определяем текущее состояние на основе step
-    let currentGameState = game.gameState; // Начальное состояние
+    let currentGameState = game.gameState || null; // Начальное состояние
     let currentStep = step !== undefined ? step : moves.length; // По умолчанию показываем финальное состояние
     
     if (currentStep === 0) {
       // Начальное состояние
-      currentGameState = game.gameState;
+      currentGameState = game.gameState || null;
     } else if (currentStep > 0 && currentStep <= moves.length) {
       // Состояние после хода currentStep
       const move = moves[currentStep - 1];
-      currentGameState = move.gameStateAfter;
+      currentGameState = move.gameStateAfter || game.gameState || null;
     } else if (currentStep > moves.length) {
       // Если step больше количества ходов, показываем финальное состояние
       currentStep = moves.length;
       if (moves.length > 0) {
-        currentGameState = moves[moves.length - 1].gameStateAfter;
+        const lastMove = moves[moves.length - 1];
+        currentGameState = lastMove.gameStateAfter || game.gameState || null;
       }
     }
 
@@ -163,12 +164,12 @@ export class HistoryService {
         status: game.status,
         player1Id: game.player1Id,
         player2Id: game.player2Id,
-        player1: {
+        player1: game.player1 ? {
           id: game.player1.id,
           username: game.player1.username,
           nickname: game.player1.nickname,
           avatarUrl: game.player1.avatarUrl,
-        },
+        } : null,
         player2: game.player2 ? {
           id: game.player2.id,
           username: game.player2.username,
@@ -187,17 +188,22 @@ export class HistoryService {
       moves: moves.map((move) => ({
         id: move.id,
         moveNumber: move.moveNumber,
-        player: {
+        player: move.player ? {
           id: move.player.id,
           username: move.player.username,
           nickname: move.player.nickname,
+        } : {
+          id: null,
+          username: 'Бот',
+          nickname: null,
         },
-        dice: move.dice,
-        moves: move.moves,
-        gameStateBefore: move.gameStateBefore,
-        gameStateAfter: move.gameStateAfter,
-        moveTimeMs: move.moveTimeMs,
-        createdAt: move.createdAt.toISOString(),
+        playerId: move.playerId,
+        dice: move.dice || [],
+        moves: move.moves || [],
+        gameStateBefore: move.gameStateBefore || null,
+        gameStateAfter: move.gameStateAfter || null,
+        moveTimeMs: move.moveTimeMs || null,
+        createdAt: move.createdAt ? move.createdAt.toISOString() : new Date().toISOString(),
       })),
       currentStep,
       totalSteps: moves.length,
@@ -215,8 +221,9 @@ export class HistoryService {
     const lines = ['Move,Player,Dice,Moves'];
     
     for (const move of replay.moves) {
-      const movesStr = move.moves.map((m: any) => `${m.from}->${m.to}`).join(';');
-      lines.push(`${move.moveNumber},${move.player.username},${move.dice.join(',')},${movesStr}`);
+      const movesStr = (move.moves || []).map((m: any) => `${m.from}->${m.to}`).join(';');
+      const playerName = move.player?.username || 'Бот';
+      lines.push(`${move.moveNumber},${playerName},${(move.dice || []).join(',')},${movesStr}`);
     }
 
     return lines.join('\n');

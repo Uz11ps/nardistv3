@@ -12,7 +12,6 @@ export default function GameSearch() {
   const [searching, setSearching] = useState(false)
   const [mode, setMode] = useState<'long' | 'short'>('long')
   const [format, setFormat] = useState<'rating' | 'normal'>('rating')
-  const [timeLimit, setTimeLimit] = useState<30 | 60>(30)
   const [stake, setStake] = useState<0 | 100 | 500 | 1000>(0)
 
   useEffect(() => {
@@ -49,7 +48,6 @@ export default function GameSearch() {
     setSearching(true)
     socket.emit('find_match', {
       mode,
-      timeLimit,
       stake,
     })
   }
@@ -100,25 +98,6 @@ export default function GameSearch() {
                 onClick={() => setFormat('normal')}
               >
                 Обычный
-              </button>
-            </div>
-          </div>
-
-          {/* Время на ход */}
-          <div className="game-search-field">
-            <div className="game-search-label">Время на ход:</div>
-            <div className="toggle-group">
-              <button
-                className={`toggle-btn ${timeLimit === 30 ? 'active' : ''}`}
-                onClick={() => setTimeLimit(30)}
-              >
-                30 сек
-              </button>
-              <button
-                className={`toggle-btn ${timeLimit === 60 ? 'active' : ''}`}
-                onClick={() => setTimeLimit(60)}
-              >
-                60 сек
               </button>
             </div>
           </div>

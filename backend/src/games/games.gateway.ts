@@ -87,21 +87,35 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       }
 
       const now = new Date();
-      const timeSinceLastMove = Math.floor((now.getTime() - game.lastMoveAt.getTime()) / 1000);
-      const normalTimeLimit = 30; // Обычное время 30 секунд
-      const overtimeLimit = 60; // Овертайм 60 секунд
-      const totalTimeLimit = normalTimeLimit + overtimeLimit; // Всего 90 секунд
+      const timeSinceLastMove = (now.getTime() - game.lastMoveAt.getTime()) / 1000; // в секундах
+      const baseMoveTime = 20; // 20 секунд на ход
       
-      // Вычисляем оставшееся время (90 секунд максимум)
-      const timeRemaining = Math.max(0, totalTimeLimit - timeSinceLastMove);
+      // Получаем общее время текущего игрока
+      const currentPlayerTimeRemaining = game.currentPlayer === 0 
+        ? (game.player1TimeRemaining || 60000) 
+        : (game.player2TimeRemaining || 60000);
+      
+      // Вычисляем превышение 20 секунд
+      const excessTime = Math.max(0, timeSinceLastMove - baseMoveTime);
+      
+      // Оставшееся время на ход: если прошло <= 20 сек, показываем оставшиеся 20 сек, иначе показываем общее время
+      const moveTimeRemaining = timeSinceLastMove <= baseMoveTime 
+        ? baseMoveTime - timeSinceLastMove 
+        : 0;
+      
+      // Общее время игрока после вычета превышения
+      const totalTimeRemaining = Math.max(0, (currentPlayerTimeRemaining / 1000) - excessTime);
       
       // Отправляем таймер всем участникам игры
       this.server.to(`game:${gameId}`).emit('timer_update', {
         gameId: game.id,
         currentPlayer: game.currentPlayer,
-        timeElapsed: timeSinceLastMove,
-        timeRemaining: timeRemaining,
-        isOvertime: timeSinceLastMove > normalTimeLimit,
+        moveTimeElapsed: timeSinceLastMove,
+        moveTimeRemaining: moveTimeRemaining,
+        totalTimeRemaining: totalTimeRemaining,
+        isOvertime: timeSinceLastMove > baseMoveTime,
+        player1TimeRemaining: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+        player2TimeRemaining: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60,
       });
     } catch (error) {
       this.logger.error(`❌ Error sending timer update for game ${gameId}:`, error);
@@ -129,21 +143,35 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         try {
           // Убеждаемся, что lastMoveAt это Date объект
           const lastMoveAt = game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt);
-          const timeSinceLastMove = Math.floor((now.getTime() - lastMoveAt.getTime()) / 1000);
-          const normalTimeLimit = 30; // Обычное время 30 секунд
-          const overtimeLimit = 60; // Овертайм 60 секунд
-          const totalTimeLimit = normalTimeLimit + overtimeLimit; // Всего 90 секунд
+          const timeSinceLastMove = (now.getTime() - lastMoveAt.getTime()) / 1000; // в секундах
+          const baseMoveTime = 20; // 20 секунд на ход
           
-          // Вычисляем оставшееся время (90 секунд максимум)
-          const timeRemaining = Math.max(0, totalTimeLimit - timeSinceLastMove);
+          // Получаем общее время текущего игрока
+          const currentPlayerTimeRemaining = game.currentPlayer === 0 
+            ? (game.player1TimeRemaining || 60000) 
+            : (game.player2TimeRemaining || 60000);
+          
+          // Вычисляем превышение 20 секунд
+          const excessTime = Math.max(0, timeSinceLastMove - baseMoveTime);
+          
+          // Оставшееся время на ход: если прошло <= 20 сек, показываем оставшиеся 20 сек, иначе показываем общее время
+          const moveTimeRemaining = timeSinceLastMove <= baseMoveTime 
+            ? baseMoveTime - timeSinceLastMove 
+            : 0;
+          
+          // Общее время игрока после вычета превышения
+          const totalTimeRemaining = Math.max(0, (currentPlayerTimeRemaining / 1000) - excessTime);
           
           // Отправляем таймер всем участникам игры
           this.server.to(`game:${game.id}`).emit('timer_update', {
             gameId: game.id,
             currentPlayer: game.currentPlayer,
-            timeElapsed: timeSinceLastMove,
-            timeRemaining: timeRemaining,
-            isOvertime: timeSinceLastMove > normalTimeLimit,
+            moveTimeElapsed: timeSinceLastMove,
+            moveTimeRemaining: moveTimeRemaining,
+            totalTimeRemaining: totalTimeRemaining,
+            isOvertime: timeSinceLastMove > baseMoveTime,
+            player1TimeRemaining: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+            player2TimeRemaining: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60,
           });
         } catch (gameError) {
           this.logger.warn(`Error sending timer update for game ${game.id}:`, gameError);
@@ -168,11 +196,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       // Используем moveTimeLimit из каждой игры индивидуально
 
       for (const game of activeGames) {
-        // Пропускаем игры с ботом (бот не должен таймаутить)
-        if (game.type === GameType.VS_BOT && game.player2Id === null) {
-          continue;
-        }
-
         // Проверяем только игры где кубики уже брошены (есть lastMoveAt)
         if (!game.lastMoveAt) {
           continue;
@@ -184,26 +207,77 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         }
 
         const timeSinceLastMove = now.getTime() - game.lastMoveAt.getTime();
-        const normalTimeLimit = 30000; // 30 секунд обычное время
-        const overtimeLimit = 60000; // 60 секунд овертайм
-        const totalTimeLimit = normalTimeLimit + overtimeLimit; // Всего 90 секунд
-
-        // Если прошло больше времени на ход (90 секунд), завершаем игру в пользу противника
-        if (timeSinceLastMove > totalTimeLimit) {
-          this.logger.warn(`⏱️ Move timeout detected for game ${game.id}, currentPlayer: ${game.currentPlayer}`);
+        const timeSinceLastMoveSeconds = timeSinceLastMove / 1000;
+        
+        // Определяем текущего игрока
+        const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
+        
+        // Для игр с ботами - просто проверяем 20 секунд (бот не использует время)
+        if (game.type === GameType.VS_BOT && game.player2Id === null) {
+          if (game.currentPlayer === 0 && timeSinceLastMoveSeconds > 20) {
+            this.logger.warn(`⏱️ Bot game timeout detected for game ${game.id}, player didn't move in 20 seconds`);
+            
+            try {
+              const currentGame = await this.gamesService.findOne(game.id);
+              if (currentGame.status === 'finished') {
+                continue;
+              }
+              
+              await this.gamesService.resignGame(game.id, game.player1Id);
+              const gameState = await this.gamesService.getGameState(game.id);
+              const finishedGame = await this.gamesService.findOne(game.id);
+              
+              this.server.to(`game:${game.id}`).emit('game_finished', {
+                winnerId: finishedGame.winnerId,
+                player1Score: finishedGame.player1Score,
+                player2Score: finishedGame.player2Score,
+                gameState,
+                reason: 'timeout',
+              });
+              
+              this.logger.log(`✅ Bot game ${game.id} finished due to timeout (20s), bot won`);
+            } catch (error) {
+              if (error.message && error.message.includes('уже завершена')) {
+                continue;
+              }
+              this.logger.error(`❌ Error handling bot game timeout for game ${game.id}:`, error);
+            }
+          }
+          continue;
+        }
+        
+        // Для обычных игр - система контроля времени: 20 секунд на ход, избыток вычитается из общего времени
+        const currentPlayerTimeRemaining = game.currentPlayer === 0 
+          ? (game.player1TimeRemaining || 60000) 
+          : (game.player2TimeRemaining || 60000);
+        
+        const baseMoveTime = 20; // 20 секунд на ход
+        const excessTime = Math.max(0, timeSinceLastMoveSeconds - baseMoveTime);
+        const timeAfterBaseMove = Math.max(0, currentPlayerTimeRemaining - (excessTime * 1000));
+        
+        // Проверяем, закончилось ли время (если прошло больше 20 сек и общее время <= 0)
+        const isTimeOut = timeSinceLastMoveSeconds > baseMoveTime && timeAfterBaseMove <= 0;
+        
+        if (isTimeOut) {
+          this.logger.warn(`⏱️ Time control timeout detected for game ${game.id}, currentPlayer: ${game.currentPlayer}, timeSinceLastMove: ${timeSinceLastMoveSeconds.toFixed(2)}s, timeRemaining: ${(currentPlayerTimeRemaining / 1000).toFixed(2)}s`);
           
           try {
-            // Определяем игрока, который должен был сделать ход
-            const timeoutPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
-            
-            // Проверяем что игра еще активна (могла завершиться между проверками)
+            // Проверяем что игра еще активна
             const currentGame = await this.gamesService.findOne(game.id);
             if (currentGame.status === 'finished') {
               continue;
             }
             
-            // Автоматически сдаем игру от его имени (победит противник)
-            await this.gamesService.resignGame(game.id, timeoutPlayerId);
+            // Обновляем общее время игрока (вычитаем превышение)
+            if (game.currentPlayer === 0) {
+              currentGame.player1TimeRemaining = 0;
+            } else {
+              currentGame.player2TimeRemaining = 0;
+            }
+            await this.gamesService['gamesRepository'].save(currentGame);
+            
+            // Автоматически сдаем игру от имени игрока, у которого закончилось время
+            await this.gamesService.resignGame(game.id, currentPlayerId);
             
             const gameState = await this.gamesService.getGameState(game.id);
             const finishedGame = await this.gamesService.findOne(game.id);
@@ -214,16 +288,16 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
               player1Score: finishedGame.player1Score,
               player2Score: finishedGame.player2Score,
               gameState,
-              reason: 'move_timeout',
+              reason: 'timeout',
             });
             
-            this.logger.log(`✅ Game ${game.id} finished due to move timeout, winner: ${finishedGame.winnerId}`);
+            this.logger.log(`✅ Game ${game.id} finished due to time control timeout, winner: ${finishedGame.winnerId}`);
           } catch (error) {
             // Если игра уже завершена, игнорируем ошибку
             if (error.message && error.message.includes('уже завершена')) {
               continue;
             }
-            this.logger.error(`❌ Error handling move timeout for game ${game.id}:`, error);
+            this.logger.error(`❌ Error handling time control timeout for game ${game.id}:`, error);
           }
         }
       }

@@ -30,6 +30,11 @@ export class HistoryController {
       throw new Error('Нет доступа к этой игре');
     }
     
+    // Проверяем, что игра завершена (для реплея нужна завершенная игра)
+    if (game.status !== 'finished') {
+      throw new Error('Реплей доступен только для завершенных игр');
+    }
+    
     return replay;
   }
 

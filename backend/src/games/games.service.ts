@@ -206,6 +206,8 @@ export class GamesService {
       p2Offset: 1,
       currentPlayer: 0,
       moveTimeLimit: moveTimeLimit,
+      player1TimeRemaining: 60000, // 60 секунд общего времени
+      player2TimeRemaining: 60000, // 60 секунд общего времени
       skinData,
     });
 
@@ -675,7 +677,52 @@ export class GamesService {
     const updatedGame = await this.findOne(gameId);
     updatedGame.gameState = currentState;
     updatedGame.currentPlayer = currentState.currentPlayer;
-    updatedGame.lastMoveAt = new Date();
+    
+    // Вычисляем время, затраченное на ход (ДО обновления lastMoveAt)
+    const now = new Date();
+    const moveStartTime = game.lastMoveAt || game.createdAt;
+    const moveTimeMs = now.getTime() - moveStartTime.getTime();
+    
+    // Обновляем общее время игрока согласно правилу: 20 секунд на ход, избыток вычитается из общего времени
+    const moveTimeSeconds = moveTimeMs / 1000;
+    const baseMoveTime = 20; // 20 секунд на ход
+    const excessTime = Math.max(0, moveTimeSeconds - baseMoveTime); // Превышение 20 секунд
+    
+    if (!isBotTurn && playerId) {
+      // Определяем, какой игрок сделал ход
+      const isPlayer1 = updatedGame.player1Id === playerId;
+      const currentPlayerTimeRemaining = isPlayer1 
+        ? (updatedGame.player1TimeRemaining || 60000) 
+        : (updatedGame.player2TimeRemaining || 60000);
+      
+      // Вычитаем превышение из общего времени (превышение в секундах, конвертируем в миллисекунды)
+      const newTimeRemaining = Math.max(0, currentPlayerTimeRemaining - (excessTime * 1000));
+      
+      if (isPlayer1) {
+        updatedGame.player1TimeRemaining = newTimeRemaining;
+      } else {
+        updatedGame.player2TimeRemaining = newTimeRemaining;
+      }
+      
+      this.logger.log(`⏱️ Player ${playerId} move time: ${moveTimeSeconds.toFixed(2)}s (excess: ${excessTime.toFixed(2)}s), remaining: ${(newTimeRemaining / 1000).toFixed(2)}s`);
+      
+      // Если общее время закончилось, завершаем игру
+      if (newTimeRemaining <= 0) {
+        this.logger.warn(`⏱️ Player ${playerId} ran out of total time (${excessTime.toFixed(2)}s excess)`);
+        // Завершаем игру в пользу противника
+        updatedGame.status = GameStatus.FINISHED;
+        updatedGame.winnerId = isPlayer1 ? updatedGame.player2Id : updatedGame.player1Id;
+        if (updatedGame.winnerId === updatedGame.player1Id) {
+          updatedGame.player1Score = 1;
+          updatedGame.player2Score = 0;
+        } else {
+          updatedGame.player1Score = 0;
+          updatedGame.player2Score = 1;
+        }
+      }
+    }
+    
+    updatedGame.lastMoveAt = now;
 
     // Если это первый ход (игра в статусе WAITING), переводим в IN_PROGRESS
     if (updatedGame.status === GameStatus.WAITING) {
@@ -1562,6 +1609,8 @@ export class GamesService {
         rngHash,
         currentPlayer: 0, // Игрок начинает первым
         moveTimeLimit: 60000,
+        player1TimeRemaining: 60000, // 60 секунд общего времени
+        player2TimeRemaining: 60000, // 60 секунд общего времени (бот не использует, но для совместимости)
         lastMoveAt: new Date(),
       });
 

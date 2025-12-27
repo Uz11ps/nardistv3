@@ -104,6 +104,12 @@ export class Game {
   @Column({ type: 'bigint', default: 0 })
   moveTimeLimit: number;
 
+  @Column({ type: 'bigint', default: 60000 })
+  player1TimeRemaining: number; // Общее время игрока 1 в миллисекундах (60 секунд)
+
+  @Column({ type: 'bigint', default: 60000 })
+  player2TimeRemaining: number; // Общее время игрока 2 в миллисекундах (60 секунд)
+
   @Column({ type: 'timestamp', nullable: true })
   lastMoveAt: Date;
 
