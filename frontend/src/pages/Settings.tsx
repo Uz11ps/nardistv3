@@ -7,7 +7,6 @@ import './Settings.css'
 interface SettingsState {
   vibration: boolean
   sound: boolean
-  animations: boolean
   matchNotifications: boolean
   economicEvents: boolean
   clanEvents: boolean
@@ -18,11 +17,10 @@ export default function Settings() {
   const navigate = useNavigate()
   const [settings, setSettings] = useState<SettingsState>({
     vibration: true,
-    sound: false,
-    animations: false,
-    matchNotifications: false,
-    economicEvents: false,
-    clanEvents: false,
+    sound: true,
+    matchNotifications: true,
+    economicEvents: true,
+    clanEvents: true,
     language: 'Русский',
   })
 
@@ -32,15 +30,14 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
-      const response = await apiClient.get('/users/settings').catch(() => ({ data: null }))
+      const response = await apiClient.get('/users/settings')
       if (response.data) {
         setSettings({
           vibration: response.data.vibration ?? true,
-          sound: response.data.sound ?? false,
-          animations: response.data.animations ?? false,
-          matchNotifications: response.data.matchNotifications ?? false,
-          economicEvents: response.data.economicEvents ?? false,
-          clanEvents: response.data.clanEvents ?? false,
+          sound: response.data.sound ?? true,
+          matchNotifications: response.data.matchNotifications ?? true,
+          economicEvents: response.data.economicEvents ?? true,
+          clanEvents: response.data.clanEvents ?? true,
           language: response.data.language ?? 'Русский',
         })
       }
@@ -53,10 +50,7 @@ export default function Settings() {
     try {
       const newSettings = { ...settings, [key]: value }
       setSettings(newSettings)
-      await apiClient.put('/users/settings', newSettings).catch(() => {
-        // Если эндпоинт не существует, просто игнорируем ошибку
-        console.warn('Settings endpoint not available, using local storage')
-      })
+      await apiClient.put('/users/settings', newSettings)
     } catch (error) {
       console.error('Failed to update setting:', error)
       setSettings(settings)
@@ -99,15 +93,6 @@ export default function Settings() {
           <span className="settings-label">Звук</span>
           <div className={`settings-toggle ${settings.sound ? 'active' : ''}`}>
             {settings.sound && <div className="settings-toggle-dot" />}
-          </div>
-        </div>
-
-        <div className="settings-divider" />
-
-        <div className="settings-item" onClick={() => handleToggle('animations')}>
-          <span className="settings-label">Анимации</span>
-          <div className={`settings-toggle ${settings.animations ? 'active' : ''}`}>
-            {settings.animations && <div className="settings-toggle-dot" />}
           </div>
         </div>
 

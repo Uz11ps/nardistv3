@@ -722,21 +722,24 @@ export default function Game() {
 
     // Для обычного хода (die <= 6 и нет steps)
     if (die <= 6 && (!steps || steps.length === 0)) {
-      const currentDiceUsage = new Map<number, number>();
-      pendingMoves.forEach(m => {
-        if (m.steps) {
-          m.steps.forEach((s: any) => currentDiceUsage.set(s.die, (currentDiceUsage.get(s.die) || 0) + 1));
-        } else {
-          currentDiceUsage.set(m.die, (currentDiceUsage.get(m.die) || 0) + 1);
-        }
-      });
+      // Для дублей не проверяем максимальное использование кубика
+      if (!isDoubles) {
+        const currentDiceUsage = new Map<number, number>();
+        pendingMoves.forEach(m => {
+          if (m.steps) {
+            m.steps.forEach((s: any) => currentDiceUsage.set(s.die, (currentDiceUsage.get(s.die) || 0) + 1));
+          } else {
+            currentDiceUsage.set(m.die, (currentDiceUsage.get(m.die) || 0) + 1);
+          }
+        });
 
-      const usedCount = currentDiceUsage.get(die) || 0;
-      const availableCount = diceArray.filter(d => d === die).length
-      
-      if (usedCount >= availableCount) {
-        alert(`Кубик ${die} уже использован максимальное количество раз`)
-        return
+        const usedCount = currentDiceUsage.get(die) || 0;
+        const availableCount = diceArray.filter(d => d === die).length
+        
+        if (usedCount >= availableCount) {
+          alert(`Кубик ${die} уже использован максимальное количество раз`)
+          return
+        }
       }
     } else if (die > 6) {
       // Для хода > 6 (комбинированный) должен быть steps

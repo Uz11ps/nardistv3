@@ -173,6 +173,51 @@ export class UsersService {
     return user;
   }
 
+  async getSettings(userId: string) {
+    const user = await this.findOne(userId);
+    return {
+      vibration: user.vibration ?? true,
+      sound: user.sound ?? true,
+      matchNotifications: user.matchNotifications ?? true,
+      economicEvents: user.economicEvents ?? true,
+      clanEvents: user.clanEvents ?? true,
+      language: user.languageCode === 'ru' ? 'Русский' : user.languageCode,
+    };
+  }
+
+  async updateSettings(userId: string, settings: {
+    vibration?: boolean;
+    sound?: boolean;
+    matchNotifications?: boolean;
+    economicEvents?: boolean;
+    clanEvents?: boolean;
+    language?: string;
+  }) {
+    const user = await this.findOne(userId);
+    
+    if (settings.vibration !== undefined) {
+      user.vibration = settings.vibration;
+    }
+    if (settings.sound !== undefined) {
+      user.sound = settings.sound;
+    }
+    if (settings.matchNotifications !== undefined) {
+      user.matchNotifications = settings.matchNotifications;
+    }
+    if (settings.economicEvents !== undefined) {
+      user.economicEvents = settings.economicEvents;
+    }
+    if (settings.clanEvents !== undefined) {
+      user.clanEvents = settings.clanEvents;
+    }
+    if (settings.language !== undefined) {
+      // Преобразуем русский язык в код
+      user.languageCode = settings.language === 'Русский' ? 'ru' : settings.language;
+    }
+    
+    return this.usersRepository.save(user);
+  }
+
   private generateReferralCode(): string {
     return crypto.randomBytes(6).toString('hex').toUpperCase();
   }

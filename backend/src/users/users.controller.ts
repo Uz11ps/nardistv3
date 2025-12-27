@@ -35,6 +35,18 @@ export class UsersController {
     return this.usersService.completeOnboardingStep(user.id, body.stepId);
   }
 
+  @Get('settings')
+  @UseGuards(JwtAuthGuard)
+  async getSettings(@CurrentUser() user: any) {
+    return this.usersService.getSettings(user.id);
+  }
+
+  @Put('settings')
+  @UseGuards(JwtAuthGuard)
+  async updateSettings(@CurrentUser() user: any, @Body() settings: any) {
+    return this.usersService.updateSettings(user.id, settings);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getUser(@Param('id') id: string) {

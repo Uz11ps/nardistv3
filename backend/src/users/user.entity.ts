@@ -158,6 +158,22 @@ export class User {
   @Column({ nullable: true })
   autobuildPriorityBuilding: string; // Приоритетное строение (тип, если strategy = 'priority')
 
+  // Настройки пользователя
+  @Column({ default: true })
+  vibration: boolean; // Вибрация
+
+  @Column({ default: true })
+  sound: boolean; // Звук
+
+  @Column({ default: true })
+  matchNotifications: boolean; // Уведомления о матчах
+
+  @Column({ default: true })
+  economicEvents: boolean; // Экономические события
+
+  @Column({ default: true })
+  clanEvents: boolean; // События федерации
+
   @CreateDateColumn()
   createdAt: Date;
 
