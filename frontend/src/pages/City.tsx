@@ -65,7 +65,7 @@ export default function City() {
     try {
       setLoading(true)
       const [cityRes, spResponse] = await Promise.all([
-        apiClient.get('/city/districts'),
+        apiClient.get('/city/data'),
         apiClient.get('/progress/skill-points').catch(() => ({ data: { economy: 0 } }))
       ])
       
@@ -245,10 +245,10 @@ export default function City() {
                   key={district.id}
                   className={`city-tab ${selectedDistrictId === district.id ? 'active' : ''} ${!district.isUnlocked ? 'locked' : ''}`}
                   onClick={() => setSelectedDistrictId(district.id)}
-                  title={!district.isUnlocked ? `Откроется на ${district.requiredLevel} уровне` : ''}
+                  title={!district.isUnlocked && district.requiredLevel ? `Откроется на ${district.requiredLevel} уровне` : ''}
                 >
                   {district.name}
-                  {!district.isUnlocked && (
+                  {!district.isUnlocked && district.requiredLevel && (
                     <span className="city-tab-lock" title={`Откроется на ${district.requiredLevel} уровне`}>
                       🔒 {district.requiredLevel}
                     </span>
@@ -260,7 +260,7 @@ export default function City() {
             {/* Контент текущего района */}
             {currentDistrict && (
               <div className="city-district-view">
-                {!currentDistrict.isUnlocked && (
+                {!currentDistrict.isUnlocked && currentDistrict.requiredLevel && (
                   <div className="city-district-locked-banner">
                     <Icon name="lock" size={24} />
                     <span>Откроется на {currentDistrict.requiredLevel} уровне (Ваш уровень: {user?.level || 1})</span>
@@ -330,7 +330,7 @@ export default function City() {
                         </div>
 
                         <div className="city-card-actions-overlay" onClick={e => e.stopPropagation()}>
-                          {isDistrictLocked ? (
+                          {isDistrictLocked && currentDistrict.requiredLevel ? (
                             <div style={{
                               padding: '8px',
                               textAlign: 'center',
@@ -339,6 +339,16 @@ export default function City() {
                               fontWeight: '600'
                             }}>
                               Район заблокирован до {currentDistrict.requiredLevel} уровня
+                            </div>
+                          ) : isDistrictLocked ? (
+                            <div style={{
+                              padding: '8px',
+                              textAlign: 'center',
+                              color: '#ff6b6b',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}>
+                              Район заблокирован
                             </div>
                           ) : userBuilding ? (
                             <>
