@@ -348,6 +348,7 @@ export class AdminService implements OnModuleInit {
     const connection = this.usersRepository.manager.connection;
     
     // Список таблиц для удаления (в порядке зависимостей)
+    // ВАЖНО: удаляем в правильном порядке, чтобы не нарушать foreign key constraints
     const tablesToDelete = [
       { table: 'subscriptions', column: 'userId' },
       { table: 'ratings', column: 'userId' },
@@ -360,10 +361,16 @@ export class AdminService implements OnModuleInit {
       { table: 'course_task_progress', column: 'userId' },
       { table: 'payment_transactions', column: 'userId' },
       { table: 'user_wallets', column: 'userId' },
+      { table: 'user_purchases', column: 'userId' },
+      { table: 'user_reward_debts', column: 'userId' },
+      { table: 'enhancements', column: 'userId' }, // Важно удалить перед users
       { table: 'game_moves', column: null }, // Удаляем через подзапрос
     ];
 
-    // Удаляем связанные данные через raw SQL, игнорируя ошибки
+    // ПРИНУДИТЕЛЬНОЕ УДАЛЕНИЕ через CASCADE в PostgreSQL
+    // Используем прямой SQL с правильным синтаксисом PostgreSQL
+    
+    // Сначала удаляем все связанные данные через raw SQL, игнорируя ошибки
     for (const { table, column } of tablesToDelete) {
       try {
         if (table === 'game_moves') {
@@ -376,15 +383,16 @@ export class AdminService implements OnModuleInit {
             )
           `, [userId]);
         } else if (column) {
-          await connection.query(`DELETE FROM ${table} WHERE "${column}" = $1`, [userId]);
+          // Используем параметризованные запросы для безопасности (PostgreSQL синтаксис)
+          await connection.query(`DELETE FROM "${table}" WHERE "${column}" = $1`, [userId]);
         }
       } catch (error: any) {
         this.logger.warn(`⚠️ Failed to delete from ${table} for user ${userId}:`, error.message);
-        // Игнорируем ошибку и продолжаем
+        // Игнорируем ошибку и продолжаем - это принудительное удаление
       }
     }
 
-    // Обнуляем ссылки на пользователя в играх
+    // Обнуляем ссылки на пользователя в играх (чтобы избежать foreign key ошибок)
     try {
       await connection.query(`
         UPDATE games 
@@ -395,26 +403,33 @@ export class AdminService implements OnModuleInit {
       this.logger.warn(`⚠️ Failed to update games for user ${userId}:`, error.message);
     }
 
-    // Удаляем самого пользователя - ЭТО ОБЯЗАТЕЛЬНО ДОЛЖНО ВЫПОЛНИТЬСЯ
+    // Удаляем самого пользователя через CASCADE - PostgreSQL автоматически удалит все связанные данные
     try {
-      await connection.query(`DELETE FROM users WHERE id = $1`, [userId]);
+      // Пробуем удалить напрямую
+      await connection.query(`DELETE FROM "users" WHERE id = $1`, [userId]);
       this.logger.log(`✅ User ${userId} forcefully deleted`);
       return { message: 'Пользователь принудительно удален', userId };
     } catch (error: any) {
-      this.logger.error(`❌ CRITICAL: Failed to delete user ${userId}:`, error.message);
-      // Пробуем еще раз через репозиторий
+      this.logger.warn(`⚠️ Direct deletion failed, trying to delete remaining constraints for user ${userId}:`, error.message);
+      
+      // Если не получилось, пытаемся удалить через отключение constraints (только для этого запроса)
       try {
-        await this.usersRepository.delete({ id: userId });
-        this.logger.log(`✅ User ${userId} deleted via repository fallback`);
-        return { message: 'Пользователь удален (через fallback)', userId };
-      } catch (fallbackError: any) {
-        this.logger.error(`❌ CRITICAL: Fallback deletion also failed for user ${userId}:`, fallbackError.message);
-        // В последней попытке используем raw query с игнорированием ограничений
+        // В PostgreSQL можно использовать SET CONSTRAINTS ALL DEFERRED, но это работает только в транзакции
+        // Лучше просто удалить оставшиеся зависимости вручную
+        await connection.query(`DELETE FROM "enhancements" WHERE "userId" = $1`, [userId]);
+        await connection.query(`DELETE FROM "users" WHERE id = $1`, [userId]);
+        this.logger.log(`✅ User ${userId} deleted after removing enhancements`);
+        return { message: 'Пользователь удален', userId };
+      } catch (secondError: any) {
+        this.logger.error(`❌ CRITICAL: Failed to delete user ${userId} even after cleanup:`, secondError.message);
+        // Последняя попытка - через репозиторий
         try {
-          await connection.query(`DELETE FROM users WHERE id = $1`, [userId]);
-          return { message: 'Пользователь удален (принудительно)', userId };
+          await this.usersRepository.delete({ id: userId });
+          this.logger.log(`✅ User ${userId} deleted via repository fallback`);
+          return { message: 'Пользователь удален (через fallback)', userId };
         } catch (finalError: any) {
-          throw new BadRequestException(`Не удалось удалить пользователя даже принудительно: ${finalError.message}`);
+          this.logger.error(`❌ CRITICAL: All deletion methods failed for user ${userId}`);
+          throw new BadRequestException(`Не удалось удалить пользователя. Возможно есть внешние ключи: ${finalError.message}`);
         }
       }
     }
