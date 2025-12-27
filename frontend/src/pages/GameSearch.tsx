@@ -11,7 +11,6 @@ export default function GameSearch() {
   const { user } = useAuthStore()
   const [searching, setSearching] = useState(false)
   const [mode, setMode] = useState<'long' | 'short'>('long')
-  const [format, setFormat] = useState<'rating' | 'normal'>('rating')
   const [stake, setStake] = useState<0 | 100 | 500 | 1000>(0)
 
   useEffect(() => {
@@ -79,25 +78,6 @@ export default function GameSearch() {
                 onClick={() => setMode('short')}
               >
                 Короткие
-              </button>
-            </div>
-          </div>
-
-          {/* Формат */}
-          <div className="game-search-field">
-            <div className="game-search-label">Формат:</div>
-            <div className="toggle-group">
-              <button
-                className={`toggle-btn ${format === 'rating' ? 'active' : ''}`}
-                onClick={() => setFormat('rating')}
-              >
-                Рейтинг
-              </button>
-              <button
-                className={`toggle-btn ${format === 'normal' ? 'active' : ''}`}
-                onClick={() => setFormat('normal')}
-              >
-                Обычный
               </button>
             </div>
           </div>
