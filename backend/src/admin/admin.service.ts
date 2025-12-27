@@ -1035,6 +1035,7 @@ export class AdminService implements OnModuleInit {
       maxAccumulation: Number(c.maxAccumulation),
       maxLevel: c.maxLevel,
       upgradeMultiplier: c.upgradeMultiplier || 1.4,
+      incomeMultiplier: c.incomeMultiplier || 1.2,
       upgradeCosts: c.upgradeCosts,
       districtId: c.districtId,
     }));
@@ -1057,6 +1058,7 @@ export class AdminService implements OnModuleInit {
       maxAccumulation: Number(config.maxAccumulation),
       maxLevel: config.maxLevel,
       upgradeMultiplier: config.upgradeMultiplier || 1.4,
+      incomeMultiplier: config.incomeMultiplier || 1.2,
       upgradeCosts: config.upgradeCosts,
       districtId: config.districtId,
     };
@@ -1072,6 +1074,7 @@ export class AdminService implements OnModuleInit {
     maxAccumulation?: number;
     maxLevel?: number;
     upgradeMultiplier?: number;
+    incomeMultiplier?: number;
     upgradeCosts?: any;
     districtId?: string;
   }) {
@@ -1086,6 +1089,7 @@ export class AdminService implements OnModuleInit {
       maxLevel: data.maxLevel || 10,
       districtId: data.districtId || null,
       upgradeMultiplier: data.upgradeMultiplier || 1.4,
+      incomeMultiplier: data.incomeMultiplier || 1.2,
       upgradeCosts: data.upgradeCosts || null,
     });
 
@@ -1102,6 +1106,7 @@ export class AdminService implements OnModuleInit {
         maxAccumulation: Number(savedConfig.maxAccumulation),
         maxLevel: savedConfig.maxLevel,
         upgradeMultiplier: savedConfig.upgradeMultiplier || 1.4,
+        incomeMultiplier: savedConfig.incomeMultiplier || 1.2,
         upgradeCosts: savedConfig.upgradeCosts,
       };
   }
@@ -1116,6 +1121,7 @@ export class AdminService implements OnModuleInit {
     maxAccumulation: number;
     maxLevel: number;
     upgradeMultiplier: number;
+    incomeMultiplier: number;
     upgradeCosts: any;
     districtId: string;
   }>) {
@@ -1130,6 +1136,7 @@ export class AdminService implements OnModuleInit {
       baseIncomePerHour: data.baseIncomePerHour !== undefined ? data.baseIncomePerHour.toString() : config.baseIncomePerHour,
       maxAccumulation: data.maxAccumulation !== undefined ? data.maxAccumulation.toString() : config.maxAccumulation,
       upgradeMultiplier: data.upgradeMultiplier !== undefined ? data.upgradeMultiplier : (config.upgradeMultiplier || 1.4),
+      incomeMultiplier: data.incomeMultiplier !== undefined ? data.incomeMultiplier : (config.incomeMultiplier || 1.2),
     });
 
     const savedConfig = await this.buildingConfigsRepository.save(config);
@@ -1145,6 +1152,7 @@ export class AdminService implements OnModuleInit {
       maxAccumulation: Number(savedConfig.maxAccumulation),
       maxLevel: savedConfig.maxLevel,
       upgradeMultiplier: savedConfig.upgradeMultiplier || 1.4,
+      incomeMultiplier: savedConfig.incomeMultiplier || 1.2,
       upgradeCosts: savedConfig.upgradeCosts,
     };
   }

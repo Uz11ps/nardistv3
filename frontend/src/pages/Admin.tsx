@@ -93,6 +93,7 @@ export default function Admin() {
     maxAccumulation: 0,
     maxLevel: 10,
     upgradeMultiplier: 1.4,
+    incomeMultiplier: 1.2,
     districtId: '',
   })
   const [skins, setSkins] = useState<any[]>([])
@@ -638,6 +639,7 @@ export default function Admin() {
                     maxAccumulation: 0,
                     maxLevel: 10,
                     upgradeMultiplier: 1.4,
+                    incomeMultiplier: 1.2,
                     districtId: '',
                   })
       
@@ -4580,7 +4582,7 @@ export default function Admin() {
                     <div className="section-header">
                       <h5>Строения ({buildings.filter(b => b.districtId === district.id).length})</h5>
                       <button className="btn-add-mini" onClick={() => {
-                        setNewBuilding({ type: 'shop', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, districtId: district.id })
+                        setNewBuilding({ type: 'shop', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, incomeMultiplier: 1.2, districtId: district.id })
                         setShowCreateBuildingModal(true)
                       }}>+</button>
                     </div>
@@ -4676,13 +4678,13 @@ export default function Admin() {
               <div className="admin-modal-overlay" onClick={() => { 
                 setShowCreateBuildingModal(false); 
                 setSelectedBuilding(null);
-                setNewBuilding({ type: '', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, districtId: '' });
+                setNewBuilding({ type: '', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, incomeMultiplier: 1.2, districtId: '' });
               }}>
                 <div className="admin-modal-content-v2" onClick={e => e.stopPropagation()}>
                   <div className="modal-header-v2"><h4>{selectedBuilding ? 'Редактировать строение' : 'Новое строение'}</h4><button className="close-btn" onClick={() => { 
                     setShowCreateBuildingModal(false); 
                     setSelectedBuilding(null);
-                    setNewBuilding({ type: '', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, districtId: '' });
+                    setNewBuilding({ type: '', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, incomeMultiplier: 1.2, districtId: '' });
                   }}>×</button></div>
                   <div className="modal-body-v2">
                     {(() => {
@@ -4748,6 +4750,15 @@ export default function Admin() {
                             />
                           </div>
                           <div className="form-group">
+                            <label>Множитель дохода за уровень</label>
+                            <input 
+                              type="number" 
+                              step="0.1"
+                              value={b.incomeMultiplier || 1.2} 
+                              onChange={e => setB({...b, incomeMultiplier: parseFloat(e.target.value) || 1.2})} 
+                            />
+                          </div>
+                          <div className="form-group">
                             <label>Район (ID)</label>
                             <select
                               value={b.districtId || ''}
@@ -4788,7 +4799,7 @@ export default function Admin() {
                         else await apiClient.post('/admin/buildings', b)
                         setShowCreateBuildingModal(false); 
                         setSelectedBuilding(null);
-                        setNewBuilding({ type: '', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, districtId: '' });
+                        setNewBuilding({ type: '', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, incomeMultiplier: 1.2, districtId: '' });
                         loadBuildings()
                       } catch (e: any) { alert(e.message) }
                     }}>Готово</button>
@@ -6987,6 +6998,15 @@ export default function Admin() {
                     step="0.1"
                     value={selectedBuilding.upgradeMultiplier || 1.4}
                     onChange={(e) => setSelectedBuilding({ ...selectedBuilding, upgradeMultiplier: parseFloat(e.target.value) || 1.4 })}
+                  />
+                </div>
+                <div>
+                  <label>Множитель дохода за уровень</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={selectedBuilding.incomeMultiplier || 1.2}
+                    onChange={(e) => setSelectedBuilding({ ...selectedBuilding, incomeMultiplier: parseFloat(e.target.value) || 1.2 })}
                   />
                 </div>
                 <div>

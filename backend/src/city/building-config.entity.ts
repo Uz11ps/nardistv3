@@ -38,6 +38,9 @@ export class BuildingConfig {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 1.4 })
   upgradeMultiplier: number; // Множитель для расчета стоимости улучшения (basePrice * multiplier^level)
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 1.2 })
+  incomeMultiplier: number; // Множитель для расчета дохода за уровень (baseIncomePerHour * multiplier^level)
+
   @Column({ type: 'jsonb', nullable: true })
   upgradeCosts: any; // Стоимость улучшения по уровням (опционально, если не используется формула)
 

@@ -180,9 +180,9 @@ export class CityService {
     const newBalance = Number(user.narCoin) - price;
     await this.usersService.update(userId, { narCoin: newBalance });
 
-    // Рассчитываем доход для уровня 1: baseIncomePerHour * 1.2^level (где level = 1)
-    // Для уровня 1: baseIncomePerHour * 1.2^1 = baseIncomePerHour * 1.2
-    const incomePerHour = Math.floor(Number(config.baseIncomePerHour) * Math.pow(1.2, 1));
+    // Рассчитываем доход для уровня 1: baseIncomePerHour * incomeMultiplier^level (где level = 1)
+    const incomeMultiplier = config.incomeMultiplier || 1.2;
+    const incomePerHour = Math.floor(Number(config.baseIncomePerHour) * Math.pow(incomeMultiplier, 1));
 
     // Создаем строение
     const building = this.buildingsRepository.create({
@@ -245,8 +245,9 @@ export class CityService {
     // Увеличиваем уровень
     building.level += 1;
 
-    // Рассчитываем новый доход: baseIncomePerHour * 1.2^level
-    const newIncomePerHour = Math.floor(Number(config.baseIncomePerHour) * Math.pow(1.2, building.level));
+    // Рассчитываем новый доход: baseIncomePerHour * incomeMultiplier^level
+    const incomeMultiplier = config.incomeMultiplier || 1.2;
+    const newIncomePerHour = Math.floor(Number(config.baseIncomePerHour) * Math.pow(incomeMultiplier, building.level));
     building.incomePerHour = newIncomePerHour.toString();
 
     await this.buildingsRepository.save(building);
