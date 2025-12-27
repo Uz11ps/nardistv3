@@ -82,12 +82,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
   private async sendTimerUpdateForGame(gameId: string): Promise<void> {
     try {
       const game = await this.gamesService.findOne(gameId);
-      if (!game || game.status !== 'in_progress' || !game.lastMoveAt) {
+      if (!game || game.status !== 'in_progress') {
         return;
       }
 
       const now = new Date();
-      const timeSinceLastMove = (now.getTime() - game.lastMoveAt.getTime()) / 1000; // в секундах
+      // Используем lastMoveAt, если он установлен, иначе используем createdAt для первых ходов
+      const referenceTime = game.lastMoveAt || game.createdAt || now;
+      const timeSinceLastMove = (now.getTime() - referenceTime.getTime()) / 1000; // в секундах
       const baseMoveTime = 20; // 20 секунд на ход
       
       // Получаем общее время текущего игрока
@@ -136,14 +138,16 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       const now = new Date();
 
       for (const game of activeGames) {
-        if (!game.lastMoveAt || !game.id) {
+        if (!game.id) {
           continue;
         }
 
         try {
-          // Убеждаемся, что lastMoveAt это Date объект
-          const lastMoveAt = game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt);
-          const timeSinceLastMove = (now.getTime() - lastMoveAt.getTime()) / 1000; // в секундах
+          // Используем lastMoveAt, если он установлен, иначе используем createdAt для первых ходов
+          const referenceTime = game.lastMoveAt 
+            ? (game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt))
+            : (game.createdAt || now);
+          const timeSinceLastMove = (now.getTime() - referenceTime.getTime()) / 1000; // в секундах
           const baseMoveTime = 20; // 20 секунд на ход
           
           // Получаем общее время текущего игрока

@@ -208,6 +208,7 @@ export class GamesService {
       moveTimeLimit: moveTimeLimit,
       player1TimeRemaining: 60000, // 60 секунд общего времени
       player2TimeRemaining: 60000, // 60 секунд общего времени
+      lastMoveAt: player2Id ? new Date() : undefined, // Устанавливаем lastMoveAt если игра сразу начинается
       skinData,
     });
 
@@ -727,6 +728,10 @@ export class GamesService {
     // Если это первый ход (игра в статусе WAITING), переводим в IN_PROGRESS
     if (updatedGame.status === GameStatus.WAITING) {
       updatedGame.status = GameStatus.IN_PROGRESS;
+      // Устанавливаем lastMoveAt при первом переходе в IN_PROGRESS для работы таймера
+      if (!updatedGame.lastMoveAt) {
+        updatedGame.lastMoveAt = now;
+      }
     }
 
     if (engine.isGameFinished(currentState)) {
@@ -1310,38 +1315,44 @@ export class GamesService {
         // Проверяем "Марс" (разгромная победа - противник не вывел ни одной шашки)
         const isMarsWin = this.isMarsWin(game);
         
-        // Рассчитываем XP для игрока (победитель или проигравший)
-        const playerXP = this.xpCalculator.calculateXP({
-          mode: game.mode,
-          gameType: GameType.VS_BOT,
-          playerWon: isWinner,
-          playerRating: playerRating,
-          opponentRating: botRating,
-          repeatMatchesCount: 1, // Игры с ботом не учитываются для анти-фарма
-          itemsXPBonus: playerItemsXPBonus,
-          isMarsWin: isMarsWin,
-          trustLevel: 'high',
-          stake: 0, // Игры с ботом без ставок
-        });
-        
-        // Начисляем XP
-        const playerResult = await this.progressService.addXP(playerId, playerXP);
-        
-        // Сохраняем начисленный XP в игру
-        game.player1XP = playerXP;
+        // Начисляем XP только за победу в играх с ботом
+        let playerResult = { levelUp: false };
+        if (isWinner) {
+          // Рассчитываем XP для игрока (только при победе)
+          const playerXP = this.xpCalculator.calculateXP({
+            mode: game.mode,
+            gameType: GameType.VS_BOT,
+            playerWon: true,
+            playerRating: playerRating,
+            opponentRating: botRating,
+            repeatMatchesCount: 1, // Игры с ботом не учитываются для анти-фарма
+            itemsXPBonus: playerItemsXPBonus,
+            isMarsWin: isMarsWin,
+            trustLevel: 'high',
+            stake: 0, // Игры с ботом без ставок
+          });
+          
+          // Начисляем XP только за победу
+          playerResult = await this.progressService.addXP(playerId, playerXP);
+          game.player1XP = playerXP;
+          
+          this.logger.log(`⭐ XP начислен игроку ${playerId} за победу в игре с ботом: +${playerXP} XP (Марс: ${isMarsWin})`);
+          
+          // Если уровень повысился, логируем
+          if (playerResult.levelUp) {
+            this.logger.log(`🎉 Игрок ${playerId} повысил уровень до ${playerResult.newLevel} в игре с ботом!`);
+          }
+        } else {
+          // При поражении опыт не начисляется
+          game.player1XP = 0;
+          this.logger.log(`⭐ Игрок ${playerId} проиграл игре с ботом - опыт не начисляется`);
+        }
         
         // Тратим энергию при завершении матча (бот-игры не тратят энергию согласно спецификации)
         // Пропускаем трату энергии для игр с ботом
         
         // Не тратим жизни при поражении от бота
         // Обновление истории матчей для анти-фарма не требуется для игр с ботом
-        
-        this.logger.log(`⭐ XP начислен игроку ${playerId} в игре с ботом: ${isWinner ? 'победа' : 'поражение'} +${playerXP} XP (Марс: ${isMarsWin})`);
-        
-        // Если уровень повысился, логируем
-        if (playerResult.levelUp) {
-          this.logger.log(`🎉 Игрок ${playerId} повысил уровень до ${playerResult.newLevel} в игре с ботом!`);
-        }
         
         // Обновляем прогресс заданий обучения
         try {

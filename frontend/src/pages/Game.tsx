@@ -219,28 +219,34 @@ export default function Game() {
       if (gameState?.currentPlayer === 0) {
         // Ход игрока 1
         if (player1TimerRef.current > 0) {
-          const newValue = Math.max(0, player1TimerRef.current - deltaSeconds)
+          const oldValue = player1TimerRef.current
+          const newValue = Math.max(0, oldValue - deltaSeconds)
           setPlayer1Timer(newValue)
-          if (newValue === 0 && player1TimerRef.current > 0) {
+          player1TimerRef.current = newValue // Обновляем ref для следующей итерации
+          if (newValue === 0 && oldValue > 0) {
             setIsInOvertime(true)
           }
         } else {
           // Овертайм - уменьшаем общее время
           const newTotal = Math.max(0, totalTimeRemainingRef.current.player1 - deltaSeconds)
           setTotalTimeRemaining(prev => ({ ...prev, player1: newTotal }))
+          totalTimeRemainingRef.current.player1 = newTotal // Обновляем ref
         }
       } else if (gameState?.currentPlayer === 1) {
         // Ход игрока 2
         if (player2TimerRef.current > 0) {
-          const newValue = Math.max(0, player2TimerRef.current - deltaSeconds)
+          const oldValue = player2TimerRef.current
+          const newValue = Math.max(0, oldValue - deltaSeconds)
           setPlayer2Timer(newValue)
-          if (newValue === 0 && player2TimerRef.current > 0) {
+          player2TimerRef.current = newValue // Обновляем ref для следующей итерации
+          if (newValue === 0 && oldValue > 0) {
             setIsInOvertime(true)
           }
         } else {
           // Овертайм - уменьшаем общее время
           const newTotal = Math.max(0, totalTimeRemainingRef.current.player2 - deltaSeconds)
           setTotalTimeRemaining(prev => ({ ...prev, player2: newTotal }))
+          totalTimeRemainingRef.current.player2 = newTotal // Обновляем ref
         }
       }
     }, 100) // Обновляем каждые 100мс для плавности
