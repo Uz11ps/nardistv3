@@ -49,11 +49,6 @@
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.toggle-btn:hover {
-  background: var(--color-secondary-hover);
-  color: var(--color-text-primary);
-}
-
 .toggle-btn.active {
   background: #3a3a3a;
   color: #FFF;
@@ -61,53 +56,112 @@
   border-width: 2px;
 }
 
-.stake-buttons {
+.stake-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin: 20px 0;
 }
 
-.stake-btn {
-  padding: 12px;
-  background: #3a3a3a;
-  color: #FFF;
-  border: 1px solid #4a4a4a;
-  border-radius: 8px;
-  font-size: 14px;
+.stake-chip-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 500;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  transition: transform 0.2s;
 }
 
-.stake-btn:hover {
-  background: var(--color-secondary-hover);
-  color: var(--color-text-primary);
+.stake-chip-container:hover {
+  transform: scale(1.05);
 }
 
-.stake-btn.active {
-  background: #3a3a3a;
-  color: #FFF;
-  border-color: #FFF;
-  border-width: 2px;
+.stake-chip-container.selected .stake-chip {
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.8), inset 0 0 10px rgba(255, 215, 0, 0.5);
+  border: 2px solid #ffd700;
 }
 
-.stake-prize-info {
-  margin-top: 12px;
-  padding: 10px;
-  background: rgba(255, 215, 0, 0.1);
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  color: var(--color-text-primary);
+.stake-chip {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 16px;
+  border: 3px dashed rgba(255, 255, 255, 0.3);
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.stake-chip.red {
+  background: radial-gradient(circle, #d32f2f 0%, #b71c1c 100%);
+  color: white;
+}
+
+.stake-chip.free {
+  background: radial-gradient(circle, #455a64 0%, #263238 100%);
+  color: #90a4ae;
+}
+
+.stake-chip-inner {
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.game-rules-card {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 15px;
+  margin-top: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rules-header {
   text-align: center;
+  color: #ffd700;
+  font-weight: bold;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+
+.rules-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 14px;
+}
+
+.rules-row:last-of-type {
+  border-bottom: none;
+}
+
+.rules-row span:last-child {
+  color: #ffd700;
   font-weight: 500;
 }
 
-.stake-commission {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  font-weight: 400;
+.rules-official {
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.rules-official input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .game-search-start-btn {
@@ -159,44 +213,6 @@
 
 .searching-text {
   font-size: 14px;
-  color: var(--color-text-secondary);
-  margin-bottom: 16px;
-  animation: fadeInOut 2s infinite;
-}
-
-.searching-container {
-  text-align: center;
-  padding: 40px 20px;
-}
-
-.searching-animation {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.search-dot {
-  width: 12px;
-  height: 12px;
-  background: #ff3333;
-  border-radius: 50%;
-  animation: searchPulse 1.4s infinite;
-}
-
-@keyframes searchPulse {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.2);
-  }
-}
-
-.searching-text {
-  font-size: 14px;
   color: #FFF;
   margin-bottom: 16px;
   text-align: center;
@@ -213,3 +229,20 @@
   }
 }
 
+.stake-prize-info {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  color: white;
+  text-align: center;
+  font-weight: 500;
+}
+
+.stake-commission {
+  font-size: 11px;
+  color: #aaa;
+  font-weight: 400;
+}

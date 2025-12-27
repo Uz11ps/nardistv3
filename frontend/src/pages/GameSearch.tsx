@@ -11,7 +11,8 @@ export default function GameSearch() {
   const { user } = useAuthStore()
   const [searching, setSearching] = useState(false)
   const [mode, setMode] = useState<'long' | 'short'>('long')
-  const [stake, setStake] = useState<0 | 100 | 500 | 1000>(0)
+  const [stake, setStake] = useState<number>(0)
+  const stakeOptions = [0, 50, 100, 250, 500, 750, 1000, 1500, 3000, 5000]
 
   useEffect(() => {
     const socket = getMatchmakingSocket()
@@ -84,22 +85,51 @@ export default function GameSearch() {
 
           {/* Ставка */}
           <div className="game-search-field">
-            <div className="game-search-label">Ставка:</div>
-            <div className="stake-buttons">
-              {[0, 100, 500, 1000].map((value) => (
-                <button
+            <div className="game-search-label">Выберите ставку для игры:</div>
+            <div className="stake-grid">
+              {stakeOptions.map((value) => (
+                <div
                   key={value}
-                  className={`stake-btn ${stake === value ? 'active' : ''}`}
-                  onClick={() => setStake(value as typeof stake)}
+                  className={`stake-chip-container ${stake === value ? 'selected' : ''}`}
+                  onClick={() => setStake(value)}
                 >
-                  {value}
-                </button>
+                  <div className={`stake-chip ${value > 0 ? 'red' : 'free'}`}>
+                    <div className="stake-chip-inner">
+                      {value === 0 ? 'FREE' : value}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
+            
+            <div className="game-rules-card">
+              <div className="rules-header">Правила игры</div>
+              <div className="rules-row">
+                <span>Время на игру</span>
+                <span>60 сек</span>
+              </div>
+              <div className="rules-row">
+                <span>Время на ход</span>
+                <span>20 сек</span>
+              </div>
+              <div className="rules-row">
+                <span>Матч до</span>
+                <span>1</span>
+              </div>
+              <div className="rules-row">
+                <span>Куб удвоения</span>
+                <span>Да</span>
+              </div>
+              <div className="rules-official">
+                 <input type="checkbox" checked readOnly />
+                 <span>Официальные правила игры</span>
+              </div>
+            </div>
+
             {stake > 0 && (
               <div className="stake-prize-info">
-                Приз за победу: {stake * 2 - 15} NAR
-                <span className="stake-commission"> (комиссия 15 NAR)</span>
+                Приз за победу: {stake * 2 - Math.floor(stake * 2 * 0.1)} NAR
+                <span className="stake-commission"> (комиссия системы)</span>
               </div>
             )}
           </div>

@@ -416,13 +416,16 @@ export class SkinsService implements OnModuleInit {
     }
 
     const skin = userSkin.skin;
+    const progressionConfig = this.progressService.getProgressionConfig();
+    const equipmentConfig = progressionConfig?.equipment;
+
     const durabilityMax = skin.durability_max || skin.maxDurability || 100;
     const durabilityCurrent = userSkin.durability_current ?? userSkin.currentDurability ?? durabilityMax;
 
     // Используем новую систему износа или старую для совместимости
     const wearMode = skin.wear_mode || 'PER_MATCH';
-    const wearAmount = skin.wear_amount || 1;
-    const tournamentWearMult = skin.tournament_wear_mult || 2.0;
+    const wearAmount = skin.wear_amount ?? (equipmentConfig?.wear?.perMatchDefault || 1);
+    const tournamentWearMult = skin.tournament_wear_mult ?? (equipmentConfig?.wear?.tournamentMult || 2.0);
 
     if (durabilityCurrent > 0) {
       // Применяем износ по новой системе
@@ -496,12 +499,15 @@ export class SkinsService implements OnModuleInit {
       // Применяем износ только к указанному кубику с PER_ROLL режимом
       if (equipmentSlot !== dieSlot) continue;
 
+      const progressionConfig = this.progressService.getProgressionConfig();
+      const equipmentConfig = progressionConfig?.equipment;
+
       const wearMode = skin.wear_mode || 'PER_ROLL';
       if (wearMode !== 'PER_ROLL') continue;
 
       const durabilityMax = skin.durability_max || getDurabilityMax(skin.rarity || 'COMMON', 'PER_ROLL');
       const durabilityCurrent = userSkin.durability_current ?? userSkin.currentDurability ?? durabilityMax;
-      const wearAmount = skin.wear_amount || 1;
+      const wearAmount = skin.wear_amount ?? (equipmentConfig?.wear?.perRollDefault || 1);
 
       if (durabilityCurrent > 0) {
         const newDurability = applyWear(durabilityCurrent, durabilityMax, wearAmount, false, 1.0);

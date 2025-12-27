@@ -16,6 +16,27 @@ export class ProgressService {
   private readonly logger = new Logger(ProgressService.name);
   private readonly MAX_LEVEL = 50;
   
+  constructor(
+    private usersService: UsersService,
+    private xpCalculator: XpCalculatorService,
+    private branchesService: ProgressionBranchesService,
+    @InjectRepository(Enhancement)
+    private enhancementRepository: Repository<Enhancement>,
+    @InjectRepository(UserPurchase)
+    private userPurchaseRepository: Repository<UserPurchase>,
+    @InjectRepository(CityTreasury)
+    private cityTreasuryRepository: Repository<CityTreasury>,
+    @InjectRepository(UserRewardDebt)
+    private userRewardDebtRepository: Repository<UserRewardDebt>,
+  ) {}
+
+  /**
+   * Возвращает текущую конфигурацию прогрессии
+   */
+  getProgressionConfig() {
+    return this.branchesService.getConfig();
+  }
+
   // Используем новый калькулятор XP
   private getLevelFromTotalXP(totalXP: number): number {
     return this.xpCalculator.getLevelFromTotalXP(totalXP);
@@ -70,6 +91,13 @@ export class ProgressService {
     private xpCalculator: XpCalculatorService,
     private branchesService: ProgressionBranchesService,
   ) {}
+
+  /**
+   * Возвращает текущую конфигурацию прогрессии
+   */
+  getProgressionConfig() {
+    return this.branchesService.getConfig();
+  }
 
   async addXP(userId: string, amount: number): Promise<{ levelUp: boolean; newLevel?: number; previousLevel?: number; skillPointsGained?: number }> {
     const user = await this.usersService.findOne(userId);

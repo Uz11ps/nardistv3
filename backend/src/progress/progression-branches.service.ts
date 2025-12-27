@@ -98,6 +98,25 @@ export class ProgressionBranchesService implements OnModuleInit {
         maxMatchXpMult: 2.50,
       },
       thresholds: {} as Record<number, number>,
+      mars: {
+        cooldownHours: 4,
+        mult: 2.0,
+      },
+    },
+    equipment: {
+      wear: {
+        tournamentMult: 2.0,
+        perMatchDefault: 1,
+        perRollDefault: 1,
+      },
+      repair: {
+        levelMultPerLevel: 0.01,
+        zoneMult: {
+          A: 1.0,
+          B: 1.3,
+          C: 1.8,
+        },
+      },
     },
   };
 

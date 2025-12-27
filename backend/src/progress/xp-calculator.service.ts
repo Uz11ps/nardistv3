@@ -49,6 +49,17 @@ export class XpCalculatorService implements OnModuleInit {
         41: 8789105, 42: 9331625, 43: 10064568, 44: 11087641, 45: 12541240,
         46: 14633038, 47: 17681154, 48: 22186326, 49: 28955279, 50: 39315825,
       } as Record<number, number>,
+      opponentMult: {
+        denominator: 2000,
+        min: 0.85,
+        max: 1.20,
+      },
+      cleanPlayMultipliers: {
+        high: 1.0,
+        medium: 0.7,
+        low: 0.5,
+        banned: 0.0,
+      },
     },
   };
 
@@ -165,11 +176,12 @@ export class XpCalculatorService implements OnModuleInit {
 
   /**
    * OpponentMult - множитель силы соперника
-   * OpponentMult = clamp( 1 + (OppRating - YourRating)/2000 , 0.85 , 1.20 )
+   * OpponentMult = clamp( 1 + (OppRating - YourRating)/denominator , min , max )
    */
   getOpponentMultiplier(playerRating: number, opponentRating: number): number {
-    const diff = (opponentRating - playerRating) / 2000;
-    return Math.max(0.85, Math.min(1.20, 1 + diff));
+    const { denominator, min, max } = this.config.xp.opponentMult;
+    const diff = (opponentRating - playerRating) / denominator;
+    return Math.max(min, Math.min(max, 1 + diff));
   }
 
   /**
@@ -193,7 +205,7 @@ export class XpCalculatorService implements OnModuleInit {
    */
   getGearXPMult(itemsXPBonus: number[]): number {
     const totalBonus = itemsXPBonus.reduce((sum, bonus) => sum + bonus, 0);
-    return Math.min(1 + totalBonus, 1.50);
+    return Math.min(1 + totalBonus, this.config.xp.caps.maxMatchXpMult); // Use maxMatchXpMult as a cap if needed, or stick to 1.50
   }
 
   /**
@@ -208,13 +220,8 @@ export class XpCalculatorService implements OnModuleInit {
    * CleanPlayMult - античит/доверие
    */
   getCleanPlayMultiplier(trustLevel: 'high' | 'medium' | 'low' | 'banned'): number {
-    const multipliers = {
-      high: 1.0,
-      medium: 0.7,
-      low: 0.5,
-      banned: 0.0,
-    };
-    return multipliers[trustLevel] || 1.0;
+    const { cleanPlayMultipliers } = this.config.xp;
+    return cleanPlayMultipliers[trustLevel] || 1.0;
   }
 
   /**

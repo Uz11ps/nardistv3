@@ -7,8 +7,9 @@ import './CreateTable.css'
 
 export default function CreateTable() {
   const navigate = useNavigate()
-  const [stake, setStake] = useState<100 | 500 | 1000 | 5000>(100)
+  const [stake, setStake] = useState<number>(50)
   const [mode, setMode] = useState<'long' | 'short'>('short')
+  const stakeOptions = [50, 100, 250, 500, 750, 1000, 1500, 3000, 5000]
   const [access, setAccess] = useState<'open' | 'private'>('open')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -90,22 +91,43 @@ export default function CreateTable() {
         <div className="create-table-card">
           {/* Ставка */}
           <div className="create-table-field">
-            <div className="create-table-label">Ставка:</div>
-            <div className="stake-buttons">
-              {[100, 500, 1000, 5000].map((value) => (
-                <button
+            <div className="create-table-label">Выберите ставку для игры:</div>
+            <div className="stake-grid">
+              {stakeOptions.map((value) => (
+                <div
                   key={value}
-                  className={`stake-btn ${stake === value ? 'active' : ''}`}
-                  onClick={() => setStake(value as typeof stake)}
+                  className={`stake-chip-container ${stake === value ? 'selected' : ''}`}
+                  onClick={() => setStake(value)}
                 >
-                  {value}
-                </button>
+                  <div className="stake-chip red">
+                    <div className="stake-chip-inner">
+                      {value}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
+
+            <div className="game-rules-card">
+              <div className="rules-header">Правила стола</div>
+              <div className="rules-row">
+                <span>Время на игру</span>
+                <span>60 сек</span>
+              </div>
+              <div className="rules-row">
+                <span>Время на ход</span>
+                <span>20 сек</span>
+              </div>
+              <div className="rules-row">
+                <span>Матч до</span>
+                <span>1</span>
+              </div>
+            </div>
+
             {stake > 0 && (
               <div className="stake-prize-info">
-                Приз за победу: {stake * 2 - 15} NAR
-                <span className="stake-commission"> (комиссия 15 NAR)</span>
+                Приз за победу: {stake * 2 - Math.floor(stake * 2 * 0.1)} NAR
+                <span className="stake-commission"> (комиссия системы)</span>
               </div>
             )}
           </div>

@@ -49,7 +49,7 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments' | 'equipment-config'>('stats')
   const [onboardingTasks, setOnboardingTasks] = useState<any[]>([])
   const [onboardingStats, setOnboardingStats] = useState<any>(null)
   const [selectedSkinType, setSelectedSkinType] = useState<string>('')
@@ -856,6 +856,24 @@ export default function Admin() {
           }}
         >
           Платежи
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'progression' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('progression')
+            loadProgressionConfig()
+          }}
+        >
+          Прогрессия
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'equipment-config' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('equipment-config')
+            loadProgressionConfig()
+          }}
+        >
+          Экипировка (v2.0)
         </button>
         <button
           className={`admin-tab-btn ${activeTab === 'prices' ? 'active' : ''}`}
@@ -3097,6 +3115,95 @@ export default function Admin() {
                 </div>
                 <div className="form-row-v2">
                   <div className="form-group">
+                    <label>Слот экипировки:</label>
+                    <select id="edit-skin-slot" defaultValue={selectedSkin.slot || 'BOARD'}>
+                      <option value="BOARD">Доска (BOARD)</option>
+                      <option value="DIE_1">Кубик 1 (DIE_1)</option>
+                      <option value="DIE_2">Кубик 2 (DIE_2)</option>
+                      <option value="CHECKERS">Шашки (CHECKERS)</option>
+                      <option value="AVATAR_FRAME">Рамка аватара (AVATAR_FRAME)</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Режим износа:</label>
+                    <select id="edit-skin-wear-mode" defaultValue={selectedSkin.wear_mode || 'PER_MATCH'}>
+                      <option value="PER_MATCH">За матч (PER_MATCH)</option>
+                      <option value="PER_ROLL">За бросок (PER_ROLL)</option>
+                      <option value="NONE">Нет износа (NONE)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row-v2">
+                  <div className="form-group">
+                    <label>Износ за ед. (wear_amount):</label>
+                    <input 
+                      type="number" 
+                      id="edit-skin-wear-amount" 
+                      step="0.01"
+                      defaultValue={selectedSkin.wear_amount || 1}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Множитель в турнирах:</label>
+                    <input 
+                      type="number" 
+                      id="edit-skin-tournament-wear-mult" 
+                      step="0.1"
+                      defaultValue={selectedSkin.tournament_wear_mult || 2.0}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row-v2">
+                  <div className="form-group">
+                    <label>Валюта ремонта:</label>
+                    <select id="edit-skin-repair-currency" defaultValue={selectedSkin.repair_currency || 'NAR'}>
+                      <option value="NAR">NAR</option>
+                      <option value="TON">TON</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Базовая цена ремонта:</label>
+                    <input 
+                      type="number" 
+                      id="edit-skin-repair-base-cost" 
+                      defaultValue={selectedSkin.repair_base_cost || 100}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row-v2">
+                  <div className="form-group">
+                    <label>Требуемый уровень:</label>
+                    <input 
+                      type="number" 
+                      id="edit-skin-required-level" 
+                      defaultValue={selectedSkin.required_level || 1}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Требуемая Сила (power_sp):</label>
+                    <input 
+                      type="number" 
+                      id="edit-skin-required-power-sp" 
+                      defaultValue={selectedSkin.required_power_sp || 0}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Бонусы (JSON):</label>
+                  <textarea 
+                    id="edit-skin-bonuses" 
+                    rows={4}
+                    defaultValue={JSON.stringify(selectedSkin.bonuses || { xpMult: 0, moneyMult: 0, commissionReduction: 0 }, null, 2)}
+                  ></textarea>
+                  <span className="field-hint">Пример: {"{ \"xpMult\": 0.05, \"commissionReduction\": 0.01 }"}</span>
+                </div>
+
+                <div className="form-row-v2">
+                  <div className="form-group">
                     <label>Макс. прочность:</label>
                     <input 
                       type="number" 
@@ -3106,7 +3213,7 @@ export default function Admin() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Бонус XP (%):</label>
+                    <label>Бонус XP (%): [Legacy]</label>
                     <input 
                       type="number" 
                       id="edit-skin-xp-bonus" 
@@ -3115,7 +3222,7 @@ export default function Admin() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Бонус денег (%):</label>
+                    <label>Бонус денег (%): [Legacy]</label>
                     <input 
                       type="number" 
                       id="edit-skin-money-bonus" 
@@ -3260,6 +3367,23 @@ export default function Admin() {
                         rarity: (document.getElementById('edit-skin-rarity') as HTMLSelectElement).value,
                         isPremium: (document.getElementById('edit-skin-premium') as HTMLInputElement).checked,
                         isDefault: (document.getElementById('edit-skin-default') as HTMLInputElement).checked,
+                        
+                        // New fields v2.0
+                        slot: (document.getElementById('edit-skin-slot') as HTMLSelectElement).value,
+                        wear_mode: (document.getElementById('edit-skin-wear-mode') as HTMLSelectElement).value,
+                        wear_amount: parseFloat((document.getElementById('edit-skin-wear-amount') as HTMLInputElement).value) || 1,
+                        tournament_wear_mult: parseFloat((document.getElementById('edit-skin-tournament-wear-mult') as HTMLInputElement).value) || 2.0,
+                        repair_currency: (document.getElementById('edit-skin-repair-currency') as HTMLSelectElement).value,
+                        repair_base_cost: parseInt((document.getElementById('edit-skin-repair-base-cost') as HTMLInputElement).value) || 100,
+                        required_level: parseInt((document.getElementById('edit-skin-required-level') as HTMLInputElement).value) || 1,
+                        required_power_sp: parseInt((document.getElementById('edit-skin-required-power-sp') as HTMLInputElement).value) || 0,
+                      }
+
+                      try {
+                        updateData.bonuses = JSON.parse((document.getElementById('edit-skin-bonuses') as HTMLTextAreaElement).value)
+                      } catch (e) {
+                        alert('Ошибка в формате JSON бонусов!')
+                        return
                       }
                       
                       // Добавляем конфиги в зависимости от типа
@@ -3333,15 +3457,104 @@ export default function Admin() {
               </div>
               <div className="form-row-v2">
                 <div className="form-group">
+                  <label>Слот экипировки:</label>
+                  <select id="skin-slot" defaultValue="BOARD">
+                    <option value="BOARD">Доска (BOARD)</option>
+                    <option value="DIE_1">Кубик 1 (DIE_1)</option>
+                    <option value="DIE_2">Кубик 2 (DIE_2)</option>
+                    <option value="CHECKERS">Шашки (CHECKERS)</option>
+                    <option value="AVATAR_FRAME">Рамка аватара (AVATAR_FRAME)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Режим износа:</label>
+                  <select id="skin-wear-mode" defaultValue="PER_MATCH">
+                    <option value="PER_MATCH">За матч (PER_MATCH)</option>
+                    <option value="PER_ROLL">За бросок (PER_ROLL)</option>
+                    <option value="NONE">Нет износа (NONE)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row-v2">
+                <div className="form-group">
+                  <label>Износ за ед. (wear_amount):</label>
+                  <input 
+                    type="number" 
+                    id="skin-wear-amount" 
+                    step="0.01"
+                    defaultValue="1"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Множитель в турнирах:</label>
+                  <input 
+                    type="number" 
+                    id="skin-tournament-wear-mult" 
+                    step="0.1"
+                    defaultValue="2.0"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row-v2">
+                <div className="form-group">
+                  <label>Валюта ремонта:</label>
+                  <select id="skin-repair-currency" defaultValue="NAR">
+                    <option value="NAR">NAR</option>
+                    <option value="TON">TON</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Базовая цена ремонта:</label>
+                  <input 
+                    type="number" 
+                    id="skin-repair-base-cost" 
+                    defaultValue="100"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row-v2">
+                <div className="form-group">
+                  <label>Требуемый уровень:</label>
+                  <input 
+                    type="number" 
+                    id="skin-required-level" 
+                    defaultValue="1"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Требуемая Сила (power_sp):</label>
+                  <input 
+                    type="number" 
+                    id="skin-required-power-sp" 
+                    defaultValue="0"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Бонусы (JSON):</label>
+                <textarea 
+                  id="skin-bonuses" 
+                  rows={4}
+                  defaultValue={JSON.stringify({ xpMult: 0, moneyMult: 0, commissionReduction: 0 }, null, 2)}
+                ></textarea>
+                <span className="field-hint">Пример: {"{ \"xpMult\": 0.05, \"commissionReduction\": 0.01 }"}</span>
+              </div>
+
+              <div className="form-row-v2">
+                <div className="form-group">
                   <label>Макс. прочность:</label>
                   <input type="number" id="skin-max-durability" min="1" defaultValue="100" />
                 </div>
                 <div className="form-group">
-                  <label>Бонус XP (%):</label>
+                  <label>Бонус XP (%): [Legacy]</label>
                   <input type="number" id="skin-xp-bonus" min="0" defaultValue="0" />
                 </div>
                 <div className="form-group">
-                  <label>Бонус денег (%):</label>
+                  <label>Бонус денег (%): [Legacy]</label>
                   <input type="number" id="skin-money-bonus" min="0" defaultValue="0" />
                 </div>
               </div>
@@ -3438,6 +3651,23 @@ export default function Admin() {
                   rarity: (document.getElementById('skin-rarity') as HTMLSelectElement).value,
                   isPremium: (document.getElementById('skin-premium') as HTMLInputElement).checked,
                   isDefault: (document.getElementById('skin-default') as HTMLInputElement).checked,
+                  
+                  // New fields v2.0
+                  slot: (document.getElementById('skin-slot') as HTMLSelectElement).value,
+                  wear_mode: (document.getElementById('skin-wear-mode') as HTMLSelectElement).value,
+                  wear_amount: parseFloat((document.getElementById('skin-wear-amount') as HTMLInputElement).value) || 1,
+                  tournament_wear_mult: parseFloat((document.getElementById('skin-tournament-wear-mult') as HTMLInputElement).value) || 2.0,
+                  repair_currency: (document.getElementById('skin-repair-currency') as HTMLSelectElement).value,
+                  repair_base_cost: parseInt((document.getElementById('skin-repair-base-cost') as HTMLInputElement).value) || 100,
+                  required_level: parseInt((document.getElementById('skin-required-level') as HTMLInputElement).value) || 1,
+                  required_power_sp: parseInt((document.getElementById('skin-required-power-sp') as HTMLInputElement).value) || 0,
+                }
+                
+                try {
+                  skinData.bonuses = JSON.parse((document.getElementById('skin-bonuses') as HTMLTextAreaElement).value)
+                } catch (e) {
+                  alert('Ошибка в формате JSON бонусов!')
+                  return
                 }
                 
                 const priceValue = (document.getElementById('skin-price') as HTMLInputElement).value
@@ -3914,6 +4144,100 @@ export default function Admin() {
 
         {activeTab === 'policy' && (
           <div className="admin-policy">
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+              <button className="btn btn-secondary" onClick={() => {
+                const standardPolicy = `Политика в отношении обработки персональных данных
+1. Общие положения
+Настоящая политика обработки персональных данных составлена в соответствии с требованиями Федерального закона от 27.07.2006. № 152-ФЗ "О персональных данных" (далее — Закон о персональных данных) и определяет порядок обработки персональных данных и меры по обеспечению безопасности персональных данных. Предпринимает их Общероссийская общественная организация «Федерация Нард России» (далее — Оператор).
+1.1. Оператор ставит своей важнейшей целью и условием осуществления своей деятельности соблюдение прав и свобод человека и гражданина при обработке его персональных данных, в том числе защиты прав на неприкосновенность частной жизни, личную и семейную тайну.
+1.2. Настоящая политика Оператора в отношении обработки персональных данных (далее — Политика) применяется ко всей информации, которую Оператор может получить о посетителях приложения ФНР.
+2. Основные понятия, используемые в Политике
+2.1. Автоматизированная обработка персональных данных — обработка персональных данных с помощью средств вычислительной техники.
+2.2. Блокирование персональных данных — временное прекращение обработки персональных данных (за исключением случаев, если обработка необходима для уточнения персональных данных).
+2.3. Приложение — совокупность графических и информационных материалов, а также программ для ЭВМ и баз данных, обеспечивающих их доступность в мобильном приложении.
+2.4. Информационная система персональных данных — совокупность содержащихся в базах данных персональных данных и обеспечивающих их обработку информационных технологий и технических средств.
+2.5. Обезличивание персональных данных — действия, в результате которых невозможно определить без использования дополнительной информации принадлежность персональных данных конкретному Пользователю или иному субъекту персональных данных.
+2.6. Обработка персональных данных — любое действие (операция) или совокупность действий (операций), совершаемых с использованием средств автоматизации или без использования таких средств с персональными данными, включая сбор, запись, систематизацию, накопление, хранение, уточнение (обновление, изменение), извлечение, использование, передачу (распространение, предоставление, доступ), обезличивание, блокирование, удаление, уничтожение персональных данных.
+2.7. Оператор — государственный орган, муниципальный орган, юридическое или физическое лицо, самостоятельно или совместно с другими лицами организующие и/или осуществляющие обработку персональных данных, а также определяющие цели обработки персональных данных, состав персональных данных, подлежащих обработке, действия (операции), совершаемые с персональными данными.
+2.8. Персональные данные — любая информация, относящаяся прямо или косвенно к определенному или определяемому Пользователю приложения ФНР.
+2.9. Персональные данные, разрешенные субъектом персональных данных для распространения, — персональные данные, доступ неограниченного круга лиц к которым предоставлен субъектом персональных данных путем дачи согласия на обработку персональных данных, разрешенных субъектом персональных данных для распространения в порядке, предусмотренном Законом о персональных данных (далее — персональные данные, разрешенные для распространения).
+2.10. Пользователь — любой посетитель приложения ФНР.
+2.11. Предоставление персональных данных — действия, направленные на раскрытие персональных данных определенному лицу или определенному кругу лиц.
+2.12. Распространение персональных данных — любые действия, направленные на раскрытие персональных данных неопределенному кругу лиц (передача персональных данных) или на ознакомление с персональными данными неограниченного круга лиц, в том числе обнародование персональных данных в средствах массовой информации, размещение в информационно-телекоммуникационных сетях или предоставление доступа к персональным данным каким-либо иным способом.
+2.13. Трансграничная передача персональных данных — передача персональных данных на территорию иностранного государства органу власти иностранного государства, иностранному физическому или иностранному юридическому лицу.
+2.14. Уничтожение персональных данных — любые действия, в результате которых персональные данные уничтожаются безвозвратно с невозможностью дальнейшего восстановления содержания персональных данных в информационной системе персональных данных и/или уничтожаются материальные носители персональных данных.
+3. Основные права и обязанности Оператора
+3.1. Оператор имеет право:
+— получать от субъекта персональных данных достоверные информацию и/или документы, содержащие персональные данные;
+— в случае отзыва субъектом персональных данных согласия на обработку персональных данных, а также, направления обращения с требованием о прекращении обработки персональных данных, Оператор вправе продолжить обработку персональных данных без согласия субъекта персональных данных при наличии оснований, указанных в Законе о персональных данных;
+— самостоятельно определять состав и перечень мер, необходимых и достаточных для обеспечения выполнения обязанностей, предусмотренных Законом о персональных данных и принятыми в соответствии с ним нормативными правовыми актами, если иное не предусмотрено Законом о персональных данных или другими федеральными законами.
+3.2. Оператор обязан:
+— предоставлять субъекту персональных данных по его просьбе информацию, касающуюся обработки его персональных данных;
+— организовывать обработку персональных данных в порядке, установленном действующим законодательством РФ;
+— отвечать на обращения и запросы субъектов персональных данных и их законных представителей в соответствии с требованиями Закона о персональных данных;
+— сообщать в уполномоченный орган по защите прав субъектов персональных данных по запросу этого органа необходимую информацию в течение 10 дней с даты получения такого запроса;
+— публиковать или иным образом обеспечивать неограниченный доступ к настоящей Политике в отношении обработки персональных данных;
+— принимать правовые, организационные и технические меры для защиты персональных данных от неправомерного или случайного доступа к ним, уничтожения, изменения, блокирования, копирования, предоставления, распространения персональных данных, а также от иных неправомерных действий в отношении персональных данных;
+— прекратить передачу (распространение, предоставление, доступ) персональных данных, прекратить обработку и уничтожить персональные данные в порядке и случаях, предусмотренных Законом о персональных данных;
+— исполнять иные обязанности, предусмотренные Законом о персональных данных.
+4. Основные права и обязанности субъектов персональных данных
+4.1. Субъекты персональных данных имеют право:
+— получать информацию, касающуюся обработки его персональных данных, за исключением случаев, предусмотренных федеральными законами. Сведения предоставляются субъекту персональных данных Оператором в доступной форме, и в них не должны содержаться персональные данные, относящиеся к другим субъектам персональных данных, за исключением случаев, когда имеются законные основания для раскрытия таких персональных данных. Перечень информации и порядок ее получения установлен Законом о персональных данных;
+— требовать от оператора уточнения его персональных данных, их блокирования или уничтожения в случае, если персональные данные являются неполными, устаревшими, неточными, незаконно полученными или не являются необходимыми для заявленной цели обработки, а также принимать предусмотренные законом меры по защите своих прав;
+— выдвигать условие предварительного согласия при обработке персональных данных в целях продвижения на рынке товаров, работ и услуг;
+— на отзыв согласия на обработку персональных данных, а также, на направление требования о прекращении обработки персональных данных;
+— обжаловать в уполномоченный орган по защите прав субъектов персональных данных или в судебном порядке неправомерные действия или бездействие Оператора при обработке его персональных данных;
+— на осуществление иных прав, предусмотренных законодательством РФ.
+4.2. Субъекты персональных данных обязаны:
+— предоставлять Оператору достоверные данные о себе;
+— сообщать Оператору об уточнении (обновлении, изменении) своих персональных данных.
+4.3. Лица, передавшие Оператору недостоверные сведения о себе, либо сведения о другом субъекте персональных данных без согласия последнего, несут ответственность в соответствии с законодательством РФ.
+5. Принципы обработки персональных данных
+5.1. Обработка персональных данных осуществляется на законной и справедливой основе.
+5.2. Обработка персональных данных ограничивается достижением конкретных, заранее определенных и законных целей. Не допускается обработка персональных данных, несовместимая с целями сбора персональных данных.
+5.3. Не допускается объединение баз данных, содержащих персональные данные, обработка которых осуществляется в целях, несовместимых между собой.
+5.4. Обработке подлежат только персональные данные, которые отвечают целям их обработки.
+5.5. Содержание и объем обрабатываемых персональных данных соответствуют заявленным целям обработки. Не допускается избыточность обрабатываемых персональных данных по отношению к заявленным целям их обработки.
+5.6. При обработке персональных данных обеспечивается точность персональных данных, их достаточность, а в необходимых случаях и актуальность по отношению к целям обработки персональных данных. Оператор принимает необходимые меры и/или обеспечивает их принятие по удалению или уточнению неполных или неточных данных.
+5.7. Хранение персональных данных осуществляется в форме, позволяющей определить субъекта персональных данных, не дольше, чем этого требуют цели обработки персональных данных, если срок хранения персональных данных не установлен федеральным законом, договором, стороной которого, выгодоприобретателем или поручителем, по которому является субъект персональных данных. Обрабатываемые персональные данные уничтожаются либо обезличиваются по достижении целей обработки или в случае утраты необходимости в достижении этих целей, если иное не предусмотрено федеральным законом.
+6. Условия обработки персональных данных
+6.1. Обработка персональных данных осуществляется с согласия субъекта персональных данных на обработку его персональных данных.
+6.2. Обработка персональных данных необходима для достижения целей, предусмотренных международным договором Российской Федерации или законом, для осуществления возложенных законодательством Российской Федерации на оператора функций, полномочий и обязанностей.
+6.3. Обработка персональных данных необходима для осуществления правосудия, исполнения судебного акта, акта другого органа или должностного лица, подлежащих исполнению в соответствии с законодательством Российской Федерации об исполнительном производстве.
+6.4. Обработка персональных данных необходима для исполнения договора, стороной которого либо выгодоприобретателем или поручителем, по которому является субъект персональных данных, а также для заключения договора по инициативе субъекта персональных данных или договора, по которому субъект персональных данных будет являться выгодоприобретателем или поручителем.
+6.5. Обработка персональных данных необходима для осуществления прав и законных интересов оператора или третьих лиц либо для достижения общественно значимых целей при условии, что при этом не нарушаются права и свободы субъекта персональных данных.
+6.6. Осуществляется обработка персональных данных, доступ неограниченного круга лиц к которым предоставлен субъектом персональных данных либо по его просьбе (далее — общедоступные персональные данные).
+6.7. Осуществляется обработка персональных данных, подлежащих опубликованию или обязательному раскрытию в соответствии с федеральным законом.
+7. Порядок сбора, хранения, передачи и других видов обработки персональных данных
+7.1. Безопасность персональных данных, которые обрабатываются Оператором, обеспечивается путем реализации правовых, организационных и технических мер, необходимых для выполнения в полном объеме требований действующего законодательства в области защиты персональных данных.
+7.2. Оператор обеспечивает сохранность персональных данных и принимает все возможные меры, исключающие доступ к персональным данным неуполномоченных лиц.
+7.3. Персональные данные Пользователя никогда, ни при каких условиях не будут переданы третьим лицам, за исключением случаев, связанных с исполнением действующего законодательства либо в случае, если субъектом персональных данных дано согласие Оператору на передачу данных третьему лицу для исполнения обязательств по гражданско-правовому договору.
+7.4. В случае выявления неточностей в персональных данных, Пользователь может актуализировать их самостоятельно, путем направления Оператору уведомление на адрес электронной почты Оператора info@sportnardy.ru с пометкой "Актуализация персональных данных".
+7.5. Срок обработки персональных данных определяется достижением целей, для которых были собраны персональные данные, если иной срок не предусмотрен договором или действующим законодательством.
+7.6. Пользователь может в любой момент отозвать свое согласие на обработку персональных данных, направив Оператору уведомление посредством электронной почты на электронный адрес Оператора info@sportnardy.ru с пометкой "Отзыв согласия на обработку персональных данных".
+7.7. Вся информация, которая собирается сторонними сервисами, в том числе платежными системами, средствами связи и другими поставщиками услуг, хранится и обрабатывается указанными лицами (Операторами) в соответствии с их Пользовательским соглашением и Политикой конфиденциальности. Субъект персональных данных и/или с указанными документами. Оператор не несет ответственность за действия третьих лиц, в том числе указанных в настоящем пункте поставщиков услуг.
+7.8. Установленные субъектом персональных данных запреты на передачу (кроме предоставления доступа), а также на обработку или условия обработки (кроме получения доступа) персональных данных, разрешенных для распространения, не действуют в случаях обработки персональных данных в государственных, общественных и иных публичных интересах, определенных законодательством РФ.
+7.9. Оператор при обработке персональных данных обеспечивает конфиденциальность персональных данных.
+7.10. Оператор осуществляет хранение персональных данных в форме, позволяющей определить субъекта персональных данных, не дольше, чем этого требуют цели обработки персональных данных, если срок хранения персональных данных не установлен федеральным законом, договором, стороной которого, выгодоприобретателем или поручителем, по которому является субъект персональных данных.
+7.11. Условием прекращения обработки персональных данных может являться достижение целей обработки персональных данных, истечение срока действия согласия субъекта персональных данных, отзыв согласия субъектом персональных данных или требование о прекращении обработки персональных данных, а также выявление неправомерной обработки персональных данных.
+8. Перечень действий, производимых Оператором с полученными персональными данными
+8.1. Оператор осуществляет сбор, запись, систематизацию, накопление, хранение, уточнение (обновление, изменение), извлечение, использование, передачу (распространение, предоставление, доступ), обезличивание, блокирование, удаление и уничтожение персональных данных.
+8.2. Оператор осуществляет автоматизированную обработку персональных данных с получением и/или передачей полученной информации по информационно-телекоммуникационным сетям или без таковой.
+9. Трансграничная передача персональных данных
+9.1. Оператор до начала осуществления деятельности по трансграничной передаче персональных данных обязан уведомить уполномоченный орган по защите прав субъектов персональных данных о своем намерении осуществлять трансграничную передачу персональных данных (такое уведомление направляется отдельно от уведомления о намерении осуществлять обработку персональных данных).
+9.2. Оператор до подачи вышеуказанного уведомления, обязан получить от органов власти иностранного государства, иностранных физических лиц, иностранных юридических лиц, которым планируется трансграничная передача персональных данных, соответствующие сведения.
+10. Конфиденциальность персональных данных
+Оператор и иные лица, получившие доступ к персональным данным, обязаны не раскрывать третьим лицам и не распространять персональные данные без согласия субъекта персональных данных, если иное не предусмотрено федеральным законом.
+11. Заключительные положения
+11.1. Пользователь может получить любые разъяснения по интересующим вопросам, касающимся обработки его персональных данных, обратившись к Оператору с помощью электронной почты info@sportnardy.ru .
+11.2. В данном документе будут отражены любые изменения политики обработки персональных данных Оператором. Политика действует бессрочно до замены ее новой версией.
+11.3. Актуальная версия Политики в свободном доступе расположена в приложении ФНР.`;
+                setPolicyContent(standardPolicy);
+                setEditingPolicy('privacy');
+              }}>
+                Загрузить стандартную политику ФНР
+              </button>
+            </div>
             <h3>Управление политиками</h3>
             
             <div className="policy-section">
@@ -4808,11 +5132,9 @@ export default function Admin() {
                     />
                   </div>
                 </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
                 <div>
-                  <h4 style={{ marginBottom: '12px' }}>Базовый XP</h4>
+                  <h4 style={{ marginBottom: '12px' }}>Базовый XP за матч</h4>
                   <div style={{ display: 'grid', gap: '8px' }}>
                     <label style={{ fontSize: '14px', color: '#aaa' }}>PvP рейтинговый</label>
                     <input 
@@ -4850,7 +5172,7 @@ export default function Admin() {
                         xp: { ...progressionConfig.xp, baseXp: { ...progressionConfig.xp.baseXp, friendly: parseInt(e.target.value) || 0 } }
                       })}
                     />
-                    <label style={{ fontSize: '14px', color: '#aaa' }}>vs AI</label>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Тренировка vs AI</label>
                     <input 
                       type="number" 
                       value={progressionConfig.xp.baseXp.ai} 
@@ -4863,11 +5185,11 @@ export default function Admin() {
                 </div>
 
                 <div>
-                  <h4 style={{ marginBottom: '12px' }}>Множители</h4>
+                  <h4 style={{ marginBottom: '12px' }}>Множители результата</h4>
                   <div style={{ display: 'grid', gap: '8px' }}>
                     <label style={{ fontSize: '14px', color: '#aaa' }}>Победа</label>
                     <input 
-                      type="number" step="0.1"
+                      type="number" step="0.01"
                       value={progressionConfig.xp.multipliers.win} 
                       onChange={(e) => setProgressionConfig({
                         ...progressionConfig,
@@ -4876,7 +5198,7 @@ export default function Admin() {
                     />
                     <label style={{ fontSize: '14px', color: '#aaa' }}>Поражение</label>
                     <input 
-                      type="number" step="0.1"
+                      type="number" step="0.01"
                       value={progressionConfig.xp.multipliers.loss} 
                       onChange={(e) => setProgressionConfig({
                         ...progressionConfig,
@@ -4885,16 +5207,16 @@ export default function Admin() {
                     />
                     <label style={{ fontSize: '14px', color: '#aaa' }}>Марс (разгром)</label>
                     <input 
-                      type="number" step="0.1"
+                      type="number" step="0.01"
                       value={progressionConfig.xp.multipliers.marsWin} 
                       onChange={(e) => setProgressionConfig({
                         ...progressionConfig,
                         xp: { ...progressionConfig.xp, multipliers: { ...progressionConfig.xp.multipliers, marsWin: parseFloat(e.target.value) || 0 } }
                       })}
                     />
-                    <label style={{ fontSize: '14px', color: '#aaa' }}>Кап XP (множитель от базы)</label>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Макс. множитель XP за матч (Gear + Buffs)</label>
                     <input 
-                      type="number" step="0.1"
+                      type="number" step="0.01"
                       value={progressionConfig.xp.caps.maxMatchXpMult} 
                       onChange={(e) => setProgressionConfig({
                         ...progressionConfig,
@@ -4905,33 +5227,101 @@ export default function Admin() {
                 </div>
 
                 <div>
-                  <h4 style={{ marginBottom: '12px' }}>Анти-фарм (повторы)</h4>
+                  <h4 style={{ marginBottom: '12px' }}>Сила соперника</h4>
                   <div style={{ display: 'grid', gap: '8px' }}>
-                    {progressionConfig.xp.multipliers.repeatOpponent.map((mult: number, idx: number) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <label style={{ fontSize: '12px', color: '#aaa', minWidth: '60px' }}>Игра {idx + 1}</label>
-                        <input 
-                          type="number" step="0.01"
-                          value={mult} 
-                          style={{ flex: 1, padding: '4px' }}
-                          onChange={(e) => {
-                            const newRepeat = [...progressionConfig.xp.multipliers.repeatOpponent];
-                            newRepeat[idx] = parseFloat(e.target.value) || 0;
-                            setProgressionConfig({
-                              ...progressionConfig,
-                              xp: { ...progressionConfig.xp, multipliers: { ...progressionConfig.xp.multipliers, repeatOpponent: newRepeat } }
-                            });
-                          }}
-                        />
-                      </div>
-                    ))}
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Знаменатель (Rating Diff / X)</label>
+                    <input 
+                      type="number" 
+                      value={progressionConfig.xp.opponentMult?.denominator || 2000} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, opponentMult: { ...progressionConfig.xp.opponentMult, denominator: parseInt(e.target.value) || 1 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Мин. множитель</label>
+                    <input 
+                      type="number" step="0.01"
+                      value={progressionConfig.xp.opponentMult?.min || 0.85} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, opponentMult: { ...progressionConfig.xp.opponentMult, min: parseFloat(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Макс. множитель</label>
+                    <input 
+                      type="number" step="0.01"
+                      value={progressionConfig.xp.opponentMult?.max || 1.20} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, opponentMult: { ...progressionConfig.xp.opponentMult, max: parseFloat(e.target.value) || 0 } }
+                      })}
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <h4 style={{ marginBottom: '12px' }}>Skill Points (SP)</h4>
+                  <h4 style={{ marginBottom: '12px' }}>Clean Play (Античит)</h4>
                   <div style={{ display: 'grid', gap: '8px' }}>
-                    <label style={{ fontSize: '14px', color: '#aaa' }}>За уровни 2-5</label>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>High Trust</label>
+                    <input 
+                      type="number" step="0.1"
+                      value={progressionConfig.xp.cleanPlayMultipliers?.high || 1.0} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, cleanPlayMultipliers: { ...progressionConfig.xp.cleanPlayMultipliers, high: parseFloat(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Medium Trust</label>
+                    <input 
+                      type="number" step="0.1"
+                      value={progressionConfig.xp.cleanPlayMultipliers?.medium || 0.7} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, cleanPlayMultipliers: { ...progressionConfig.xp.cleanPlayMultipliers, medium: parseFloat(e.target.value) || 0 } }
+                      })}
+                    />
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Low Trust</label>
+                    <input 
+                      type="number" step="0.1"
+                      value={progressionConfig.xp.cleanPlayMultipliers?.low || 0.5} 
+                      onChange={(e) => setProgressionConfig({
+                        ...progressionConfig,
+                        xp: { ...progressionConfig.xp, cleanPlayMultipliers: { ...progressionConfig.xp.cleanPlayMultipliers, low: parseFloat(e.target.value) || 0 } }
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <h4 style={{ marginBottom: '12px' }}>Анти-фарм: множители за повторные матчи (24 часа)</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
+                  {progressionConfig.xp.multipliers.repeatOpponent.map((mult: number, idx: number) => (
+                    <div key={idx}>
+                      <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>Матч {idx + 1}</label>
+                      <input 
+                        type="number" step="0.01"
+                        value={mult} 
+                        style={{ width: '100%', padding: '4px' }}
+                        onChange={(e) => {
+                          const newRepeat = [...progressionConfig.xp.multipliers.repeatOpponent];
+                          newRepeat[idx] = parseFloat(e.target.value) || 0;
+                          setProgressionConfig({
+                            ...progressionConfig,
+                            xp: { ...progressionConfig.xp, multipliers: { ...progressionConfig.xp.multipliers, repeatOpponent: newRepeat } }
+                          });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                <div>
+                  <h4 style={{ marginBottom: '12px' }}>Очки прокачки (Skill Points)</h4>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>За уровни 2-5 (на каждый уровень)</label>
                     <input 
                       type="number" 
                       value={progressionConfig.skillPoints.levels2To5} 
@@ -4940,7 +5330,7 @@ export default function Admin() {
                         skillPoints: { ...progressionConfig.skillPoints, levels2To5: parseInt(e.target.value) || 0 }
                       })}
                     />
-                    <label style={{ fontSize: '14px', color: '#aaa' }}>За уровни 6-50</label>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>За уровни 6-50 (на каждый уровень)</label>
                     <input 
                       type="number" 
                       value={progressionConfig.skillPoints.levels6To50} 
@@ -4951,12 +5341,52 @@ export default function Admin() {
                     />
                   </div>
                 </div>
+                <div>
+                  <h4 style={{ marginBottom: '12px' }}>Действия</h4>
+                  <button className="btn btn-secondary" onClick={() => {
+                    // Генерируем пороги XP по формуле из ТЗ
+                    const A = progressionConfig.xpCurve?.A || 350;
+                    const maxL = progressionConfig.maxLevel || 50;
+                    const thresholds: Record<number, number> = {};
+                    const rewards: Record<number, number> = {};
+                    
+                    // Базовые пороги GWars (примерные для формы)
+                    const gwarsBase = [0, 1750, 5250, 12950, 26600, 50050, 76513, 111146, 155133, 223947, 274745];
+                    
+                    for (let l = 1; l <= maxL; l++) {
+                      let factor = A;
+                      if (l > 5) {
+                        const t = (l - 5) / (maxL - 5);
+                        factor = Math.exp(Math.log(A) * (1 - t));
+                      }
+                      
+                      // Награда: 5 уровень - 10000, остальные по 1000 за уровень (пример)
+                      rewards[l] = l === 5 ? 10000 : 1000 * l;
+                      
+                      // Порог: используем упрощенную кубическую зависимость для примера автогенерации
+                      // В реальности администратор подправит вручную
+                      if (l <= 10) {
+                        thresholds[l] = gwarsBase[l] || (l * l * l * 100 * factor / A);
+                      } else {
+                        thresholds[l] = Math.round(l * l * l * 300 * factor);
+                      }
+                    }
+                    
+                    setProgressionConfig({
+                      ...progressionConfig,
+                      xp: { ...progressionConfig.xp, thresholds },
+                      levelRewards: rewards
+                    });
+                  }}>
+                    🔄 Сгенерировать пороги и награды по формуле
+                  </button>
+                </div>
               </div>
 
               <div style={{ marginTop: '32px' }}>
                 <h4 style={{ marginBottom: '16px' }}>Пороги XP для уровней (Total XP)</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
-                  {Object.entries(progressionConfig.xp.thresholds).map(([level, xp]: [any, any]) => (
+                  {Object.entries(progressionConfig.xp.thresholds).sort(([a], [b]) => Number(a) - Number(b)).map(([level, xp]: [any, any]) => (
                     <div key={level}>
                       <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>Уровень {level}</label>
                       <input 
@@ -4980,7 +5410,7 @@ export default function Admin() {
               <div style={{ marginTop: '32px' }}>
                 <h4 style={{ marginBottom: '16px' }}>Награды NAR за повышение уровня</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
-                  {progressionConfig.levelRewards && Object.entries(progressionConfig.levelRewards).map(([level, reward]: [any, any]) => (
+                  {progressionConfig.levelRewards && Object.entries(progressionConfig.levelRewards).sort(([a], [b]) => Number(a) - Number(b)).map(([level, reward]: [any, any]) => (
                     <div key={level}>
                       <label style={{ fontSize: '12px', color: '#aaa', display: 'block', marginBottom: '4px' }}>Уровень {level}</label>
                       <input 
@@ -5434,6 +5864,191 @@ export default function Admin() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* РАЗДЕЛ ЭКИПИРОВКИ (V2.0) */}
+      {activeTab === 'equipment-config' && progressionConfig && (
+        <div className="admin-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2>Настройки экипировки и износа (v2.0)</h2>
+            <button 
+              className="admin-btn primary"
+              onClick={handleSaveProgressionConfig}
+              disabled={isSavingProgression}
+            >
+              {isSavingProgression ? 'Сохранение...' : '💾 Сохранить настройки экипировки'}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+            {/* Износ */}
+            <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+              <h3 style={{ color: '#ff9800', marginBottom: '20px' }}>Износ (Wear)</h3>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div className="form-group-v2">
+                  <label>Множитель в турнирах (tournament_wear_mult)</label>
+                  <input type="number" step="0.1" value={progressionConfig.equipment?.wear?.tournamentMult || 2.0} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      equipment: { 
+                        ...progressionConfig.equipment, 
+                        wear: { ...progressionConfig.equipment?.wear, tournamentMult: parseFloat(e.target.value) || 0 } 
+                      }
+                    })} />
+                </div>
+                <div className="form-group-v2">
+                  <label>Износ за партию (BOARD/CHECKERS/...)</label>
+                  <input type="number" value={progressionConfig.equipment?.wear?.perMatchDefault || 1} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      equipment: { 
+                        ...progressionConfig.equipment, 
+                        wear: { ...progressionConfig.equipment?.wear, perMatchDefault: parseInt(e.target.value) || 0 } 
+                      }
+                    })} />
+                </div>
+                <div className="form-group-v2">
+                  <label>Износ за бросок (DIE_1/DIE_2)</label>
+                  <input type="number" value={progressionConfig.equipment?.wear?.perRollDefault || 1} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      equipment: { 
+                        ...progressionConfig.equipment, 
+                        wear: { ...progressionConfig.equipment?.wear, perRollDefault: parseInt(e.target.value) || 0 } 
+                      }
+                    })} />
+                </div>
+              </div>
+            </div>
+
+            {/* Ремонт */}
+            <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+              <h3 style={{ color: '#2196f3', marginBottom: '20px' }}>Ремонт (Repair)</h3>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div className="form-group-v2">
+                  <label>Множитель за уровень игрока (player_level * 0.01)</label>
+                  <input type="number" step="0.001" value={progressionConfig.equipment?.repair?.levelMultPerLevel || 0.01} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      equipment: { 
+                        ...progressionConfig.equipment, 
+                        repair: { ...progressionConfig.equipment?.repair, levelMultPerLevel: parseFloat(e.target.value) || 0 } 
+                      }
+                    })} />
+                </div>
+                <div style={{ marginTop: '10px' }}>
+                  <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>Множители зон ремонта (repair_zone_mult)</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                    <div className="form-group-v2">
+                      <label>Зона A (>50%)</label>
+                      <input type="number" step="0.1" value={progressionConfig.equipment?.repair?.zoneMult?.A || 1.0} 
+                        onChange={(e) => setProgressionConfig({
+                          ...progressionConfig, 
+                          equipment: { 
+                            ...progressionConfig.equipment, 
+                            repair: { 
+                              ...progressionConfig.equipment?.repair, 
+                              zoneMult: { ...progressionConfig.equipment?.repair?.zoneMult, A: parseFloat(e.target.value) || 0 } 
+                            } 
+                          }
+                        })} />
+                    </div>
+                    <div className="form-group-v2">
+                      <label>Зона B (25-50%)</label>
+                      <input type="number" step="0.1" value={progressionConfig.equipment?.repair?.zoneMult?.B || 1.3} 
+                        onChange={(e) => setProgressionConfig({
+                          ...progressionConfig, 
+                          equipment: { 
+                            ...progressionConfig.equipment, 
+                            repair: { 
+                              ...progressionConfig.equipment?.repair, 
+                              zoneMult: { ...progressionConfig.equipment?.repair?.zoneMult, B: parseFloat(e.target.value) || 0 } 
+                            } 
+                          }
+                        })} />
+                    </div>
+                    <div className="form-group-v2">
+                      <label>Зона C (<25%)</label>
+                      <input type="number" step="0.1" value={progressionConfig.equipment?.repair?.zoneMult?.C || 1.8} 
+                        onChange={(e) => setProgressionConfig({
+                          ...progressionConfig, 
+                          equipment: { 
+                            ...progressionConfig.equipment, 
+                            repair: { 
+                              ...progressionConfig.equipment?.repair, 
+                              zoneMult: { ...progressionConfig.equipment?.repair?.zoneMult, C: parseFloat(e.target.value) || 0 } 
+                            } 
+                          }
+                        })} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Марс и XP */}
+            <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+              <h3 style={{ color: '#f44336', marginBottom: '20px' }}>Бонусы Марса и XP</h3>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div className="form-group-v2">
+                  <label>Кулдаун бонуса Марса (часы)</label>
+                  <input type="number" value={progressionConfig.xp?.mars?.cooldownHours || 4} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      xp: { ...progressionConfig.xp, mars: { ...progressionConfig.xp?.mars, cooldownHours: parseInt(e.target.value) || 0 } }
+                    })} />
+                </div>
+                <div className="form-group-v2">
+                  <label>Множитель Марса (mars_xp_mult)</label>
+                  <input type="number" step="0.1" value={progressionConfig.xp?.mars?.mult || 2.0} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      xp: { ...progressionConfig.xp, mars: { ...progressionConfig.xp?.mars, mult: parseFloat(e.target.value) || 0 } }
+                    })} />
+                </div>
+                <div className="form-group-v2">
+                  <label>Кап множителя XP от экипировки (gear_xp_mult_cap)</label>
+                  <input type="number" step="0.01" value={progressionConfig.caps?.gearXpMultCap || 1.50} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      caps: { ...progressionConfig.caps, gearXpMultCap: parseFloat(e.target.value) || 0 }
+                    })} />
+                </div>
+              </div>
+            </div>
+
+            {/* Комиссии и Лимиты */}
+            <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px' }}>
+              <h3 style={{ color: '#9c27b0', marginBottom: '20px' }}>Комиссии и Лимиты</h3>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div className="form-group-v2">
+                  <label>Базовая комиссия (commission_base)</label>
+                  <input type="number" step="0.01" value={progressionConfig.commission?.base || 0.15} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      commission: { ...progressionConfig.commission, base: parseFloat(e.target.value) || 0 }
+                    })} />
+                </div>
+                <div className="form-group-v2">
+                  <label>Мин. комиссия от статов (commission_stats_min)</label>
+                  <input type="number" step="0.01" value={progressionConfig.commission?.statsMin || 0.10} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      commission: { ...progressionConfig.commission, statsMin: parseFloat(e.target.value) || 0 }
+                    })} />
+                </div>
+                <div className="form-group-v2">
+                  <label>Абсолютный минимум комиссии (commission_min)</label>
+                  <input type="number" step="0.01" value={progressionConfig.commission?.min || 0.05} 
+                    onChange={(e) => setProgressionConfig({
+                      ...progressionConfig, 
+                      commission: { ...progressionConfig.commission, min: parseFloat(e.target.value) || 0 }
+                    })} />
+                </div>
+              </div>
             </div>
           </div>
         </div>

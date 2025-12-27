@@ -1198,6 +1198,16 @@ export class AdminService implements OnModuleInit {
     maxDurability?: number;
     xpBonusPercent?: number;
     moneyBonusPercent?: number;
+    // New fields v2.0
+    slot?: string;
+    wear_mode?: string;
+    wear_amount?: number;
+    tournament_wear_mult?: number;
+    repair_currency?: string;
+    repair_base_cost?: number;
+    bonuses?: any;
+    required_level?: number;
+    required_power_sp?: number;
   }) {
     const skin = this.skinsRepository.create({
       name: data.name,
@@ -1215,6 +1225,16 @@ export class AdminService implements OnModuleInit {
       maxDurability: data.maxDurability || 100,
       xpBonusPercent: data.xpBonusPercent || 0,
       moneyBonusPercent: data.moneyBonusPercent || 0,
+      // New fields v2.0
+      slot: data.slot || 'BOARD',
+      wear_mode: data.wear_mode || 'PER_MATCH',
+      wear_amount: data.wear_amount || 1,
+      tournament_wear_mult: data.tournament_wear_mult || 2.0,
+      repair_currency: data.repair_currency || 'NAR',
+      repair_base_cost: data.repair_base_cost || 100,
+      bonuses: data.bonuses || null,
+      required_level: data.required_level || 1,
+      required_power_sp: data.required_power_sp || 0,
       // Все поля для изображений удалены - скины теперь только на материалах (цветах)
     });
 
@@ -1237,6 +1257,16 @@ export class AdminService implements OnModuleInit {
     maxDurability: number;
     xpBonusPercent: number;
     moneyBonusPercent: number;
+    // New fields v2.0
+    slot: string;
+    wear_mode: string;
+    wear_amount: number;
+    tournament_wear_mult: number;
+    repair_currency: string;
+    repair_base_cost: number;
+    bonuses: any;
+    required_level: number;
+    required_power_sp: number;
   }>) {
     const skin = await this.skinsRepository.findOne({ where: { id } });
     if (!skin) {

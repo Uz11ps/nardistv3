@@ -1689,3 +1689,28 @@
     gap: 12px;
   }
 }
+.form-group-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group-v2 label {
+  font-size: 14px;
+  color: #aaa;
+  font-weight: 500;
+}
+
+.form-group-v2 input {
+  padding: 10px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.form-group-v2 input:focus {
+  outline: none;
+  border-color: #4a9eff;
+}

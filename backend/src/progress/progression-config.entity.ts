@@ -113,6 +113,37 @@ export class ProgressionConfig {
         maxMatchXpMult: number; // Максимальный XP за матч (BaseXP * 2.50)
       };
       thresholds: { [key: number]: number }; // Пороги XP для уровней 1-50
+      mars: {
+        cooldownHours: number; // 4
+        mult: number; // 2.0
+      };
+      opponentMult: {
+        denominator: number; // 2000
+        min: number; // 0.85
+        max: number; // 1.20
+      };
+      cleanPlayMultipliers: {
+        high: number; // 1.0
+        medium: number; // 0.7
+        low: number; // 0.5
+        banned: number; // 0.0
+      };
+    };
+    // Экипировка и износ
+    equipment: {
+      wear: {
+        tournamentMult: number; // 2.0
+        perMatchDefault: number; // 1
+        perRollDefault: number; // 1
+      };
+      repair: {
+        levelMultPerLevel: number; // 0.01
+        zoneMult: {
+          A: number; // 1.0
+          B: number; // 1.3
+          C: number; // 1.8
+        };
+      };
     };
   };
 
