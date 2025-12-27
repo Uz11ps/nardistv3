@@ -101,7 +101,7 @@ export default function History() {
   const convertGameStateForBoard = (gameState: any) => {
     if (!gameState) return null
     
-    // ВАЖНО: BackgammonBoard теперь ожидает points как массив чисел (-15 до 15)
+    // ВАЖНО: BackgammonBoard теперь ожидает points как массив чисел (-5 до 5)
     // а не массив объектов с checkers[]. Оставляем массив points как есть.
     const points = Array.isArray(gameState.points) ? [...gameState.points] : []
     

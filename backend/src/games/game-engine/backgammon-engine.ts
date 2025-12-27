@@ -16,7 +16,7 @@ export interface BoardState {
 export class BackgammonEngine {
   private readonly BOARD_SIZE = 24;
   private readonly INITIAL_BOARD = [
-    2, 0, 0, 0, 0, -5, 0, -3, 0, 0, 0, 5, -5, 0, 0, 0, 3, 0, 5, 0, 0, 0, 0, -2
+    1, 0, 0, 0, 0, -1, 0, -1, 0, 0, 0, 2, -2, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, -1
   ];
 
   createInitialState(): BoardState {
@@ -287,12 +287,12 @@ export class BackgammonEngine {
   }
 
   isGameFinished(state: BoardState): boolean {
-    return state.borneOff[0] === 15 || state.borneOff[1] === 15;
+    return state.borneOff[0] === 5 || state.borneOff[1] === 5;
   }
 
   getWinner(state: BoardState): number | null {
-    if (state.borneOff[0] === 15) return 0;
-    if (state.borneOff[1] === 15) return 1;
+    if (state.borneOff[0] === 5) return 0;
+    if (state.borneOff[1] === 5) return 1;
     return null;
   }
 

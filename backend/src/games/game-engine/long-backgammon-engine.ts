@@ -21,10 +21,10 @@ export class LongBackgammonEngine {
   // Index 11 = Point 13 (Top Left)
   // Index 12 = Point 12 (Bottom Left) - Black Head
   // Index 23 = Point 1 (Bottom Right)
-  // White (positive): 15 checkers on Point 24 (index 0) - HEAD
-  // Black (negative): 15 checkers on Point 12 (index 12) - HEAD
+  // White (positive): 5 checkers on Point 24 (index 0) - HEAD
+  // Black (negative): 5 checkers on Point 12 (index 12) - HEAD
   private readonly INITIAL_BOARD = [
-    15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ];
   
   // Head positions (starting points)
@@ -467,12 +467,12 @@ export class LongBackgammonEngine {
   }
 
   isGameFinished(state: LongBoardState): boolean {
-    return state.borneOff[0] === 15 || state.borneOff[1] === 15;
+    return state.borneOff[0] === 5 || state.borneOff[1] === 5;
   }
 
   getWinner(state: LongBoardState): number | null {
-    if (state.borneOff[0] === 15) return 0;
-    if (state.borneOff[1] === 15) return 1;
+    if (state.borneOff[0] === 5) return 0;
+    if (state.borneOff[1] === 5) return 1;
     return null;
   }
 
