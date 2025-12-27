@@ -92,6 +92,7 @@ export default function Admin() {
     baseIncomePerHour: 0,
     maxAccumulation: 0,
     maxLevel: 10,
+    upgradeMultiplier: 1.4,
     districtId: '',
   })
   const [skins, setSkins] = useState<any[]>([])
@@ -4578,7 +4579,7 @@ export default function Admin() {
                     <div className="section-header">
                       <h5>Строения ({buildings.filter(b => b.districtId === district.id).length})</h5>
                       <button className="btn-add-mini" onClick={() => {
-                        setNewBuilding({ type: 'shop', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, districtId: district.id })
+                        setNewBuilding({ type: 'shop', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, districtId: district.id })
                         setShowCreateBuildingModal(true)
                       }}>+</button>
                     </div>
@@ -4671,21 +4672,109 @@ export default function Admin() {
             )}
 
             {(showCreateBuildingModal || selectedBuilding) && (
-              <div className="admin-modal-overlay" onClick={() => { setShowCreateBuildingModal(false); setSelectedBuilding(null); }}>
+              <div className="admin-modal-overlay" onClick={() => { 
+                setShowCreateBuildingModal(false); 
+                setSelectedBuilding(null);
+                setNewBuilding({ type: '', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, districtId: '' });
+              }}>
                 <div className="admin-modal-content-v2" onClick={e => e.stopPropagation()}>
-                  <div className="modal-header-v2"><h4>{selectedBuilding ? 'Редактировать строение' : 'Новое строение'}</h4><button className="close-btn" onClick={() => { setShowCreateBuildingModal(false); setSelectedBuilding(null); }}>×</button></div>
+                  <div className="modal-header-v2"><h4>{selectedBuilding ? 'Редактировать строение' : 'Новое строение'}</h4><button className="close-btn" onClick={() => { 
+                    setShowCreateBuildingModal(false); 
+                    setSelectedBuilding(null);
+                    setNewBuilding({ type: '', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, districtId: '' });
+                  }}>×</button></div>
                   <div className="modal-body-v2">
                     {(() => {
                       const b = selectedBuilding || newBuilding
                       const setB = selectedBuilding ? setSelectedBuilding : setNewBuilding
                       return (
                         <div className="form-grid-v2">
-                          <div className="form-group"><label>Название</label><input type="text" value={b.name} onChange={e => setB({...b, name: e.target.value})} /></div>
-                          <div className="form-row-v2">
-                            <div className="form-group"><label>Цена</label><input type="number" value={b.basePrice} onChange={e => setB({...b, basePrice: parseInt(e.target.value)})} /></div>
-                            <div className="form-group"><label>Доход/ч</label><input type="number" value={b.baseIncomePerHour} onChange={e => setB({...b, baseIncomePerHour: parseInt(e.target.value)})} /></div>
+                          <div className="form-group">
+                            <label>Название</label>
+                            <input 
+                              type="text" 
+                              value={b.name || ''} 
+                              onChange={e => setB({...b, name: e.target.value})} 
+                            />
                           </div>
-                          <div className="form-group"><label>Изображение (URL)</label><input type="text" value={b.image} onChange={e => setB({...b, image: e.target.value})} /></div>
+                          <div className="form-group">
+                            <label>Тип (shop, factory, etc.)</label>
+                            <input 
+                              type="text" 
+                              value={b.type || ''} 
+                              onChange={e => setB({...b, type: e.target.value})} 
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label>Доход в час (NAR)</label>
+                            <input 
+                              type="number" 
+                              value={b.baseIncomePerHour || 0} 
+                              onChange={e => setB({...b, baseIncomePerHour: parseInt(e.target.value) || 0})} 
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label>Базовая цена (NAR)</label>
+                            <input 
+                              type="number" 
+                              value={b.basePrice || 0} 
+                              onChange={e => setB({...b, basePrice: parseInt(e.target.value) || 0})} 
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label>Макс. накопление (NAR)</label>
+                            <input 
+                              type="number" 
+                              value={b.maxAccumulation || 0} 
+                              onChange={e => setB({...b, maxAccumulation: parseInt(e.target.value) || 0})} 
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label>Макс. уровень</label>
+                            <input 
+                              type="number" 
+                              value={b.maxLevel || 10} 
+                              onChange={e => setB({...b, maxLevel: parseInt(e.target.value) || 10})} 
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label>Множитель улучшения</label>
+                            <input 
+                              type="number" 
+                              step="0.1"
+                              value={b.upgradeMultiplier || 1.4} 
+                              onChange={e => setB({...b, upgradeMultiplier: parseFloat(e.target.value) || 1.4})} 
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label>Район (ID)</label>
+                            <select
+                              value={b.districtId || ''}
+                              onChange={e => setB({...b, districtId: e.target.value})}
+                              style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                            >
+                              <option value="">Без района</option>
+                              {districts.map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label>Иконка (URL)</label>
+                            <input 
+                              type="text" 
+                              value={b.icon || ''} 
+                              onChange={e => setB({...b, icon: e.target.value})} 
+                            />
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label>Фото строения (URL)</label>
+                            <input 
+                              type="text" 
+                              value={b.image || ''} 
+                              onChange={e => setB({...b, image: e.target.value})} 
+                            />
+                          </div>
                         </div>
                       )
                     })()}
@@ -4696,7 +4785,10 @@ export default function Admin() {
                       try {
                         if (selectedBuilding) await apiClient.put(`/admin/buildings/${selectedBuilding.id}`, selectedBuilding)
                         else await apiClient.post('/admin/buildings', b)
-                        setShowCreateBuildingModal(false); setSelectedBuilding(null); loadBuildings()
+                        setShowCreateBuildingModal(false); 
+                        setSelectedBuilding(null);
+                        setNewBuilding({ type: '', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, upgradeMultiplier: 1.4, districtId: '' });
+                        loadBuildings()
                       } catch (e: any) { alert(e.message) }
                     }}>Готово</button>
                   </div>
