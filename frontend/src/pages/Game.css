@@ -311,12 +311,6 @@
   z-index: 2;
 }
 
-.game-player-active {
-  border-color: #4caf50;
-  box-shadow: 0 0 12px rgba(76, 175, 80, 0.3);
-  z-index: 1;
-}
-
 /* Таймер теперь отображается как круговой прогресс-бар вокруг аватарки */
 
 /* Game Score Section */

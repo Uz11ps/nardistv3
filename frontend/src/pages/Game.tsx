@@ -967,7 +967,7 @@ export default function Game() {
                   )}
                 </div>
               </div>
-              <div className={`game-player-avatar ${!isPlayer1 && gameState?.currentPlayer === 1 ? 'game-player-active' : ''}`}>
+              <div className="game-player-avatar">
                 {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && (() => {
                   // Время на ход ВСЕГДА 20 секунд
                   // Если player2Timer > 0, значит еще не начался овертайм (зеленая)
@@ -1038,8 +1038,8 @@ export default function Game() {
               )}
               <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
-                <div className={`game-player-avatar ${!isPlayer1 && gameState?.currentPlayer === 1 ? 'game-player-active' : ''}`}>
-                  {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && gameState?.dice && (
+                <div className="game-player-avatar">
+                  {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && (
                     <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                       <circle
                         className="game-player-timer-ring-bg"
@@ -1074,7 +1074,7 @@ export default function Game() {
               </div>
               <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
-                <div className={`game-player-avatar ${isPlayer1 && gameState?.currentPlayer === 0 ? 'game-player-active' : ''}`}>
+                <div className="game-player-avatar">
                   {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && (() => {
                     // Время на ход ВСЕГДА 20 секунд
                     // Если player1Timer > 0, значит еще не начался овертайм (зеленая)
@@ -1220,7 +1220,7 @@ export default function Game() {
                   )}
                 </div>
               </div>
-              <div className={`game-player-avatar ${isPlayer1 && gameState?.currentPlayer === 0 ? 'game-player-active' : ''}`}>
+              <div className="game-player-avatar">
                 {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && (() => {
                   // Время на ход ВСЕГДА 20 секунд
                   // Если player1Timer > 0, значит еще не начался овертайм (зеленая)
