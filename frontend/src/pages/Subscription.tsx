@@ -70,6 +70,7 @@ export default function Subscription() {
   } | null>(null)
 
   useEffect(() => {
+    loadPlans()
     loadCityAutobuildStatus()
   }, [])
 
@@ -97,11 +98,6 @@ export default function Subscription() {
       setSubscriptionPlans([])
     }
   }
-
-  useEffect(() => {
-    if (activeTab !== 'subscription') return
-    loadPlans()
-  }, [paymentMethod])
 
   const loadCityAutobuildStatus = async () => {
     try {
