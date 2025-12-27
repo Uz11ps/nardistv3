@@ -79,7 +79,8 @@ export default function TonPaymentModal({
     
     try {
       setChecking(true)
-      const response = await apiClient.get(`/subscription/payment/${transactionId}/status`)
+      // Используем универсальный endpoint для всех типов транзакций
+      const response = await apiClient.get(`/payment/transaction/${transactionId}/status`)
       const transaction = response.data
       
       if (transaction.status === 'completed') {
@@ -119,7 +120,8 @@ export default function TonPaymentModal({
 
     try {
       setChecking(true)
-      await apiClient.post(`/subscription/payment/${transactionId}/confirm`, {
+      // Используем универсальный endpoint для всех типов транзакций
+      await apiClient.post(`/payment/transaction/${transactionId}/confirm`, {
         txHash: txHash.trim(),
       })
 
@@ -127,7 +129,7 @@ export default function TonPaymentModal({
       // Начинаем проверку статуса
       setTimeout(() => checkPaymentStatus(), 2000)
     } catch (error: any) {
-      alert(error.message || 'Ошибка при подтверждении платежа')
+      alert(error.response?.data?.message || error.message || 'Ошибка при подтверждении платежа')
       setChecking(false)
     }
   }
