@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Article } from './article.entity';
 import { UserMaterial } from './user-material.entity';
 import { ArticleSlot } from './article-slot.entity';
 import { CourseTask } from './course-task.entity';
+import { CourseTaskProgress } from './course-task-progress.entity';
 import { UsersService } from '../users/users.service';
 import { AdminService } from '../admin/admin.service';
 
