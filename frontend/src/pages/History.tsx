@@ -20,6 +20,7 @@ interface GameHistory {
   duration: number
   createdAt: string
   moves: any[]
+  moveCount: number
 }
 
 export default function History() {

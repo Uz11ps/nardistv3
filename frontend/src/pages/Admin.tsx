@@ -96,6 +96,8 @@ export default function Admin() {
   const [gameReplay, setGameReplay] = useState<any>(null)
   const [replayStep, setReplayStep] = useState(0)
   const [showCreateTournamentModal, setShowCreateTournamentModal] = useState(false)
+  const [showCreateDistrictModal, setShowCreateDistrictModal] = useState(false)
+  const [showCreateBuildingModal, setShowCreateBuildingModal] = useState(false)
   
   // Функция для загрузки состояния на конкретном шаге
   const loadReplayStep = async (step: number) => {
