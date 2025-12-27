@@ -16,18 +16,30 @@ export class ProgressService {
   private readonly logger = new Logger(ProgressService.name);
   private readonly MAX_LEVEL = 50;
   
+  private readonly ENERGY_RESTORE_INTERVAL = 30 * 60 * 1000; // 30 минут
+  private readonly ENERGY_RESTORE_AMOUNT = 10; // 10 энергии за восстановление
+  private readonly LIFE_RESTORE_INTERVAL = 4 * 60 * 60 * 1000; // 4 часа
+  private readonly LIFE_RESTORE_AMOUNT = 1; // 1 жизнь за восстановление
+  private readonly BASE_LIVES_LOSS = 1; // Базовая потеря жизней при поражении
+  
+  // Расход энергии согласно таблице 9 спецификации
+  private readonly ENERGY_COST_WIN = 5; // Победа в боевом матче
+  private readonly ENERGY_COST_LOSS = 10; // Поражение в боевом матче
+  private readonly ENERGY_COST_TOURNAMENT = 15; // Турнирный матч (участие)
+
   constructor(
+    @InjectRepository(Enhancement)
+    private enhancementsRepository: Repository<Enhancement>,
+    @InjectRepository(UserPurchase)
+    private purchasesRepository: Repository<UserPurchase>,
+    @InjectRepository(CityTreasury)
+    private treasuryRepository: Repository<CityTreasury>,
+    @InjectRepository(UserRewardDebt)
+    private rewardDebtRepository: Repository<UserRewardDebt>,
+    @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
     private xpCalculator: XpCalculatorService,
     private branchesService: ProgressionBranchesService,
-    @InjectRepository(Enhancement)
-    private enhancementRepository: Repository<Enhancement>,
-    @InjectRepository(UserPurchase)
-    private userPurchaseRepository: Repository<UserPurchase>,
-    @InjectRepository(CityTreasury)
-    private cityTreasuryRepository: Repository<CityTreasury>,
-    @InjectRepository(UserRewardDebt)
-    private userRewardDebtRepository: Repository<UserRewardDebt>,
   ) {}
 
   /**
@@ -66,39 +78,6 @@ export class ProgressService {
     };
   }
   
-  private readonly ENERGY_RESTORE_INTERVAL = 30 * 60 * 1000; // 30 минут
-  private readonly ENERGY_RESTORE_AMOUNT = 10; // 10 энергии за восстановление
-  private readonly LIFE_RESTORE_INTERVAL = 4 * 60 * 60 * 1000; // 4 часа
-  private readonly LIFE_RESTORE_AMOUNT = 1; // 1 жизнь за восстановление
-  private readonly BASE_LIVES_LOSS = 1; // Базовая потеря жизней при поражении
-  
-  // Расход энергии согласно таблице 9 спецификации
-  private readonly ENERGY_COST_WIN = 5; // Победа в боевом матче
-  private readonly ENERGY_COST_LOSS = 10; // Поражение в боевом матче
-  private readonly ENERGY_COST_TOURNAMENT = 15; // Турнирный матч (участие)
-
-  constructor(
-    @InjectRepository(Enhancement)
-    private enhancementsRepository: Repository<Enhancement>,
-    @InjectRepository(UserPurchase)
-    private purchasesRepository: Repository<UserPurchase>,
-    @InjectRepository(CityTreasury)
-    private treasuryRepository: Repository<CityTreasury>,
-    @InjectRepository(UserRewardDebt)
-    private rewardDebtRepository: Repository<UserRewardDebt>,
-    @Inject(forwardRef(() => UsersService))
-    private usersService: UsersService,
-    private xpCalculator: XpCalculatorService,
-    private branchesService: ProgressionBranchesService,
-  ) {}
-
-  /**
-   * Возвращает текущую конфигурацию прогрессии
-   */
-  getProgressionConfig() {
-    return this.branchesService.getConfig();
-  }
-
   async addXP(userId: string, amount: number): Promise<{ levelUp: boolean; newLevel?: number; previousLevel?: number; skillPointsGained?: number }> {
     const user = await this.usersService.findOne(userId);
     

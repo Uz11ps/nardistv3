@@ -5943,7 +5943,7 @@ export default function Admin() {
                   <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>Множители зон ремонта (repair_zone_mult)</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div className="form-group-v2">
-                      <label>Зона A ({'>'}50%)</label>
+                      <label>Зона A (&gt;50%)</label>
                       <input type="number" step="0.1" value={progressionConfig.equipment?.repair?.zoneMult?.A || 1.0} 
                         onChange={(e) => setProgressionConfig({
                           ...progressionConfig, 
@@ -5971,7 +5971,7 @@ export default function Admin() {
                         })} />
                     </div>
                     <div className="form-group-v2">
-                      <label>Зона C ({'<'}25%)</label>
+                      <label>Зона C (&lt;25%)</label>
                       <input type="number" step="0.1" value={progressionConfig.equipment?.repair?.zoneMult?.C || 1.8} 
                         onChange={(e) => setProgressionConfig({
                           ...progressionConfig, 
