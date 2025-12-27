@@ -57,6 +57,7 @@ export default function Admin() {
   const [paymentStats, setPaymentStats] = useState<any>(null)
   const [wallets, setWallets] = useState<any[]>([])
   const [systemSettings, setSystemSettings] = useState<any>({})
+  const [walletPrivateKeyModal, setWalletPrivateKeyModal] = useState<{ wallet: any; privateKey: string; address: string } | null>(null)
   const [isSavingProgression, setIsSavingProgression] = useState(false)
   const [editingOnboardingTask, setEditingOnboardingTask] = useState<any>(null)
   const [newOnboardingTask, setNewOnboardingTask] = useState({
@@ -5998,7 +5999,11 @@ export default function Admin() {
                             onClick={async () => {
                               try {
                                 const response = await apiClient.get(`/admin/wallets/${wallet.id}/private-key`)
-                                alert(`Приватный ключ: ${response.data.privateKey}\nАдрес: ${response.data.address}`)
+                                setWalletPrivateKeyModal({
+                                  wallet: wallet,
+                                  privateKey: response.data.privateKey,
+                                  address: response.data.address
+                                })
                               } catch (error: any) {
                                 alert('Ошибка: ' + (error.response?.data?.message || error.message))
                               }
@@ -7142,6 +7147,139 @@ export default function Admin() {
                   style={{ padding: '10px 20px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                 >
                   Сохранить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно приватного ключа кошелька */}
+      {walletPrivateKeyModal && (
+        <div className="admin-modal-overlay" onClick={() => setWalletPrivateKeyModal(null)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h3>Информация о кошельке</h3>
+              <button className="admin-modal-close" onClick={() => setWalletPrivateKeyModal(null)}>×</button>
+            </div>
+            <div className="admin-modal-content">
+              <div className="form-group">
+                <label>Адрес кошелька</label>
+                <div style={{ 
+                  background: '#1a1a1a', 
+                  padding: '12px', 
+                  borderRadius: '8px', 
+                  border: '1px solid #3a3a3a',
+                  wordBreak: 'break-all',
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  color: '#fff'
+                }}>
+                  {walletPrivateKeyModal.address}
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(walletPrivateKeyModal.address)
+                    alert('Адрес скопирован в буфер обмена')
+                  }}
+                  style={{
+                    marginTop: '8px',
+                    padding: '6px 12px',
+                    background: '#3a3a3a',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  Копировать адрес
+                </button>
+              </div>
+
+              <div className="form-group">
+                <label>Приватный ключ</label>
+                <div style={{ 
+                  background: '#1a1a1a', 
+                  padding: '12px', 
+                  borderRadius: '8px', 
+                  border: '1px solid #3a3a3a',
+                  wordBreak: 'break-all',
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  color: '#ff6b6b',
+                  position: 'relative'
+                }}>
+                  {walletPrivateKeyModal.privateKey}
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(walletPrivateKeyModal.privateKey)
+                    alert('Приватный ключ скопирован в буфер обмена')
+                  }}
+                  style={{
+                    marginTop: '8px',
+                    padding: '6px 12px',
+                    background: '#ff6b6b',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  Копировать приватный ключ
+                </button>
+              </div>
+
+              {walletPrivateKeyModal.wallet && (
+                <div className="form-group">
+                  <label>Дополнительная информация</label>
+                  <div style={{ 
+                    background: '#1a1a1a', 
+                    padding: '12px', 
+                    borderRadius: '8px', 
+                    border: '1px solid #3a3a3a',
+                    fontSize: '13px',
+                    color: '#B6B6B6'
+                  }}>
+                    <div style={{ marginBottom: '8px' }}>
+                      <strong>ID пользователя:</strong> {walletPrivateKeyModal.wallet.userId || 'N/A'}
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <strong>Тип кошелька:</strong> {walletPrivateKeyModal.wallet.walletType || 'TON'}
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <strong>Баланс:</strong> {typeof walletPrivateKeyModal.wallet.balance === 'number' ? walletPrivateKeyModal.wallet.balance.toFixed(4) : '0.0000'} TON
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <strong>Статус:</strong> {walletPrivateKeyModal.wallet.isActive ? 'Активен' : 'Неактивен'}
+                    </div>
+                    <div>
+                      <strong>Создан:</strong> {new Date(walletPrivateKeyModal.wallet.createdAt).toLocaleString('ru-RU')}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ 
+                marginTop: '20px', 
+                padding: '12px', 
+                background: 'rgba(255, 107, 107, 0.1)', 
+                border: '1px solid rgba(255, 107, 107, 0.3)', 
+                borderRadius: '8px',
+                fontSize: '12px',
+                color: '#ff6b6b'
+              }}>
+                ⚠️ Внимание! Приватный ключ дает полный доступ к кошельку. Храните его в безопасности и никому не передавайте.
+              </div>
+
+              <div className="edit-form-actions" style={{ marginTop: '20px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setWalletPrivateKeyModal(null)}
+                >
+                  Закрыть
                 </button>
               </div>
             </div>
