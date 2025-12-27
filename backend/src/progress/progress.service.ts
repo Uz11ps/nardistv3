@@ -24,6 +24,26 @@ export class ProgressService {
   private getTotalXPForLevel(level: number): number {
     return this.xpCalculator.getTotalXPForLevel(level);
   }
+
+  async getLevelProgress(userId: string): Promise<{ currentLevel: number; currentXP: number; xpForCurrentLevel: number; xpForNextLevel: number; xpNeededForNextLevel: number; progress: number }> {
+    const user = await this.usersService.findOne(userId);
+    const currentXP = Number(user.xp || 0);
+    const currentLevel = this.getLevelFromTotalXP(currentXP);
+    const xpForCurrentLevel = currentLevel <= 1 ? 0 : this.getTotalXPForLevel(currentLevel);
+    const xpForNextLevel = currentLevel >= this.MAX_LEVEL ? xpForCurrentLevel : this.getTotalXPForLevel(currentLevel + 1);
+    const xpNeededForNextLevel = xpForNextLevel - xpForCurrentLevel;
+    const xpProgress = currentXP - xpForCurrentLevel;
+    const progress = currentLevel >= this.MAX_LEVEL ? 1 : Math.max(0, Math.min(1, xpProgress / xpNeededForNextLevel));
+    
+    return {
+      currentLevel,
+      currentXP,
+      xpForCurrentLevel,
+      xpForNextLevel,
+      xpNeededForNextLevel,
+      progress,
+    };
+  }
   
   private readonly ENERGY_RESTORE_INTERVAL = 30 * 60 * 1000; // 30 минут
   private readonly ENERGY_RESTORE_AMOUNT = 10; // 10 энергии за восстановление

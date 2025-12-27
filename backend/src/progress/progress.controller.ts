@@ -46,6 +46,12 @@ export class ProgressController {
     };
   }
 
+  @Get('level-progress')
+  @UseGuards(JwtAuthGuard)
+  async getLevelProgress(@CurrentUser() user: any) {
+    return this.progressService.getLevelProgress(user.id);
+  }
+
   @Get('enhancement/availability')
   @UseGuards(JwtAuthGuard)
   async getEnhancementAvailability(@CurrentUser() user: any) {

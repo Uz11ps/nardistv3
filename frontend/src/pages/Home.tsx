@@ -12,12 +12,22 @@ interface Stats {
   maxEnergy: number
 }
 
+interface LevelProgress {
+  currentLevel: number
+  currentXP: number
+  xpForCurrentLevel: number
+  xpForNextLevel: number
+  xpNeededForNextLevel: number
+  progress: number
+}
+
 export default function Home() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const [stats, setStats] = useState<Stats>({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
   const [hasPremium, setHasPremium] = useState(false)
   const [hasNotifications, setHasNotifications] = useState(false)
+  const [levelProgress, setLevelProgress] = useState<LevelProgress | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -34,6 +44,7 @@ export default function Home() {
         checkPremium()
         checkNotifications()
         loadEnergy()
+        loadLevelProgress()
       } catch (error) {
         console.error('Ошибка при загрузке статистики:', error)
         setStats({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
@@ -49,6 +60,15 @@ export default function Home() {
         energy: response.data.energy || prev.energy,
         maxEnergy: response.data.maxEnergy || prev.maxEnergy,
       }))
+    } catch (error) {
+      // Игнорируем ошибки
+    }
+  }
+
+  const loadLevelProgress = async () => {
+    try {
+      const response = await apiClient.get('/progress/level-progress')
+      setLevelProgress(response.data)
     } catch (error) {
       // Игнорируем ошибки
     }
@@ -125,6 +145,26 @@ export default function Home() {
       </div>
 
       <div className="home-content">
+        {/* Прогресс-бар уровня */}
+        {levelProgress && (
+          <div className="home-level-progress-container">
+            <div className="home-level-progress-bar">
+              <div 
+                className="home-level-progress-fill" 
+                style={{ width: `${levelProgress.progress * 100}%` }}
+              />
+            </div>
+            <div className="home-level-progress-info">
+              <span className="home-level-progress-text">
+                {levelProgress.currentXP - levelProgress.xpForCurrentLevel} / {levelProgress.xpNeededForNextLevel} XP
+              </span>
+              <span className="home-level-progress-level">
+                Уровень {levelProgress.currentLevel} → {levelProgress.currentLevel + 1}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Меню */}
         <div className="home-menu">
           {menuItems.map((item) => {
