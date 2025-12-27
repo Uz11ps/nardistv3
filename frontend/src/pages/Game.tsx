@@ -570,9 +570,8 @@ export default function Game() {
 
     socket.on('timer_update', (data: any) => {
       if (data.gameId === gameId) {
-        // Система: 20 секунд на ход ВСЕГДА, общее время 60 секунд
-        const moveTimeElapsed = data.moveTimeElapsed !== undefined ? data.moveTimeElapsed : 0
-        const moveTimeRemaining = Math.max(0, 20 - moveTimeElapsed) // Всегда максимум 20 секунд на ход
+        // Используем данные из сервера
+        const moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 20
         const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
         const isOvertime = data.isOvertime || false

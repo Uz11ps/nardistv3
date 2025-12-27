@@ -296,8 +296,9 @@ export default function BackgammonBoard({
             return move
           })
           
-          // Если есть шашки на баре - фильтруем, оставляем только ходы с бара
-          if (hasBarCheckers) {
+          // Если есть шашки на баре и нет pendingMoves - фильтруем, оставляем только ходы с бара
+          // Если есть pendingMoves, значит уже начали ход с бара, показываем все возможные ходы
+          if (hasBarCheckers && pendingMoves.length === 0) {
             flatMoves = flatMoves.filter(move => move.from === (isPlayer1 ? 24 : 25))
           }
         }

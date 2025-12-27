@@ -456,6 +456,25 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         });
         this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
         
+        // Проверяем наличие валидных ходов после броска (как и для обычных игроков)
+        const possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
+        const hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
+        
+        if (!hasMoves) {
+          this.logger.log(`🔄 No possible moves for bot, switching turn automatically for game ${gameId}`);
+          // Переключаем ход сразу без задержки
+          try {
+            await this.gamesService.makeMove(gameId, botPlayerId, []);
+            const updatedGameState = await this.gamesService.getGameState(gameId);
+            this.server.to(`game:${gameId}`).emit('game_state', updatedGameState);
+            await this.sendTimerUpdateForGame(gameId);
+            return; // Выходим, т.к. ход переключен на игрока
+          } catch (e) {
+            this.logger.error(`Error in auto-skip turn for bot: ${e.message}`);
+            return;
+          }
+        }
+        
         // Делаем ход бота с задержкой 0-5 секунд
         try {
           // Случайная задержка от 0 до 5 секунд для более естественного поведения бота
