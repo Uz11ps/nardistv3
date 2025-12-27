@@ -254,12 +254,16 @@ export class SubscriptionController {
   @UseGuards(JwtAuthGuard)
   async createNarCoinPayment(@CurrentUser() user: any, @Body() body: { amount: number; price: number; method?: PaymentMethod | string }) {
     try {
-      if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
+      // Явно конвертируем в числа
+      const narAmount = Number(body.amount);
+      const price = Number(body.price);
+
+      if (isNaN(narAmount) || narAmount <= 0) {
         throw new BadRequestException('Некорректное количество NAR. Количество должно быть больше 0.');
       }
 
-      if (!body.price || isNaN(body.price) || body.price <= 0) {
-        throw new BadRequestException('Некорректная цена. Цена должна быть больше 0.');
+      if (isNaN(price) || price <= 0) {
+        throw new BadRequestException(`Некорректная цена. Цена должна быть больше 0. Получено: ${body.price} (тип: ${typeof body.price})`);
       }
 
       // Преобразуем строку в enum (если пришла строка с фронтенда)
@@ -282,12 +286,12 @@ export class SubscriptionController {
       }
 
       // Используем цену из пакета (установленную админом)
-      // body.price - это цена в TON/USDT для данного пакета
+      // price - это цена в TON/USDT для данного пакета
       const transaction = await this.paymentTransactionService.createNarCoinTransaction(
         user.id,
-        body.price, // Используем цену из пакета
+        price, // Используем цену из пакета (конвертированную в число)
         method,
-        body.amount, // Передаем количество NAR из пакета
+        narAmount, // Передаем количество NAR из пакета (конвертированное в число)
       );
 
       // Получаем или создаем кошелек пользователя
@@ -300,7 +304,7 @@ export class SubscriptionController {
         comment: transaction.comment,
         method: String(transaction.method).toUpperCase(),
         status: transaction.status,
-        narAmount: body.amount, // Количество NAR из пакета
+        narAmount: narAmount, // Количество NAR из пакета
         expiresAt: transaction.expiresAt,
       };
     } catch (error: any) {
