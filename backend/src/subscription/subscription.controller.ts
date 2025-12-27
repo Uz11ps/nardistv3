@@ -154,7 +154,7 @@ export class SubscriptionController {
         walletAddress: wallet.address,
         amount: transaction.amount,
         comment: transaction.comment,
-        method: transaction.method,
+        method: String(transaction.method).toUpperCase(),
         status: transaction.status,
         expiresAt: transaction.expiresAt,
         // Инструкции для пользователя
@@ -291,7 +291,7 @@ export class SubscriptionController {
         walletAddress: wallet.address,
         amount: transaction.amount,
         comment: transaction.comment,
-        method: transaction.method,
+        method: String(transaction.method).toUpperCase(),
         status: transaction.status,
         narAmount: transaction.amount * tonRate,
         expiresAt: transaction.expiresAt,

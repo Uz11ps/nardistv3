@@ -189,16 +189,6 @@ export default function TonPaymentModal({
             </div>
           ) : (
             <>
-              <div className="ton-payment-instructions">
-                <h4>Инструкция по оплате:</h4>
-                <ol>
-                  <li>Откройте ваш TON кошелек (Tonkeeper, TON Wallet и т.д.)</li>
-                  <li>Отправьте <strong>{amount} {method}</strong> на адрес ниже</li>
-                  {comment && <li>В комментарии к транзакции можно указать: <code>{comment}</code> (необязательно)</li>}
-                  <li>После отправки введите хеш транзакции ниже</li>
-                </ol>
-              </div>
-
               <div className="ton-payment-details">
                 <div className="ton-payment-detail-item">
                   <label>Адрес кошелька:</label>
@@ -218,20 +208,18 @@ export default function TonPaymentModal({
                   <div className="ton-payment-amount">{amount} {method}</div>
                 </div>
 
-                {comment && (
-                  <div className="ton-payment-detail-item">
-                    <label>Комментарий (необязательно):</label>
-                    <div className="ton-payment-comment-container">
-                      <code className="ton-payment-comment">{comment}</code>
-                      <button
-                        className="ton-payment-copy-btn"
-                        onClick={() => copyToClipboard(comment)}
-                      >
-                        {copied ? '✓ Скопировано' : 'Копировать'}
-                      </button>
-                    </div>
+                <div className="ton-payment-detail-item">
+                  <label>Комментарий <span style={{ color: '#ff4444' }}>*</span>:</label>
+                  <div className="ton-payment-comment-container">
+                    <code className="ton-payment-comment">{comment}</code>
+                    <button
+                      className="ton-payment-copy-btn"
+                      onClick={() => copyToClipboard(comment)}
+                    >
+                      {copied ? '✓ Скопировано' : 'Копировать'}
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
 
               <div className="ton-payment-hash-input">
