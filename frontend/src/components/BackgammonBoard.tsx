@@ -692,46 +692,43 @@ export default function BackgammonBoard({
       const isHead = gameMode === 'long' && (pointIndex === 0 || pointIndex === 12);
       
       const checkersToDraw = (isDraggingFromThisPoint || isAnimatingFromThisPoint) ? checkerCount - 1 : checkerCount
+      const isHead = gameMode === 'long' && (pointIndex === 0 || pointIndex === 12);
       
-      // В длинных нардах голову (0 и 12) рисуем как одну шашку с числом, если там больше 1 шашки
-      if (isHead && checkersToDraw > 0) {
-        drawChecker(x, checkerBaseY, checkerSize, isWhiteChecker, isMyPoint)
-        // Пишем общее количество шашек в этой точке (включая те, что в виртуальном состоянии)
-        // Но так как при перетаскивании мы уже уменьшили virtualGameState, 
-        // отображаем текущее значение checkerCount
-        if (checkerCount > 1) {
+      for (let i = 0; i < checkersToDraw; i++) {
+        // Если шашек много (больше 5), начинаем их накладывать друг на друга плотнее
+        const overlap = checkerCount > 5 ? (checkerSize * 0.8) : checkerSize
+        const yOffset = i * overlap
+        const checkerY = isTopRow 
+          ? checkerBaseY + yOffset 
+          : checkerBaseY - yOffset
+        
+        // Используем текстуры шашек если есть
+        drawChecker(x, checkerY, checkerSize, isWhiteChecker, isMyPoint)
+
+        // Если это первая шашка в голове (индекс i === 0), рисуем на ней количество оставшихся шашек
+        if (isHead && i === 0 && checkerCount > 1) {
+          ctx.save()
           ctx.fillStyle = isWhiteChecker ? '#000' : '#FFF'
           ctx.font = 'bold 14px Arial'
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
-          ctx.fillText(checkerCount.toString(), x, checkerBaseY)
+          ctx.fillText(checkerCount.toString(), x, checkerY)
+          ctx.restore()
         }
-      } else {
-        for (let i = 0; i < checkersToDraw; i++) {
-          // Если шашек много (больше 5), начинаем их накладывать друг на друга плотнее
-          const overlap = checkerCount > 5 ? (checkerSize * 0.8) : checkerSize
-          const yOffset = i * overlap
-          const checkerY = isTopRow 
-            ? checkerBaseY + yOffset 
-            : checkerBaseY - yOffset
-          
-          // Используем текстуры шашек если есть
-          drawChecker(x, checkerY, checkerSize, isWhiteChecker, isMyPoint)
-        }
+      }
+      
+      // Если шашек больше 5 (и это не голова), показываем число на последней шашке
+      if (!isHead && checkerCount > 5 && !isDraggingFromThisPoint && !isAnimatingFromThisPoint) {
+        const overlap = checkerSize * 0.8
+        const lastCheckerY = isTopRow 
+          ? checkerBaseY + ((checkerCount - 1) * overlap)
+          : checkerBaseY - ((checkerCount - 1) * overlap)
         
-        // Если шашек больше 5, показываем число на последней шашке
-        if (checkerCount > 5 && !isDraggingFromThisPoint && !isAnimatingFromThisPoint) {
-          const overlap = checkerSize * 0.8
-          const lastCheckerY = isTopRow 
-            ? checkerBaseY + ((checkerCount - 1) * overlap)
-            : checkerBaseY - ((checkerCount - 1) * overlap)
-          
-          ctx.fillStyle = isWhiteChecker ? '#000' : '#FFF'
-          ctx.font = 'bold 11px Arial'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(checkerCount.toString(), x, lastCheckerY)
-        }
+        ctx.fillStyle = isWhiteChecker ? '#000' : '#FFF'
+        ctx.font = 'bold 11px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(checkerCount.toString(), x, lastCheckerY)
       }
     })
     
