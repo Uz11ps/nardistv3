@@ -10,6 +10,7 @@ interface TonPaymentModalProps {
   amount: number
   comment: string
   method: 'TON' | 'USDT'
+  expiresAt?: string | Date
   onSuccess: () => void
 }
 

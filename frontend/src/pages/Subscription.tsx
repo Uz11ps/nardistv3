@@ -69,6 +69,7 @@ export default function Subscription() {
     amount: number
     comment: string
     method: 'TON' | 'USDT'
+    expiresAt?: string | Date
   } | null>(null)
 
   useEffect(() => {

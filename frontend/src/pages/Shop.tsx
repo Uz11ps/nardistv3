@@ -40,6 +40,7 @@ export default function Shop() {
     comment: string
     method: 'TON' | 'USDT'
     narAmount: number
+    expiresAt?: string | Date
   } | null>(null)
 
   useEffect(() => {
