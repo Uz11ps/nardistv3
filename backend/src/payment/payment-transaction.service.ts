@@ -120,11 +120,16 @@ export class PaymentTransactionService {
 
   /**
    * Создать транзакцию для покупки NAR-coin
+   * @param userId ID пользователя
+   * @param amount Цена в TON/USDT из пакета (установлена админом)
+   * @param method Метод оплаты
+   * @param narAmount Количество NAR из пакета (установлено админом)
    */
   async createNarCoinTransaction(
     userId: string,
-    amount: number, // количество TON для покупки
+    amount: number, // Цена в TON/USDT из пакета
     method: PaymentMethod = PaymentMethod.TON,
+    narAmount?: number, // Количество NAR из пакета
   ): Promise<PaymentTransaction> {
     // Получаем или создаем кошелек пользователя
     const wallet = await this.walletService.getOrCreateWallet(userId);
@@ -132,9 +137,6 @@ export class PaymentTransactionService {
     // Генерируем комментарий для идентификации платежа (необязательный)
     const transactionId = `nar_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const comment = this.tonService.generatePaymentComment(userId, transactionId);
-
-    // Получаем текущий курс
-    const tonRate = await this.getTonRate();
 
     // Создаем транзакцию с временем истечения (15 минут)
     const expiresAt = new Date();
@@ -146,20 +148,19 @@ export class PaymentTransactionService {
       type: PaymentType.NAR_COIN,
       method,
       status: PaymentStatus.PENDING,
-      amount,
+      amount, // Цена из пакета
       toAddress: wallet.address,
-      comment: comment, // Комментарий необязательный, но генерируем для удобства идентификации
+      comment: comment,
       expiresAt,
       metadata: {
         userId,
         transactionId,
-        narAmount: Math.floor(amount * tonRate),
-        rate: tonRate,
+        narAmount: narAmount || 0, // Количество NAR из пакета
       },
     });
 
     const savedTransaction = await this.transactionRepository.save(transaction);
-    this.logger.log(`✅ Создана транзакция для покупки NAR-coin: userId=${userId}, amount=${amount} TON`);
+    this.logger.log(`✅ Создана транзакция для покупки NAR-coin: userId=${userId}, amount=${amount} TON, narAmount=${narAmount || 0} NAR`);
 
     return savedTransaction;
   }
@@ -319,8 +320,13 @@ export class PaymentTransactionService {
     } else if (transaction.type === PaymentType.NAR_COIN) {
       // Начисляем NAR-coin
       const user = await this.usersService.findOne(transaction.userId);
-      // Используем narAmount из метаданных (зафиксированный при создании) или текущий курс
-      const narAmount = transaction.metadata?.narAmount || Math.floor(transaction.amount * tonRate);
+      // Используем narAmount из метаданных (из пакета, установленного админом)
+      const narAmount = transaction.metadata?.narAmount;
+      
+      if (!narAmount || narAmount <= 0) {
+        this.logger.error(`❌ Ошибка: не указано количество NAR в транзакции ${transaction.id}`);
+        throw new BadRequestException('Не указано количество NAR в транзакции');
+      }
       
       const currentBalance = Number(user.narCoin || 0);
       await this.usersService.update(transaction.userId, {

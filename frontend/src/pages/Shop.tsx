@@ -179,9 +179,11 @@ export default function Shop() {
     try {
       setBuyingNarCoinAmount(amount)
       // Создаем платежную транзакцию для покупки NAR-coin
-      // amount - количество NAR, которое хочет купить пользователь
+      // amount - количество NAR из пакета
+      // price - цена в TON/USDT из пакета
       const response = await apiClient.post('/subscription/nar-coin/payment/create', {
-        amount: amount, // количество NAR, которое хочет купить пользователь
+        amount: amount, // количество NAR из пакета
+        price: price, // цена в TON/USDT из пакета
         method: paymentMethod,
       })
       

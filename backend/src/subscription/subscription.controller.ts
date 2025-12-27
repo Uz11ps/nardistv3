@@ -247,14 +247,19 @@ export class SubscriptionController {
 
   /**
    * Создать транзакцию для покупки NAR-coin через TON/USDT
-   * body.amount - количество NAR, которое хочет купить пользователь
+   * body.amount - количество NAR из пакета
+   * body.price - цена в TON/USDT из пакета (устанавливается админом)
    */
   @Post('nar-coin/payment/create')
   @UseGuards(JwtAuthGuard)
-  async createNarCoinPayment(@CurrentUser() user: any, @Body() body: { amount: number; method?: PaymentMethod | string }) {
+  async createNarCoinPayment(@CurrentUser() user: any, @Body() body: { amount: number; price: number; method?: PaymentMethod | string }) {
     try {
       if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
         throw new BadRequestException('Некорректное количество NAR. Количество должно быть больше 0.');
+      }
+
+      if (!body.price || isNaN(body.price) || body.price <= 0) {
+        throw new BadRequestException('Некорректная цена. Цена должна быть больше 0.');
       }
 
       // Преобразуем строку в enum (если пришла строка с фронтенда)
@@ -276,22 +281,13 @@ export class SubscriptionController {
         }
       }
 
-      // Получаем курс обмена из настроек админа
-      const settings = await this.adminService.getSystemSettings();
-      const tonRate = Number(settings.ton_exchange_rate);
-      
-      if (!tonRate || tonRate <= 0) {
-        throw new BadRequestException('Курс обмена TON/NAR не установлен в настройках. Обратитесь к администратору.');
-      }
-
-      // Рассчитываем количество TON/USDT, необходимое для покупки указанного количества NAR
-      const tonAmount = body.amount / tonRate;
-
-      // Создаем транзакцию с рассчитанной суммой в TON
+      // Используем цену из пакета (установленную админом)
+      // body.price - это цена в TON/USDT для данного пакета
       const transaction = await this.paymentTransactionService.createNarCoinTransaction(
         user.id,
-        tonAmount,
+        body.price, // Используем цену из пакета
         method,
+        body.amount, // Передаем количество NAR из пакета
       );
 
       // Получаем или создаем кошелек пользователя
@@ -304,7 +300,7 @@ export class SubscriptionController {
         comment: transaction.comment,
         method: String(transaction.method).toUpperCase(),
         status: transaction.status,
-        narAmount: body.amount, // Количество NAR, которое получит пользователь
+        narAmount: body.amount, // Количество NAR из пакета
         expiresAt: transaction.expiresAt,
       };
     } catch (error: any) {
