@@ -108,6 +108,7 @@ export class SubscriptionController {
         comment: transaction.comment,
         method: transaction.method,
         status: transaction.status,
+        expiresAt: transaction.expiresAt,
         // Инструкции для пользователя
         instructions: {
           ton: `Отправьте ${transaction.amount} TON на адрес ${wallet.address} с комментарием: ${transaction.comment}`,
@@ -136,7 +137,7 @@ export class SubscriptionController {
   ) {
     const transaction = await this.paymentTransactionService.updateTransactionHash(transactionId, body.txHash);
     
-    // Сразу проверяем статус транзакции
+    // Проверяем статус транзакции только после того, как пользователь ввел хеш
     await this.paymentTransactionService.checkTransactionStatus(transactionId);
 
     return {
@@ -159,8 +160,8 @@ export class SubscriptionController {
       throw new BadRequestException('Транзакция не принадлежит пользователю');
     }
 
-    // Проверяем статус в блокчейне (если еще не завершена)
-    if (transaction.status !== 'completed' && transaction.status !== 'failed') {
+    // Проверяем статус в блокчейне только если есть хеш транзакции
+    if (transaction.status !== 'completed' && transaction.status !== 'failed' && transaction.txHash) {
       await this.paymentTransactionService.checkTransactionStatus(transactionId);
       // Получаем обновленную транзакцию
       return await this.paymentTransactionService.getTransaction(transactionId);
@@ -245,6 +246,7 @@ export class SubscriptionController {
         method: transaction.method,
         status: transaction.status,
         narAmount: transaction.amount * tonRate,
+        expiresAt: transaction.expiresAt,
       };
     } catch (error: any) {
       // Если это уже BadRequestException, просто пробрасываем

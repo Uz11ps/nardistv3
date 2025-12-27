@@ -30,6 +30,7 @@ export default function Shop() {
   const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
   const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
   const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
+  const [paymentMethod, setPaymentMethod] = useState<'TON' | 'USDT'>('TON')
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentData, setPaymentData] = useState<{
@@ -147,18 +148,25 @@ export default function Shop() {
 
   const handleBuySubscription = async (plan: string, price: number) => {
     try {
-      // Создаем платеж через TON для подписки
-      const response = await apiClient.post('/payment/ton/create', { 
-        amount: price, 
-        description: `Подписка ${plan}`,
-        type: 'subscription'
+      // Создаем платежную транзакцию для подписки (используем тот же endpoint что и в Subscription.tsx)
+      // Для премиум подписки используем month_12 (годовая подписка)
+      const response = await apiClient.post('/subscription/payment/create', {
+        plan: 'month_12',
+        method: paymentMethod,
       })
       
-      if (response.data.paymentUrl) {
-        // Открываем страницу оплаты
-        window.open(response.data.paymentUrl, '_blank')
-        alert('Откройте ссылку для оплаты. После оплаты подписка будет активирована автоматически.')
-      }
+      const { transactionId, walletAddress, amount, comment, method } = response.data
+      
+      // Показываем модальное окно оплаты
+      setPaymentData({
+        transactionId,
+        walletAddress,
+        amount,
+        comment,
+        method: method === 'TON' ? 'TON' : 'USDT',
+        narAmount: 0, // Для подписки не нужно
+      })
+      setShowPaymentModal(true)
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при создании платежа')
       console.error('Subscription purchase failed:', error)
@@ -191,11 +199,11 @@ export default function Shop() {
       setBuyingNarCoinAmount(amount)
       // Создаем платежную транзакцию для покупки NAR-coin
       const response = await apiClient.post('/subscription/nar-coin/payment/create', {
-        amount: price, // цена в TON
-        method: 'TON',
+        amount: price, // цена в TON/USDT
+        method: paymentMethod,
       })
       
-      const { transactionId, walletAddress, amount: tonAmount, comment, method, narAmount } = response.data
+      const { transactionId, walletAddress, amount: tonAmount, comment, method, narAmount, expiresAt } = response.data
       
       // Показываем модальное окно оплаты
       setPaymentData({
@@ -205,6 +213,7 @@ export default function Shop() {
         comment,
         method: method === 'TON' ? 'TON' : 'USDT',
         narAmount,
+        expiresAt,
       })
       setShowPaymentModal(true)
     } catch (error: any) {
@@ -377,13 +386,60 @@ export default function Shop() {
 
         {/* NAR-coin */}
         {activeTab === 'coin' && (
-          <div className="shop-list">
-            {loading ? (
-              <Card>
-                <div className="shop-empty">Загрузка...</div>
-              </Card>
-            ) : (
-              narCoinPackages.map((pkg) => (
+          <>
+            {/* Выбор метода оплаты */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '8px', 
+              marginBottom: '16px'
+            }}>
+              <button
+                onClick={() => setPaymentMethod('TON')}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  background: paymentMethod === 'TON' 
+                    ? 'linear-gradient(180deg, #0088CC 0%, #006699 100%)' 
+                    : '#3a3a3a',
+                  border: paymentMethod === 'TON' ? '2px solid #0088CC' : '1px solid #4a4a4a',
+                  color: '#FFF',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                TON
+              </button>
+              <button
+                onClick={() => setPaymentMethod('USDT')}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  background: paymentMethod === 'USDT' 
+                    ? 'linear-gradient(180deg, #26A17B 0%, #1A7A5C 100%)' 
+                    : '#3a3a3a',
+                  border: paymentMethod === 'USDT' ? '2px solid #26A17B' : '1px solid #4a4a4a',
+                  color: '#FFF',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                USDT
+              </button>
+            </div>
+
+            <div className="shop-list">
+              {loading ? (
+                <Card>
+                  <div className="shop-empty">Загрузка...</div>
+                </Card>
+              ) : (
+                narCoinPackages.map((pkg) => (
                 <Card key={pkg.amount} className="shop-nar-coin-card">
                   <div className="shop-nar-coin-content">
                     <div className="shop-nar-coin-info">
@@ -406,6 +462,7 @@ export default function Shop() {
               ))
             )}
           </div>
+          </>
         )}
 
         {/* Подписка */}
@@ -531,6 +588,7 @@ export default function Shop() {
               </div>
             </Card>
           </div>
+          </>
         )}
 
         {/* Скины */}
@@ -700,6 +758,7 @@ export default function Shop() {
           amount={paymentData.amount}
           comment={paymentData.comment}
           method={paymentData.method}
+          expiresAt={paymentData.expiresAt}
           onSuccess={handlePaymentSuccess}
         />
       )}

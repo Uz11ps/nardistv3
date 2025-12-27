@@ -169,6 +169,12 @@ export class PaymentTransaction {
   @Column({ type: 'text', nullable: true })
   lastError: string;
 
+  /**
+   * Время истечения транзакции (15 минут с момента создания)
+   */
+  @Column({ type: 'timestamp', nullable: true })
+  expiresAt: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 

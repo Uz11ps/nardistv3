@@ -341,6 +341,34 @@ export class GamesService {
       this.logger.error(`Error fetching active in-progress games: ${errorMessage}`);
       this.logger.debug(`Error stack: ${errorStack}`);
       
+      return [];
+    }
+  }
+
+  /**
+   * Получает все активные игры конкретного игрока
+   */
+  async getActiveGamesByPlayer(playerId: string): Promise<Game[]> {
+    try {
+      if (!this.gamesRepository) {
+        this.logger.warn('gamesRepository is not initialized');
+        return [];
+      }
+      
+      return await this.gamesRepository.find({
+        where: [
+          { status: GameStatus.IN_PROGRESS, player1Id: playerId },
+          { status: GameStatus.IN_PROGRESS, player2Id: playerId },
+        ],
+        relations: [],
+      });
+    } catch (error: any) {
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+      this.logger.error(`Error fetching active games for player ${playerId}: ${errorMessage}`);
+      return [];
+    }
+  }
+      
       return []; // Возвращаем пустой массив при ошибке
     }
   }

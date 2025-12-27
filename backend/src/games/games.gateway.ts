@@ -61,8 +61,18 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     }
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
+    const userId = client.data.userId;
     this.connectedUsers.delete(client.id);
+    
+    // При дисконнекте проверяем все активные игры этого игрока и завершаем по таймауту если нужно
+    if (userId) {
+      try {
+        await this.checkPlayerGameTimeouts(userId);
+      } catch (error) {
+        this.logger.error(`Error checking timeouts for disconnected player ${userId}:`, error);
+      }
+    }
   }
 
   /**
@@ -185,6 +195,111 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     } catch (error) {
       this.logger.error(`❌ Error sending timer updates:`, error instanceof Error ? error.message : error);
       this.logger.debug(`Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
+    }
+  }
+
+  /**
+   * Проверяет таймауты для всех активных игр конкретного игрока
+   */
+  private async checkPlayerGameTimeouts(playerId: string): Promise<void> {
+    try {
+      const activeGames = await this.gamesService.getActiveGamesByPlayer(playerId);
+      if (activeGames.length === 0) {
+        return;
+      }
+
+      const now = new Date();
+      
+      for (const game of activeGames) {
+        try {
+          // Проверяем, что игра еще активна
+          const currentGame = await this.gamesService.findOne(game.id);
+          if (currentGame.status !== 'in_progress') {
+            continue;
+          }
+
+          const referenceTime = currentGame.lastMoveAt 
+            ? (currentGame.lastMoveAt instanceof Date ? currentGame.lastMoveAt : new Date(currentGame.lastMoveAt))
+            : (currentGame.createdAt || now);
+          
+          const timeSinceLastMove = now.getTime() - referenceTime.getTime();
+          const timeSinceLastMoveSeconds = timeSinceLastMove / 1000;
+          
+          // Определяем, является ли этот игрок текущим
+          const isCurrentPlayer = (currentGame.currentPlayer === 0 && currentGame.player1Id === playerId) ||
+                                  (currentGame.currentPlayer === 1 && currentGame.player2Id === playerId);
+          
+          if (!isCurrentPlayer) {
+            continue; // Не ход этого игрока, пропускаем
+          }
+
+          // Для игр с ботами - проверяем 20 секунд на ход
+          if (currentGame.type === GameType.VS_BOT && currentGame.player2Id === null) {
+            if (currentGame.currentPlayer === 0 && timeSinceLastMoveSeconds > 20) {
+              this.logger.warn(`⏱️ Bot game timeout on disconnect for game ${currentGame.id}, player ${playerId} disconnected, timeSinceLastMove: ${timeSinceLastMoveSeconds.toFixed(2)}s`);
+              
+              await this.gamesService.resignGame(currentGame.id, playerId);
+              const gameState = await this.gamesService.getGameState(currentGame.id);
+              const finishedGame = await this.gamesService.findOne(currentGame.id);
+              
+              this.server.to(`game:${currentGame.id}`).emit('game_finished', {
+                winnerId: finishedGame.winnerId,
+                player1Score: finishedGame.player1Score,
+                player2Score: finishedGame.player2Score,
+                gameState,
+                reason: 'timeout',
+              });
+              
+              this.logger.log(`✅ Bot game ${currentGame.id} finished due to timeout on disconnect, bot won`);
+            }
+            continue;
+          }
+
+          // Для обычных игр - проверяем систему контроля времени
+          const currentPlayerTimeRemaining = currentGame.currentPlayer === 0 
+            ? (currentGame.player1TimeRemaining || 60000) 
+            : (currentGame.player2TimeRemaining || 60000);
+          
+          const baseMoveTime = 20;
+          const excessTime = Math.max(0, timeSinceLastMoveSeconds - baseMoveTime);
+          const timeAfterBaseMove = Math.max(0, currentPlayerTimeRemaining - (excessTime * 1000));
+          
+          const isTimeOut = timeSinceLastMoveSeconds > baseMoveTime && timeAfterBaseMove <= 0;
+          
+          if (isTimeOut) {
+            this.logger.warn(`⏱️ Time control timeout on disconnect for game ${currentGame.id}, player ${playerId} disconnected, timeSinceLastMove: ${timeSinceLastMoveSeconds.toFixed(2)}s`);
+            
+            // Обновляем общее время игрока
+            if (currentGame.currentPlayer === 0) {
+              currentGame.player1TimeRemaining = 0;
+            } else {
+              currentGame.player2TimeRemaining = 0;
+            }
+            await this.gamesService['gamesRepository'].save(currentGame);
+            
+            await this.gamesService.resignGame(currentGame.id, playerId);
+            const gameState = await this.gamesService.getGameState(currentGame.id);
+            const finishedGame = await this.gamesService.findOne(currentGame.id);
+            
+            this.server.to(`game:${currentGame.id}`).emit('game_finished', {
+              winnerId: finishedGame.winnerId,
+              player1Score: finishedGame.player1Score,
+              player2Score: finishedGame.player2Score,
+              gameState,
+              reason: 'timeout',
+            });
+            
+            this.logger.log(`✅ Game ${currentGame.id} finished due to time control timeout on disconnect, winner: ${finishedGame.winnerId}`);
+          }
+        } catch (error) {
+          if (error.message && error.message.includes('уже завершена')) {
+            continue;
+          }
+          this.logger.error(`❌ Error handling timeout for game ${game.id} on disconnect:`, error);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`❌ Error checking player game timeouts for ${playerId}:`, error);
     }
   }
 

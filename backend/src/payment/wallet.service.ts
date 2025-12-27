@@ -21,22 +21,31 @@ export class WalletService {
 
   /**
    * Получить или создать кошелек для пользователя
+   * Важно: всегда возвращает один и тот же кошелек для userId
    */
   async getOrCreateWallet(userId: string): Promise<UserWallet> {
+    // Сначала проверяем, есть ли кошелек (включая неактивные)
     let wallet = await this.walletRepository.findOne({
-      where: { userId, isActive: true },
+      where: { userId },
+      order: { createdAt: 'ASC' }, // Берем самый первый кошелек
     });
 
-    if (!wallet) {
-      // Создаем новый кошелек
-      wallet = await this.createWallet(userId);
+    if (wallet) {
+      // Если кошелек есть, активируем его (если неактивен) и возвращаем
+      if (!wallet.isActive) {
+        wallet.isActive = true;
+        await this.walletRepository.save(wallet);
+      }
+      return wallet;
     }
 
-    return wallet;
+    // Если кошелька нет, создаем новый
+    return await this.createWallet(userId);
   }
 
   /**
    * Создать новый кошелек для пользователя
+   * Важно: каждый userId имеет один и тот же кошелек всегда (не создаем новый)
    */
   async createWallet(userId: string): Promise<UserWallet> {
     // Проверяем, что пользователь существует
@@ -45,13 +54,23 @@ export class WalletService {
       throw new NotFoundException('Пользователь не найден');
     }
 
-    // Деактивируем старые кошельки (если есть)
-    await this.walletRepository.update(
-      { userId, isActive: true },
-      { isActive: false },
-    );
+    // Проверяем, нет ли уже кошелька для этого пользователя (включая неактивные)
+    const existingWallet = await this.walletRepository.findOne({
+      where: { userId },
+      order: { createdAt: 'ASC' }, // Берем самый первый кошелек
+    });
 
-    // Генерируем новый кошелек
+    if (existingWallet) {
+      // Если кошелек уже есть, активируем его и возвращаем
+      if (!existingWallet.isActive) {
+        existingWallet.isActive = true;
+        await this.walletRepository.save(existingWallet);
+      }
+      this.logger.log(`✅ Используется существующий кошелек для пользователя ${userId}: ${existingWallet.address}`);
+      return existingWallet;
+    }
+
+    // Генерируем новый кошелек только если его еще нет
     const walletData = await this.tonService.generateWallet();
 
     // Шифруем приватный ключ

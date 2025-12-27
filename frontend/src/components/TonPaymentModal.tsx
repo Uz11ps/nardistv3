@@ -22,22 +22,50 @@ export default function TonPaymentModal({
   comment,
   method,
   onSuccess,
+  expiresAt,
 }: TonPaymentModalProps) {
   const [copied, setCopied] = useState(false)
   const [txHash, setTxHash] = useState('')
   const [checking, setChecking] = useState(false)
   const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending')
+  const [timeRemaining, setTimeRemaining] = useState<number>(900) // 15 минут в секундах
 
   useEffect(() => {
     if (isOpen && transactionId) {
-      // Начинаем проверку статуса каждые 5 секунд
-      const interval = setInterval(() => {
-        checkPaymentStatus()
+      // Устанавливаем таймер на основе expiresAt или 15 минут по умолчанию
+      if (expiresAt) {
+        const expires = new Date(expiresAt)
+        const now = new Date()
+        const remaining = Math.max(0, Math.floor((expires.getTime() - now.getTime()) / 1000))
+        setTimeRemaining(remaining)
+      } else {
+        setTimeRemaining(900) // 15 минут по умолчанию
+      }
+      
+      // Обновляем таймер каждую секунду
+      const timerInterval = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 0) {
+            setStatus('failed')
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+
+      // Начинаем проверку статуса каждые 5 секунд (только если статус processing и есть хеш)
+      const statusInterval = setInterval(() => {
+        if (status === 'processing' && txHash) {
+          checkPaymentStatus()
+        }
       }, 5000)
       
-      return () => clearInterval(interval)
+      return () => {
+        clearInterval(timerInterval)
+        clearInterval(statusInterval)
+      }
     }
-  }, [isOpen, transactionId])
+  }, [isOpen, transactionId, expiresAt, status, txHash])
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -51,18 +79,29 @@ export default function TonPaymentModal({
     try {
       setChecking(true)
       const response = await apiClient.get(`/subscription/payment/${transactionId}/status`)
-      const { data } = await response
+      const transaction = response.data
       
-      if (response.data.status === 'completed') {
+      if (transaction.status === 'completed') {
         setStatus('completed')
         setTimeout(() => {
           onSuccess()
           onClose()
         }, 2000)
-      } else if (response.data.status === 'failed') {
+      } else if (transaction.status === 'failed') {
         setStatus('failed')
-      } else if (response.data.status === 'processing') {
+      } else if (transaction.status === 'processing') {
         setStatus('processing')
+      } else if (transaction.status === 'pending') {
+        // Если есть expiresAt, обновляем таймер
+        if (transaction.expiresAt) {
+          const expiresAt = new Date(transaction.expiresAt)
+          const now = new Date()
+          const remaining = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000))
+          setTimeRemaining(remaining)
+          if (remaining === 0) {
+            setStatus('failed')
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to check payment status:', error)
@@ -103,6 +142,35 @@ export default function TonPaymentModal({
         </div>
 
         <div className="ton-payment-modal-content">
+          {/* Таймер обратного отсчета */}
+          {(status === 'pending' || status === 'processing') && (
+            <div style={{
+              padding: '12px',
+              marginBottom: '16px',
+              borderRadius: '8px',
+              background: timeRemaining < 60 ? '#4a1a1a' : '#1a2a1a',
+              border: `1px solid ${timeRemaining < 60 ? '#ff4444' : '#44ff44'}`,
+              textAlign: 'center',
+            }}>
+              <div style={{ 
+                color: timeRemaining < 60 ? '#ff8888' : '#88ff88',
+                fontSize: '14px',
+                fontWeight: '500',
+                marginBottom: '4px',
+              }}>
+                Осталось времени на оплату
+              </div>
+              <div style={{
+                color: timeRemaining < 60 ? '#ff4444' : '#44ff44',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                fontFamily: 'monospace',
+              }}>
+                {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+              </div>
+            </div>
+          )}
+
           {status === 'completed' ? (
             <div className="ton-payment-success">
               <div className="ton-payment-success-icon">✅</div>
@@ -125,7 +193,7 @@ export default function TonPaymentModal({
                 <ol>
                   <li>Откройте ваш TON кошелек (Tonkeeper, TON Wallet и т.д.)</li>
                   <li>Отправьте <strong>{amount} {method}</strong> на адрес ниже</li>
-                  <li>В комментарии к транзакции укажите: <code>{comment}</code></li>
+                  {comment && <li>В комментарии к транзакции можно указать: <code>{comment}</code> (необязательно)</li>}
                   <li>После отправки введите хеш транзакции ниже</li>
                 </ol>
               </div>
@@ -149,18 +217,20 @@ export default function TonPaymentModal({
                   <div className="ton-payment-amount">{amount} {method}</div>
                 </div>
 
-                <div className="ton-payment-detail-item">
-                  <label>Комментарий (обязательно!):</label>
-                  <div className="ton-payment-comment-container">
-                    <code className="ton-payment-comment">{comment}</code>
-                    <button
-                      className="ton-payment-copy-btn"
-                      onClick={() => copyToClipboard(comment)}
-                    >
-                      {copied ? '✓ Скопировано' : 'Копировать'}
-                    </button>
+                {comment && (
+                  <div className="ton-payment-detail-item">
+                    <label>Комментарий (необязательно):</label>
+                    <div className="ton-payment-comment-container">
+                      <code className="ton-payment-comment">{comment}</code>
+                      <button
+                        className="ton-payment-copy-btn"
+                        onClick={() => copyToClipboard(comment)}
+                      >
+                        {copied ? '✓ Скопировано' : 'Копировать'}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="ton-payment-hash-input">

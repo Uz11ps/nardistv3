@@ -67,11 +67,14 @@ export class PaymentTransactionService {
     const prices = await this.getSubscriptionPrices();
     const amount = prices[plan];
     
-    // Генерируем комментарий для идентификации платежа
+    // Генерируем комментарий для идентификации платежа (необязательный)
     const transactionId = `sub_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const comment = this.tonService.generatePaymentComment(userId, transactionId);
 
-    // Создаем транзакцию
+    // Создаем транзакцию с временем истечения (15 минут)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
     const transaction = this.transactionRepository.create({
       userId,
       walletId: wallet.id,
@@ -81,7 +84,8 @@ export class PaymentTransactionService {
       amount,
       subscriptionPlan: plan,
       toAddress: wallet.address,
-      comment,
+      comment: comment, // Комментарий необязательный, но генерируем для удобства идентификации
+      expiresAt,
       metadata: {
         plan,
         userId,
@@ -106,14 +110,17 @@ export class PaymentTransactionService {
     // Получаем или создаем кошелек пользователя
     const wallet = await this.walletService.getOrCreateWallet(userId);
     
-    // Генерируем комментарий для идентификации платежа
+    // Генерируем комментарий для идентификации платежа (необязательный)
     const transactionId = `nar_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const comment = this.tonService.generatePaymentComment(userId, transactionId);
 
     // Получаем текущий курс
     const tonRate = await this.getTonRate();
 
-    // Создаем транзакцию
+    // Создаем транзакцию с временем истечения (15 минут)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
     const transaction = this.transactionRepository.create({
       userId,
       walletId: wallet.id,
@@ -122,7 +129,8 @@ export class PaymentTransactionService {
       status: PaymentStatus.PENDING,
       amount,
       toAddress: wallet.address,
-      comment,
+      comment: comment, // Комментарий необязательный, но генерируем для удобства идентификации
+      expiresAt,
       metadata: {
         userId,
         transactionId,
@@ -178,10 +186,23 @@ export class PaymentTransactionService {
       return transaction; // Не обрабатываем
     }
 
+    // Проверяем истечение времени (15 минут)
+    const now = new Date();
+    if (transaction.expiresAt && now > transaction.expiresAt) {
+      transaction.status = PaymentStatus.FAILED;
+      transaction.lastError = 'Время на оплату истекло (15 минут)';
+      return await this.transactionRepository.save(transaction);
+    }
+
+    // Если нет хеша транзакции, не проверяем
+    if (!transaction.txHash) {
+      return transaction;
+    }
+
     try {
       // Проверяем транзакцию в блокчейне
       const txInfo = await this.tonService.checkTransaction(
-        transaction.txHash || '',
+        transaction.txHash,
         transaction.toAddress,
       );
 
@@ -190,7 +211,6 @@ export class PaymentTransactionService {
       if (txInfo.found) {
         // Транзакция найдена
         transaction.status = PaymentStatus.COMPLETED;
-        transaction.txHash = transaction.txHash || txInfo.fromAddress || '';
         transaction.lt = txInfo.lt;
         transaction.fromAddress = txInfo.fromAddress;
         transaction.confirmedAt = new Date();
@@ -201,11 +221,10 @@ export class PaymentTransactionService {
 
         this.logger.log(`✅ Транзакция ${transactionId} подтверждена и обработана`);
       } else {
-        // Транзакция еще не найдена
-        if (transaction.checkAttempts >= 10) {
-          // Превышено количество попыток проверки
+        // Транзакция еще не найдена - проверяем время истечения еще раз
+        if (transaction.expiresAt && now > transaction.expiresAt) {
           transaction.status = PaymentStatus.FAILED;
-          transaction.lastError = 'Превышено количество попыток проверки транзакции';
+          transaction.lastError = 'Время на оплату истекло (15 минут)';
         } else {
           transaction.status = PaymentStatus.PROCESSING;
         }
@@ -216,8 +235,13 @@ export class PaymentTransactionService {
       transaction.lastError = error.message;
       transaction.checkAttempts += 1;
       
-      if (transaction.checkAttempts >= 10) {
+      // Проверяем время истечения при ошибке
+      if (transaction.expiresAt && now > transaction.expiresAt) {
         transaction.status = PaymentStatus.FAILED;
+        transaction.lastError = 'Время на оплату истекло (15 минут)';
+      } else if (transaction.checkAttempts >= 10) {
+        transaction.status = PaymentStatus.FAILED;
+        transaction.lastError = 'Превышено количество попыток проверки транзакции';
       }
 
       await this.transactionRepository.save(transaction);

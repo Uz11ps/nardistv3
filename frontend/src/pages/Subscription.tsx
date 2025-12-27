@@ -61,6 +61,7 @@ export default function Subscription() {
   const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
   const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
   const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
+  const [paymentMethod, setPaymentMethod] = useState<'TON' | 'USDT'>('TON')
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentData, setPaymentData] = useState<{
     transactionId: string
@@ -104,10 +105,10 @@ export default function Subscription() {
       // Создаем платежную транзакцию
       const response = await apiClient.post('/subscription/payment/create', {
         plan: selectedPlan,
-        method: 'TON',
+        method: paymentMethod,
       })
       
-      const { transactionId, walletAddress, amount, comment, method } = response.data
+      const { transactionId, walletAddress, amount, comment, method, expiresAt } = response.data
       
       // Показываем модальное окно оплаты
       setPaymentData({
@@ -116,6 +117,7 @@ export default function Subscription() {
         amount,
         comment,
         method: method === 'TON' ? 'TON' : 'USDT',
+        expiresAt,
       })
       setShowPaymentModal(true)
     } catch (error: any) {
@@ -205,6 +207,53 @@ export default function Subscription() {
           ))}
         </div>
 
+        {/* Выбор метода оплаты */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '8px', 
+          marginBottom: '16px',
+          marginTop: '16px'
+        }}>
+          <button
+            onClick={() => setPaymentMethod('TON')}
+            style={{
+              flex: 1,
+              padding: '10px 16px',
+              borderRadius: '8px',
+              background: paymentMethod === 'TON' 
+                ? 'linear-gradient(180deg, #0088CC 0%, #006699 100%)' 
+                : '#3a3a3a',
+              border: paymentMethod === 'TON' ? '2px solid #0088CC' : '1px solid #4a4a4a',
+              color: '#FFF',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            TON
+          </button>
+          <button
+            onClick={() => setPaymentMethod('USDT')}
+            style={{
+              flex: 1,
+              padding: '10px 16px',
+              borderRadius: '8px',
+              background: paymentMethod === 'USDT' 
+                ? 'linear-gradient(180deg, #26A17B 0%, #1A7A5C 100%)' 
+                : '#3a3a3a',
+              border: paymentMethod === 'USDT' ? '2px solid #26A17B' : '1px solid #4a4a4a',
+              color: '#FFF',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            USDT
+          </button>
+        </div>
+
         {/* Кнопка оформления */}
         <Button
           variant="primary"
@@ -274,6 +323,7 @@ export default function Subscription() {
           amount={paymentData.amount}
           comment={paymentData.comment}
           method={paymentData.method}
+          expiresAt={paymentData.expiresAt}
           onSuccess={handlePaymentSuccess}
         />
       )}
