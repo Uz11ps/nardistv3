@@ -79,6 +79,12 @@ export class CityService {
         };
       });
 
+      // Логика разблокировки: user.level >= district.requiredLevel
+      // requiredLevel всегда загружается из админки
+      const userLevel = user.level || 1;
+      const requiredLevel = district.requiredLevel ?? 1; // По умолчанию 1, если не указан
+      const isUnlocked = userLevel >= requiredLevel;
+
       return {
         id: district.id,
         code: district.code,
@@ -86,8 +92,8 @@ export class CityService {
         description: district.description,
         icon: district.icon,
         image: district.image,
-        requiredLevel: district.requiredLevel,
-        isUnlocked: user.level >= (district.requiredLevel || 0),
+        requiredLevel: requiredLevel, // Всегда возвращаем requiredLevel из админки
+        isUnlocked: isUnlocked,
         buildings: districtBuildings,
       };
     });

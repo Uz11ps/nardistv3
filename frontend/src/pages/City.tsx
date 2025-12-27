@@ -245,9 +245,14 @@ export default function City() {
                   key={district.id}
                   className={`city-tab ${selectedDistrictId === district.id ? 'active' : ''} ${!district.isUnlocked ? 'locked' : ''}`}
                   onClick={() => setSelectedDistrictId(district.id)}
+                  title={!district.isUnlocked ? `Откроется на ${district.requiredLevel} уровне` : ''}
                 >
                   {district.name}
-                  {!district.isUnlocked && <span className="city-tab-lock">🔒</span>}
+                  {!district.isUnlocked && (
+                    <span className="city-tab-lock" title={`Откроется на ${district.requiredLevel} уровне`}>
+                      🔒 {district.requiredLevel}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -258,7 +263,7 @@ export default function City() {
                 {!currentDistrict.isUnlocked && (
                   <div className="city-district-locked-banner">
                     <Icon name="lock" size={24} />
-                    <span>Откроется на {currentDistrict.requiredLevel} уровне</span>
+                    <span>Откроется на {currentDistrict.requiredLevel} уровне (Ваш уровень: {user?.level || 1})</span>
                   </div>
                 )}
                 
@@ -269,11 +274,14 @@ export default function City() {
                       ? Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.4, userBuilding.level))
                       : config.basePrice
 
+                    const isDistrictLocked = !currentDistrict.isUnlocked;
+                    
                     return (
                       <div 
                         key={config.id} 
-                        className={`city-card-v2 ${!userBuilding && !currentDistrict.isUnlocked ? 'disabled' : ''}`}
-                        onClick={() => setShowBuildingModal(config)}
+                        className={`city-card-v2 ${isDistrictLocked ? 'disabled preview' : ''}`}
+                        onClick={() => !isDistrictLocked && setShowBuildingModal(config)}
+                        style={isDistrictLocked ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                       >
                         <div className="city-card-header">
                           <div className="city-card-icon-wrapper">
@@ -322,13 +330,23 @@ export default function City() {
                         </div>
 
                         <div className="city-card-actions-overlay" onClick={e => e.stopPropagation()}>
-                          {userBuilding ? (
+                          {isDistrictLocked ? (
+                            <div style={{
+                              padding: '8px',
+                              textAlign: 'center',
+                              color: '#ff6b6b',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}>
+                              Район заблокирован до {currentDistrict.requiredLevel} уровня
+                            </div>
+                          ) : userBuilding ? (
                             <>
                               {accumulated > 0 && (
                                 <button
                                   className="city-card-action-btn collect"
                                   onClick={() => handleCollectIncome(userBuilding.id)}
-                                  disabled={collecting === userBuilding.id}
+                                  disabled={collecting === userBuilding.id || isDistrictLocked}
                                 >
                                   {collecting === userBuilding.id ? '...' : `Собрать ${accumulated}`}
                                 </button>
@@ -337,7 +355,7 @@ export default function City() {
                                 <button
                                   className="city-card-action-btn upgrade"
                                   onClick={() => handleUpgradeBuilding(userBuilding.id)}
-                                  disabled={purchasing === userBuilding.id || (user?.narCoin || 0) < upgradePrice}
+                                  disabled={purchasing === userBuilding.id || (user?.narCoin || 0) < upgradePrice || isDistrictLocked}
                                 >
                                   {purchasing === userBuilding.id ? '...' : 'Улучшить'}
                                 </button>
@@ -347,7 +365,7 @@ export default function City() {
                             <button
                               className="city-card-action-btn buy"
                               onClick={() => handlePurchaseBuilding(config.id)}
-                              disabled={purchasing === config.id || (user?.narCoin || 0) < config.basePrice || !currentDistrict.isUnlocked}
+                              disabled={purchasing === config.id || (user?.narCoin || 0) < config.basePrice || isDistrictLocked}
                             >
                               {purchasing === config.id ? '...' : 'Купить'}
                             </button>
@@ -370,6 +388,19 @@ export default function City() {
               <h3>{showBuildingModal.name}</h3>
               <button onClick={() => setShowBuildingModal(null)}>×</button>
             </div>
+            {currentDistrict && !currentDistrict.isUnlocked && (
+              <div style={{
+                padding: '12px',
+                background: 'rgba(255, 107, 107, 0.1)',
+                borderBottom: '1px solid rgba(255, 107, 107, 0.3)',
+                color: '#ff6b6b',
+                fontSize: '14px',
+                fontWeight: '600',
+                textAlign: 'center'
+              }}>
+                ⚠️ Район заблокирован до {currentDistrict.requiredLevel} уровня (Ваш уровень: {user?.level || 1})
+              </div>
+            )}
             <div className="city-modal-content">
               <div className="city-modal-image-container">
                 <img 
@@ -429,7 +460,11 @@ export default function City() {
                         onClick={() => handlePurchaseBuilding(showBuildingModal.id)}
                         disabled={purchasing === showBuildingModal.id || (user?.narCoin || 0) < showBuildingModal.basePrice || !currentDistrict?.isUnlocked}
                       >
-                        {purchasing === showBuildingModal.id ? 'Покупка...' : `Купить за ${showBuildingModal.basePrice.toLocaleString()} NAR`}
+                        {!currentDistrict?.isUnlocked 
+                          ? `Заблокировано до ${currentDistrict?.requiredLevel} уровня`
+                          : purchasing === showBuildingModal.id 
+                            ? 'Покупка...' 
+                            : `Купить за ${showBuildingModal.basePrice.toLocaleString()} NAR`}
                       </Button>
                     )}
                   </div>
