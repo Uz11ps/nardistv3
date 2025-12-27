@@ -247,13 +247,14 @@ export class SubscriptionController {
 
   /**
    * Создать транзакцию для покупки NAR-coin через TON/USDT
+   * body.amount - количество NAR, которое хочет купить пользователь
    */
   @Post('nar-coin/payment/create')
   @UseGuards(JwtAuthGuard)
   async createNarCoinPayment(@CurrentUser() user: any, @Body() body: { amount: number; method?: PaymentMethod | string }) {
     try {
       if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
-        throw new BadRequestException('Некорректная сумма платежа. Сумма должна быть больше 0.');
+        throw new BadRequestException('Некорректное количество NAR. Количество должно быть больше 0.');
       }
 
       // Преобразуем строку в enum (если пришла строка с фронтенда)
@@ -274,17 +275,27 @@ export class SubscriptionController {
           method = body.method;
         }
       }
+
+      // Получаем курс обмена из настроек админа
+      const settings = await this.adminService.getSystemSettings();
+      const tonRate = Number(settings.ton_exchange_rate);
+      
+      if (!tonRate || tonRate <= 0) {
+        throw new BadRequestException('Курс обмена TON/NAR не установлен в настройках. Обратитесь к администратору.');
+      }
+
+      // Рассчитываем количество TON/USDT, необходимое для покупки указанного количества NAR
+      const tonAmount = body.amount / tonRate;
+
+      // Создаем транзакцию с рассчитанной суммой в TON
       const transaction = await this.paymentTransactionService.createNarCoinTransaction(
         user.id,
-        body.amount,
+        tonAmount,
         method,
       );
 
       // Получаем или создаем кошелек пользователя
       const wallet = await this.walletService.getOrCreateWallet(user.id);
-
-      const settings = await this.adminService.getSystemSettings();
-      const tonRate = Number(settings.ton_exchange_rate) || 1000;
 
       return {
         transactionId: transaction.id,
@@ -293,7 +304,7 @@ export class SubscriptionController {
         comment: transaction.comment,
         method: String(transaction.method).toUpperCase(),
         status: transaction.status,
-        narAmount: transaction.amount * tonRate,
+        narAmount: body.amount, // Количество NAR, которое получит пользователь
         expiresAt: transaction.expiresAt,
       };
     } catch (error: any) {
