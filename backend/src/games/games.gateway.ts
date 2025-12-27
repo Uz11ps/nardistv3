@@ -200,26 +200,23 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       // Используем moveTimeLimit из каждой игры индивидуально
 
       for (const game of activeGames) {
-        // Проверяем только игры где кубики уже брошены (есть lastMoveAt)
-        if (!game.lastMoveAt) {
-          continue;
-        }
-
-        // Проверяем что кубики брошены (dice не пустой)
-        if (!game.gameState?.dice || game.gameState.dice.length === 0) {
-          continue;
-        }
-
-        const timeSinceLastMove = now.getTime() - game.lastMoveAt.getTime();
+        // Используем lastMoveAt, если он установлен, иначе используем createdAt для первых ходов
+        // Таймер должен работать с самого начала игры, даже если кубики еще не брошены
+        const referenceTime = game.lastMoveAt 
+          ? (game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt))
+          : (game.createdAt || now);
+        
+        const timeSinceLastMove = now.getTime() - referenceTime.getTime();
         const timeSinceLastMoveSeconds = timeSinceLastMove / 1000;
         
         // Определяем текущего игрока
         const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
         
-        // Для игр с ботами - просто проверяем 20 секунд (бот не использует время)
+        // Для игр с ботами - проверяем 20 секунд на ход игрока (бот не использует время)
+        // Таймер работает независимо от подключения игрока к WebSocket
         if (game.type === GameType.VS_BOT && game.player2Id === null) {
           if (game.currentPlayer === 0 && timeSinceLastMoveSeconds > 20) {
-            this.logger.warn(`⏱️ Bot game timeout detected for game ${game.id}, player didn't move in 20 seconds`);
+            this.logger.warn(`⏱️ Bot game timeout detected for game ${game.id}, player didn't move in 20 seconds, timeSinceStart: ${timeSinceLastMoveSeconds.toFixed(2)}s`);
             
             try {
               const currentGame = await this.gamesService.findOne(game.id);
@@ -231,6 +228,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
               const gameState = await this.gamesService.getGameState(game.id);
               const finishedGame = await this.gamesService.findOne(game.id);
               
+              // Уведомляем всех участников игры (если они подключены)
               this.server.to(`game:${game.id}`).emit('game_finished', {
                 winnerId: finishedGame.winnerId,
                 player1Score: finishedGame.player1Score,
@@ -239,7 +237,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
                 reason: 'timeout',
               });
               
-              this.logger.log(`✅ Bot game ${game.id} finished due to timeout (20s), bot won`);
+              this.logger.log(`✅ Bot game ${game.id} finished due to timeout (20s), bot won (игрок отключился или не сделал ход)`);
             } catch (error) {
               if (error.message && error.message.includes('уже завершена')) {
                 continue;

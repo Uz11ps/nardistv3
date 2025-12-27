@@ -327,10 +327,10 @@ export class GamesService {
         return [];
       }
       
+      // Включаем все активные игры (VS_PLAYER и VS_BOT) - таймер должен работать для всех
       return await this.gamesRepository.find({
         where: { 
           status: GameStatus.IN_PROGRESS,
-          type: GameType.VS_PLAYER, // Исключаем игры с ботом
         },
         relations: [], // Не загружаем relations для производительности
       });
@@ -481,6 +481,7 @@ export class GamesService {
     // Если moves пустой, это пропуск хода - переключаем игрока
     if (moves.length === 0) {
       const currentState = JSON.parse(JSON.stringify(game.gameState));
+      const oldCurrentPlayer = game.currentPlayer;
       currentState.dice = [];
       currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
       currentState.movesFromHead = 0;
@@ -489,7 +490,45 @@ export class GamesService {
       const updatedGame = await this.findOne(gameId);
       updatedGame.gameState = currentState;
       updatedGame.currentPlayer = currentState.currentPlayer;
-      updatedGame.lastMoveAt = new Date();
+      
+      // Вычисляем время хода и обновляем lastMoveAt (ход завершен - произошла смена игрока)
+      const now = new Date();
+      const moveStartTime = game.lastMoveAt || game.createdAt;
+      const moveTimeMs = now.getTime() - moveStartTime.getTime();
+      const moveTimeSeconds = moveTimeMs / 1000;
+      const baseMoveTime = 20;
+      const excessTime = Math.max(0, moveTimeSeconds - baseMoveTime);
+      
+      // Обновляем общее время игрока при завершении хода
+      if (playerId && !isBotTurn) {
+        const isPlayer1 = oldCurrentPlayer === 0;
+        const currentPlayerTimeRemaining = isPlayer1 
+          ? (updatedGame.player1TimeRemaining || 60000) 
+          : (updatedGame.player2TimeRemaining || 60000);
+        
+        const newTimeRemaining = Math.max(0, currentPlayerTimeRemaining - (excessTime * 1000));
+        
+        if (isPlayer1) {
+          updatedGame.player1TimeRemaining = newTimeRemaining;
+        } else {
+          updatedGame.player2TimeRemaining = newTimeRemaining;
+        }
+        
+        if (newTimeRemaining <= 0) {
+          updatedGame.status = GameStatus.FINISHED;
+          updatedGame.winnerId = isPlayer1 ? updatedGame.player2Id : updatedGame.player1Id;
+          if (updatedGame.winnerId === updatedGame.player1Id) {
+            updatedGame.player1Score = 1;
+            updatedGame.player2Score = 0;
+          } else {
+            updatedGame.player1Score = 0;
+            updatedGame.player2Score = 1;
+          }
+        }
+      }
+      
+      // Обновляем lastMoveAt при смене хода (ход завершен)
+      updatedGame.lastMoveAt = now;
       
       return await this.gamesRepository.save(updatedGame);
     }
@@ -676,6 +715,7 @@ export class GamesService {
     
     // Перезагружаем игру чтобы TypeORM знал о новом ходе и не пытался синхронизировать relations
     const updatedGame = await this.findOne(gameId);
+    const oldCurrentPlayer = updatedGame.currentPlayer; // Сохраняем старый игрока для проверки смены хода
     updatedGame.gameState = currentState;
     updatedGame.currentPlayer = currentState.currentPlayer;
     
@@ -684,14 +724,18 @@ export class GamesService {
     const moveStartTime = game.lastMoveAt || game.createdAt;
     const moveTimeMs = now.getTime() - moveStartTime.getTime();
     
-    // Обновляем общее время игрока согласно правилу: 20 секунд на ход, избыток вычитается из общего времени
-    const moveTimeSeconds = moveTimeMs / 1000;
-    const baseMoveTime = 20; // 20 секунд на ход
-    const excessTime = Math.max(0, moveTimeSeconds - baseMoveTime); // Превышение 20 секунд
+    // Проверяем, произошла ли смена хода
+    const turnChanged = oldCurrentPlayer !== currentState.currentPlayer;
     
-    if (!isBotTurn && playerId) {
-      // Определяем, какой игрок сделал ход
-      const isPlayer1 = updatedGame.player1Id === playerId;
+    // Обновляем общее время игрока только когда ход полностью завершен (произошла смена хода)
+    // Таймер считается до полного окончания хода, а не до промежуточного подтверждения
+    if (turnChanged && !isBotTurn && playerId) {
+      const moveTimeSeconds = moveTimeMs / 1000;
+      const baseMoveTime = 20; // 20 секунд на ход
+      const excessTime = Math.max(0, moveTimeSeconds - baseMoveTime); // Превышение 20 секунд
+      
+      // Определяем, какой игрок завершил ход (это был предыдущий currentPlayer)
+      const isPlayer1 = oldCurrentPlayer === 0;
       const currentPlayerTimeRemaining = isPlayer1 
         ? (updatedGame.player1TimeRemaining || 60000) 
         : (updatedGame.player2TimeRemaining || 60000);
@@ -705,11 +749,11 @@ export class GamesService {
         updatedGame.player2TimeRemaining = newTimeRemaining;
       }
       
-      this.logger.log(`⏱️ Player ${playerId} move time: ${moveTimeSeconds.toFixed(2)}s (excess: ${excessTime.toFixed(2)}s), remaining: ${(newTimeRemaining / 1000).toFixed(2)}s`);
+      this.logger.log(`⏱️ Player ${oldCurrentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id} move completed: ${moveTimeSeconds.toFixed(2)}s (excess: ${excessTime.toFixed(2)}s), remaining: ${(newTimeRemaining / 1000).toFixed(2)}s`);
       
       // Если общее время закончилось, завершаем игру
       if (newTimeRemaining <= 0) {
-        this.logger.warn(`⏱️ Player ${playerId} ran out of total time (${excessTime.toFixed(2)}s excess)`);
+        this.logger.warn(`⏱️ Player ${oldCurrentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id} ran out of total time (${excessTime.toFixed(2)}s excess)`);
         // Завершаем игру в пользу противника
         updatedGame.status = GameStatus.FINISHED;
         updatedGame.winnerId = isPlayer1 ? updatedGame.player2Id : updatedGame.player1Id;
@@ -721,9 +765,11 @@ export class GamesService {
           updatedGame.player2Score = 1;
         }
       }
+      
+      // Обновляем lastMoveAt только при смене хода (когда ход полностью завершен)
+      updatedGame.lastMoveAt = now;
     }
-    
-    updatedGame.lastMoveAt = now;
+    // Если ход не завершен (промежуточное подтверждение), lastMoveAt НЕ обновляется
 
     // Если это первый ход (игра в статусе WAITING), переводим в IN_PROGRESS
     if (updatedGame.status === GameStatus.WAITING) {

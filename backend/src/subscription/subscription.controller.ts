@@ -68,13 +68,30 @@ export class SubscriptionController {
    */
   @Post('payment/create')
   @UseGuards(JwtAuthGuard)
-  async createPayment(@CurrentUser() user: any, @Body() body: { plan: SubscriptionPlan; method?: PaymentMethod }) {
+  async createPayment(@CurrentUser() user: any, @Body() body: { plan: SubscriptionPlan; method?: PaymentMethod | string }) {
     try {
       if (!body.plan) {
         throw new BadRequestException('Не выбрана подписка');
       }
 
-      const method = body.method || PaymentMethod.TON;
+      // Преобразуем строку в enum (если пришла строка с фронтенда)
+      let method: PaymentMethod = PaymentMethod.TON;
+      if (body.method) {
+        if (typeof body.method === 'string') {
+          const methodLower = body.method.toLowerCase();
+          if (methodLower === 'ton') {
+            method = PaymentMethod.TON;
+          } else if (methodLower === 'usdt') {
+            method = PaymentMethod.USDT;
+          } else if (methodLower === 'telegram_stars') {
+            method = PaymentMethod.TELEGRAM_STARS;
+          } else {
+            method = PaymentMethod.TON; // По умолчанию
+          }
+        } else {
+          method = body.method;
+        }
+      }
       const transaction = await this.paymentTransactionService.createSubscriptionTransaction(
         user.id,
         body.plan,
@@ -184,13 +201,30 @@ export class SubscriptionController {
    */
   @Post('nar-coin/payment/create')
   @UseGuards(JwtAuthGuard)
-  async createNarCoinPayment(@CurrentUser() user: any, @Body() body: { amount: number; method?: PaymentMethod }) {
+  async createNarCoinPayment(@CurrentUser() user: any, @Body() body: { amount: number; method?: PaymentMethod | string }) {
     try {
       if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
         throw new BadRequestException('Некорректная сумма платежа. Сумма должна быть больше 0.');
       }
 
-      const method = body.method || PaymentMethod.TON;
+      // Преобразуем строку в enum (если пришла строка с фронтенда)
+      let method: PaymentMethod = PaymentMethod.TON;
+      if (body.method) {
+        if (typeof body.method === 'string') {
+          const methodLower = body.method.toLowerCase();
+          if (methodLower === 'ton') {
+            method = PaymentMethod.TON;
+          } else if (methodLower === 'usdt') {
+            method = PaymentMethod.USDT;
+          } else if (methodLower === 'telegram_stars') {
+            method = PaymentMethod.TELEGRAM_STARS;
+          } else {
+            method = PaymentMethod.TON; // По умолчанию
+          }
+        } else {
+          method = body.method;
+        }
+      }
       const transaction = await this.paymentTransactionService.createNarCoinTransaction(
         user.id,
         body.amount,
