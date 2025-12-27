@@ -1044,6 +1044,7 @@ export default function Game() {
                 </div>
               </div>
               <div className="game-player-avatar">
+                {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
                 {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && (() => {
                   // Время на ход ВСЕГДА 20 секунд
                   // Если player2Timer > 0, значит еще не начался овертайм (зеленая)
@@ -1079,7 +1080,6 @@ export default function Game() {
                     </svg>
                   )
                 })()}
-                {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
               </div>
             </div>
             
@@ -1115,33 +1115,39 @@ export default function Game() {
               <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
                 <div className="game-player-avatar">
-                  {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && (
-                    <svg className="game-player-timer-ring" viewBox="0 0 100 100">
-                      <circle
-                        className="game-player-timer-ring-bg"
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        fill="none"
-                        stroke="rgba(255, 255, 255, 0.1)"
-                        strokeWidth="6"
-                      />
-                      <circle
-                        className={`game-player-timer-ring-progress ${isInOvertime ? 'overtime' : 'normal'}`}
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        fill="none"
-                        stroke={isInOvertime ? '#FF9800' : '#4caf50'}
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                        strokeDasharray={2 * Math.PI * 45}
-                        strokeDashoffset={2 * Math.PI * 45 * (1 - Math.max(0, Math.min(1, isInOvertime ? totalTimeRemaining.player2 / 60 : player2Timer / 20)))}
-                        transform="rotate(-90 50 50)"
-                      />
-                    </svg>
-                  )}
                   {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
+                  {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && (() => {
+                    const isOvertime = player2Timer <= 0 || isInOvertime
+                    const progress = isOvertime 
+                      ? Math.max(0, Math.min(1, totalTimeRemaining.player2 / 60))
+                      : Math.max(0, Math.min(1, player2Timer / 20))
+                    return (
+                      <svg className="game-player-timer-ring" viewBox="0 0 100 100">
+                        <circle
+                          className="game-player-timer-ring-bg"
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke="rgba(255, 255, 255, 0.1)"
+                          strokeWidth="6"
+                        />
+                        <circle
+                          className={`game-player-timer-ring-progress ${isOvertime ? 'overtime' : 'normal'}`}
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke={isOvertime ? '#FF9800' : '#4caf50'}
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          strokeDasharray={2 * Math.PI * 45}
+                          strokeDashoffset={2 * Math.PI * 45 * (1 - progress)}
+                          transform="rotate(-90 50 50)"
+                        />
+                      </svg>
+                    )
+                  })()}
                 </div>
               </div>
               <div className="game-score-section">
@@ -1151,6 +1157,7 @@ export default function Game() {
               <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
                 <div className="game-player-avatar">
+                  {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
                   {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && (() => {
                     // Время на ход ВСЕГДА 20 секунд
                     // Если player1Timer > 0, значит еще не начался овертайм (зеленая)
@@ -1186,7 +1193,6 @@ export default function Game() {
                       </svg>
                     )
                   })()}
-                  {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
                 </div>
               </div>
             </div>
@@ -1297,6 +1303,7 @@ export default function Game() {
                 </div>
               </div>
               <div className="game-player-avatar">
+                {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
                 {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && (() => {
                   // Время на ход ВСЕГДА 20 секунд
                   // Если player1Timer > 0, значит еще не начался овертайм (зеленая)
@@ -1332,7 +1339,6 @@ export default function Game() {
                     </svg>
                   )
                 })()}
-                {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
               </div>
             </div>
 
