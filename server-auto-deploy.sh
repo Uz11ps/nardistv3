@@ -155,9 +155,17 @@ deploy() {
     
     # Пересборка и запуск
     log "${YELLOW}🔨 Пересборка и запуск контейнеров...${NC}"
+    # Сначала только собираем образы, чтобы не держать порты свободными слишком долго
+    docker-compose build
+    
+    # ПЕРЕД запуском контейнеров еще раз проверяем порты, так как сборка могла занять время
+    log "${YELLOW}🔓 Повторная проверка портов 80 и 443 после сборки...${NC}"
+    sudo lsof -ti :80 | xargs -r sudo kill -9 || true
+    sudo lsof -ti :443 | xargs -r sudo kill -9 || true
+    
     # Используем --force-recreate чтобы пересоздать контейнеры даже если они не изменились
     # Запускаем все сервисы включая postgres и redis
-    docker-compose up -d --build --force-recreate
+    docker-compose up -d --force-recreate
     
     # Ожидание запуска
     log "${YELLOW}⏳ Ожидание запуска сервисов (15 секунд)...${NC}"
