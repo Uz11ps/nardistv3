@@ -155,11 +155,6 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
           this.logger.error(`Ошибка при обновлении списка столов: ${error.message}`, error.stack);
         }
       });
-      
-      // Отправляем уведомление в Telegram (не блокируем)
-      this.sendTelegramNotification(userId, `🪑 Стол создан! ID игры: #${gameId.substring(0, 8)}`).catch(err => {
-        this.logger.warn(`Не удалось отправить уведомление в Telegram: ${err.message}`);
-      });
     } catch (error) {
       this.logger.error(`Ошибка при создании стола: ${error.message}`, error.stack);
       client.emit('error', { message: error.message || 'Ошибка при создании стола' });
@@ -183,13 +178,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
       if (game.player1Id && game.player1Id !== userId) {
         this.logger.log(`📤 Отправка события opponent_joined пользователю ${game.player1Id}`);
         this.server.to(`user:${game.player1Id}`).emit('opponent_joined', { gameId: data.gameId, game });
-        await this.sendTelegramNotification(game.player1Id, `✅ Игрок присоединился к столу! Игра #${data.gameId.substring(0, 8)}`).catch(err => {
-          this.logger.warn(`Не удалось отправить уведомление в Telegram: ${err.message}`);
-        });
       }
-      await this.sendTelegramNotification(userId, `✅ Вы присоединились к столу! Игра #${data.gameId.substring(0, 8)}`).catch(err => {
-        this.logger.warn(`Не удалось отправить уведомление в Telegram: ${err.message}`);
-      });
       
       // Отправляем обновление списка столов всем подписчикам (все режимы)
       const tables = await this.matchmakingService.getOpenTables();
@@ -256,10 +245,6 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
         // Отправляем обновление списка столов всем подписчикам
         const tables = await this.matchmakingService.getOpenTables(game.mode);
         this.server.emit('open_tables', tables);
-        
-        // Отправляем уведомления в Telegram
-        await this.sendTelegramNotification(game.player1Id, `🎮 Игра началась! Игра #${data.gameId.substring(0, 8)}`);
-        await this.sendTelegramNotification(game.player2Id, `🎮 Игра началась! Игра #${data.gameId.substring(0, 8)}`);
       } else {
         // Отправляем обновление статуса готовности обоим игрокам
         const readyStatusData = {

@@ -344,94 +344,121 @@ export class AdminService implements OnModuleInit {
       throw new BadRequestException('Нельзя удалить администратора');
     }
 
-    // ПРИНУДИТЕЛЬНОЕ УДАЛЕНИЕ - игнорируем все ошибки, удаляем через raw SQL
+    // ПРИНУДИТЕЛЬНОЕ УДАЛЕНИЕ - сносим все нахуй через raw SQL с отключением constraints
     const connection = this.usersRepository.manager.connection;
+    const queryRunner = connection.createQueryRunner();
     
-    // Список таблиц для удаления (в порядке зависимостей)
-    // ВАЖНО: удаляем в правильном порядке, чтобы не нарушать foreign key constraints
-    const tablesToDelete = [
-      { table: 'subscriptions', column: 'userId' },
-      { table: 'ratings', column: 'userId' },
-      { table: 'notifications', column: 'userId' },
-      { table: 'user_materials', column: 'userId' },
-      { table: 'user_skins', column: 'userId' },
-      { table: 'clan_members', column: 'userId' },
-      { table: 'quest_progress', column: 'userId' },
-      { table: 'buildings', column: 'userId' },
-      { table: 'course_task_progress', column: 'userId' },
-      { table: 'payment_transactions', column: 'userId' },
-      { table: 'user_wallets', column: 'userId' },
-      { table: 'user_purchases', column: 'userId' },
-      { table: 'user_reward_debts', column: 'userId' },
-      { table: 'enhancements', column: 'userId' }, // Важно удалить перед users
-      { table: 'game_moves', column: null }, // Удаляем через подзапрос
-    ];
-
-    // ПРИНУДИТЕЛЬНОЕ УДАЛЕНИЕ через CASCADE в PostgreSQL
-    // Используем прямой SQL с правильным синтаксисом PostgreSQL
-    
-    // Сначала удаляем все связанные данные через raw SQL, игнорируя ошибки
-    for (const { table, column } of tablesToDelete) {
-      try {
-        if (table === 'game_moves') {
-          // Удаляем ходы игр пользователя
-          await connection.query(`
-            DELETE FROM game_moves 
-            WHERE "gameId" IN (
-              SELECT id FROM games 
-              WHERE "player1Id" = $1 OR "player2Id" = $1
-            )
-          `, [userId]);
-        } else if (column) {
-          // Используем параметризованные запросы для безопасности (PostgreSQL синтаксис)
-          await connection.query(`DELETE FROM "${table}" WHERE "${column}" = $1`, [userId]);
-        }
-      } catch (error: any) {
-        this.logger.warn(`⚠️ Failed to delete from ${table} for user ${userId}:`, error.message);
-        // Игнорируем ошибку и продолжаем - это принудительное удаление
-      }
-    }
-
-    // Обнуляем ссылки на пользователя в играх (чтобы избежать foreign key ошибок)
     try {
-      await connection.query(`
-        UPDATE games 
-        SET "player1Id" = NULL, "player2Id" = NULL, "winnerId" = NULL 
-        WHERE "player1Id" = $1 OR "player2Id" = $1 OR "winnerId" = $1
-      `, [userId]);
-    } catch (error: any) {
-      this.logger.warn(`⚠️ Failed to update games for user ${userId}:`, error.message);
-    }
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
 
-    // Удаляем самого пользователя через CASCADE - PostgreSQL автоматически удалит все связанные данные
-    try {
-      // Пробуем удалить напрямую
-      await connection.query(`DELETE FROM "users" WHERE id = $1`, [userId]);
-      this.logger.log(`✅ User ${userId} forcefully deleted`);
-      return { message: 'Пользователь принудительно удален', userId };
-    } catch (error: any) {
-      this.logger.warn(`⚠️ Direct deletion failed, trying to delete remaining constraints for user ${userId}:`, error.message);
+      // ВРЕМЕННО ОТКЛЮЧАЕМ ВСЕ FOREIGN KEY CONSTRAINTS для этой транзакции
+      await queryRunner.query('SET session_replication_role = replica;');
       
-      // Если не получилось, пытаемся удалить через отключение constraints (только для этого запроса)
-      try {
-        // В PostgreSQL можно использовать SET CONSTRAINTS ALL DEFERRED, но это работает только в транзакции
-        // Лучше просто удалить оставшиеся зависимости вручную
-        await connection.query(`DELETE FROM "enhancements" WHERE "userId" = $1`, [userId]);
-        await connection.query(`DELETE FROM "users" WHERE id = $1`, [userId]);
-        this.logger.log(`✅ User ${userId} deleted after removing enhancements`);
-        return { message: 'Пользователь удален', userId };
-      } catch (secondError: any) {
-        this.logger.error(`❌ CRITICAL: Failed to delete user ${userId} even after cleanup:`, secondError.message);
-        // Последняя попытка - через репозиторий
+      // Полный список всех таблиц, которые могут ссылаться на users
+      const allRelatedTables = [
+        'subscriptions', 'ratings', 'notifications', 'user_materials', 'user_skins',
+        'clan_members', 'quest_progress', 'buildings', 'course_task_progress',
+        'payment_transactions', 'user_wallets', 'user_purchases', 'user_reward_debts',
+        'enhancements', 'referral_earnings', 'tournament_tickets', 'user_achievements',
+        'user_task_progress', 'user_training_progress', 'game_moves'
+      ];
+
+      // Удаляем все связанные данные, игнорируя ошибки
+      for (const table of allRelatedTables) {
         try {
-          await this.usersRepository.delete({ id: userId });
-          this.logger.log(`✅ User ${userId} deleted via repository fallback`);
-          return { message: 'Пользователь удален (через fallback)', userId };
-        } catch (finalError: any) {
-          this.logger.error(`❌ CRITICAL: All deletion methods failed for user ${userId}`);
-          throw new BadRequestException(`Не удалось удалить пользователя. Возможно есть внешние ключи: ${finalError.message}`);
+          if (table === 'game_moves') {
+            // Удаляем ходы игр пользователя
+            await queryRunner.query(`
+              DELETE FROM game_moves 
+              WHERE "gameId" IN (
+                SELECT id FROM games 
+                WHERE "player1Id" = $1 OR "player2Id" = $1
+              )
+            `, [userId]);
+          } else {
+            // Пробуем удалить по userId
+            await queryRunner.query(`DELETE FROM "${table}" WHERE "userId" = $1`, [userId]);
+          }
+        } catch (error: any) {
+          this.logger.warn(`⚠️ Failed to delete from ${table}:`, error.message);
+          // Игнорируем и продолжаем
         }
       }
+
+      // Удаляем ВСЕ игры пользователя (сначала ходы, потом игры)
+      try {
+        // Удаляем ходы игр
+        await queryRunner.query(`
+          DELETE FROM game_moves 
+          WHERE "gameId" IN (
+            SELECT id FROM games 
+            WHERE "player1Id" = $1 OR "player2Id" = $1
+          )
+        `, [userId]);
+        
+        // Удаляем сами игры
+        await queryRunner.query(`
+          DELETE FROM games 
+          WHERE "player1Id" = $1 OR "player2Id" = $1
+        `, [userId]);
+      } catch (error: any) {
+        this.logger.warn(`⚠️ Failed to delete games:`, error.message);
+      }
+
+      // Удаляем самого пользователя
+      await queryRunner.query(`DELETE FROM "users" WHERE id = $1`, [userId]);
+      
+      // Включаем обратно constraints
+      await queryRunner.query('SET session_replication_role = DEFAULT;');
+      
+      await queryRunner.commitTransaction();
+      this.logger.log(`✅ User ${userId} FORCEFULLY DELETED with all related data`);
+      return { message: 'Пользователь и все связанные данные принудительно удалены', userId };
+      
+    } catch (error: any) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(`❌ CRITICAL: Force deletion failed:`, error.message);
+      
+      // Если транзакция не помогла, пробуем через прямой SQL без транзакции
+      try {
+        // Отключаем constraints для сессии
+        await connection.query('SET session_replication_role = replica;');
+        
+        // Удаляем все связанные данные (включая игры)
+        await connection.query(`
+          DELETE FROM game_moves 
+          WHERE "gameId" IN (
+            SELECT id FROM games 
+            WHERE "player1Id" = $1 OR "player2Id" = $1
+          )
+        `, [userId]);
+        await connection.query(`DELETE FROM "games" WHERE "player1Id" = $1 OR "player2Id" = $1`, [userId]);
+        
+        // Удаляем все остальные связанные данные
+        for (const table of allRelatedTables.filter(t => t !== 'game_moves')) {
+          try {
+            await connection.query(`DELETE FROM "${table}" WHERE "userId" = $1`, [userId]);
+          } catch {}
+        }
+        
+        await connection.query(`DELETE FROM "users" WHERE id = $1`, [userId]);
+        
+        // Включаем обратно
+        await connection.query('SET session_replication_role = DEFAULT;');
+        
+        this.logger.log(`✅ User ${userId} deleted via direct SQL fallback`);
+        return { message: 'Пользователь удален (через fallback)', userId };
+      } catch (finalError: any) {
+        this.logger.error(`❌ CRITICAL: All deletion methods failed`);
+        // Включаем обратно constraints даже при ошибке
+        try {
+          await connection.query('SET session_replication_role = DEFAULT;');
+        } catch {}
+        throw new BadRequestException(`Не удалось удалить пользователя принудительно: ${finalError.message}`);
+      }
+    } finally {
+      await queryRunner.release();
     }
   }
 
