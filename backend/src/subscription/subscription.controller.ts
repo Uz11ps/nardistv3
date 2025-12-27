@@ -69,33 +69,42 @@ export class SubscriptionController {
   @Post('payment/create')
   @UseGuards(JwtAuthGuard)
   async createPayment(@CurrentUser() user: any, @Body() body: { plan: SubscriptionPlan; method?: PaymentMethod }) {
-    if (!body.plan) {
-      throw new BadRequestException('Не выбрана подписка');
+    try {
+      if (!body.plan) {
+        throw new BadRequestException('Не выбрана подписка');
+      }
+
+      const method = body.method || PaymentMethod.TON;
+      const transaction = await this.paymentTransactionService.createSubscriptionTransaction(
+        user.id,
+        body.plan,
+        method,
+      );
+
+      // Получаем или создаем кошелек пользователя
+      const wallet = await this.walletService.getOrCreateWallet(user.id);
+
+      return {
+        transactionId: transaction.id,
+        walletAddress: wallet.address,
+        amount: transaction.amount,
+        comment: transaction.comment,
+        method: transaction.method,
+        status: transaction.status,
+        // Инструкции для пользователя
+        instructions: {
+          ton: `Отправьте ${transaction.amount} TON на адрес ${wallet.address} с комментарием: ${transaction.comment}`,
+          usdt: `Отправьте ${transaction.amount} USDT на адрес ${wallet.address} с комментарием: ${transaction.comment}`,
+        },
+      };
+    } catch (error: any) {
+      // Если это уже BadRequestException, просто пробрасываем
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      // Для других ошибок оборачиваем в понятное сообщение
+      throw new BadRequestException(error.message || 'Не удалось создать платеж. Попробуйте позже или обратитесь в поддержку.');
     }
-
-    const method = body.method || PaymentMethod.TON;
-    const transaction = await this.paymentTransactionService.createSubscriptionTransaction(
-      user.id,
-      body.plan,
-      method,
-    );
-
-    // Получаем или создаем кошелек пользователя
-    const wallet = await this.walletService.getOrCreateWallet(user.id);
-
-    return {
-      transactionId: transaction.id,
-      walletAddress: wallet.address,
-      amount: transaction.amount,
-      comment: transaction.comment,
-      method: transaction.method,
-      status: transaction.status,
-      // Инструкции для пользователя
-      instructions: {
-        ton: `Отправьте ${transaction.amount} TON на адрес ${wallet.address} с комментарием: ${transaction.comment}`,
-        usdt: `Отправьте ${transaction.amount} USDT на адрес ${wallet.address} с комментарием: ${transaction.comment}`,
-      },
-    };
   }
 
   /**
@@ -176,32 +185,41 @@ export class SubscriptionController {
   @Post('nar-coin/payment/create')
   @UseGuards(JwtAuthGuard)
   async createNarCoinPayment(@CurrentUser() user: any, @Body() body: { amount: number; method?: PaymentMethod }) {
-    if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
-      throw new BadRequestException('Некорректная сумма платежа');
+    try {
+      if (!body.amount || isNaN(body.amount) || body.amount <= 0) {
+        throw new BadRequestException('Некорректная сумма платежа. Сумма должна быть больше 0.');
+      }
+
+      const method = body.method || PaymentMethod.TON;
+      const transaction = await this.paymentTransactionService.createNarCoinTransaction(
+        user.id,
+        body.amount,
+        method,
+      );
+
+      // Получаем или создаем кошелек пользователя
+      const wallet = await this.walletService.getOrCreateWallet(user.id);
+
+      const settings = await this.adminService.getSystemSettings();
+      const tonRate = Number(settings.ton_exchange_rate) || 1000;
+
+      return {
+        transactionId: transaction.id,
+        walletAddress: wallet.address,
+        amount: transaction.amount,
+        comment: transaction.comment,
+        method: transaction.method,
+        status: transaction.status,
+        narAmount: transaction.amount * tonRate,
+      };
+    } catch (error: any) {
+      // Если это уже BadRequestException, просто пробрасываем
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      // Для других ошибок оборачиваем в понятное сообщение
+      throw new BadRequestException(error.message || 'Не удалось создать платеж. Попробуйте позже или обратитесь в поддержку.');
     }
-
-    const method = body.method || PaymentMethod.TON;
-    const transaction = await this.paymentTransactionService.createNarCoinTransaction(
-      user.id,
-      body.amount,
-      method,
-    );
-
-    // Получаем или создаем кошелек пользователя
-    const wallet = await this.walletService.getOrCreateWallet(user.id);
-
-    const settings = await this.adminService.getSystemSettings();
-    const tonRate = Number(settings.ton_exchange_rate) || 1000;
-
-    return {
-      transactionId: transaction.id,
-      walletAddress: wallet.address,
-      amount: transaction.amount,
-      comment: transaction.comment,
-      method: transaction.method,
-      status: transaction.status,
-      narAmount: transaction.amount * tonRate,
-    };
   }
 }
 

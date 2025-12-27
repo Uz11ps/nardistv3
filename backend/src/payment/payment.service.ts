@@ -42,10 +42,17 @@ export class PaymentService {
    * Создать платеж через Telegram Stars (TON)
    */
   async createTonPayment(request: TonPaymentRequest): Promise<TonPaymentResponse> {
-    // Используем Telegram Stars API для оплаты
-    // В реальности нужно использовать Telegram Bot API для создания инвойса
-    
     try {
+      // Проверяем наличие токена бота
+      if (!this.BOT_TOKEN || this.BOT_TOKEN.trim() === '') {
+        throw new Error('Ошибка настройки: токен Telegram бота не настроен на сервере. Обратитесь в поддержку.');
+      }
+
+      // Проверяем валидность суммы
+      if (!request.amount || request.amount <= 0) {
+        throw new Error('Некорректная сумма платежа. Сумма должна быть больше 0.');
+      }
+
       // Создаем инвойс через Telegram Bot API
       const invoiceResponse = await axios.post(
         `https://api.telegram.org/bot${this.BOT_TOKEN}/createInvoiceLink`,
@@ -72,20 +79,76 @@ export class PaymentService {
             type: request.type || 'nar_coin',
           }),
         },
+        {
+          timeout: 10000, // 10 секунд таймаут
+        },
       );
 
-      if (invoiceResponse.data.ok) {
+      // Проверяем ответ от Telegram API
+      if (!invoiceResponse.data) {
+        throw new Error('Не получен ответ от платежной системы. Попробуйте позже.');
+      }
+
+      if (invoiceResponse.data.ok && invoiceResponse.data.result) {
+        const paymentLink = invoiceResponse.data.result.invoice_link;
+        if (!paymentLink) {
+          throw new Error('Платежная система не вернула ссылку для оплаты. Попробуйте позже.');
+        }
+
         return {
           paymentId: invoiceResponse.data.result.invoice_payload || `payment_${Date.now()}`,
-          paymentUrl: invoiceResponse.data.result.invoice_link,
-          qrCode: invoiceResponse.data.result.invoice_link, // Можно сгенерировать QR из ссылки
+          paymentUrl: paymentLink,
+          qrCode: paymentLink,
         };
       }
 
-      throw new Error('Не удалось создать платеж');
+      // Обрабатываем ошибки от Telegram API
+      const errorCode = invoiceResponse.data.error_code;
+      const errorDescription = invoiceResponse.data.description || 'Неизвестная ошибка';
+
+      if (errorCode === 401) {
+        throw new Error('Ошибка авторизации в платежной системе. Обратитесь в поддержку.');
+      } else if (errorCode === 400) {
+        throw new Error(`Ошибка запроса: ${errorDescription}. Проверьте данные и попробуйте снова.`);
+      } else if (errorCode === 429) {
+        throw new Error('Слишком много запросов. Подождите немного и попробуйте снова.');
+      } else {
+        throw new Error(`Ошибка платежной системы: ${errorDescription}. Попробуйте позже или обратитесь в поддержку.`);
+      }
     } catch (error: any) {
-      console.error('Ошибка создания TON платежа:', error.response?.data || error.message);
-      throw new Error('Ошибка создания платежа: ' + (error.response?.data?.description || error.message));
+      // Обработка сетевых ошибок
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        throw new Error('Превышено время ожидания ответа от платежной системы. Проверьте подключение к интернету и попробуйте снова.');
+      }
+
+      if (error.response) {
+        // Ошибка с ответом от сервера
+        const status = error.response.status;
+        const errorData = error.response.data;
+
+        if (status === 401) {
+          throw new Error('Ошибка авторизации в платежной системе. Обратитесь в поддержку.');
+        } else if (status === 400) {
+          const description = errorData?.description || errorData?.error || 'Некорректный запрос';
+          throw new Error(`Ошибка запроса: ${description}. Проверьте данные и попробуйте снова.`);
+        } else if (status === 429) {
+          throw new Error('Слишком много запросов к платежной системе. Подождите немного и попробуйте снова.');
+        } else if (status >= 500) {
+          throw new Error('Платежная система временно недоступна. Попробуйте позже.');
+        } else {
+          const description = errorData?.description || errorData?.error || error.message || 'Неизвестная ошибка';
+          throw new Error(`Ошибка платежной системы: ${description}. Попробуйте позже или обратитесь в поддержку.`);
+        }
+      }
+
+      // Если ошибка уже имеет понятное сообщение (наше собственное), просто пробрасываем
+      if (error.message && error.message.includes('Ошибка')) {
+        throw error;
+      }
+
+      // Для всех остальных ошибок даем общее сообщение
+      console.error('Ошибка создания TON платежа:', error);
+      throw new Error(`Не удалось создать платеж. ${error.message || 'Неизвестная ошибка'}. Попробуйте позже или обратитесь в поддержку.`);
     }
   }
 

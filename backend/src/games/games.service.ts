@@ -1316,7 +1316,6 @@ export class GamesService {
         const isMarsWin = this.isMarsWin(game);
         
         // Начисляем XP только за победу в играх с ботом
-        let playerResult = { levelUp: false };
         if (isWinner) {
           // Рассчитываем XP для игрока (только при победе)
           const playerXP = this.xpCalculator.calculateXP({
@@ -1333,13 +1332,13 @@ export class GamesService {
           });
           
           // Начисляем XP только за победу
-          playerResult = await this.progressService.addXP(playerId, playerXP);
+          const playerResult = await this.progressService.addXP(playerId, playerXP);
           game.player1XP = playerXP;
           
           this.logger.log(`⭐ XP начислен игроку ${playerId} за победу в игре с ботом: +${playerXP} XP (Марс: ${isMarsWin})`);
           
           // Если уровень повысился, логируем
-          if (playerResult.levelUp) {
+          if (playerResult.levelUp && playerResult.newLevel) {
             this.logger.log(`🎉 Игрок ${playerId} повысил уровень до ${playerResult.newLevel} в игре с ботом!`);
           }
         } else {
