@@ -13,16 +13,13 @@ interface SubscriptionPlan {
   id: 'month_1' | 'month_3' | 'month_12'
   name: string
   price: number
+  priceTon?: number
+  priceUsdt?: number
   currency: string
   badge?: string
   popular?: boolean
 }
 
-const defaultPlans: SubscriptionPlan[] = [
-  { id: 'month_1', name: '1 месяц', price: 3, currency: 'TON', badge: 'Попробовать' },
-  { id: 'month_3', name: '3 месяца', price: 7, currency: 'TON', badge: 'Оптимально', popular: true },
-  { id: 'month_12', name: '1 год', price: 22, currency: 'TON', badge: 'Выгоднее' },
-]
 
 const subscriptionFeatures = [
   {
@@ -55,7 +52,7 @@ const subscriptionFeatures = [
 export default function Subscription() {
   const navigate = useNavigate()
   const { user, updateUser } = useAuthStore()
-  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>(defaultPlans)
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([])
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan['id']>('month_3')
   const [loading, setLoading] = useState(false)
   const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
@@ -73,23 +70,38 @@ export default function Subscription() {
   } | null>(null)
 
   useEffect(() => {
-    loadPlans()
     loadCityAutobuildStatus()
   }, [])
 
+  useEffect(() => {
+    loadPlans()
+  }, [paymentMethod])
+
   const loadPlans = async () => {
     try {
-      const response = await apiClient.get('/subscription/plans').catch(() => ({ data: defaultPlans }))
-      setSubscriptionPlans(response.data || defaultPlans)
-      // Устанавливаем выбранный план как популярный или средний
-      const popularPlan = response.data?.find((p: SubscriptionPlan) => p.popular)
-      if (popularPlan) {
-        setSelectedPlan(popularPlan.id)
+      const response = await apiClient.get(`/subscription/plans?method=${paymentMethod}`)
+      if (response.data && response.data.length > 0) {
+        setSubscriptionPlans(response.data)
+        // Устанавливаем выбранный план как популярный или средний
+        const popularPlan = response.data.find((p: SubscriptionPlan) => p.popular)
+        if (popularPlan) {
+          setSelectedPlan(popularPlan.id)
+        } else if (response.data.length > 0) {
+          setSelectedPlan(response.data[0].id)
+        }
+      } else {
+        setSubscriptionPlans([])
       }
     } catch (error) {
       console.error('Failed to load subscription plans:', error)
+      setSubscriptionPlans([])
     }
   }
+
+  useEffect(() => {
+    if (activeTab !== 'subscription') return
+    loadPlans()
+  }, [paymentMethod])
 
   const loadCityAutobuildStatus = async () => {
     try {
@@ -184,36 +196,12 @@ export default function Subscription() {
           ))}
         </div>
 
-        {/* Варианты подписки */}
-        <div className="subscription-plans">
-          {subscriptionPlans.map((plan) => (
-            <Card
-              key={plan.id}
-              className={`subscription-plan-card ${selectedPlan === plan.id ? 'selected' : ''} ${plan.popular ? 'popular' : ''}`}
-              onClick={() => setSelectedPlan(plan.id)}
-            >
-              <div className="subscription-plan-header">
-                <div className="subscription-plan-name">{plan.name}</div>
-                {plan.badge && (
-                  <div className={`subscription-plan-badge ${plan.popular ? 'popular-badge' : ''}`}>
-                    {plan.badge}
-                  </div>
-                )}
-              </div>
-              <div className="subscription-plan-price">
-                <span className="subscription-plan-price-icon">▼</span>
-                <span>{plan.price} {plan.currency}</span>
-              </div>
-            </Card>
-          ))}
-        </div>
-
         {/* Выбор метода оплаты */}
         <div style={{ 
           display: 'flex', 
           gap: '8px', 
-          marginBottom: '16px',
-          marginTop: '16px'
+          marginBottom: '24px',
+          marginTop: '24px'
         }}>
           <button
             onClick={() => setPaymentMethod('TON')}
@@ -253,6 +241,30 @@ export default function Subscription() {
           >
             USDT
           </button>
+        </div>
+
+        {/* Варианты подписки */}
+        <div className="subscription-plans">
+          {subscriptionPlans.map((plan) => (
+            <Card
+              key={plan.id}
+              className={`subscription-plan-card ${selectedPlan === plan.id ? 'selected' : ''} ${plan.popular ? 'popular' : ''}`}
+              onClick={() => setSelectedPlan(plan.id)}
+            >
+              <div className="subscription-plan-header">
+                <div className="subscription-plan-name">{plan.name}</div>
+                {plan.badge && (
+                  <div className={`subscription-plan-badge ${plan.popular ? 'popular-badge' : ''}`}>
+                    {plan.badge}
+                  </div>
+                )}
+              </div>
+              <div className="subscription-plan-price">
+                <span className="subscription-plan-price-icon">▼</span>
+                <span>{plan.price} {plan.currency}</span>
+              </div>
+            </Card>
+          ))}
         </div>
 
         {/* Кнопка оформления */}

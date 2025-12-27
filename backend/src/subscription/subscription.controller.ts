@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, NotFoundException, BadRequestException, Query } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { PaymentTransactionService } from '../payment/payment-transaction.service';
 import { WalletService } from '../payment/wallet.service';
@@ -36,12 +36,49 @@ export class SubscriptionController {
   }
 
   @Get('plans')
-  async getPlans() {
+  async getPlans(@Query('method') method?: string) {
     const prices = await this.adminService.getSubscriptionPrices();
+    
+    // Если цены не установлены в админке, возвращаем пустой массив
+    if (!prices) {
+      return [];
+    }
+    
+    const paymentMethod = method?.toLowerCase() === 'usdt' ? 'usdt' : 'ton';
+    
+    const getPrice = (planPrices: { ton: number; usdt: number }) => {
+      return paymentMethod === 'usdt' ? planPrices.usdt : planPrices.ton;
+    };
+    
     return [
-      { id: 'month_1', name: '1 месяц', price: Number(prices.month_1), currency: 'TON', badge: 'Попробовать' },
-      { id: 'month_3', name: '3 месяца', price: Number(prices.month_3), currency: 'TON', badge: 'Оптимально', popular: true },
-      { id: 'month_12', name: '1 год', price: Number(prices.month_12), currency: 'TON', badge: 'Выгоднее' },
+      { 
+        id: 'month_1', 
+        name: '1 месяц', 
+        price: Number(getPrice(prices.month_1)), 
+        priceTon: Number(prices.month_1.ton),
+        priceUsdt: Number(prices.month_1.usdt),
+        currency: paymentMethod.toUpperCase(), 
+        badge: 'Попробовать' 
+      },
+      { 
+        id: 'month_3', 
+        name: '3 месяца', 
+        price: Number(getPrice(prices.month_3)), 
+        priceTon: Number(prices.month_3.ton),
+        priceUsdt: Number(prices.month_3.usdt),
+        currency: paymentMethod.toUpperCase(), 
+        badge: 'Оптимально', 
+        popular: true 
+      },
+      { 
+        id: 'month_12', 
+        name: '1 год', 
+        price: Number(getPrice(prices.month_12)), 
+        priceTon: Number(prices.month_12.ton),
+        priceUsdt: Number(prices.month_12.usdt),
+        currency: paymentMethod.toUpperCase(), 
+        badge: 'Выгоднее' 
+      },
     ];
   }
 
@@ -49,12 +86,23 @@ export class SubscriptionController {
    * Получить пакеты NAR-coin (используется в Shop.tsx)
    */
   @Get('nar-coin-packages')
-  async getNarCoinPackages() {
+  async getNarCoinPackages(@Query('method') method?: string) {
     const packages = await this.adminService.getNarCoinPrices();
-    return packages.map(pkg => ({
-      ...pkg,
-      currency: 'TON'
-    }));
+    const paymentMethod = method?.toLowerCase() === 'usdt' ? 'usdt' : 'ton';
+    
+    return packages.map(pkg => {
+      const price = paymentMethod === 'usdt' 
+        ? Number(pkg.priceUsdt || 0)
+        : Number(pkg.priceTon || 0);
+      
+      return {
+        amount: pkg.amount,
+        price,
+        priceTon: Number(pkg.priceTon || 0),
+        priceUsdt: Number(pkg.priceUsdt || 0),
+        currency: paymentMethod.toUpperCase()
+      };
+    });
   }
 
   @Post('purchase')

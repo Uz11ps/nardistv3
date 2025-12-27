@@ -55,6 +55,7 @@ export default function Admin() {
   const [selectedSkinType, setSelectedSkinType] = useState<string>('')
   const [progressionConfig, setProgressionConfig] = useState<any>(null)
   const [paymentStats, setPaymentStats] = useState<any>(null)
+  const [wallets, setWallets] = useState<any[]>([])
   const [systemSettings, setSystemSettings] = useState<any>({})
   const [isSavingProgression, setIsSavingProgression] = useState(false)
   const [editingOnboardingTask, setEditingOnboardingTask] = useState<any>(null)
@@ -126,8 +127,12 @@ export default function Admin() {
   const [editingArticle, setEditingArticle] = useState<any>(null)
   const [selectedTournament, setSelectedTournament] = useState<any>(null)
   const [editingUser, setEditingUser] = useState<any>(null)
-  const [subscriptionPrices, setSubscriptionPrices] = useState({ month_1: 3, month_3: 7, month_12: 22 })
-  const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; price: number }>>([])
+  const [subscriptionPrices, setSubscriptionPrices] = useState<{ 
+    month_1?: { ton?: number; usdt?: number }; 
+    month_3?: { ton?: number; usdt?: number }; 
+    month_12?: { ton?: number; usdt?: number } 
+  } | null>(null)
+  const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; priceTon: number; priceUsdt: number }>>([])
   const [editingSetting, setEditingSetting] = useState<{ key: string; value: any } | null>(null)
   const [districts, setDistricts] = useState<any[]>([])
   const [editingDistrict, setEditingDistrict] = useState<any>(null)
@@ -530,10 +535,30 @@ export default function Admin() {
     }
   }
 
+  const loadWallets = async () => {
+    try {
+      const response = await apiClient.get('/admin/wallets')
+      setWallets(response.data || [])
+    } catch (error) {
+      console.error('Failed to load wallets:', error)
+      setWallets([])
+    }
+  }
+
   const loadSubscriptionPrices = async () => {
     try {
       const response = await apiClient.get('/admin/prices/subscription')
-      setSubscriptionPrices(response.data)
+      const prices = response.data
+      // Нормализуем данные для поддержки старого формата
+      if (prices.month_1 && typeof prices.month_1 === 'number') {
+        setSubscriptionPrices({
+          month_1: { ton: prices.month_1, usdt: prices.month_1 },
+          month_3: { ton: prices.month_3, usdt: prices.month_3 },
+          month_12: { ton: prices.month_12, usdt: prices.month_12 },
+        })
+      } else {
+        setSubscriptionPrices(prices)
+      }
     } catch (error) {
       console.error('Failed to load subscription prices:', error)
     }
@@ -542,7 +567,17 @@ export default function Admin() {
   const loadNarCoinPrices = async () => {
     try {
       const response = await apiClient.get('/admin/prices/nar-coin')
-      setNarCoinPackages(response.data)
+      const packages = response.data
+      // Нормализуем данные для поддержки старого формата
+      if (packages.length > 0 && packages[0].price !== undefined && packages[0].priceTon === undefined) {
+        setNarCoinPackages(packages.map((pkg: any) => ({
+          amount: pkg.amount,
+          priceTon: pkg.price,
+          priceUsdt: pkg.price,
+        })))
+      } else {
+        setNarCoinPackages(packages)
+      }
     } catch (error) {
       console.error('Failed to load nar-coin prices:', error)
     }
@@ -813,6 +848,7 @@ export default function Admin() {
           onClick={() => {
             setActiveTab('payments')
             loadPaymentStats()
+            loadWallets()
             loadSystemSettings()
           }}
         >
@@ -4911,41 +4947,110 @@ export default function Admin() {
           
           {/* Цены подписок */}
           <div style={{ marginBottom: '32px' }}>
-            <h3>Цены подписок (TON)</h3>
-            <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
-              <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>1 месяц</label>
-                <input
-                  type="number"
-                  value={subscriptionPrices.month_1}
-                  onChange={(e) => setSubscriptionPrices({ ...subscriptionPrices, month_1: parseFloat(e.target.value) || 0 })}
-                  style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
-                />
+            <h3>Цены подписок</h3>
+            {subscriptionPrices === null && (
+              <div style={{ marginBottom: '16px', padding: '12px', background: '#2a2a2a', borderRadius: '8px', color: '#aaa' }}>
+                Цены не установлены. Заполните и сохраните цены ниже.
               </div>
+            )}
+            <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+              {/* 1 месяц */}
               <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>3 месяца</label>
-                <input
-                  type="number"
-                  value={subscriptionPrices.month_3}
-                  onChange={(e) => setSubscriptionPrices({ ...subscriptionPrices, month_3: parseFloat(e.target.value) || 0 })}
-                  style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
-                />
+                <label style={{ display: 'block', marginBottom: '12px', color: '#fff', fontWeight: 'bold' }}>1 месяц</label>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TON</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={subscriptionPrices?.month_1?.ton || ''}
+                    onChange={(e) => setSubscriptionPrices({ 
+                      ...(subscriptionPrices || {}), 
+                      month_1: { ...(subscriptionPrices?.month_1 || {}), ton: parseFloat(e.target.value) || 0 } 
+                    })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена USDT</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={subscriptionPrices?.month_1?.usdt || ''}
+                    onChange={(e) => setSubscriptionPrices({ 
+                      ...(subscriptionPrices || {}), 
+                      month_1: { ...(subscriptionPrices?.month_1 || {}), usdt: parseFloat(e.target.value) || 0 } 
+                    })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
               </div>
+              {/* 3 месяца */}
               <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>12 месяцев</label>
-                <input
-                  type="number"
-                  value={subscriptionPrices.month_12}
-                  onChange={(e) => setSubscriptionPrices({ ...subscriptionPrices, month_12: parseFloat(e.target.value) || 0 })}
-                  style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
-                />
+                <label style={{ display: 'block', marginBottom: '12px', color: '#fff', fontWeight: 'bold' }}>3 месяца</label>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TON</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={subscriptionPrices?.month_3?.ton || ''}
+                    onChange={(e) => setSubscriptionPrices({ 
+                      ...(subscriptionPrices || {}), 
+                      month_3: { ...(subscriptionPrices?.month_3 || {}), ton: parseFloat(e.target.value) || 0 } 
+                    })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена USDT</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={subscriptionPrices?.month_3?.usdt || ''}
+                    onChange={(e) => setSubscriptionPrices({ 
+                      ...(subscriptionPrices || {}), 
+                      month_3: { ...(subscriptionPrices?.month_3 || {}), usdt: parseFloat(e.target.value) || 0 } 
+                    })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+              </div>
+              {/* 12 месяцев */}
+              <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                <label style={{ display: 'block', marginBottom: '12px', color: '#fff', fontWeight: 'bold' }}>12 месяцев</label>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TON</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={subscriptionPrices?.month_12?.ton || ''}
+                    onChange={(e) => setSubscriptionPrices({ 
+                      ...(subscriptionPrices || {}), 
+                      month_12: { ...(subscriptionPrices?.month_12 || {}), ton: parseFloat(e.target.value) || 0 } 
+                    })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена USDT</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={subscriptionPrices?.month_12?.usdt || ''}
+                    onChange={(e) => setSubscriptionPrices({ 
+                      ...(subscriptionPrices || {}), 
+                      month_12: { ...(subscriptionPrices?.month_12 || {}), usdt: parseFloat(e.target.value) || 0 } 
+                    })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
               </div>
             </div>
             <button
               onClick={async () => {
                 try {
-                  await apiClient.put('/admin/prices/subscription', subscriptionPrices)
+                  await apiClient.put('/admin/prices/subscription', subscriptionPrices || {})
                   alert('Цены подписок обновлены')
+                  await loadSubscriptionPrices()
                 } catch (error: any) {
                   alert('Ошибка: ' + (error.response?.data?.message || error.message))
                 }
@@ -4961,41 +5066,64 @@ export default function Admin() {
             <h3>Пакеты NAR-coin</h3>
             <div style={{ marginBottom: '16px' }}>
               {narCoinPackages.map((pkg, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                  <input
-                    type="number"
-                    placeholder="Количество NAR"
-                    value={pkg.amount}
-                    onChange={(e) => {
-                      const newPackages = [...narCoinPackages]
-                      newPackages[idx].amount = parseFloat(e.target.value) || 0
-                      setNarCoinPackages(newPackages)
-                    }}
-                    style={{ flex: 1, padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
-                  />
-                  <input
-                    type="number"
-                    placeholder="Цена TON"
-                    value={pkg.price}
-                    onChange={(e) => {
-                      const newPackages = [...narCoinPackages]
-                      newPackages[idx].price = parseFloat(e.target.value) || 0
-                      setNarCoinPackages(newPackages)
-                    }}
-                    style={{ flex: 1, padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
-                  />
-                  <button
-                    onClick={() => {
-                      setNarCoinPackages(narCoinPackages.filter((_, i) => i !== idx))
-                    }}
-                    style={{ padding: '8px 16px', background: '#ff3333', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                  >
-                    Удалить
-                  </button>
+                <div key={idx} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      placeholder="Количество NAR"
+                      value={pkg.amount}
+                      onChange={(e) => {
+                        const newPackages = [...narCoinPackages]
+                        newPackages[idx].amount = parseFloat(e.target.value) || 0
+                        setNarCoinPackages(newPackages)
+                      }}
+                      style={{ flex: 1, padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                    />
+                    <button
+                      onClick={() => {
+                        setNarCoinPackages(narCoinPackages.filter((_, i) => i !== idx))
+                      }}
+                      style={{ padding: '8px 16px', background: '#ff3333', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TON</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Цена TON"
+                        value={pkg.priceTon || 0}
+                        onChange={(e) => {
+                          const newPackages = [...narCoinPackages]
+                          newPackages[idx].priceTon = parseFloat(e.target.value) || 0
+                          setNarCoinPackages(newPackages)
+                        }}
+                        style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена USDT</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Цена USDT"
+                        value={pkg.priceUsdt || 0}
+                        onChange={(e) => {
+                          const newPackages = [...narCoinPackages]
+                          newPackages[idx].priceUsdt = parseFloat(e.target.value) || 0
+                          setNarCoinPackages(newPackages)
+                        }}
+                        style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
               <button
-                onClick={() => setNarCoinPackages([...narCoinPackages, { amount: 0, price: 0 }])}
+                onClick={() => setNarCoinPackages([...narCoinPackages, { amount: 0, priceTon: 0, priceUsdt: 0 }])}
                 style={{ padding: '8px 16px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}
               >
                 + Добавить пакет
@@ -5665,6 +5793,79 @@ export default function Admin() {
                       <td style={{ fontWeight: 'bold', color: '#4caf50' }}>{w.totalAmount.toFixed(2)}</td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px', marginBottom: '32px' }}>
+            <h3 style={{ marginBottom: '20px' }}>Кошельки пользователей</h3>
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Пользователь</th>
+                    <th>Адрес кошелька</th>
+                    <th>Тип</th>
+                    <th>Статус</th>
+                    <th>Создан</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {wallets.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', color: '#aaa', padding: '20px' }}>
+                        Кошельков не найдено
+                      </td>
+                    </tr>
+                  ) : (
+                    wallets.map((wallet) => (
+                      <tr key={wallet.id}>
+                        <td>
+                          <div style={{ fontWeight: 'bold' }}>{wallet.username || 'Unknown'}</div>
+                          <div style={{ fontSize: '11px', color: '#aaa' }}>{wallet.userId?.substring(0, 8)}...</div>
+                        </td>
+                        <td style={{ fontFamily: 'monospace', fontSize: '12px' }}>{wallet.address}</td>
+                        <td>{wallet.walletType || 'TON'}</td>
+                        <td>
+                          <span style={{ 
+                            padding: '4px 8px', 
+                            borderRadius: '4px', 
+                            background: wallet.isActive ? '#4caf50' : '#ff5722',
+                            color: '#fff',
+                            fontSize: '12px'
+                          }}>
+                            {wallet.isActive ? 'Активен' : 'Неактивен'}
+                          </span>
+                        </td>
+                        <td>{new Date(wallet.createdAt).toLocaleString('ru-RU')}</td>
+                        <td>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await apiClient.get(`/admin/wallets/${wallet.id}/private-key`)
+                                alert(`Приватный ключ: ${response.data.privateKey}\nАдрес: ${response.data.address}`)
+                              } catch (error: any) {
+                                alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                              }
+                            }}
+                            style={{ 
+                              padding: '4px 8px', 
+                              background: '#4a9eff', 
+                              color: '#fff', 
+                              border: 'none', 
+                              borderRadius: '4px', 
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            Приватный ключ
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

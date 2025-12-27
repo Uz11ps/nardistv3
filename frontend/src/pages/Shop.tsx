@@ -12,6 +12,8 @@ import './Shop.css'
 interface NarCoinPackage {
   amount: number
   price: number
+  priceTon?: number
+  priceUsdt?: number
   currency: string
 }
 
@@ -62,16 +64,8 @@ export default function Shop() {
   const loadNarCoinPackages = async () => {
     try {
       setLoading(true)
-      // Загружаем пакеты NAR-coin с сервера
-      const response = await apiClient.get('/subscription/nar-coin-packages').catch(() => {
-        // Если endpoint не существует, используем дефолтные значения
-        return { data: [
-          { amount: 1000, price: 1, currency: 'TON' },
-          { amount: 5000, price: 4, currency: 'TON' },
-          { amount: 15000, price: 10, currency: 'TON' },
-          { amount: 50000, price: 30, currency: 'TON' },
-        ]}
-      })
+      // Загружаем пакеты NAR-coin с сервера с учетом выбранного метода оплаты
+      const response = await apiClient.get(`/subscription/nar-coin-packages?method=${paymentMethod}`)
       setNarCoinPackages(response.data || [])
     } catch (error) {
       console.error('Failed to load NAR-coin packages:', error)
@@ -79,6 +73,12 @@ export default function Shop() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (activeTab === 'coin') {
+      loadNarCoinPackages()
+    }
+  }, [paymentMethod])
 
   const loadSkins = async () => {
     try {

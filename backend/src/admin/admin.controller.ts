@@ -945,9 +945,9 @@ export class AdminController {
   async updateSubscriptionPrices(
     @CurrentUser() user: any,
     @Body() body: {
-      month_1?: number;
-      month_3?: number;
-      month_12?: number;
+      month_1?: { ton?: number; usdt?: number };
+      month_3?: { ton?: number; usdt?: number };
+      month_12?: { ton?: number; usdt?: number };
     },
   ) {
     return this.adminService.updateSubscriptionPrices(body);
@@ -963,7 +963,7 @@ export class AdminController {
   @UseGuards(AdminAuthGuard)
   async updateNarCoinPrices(
     @CurrentUser() user: any,
-    @Body() body: { packages: Array<{ amount: number; price: number }> },
+    @Body() body: { packages: Array<{ amount: number; priceTon?: number; priceUsdt?: number }> },
   ) {
     return this.adminService.updateNarCoinPrices(body.packages);
   }

@@ -2481,21 +2481,39 @@ export class AdminService implements OnModuleInit {
   async getSubscriptionPrices() {
     const setting = await this.systemSettingsRepository.findOne({ where: { key: 'subscription_prices' } });
     if (setting) {
-      return JSON.parse(setting.value);
+      const prices = JSON.parse(setting.value);
+      // Поддержка старого формата для обратной совместимости
+      if (prices.month_1 && typeof prices.month_1 === 'number') {
+        return {
+          month_1: { ton: prices.month_1, usdt: prices.month_1 },
+          month_3: { ton: prices.month_3, usdt: prices.month_3 },
+          month_12: { ton: prices.month_12, usdt: prices.month_12 },
+        };
+      }
+      return prices;
     }
-    // Дефолтные цены
-    return {
-      month_1: 3,
-      month_3: 7,
-      month_12: 22,
-    };
+    // Нет данных в админке
+    return null;
   }
 
-  async updateSubscriptionPrices(prices: { month_1?: number; month_3?: number; month_12?: number }) {
+  async updateSubscriptionPrices(prices: { 
+    month_1?: { ton?: number; usdt?: number }; 
+    month_3?: { ton?: number; usdt?: number }; 
+    month_12?: { ton?: number; usdt?: number } 
+  }) {
     let setting = await this.systemSettingsRepository.findOne({ where: { key: 'subscription_prices' } });
-    const currentPrices = setting ? JSON.parse(setting.value) : { month_1: 3, month_3: 7, month_12: 22 };
+    const currentPrices = setting ? await this.getSubscriptionPrices() : null;
     
-    const updatedPrices = { ...currentPrices, ...prices };
+    // Если текущих цен нет, создаем новые из переданных данных
+    const updatedPrices = currentPrices ? {
+      month_1: { ...currentPrices.month_1, ...(prices.month_1 || {}) },
+      month_3: { ...currentPrices.month_3, ...(prices.month_3 || {}) },
+      month_12: { ...currentPrices.month_12, ...(prices.month_12 || {}) },
+    } : {
+      month_1: prices.month_1 || { ton: 0, usdt: 0 },
+      month_3: prices.month_3 || { ton: 0, usdt: 0 },
+      month_12: prices.month_12 || { ton: 0, usdt: 0 },
+    };
     
     if (!setting) {
       setting = this.systemSettingsRepository.create({
@@ -2513,25 +2531,50 @@ export class AdminService implements OnModuleInit {
   async getNarCoinPrices() {
     const setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
     if (setting) {
-      return JSON.parse(setting.value);
+      const packages = JSON.parse(setting.value);
+      // Поддержка старого формата для обратной совместимости
+      if (packages.length > 0 && packages[0].price !== undefined && packages[0].priceTon === undefined) {
+        return packages.map((pkg: any) => ({
+          amount: pkg.amount,
+          priceTon: pkg.price,
+          priceUsdt: pkg.price,
+        }));
+      }
+      return packages;
     }
     return [];
   }
 
-  async updateNarCoinPrices(packages: Array<{ amount: number; price: number }>) {
+  async updateNarCoinPrices(packages: Array<{ amount: number; priceTon?: number; priceUsdt?: number }>) {
     let setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
+    
+    // Нормализуем пакеты - если пришёл старый формат, конвертируем
+    const normalizedPackages = packages.map(pkg => {
+      if ('price' in pkg && typeof pkg.price === 'number') {
+        return {
+          amount: pkg.amount,
+          priceTon: pkg.price,
+          priceUsdt: pkg.price,
+        };
+      }
+      return {
+        amount: pkg.amount,
+        priceTon: pkg.priceTon || 0,
+        priceUsdt: pkg.priceUsdt || 0,
+      };
+    });
     
     if (!setting) {
       setting = this.systemSettingsRepository.create({
         key: 'nar_coin_packages',
-        value: JSON.stringify(packages),
+        value: JSON.stringify(normalizedPackages),
       });
     } else {
-      setting.value = JSON.stringify(packages);
+      setting.value = JSON.stringify(normalizedPackages);
     }
     
     await this.systemSettingsRepository.save(setting);
-    return packages;
+    return normalizedPackages;
   }
 
   // ========== СИСТЕМНЫЕ НАСТРОЙКИ ==========

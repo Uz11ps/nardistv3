@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, In } from 'typeorm';
 import { PaymentTransaction, PaymentStatus, PaymentMethod, PaymentType } from './payment-transaction.entity';
 import { SubscriptionPlan } from '../subscription/subscription.entity';
 import { TonService } from './ton.service';
@@ -41,15 +41,35 @@ export class PaymentTransactionService {
   }
 
   /**
-   * Получить цены подписок из настроек
+   * Получить цену подписки из настроек в зависимости от метода оплаты
    */
-  private async getSubscriptionPrices(): Promise<{ [key in SubscriptionPlan]: number }> {
+  private async getSubscriptionPrice(plan: SubscriptionPlan, method: PaymentMethod): Promise<number> {
     const prices = await this.adminService.getSubscriptionPrices();
-    return {
-      [SubscriptionPlan.MONTH_1]: Number(prices.month_1) || 3,
-      [SubscriptionPlan.MONTH_3]: Number(prices.month_3) || 7,
-      [SubscriptionPlan.MONTH_12]: Number(prices.month_12) || 22,
-    };
+    
+    if (!prices) {
+      throw new BadRequestException('Цены подписок не установлены. Обратитесь к администратору.');
+    }
+    
+    const planKey = plan === SubscriptionPlan.MONTH_1 ? 'month_1' : plan === SubscriptionPlan.MONTH_3 ? 'month_3' : 'month_12';
+    const planPrices = prices[planKey];
+    
+    if (!planPrices) {
+      throw new BadRequestException(`Цена для плана ${planKey} не установлена. Обратитесь к администратору.`);
+    }
+    
+    if (method === PaymentMethod.USDT) {
+      const price = Number(planPrices.usdt);
+      if (!price || price <= 0) {
+        throw new BadRequestException(`Цена USDT для плана ${planKey} не установлена. Обратитесь к администратору.`);
+      }
+      return price;
+    }
+    
+    const price = Number(planPrices.ton);
+    if (!price || price <= 0) {
+      throw new BadRequestException(`Цена TON для плана ${planKey} не установлена. Обратитесь к администратору.`);
+    }
+    return price;
   }
 
   /**
@@ -63,9 +83,8 @@ export class PaymentTransactionService {
     // Получаем или создаем кошелек пользователя
     const wallet = await this.walletService.getOrCreateWallet(userId);
     
-    // Определяем сумму платежа из настроек
-    const prices = await this.getSubscriptionPrices();
-    const amount = prices[plan];
+    // Определяем сумму платежа из настроек в зависимости от метода оплаты
+    const amount = await this.getSubscriptionPrice(plan, method);
     
     // Генерируем комментарий для идентификации платежа (необязательный)
     const transactionId = `sub_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -325,6 +344,67 @@ export class PaymentTransactionService {
       order: { createdAt: 'ASC' },
       take: limit,
     });
+  }
+
+  /**
+   * Проверить все pending и processing транзакции
+   * Вызывается периодически через cron
+   */
+  async checkPendingTransactions(): Promise<void> {
+    this.logger.log('🔍 Начинаю проверку pending транзакций...');
+    
+    try {
+      // Находим все транзакции, которые нужно проверить
+      const transactions = await this.transactionRepository.find({
+        where: {
+          status: In([PaymentStatus.PENDING, PaymentStatus.PROCESSING]),
+        },
+      });
+
+      this.logger.log(`📊 Найдено ${transactions.length} транзакций для проверки`);
+
+      let checked = 0;
+      let completed = 0;
+      let failed = 0;
+
+      for (const transaction of transactions) {
+        try {
+          // Пропускаем транзакции без хеша
+          if (!transaction.txHash) {
+            continue;
+          }
+
+          // Проверяем истечение времени
+          const now = new Date();
+          if (transaction.expiresAt && now > transaction.expiresAt) {
+            if (transaction.status !== PaymentStatus.FAILED) {
+              transaction.status = PaymentStatus.FAILED;
+              transaction.lastError = 'Время на оплату истекло (15 минут)';
+              await this.transactionRepository.save(transaction);
+              failed++;
+            }
+            continue;
+          }
+
+          // Проверяем транзакцию в блокчейне
+          const updatedTransaction = await this.checkTransactionStatus(transaction.id);
+          
+          if (updatedTransaction.status === PaymentStatus.COMPLETED) {
+            completed++;
+          } else if (updatedTransaction.status === PaymentStatus.FAILED) {
+            failed++;
+          }
+          
+          checked++;
+        } catch (error: any) {
+          this.logger.error(`❌ Ошибка при проверке транзакции ${transaction.id}: ${error.message}`);
+        }
+      }
+
+      this.logger.log(`✅ Проверка завершена: проверено ${checked}, завершено ${completed}, провалено ${failed}`);
+    } catch (error: any) {
+      this.logger.error(`❌ Ошибка при проверке pending транзакций: ${error.message}`);
+    }
   }
 }
 
