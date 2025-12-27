@@ -308,7 +308,9 @@ export default function Inventory() {
           </div>
           <div className="inventory-item-info">
             <div className="inventory-item-name">{skin.name}</div>
-            <div className="inventory-item-rarity">{getRarityName(skin.rarity)}</div>
+            <div className="inventory-item-rarity">
+              {getRarityName(skin.rarity)} • {skin.weight} кг
+            </div>
             {skin.price !== undefined && skin.price !== null && (
               <div className="inventory-item-durability">
                 <div className="inventory-item-durability-label">

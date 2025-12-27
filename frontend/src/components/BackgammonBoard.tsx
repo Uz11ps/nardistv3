@@ -1667,14 +1667,15 @@ export default function BackgammonBoard({
             const isUsed = usedDiceIndices.has(index)
             const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0])
             
-            // Не показываем использованные кубики
-            if (isUsed) return null
+            // Показываем использованные кубики полупрозрачными
+            const alpha = isUsed ? 0.3 : 1
             
             return (
               <div
                 key={index}
                 style={{
                   position: 'relative',
+                  opacity: alpha,
                 }}
               >
                 <Dice3D

@@ -31,6 +31,8 @@ export default function Profile() {
     avatarUrl: '',
   })
   const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<'stats' | 'premium'>('stats')
+  const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null)
 
   useEffect(() => {
     if (user) {
@@ -93,6 +95,7 @@ export default function Profile() {
     try {
       const response = await apiClient.get('/subscription/status').catch(() => ({ data: { hasActive: false } }))
       setHasPremium(response.data?.hasActive || false)
+      setSubscriptionDetails(response.data)
     } catch (error) {
       console.error('Failed to check subscription:', error)
     }
@@ -242,8 +245,26 @@ export default function Profile() {
       }
     >
       <div className="profile-content">
-        {/* Профиль пользователя */}
-        <div className="profile-header">
+        {/* Табы */}
+        <div className="profile-tabs">
+          <button 
+            className={`profile-tab ${activeTab === 'stats' ? 'active' : ''}`}
+            onClick={() => setActiveTab('stats')}
+          >
+            Характеристики
+          </button>
+          <button 
+            className={`profile-tab ${activeTab === 'premium' ? 'active' : ''}`}
+            onClick={() => setActiveTab('premium')}
+          >
+            Премиум
+          </button>
+        </div>
+
+        {activeTab === 'stats' ? (
+          <>
+            {/* Профиль пользователя */}
+            <div className="profile-header">
           <div className="profile-avatar-container">
             <div className="profile-avatar">
               {user?.avatarUrl ? (
@@ -386,7 +407,79 @@ export default function Profile() {
               </div>
             </div>
           ))}
-        </div>
+          </>
+        ) : (
+          <div className="profile-premium-tab">
+            <div className={`premium-status-card ${hasPremium ? 'active' : 'inactive'}`}>
+              <div className="premium-status-header">
+                <div className="premium-status-icon">{hasPremium ? '👑' : '⭐'}</div>
+                <div className="premium-status-info">
+                  <div className="premium-status-title">
+                    {hasPremium ? 'Премиум активен' : 'Премиум не активен'}
+                  </div>
+                  {hasPremium && subscriptionDetails?.expiresAt && (
+                    <div className="premium-status-expiry">
+                      До {new Date(subscriptionDetails.expiresAt).toLocaleDateString('ru-RU')}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {!hasPremium && (
+                <button className="premium-activate-btn" onClick={() => navigate('/shop')}>
+                  Активировать
+                </button>
+              )}
+            </div>
+
+            <div className="premium-features-list">
+              <div className="premium-feature-item">
+                <div className="premium-feature-icon">📊</div>
+                <div className="premium-feature-info">
+                  <div className="premium-feature-title">История и Анализ</div>
+                  <div className="premium-feature-description">
+                    Доступ к истории всех игр и детальному разбору ошибок с помощью ИИ.
+                  </div>
+                </div>
+              </div>
+              <div className="premium-feature-item">
+                <div className="premium-feature-icon">🚀</div>
+                <div className="premium-feature-info">
+                  <div className="premium-feature-title">Приоритет в матчах</div>
+                  <div className="premium-feature-description">
+                    Твои заявки в поиске соперника обрабатываются в первую очередь.
+                  </div>
+                </div>
+              </div>
+              <div className="premium-feature-item">
+                <div className="premium-feature-icon">👑</div>
+                <div className="premium-feature-info">
+                  <div className="premium-feature-title">Премиум-значок</div>
+                  <div className="premium-feature-description">
+                    Специальная иконка короны в списках и таблице лидеров.
+                  </div>
+                </div>
+              </div>
+              <div className="premium-feature-item">
+                <div className="premium-feature-icon">📉</div>
+                <div className="premium-feature-info">
+                  <div className="premium-feature-title">Снижение комиссии</div>
+                  <div className="premium-feature-description">
+                    Дополнительная скидка на игровую комиссию.
+                  </div>
+                </div>
+              </div>
+              <div className="premium-feature-item">
+                <div className="premium-feature-icon">✨</div>
+                <div className="premium-feature-info">
+                  <div className="premium-feature-title">Бонус XP</div>
+                  <div className="premium-feature-description">
+                    Получай на 15% больше опыта за каждый матч.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Модальное окно редактирования профиля */}

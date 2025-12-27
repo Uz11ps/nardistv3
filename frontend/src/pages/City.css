@@ -1,251 +1,253 @@
-/* City Page Styles */
+/* City Page Styles v2 (Hamster style) */
 
-.city-content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 0 16px 40px;
+.city-content-v2 {
+  padding: 0 12px 40px;
+  background: #000;
+  min-height: 100vh;
 }
 
+.city-v2-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Tabs */
+.city-tabs {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 16px 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 16px;
+}
+
+.city-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.city-tab {
+  flex: 0 0 auto;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.city-tab.active {
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  color: #fff;
+  border-color: #C93C3D;
+  box-shadow: 0 4px 12px rgba(232, 65, 66, 0.3);
+}
+
+.city-tab.locked {
+  opacity: 0.6;
+}
+
+.city-tab-lock {
+  font-size: 12px;
+}
+
+/* Grid */
+.city-buildings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Building Card */
+.city-card-v2 {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.city-card-v2:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.city-card-v2.disabled {
+  opacity: 0.7;
+  filter: grayscale(0.5);
+}
+
+.city-card-header {
+  display: flex;
+  gap: 10px;
+}
+
+.city-card-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  background: #2a2a2a;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.city-card-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.city-card-title-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.city-card-name {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.city-card-profit {
+  color: #888;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.city-card-profit-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  font-size: 11px;
+  margin-top: 1px;
+}
+
+.city-card-coin-mini {
+  width: 12px;
+  height: 12px;
+}
+
+.city-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.city-card-lvl {
+  color: #888;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.city-card-price {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.city-card-price-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Actions Overlay (Mobile friendly buttons) */
+.city-card-actions-overlay {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.city-card-action-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: 10px;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.city-card-action-btn.collect {
+  background: linear-gradient(180deg, #4CAF50 0%, #388E3C 100%);
+  color: #fff;
+}
+
+.city-card-action-btn.upgrade {
+  background: linear-gradient(180deg, #2196F3 0%, #1976D2 100%);
+  color: #fff;
+}
+
+.city-card-action-btn.buy {
+  background: linear-gradient(180deg, #FF9800 0%, #F57C00 100%);
+  color: #fff;
+}
+
+.city-card-action-btn:disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.city-district-locked-banner {
+  background: rgba(232, 65, 66, 0.1);
+  border: 1px solid rgba(232, 65, 66, 0.3);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #E84142;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Old styles kept for clan mode if needed, but updated to content-v2 */
+.city-section-title {
+  color: #fff;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+/* Loading */
 .city-loading {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 60vh;
   color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
-}
-
-.city-empty {
-  text-align: center;
-  padding: 40px;
-  color: #888;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-}
-
-/* Районы */
-.city-districts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.city-district-card {
-  border-radius: 16px;
-  overflow: hidden;
-  background: #1a1a1a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: transform 0.2s;
-}
-
-.city-district-card.locked {
-  opacity: 0.7;
-}
-
-.city-district-header {
-  height: 120px;
-  padding: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  cursor: pointer;
-}
-
-.locked .city-district-header {
-  cursor: default;
-  filter: grayscale(1);
-}
-
-.city-district-info {
-  position: relative;
-  z-index: 2;
-  flex: 1;
-}
-
-.city-district-name {
-  color: #fff;
-  font-size: 20px;
-  font-weight: bold;
-  margin: 0 0 4px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.city-district-lock {
-  font-size: 14px;
-  color: #ff9800;
-  font-weight: normal;
-}
-
-.city-district-desc {
-  color: #ccc;
-  font-size: 13px;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.city-district-arrow {
-  color: #fff;
-  font-size: 14px;
-  transition: transform 0.3s;
-  background: rgba(0, 0, 0, 0.3);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-}
-
-.city-district-arrow.expanded {
-  transform: rotate(180deg);
-}
-
-.city-district-content {
-  padding: 16px;
-  background: #111;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* Строения */
-.city-buildings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.city-building-card {
-  background: #222;
-  border-radius: 12px;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.city-building-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.city-building-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  background: #333;
-  object-fit: cover;
-}
-
-.city-building-info {
-  flex: 1;
-}
-
-.city-building-name {
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-
-.city-building-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.city-building-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.city-building-status-dot.stable { background: #4CAF50; }
-.city-building-status-dot.free { background: #E84142; }
-
-.city-building-status-text {
-  color: #888;
-  font-size: 12px;
-}
-
-.city-building-right {
-  text-align: right;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.city-building-income {
-  color: #4CAF50;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.city-building-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.city-building-action-btn {
-  padding: 6px 10px !important;
-  font-size: 12px !important;
-  height: auto !important;
-  border-radius: 6px !important;
-}
-
-.city-unavailable {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  padding: 40px 20px;
-  text-align: center;
-}
-
-.city-unavailable-icon {
-  width: 120px;
-  height: 120px;
-  margin-bottom: 24px;
-  object-fit: contain;
-}
-
-.city-unavailable-title {
-  color: #FFF;
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-.city-unavailable-text {
-  color: #B6B6B6;
-  font-size: 16px;
-  line-height: 1.5;
-  max-width: 300px;
-}
-
-@media (max-width: 480px) {
-  .city-building-header {
-    flex-wrap: wrap;
-  }
-  .city-building-right {
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-  }
 }
 
 /* Модальные окна */
@@ -360,11 +362,51 @@
   line-height: 1.4;
 }
 
-.city-modal-footer {
-  padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+.city-modal-footer-v2 {
+  margin-top: 24px;
+}
+
+.city-modal-actions-group {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.city-modal-info-row {
+  display: flex;
+  justify-content: space-between;
+  color: #888;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.city-max-lvl-badge {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4CAF50;
+  padding: 12px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.city-modal-image-container {
+  width: 100%;
+  height: 180px;
+  background: #2a2a2a;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
   justify-content: center;
+}
+
+.city-modal-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* Инфо кнопки */

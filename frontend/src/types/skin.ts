@@ -16,6 +16,9 @@ export interface Skin {
   weight: number
   isPremium: boolean
   isDefault: boolean
+  maxDurability?: number
+  xpBonusPercent?: number
+  moneyBonusPercent?: number
   boardConfig?: {
     color?: string
     pattern?: string

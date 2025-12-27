@@ -34,6 +34,8 @@ export default function Shop() {
   const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
   const [paymentMethod, setPaymentMethod] = useState<'TON' | 'USDT'>('TON')
   const [showPremiumModal, setShowPremiumModal] = useState(false)
+  const [showSkinPreview, setShowSkinPreview] = useState(false)
+  const [previewSkin, setPreviewSkin] = useState<Skin | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentData, setPaymentData] = useState<{
     transactionId: string
@@ -285,14 +287,24 @@ export default function Shop() {
         <div className="shop-skin-content">
           {/* Заголовок - название и редкость вверху слева */}
           <div className="shop-skin-header">
-            <div className="shop-skin-name">{skin.name}</div>
+            <div className="shop-skin-name-group">
+              <div className="shop-skin-name">{skin.name}</div>
+              <div className="shop-skin-stats-inline">
+                <span className="shop-skin-stat-item">⚖️ {skin.weight || 0}</span>
+                {skin.xpBonusPercent > 0 && <span className="shop-skin-stat-item bonus-xp">+{skin.xpBonusPercent}% XP</span>}
+                {skin.moneyBonusPercent > 0 && <span className="shop-skin-stat-item bonus-money">+{skin.moneyBonusPercent}% NAR</span>}
+              </div>
+            </div>
             <div className={`shop-skin-rarity ${getRarityBadgeClass(skin.rarity)}`}>
               {getRarityName(skin.rarity)}
             </div>
           </div>
 
           {/* Изображение по центру */}
-          <div className="shop-skin-image">
+          <div className="shop-skin-image" onClick={() => {
+            setPreviewSkin(skin)
+            setShowSkinPreview(true)
+          }}>
             {(skin.shopImageUrl || skin.imageUrl) ? (
               <img
                 src={getImageUrl(skin.shopImageUrl || skin.imageUrl) || (skin.shopImageUrl || skin.imageUrl)}
@@ -316,6 +328,7 @@ export default function Shop() {
             }}>
               <div style={{ fontSize: '48px' }}>🎲</div>
             </div>
+            <div className="shop-skin-preview-hint">Нажмите для предпросмотра</div>
           </div>
 
           {/* Футер - цена справа и кнопка по центру */}
@@ -340,7 +353,10 @@ export default function Shop() {
                   variant="primary"
                   className="shop-buy-btn"
                   fullWidth
-                  onClick={() => handleBuySkin(skin.id)}
+                  onClick={() => {
+                    setPreviewSkin(skin)
+                    setShowSkinPreview(true)
+                  }}
                   disabled={processingSkinId !== null}
                 >
                   {processingSkinId === skin.id ? 'Покупка...' : 'Купить'}
@@ -739,6 +755,79 @@ export default function Shop() {
           expiresAt={paymentData.expiresAt}
           onSuccess={handlePaymentSuccess}
         />
+      )}
+
+      {/* Предпросмотр скина */}
+      {showSkinPreview && previewSkin && (
+        <div className="shop-skin-preview-modal-overlay" onClick={() => setShowSkinPreview(false)}>
+          <div className="shop-skin-preview-modal" onClick={e => e.stopPropagation()}>
+            <div className="preview-modal-header">
+              <h3>Предпросмотр: {previewSkin.name}</h3>
+              <button className="close-btn" onClick={() => setShowSkinPreview(false)}>×</button>
+            </div>
+            
+            <div className="preview-modal-body">
+              <div className="preview-image-container">
+                <img 
+                  src={getImageUrl(previewSkin.shopImageUrl || previewSkin.imageUrl) || (previewSkin.shopImageUrl || previewSkin.imageUrl)} 
+                  alt={previewSkin.name} 
+                />
+              </div>
+              
+              <div className="preview-info">
+                <div className="preview-rarity-badge">
+                  <span className={`badge ${previewSkin.rarity}`}>{getRarityName(previewSkin.rarity)}</span>
+                </div>
+                <div className="preview-stats">
+                  <div className="preview-stat">
+                    <span className="label">Вес:</span>
+                    <span className="value">⚖️ {previewSkin.weight || 0} ед.</span>
+                  </div>
+                  {previewSkin.xpBonusPercent > 0 && (
+                    <div className="preview-stat">
+                      <span className="label">Бонус XP:</span>
+                      <span className="value" style={{ color: '#4caf50' }}>+{previewSkin.xpBonusPercent}%</span>
+                    </div>
+                  )}
+                  {previewSkin.moneyBonusPercent > 0 && (
+                    <div className="preview-stat">
+                      <span className="label">Бонус NAR:</span>
+                      <span className="value" style={{ color: '#f59e0b' }}>+{previewSkin.moneyBonusPercent}%</span>
+                    </div>
+                  )}
+                  <div className="preview-stat">
+                    <span className="label">Прочность:</span>
+                    <span className="value">🛠️ {previewSkin.maxDurability || 100}</span>
+                  </div>
+                  {previewSkin.type === 'board' && (
+                    <div className="preview-stat">
+                      <span className="label">Тип:</span>
+                      <span className="value">Игровая доска</span>
+                    </div>
+                  )}
+                </div>
+                <p className="preview-description">{previewSkin.description || 'Нет описания для этого предмета.'}</p>
+              </div>
+            </div>
+
+            <div className="preview-modal-footer">
+              {!ownedSkins.includes(previewSkin.id) ? (
+                <Button 
+                  variant="primary" 
+                  fullWidth 
+                  onClick={() => {
+                    handleBuySkin(previewSkin.id)
+                    setShowSkinPreview(false)
+                  }}
+                >
+                  Купить за {previewSkin.price?.toLocaleString()} NAR
+                </Button>
+              ) : (
+                <Button variant="secondary" fullWidth disabled>Уже в коллекции</Button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </PageLayout>
   )

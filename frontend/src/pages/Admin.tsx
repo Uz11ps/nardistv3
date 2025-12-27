@@ -95,6 +95,7 @@ export default function Admin() {
   const [selectedGame, setSelectedGame] = useState<any>(null)
   const [gameReplay, setGameReplay] = useState<any>(null)
   const [replayStep, setReplayStep] = useState(0)
+  const [showCreateTournamentModal, setShowCreateTournamentModal] = useState(false)
   
   // Функция для загрузки состояния на конкретном шаге
   const loadReplayStep = async (step: number) => {
@@ -1959,120 +1960,12 @@ export default function Admin() {
         )}
 
         {activeTab === 'tournaments' && (
-          <div className="admin-tournaments">
-            <div className="create-form">
-              <h3>Создать турнир</h3>
-              <div className="form-group">
-                <label>Название</label>
-                <input
-                  type="text"
-                  value={newTournament.name}
-                  onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
-                  placeholder="Название турнира"
-                />
-              </div>
-              <div className="form-group">
-                <label>Режим</label>
-                <select
-                  value={newTournament.mode}
-                  onChange={(e) => setNewTournament({ ...newTournament, mode: e.target.value })}
-                >
-                  <option value="short">Короткие нарды</option>
-                  <option value="long">Длинные нарды</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Формат</label>
-                <select
-                  value={newTournament.format}
-                  onChange={(e) => setNewTournament({ ...newTournament, format: e.target.value })}
-                >
-                  <option value="bracket">Олимпийская система</option>
-                  <option value="round_robin">Круговой</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Дата начала регистрации</label>
-                <input
-                  type="datetime-local"
-                  value={newTournament.registrationStart}
-                  onChange={(e) => setNewTournament({ ...newTournament, registrationStart: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Дата окончания регистрации</label>
-                <input
-                  type="datetime-local"
-                  value={newTournament.registrationEnd}
-                  onChange={(e) => setNewTournament({ ...newTournament, registrationEnd: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Дата начала турнира</label>
-                <input
-                  type="datetime-local"
-                  value={newTournament.startDate}
-                  onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Максимум участников</label>
-                <input
-                  type="number"
-                  value={newTournament.maxParticipants}
-                  onChange={(e) => setNewTournament({ ...newTournament, maxParticipants: parseInt(e.target.value) })}
-                  min="2"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Взнос (NAR)</label>
-                <input
-                  type="number"
-                  value={newTournament.entryFee}
-                  onChange={(e) => setNewTournament({ ...newTournament, entryFee: parseInt(e.target.value) })}
-                  min="0"
-                />
-              </div>
-              <div className="form-group">
-                <label>Награды (JSON, например: {'{"1": {"narCoin": 1000, "xp": 500}, "2": {"narCoin": 500, "xp": 250}, "3": {"narCoin": 250, "xp": 100}}'})</label>
-                <textarea
-                  value={newTournament.prizes}
-                  onChange={(e) => setNewTournament({ ...newTournament, prizes: e.target.value })}
-                  rows={4}
-                  placeholder='{"1": {"narCoin": 1000, "xp": 500}, "2": {"narCoin": 500, "xp": 250}}'
-                  style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff', fontFamily: 'monospace' }}
-                />
-              </div>
-              <button onClick={async () => {
-                try {
-                  if (!newTournament.registrationStart || !newTournament.registrationEnd || !newTournament.startDate) {
-                    alert('Заполните все даты!')
-                    return
-                  }
-                  
-                  let prizes = null;
-                  if (newTournament.prizes && newTournament.prizes.trim()) {
-                    try {
-                      prizes = JSON.parse(newTournament.prizes);
-                    } catch (e) {
-                      alert('Ошибка в формате наград. Используйте валидный JSON.');
-                      return;
-                    }
-                  }
-
-                  await apiClient.post('/admin/tournaments/create', {
-                    ...newTournament,
-                    registrationStart: new Date(newTournament.registrationStart).toISOString(),
-                    registrationEnd: new Date(newTournament.registrationEnd).toISOString(),
-                    startDate: new Date(newTournament.startDate).toISOString(),
-                    status: 'registration',
-                    prizes: prizes,
-                  })
-                  alert('Турнир создан!')
+          <div className="admin-tournaments-v2">
+            <div className="admin-section-header">
+              <h3>Управление турнирами</h3>
+              <button 
+                className="btn btn-primary"
+                onClick={() => {
                   setNewTournament({ 
                     name: '', 
                     mode: 'short', 
@@ -2084,25 +1977,24 @@ export default function Admin() {
                     entryFee: 0,
                     prizes: '',
                   })
-                  loadStats()
-                } catch (error: any) {
-                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                }
-              }}>Создать турнир</button>
+                  setShowCreateTournamentModal(true)
+                }}
+              >
+                + Создать турнир
+              </button>
             </div>
 
-            <div className="tournaments-list">
-              <h3>Существующие турниры</h3>
-              <div className="admin-filters">
+            <div className="admin-filters-bar">
+              <div className="search-box">
                 <input
                   type="text"
-                  placeholder="Поиск по названию..."
-                  className="admin-filter-input"
+                  placeholder="Поиск турнира..."
                   value={tournamentFilters.search}
                   onChange={(e) => setTournamentFilters({ ...tournamentFilters, search: e.target.value })}
                 />
+              </div>
+              <div className="status-filter">
                 <select
-                  className="admin-filter-select"
                   value={tournamentFilters.status}
                   onChange={(e) => setTournamentFilters({ ...tournamentFilters, status: e.target.value })}
                 >
@@ -2114,164 +2006,341 @@ export default function Admin() {
                   <option value="cancelled">Отменен</option>
                 </select>
               </div>
-              <div className="admin-table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Название</th>
-                      <th>Режим</th>
-                      <th>Формат</th>
-                      <th>Статус</th>
-                      <th>Участников</th>
-                      <th>Взнос</th>
-                      <th>Призовой фонд</th>
-                      <th>Начало регистрации</th>
-                      <th>Окончание регистрации</th>
-                      <th>Дата начала</th>
-                      <th>Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tournaments.filter((t) => {
-                      if (tournamentFilters.search && !t.name.toLowerCase().includes(tournamentFilters.search.toLowerCase())) return false
-                      if (tournamentFilters.status && t.status !== tournamentFilters.status) return false
-                      return true
-                    }).map((t) => {
-                      const entryFee = typeof t.entryFee === 'string' ? Number(t.entryFee) : (t.entryFee || 0)
-                      const prizePool = entryFee * (t.currentParticipants || 0)
-                      return (
-                        <tr key={t.id}>
-                          <td>{t.name}</td>
-                          <td>{t.mode === 'short' ? 'Короткие' : 'Длинные'}</td>
-                          <td>{t.format === 'bracket' ? 'Олимпийская' : 'Круговой'}</td>
-                          <td><span className="badge">{t.status}</span></td>
-                          <td>{t.currentParticipants || 0} / {t.maxParticipants}</td>
-                          <td>{entryFee} NAR</td>
-                          <td>{prizePool.toLocaleString()} NAR</td>
-                          <td>{t.registrationStart ? new Date(t.registrationStart).toLocaleString() : '-'}</td>
-                          <td>{t.registrationEnd ? new Date(t.registrationEnd).toLocaleString() : '-'}</td>
-                          <td>{t.startDate ? new Date(t.startDate).toLocaleString() : '-'}</td>
-                          <td>
-                            <button onClick={() => setSelectedTournament(t)} style={{ marginRight: '8px' }}>Редактировать</button>
-                            <button onClick={async () => {
-                              if (confirm('Удалить турнир?')) {
-                                try {
-                                  await apiClient.delete(`/admin/tournaments/${t.id}`)
-                                  alert('Турнир удален')
-                                  loadStats()
-                                } catch (error: any) {
-                                  alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                                }
-                              }
-                            }}>Удалить</button>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                </tbody>
-              </table>
             </div>
-            
-            {selectedTournament && (
-              <div className="admin-modal-overlay" onClick={() => setSelectedTournament(null)}>
-                <div className="admin-modal-content" onClick={(e) => e.stopPropagation()}>
-                  <h4>Редактировать турнир: {selectedTournament.name}</h4>
-                  <div className="form-group">
-                    <label>Название</label>
-                    <input
-                      type="text"
-                      value={selectedTournament.name}
-                      onChange={(e) => setSelectedTournament({ ...selectedTournament, name: e.target.value })}
-                    />
+
+            <div className="tournaments-grid-v2">
+              {tournaments.filter((t) => {
+                if (tournamentFilters.search && !t.name.toLowerCase().includes(tournamentFilters.search.toLowerCase())) return false
+                if (tournamentFilters.status && t.status !== tournamentFilters.status) return false
+                return true
+              }).map((t) => {
+                const entryFee = typeof t.entryFee === 'string' ? Number(t.entryFee) : (t.entryFee || 0)
+                const prizePool = entryFee * (t.currentParticipants || 0)
+                const statusInfo = {
+                  registration: { label: 'Регистрация', class: 'status-registration' },
+                  upcoming: { label: 'Предстоящий', class: 'status-upcoming' },
+                  in_progress: { label: 'В процессе', class: 'status-inprogress' },
+                  finished: { label: 'Завершен', class: 'status-finished' },
+                  cancelled: { label: 'Отменен', class: 'status-cancelled' },
+                }[t.status as string] || { label: t.status, class: 'status-default' }
+
+                return (
+                  <div key={t.id} className="admin-tournament-card">
+                    <div className="tournament-card-header">
+                      <div className="tournament-name-group">
+                        <div className="tournament-name">{t.name}</div>
+                        <div className={`tournament-status-badge ${statusInfo.class}`}>{statusInfo.label}</div>
+                      </div>
+                      <div className="tournament-mode-tag">
+                        {t.mode === 'short' ? 'Короткие' : 'Длинные'} • {t.format === 'bracket' ? 'Олимпийская' : 'Круговой'}
+                      </div>
+                    </div>
+                    
+                    <div className="tournament-card-stats">
+                      <div className="stat-item">
+                        <span className="label">Участники</span>
+                        <span className="value">{t.currentParticipants || 0} / {t.maxParticipants}</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="label">Взнос</span>
+                        <span className="value">{entryFee} NAR</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="label">Призовой фонд</span>
+                        <span className="value highlighted">{prizePool.toLocaleString()} NAR</span>
+                      </div>
+                    </div>
+
+                    <div className="tournament-card-dates">
+                      <div className="date-item">
+                        <span className="label">Регистрация:</span>
+                        <span className="value">{t.registrationStart ? new Date(t.registrationStart).toLocaleDateString() : '-'} - {t.registrationEnd ? new Date(t.registrationEnd).toLocaleDateString() : '-'}</span>
+                      </div>
+                      <div className="date-item">
+                        <span className="label">Старт:</span>
+                        <span className="value">{t.startDate ? new Date(t.startDate).toLocaleString() : '-'}</span>
+                      </div>
+                    </div>
+
+                    <div className="tournament-card-actions">
+                      <button 
+                        className="btn-card-edit"
+                        onClick={() => setSelectedTournament(t)}
+                      >
+                        📝 Редактировать
+                      </button>
+                      <button 
+                        className="btn-card-delete"
+                        onClick={async () => {
+                          if (confirm('Удалить турнир?')) {
+                            try {
+                              await apiClient.delete(`/admin/tournaments/${t.id}`)
+                              alert('Турнир удален')
+                              loadStats()
+                            } catch (error: any) {
+                              alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                            }
+                          }
+                        }}
+                      >
+                        🗑️ Удалить
+                      </button>
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Режим</label>
-                    <select
-                      value={selectedTournament.mode}
-                      onChange={(e) => setSelectedTournament({ ...selectedTournament, mode: e.target.value })}
-                    >
-                      <option value="short">Короткие нарды</option>
-                      <option value="long">Длинные нарды</option>
-                    </select>
+                )
+              })}
+            </div>
+
+            {/* Модалка создания турнира */}
+            {showCreateTournamentModal && (
+              <div className="admin-modal-overlay" onClick={() => setShowCreateTournamentModal(false)}>
+                <div className="admin-modal-content-v2" onClick={(e) => e.stopPropagation()}>
+                  <div className="modal-header-v2">
+                    <h4>Новый турнир</h4>
+                    <button className="close-btn" onClick={() => setShowCreateTournamentModal(false)}>×</button>
                   </div>
-                  <div className="form-group">
-                    <label>Формат</label>
-                    <select
-                      value={selectedTournament.format}
-                      onChange={(e) => setSelectedTournament({ ...selectedTournament, format: e.target.value })}
-                    >
-                      <option value="bracket">Олимпийская система</option>
-                      <option value="round_robin">Круговой</option>
-                    </select>
+                  <div className="modal-body-v2">
+                    <div className="form-grid-v2">
+                      <div className="form-group">
+                        <label>Название</label>
+                        <input
+                          type="text"
+                          value={newTournament.name}
+                          onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
+                          placeholder="Название турнира"
+                        />
+                      </div>
+                      <div className="form-row-v2">
+                        <div className="form-group">
+                          <label>Режим</label>
+                          <select
+                            value={newTournament.mode}
+                            onChange={(e) => setNewTournament({ ...newTournament, mode: e.target.value })}
+                          >
+                            <option value="short">Короткие нарды</option>
+                            <option value="long">Длинные нарды</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Формат</label>
+                          <select
+                            value={newTournament.format}
+                            onChange={(e) => setNewTournament({ ...newTournament, format: e.target.value })}
+                          >
+                            <option value="bracket">Олимпийская система</option>
+                            <option value="round_robin">Круговой</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="form-row-v2">
+                        <div className="form-group">
+                          <label>Начало регистрации</label>
+                          <input
+                            type="datetime-local"
+                            value={newTournament.registrationStart}
+                            onChange={(e) => setNewTournament({ ...newTournament, registrationStart: e.target.value })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Конец регистрации</label>
+                          <input
+                            type="datetime-local"
+                            value={newTournament.registrationEnd}
+                            onChange={(e) => setNewTournament({ ...newTournament, registrationEnd: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row-v2">
+                        <div className="form-group">
+                          <label>Дата начала турнира</label>
+                          <input
+                            type="datetime-local"
+                            value={newTournament.startDate}
+                            onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Макс. участников</label>
+                          <input
+                            type="number"
+                            value={newTournament.maxParticipants}
+                            onChange={(e) => setNewTournament({ ...newTournament, maxParticipants: parseInt(e.target.value) })}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>Взнос (NAR)</label>
+                        <input
+                          type="number"
+                          value={newTournament.entryFee}
+                          onChange={(e) => setNewTournament({ ...newTournament, entryFee: parseInt(e.target.value) })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Награды (JSON)</label>
+                        <textarea
+                          value={newTournament.prizes}
+                          onChange={(e) => setNewTournament({ ...newTournament, prizes: e.target.value })}
+                          rows={3}
+                          placeholder='{"1": {"narCoin": 1000}, "2": {"narCoin": 500}}'
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Статус</label>
-                    <select
-                      value={selectedTournament.status}
-                      onChange={(e) => setSelectedTournament({ ...selectedTournament, status: e.target.value })}
-                    >
-                      <option value="upcoming">Предстоящий</option>
-                      <option value="registration">Регистрация</option>
-                      <option value="in_progress">В процессе</option>
-                      <option value="finished">Завершен</option>
-                      <option value="cancelled">Отменен</option>
-                    </select>
+                  <div className="modal-footer-v2">
+                    <button className="btn btn-secondary" onClick={() => setShowCreateTournamentModal(false)}>Отмена</button>
+                    <button className="btn btn-primary" onClick={async () => {
+                      try {
+                        if (!newTournament.registrationStart || !newTournament.registrationEnd || !newTournament.startDate) {
+                          alert('Заполните все даты!')
+                          return
+                        }
+                        
+                        let prizes = null;
+                        if (newTournament.prizes && newTournament.prizes.trim()) {
+                          try {
+                            prizes = JSON.parse(newTournament.prizes);
+                          } catch (e) {
+                            alert('Ошибка в формате наград. Используйте валидный JSON.');
+                            return;
+                          }
+                        }
+
+                        await apiClient.post('/admin/tournaments/create', {
+                          ...newTournament,
+                          registrationStart: new Date(newTournament.registrationStart).toISOString(),
+                          registrationEnd: new Date(newTournament.registrationEnd).toISOString(),
+                          startDate: new Date(newTournament.startDate).toISOString(),
+                          status: 'registration',
+                          prizes: prizes,
+                        })
+                        alert('Турнир создан!')
+                        setShowCreateTournamentModal(false)
+                        loadStats()
+                      } catch (error: any) {
+                        alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                      }
+                    }}>Создать</button>
                   </div>
-                  <div className="form-group">
-                    <label>Макс. участников</label>
-                    <input
-                      type="number"
-                      value={selectedTournament.maxParticipants}
-                      onChange={(e) => setSelectedTournament({ ...selectedTournament, maxParticipants: parseInt(e.target.value) })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Взнос (NAR)</label>
-                    <input
-                      type="number"
-                      value={typeof selectedTournament.entryFee === 'string' ? Number(selectedTournament.entryFee) : (selectedTournament.entryFee || 0)}
-                      onChange={(e) => setSelectedTournament({ ...selectedTournament, entryFee: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Начало регистрации</label>
-                    <input
-                      type="datetime-local"
-                      value={selectedTournament.registrationStart ? new Date(selectedTournament.registrationStart).toISOString().slice(0, 16) : ''}
-                      onChange={(e) => setSelectedTournament({ ...selectedTournament, registrationStart: new Date(e.target.value).toISOString() })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Окончание регистрации</label>
-                    <input
-                      type="datetime-local"
-                      value={selectedTournament.registrationEnd ? new Date(selectedTournament.registrationEnd).toISOString().slice(0, 16) : ''}
-                      onChange={(e) => setSelectedTournament({ ...selectedTournament, registrationEnd: new Date(e.target.value).toISOString() })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Дата начала</label>
-                    <input
-                      type="datetime-local"
-                      value={selectedTournament.startDate ? new Date(selectedTournament.startDate).toISOString().slice(0, 16) : ''}
-                      onChange={(e) => setSelectedTournament({ ...selectedTournament, startDate: new Date(e.target.value).toISOString() })}
-                    />
-                  </div>
-                  <button onClick={async () => {
-                    try {
-                      await apiClient.put(`/admin/tournaments/${selectedTournament.id}`, selectedTournament)
-                      alert('Турнир обновлен')
-                      setSelectedTournament(null)
-                      loadStats()
-                    } catch (error: any) {
-                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                    }
-                  }}>Сохранить</button>
-                  <button onClick={() => setSelectedTournament(null)}>Отмена</button>
                 </div>
               </div>
             )}
-            </div>
+            
+            {selectedTournament && (
+              <div className="admin-modal-overlay" onClick={() => setSelectedTournament(null)}>
+                <div className="admin-modal-content-v2" onClick={(e) => e.stopPropagation()}>
+                  <div className="modal-header-v2">
+                    <h4>Редактировать: {selectedTournament.name}</h4>
+                    <button className="close-btn" onClick={() => setSelectedTournament(null)}>×</button>
+                  </div>
+                  <div className="modal-body-v2">
+                    <div className="form-grid-v2">
+                      <div className="form-group">
+                        <label>Название</label>
+                        <input
+                          type="text"
+                          value={selectedTournament.name}
+                          onChange={(e) => setSelectedTournament({ ...selectedTournament, name: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-row-v2">
+                        <div className="form-group">
+                          <label>Режим</label>
+                          <select
+                            value={selectedTournament.mode}
+                            onChange={(e) => setSelectedTournament({ ...selectedTournament, mode: e.target.value })}
+                          >
+                            <option value="short">Короткие нарды</option>
+                            <option value="long">Длинные нарды</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Формат</label>
+                          <select
+                            value={selectedTournament.format}
+                            onChange={(e) => setSelectedTournament({ ...selectedTournament, format: e.target.value })}
+                          >
+                            <option value="bracket">Олимпийская система</option>
+                            <option value="round_robin">Круговой</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>Статус</label>
+                        <select
+                          value={selectedTournament.status}
+                          onChange={(e) => setSelectedTournament({ ...selectedTournament, status: e.target.value })}
+                        >
+                          <option value="upcoming">Предстоящий</option>
+                          <option value="registration">Регистрация</option>
+                          <option value="in_progress">В процессе</option>
+                          <option value="finished">Завершен</option>
+                          <option value="cancelled">Отменен</option>
+                        </select>
+                      </div>
+                      <div className="form-row-v2">
+                        <div className="form-group">
+                          <label>Макс. участников</label>
+                          <input
+                            type="number"
+                            value={selectedTournament.maxParticipants}
+                            onChange={(e) => setSelectedTournament({ ...selectedTournament, maxParticipants: parseInt(e.target.value) })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Взнос (NAR)</label>
+                          <input
+                            type="number"
+                            value={typeof selectedTournament.entryFee === 'string' ? Number(selectedTournament.entryFee) : (selectedTournament.entryFee || 0)}
+                            onChange={(e) => setSelectedTournament({ ...selectedTournament, entryFee: parseInt(e.target.value) || 0 })}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row-v2">
+                        <div className="form-group">
+                          <label>Начало регистрации</label>
+                          <input
+                            type="datetime-local"
+                            value={selectedTournament.registrationStart ? new Date(selectedTournament.registrationStart).toISOString().slice(0, 16) : ''}
+                            onChange={(e) => setSelectedTournament({ ...selectedTournament, registrationStart: new Date(e.target.value).toISOString() })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Окончание регистрации</label>
+                          <input
+                            type="datetime-local"
+                            value={selectedTournament.registrationEnd ? new Date(selectedTournament.registrationEnd).toISOString().slice(0, 16) : ''}
+                            onChange={(e) => setSelectedTournament({ ...selectedTournament, registrationEnd: new Date(e.target.value).toISOString() })}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>Дата начала</label>
+                        <input
+                          type="datetime-local"
+                          value={selectedTournament.startDate ? new Date(selectedTournament.startDate).toISOString().slice(0, 16) : ''}
+                          onChange={(e) => setSelectedTournament({ ...selectedTournament, startDate: new Date(e.target.value).toISOString() })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="modal-footer-v2">
+                    <button className="btn btn-secondary" onClick={() => setSelectedTournament(null)}>Отмена</button>
+                    <button className="btn btn-primary" onClick={async () => {
+                      try {
+                        const { id, ...data } = selectedTournament
+                        await apiClient.put(`/admin/tournaments/${id}`, data)
+                        alert('Турнир обновлен!')
+                        setSelectedTournament(null)
+                        loadStats()
+                      } catch (error: any) {
+                        alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                      }
+                    }}>Сохранить</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -3024,6 +3093,35 @@ export default function Admin() {
                     defaultValue={selectedSkin.weight || 1}
                   />
                 </div>
+                <div className="form-row-v2">
+                  <div className="form-group">
+                    <label>Макс. прочность:</label>
+                    <input 
+                      type="number" 
+                      id="edit-skin-max-durability" 
+                      min="1" 
+                      defaultValue={selectedSkin.maxDurability || 100}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Бонус XP (%):</label>
+                    <input 
+                      type="number" 
+                      id="edit-skin-xp-bonus" 
+                      min="0" 
+                      defaultValue={selectedSkin.xpBonusPercent || 0}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Бонус денег (%):</label>
+                    <input 
+                      type="number" 
+                      id="edit-skin-money-bonus" 
+                      min="0" 
+                      defaultValue={selectedSkin.moneyBonusPercent || 0}
+                    />
+                  </div>
+                </div>
                 <div className="form-group">
                   <label>Редкость:</label>
                   <select id="edit-skin-rarity" defaultValue={selectedSkin.rarity || 'common'}>
@@ -3154,6 +3252,9 @@ export default function Admin() {
                         theme: (document.getElementById('edit-skin-theme') as HTMLInputElement).value || selectedSkin.type,
                         price: parseInt((document.getElementById('edit-skin-price') as HTMLInputElement).value) || 0,
                         weight: parseInt((document.getElementById('edit-skin-weight') as HTMLInputElement).value) || 1,
+                        maxDurability: parseInt((document.getElementById('edit-skin-max-durability') as HTMLInputElement).value) || 100,
+                        xpBonusPercent: parseInt((document.getElementById('edit-skin-xp-bonus') as HTMLInputElement).value) || 0,
+                        moneyBonusPercent: parseInt((document.getElementById('edit-skin-money-bonus') as HTMLInputElement).value) || 0,
                         rarity: (document.getElementById('edit-skin-rarity') as HTMLSelectElement).value,
                         isPremium: (document.getElementById('edit-skin-premium') as HTMLInputElement).checked,
                         isDefault: (document.getElementById('edit-skin-default') as HTMLInputElement).checked,
@@ -3227,6 +3328,20 @@ export default function Admin() {
                   Вес <span className="field-hint">(вероятность выпадения в случайной выборке, чем больше число - тем чаще выпадает)</span>:
                 </label>
                 <input type="number" placeholder="1" id="skin-weight" min="1" defaultValue="1" />
+              </div>
+              <div className="form-row-v2">
+                <div className="form-group">
+                  <label>Макс. прочность:</label>
+                  <input type="number" id="skin-max-durability" min="1" defaultValue="100" />
+                </div>
+                <div className="form-group">
+                  <label>Бонус XP (%):</label>
+                  <input type="number" id="skin-xp-bonus" min="0" defaultValue="0" />
+                </div>
+                <div className="form-group">
+                  <label>Бонус денег (%):</label>
+                  <input type="number" id="skin-money-bonus" min="0" defaultValue="0" />
+                </div>
               </div>
               <div className="form-group">
                 <label>Редкость:</label>
@@ -3315,6 +3430,9 @@ export default function Admin() {
                   name: name,
                   theme: (document.getElementById('skin-theme') as HTMLInputElement).value || selectedSkinType,
                   weight: parseInt((document.getElementById('skin-weight') as HTMLInputElement).value || '1'),
+                  maxDurability: parseInt((document.getElementById('skin-max-durability') as HTMLInputElement).value || '100'),
+                  xpBonusPercent: parseInt((document.getElementById('skin-xp-bonus') as HTMLInputElement).value || '0'),
+                  moneyBonusPercent: parseInt((document.getElementById('skin-money-bonus') as HTMLInputElement).value || '0'),
                   rarity: (document.getElementById('skin-rarity') as HTMLSelectElement).value,
                   isPremium: (document.getElementById('skin-premium') as HTMLInputElement).checked,
                   isDefault: (document.getElementById('skin-default') as HTMLInputElement).checked,
@@ -3355,6 +3473,9 @@ export default function Admin() {
                   ;(document.getElementById('skin-theme') as HTMLInputElement).value = ''
                   ;(document.getElementById('skin-price') as HTMLInputElement).value = ''
                   ;(document.getElementById('skin-weight') as HTMLInputElement).value = '1'
+                  ;(document.getElementById('skin-max-durability') as HTMLInputElement).value = '100'
+                  ;(document.getElementById('skin-xp-bonus') as HTMLInputElement).value = '0'
+                  ;(document.getElementById('skin-money-bonus') as HTMLInputElement).value = '0'
                   ;(document.getElementById('skin-premium') as HTMLInputElement).checked = false
                   ;(document.getElementById('skin-default') as HTMLInputElement).checked = false
                 } catch (error: any) {
@@ -3877,767 +3998,163 @@ export default function Admin() {
 
 
         {activeTab === 'city' && (
-          <div className="admin-city">
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-              <button
-                onClick={() => {
-                  loadBuildings()
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: '#4a90e2',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
-              >
-                Обновить данные
-              </button>
+          <div className="admin-city-v2">
+            <div className="admin-section-header">
+              <h3>Управление городом</h3>
+              <div className="header-actions">
+                <button className="btn btn-primary" onClick={() => setShowCreateDistrictModal(true)}>+ Новый район</button>
+                <button className="btn btn-secondary" onClick={loadBuildings}>🔄 Обновить данные</button>
+              </div>
             </div>
 
+            <div className="admin-districts-grid">
+              {districts.map((district) => (
+                <div key={district.id} className="admin-district-card">
+                  <div className="district-card-header">
+                    <div className="district-info">
+                      <div className="district-name">{district.name}</div>
+                      <div className="district-code">{district.code}</div>
+                    </div>
+                    <div className={`status-badge ${district.isActive ? 'active' : 'inactive'}`}>
+                      {district.isActive ? 'Активен' : 'Неактивен'}
+                    </div>
+                  </div>
+                  
+                  <div className="district-card-stats">
+                    <div className="stat-item"><span className="label">Lvl</span><span className="value">{district.requiredLevel || 1}</span></div>
+                    <div className="stat-item"><span className="label">Доход</span><span className="value">{Number(district.baseIncomePerDay || 0).toLocaleString()} NAR</span></div>
+                    <div className="stat-item"><span className="label">Порядок</span><span className="value">#{district.order}</span></div>
+                  </div>
 
-            {/* Управление районами */}
-            <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '2px solid #3a3a3a' }}>
-              <h3>Управление районами</h3>
-              
-              {/* Форма создания нового района */}
-              <div style={{
-                background: '#2a2a2a',
-                padding: '16px',
-                borderRadius: '8px',
-                marginBottom: '16px',
-              }}>
-                <h4 style={{ marginTop: 0, color: '#fff' }}>Создать новый район</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название района</label>
-                    <input
-                      type="text"
-                      placeholder="Название района"
-                      id="new-district-name"
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
+                  <div className="district-buildings-section">
+                    <div className="section-header">
+                      <h5>Строения ({buildings.filter(b => b.districtId === district.id).length})</h5>
+                      <button className="btn-add-mini" onClick={() => {
+                        setNewBuilding({ type: 'shop', name: '', icon: '', image: '', basePrice: 0, baseIncomePerHour: 0, maxAccumulation: 0, maxLevel: 10, districtId: district.id })
+                        setShowCreateBuildingModal(true)
+                      }}>+</button>
+                    </div>
+                    <div className="mini-buildings-list">
+                      {buildings.filter(b => b.districtId === district.id).slice(0, 3).map(b => (
+                        <div key={b.id} className="mini-building-item" onClick={() => setSelectedBuilding(b)}>
+                          <span className="b-name">{b.name}</span>
+                          <span className="b-price">{Number(b.basePrice).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Доступ с уровня</label>
-                    <input
-                      type="number"
-                      placeholder="1"
-                      id="new-district-required-level"
-                      defaultValue={1}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Описание района</label>
-                    <textarea
-                      placeholder="Описание района"
-                      id="new-district-description"
-                      rows={3}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Фото района (URL)</label>
-                    <input
-                      type="text"
-                      placeholder="/img/district_default.jpg"
-                      id="new-district-image"
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Код района (уникальный)</label>
-                    <input
-                      type="text"
-                      placeholder="district_1"
-                      id="new-district-code"
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Порядок отображения</label>
-                    <input
-                      type="number"
-                      placeholder="1"
-                      id="new-district-order"
-                      defaultValue={1}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Доход района в день (NAR)</label>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      id="new-district-income"
-                      defaultValue={0}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>
-                      <input type="checkbox" id="new-district-active" defaultChecked style={{ marginRight: '8px' }} />
-                      Активен
-                    </label>
+
+                  <div className="district-card-actions">
+                    <button className="btn-edit" onClick={() => setEditingDistrict(district)}>📝</button>
+                    <button className="btn-delete" onClick={async () => {
+                      if (confirm(`Удалить район "${district.name}"?`)) {
+                        try {
+                          await apiClient.delete(`/admin/districts/${district.id}`)
+                          alert('Район удален!')
+                          loadDistricts()
+                        } catch (e: any) { alert(e.message) }
+                      }
+                    }}>🗑️</button>
                   </div>
                 </div>
-                <button
-                  onClick={async () => {
-                    try {
-                      const code = (document.getElementById('new-district-code') as HTMLInputElement).value
-                      const name = (document.getElementById('new-district-name') as HTMLInputElement).value
-                      if (!code || !name) {
-                        alert('Заполните код и название района')
-                        return
-                      }
-                      
-                      await apiClient.post('/admin/districts', {
-                        code,
-                        name,
-                        description: (document.getElementById('new-district-description') as HTMLTextAreaElement).value || '',
-                        image: (document.getElementById('new-district-image') as HTMLInputElement).value || '',
-                        order: parseInt((document.getElementById('new-district-order') as HTMLInputElement).value) || 1,
-                        requiredLevel: parseInt((document.getElementById('new-district-required-level') as HTMLInputElement).value) || 1,
-                        baseIncomePerDay: parseInt((document.getElementById('new-district-income') as HTMLInputElement).value) || 0,
-                        isActive: (document.getElementById('new-district-active') as HTMLInputElement).checked,
-                      })
-                      
-                      alert('Район создан!')
-                      loadDistricts()
-                      // Очищаем форму
-                      ;(document.getElementById('new-district-code') as HTMLInputElement).value = ''
-                      ;(document.getElementById('new-district-name') as HTMLInputElement).value = ''
-                      ;(document.getElementById('new-district-description') as HTMLTextAreaElement).value = ''
-                      ;(document.getElementById('new-district-order') as HTMLInputElement).value = '1'
-                      ;(document.getElementById('new-district-required-level') as HTMLInputElement).value = '1'
-                      ;(document.getElementById('new-district-income') as HTMLInputElement).value = '0'
-                      ;(document.getElementById('new-district-image') as HTMLInputElement).value = ''
-                      ;(document.getElementById('new-district-active') as HTMLInputElement).checked = true
-                    } catch (error: any) {
-                      alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                    }
-                  }}
-                  style={{
-                    marginTop: '12px',
-                    padding: '8px 16px',
-                    background: '#4a90e2',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Создать район
-                </button>
-              </div>
-
-              {/* Список районов */}
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {districts.map((district) => (
-                  <div
-                    key={district.id}
-                    style={{
-                      background: '#2a2a2a',
-                      padding: '16px',
-                      borderRadius: '8px',
-                      border: editingDistrict?.id === district.id ? '2px solid #4a90e2' : '1px solid #3a3a3a',
-                    }}
-                  >
-                    {editingDistrict?.id === district.id ? (
-                      <div style={{ display: 'grid', gap: '12px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Код</label>
-                            <input
-                              type="text"
-                              value={editingDistrict.code}
-                              onChange={(e) => setEditingDistrict({ ...editingDistrict, code: e.target.value })}
-                              style={{
-                                width: '100%',
-                                padding: '8px',
-                                background: '#1a1a1a',
-                                border: '1px solid #444',
-                                borderRadius: '4px',
-                                color: '#fff',
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Название</label>
-                            <input
-                              type="text"
-                              value={editingDistrict.name}
-                              onChange={(e) => setEditingDistrict({ ...editingDistrict, name: e.target.value })}
-                              style={{
-                                width: '100%',
-                                padding: '8px',
-                                background: '#1a1a1a',
-                                border: '1px solid #444',
-                                borderRadius: '4px',
-                                color: '#fff',
-                              }}
-                            />
-                          </div>
-                          <div style={{ gridColumn: '1 / -1' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Описание</label>
-                            <textarea
-                              value={editingDistrict.description || ''}
-                              onChange={(e) => setEditingDistrict({ ...editingDistrict, description: e.target.value })}
-                              rows={3}
-                              style={{
-                                width: '100%',
-                                padding: '8px',
-                                background: '#1a1a1a',
-                                border: '1px solid #444',
-                                borderRadius: '4px',
-                                color: '#fff',
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Порядок</label>
-                            <input
-                              type="number"
-                              value={editingDistrict.order}
-                              onChange={(e) => setEditingDistrict({ ...editingDistrict, order: parseInt(e.target.value) || 0 })}
-                              style={{
-                                width: '100%',
-                                padding: '8px',
-                                background: '#1a1a1a',
-                                border: '1px solid #444',
-                                borderRadius: '4px',
-                                color: '#fff',
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Требуемый уровень</label>
-                            <input
-                              type="number"
-                              value={editingDistrict.requiredLevel || 1}
-                              onChange={(e) => setEditingDistrict({ ...editingDistrict, requiredLevel: parseInt(e.target.value) || 1 })}
-                              style={{
-                                width: '100%',
-                                padding: '8px',
-                                background: '#1a1a1a',
-                                border: '1px solid #444',
-                                borderRadius: '4px',
-                                color: '#fff',
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Фото (URL)</label>
-                            <input
-                              type="text"
-                              value={editingDistrict.image || ''}
-                              onChange={(e) => setEditingDistrict({ ...editingDistrict, image: e.target.value })}
-                              style={{
-                                width: '100%',
-                                padding: '8px',
-                                background: '#1a1a1a',
-                                border: '1px solid #444',
-                                borderRadius: '4px',
-                                color: '#fff',
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>Доход в день (NAR)</label>
-                            <input
-                              type="number"
-                              value={editingDistrict.baseIncomePerDay || 0}
-                              onChange={(e) => setEditingDistrict({ ...editingDistrict, baseIncomePerDay: parseInt(e.target.value) || 0 })}
-                              style={{
-                                width: '100%',
-                                padding: '8px',
-                                background: '#1a1a1a',
-                                border: '1px solid #444',
-                                borderRadius: '4px',
-                                color: '#fff',
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '4px', color: '#ccc' }}>
-                              <input
-                                type="checkbox"
-                                checked={editingDistrict.isActive}
-                                onChange={(e) => setEditingDistrict({ ...editingDistrict, isActive: e.target.checked })}
-                                style={{ marginRight: '8px' }}
-                              />
-                              Активен
-                            </label>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await apiClient.put(`/admin/districts/${district.id}`, {
-                                  code: editingDistrict.code,
-                                  name: editingDistrict.name,
-                                  description: editingDistrict.description,
-                                  order: editingDistrict.order,
-                                  requiredLevel: editingDistrict.requiredLevel,
-                                  baseIncomePerDay: editingDistrict.baseIncomePerDay,
-                                  isActive: editingDistrict.isActive,
-                                })
-                                alert('Район обновлен!')
-                                setEditingDistrict(null)
-                                loadDistricts()
-                              } catch (error: any) {
-                                alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                              }
-                            }}
-                            style={{
-                              padding: '8px 16px',
-                              background: '#4a90e2',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Сохранить
-                          </button>
-                          <button
-                            onClick={() => setEditingDistrict(null)}
-                            style={{
-                              padding: '8px 16px',
-                              background: '#666',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Отмена
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
-                              <h4 style={{ margin: 0, color: '#fff' }}>{district.name}</h4>
-                              <span style={{
-                                padding: '2px 8px',
-                                background: '#4a90e2',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                color: '#fff',
-                              }}>
-                                {district.code}
-                              </span>
-                              {!district.isActive && (
-                                <span style={{
-                                  padding: '2px 8px',
-                                  background: '#666',
-                                  borderRadius: '4px',
-                                  fontSize: '12px',
-                                  color: '#fff',
-                                }}>
-                                  Неактивен
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ color: '#999', fontSize: '14px' }}>
-                              {district.description && <div style={{ marginBottom: '4px' }}>{district.description}</div>}
-                              <div>Порядок: {district.order} | Уровень: {district.requiredLevel || 1} | Доход: {Number(district.baseIncomePerDay || 0).toLocaleString()} NAR/день</div>
-                            </div>
-                            {/* Строения в этом районе */}
-                            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #3a3a3a' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                <h5 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>Строения в районе:</h5>
-                                <button
-                                  onClick={() => {
-                                    setNewBuilding({
-                                      type: '',
-                                      name: '',
-                                      icon: '',
-                                      image: '',
-                                      basePrice: 0,
-                                      baseIncomePerHour: 0,
-                                      maxAccumulation: 0,
-                                      maxLevel: 10,
-                                      districtId: district.id,
-                                    })
-                                    const formId = `district-${district.id}-building-form`
-                                    const form = document.getElementById(formId)
-                                    if (form) {
-                                      form.style.display = form.style.display === 'none' ? 'block' : 'none'
-                                    }
-                                  }}
-                                  style={{
-                                    padding: '6px 12px',
-                                    background: '#4CAF50',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px',
-                                  }}
-                                >
-                                  + Добавить строение
-                                </button>
-                              </div>
-                              {/* Форма создания строения внутри района */}
-                              <div id={`district-${district.id}-building-form`} style={{ display: 'none', marginBottom: '16px', padding: '12px', background: '#1a1a1a', borderRadius: '8px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                                  <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Название (города)</label>
-                                    <input
-                                      type="text"
-                                      placeholder="Название города"
-                                      id={`district-${district.id}-building-name`}
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: '#2a2a2a',
-                                        border: '1px solid #444',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Тип (shop, factory, etc.)</label>
-                                    <input
-                                      type="text"
-                                      placeholder="shop, factory, etc."
-                                      id={`district-${district.id}-building-type`}
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: '#2a2a2a',
-                                        border: '1px solid #444',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Иконка (города) URL</label>
-                                    <input
-                                      type="text"
-                                      id={`district-${district.id}-building-icon`}
-                                      placeholder="/img/building_icon.png"
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: '#2a2a2a',
-                                        border: '1px solid #444',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Доход в час (NAR)</label>
-                                    <input
-                                      type="number"
-                                      id={`district-${district.id}-building-income`}
-                                      min="0"
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: '#2a2a2a',
-                                        border: '1px solid #444',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Макс. накопление (NAR)</label>
-                                    <input
-                                      type="number"
-                                      id={`district-${district.id}-building-accumulation`}
-                                      min="0"
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: '#2a2a2a',
-                                        border: '1px solid #444',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Макс. уровень</label>
-                                    <input
-                                      type="number"
-                                      id={`district-${district.id}-building-maxlevel`}
-                                      min="1"
-                                      defaultValue="10"
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: '#2a2a2a',
-                                        border: '1px solid #444',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Базовая цена (NAR)</label>
-                                    <input
-                                      type="number"
-                                      id={`district-${district.id}-building-price`}
-                                      min="0"
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: '#2a2a2a',
-                                        border: '1px solid #444',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', color: '#ccc', fontSize: '12px' }}>Фото строения (URL)</label>
-                                    <input
-                                      type="text"
-                                      id={`district-${district.id}-building-image`}
-                                      placeholder="/img/building_image.jpg"
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: '#2a2a2a',
-                                        border: '1px solid #444',
-                                        borderRadius: '4px',
-                                        color: '#fff',
-                                        fontSize: '12px',
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                  <button
-                                    onClick={async () => {
-                                      try {
-                                        const type = (document.getElementById(`district-${district.id}-building-type`) as HTMLInputElement).value
-                                        const name = (document.getElementById(`district-${district.id}-building-name`) as HTMLInputElement).value
-                                        const price = parseInt((document.getElementById(`district-${district.id}-building-price`) as HTMLInputElement).value || '0')
-                                        const income = parseInt((document.getElementById(`district-${district.id}-building-income`) as HTMLInputElement).value || '0')
-                                        const accumulation = parseInt((document.getElementById(`district-${district.id}-building-accumulation`) as HTMLInputElement).value || '0')
-                                        const maxLevel = parseInt((document.getElementById(`district-${district.id}-building-maxlevel`) as HTMLInputElement).value || '10')
-                                        const icon = (document.getElementById(`district-${district.id}-building-icon`) as HTMLInputElement).value || ''
-                                        const image = (document.getElementById(`district-${district.id}-building-image`) as HTMLInputElement).value || ''
-
-                                        if (!type || !name) {
-                                          alert('Заполните тип и название строения')
-                                          return
-                                        }
-
-                                        await apiClient.post('/admin/buildings', {
-                                          type,
-                                          name,
-                                          basePrice: price,
-                                          baseIncomePerHour: income,
-                                          maxAccumulation: accumulation,
-                                          maxLevel,
-                                          icon,
-                                          image,
-                                          districtId: district.id,
-                                        })
-
-                                        alert('Строение создано в районе!')
-                                        loadBuildings()
-                                        loadDistricts()
-                                        // Скрываем форму
-                                        const form = document.getElementById(`district-${district.id}-building-form`)
-                                        if (form) form.style.display = 'none'
-                                        // Очищаем поля
-                                        ;(document.getElementById(`district-${district.id}-building-type`) as HTMLInputElement).value = ''
-                                        ;(document.getElementById(`district-${district.id}-building-name`) as HTMLInputElement).value = ''
-                                        ;(document.getElementById(`district-${district.id}-building-price`) as HTMLInputElement).value = ''
-                                        ;(document.getElementById(`district-${district.id}-building-income`) as HTMLInputElement).value = ''
-                                        ;(document.getElementById(`district-${district.id}-building-accumulation`) as HTMLInputElement).value = ''
-                                        ;(document.getElementById(`district-${district.id}-building-maxlevel`) as HTMLInputElement).value = '10'
-                                        ;(document.getElementById(`district-${district.id}-building-icon`) as HTMLInputElement).value = ''
-                                        ;(document.getElementById(`district-${district.id}-building-image`) as HTMLInputElement).value = ''
-                                      } catch (error: any) {
-                                        alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                                      }
-                                    }}
-                                    style={{
-                                      padding: '6px 12px',
-                                      background: '#4CAF50',
-                                      color: '#fff',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      fontSize: '12px',
-                                    }}
-                                  >
-                                    Создать строение
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      const form = document.getElementById(`district-${district.id}-building-form`)
-                                      if (form) form.style.display = 'none'
-                                    }}
-                                    style={{
-                                      padding: '6px 12px',
-                                      background: '#666',
-                                      color: '#fff',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      fontSize: '12px',
-                                    }}
-                                  >
-                                    Отмена
-                                  </button>
-                                </div>
-                              </div>
-                              {/* Список строений в этом районе */}
-                              <div>
-                                {buildings.filter(b => b.districtId === district.id).length === 0 ? (
-                                  <div style={{ color: '#666', fontSize: '12px', padding: '8px' }}>Нет строений в этом районе</div>
-                                ) : (
-                                  <div style={{ display: 'grid', gap: '8px' }}>
-                                    {buildings.filter(b => b.districtId === district.id).map((building) => (
-                                      <div key={building.id} style={{ padding: '8px', background: '#2a2a2a', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
-                                          <div style={{ color: '#fff', fontSize: '13px', fontWeight: '500' }}>{building.name} ({building.type})</div>
-                                          <div style={{ color: '#999', fontSize: '11px' }}>
-                                            Цена: {Number(building.basePrice).toLocaleString()} NAR | Доход: {Number(building.baseIncomePerHour).toLocaleString()} NAR/час
-                                          </div>
-                                        </div>
-                                        <button
-                                          onClick={() => setSelectedBuilding(building)}
-                                          style={{
-                                            padding: '4px 8px',
-                                            background: '#4a90e2',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                            fontSize: '11px',
-                                          }}
-                                        >
-                                          Редактировать
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              onClick={() => setEditingDistrict({ ...district })}
-                              style={{
-                                padding: '6px 12px',
-                                background: '#4a90e2',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              Редактировать
-                            </button>
-                            <button
-                              onClick={async () => {
-                                if (confirm(`Удалить район "${district.name}"?`)) {
-                                  try {
-                                    await apiClient.delete(`/admin/districts/${district.id}`)
-                                    alert('Район удален!')
-                                    loadDistricts()
-                                  } catch (error: any) {
-                                    alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                                  }
-                                }
-                              }}
-                              style={{
-                                padding: '6px 12px',
-                                background: '#e24a4a',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              Удалить
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {districts.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>Нет районов</div>
-                )}
-              </div>
+              ))}
             </div>
+
+            {/* Модалки */}
+            {showCreateDistrictModal && (
+              <div className="admin-modal-overlay" onClick={() => setShowCreateDistrictModal(false)}>
+                <div className="admin-modal-content-v2" onClick={e => e.stopPropagation()}>
+                  <div className="modal-header-v2"><h4>Новый район</h4><button className="close-btn" onClick={() => setShowCreateDistrictModal(false)}>×</button></div>
+                  <div className="modal-body-v2">
+                    <div className="form-grid-v2">
+                      <div className="form-group"><label>Название</label><input type="text" id="new-district-name" /></div>
+                      <div className="form-group"><label>Код</label><input type="text" id="new-district-code" /></div>
+                      <div className="form-row-v2">
+                        <div className="form-group"><label>Lvl</label><input type="number" id="new-district-level" defaultValue={1} /></div>
+                        <div className="form-group"><label>Порядок</label><input type="number" id="new-district-order" defaultValue={1} /></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="modal-footer-v2">
+                    <button className="btn btn-secondary" onClick={() => setShowCreateDistrictModal(false)}>Отмена</button>
+                    <button className="btn btn-primary" onClick={async () => {
+                      const name = (document.getElementById('new-district-name') as HTMLInputElement).value
+                      const code = (document.getElementById('new-district-code') as HTMLInputElement).value
+                      try {
+                        await apiClient.post('/admin/districts', {
+                          name, code,
+                          requiredLevel: parseInt((document.getElementById('new-district-level') as HTMLInputElement).value),
+                          order: parseInt((document.getElementById('new-district-order') as HTMLInputElement).value),
+                          isActive: true
+                        })
+                        setShowCreateDistrictModal(false); loadDistricts()
+                      } catch (e: any) { alert(e.message) }
+                    }}>Создать</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {editingDistrict && (
+              <div className="admin-modal-overlay" onClick={() => setEditingDistrict(null)}>
+                <div className="admin-modal-content-v2" onClick={e => e.stopPropagation()}>
+                  <div className="modal-header-v2"><h4>Изменить район</h4><button className="close-btn" onClick={() => setEditingDistrict(null)}>×</button></div>
+                  <div className="modal-body-v2">
+                    <div className="form-grid-v2">
+                      <div className="form-group"><label>Название</label><input type="text" value={editingDistrict.name} onChange={e => setEditingDistrict({...editingDistrict, name: e.target.value})} /></div>
+                      <div className="form-row-v2">
+                        <div className="form-group"><label>Lvl</label><input type="number" value={editingDistrict.requiredLevel} onChange={e => setEditingDistrict({...editingDistrict, requiredLevel: parseInt(e.target.value)})} /></div>
+                        <div className="form-group"><label>Доход</label><input type="number" value={editingDistrict.baseIncomePerDay} onChange={e => setEditingDistrict({...editingDistrict, baseIncomePerDay: parseInt(e.target.value)})} /></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="modal-footer-v2">
+                    <button className="btn btn-secondary" onClick={() => setEditingDistrict(null)}>Отмена</button>
+                    <button className="btn btn-primary" onClick={async () => {
+                      try {
+                        const { id, ...data } = editingDistrict
+                        await apiClient.put(`/admin/districts/${id}`, data)
+                        setEditingDistrict(null); loadDistricts()
+                      } catch (e: any) { alert(e.message) }
+                    }}>Сохранить</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(showCreateBuildingModal || selectedBuilding) && (
+              <div className="admin-modal-overlay" onClick={() => { setShowCreateBuildingModal(false); setSelectedBuilding(null); }}>
+                <div className="admin-modal-content-v2" onClick={e => e.stopPropagation()}>
+                  <div className="modal-header-v2"><h4>{selectedBuilding ? 'Редактировать строение' : 'Новое строение'}</h4><button className="close-btn" onClick={() => { setShowCreateBuildingModal(false); setSelectedBuilding(null); }}>×</button></div>
+                  <div className="modal-body-v2">
+                    {(() => {
+                      const b = selectedBuilding || newBuilding
+                      const setB = selectedBuilding ? setSelectedBuilding : setNewBuilding
+                      return (
+                        <div className="form-grid-v2">
+                          <div className="form-group"><label>Название</label><input type="text" value={b.name} onChange={e => setB({...b, name: e.target.value})} /></div>
+                          <div className="form-row-v2">
+                            <div className="form-group"><label>Цена</label><input type="number" value={b.basePrice} onChange={e => setB({...b, basePrice: parseInt(e.target.value)})} /></div>
+                            <div className="form-group"><label>Доход/ч</label><input type="number" value={b.baseIncomePerHour} onChange={e => setB({...b, baseIncomePerHour: parseInt(e.target.value)})} /></div>
+                          </div>
+                          <div className="form-group"><label>Изображение (URL)</label><input type="text" value={b.image} onChange={e => setB({...b, image: e.target.value})} /></div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                  <div className="modal-footer-v2">
+                    <button className="btn btn-primary" onClick={async () => {
+                      const b = selectedBuilding || newBuilding
+                      try {
+                        if (selectedBuilding) await apiClient.put(`/admin/buildings/${selectedBuilding.id}`, selectedBuilding)
+                        else await apiClient.post('/admin/buildings', b)
+                        setShowCreateBuildingModal(false); setSelectedBuilding(null); loadBuildings()
+                      } catch (e: any) { alert(e.message) }
+                    }}>Готово</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

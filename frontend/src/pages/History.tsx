@@ -100,32 +100,19 @@ export default function History() {
   const convertGameStateForBoard = (gameState: any) => {
     if (!gameState) return null
     
-    const points = gameState.points || []
-    const convertedPoints = points.map((pointValue: number, index: number) => {
-      const checkers: number[] = []
-      const absValue = Math.abs(pointValue)
-      
-      // Создаем массив checkers на основе значения точки
-      for (let i = 0; i < absValue; i++) {
-        checkers.push(pointValue > 0 ? 0 : 1) // 0 = белые, 1 = черные
-      }
-      
-      return {
-        index,
-        checkers,
-        color: pointValue > 0 ? 'white' : pointValue < 0 ? 'black' : null,
-      }
-    })
+    // ВАЖНО: BackgammonBoard теперь ожидает points как массив чисел (-15 до 15)
+    // а не массив объектов с checkers[]. Оставляем массив points как есть.
+    const points = Array.isArray(gameState.points) ? [...gameState.points] : []
     
     return {
       ...gameState,
-      points: convertedPoints,
+      points,
       bar: Array.isArray(gameState.bar) 
         ? { white: gameState.bar[0] || 0, black: gameState.bar[1] || 0 }
         : gameState.bar || { white: 0, black: 0 },
       bearOff: Array.isArray(gameState.borneOff)
         ? { white: gameState.borneOff[0] || 0, black: gameState.borneOff[1] || 0 }
-        : gameState.bearOff || { white: 0, black: 0 },
+        : (gameState.bearOff || { white: 0, black: 0 }),
     }
   }
   
@@ -175,8 +162,8 @@ export default function History() {
     if (!replayData || !replayData.moves || replayStep === 0) return null
     
     const move = replayData.moves[replayStep - 1]
-    if (move && move.dice && move.dice.length >= 2) {
-      return { die1: move.dice[0], die2: move.dice[1] }
+    if (move && move.dice) {
+      return move.dice // Теперь возвращаем массив как есть (может быть 2 или 4 кубика)
     }
     
     return null
@@ -327,7 +314,7 @@ export default function History() {
                       {formatDate(game.createdAt)} • {formatDuration(game.duration)}
                     </div>
                     <div className="card-subtitle" style={{ marginTop: '4px' }}>
-                      Счет: {game.score.player1}:{game.score.player2}
+                      Счет: {game.score.player1}:{game.score.player2} • {game.moveCount} ходов
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -516,26 +503,21 @@ export default function History() {
             
             {/* Информация о текущем ходе */}
             {replayData?.moves && replayData.moves[replayStep - 1] && (
-              <div style={{ 
-                padding: '12px', 
-                background: 'rgba(0,0,0,0.3)', 
-                borderRadius: '8px',
-                marginTop: '12px',
-                fontSize: '14px'
-              }}>
-                <div style={{ marginBottom: '8px' }}>
-                  <strong>Ход {replayStep}:</strong> {replayData.moves[replayStep - 1].player.username}
-                </div>
-                <div style={{ marginBottom: '4px' }}>
-                  Кубики: {replayData.moves[replayStep - 1].dice?.join(', ') || 'N/A'}
+              <div className="replay-move-details">
+                <div className="replay-move-header">
+                  <div className="replay-move-player">
+                    <strong>Ход {replayStep}:</strong> {replayData.moves[replayStep - 1].player.username}
+                  </div>
+                  <div className="replay-move-dice">
+                    🎲 {replayData.moves[replayStep - 1].dice?.join(', ') || 'N/A'}
+                  </div>
                 </div>
                 {replayData.moves[replayStep - 1].moves && replayData.moves[replayStep - 1].moves.length > 0 && (
-                  <div>
-                    Ходы: {replayData.moves[replayStep - 1].moves.map((m: any, idx: number) => (
-                      <span key={idx}>
-                        {idx > 0 ? ', ' : ''}
+                  <div className="replay-move-list">
+                    {replayData.moves[replayStep - 1].moves.map((m: any, idx: number) => (
+                      <div key={idx} className="replay-move-item">
                         {m.from === -1 ? 'бар' : m.from} → {m.to === -1 ? 'вынос' : m.to >= 24 ? 'вынос' : m.to}
-                      </span>
+                      </div>
                     ))}
                   </div>
                 )}

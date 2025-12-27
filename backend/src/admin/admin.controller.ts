@@ -579,6 +579,9 @@ export class AdminController {
       isPremium: body.isPremium === 'true' || body.isPremium === true,
       weight: body.weight ? parseFloat(body.weight) : 1,
       price: body.price ? parseFloat(body.price) : null,
+      maxDurability: body.maxDurability ? parseInt(body.maxDurability) : 100,
+      xpBonusPercent: body.xpBonusPercent ? parseInt(body.xpBonusPercent) : 0,
+      moneyBonusPercent: body.moneyBonusPercent ? parseInt(body.moneyBonusPercent) : 0,
       rarity: rarity,
     };
     

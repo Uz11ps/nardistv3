@@ -322,3 +322,45 @@
   cursor: not-allowed;
 }
 
+/* Replay Move Details */
+.replay-move-details {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  margin-top: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.replay-move-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.replay-move-player {
+  font-size: 16px;
+  color: #fff;
+}
+
+.replay-move-dice {
+  font-size: 18px;
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.replay-move-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.replay-move-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #ccc;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+

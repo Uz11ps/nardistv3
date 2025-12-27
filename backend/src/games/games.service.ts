@@ -1231,12 +1231,18 @@ export class GamesService {
       try {
         const stake = Number(game.stake);
         const totalPot = stake * 2;
-        const finalCommission = 15; // Фиксированная комиссия 15 нар за игру
-        const winnerReward = totalPot - finalCommission;
-
+        
         // Получаем пользователя и бонусы от скинов для денег
         const winnerUser = await this.usersService.findOne(game.winnerId);
         const winnerBonuses = await this.skinsService.getSkinBonuses(game.winnerId);
+        
+        // Рассчитываем динамическую комиссию на основе прокачки Экономики
+        const winnerEconSp = winnerUser.economySp || 0;
+        const gearCommissionBonus = (winnerBonuses.commissionReduction || 0) / 100;
+        const commissionRate = this.branchesService.calculateFinalCommission(winnerEconSp, gearCommissionBonus);
+        const finalCommission = Math.floor(totalPot * commissionRate);
+        
+        const winnerReward = totalPot - finalCommission;
         const moneyBonus = Math.floor(winnerReward * (winnerBonuses.moneyBonusPercent / 100));
         const finalWinnerReward = winnerReward + moneyBonus;
         
@@ -1247,7 +1253,7 @@ export class GamesService {
         // Пополняем казну города комиссией
         await this.progressService.addToCityTreasury(finalCommission);
         
-        this.logger.log(`💰 Награда начислена победителю ${game.winnerId}: +${finalWinnerReward} NAR (базовая: ${winnerReward}, бонус: ${moneyBonus} (${winnerBonuses.moneyBonusPercent}%)), было ${winnerBalance}, стало ${newWinnerBalance}, комиссия: ${finalCommission} NAR (в казну)`);
+        this.logger.log(`💰 Награда начислена победителю ${game.winnerId}: +${finalWinnerReward} NAR (базовая: ${winnerReward}, бонус: ${moneyBonus} (${winnerBonuses.moneyBonusPercent}%), комиссия: ${Math.round(commissionRate * 100)}%), было ${winnerBalance}, стало ${newWinnerBalance}, комиссия в казну: ${finalCommission} NAR`);
       } catch (error) {
         this.logger.error(`❌ Ошибка при начислении ставки: ${error.message}`, error.stack);
       }
