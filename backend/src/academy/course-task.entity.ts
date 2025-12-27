@@ -58,6 +58,13 @@ export class CourseTask {
   // { positionId: 'uuid' } для тренировочных позиций
   // { buildingType: 'shop' } для покупки строения
 
+  // Поля для целевых значений (как в квестах) - используются для онбординга
+  @Column({ nullable: true })
+  target: string; // Целевое действие (например, 'play_matches', 'win_streak', 'collect_income' и т.д.)
+  
+  @Column({ type: 'int', nullable: true })
+  targetValue: number; // Целевое значение (например, количество матчей, побед подряд и т.д.)
+
   @Column({ type: 'bigint', default: 0 })
   rewardNarCoin: number; // Награда в NAR-coin за выполнение
 

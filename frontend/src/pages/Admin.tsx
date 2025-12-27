@@ -65,6 +65,8 @@ export default function Admin() {
     description: '',
     order: 1,
     requirements: {},
+    target: '', // Целевое действие (как в квестах)
+    targetValue: 0, // Целевое значение (как в квестах)
     rewardNarCoin: 0,
     rewardXP: 0,
     isRequired: true,
@@ -128,6 +130,16 @@ export default function Admin() {
   const [editingCourse, setEditingCourse] = useState<any>(null)
   const [selectedArticle, setSelectedArticle] = useState<any>(null)
   const [editingArticle, setEditingArticle] = useState<any>(null)
+  const [courseTasks, setCourseTasks] = useState<any[]>([])
+  const [newCourseTask, setNewCourseTask] = useState({
+    type: 'train_with_bot',
+    title: '',
+    description: '',
+    order: 1,
+    rewardNarCoin: 0,
+    rewardXP: 0,
+    isRequired: true,
+  })
   const [selectedTournament, setSelectedTournament] = useState<any>(null)
   const [editingUser, setEditingUser] = useState<any>(null)
   const [subscriptionPrices, setSubscriptionPrices] = useState<{ 
@@ -429,6 +441,8 @@ export default function Admin() {
         description: '',
         order: onboardingTasks.length + 1,
         requirements: {},
+        target: '',
+        targetValue: 0,
         rewardNarCoin: 0,
         rewardXP: 0,
         isRequired: true,
@@ -2389,6 +2403,7 @@ export default function Admin() {
                   onChange={(e) => setNewArticle({ ...newArticle, type: e.target.value })}
                 >
                   <option value="course">Курс (только для админов)</option>
+                  <option value="article">Статья</option>
                 </select>
               </div>
               <div className="form-group">
@@ -2445,9 +2460,8 @@ export default function Admin() {
 
                   await apiClient.post('/admin/academy/create', {
                     ...newArticle,
-                    type: 'course', // Курсы создаются только админами
-                    authorId: null, // null означает, что это курс от админа
-                    isVerified: true, // Курсы от админов сразу верифицированы
+                    authorId: null, // null означает, что это материал от админа
+                    isVerified: true, // Материалы от админов сразу верифицированы (и курсы, и статьи)
                     rewards: rewards, // Награды (может быть массив)
                   })
                   alert('Курс создан!')
@@ -2521,6 +2535,31 @@ export default function Admin() {
                   min="1"
                 />
               </div>
+              <div className="form-group">
+                <label>Целевое действие (как в квестах)</label>
+                <select
+                  value={newOnboardingTask.target}
+                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, target: e.target.value })}
+                >
+                  <option value="">Не выбрано</option>
+                  <option value="play_matches">Сыграть матчей</option>
+                  <option value="win_streak">Побед подряд</option>
+                  <option value="collect_income">Собрать дохода</option>
+                  <option value="tournament">Участие в турнире</option>
+                  <option value="subscribe_channel">Подписаться на канал</option>
+                </select>
+              </div>
+              {newOnboardingTask.target && (
+                <div className="form-group">
+                  <label>Целевое значение (например, количество матчей, побед и т.д.)</label>
+                  <input
+                    type="number"
+                    value={newOnboardingTask.targetValue}
+                    onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, targetValue: parseInt(e.target.value) || 0 })}
+                    min="0"
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <label>Награда NAR-coin</label>
                 <input
@@ -2635,6 +2674,31 @@ export default function Admin() {
                       />
                     </div>
                     <div className="form-group">
+                      <label>Целевое действие (как в квестах)</label>
+                      <select
+                        value={editingOnboardingTask.target || ''}
+                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, target: e.target.value })}
+                      >
+                        <option value="">Не выбрано</option>
+                        <option value="play_matches">Сыграть матчей</option>
+                        <option value="win_streak">Побед подряд</option>
+                        <option value="collect_income">Собрать дохода</option>
+                        <option value="tournament">Участие в турнире</option>
+                        <option value="subscribe_channel">Подписаться на канал</option>
+                      </select>
+                    </div>
+                    {editingOnboardingTask.target && (
+                      <div className="form-group">
+                        <label>Целевое значение (например, количество матчей, побед и т.д.)</label>
+                        <input
+                          type="number"
+                          value={editingOnboardingTask.targetValue || 0}
+                          onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, targetValue: parseInt(e.target.value) || 0 })}
+                          min="0"
+                        />
+                      </div>
+                    )}
+                    <div className="form-group">
                       <label>Награда NAR-coin</label>
                       <input
                         type="number"
@@ -2729,7 +2793,19 @@ export default function Admin() {
                       <td>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button 
-                            onClick={() => setSelectedArticle(a)}
+                            onClick={async () => {
+                              setSelectedArticle(a)
+                              // Загружаем задания курса, если это курс
+                              if (a.type === 'course') {
+                                try {
+                                  const tasksRes = await apiClient.get(`/academy/courses/${a.id}/tasks`)
+                                  setCourseTasks(tasksRes.data || [])
+                                } catch (error) {
+                                  console.error('Failed to load course tasks:', error)
+                                  setCourseTasks([])
+                                }
+                              }
+                            }}
                             style={{
                               padding: '4px 8px',
                               background: '#4a90e2',
@@ -2822,7 +2898,10 @@ export default function Admin() {
                   zIndex: 1000,
                   padding: '20px',
                 }}
-                onClick={() => setSelectedArticle(null)}
+                onClick={() => {
+                  setSelectedArticle(null)
+                  setCourseTasks([])
+                }}
               >
                 <div
                   style={{
@@ -2931,6 +3010,148 @@ export default function Admin() {
                       {selectedArticle.content || 'Содержание отсутствует'}
                     </div>
                   </div>
+
+                  {selectedArticle.type === 'course' && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <h3 style={{ color: '#FFF', fontSize: '18px', marginBottom: '12px' }}>Задания курса:</h3>
+                      <div style={{ marginBottom: '16px', background: '#2a2a2a', padding: '16px', borderRadius: '8px', border: '1px solid #3a3a3a' }}>
+                        <h4 style={{ color: '#FFF', fontSize: '14px', marginBottom: '12px' }}>Создать новое задание:</h4>
+                        <div className="form-group">
+                          <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Тип задания</label>
+                          <select
+                            value={newCourseTask.type}
+                            onChange={(e) => setNewCourseTask({ ...newCourseTask, type: e.target.value })}
+                            style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
+                          >
+                            <option value="train_with_bot">Тренировка с ботом</option>
+                            <option value="online_match">Онлайн-партия</option>
+                            <option value="view_city">Просмотр города</option>
+                            <option value="play_short_match">Быстрая партия</option>
+                            <option value="play_long_match">Длинная партия</option>
+                            <option value="win_match">Победа в матче</option>
+                            <option value="complete_training_position">Тренировочная позиция</option>
+                            <option value="join_clan">Вступить в клан</option>
+                            <option value="purchase_building">Купить строение</option>
+                            <option value="upgrade_building">Улучшить строение</option>
+                            <option value="custom">Кастомное</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Название</label>
+                          <input
+                            type="text"
+                            value={newCourseTask.title}
+                            onChange={(e) => setNewCourseTask({ ...newCourseTask, title: e.target.value })}
+                            placeholder="Название задания"
+                            style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Описание</label>
+                          <textarea
+                            value={newCourseTask.description}
+                            onChange={(e) => setNewCourseTask({ ...newCourseTask, description: e.target.value })}
+                            rows={2}
+                            placeholder="Описание задания"
+                            style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                          <div className="form-group">
+                            <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Порядок</label>
+                            <input
+                              type="number"
+                              value={newCourseTask.order}
+                              onChange={(e) => setNewCourseTask({ ...newCourseTask, order: parseInt(e.target.value) || 1 })}
+                              min="1"
+                              style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Награда NAR</label>
+                            <input
+                              type="number"
+                              value={newCourseTask.rewardNarCoin}
+                              onChange={(e) => setNewCourseTask({ ...newCourseTask, rewardNarCoin: parseInt(e.target.value) || 0 })}
+                              min="0"
+                              style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Награда XP</label>
+                            <input
+                              type="number"
+                              value={newCourseTask.rewardXP}
+                              onChange={(e) => setNewCourseTask({ ...newCourseTask, rewardXP: parseInt(e.target.value) || 0 })}
+                              min="0"
+                              style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
+                            />
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await apiClient.post(`/academy/courses/${selectedArticle.id}/tasks`, newCourseTask)
+                              alert('Задание создано!')
+                              setNewCourseTask({
+                                type: 'train_with_bot',
+                                title: '',
+                                description: '',
+                                order: courseTasks.length + 1,
+                                rewardNarCoin: 0,
+                                rewardXP: 0,
+                                isRequired: true,
+                              })
+                              // Загружаем задания курса
+                              const tasksRes = await apiClient.get(`/academy/courses/${selectedArticle.id}/tasks`)
+                              setCourseTasks(tasksRes.data || [])
+                            } catch (error: any) {
+                              alert('Ошибка: ' + (error.response?.data?.message || error.message))
+                            }
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            background: 'linear-gradient(180deg, #4CAF50 -144.23%, #2E7D32 105.77%)',
+                            color: '#FFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                          }}
+                        >
+                          Создать задание
+                        </button>
+                      </div>
+                      {courseTasks.length > 0 && (
+                        <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px', border: '1px solid #3a3a3a' }}>
+                          <h4 style={{ color: '#FFF', fontSize: '14px', marginBottom: '12px' }}>Существующие задания:</h4>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr style={{ borderBottom: '1px solid #3a3a3a' }}>
+                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Порядок</th>
+                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Название</th>
+                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Тип</th>
+                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Награда NAR</th>
+                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Награда XP</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {courseTasks.map((task) => (
+                                <tr key={task.id} style={{ borderBottom: '1px solid #3a3a3a' }}>
+                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{task.order}</td>
+                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{task.title}</td>
+                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{task.type}</td>
+                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{Number(task.rewardNarCoin || 0).toLocaleString()}</td>
+                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{task.rewardXP || 0}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                     {selectedArticle.type === 'article' && selectedArticle.authorId && !selectedArticle.isVerified && (

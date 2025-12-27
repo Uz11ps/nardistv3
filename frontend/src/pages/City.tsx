@@ -69,15 +69,18 @@ export default function City() {
         apiClient.get('/progress/skill-points').catch(() => ({ data: { economy: 0 } }))
       ])
       
-      setCityData(cityRes.data)
-      setSkillPoints(spResponse.data)
+      // Проверяем, что данные - массив
+      const districts = Array.isArray(cityRes.data) ? cityRes.data : []
+      setCityData(districts)
+      setSkillPoints(spResponse.data || { economy: 0 })
       
-      if (cityRes.data.length > 0 && !selectedDistrictId) {
-        const firstUnlocked = cityRes.data.find((d: DistrictData) => d.isUnlocked) || cityRes.data[0]
+      if (districts.length > 0 && !selectedDistrictId) {
+        const firstUnlocked = districts.find((d: DistrictData) => d.isUnlocked) || districts[0]
         setSelectedDistrictId(firstUnlocked.id)
       }
     } catch (error) {
       console.error('Failed to load city data:', error)
+      setCityData([]) // Устанавливаем пустой массив при ошибке
     } finally {
       setLoading(false)
     }
@@ -186,7 +189,7 @@ export default function City() {
           <div className="city-section">
             <h2 className="city-section-title">Доступные строения для захвата</h2>
             <div className="city-available-buildings">
-              {clanBuildings.length === 0 ? (
+              {!clanBuildings || !Array.isArray(clanBuildings) || clanBuildings.length === 0 ? (
                 <div className="city-empty">Нет доступных строений для захвата</div>
               ) : (
                 clanBuildings.map((building: any) => (
@@ -237,7 +240,7 @@ export default function City() {
           <div className="city-v2-container">
             {/* Горизонтальные вкладки районов */}
             <div className="city-tabs">
-              {cityData.map(district => (
+              {cityData && Array.isArray(cityData) && cityData.map(district => (
                 <button
                   key={district.id}
                   className={`city-tab ${selectedDistrictId === district.id ? 'active' : ''} ${!district.isUnlocked ? 'locked' : ''}`}
@@ -260,7 +263,7 @@ export default function City() {
                 )}
                 
                 <div className="city-buildings-grid">
-                  {currentDistrict.buildings.map(({ config, userBuilding }) => {
+                  {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map(({ config, userBuilding }) => {
                     const accumulated = userBuilding ? calculateAccumulatedIncome(userBuilding, config) : 0
                     const upgradePrice = userBuilding 
                       ? Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.4, userBuilding.level))
@@ -391,7 +394,9 @@ export default function City() {
               </div>
               
               {(() => {
-                const userBuilding = currentDistrict?.buildings.find(b => b.config.id === showBuildingModal.id)?.userBuilding
+                const userBuilding = currentDistrict?.buildings && Array.isArray(currentDistrict.buildings) 
+                  ? currentDistrict.buildings.find(b => b.config.id === showBuildingModal.id)?.userBuilding 
+                  : null
                 const upgradePrice = userBuilding 
                   ? Math.floor(showBuildingModal.basePrice * Math.pow(showBuildingModal.upgradeMultiplier || 1.4, userBuilding.level))
                   : showBuildingModal.basePrice

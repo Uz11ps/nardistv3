@@ -790,6 +790,11 @@ export class AdminService implements OnModuleInit {
   }
 
   async createArticle(data: any) {
+    // Если authorId === null, значит это материал от админа - не требует верификации
+    if (data.authorId === null || data.authorId === undefined) {
+      data.isVerified = true; // Материалы от админов сразу верифицированы
+    }
+    
     // Статья - без наград, может быть платной или бесплатной
     if (data.type === 'article') {
       data.rewardNarCoin = 0;
@@ -798,12 +803,10 @@ export class AdminService implements OnModuleInit {
     } else if (data.type === 'course') {
       // Курс - с наградами, платный, создается админом
       data.authorId = null; // null означает, что это курс от админа
-      data.isVerified = true; // Курсы от админов сразу верифицированы
       data.isPaid = true; // Курсы платные
     } else if (data.type === 'onboarding') {
       // Онбординг - с наградами, бесплатный, единоразовый для новичков
       data.authorId = null;
-      data.isVerified = true;
       data.isPaid = false; // Онбординг бесплатный
       data.price = 0;
     }
