@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import apiClient from '../api/client'
 import './TonPaymentModal.css'
 
@@ -136,7 +137,7 @@ export default function TonPaymentModal({
 
   if (!isOpen) return null
 
-  return (
+  const modalContent = (
     <div className="ton-payment-modal-overlay" onClick={onClose}>
       <div className="ton-payment-modal" onClick={(e) => e.stopPropagation()}>
         <div className="ton-payment-modal-header">
@@ -254,5 +255,8 @@ export default function TonPaymentModal({
       </div>
     </div>
   )
+
+  // Рендерим модальное окно через Portal в body, чтобы оно не зависело от родительских контейнеров
+  return createPortal(modalContent, document.body)
 }
 
