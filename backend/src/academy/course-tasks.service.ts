@@ -92,11 +92,11 @@ export class CourseTasksService {
     isRequired?: boolean;
     isOnboarding?: boolean;
   }) {
-    // Если courseId указан, проверяем что курс существует
+    // Если courseId указан, проверяем что курс или онбординг существует
     if (courseId) {
       const course = await this.articlesRepository.findOne({ where: { id: courseId } });
-      if (!course || course.type !== 'course') {
-        throw new NotFoundException('Курс не найден');
+      if (!course || (course.type !== 'course' && course.type !== 'onboarding')) {
+        throw new NotFoundException('Курс или онбординг не найден');
       }
     }
 

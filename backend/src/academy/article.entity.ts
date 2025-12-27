@@ -28,7 +28,7 @@ export class Article {
   authorId: string; // ID пользователя-автора (если статья создана пользователем)
 
   @Column({ default: 'article' })
-  type: string; // 'article' | 'course'
+  type: string; // 'article' | 'course' | 'onboarding'
 
   @Column({ default: false })
   isPaid: boolean;

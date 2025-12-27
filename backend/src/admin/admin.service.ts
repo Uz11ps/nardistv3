@@ -787,10 +787,22 @@ export class AdminService implements OnModuleInit {
   }
 
   async createArticle(data: any) {
-    // Если это курс от админа, устанавливаем authorId в null и isVerified в true
-    if (data.type === 'course') {
+    // Статья - без наград, может быть платной или бесплатной
+    if (data.type === 'article') {
+      data.rewardNarCoin = 0;
+      data.rewardXP = 0;
+      data.rewards = null;
+    } else if (data.type === 'course') {
+      // Курс - с наградами, платный, создается админом
       data.authorId = null; // null означает, что это курс от админа
       data.isVerified = true; // Курсы от админов сразу верифицированы
+      data.isPaid = true; // Курсы платные
+    } else if (data.type === 'onboarding') {
+      // Онбординг - с наградами, бесплатный, единоразовый для новичков
+      data.authorId = null;
+      data.isVerified = true;
+      data.isPaid = false; // Онбординг бесплатный
+      data.price = 0;
     }
     return this.academyService.create(data);
   }
@@ -800,6 +812,26 @@ export class AdminService implements OnModuleInit {
   }
 
   async updateArticle(id: string, data: any) {
+    // Проверяем текущий тип статьи
+    const existingArticle = await this.academyService.findOne(id);
+    if (!existingArticle) {
+      throw new NotFoundException('Статья не найдена');
+    }
+    
+    // Если это статья, убираем награды (но может быть платной)
+    if (data.type === 'article' || existingArticle.type === 'article') {
+      data.rewardNarCoin = 0;
+      data.rewardXP = 0;
+      data.rewards = null;
+    } else if (data.type === 'course' || existingArticle.type === 'course') {
+      // Курс должен быть платным
+      data.isPaid = true;
+    } else if (data.type === 'onboarding' || existingArticle.type === 'onboarding') {
+      // Онбординг должен быть бесплатным
+      data.isPaid = false;
+      data.price = 0;
+    }
+    
     return this.academyService.update(id, data);
   }
 

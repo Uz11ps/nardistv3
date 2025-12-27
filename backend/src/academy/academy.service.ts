@@ -59,8 +59,8 @@ export class AcademyService {
       result.content = article.content;
     }
 
-    // Если это курс, загружаем задания как sections
-    if (article.type === 'course') {
+    // Если это курс или онбординг, загружаем задания как sections
+    if (article.type === 'course' || article.type === 'onboarding') {
       const tasks = await this.courseTasksRepository.find({
         where: { courseId: id, isActive: true },
         order: { order: 'ASC' },
@@ -85,7 +85,7 @@ export class AcademyService {
       if (result.sections.length === 0 && article.content) {
         result.sections = [{
           id: 'main',
-          title: 'Содержание курса',
+          title: article.type === 'onboarding' ? 'Содержание онбординга' : 'Содержание курса',
           content: article.content,
           order: 0,
         }];

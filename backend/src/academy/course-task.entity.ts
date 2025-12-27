@@ -31,7 +31,7 @@ export class CourseTask {
 
   @Column({ nullable: true })
   @Index()
-  courseId: string | null; // ID курса (Article с type='course'), null для онбординговых заданий
+  courseId: string | null; // ID курса/онбординга (Article с type='course' или 'onboarding'), null только для старых онбординговых заданий
 
   @ManyToOne(() => Article)
   course: Article;
