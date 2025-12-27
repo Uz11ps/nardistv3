@@ -11,7 +11,7 @@ interface Dice3DProps {
 export default function Dice3D({ values, animating = false, diceColor = '#FFFFFF', used = false }: Dice3DProps) {
   const [displayValues, setDisplayValues] = useState<number[]>(values)
   const lastValues = useRef<number[]>(values)
-  const animationIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const animationIntervalRef = useRef<number | null>(null)
 
   useEffect(() => {
     // Если началась анимация, запускаем интервал для смены значений
