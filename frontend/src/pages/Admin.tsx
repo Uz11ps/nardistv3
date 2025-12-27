@@ -637,6 +637,7 @@ export default function Admin() {
                     baseIncomePerHour: 0,
                     maxAccumulation: 0,
                     maxLevel: 10,
+                    upgradeMultiplier: 1.4,
                     districtId: '',
                   })
       
