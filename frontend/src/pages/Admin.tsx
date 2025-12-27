@@ -5707,28 +5707,7 @@ export default function Admin() {
 
       {activeTab === 'payments' && paymentStats && (
         <div className="admin-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2>Статистика платежей</h2>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: '#2a2a2a', padding: '12px 20px', borderRadius: '12px' }}>
-              <label style={{ color: '#aaa', fontSize: '14px' }}>Курс 1 TON =</label>
-              <input 
-                type="number" 
-                value={systemSettings.ton_exchange_rate || 1000} 
-                style={{ width: '100px', textAlign: 'center' }}
-                onChange={(e) => {
-                  setSystemSettings({ ...systemSettings, ton_exchange_rate: parseInt(e.target.value) || 0 })
-                }}
-              />
-              <span style={{ color: '#aaa', fontSize: '14px' }}>NAR</span>
-              <button 
-                className="admin-btn primary" 
-                style={{ marginLeft: '12px' }}
-                onClick={() => handleUpdateSystemSettings({ ton_exchange_rate: systemSettings.ton_exchange_rate })}
-              >
-                💾
-              </button>
-            </div>
-          </div>
+          <h2 style={{ marginBottom: '24px' }}>Статистика платежей</h2>
 
           <div className="stats-grid" style={{ marginBottom: '32px' }}>
             <div className="stat-card">
