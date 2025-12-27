@@ -147,31 +147,9 @@ export default function Shop() {
     }
   }
 
-  const handleBuySubscription = async (plan: string, price: number) => {
-    try {
-      // Создаем платежную транзакцию для подписки (используем тот же endpoint что и в Subscription.tsx)
-      // Для премиум подписки используем month_12 (годовая подписка)
-      const response = await apiClient.post('/subscription/payment/create', {
-        plan: 'month_12',
-        method: paymentMethod,
-      })
-      
-      const { transactionId, walletAddress, amount, comment, method } = response.data
-      
-      // Показываем модальное окно оплаты
-      setPaymentData({
-        transactionId,
-        walletAddress,
-        amount,
-        comment,
-        method: method === 'TON' ? 'TON' : 'USDT',
-        narAmount: 0, // Для подписки не нужно
-      })
-      setShowPaymentModal(true)
-    } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при создании платежа')
-      console.error('Subscription purchase failed:', error)
-    }
+  const handleBuySubscription = () => {
+    // Перенаправляем на страницу подписки, где пользователь сможет выбрать длительность
+    navigate('/subscription')
   }
 
   const handlePurchaseCityAutobuild = async () => {
@@ -730,15 +708,15 @@ export default function Shop() {
               </div>
 
               <div className="shop-premium-modal-actions">
-                <button
-                  className="shop-premium-modal-button"
-                  onClick={() => {
-                    setShowPremiumModal(false)
-                    handleBuySubscription('premium', 199)
-                  }}
-                >
-                  Оформить подписку
-                </button>
+                    <button
+                      className="shop-premium-modal-button"
+                      onClick={() => {
+                        setShowPremiumModal(false)
+                        navigate('/subscription')
+                      }}
+                    >
+                      Оформить подписку
+                    </button>
               </div>
             </div>
           </div>
