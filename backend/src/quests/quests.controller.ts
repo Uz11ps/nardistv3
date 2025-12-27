@@ -26,4 +26,3 @@ export class QuestsController {
     return { subscribed: isSubscribed };
   }
 }
-

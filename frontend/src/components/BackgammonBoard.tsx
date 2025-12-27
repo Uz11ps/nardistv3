@@ -691,7 +691,9 @@ export default function BackgammonBoard({
       const isAnimatingFromThisPoint = animatingChecker && animatingChecker.from === pointIndex
       const isHead = gameMode === 'long' && (pointIndex === 0 || pointIndex === 12);
       
-      const checkersToDraw = (isDraggingFromThisPoint || isAnimatingFromThisPoint) ? checkerCount - 1 : checkerCount
+      const checkersToDrawTotal = (isDraggingFromThisPoint || isAnimatingFromThisPoint) ? checkerCount - 1 : checkerCount
+      // В голове рисуем максимум 5 шашек визуально, даже если их 15
+      const checkersToDraw = isHead ? Math.min(checkersToDrawTotal, 5) : checkersToDrawTotal
       
       for (let i = 0; i < checkersToDraw; i++) {
         // Если шашек много (больше 5), начинаем их накладывать друг на друга плотнее
@@ -704,7 +706,7 @@ export default function BackgammonBoard({
         // Используем текстуры шашек если есть
         drawChecker(x, checkerY, checkerSize, isWhiteChecker, isMyPoint)
 
-        // Если это первая шашка в голове (индекс i === 0), рисуем на ней количество оставшихся шашек
+        // Если это первая шашка в голове (индекс i === 0), рисуем на ней количество всех шашек в этой точке
         if (isHead && i === 0 && checkerCount > 1) {
           ctx.save()
           ctx.fillStyle = isWhiteChecker ? '#000' : '#FFF'

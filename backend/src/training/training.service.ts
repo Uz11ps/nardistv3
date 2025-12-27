@@ -278,4 +278,3 @@ export class TrainingService {
     await this.taskProgressRepository.save(progress);
   }
 }
-

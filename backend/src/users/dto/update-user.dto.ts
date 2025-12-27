@@ -37,4 +37,3 @@ export class UpdateUserDto {
   @IsOptional()
   birthday?: string; // Дата в формате YYYY-MM-DD
 }
-
