@@ -130,7 +130,8 @@ export class WalletService {
   }
 
   /**
-   * Получить все кошельки (для админ панели)
+   * Получить все активные кошельки (для админ панели)
+   * Возвращает только активные кошельки
    */
   async getAllWallets(): Promise<UserWallet[]> {
     return this.walletRepository.find({

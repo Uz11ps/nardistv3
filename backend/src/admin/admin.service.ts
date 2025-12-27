@@ -1697,20 +1697,44 @@ export class AdminService implements OnModuleInit {
   }
 
   /**
-   * Получить все кошельки пользователей
+   * Получить все кошельки пользователей с балансами
+   * Возвращает ВСЕ кошельки, которые когда-либо были созданы игроками
    */
   async getAllWallets(): Promise<any[]> {
     const wallets = await this.walletService.getAllWallets();
-    return wallets.map(w => ({
-      id: w.id,
-      userId: w.userId,
-      username: w.user?.username || 'Unknown',
-      address: w.address,
-      walletType: w.walletType,
-      isActive: w.isActive,
-      createdAt: w.createdAt,
-      balance: 0, // Можно добавить получение баланса
-    }));
+    
+    // Получаем балансы для всех кошельков параллельно
+    const walletsWithBalance = await Promise.all(
+      wallets.map(async (w) => {
+        try {
+          const balance = await this.tonService.getWalletBalance(w.address);
+          return {
+            id: w.id,
+            userId: w.userId,
+            username: w.user?.username || 'Unknown',
+            address: w.address,
+            walletType: w.walletType,
+            isActive: w.isActive,
+            createdAt: w.createdAt,
+            balance: balance,
+          };
+        } catch (error: any) {
+          this.logger.warn(`⚠️ Не удалось получить баланс для кошелька ${w.address}: ${error.message}`);
+          return {
+            id: w.id,
+            userId: w.userId,
+            username: w.user?.username || 'Unknown',
+            address: w.address,
+            walletType: w.walletType,
+            isActive: w.isActive,
+            createdAt: w.createdAt,
+            balance: 0,
+          };
+        }
+      })
+    );
+    
+    return walletsWithBalance;
   }
 
   /**

@@ -5304,6 +5304,7 @@ export default function Admin() {
                   <tr>
                     <th>Пользователь</th>
                     <th>Адрес кошелька</th>
+                    <th>Баланс (TON)</th>
                     <th>Тип</th>
                     <th>Статус</th>
                     <th>Создан</th>
@@ -5313,7 +5314,7 @@ export default function Admin() {
                 <tbody>
                   {wallets.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', color: '#aaa', padding: '20px' }}>
+                      <td colSpan={7} style={{ textAlign: 'center', color: '#aaa', padding: '20px' }}>
                         Кошельков не найдено
                       </td>
                     </tr>
@@ -5325,6 +5326,9 @@ export default function Admin() {
                           <div style={{ fontSize: '11px', color: '#aaa' }}>{wallet.userId?.substring(0, 8)}...</div>
                         </td>
                         <td style={{ fontFamily: 'monospace', fontSize: '12px' }}>{wallet.address}</td>
+                        <td style={{ fontWeight: 'bold', color: '#4caf50' }}>
+                          {typeof wallet.balance === 'number' ? wallet.balance.toFixed(4) : '0.0000'}
+                        </td>
                         <td>{wallet.walletType || 'TON'}</td>
                         <td>
                           <span style={{ 
