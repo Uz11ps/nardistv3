@@ -348,21 +348,21 @@ export class AdminService implements OnModuleInit {
     const connection = this.usersRepository.manager.connection;
     const queryRunner = connection.createQueryRunner();
     
+    // Полный список всех таблиц, которые могут ссылаться на users
+    const allRelatedTables = [
+      'subscriptions', 'ratings', 'notifications', 'user_materials', 'user_skins',
+      'clan_members', 'quest_progress', 'buildings', 'course_task_progress',
+      'payment_transactions', 'user_wallets', 'user_purchases', 'user_reward_debts',
+      'enhancements', 'referral_earnings', 'tournament_tickets', 'user_achievements',
+      'user_task_progress', 'user_training_progress', 'game_moves'
+    ];
+    
     try {
       await queryRunner.connect();
       await queryRunner.startTransaction();
 
       // ВРЕМЕННО ОТКЛЮЧАЕМ ВСЕ FOREIGN KEY CONSTRAINTS для этой транзакции
       await queryRunner.query('SET session_replication_role = replica;');
-      
-      // Полный список всех таблиц, которые могут ссылаться на users
-      const allRelatedTables = [
-        'subscriptions', 'ratings', 'notifications', 'user_materials', 'user_skins',
-        'clan_members', 'quest_progress', 'buildings', 'course_task_progress',
-        'payment_transactions', 'user_wallets', 'user_purchases', 'user_reward_debts',
-        'enhancements', 'referral_earnings', 'tournament_tickets', 'user_achievements',
-        'user_task_progress', 'user_training_progress', 'game_moves'
-      ];
 
       // Удаляем все связанные данные, игнорируя ошибки
       for (const table of allRelatedTables) {
