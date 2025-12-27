@@ -692,7 +692,6 @@ export default function BackgammonBoard({
       const isHead = gameMode === 'long' && (pointIndex === 0 || pointIndex === 12);
       
       const checkersToDraw = (isDraggingFromThisPoint || isAnimatingFromThisPoint) ? checkerCount - 1 : checkerCount
-      const isHead = gameMode === 'long' && (pointIndex === 0 || pointIndex === 12);
       
       for (let i = 0; i < checkersToDraw; i++) {
         // Если шашек много (больше 5), начинаем их накладывать друг на друга плотнее
