@@ -8,6 +8,7 @@ import { BackgammonEngine } from './game-engine/backgammon-engine';
 import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
 import { ProgressService } from '../progress/progress.service';
 import { XpCalculatorService } from '../progress/xp-calculator.service';
+import { ProgressionBranchesService } from '../progress/progression-branches.service';
 import { RatingsService } from '../ratings/ratings.service';
 import { UsersService } from '../users/users.service';
 import { BotService } from '../bot/bot.service';
@@ -48,6 +49,7 @@ export class GamesService {
     private questsService: QuestsService,
     @Inject(forwardRef(() => TrainingService))
     private trainingService: TrainingService,
+    private branchesService: ProgressionBranchesService,
     @Inject(forwardRef(() => TournamentsService))
     private tournamentsService: TournamentsService,
   ) {}
@@ -1226,7 +1228,7 @@ export class GamesService {
         
         // Рассчитываем динамическую комиссию на основе прокачки Экономики
         const winnerEconSp = winnerUser.economySp || 0;
-        const gearCommissionBonus = (winnerBonuses.commissionReduction || 0) / 100;
+        const gearCommissionBonus = (winnerBonuses.bonuses?.commissionReduction || 0); 
         const commissionRate = this.branchesService.calculateFinalCommission(winnerEconSp, gearCommissionBonus);
         const finalCommission = Math.floor(totalPot * commissionRate);
         
