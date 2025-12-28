@@ -35,4 +35,3 @@ export class UserSkin {
   @Column({ type: 'int', nullable: true })
   durability_current: number; // Текущая прочность предмета (null = полная прочность)
 }
-

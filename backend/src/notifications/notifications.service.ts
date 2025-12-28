@@ -83,4 +83,3 @@ export class NotificationsService {
     return this.notificationsRepository.save(notifications);
   }
 }
-

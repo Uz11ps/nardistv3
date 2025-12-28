@@ -42,4 +42,3 @@ export class TrainingController {
     return { message: 'Награда получена' };
   }
 }
-

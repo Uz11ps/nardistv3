@@ -689,7 +689,11 @@ export default function BackgammonBoard({
       
       const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
       const isAnimatingFromThisPoint = animatingChecker && animatingChecker.from === pointIndex
-      const checkersToDraw = (isDraggingFromThisPoint || isAnimatingFromThisPoint) ? checkerCount - 1 : checkerCount
+      const isHead = gameMode === 'long' && (pointIndex === 0 || pointIndex === 12);
+      
+      const checkersToDrawTotal = (isDraggingFromThisPoint || isAnimatingFromThisPoint) ? checkerCount - 1 : checkerCount
+      // В голове рисуем максимум 5 шашек визуально, даже если их 15
+      const checkersToDraw = isHead ? Math.min(checkersToDrawTotal, 5) : checkersToDrawTotal
       
       for (let i = 0; i < checkersToDraw; i++) {
         // Если шашек много (больше 5), начинаем их накладывать друг на друга плотнее
@@ -701,10 +705,21 @@ export default function BackgammonBoard({
         
         // Используем текстуры шашек если есть
         drawChecker(x, checkerY, checkerSize, isWhiteChecker, isMyPoint)
+
+        // Если это первая шашка в голове (индекс i === 0), рисуем на ней количество всех шашек в этой точке
+        if (isHead && i === 0 && checkerCount > 1) {
+          ctx.save()
+          ctx.fillStyle = isWhiteChecker ? '#000' : '#FFF'
+          ctx.font = 'bold 14px Arial'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(checkerCount.toString(), x, checkerY)
+          ctx.restore()
+        }
       }
       
-      // Если шашек больше 5, показываем число на последней шашке
-      if (checkerCount > 5 && !isDraggingFromThisPoint && !isAnimatingFromThisPoint) {
+      // Если шашек больше 5 (и это не голова), показываем число на последней шашке
+      if (!isHead && checkerCount > 5 && !isDraggingFromThisPoint && !isAnimatingFromThisPoint) {
         const overlap = checkerSize * 0.8
         const lastCheckerY = isTopRow 
           ? checkerBaseY + ((checkerCount - 1) * overlap)
