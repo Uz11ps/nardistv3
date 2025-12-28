@@ -6,6 +6,7 @@ import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
 import { PaymentTransactionService } from './payment-transaction.service';
 import { PaymentTransactionCheckerService } from './payment-transaction-checker.service';
+import { PaymentMigrationService } from './payment-migration.service';
 import { UserWallet } from './user-wallet.entity';
 import { PaymentTransaction } from './payment-transaction.entity';
 import { UsersModule } from '../users/users.module';
@@ -24,7 +25,7 @@ import { AdminModule } from '../admin/admin.module';
     forwardRef(() => AdminModule),
   ],
   controllers: [PaymentController],
-  providers: [PaymentService, PaymentTransactionService, PaymentTransactionCheckerService],
+  providers: [PaymentService, PaymentTransactionService, PaymentTransactionCheckerService, PaymentMigrationService],
   exports: [PaymentService, PaymentTransactionService],
 })
 export class PaymentModule {}
