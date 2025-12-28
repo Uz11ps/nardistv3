@@ -1590,6 +1590,37 @@ export class GamesService {
     return game;
   }
 
+  /**
+   * Завершить игру с ботом при таймауте игрока
+   * Используется когда игрок не сделал ход в течение 20 секунд
+   */
+  async finishBotGameOnTimeout(gameId: string): Promise<Game> {
+    const game = await this.findOne(gameId);
+    
+    if (game.status !== GameStatus.IN_PROGRESS) {
+      this.logger.warn(`⚠️ Игра ${gameId} уже завершена или не в статусе IN_PROGRESS, статус: ${game.status}`);
+      return game;
+    }
+    
+    if (game.type !== GameType.VS_BOT || game.player2Id !== null) {
+      throw new BadRequestException('Метод finishBotGameOnTimeout может использоваться только для игр с ботом');
+    }
+    
+    // Бот побеждает при таймауте игрока
+    game.status = GameStatus.FINISHED;
+    game.winnerId = null; // null означает победу бота
+    game.player1Score = 0;
+    game.player2Score = 1;
+    
+    const savedGame = await this.gamesRepository.save(game);
+    
+    // Применяем логику после завершения игры (награды, рейтинги)
+    await this.onGameFinished(savedGame);
+    
+    // Перезагружаем игру, чтобы получить обновленные данные
+    return await this.findOne(gameId);
+  }
+
   async createBotGame(playerId: string, mode?: GameMode): Promise<Game> {
     try {
       // Для игр с ИИ игра начинается сразу, без этапа ожидания
