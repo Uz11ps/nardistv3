@@ -203,19 +203,37 @@ export class PaymentService {
         },
       );
 
-      if (!invoiceResponse.data || !invoiceResponse.data.ok) {
-        const errorDescription = invoiceResponse.data?.description || 'Неизвестная ошибка';
+      if (!invoiceResponse.data) {
+        throw new Error('Не получен ответ от платежной системы. Попробуйте позже.');
+      }
+
+      if (!invoiceResponse.data.ok) {
+        const errorDescription = invoiceResponse.data.description || invoiceResponse.data.error_code || 'Неизвестная ошибка';
+        alert('Ошибка создания STARS инвойса:' + invoiceResponse.data);
         throw new Error(`Ошибка создания инвойса: ${errorDescription}`);
       }
 
-      const invoiceLink = invoiceResponse.data.result.invoice_link;
-      const invoiceId = invoiceResponse.data.result.invoice_payload || `stars_${Date.now()}`;
+      const result = invoiceResponse.data.result;
+      if (!result) {
+        alert('Ответ от Telegram API не содержит result: ' +invoiceResponse.data);
+        throw new Error('Платежная система вернула некорректный ответ. Попробуйте позже.');
+      }
+
+      const invoiceLink = result.invoice_link;
+      if (!invoiceLink) {
+        alert('Ответ от Telegram API не содержит invoice_link:' + result);
+        throw new Error('Платежная система не вернула ссылку для оплаты. Попробуйте позже.');
+      }
+
+      const invoiceId = result.invoice_payload || `stars_${Date.now()}`;
 
       // Извлекаем invoice_id из ссылки для использования в WebApp.openInvoice
+      // Формат ссылки: https://t.me/invoice/XXXXX
       const invoiceMatch = invoiceLink.match(/\/invoice\/([^/?]+)/);
       const invoice = invoiceMatch ? invoiceMatch[1] : null;
 
       if (!invoice) {
+        console.error('Не удалось извлечь invoice ID из ссылки:', invoiceLink);
         throw new Error('Не удалось извлечь invoice ID из ссылки');
       }
 
@@ -301,7 +319,11 @@ export class PaymentService {
         throw new Error(`Ошибка создания инвойса: ${errorDescription}`);
       }
 
-      const invoiceLink = invoiceResponse.data.result.invoice_link;
+      const invoiceLink = invoiceResponse.data.result?.invoice_link;
+      if (!invoiceLink) {
+        throw new Error('Платежная система не вернула ссылку для оплаты. Попробуйте позже.');
+      }
+
       const invoiceId = invoiceResponse.data.result.invoice_payload || `tribute_${Date.now()}`;
 
       // Извлекаем invoice_id из ссылки для использования в WebApp.openInvoice

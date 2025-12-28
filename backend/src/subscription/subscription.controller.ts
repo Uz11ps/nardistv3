@@ -57,9 +57,9 @@ export class SubscriptionController {
       if (isStars) {
         return planPrices.stars || 0;
       }
-      // Для TRIBUTE используем цену TRIBUTE из админки
+      // Для TRIBUTE не показываем цену (контролируется сервисом Tribute)
       if (isTribute) {
-        return planPrices.tribute || 0;
+        return null; // Не показываем цену для TRIBUTE
       }
       return 0;
     };
@@ -68,30 +68,33 @@ export class SubscriptionController {
       { 
         id: 'month_1', 
         name: '1 месяц', 
-        price: Number(getPrice(prices.month_1)), 
+        price: isTribute ? null : Number(getPrice(prices.month_1)), 
         priceTribute: Number(prices.month_1?.tribute || 0),
         priceStars: Number(prices.month_1?.stars || 0),
         currency, 
-        badge: 'Попробовать' 
+        badge: 'Попробовать',
+        showPrice: !isTribute // Для TRIBUTE не показываем цену
       },
       { 
         id: 'month_3', 
         name: '3 месяца', 
-        price: Number(getPrice(prices.month_3)), 
+        price: isTribute ? null : Number(getPrice(prices.month_3)), 
         priceTribute: Number(prices.month_3?.tribute || 0),
         priceStars: Number(prices.month_3?.stars || 0),
         currency, 
         badge: 'Оптимально', 
-        popular: true 
+        popular: true,
+        showPrice: !isTribute
       },
       { 
         id: 'month_12', 
         name: '1 год', 
-        price: Number(getPrice(prices.month_12)), 
+        price: isTribute ? null : Number(getPrice(prices.month_12)), 
         priceTribute: Number(prices.month_12?.tribute || 0),
         priceStars: Number(prices.month_12?.stars || 0),
         currency, 
-        badge: 'Выгоднее' 
+        badge: 'Выгоднее',
+        showPrice: !isTribute
       },
     ];
   }

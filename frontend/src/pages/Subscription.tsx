@@ -11,12 +11,13 @@ import './Subscription.css'
 interface SubscriptionPlan {
   id: 'month_1' | 'month_3' | 'month_12'
   name: string
-  price: number
-  priceTon?: number
-  priceUsdt?: number
+  price: number | null
+  priceTribute?: number
+  priceStars?: number
   currency: string
   badge?: string
   popular?: boolean
+  showPrice?: boolean
 }
 
 
@@ -262,8 +263,14 @@ export default function Subscription() {
                 )}
               </div>
               <div className="subscription-plan-price">
-                <span className="subscription-plan-price-icon">▼</span>
-                <span>{plan.price} {plan.currency}</span>
+                {plan.currency === 'TRIBUTE' ? (
+                  <span style={{ fontSize: '14px', color: '#aaa' }}>Через Tribute</span>
+                ) : plan.price !== null && plan.price !== undefined ? (
+                  <>
+                    <span className="subscription-plan-price-icon">▼</span>
+                    <span>{plan.price} {plan.currency}</span>
+                  </>
+                ) : null}
               </div>
             </Card>
           ))}
