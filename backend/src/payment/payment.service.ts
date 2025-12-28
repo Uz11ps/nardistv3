@@ -767,6 +767,10 @@ export class PaymentService {
       })));
 
       // Находим подходящую транзакцию
+      // Важно: учитываем только недавние транзакции (созданные в последние 2 часа)
+      // и только те, которые еще не были обработаны (нет txHash и статус PENDING)
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      
       let matchingTransactions: any[] = [];
       
       if (type) {
@@ -775,18 +779,22 @@ export class PaymentService {
           (t) => 
             t.status === PaymentStatus.PENDING &&
             t.method === PaymentMethod.TRIBUTE &&
+            !t.txHash && // Транзакция еще не была обработана
+            t.createdAt >= twoHoursAgo && // Транзакция создана недавно
             ((type === 'subscription' && t.type === 'subscription') ||
              (type === 'nar_coin' && t.type === 'nar_coin')),
         );
-        console.log(`   Подходящих транзакций типа ${type}: ${matchingTransactions.length}`);
+        console.log(`   Подходящих транзакций типа ${type} (недавних и необработанных): ${matchingTransactions.length}`);
       } else {
         // Если тип не определен, ищем любую PENDING транзакцию TRIBUTE
         matchingTransactions = transactions.filter(
           (t) => 
             t.status === PaymentStatus.PENDING &&
-            t.method === PaymentMethod.TRIBUTE,
+            t.method === PaymentMethod.TRIBUTE &&
+            !t.txHash && // Транзакция еще не была обработана
+            t.createdAt >= twoHoursAgo, // Транзакция создана недавно
         );
-        console.log(`   Подходящих PENDING транзакций TRIBUTE (любого типа): ${matchingTransactions.length}`);
+        console.log(`   Подходящих PENDING транзакций TRIBUTE (недавних и необработанных): ${matchingTransactions.length}`);
       }
       
       // Берем самую свежую транзакцию
@@ -800,6 +808,17 @@ export class PaymentService {
       }
 
       if (transaction) {
+        // Дополнительная проверка: убеждаемся, что транзакция еще не обработана
+        if (transaction.status !== PaymentStatus.PENDING) {
+          console.warn(`⚠️ Транзакция ${transaction.id} уже обработана (статус: ${transaction.status}), пропускаем`);
+          return;
+        }
+        
+        if (transaction.txHash) {
+          console.warn(`⚠️ Транзакция ${transaction.id} уже имеет txHash (${transaction.txHash}), пропускаем`);
+          return;
+        }
+        
         console.log(`✅ ========== НАЙДЕНА ТРАНЗАКЦИЯ ДЛЯ ОБРАБОТКИ ==========`);
         console.log(`✅ transactionId=${transaction.id}, type=${transaction.type}`);
         if (transaction.type === 'subscription') {
@@ -808,12 +827,15 @@ export class PaymentService {
           console.log(`✅ NAR-coin транзакция, narAmount из metadata: ${transaction.metadata?.narAmount || 'не указано'}`);
         }
         console.log(`✅ Статус до обработки: ${transaction.status}`);
+        console.log(`✅ Транзакция создана: ${transaction.createdAt.toISOString()}`);
         
         // Обновляем транзакцию как завершенную
         transaction.status = PaymentStatus.COMPLETED;
         transaction.confirmedAt = new Date();
         // Сохраняем ID транзакции Tribute в txHash для предотвращения повторной обработки
-        transaction.txHash = String(tributeTransactionId);
+        if (tributeTransactionId) {
+          transaction.txHash = String(tributeTransactionId);
+        }
         transaction.metadata = {
           ...transaction.metadata,
           tributeTransactionId: tributeTransactionId,
@@ -833,15 +855,25 @@ export class PaymentService {
       } else {
         console.warn(`⚠️ ========== ТРАНЗАКЦИЯ НЕ НАЙДЕНА ==========`);
         console.warn(`⚠️ userId=${userId}, type=${type}`);
-        console.warn(`⚠️ Найдено транзакций: ${transactions.length}`);
-        console.warn(`⚠️ Доступные транзакции:`, transactions.map(t => ({
+        console.warn(`⚠️ Найдено транзакций TRIBUTE: ${transactions.length}`);
+        console.warn(`⚠️ Подходящих транзакций (недавних и необработанных): ${matchingTransactions.length}`);
+        console.warn(`⚠️ Все транзакции TRIBUTE:`, transactions.map(t => ({
           id: t.id,
           status: t.status,
           type: t.type,
           method: t.method,
-          createdAt: t.createdAt,
+          createdAt: t.createdAt.toISOString(),
           subscriptionPlan: t.subscriptionPlan,
+          txHash: t.txHash || 'нет',
+          isRecent: t.createdAt >= twoHoursAgo,
+          isPending: t.status === PaymentStatus.PENDING,
         })));
+        
+        // Если есть транзакции, но они все старые или уже обработаны
+        const pendingTransactions = transactions.filter(t => t.status === PaymentStatus.PENDING);
+        if (pendingTransactions.length > 0) {
+          console.warn(`⚠️ Есть ${pendingTransactions.length} PENDING транзакций, но они либо старые (>2 часов), либо уже обработаны (имеют txHash)`);
+        }
       }
     } catch (error) {
       console.error('❌ Ошибка обработки Tribute webhook:', error);
