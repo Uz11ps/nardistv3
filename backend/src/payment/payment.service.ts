@@ -71,7 +71,7 @@ export class PaymentService {
           prices: [
             {
               label: request.description,
-              amount: Math.round(request.amount * 100), // Stars в копейках (1 Star = 100)
+              amount: Math.round(request.amount), // Для Stars (XTR) amount указывается напрямую в Stars (не в копейках)
             },
           ],
           max_tip_amount: 0,
@@ -183,7 +183,7 @@ export class PaymentService {
         prices: [
           {
             label: request.description,
-            amount: Math.round(request.amount * 100), // Stars в копейках (1 Star = 100)
+            amount: Math.round(request.amount), // Для Stars (XTR) amount указывается напрямую в Stars (не в копейках)
           },
         ],
         max_tip_amount: 0,
@@ -443,9 +443,8 @@ export class PaymentService {
         const userId = payload.userId || providerData.userId;
         const type = payload.type || providerData.type || 'nar_coin';
         const method = payload.method || providerData.method || 'tribute';
-        const amount = update.message.successful_payment.total_amount / 100; // Конвертируем из копеек (Stars)
-        
-        // Stars уже в правильном формате (amount в Stars)
+        // Для Stars (XTR) total_amount уже в Stars (не нужно делить на 100)
+        const amount = update.message.successful_payment.total_amount;
         const starsAmount = amount;
 
         // Если это платеж через Tribute или Stars, обновляем транзакцию
