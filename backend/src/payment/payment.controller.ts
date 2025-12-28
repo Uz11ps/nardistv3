@@ -51,10 +51,24 @@ export class PaymentController {
       }
     }
 
-    console.log('🔄 Вызываю handlePaymentWebhook с данными:', JSON.stringify(update, null, 2).substring(0, 500));
-    const result = await this.paymentService.handlePaymentWebhook(update);
-    console.log('✅ handlePaymentWebhook завершен');
-    return result;
+    console.log('🔄 ========== ВЫЗОВ handlePaymentWebhook ==========');
+    console.log('🔄 Структура webhook:', {
+      keys: Object.keys(update),
+      event: update.event,
+      type: update.type,
+      hasPayment: !!update.payment,
+      hasData: !!update.data,
+      fullUpdate: JSON.stringify(update, null, 2).substring(0, 1000),
+    });
+    
+    try {
+      const result = await this.paymentService.handlePaymentWebhook(update);
+      console.log('✅ handlePaymentWebhook завершен успешно');
+      return result;
+    } catch (error) {
+      console.error('❌ Ошибка в handlePaymentWebhook:', error);
+      throw error;
+    }
   }
 
   /**

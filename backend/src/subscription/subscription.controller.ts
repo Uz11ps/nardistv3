@@ -369,10 +369,6 @@ export class SubscriptionController {
         throw new BadRequestException('Некорректное количество NAR. Количество должно быть больше 0.');
       }
 
-      if (isNaN(price) || price <= 0) {
-        throw new BadRequestException(`Некорректная цена. Цена должна быть больше 0. Получено: ${body.price} (тип: ${typeof body.price})`);
-      }
-
       // Преобразуем строку в enum (если пришла строка с фронтенда)
       let method: PaymentMethod = PaymentMethod.TRIBUTE;
       if (body.method) {
@@ -394,6 +390,11 @@ export class SubscriptionController {
       if (method === PaymentMethod.TRIBUTE || method === PaymentMethod.TELEGRAM_STARS) {
         let payment: any;
         if (method === PaymentMethod.TELEGRAM_STARS) {
+          // Для STARS проверяем цену
+          if (isNaN(price) || price <= 0) {
+            throw new BadRequestException(`Некорректная цена. Цена должна быть больше 0. Получено: ${body.price} (тип: ${typeof body.price})`);
+          }
+          
           payment = await this.paymentService.createStarsPayment({
             userId: user.id,
             amount: price,
@@ -401,6 +402,7 @@ export class SubscriptionController {
             type: 'nar_coin',
           });
         } else {
+          // Для TRIBUTE цена не нужна - используется только ссылка
           // Для TRIBUTE получаем ссылку из пакета NAR-coin
           const packages = await this.adminService.getNarCoinPrices();
           const selectedPackage = packages.find((pkg: any) => pkg.amount === narAmount);

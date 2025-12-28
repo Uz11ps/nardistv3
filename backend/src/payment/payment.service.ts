@@ -513,9 +513,30 @@ export class PaymentService {
     });
     
     // Проверяем, это webhook от Tribute или от Telegram
-    // Tribute обычно отправляет данные в формате { event: 'payment.completed', data: {...} }
-    if (update.event === 'payment.completed' || update.type === 'payment.completed' || update.payment) {
+    // Tribute может отправлять данные в разных форматах:
+    // 1. { event: 'payment.completed', data: {...} }
+    // 2. { type: 'payment.completed', ... }
+    // 3. { payment: {...} }
+    // 4. Прямой формат с полями userId, amount и т.д.
+    
+    const isTributeWebhook = 
+      update.event === 'payment.completed' || 
+      update.type === 'payment.completed' || 
+      update.payment ||
+      (update.data && (update.data.userId || update.data.user_id)) ||
+      (update.userId || update.user_id) ||
+      (update.event && update.event.includes('payment')) ||
+      (update.type && update.type.includes('payment'));
+    
+    if (isTributeWebhook) {
       console.log('✅ Определен как Tribute webhook, вызываю handleTributeWebhook');
+      console.log('✅ Причина определения:', {
+        hasEvent: update.event === 'payment.completed',
+        hasType: update.type === 'payment.completed',
+        hasPayment: !!update.payment,
+        hasDataWithUserId: !!(update.data && (update.data.userId || update.data.user_id)),
+        hasDirectUserId: !!(update.userId || update.user_id),
+      });
       // Это webhook от Tribute
       await this.handleTributeWebhook(update);
       console.log('✅ handleTributeWebhook завершен');
