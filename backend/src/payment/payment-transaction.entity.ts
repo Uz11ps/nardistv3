@@ -127,9 +127,9 @@ export class PaymentTransaction {
   fromAddress: string;
 
   /**
-   * Адрес получателя (наш кошелек)
+   * Адрес получателя (для TON платежей, не используется для STARS/TRIBUTE)
    */
-  @Column()
+  @Column({ nullable: true })
   toAddress: string;
 
   /**
