@@ -183,8 +183,16 @@ export default function Shop() {
           throw new Error('Telegram WebApp не доступен. Откройте приложение через Telegram бота.')
         }
 
+        // Для Stars платежей используем полную ссылку или slug с префиксом $
+        // Формат ссылки: https://t.me/$XXXXX
+        const invoiceSlug = response.data.invoice.url 
+          ? response.data.invoice.url.replace('https://t.me/', '') // Убираем префикс, оставляем $XXXXX
+          : (response.data.invoice.slug?.startsWith('$') ? response.data.invoice.slug : `$${response.data.invoice.slug}`)
+
+        console.log('Opening Stars invoice:', { slug: invoiceSlug, invoice: response.data.invoice })
+
         // Открываем инвойс через WebApp API
-        telegramWebApp.openInvoice(response.data.invoice.slug, (status: string) => {
+        telegramWebApp.openInvoice(invoiceSlug, (status: string) => {
           if (status === 'paid') {
             // Платеж успешен
             handlePaymentSuccess()

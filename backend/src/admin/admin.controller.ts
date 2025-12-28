@@ -966,7 +966,7 @@ export class AdminController {
   @UseGuards(AdminAuthGuard)
   async updateNarCoinPrices(
     @CurrentUser() user: any,
-    @Body() body: { packages: Array<{ amount: number; priceTon?: number; priceUsdt?: number; tributeLink?: string }> },
+    @Body() body: { packages: Array<{ amount: number; priceStars?: number; tributeLink?: string }> },
   ) {
     return this.adminService.updateNarCoinPrices(body.packages);
   }

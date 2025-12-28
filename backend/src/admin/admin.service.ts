@@ -2613,40 +2613,41 @@ export class AdminService implements OnModuleInit {
     const setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
     if (setting) {
       const packages = JSON.parse(setting.value);
-      // Поддержка старого формата для обратной совместимости
-      if (packages.length > 0 && packages[0].price !== undefined && packages[0].priceTon === undefined) {
-        return packages.map((pkg: any) => ({
-          amount: pkg.amount,
-          priceTon: pkg.price,
-          priceUsdt: pkg.price,
-          tributeLink: pkg.tributeLink || '',
-        }));
-      }
-      // Убеждаемся что есть tributeLink
+      // Нормализуем данные - убираем старые поля TON/USDT, оставляем только STARS и TRIBUTE
       return packages.map((pkg: any) => ({
-        ...pkg,
+        amount: pkg.amount || 0,
+        priceStars: pkg.priceStars || pkg.price || pkg.priceTon || 0,
         tributeLink: pkg.tributeLink || '',
       }));
     }
     return [];
   }
 
-  async updateNarCoinPrices(packages: Array<{ amount: number; priceTon?: number; priceUsdt?: number; tributeLink?: string }>) {
+  async updateNarCoinPrices(packages: Array<{ amount: number; priceStars?: number; tributeLink?: string }>) {
     let setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
     
     // Нормализуем пакеты - если пришёл старый формат, конвертируем
     const normalizedPackages = packages.map(pkg => {
+      // Поддержка старого формата для обратной совместимости
       if ('price' in pkg && typeof pkg.price === 'number') {
         return {
           amount: pkg.amount,
-          priceTon: pkg.price,
-          priceUsdt: pkg.price,
+          priceStars: pkg.price,
+          tributeLink: pkg.tributeLink || '',
+        };
+      }
+      // Поддержка старого формата с priceTon/priceUsdt
+      if ('priceTon' in pkg || 'priceUsdt' in pkg) {
+        return {
+          amount: pkg.amount,
+          priceStars: pkg.priceStars || pkg.priceTon || pkg.priceUsdt || 0,
+          tributeLink: pkg.tributeLink || '',
         };
       }
       return {
         amount: pkg.amount,
-        priceTon: pkg.priceTon || 0,
-        priceUsdt: pkg.priceUsdt || 0,
+        priceStars: pkg.priceStars || 0,
+        tributeLink: pkg.tributeLink || '',
       };
     });
     

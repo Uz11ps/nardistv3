@@ -150,7 +150,7 @@ export default function Admin() {
     month_3?: { tribute?: number; stars?: number; tributeLink?: string }; 
     month_12?: { tribute?: number; stars?: number; tributeLink?: string } 
   } | null>(null)
-  const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; priceTon: number; priceUsdt: number; tributeLink?: string }>>([])
+  const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; priceTon?: number; priceUsdt?: number; priceStars?: number; tributeLink?: string }>>([])
   const [editingSetting, setEditingSetting] = useState<{ key: string; value: any } | null>(null)
   const [districts, setDistricts] = useState<any[]>([])
   const [editingDistrict, setEditingDistrict] = useState<any>(null)
@@ -589,15 +589,11 @@ export default function Admin() {
       const response = await apiClient.get('/admin/prices/nar-coin')
       const packages = response.data
       // Нормализуем данные для поддержки старого формата
-      if (packages.length > 0 && packages[0].price !== undefined && packages[0].priceTon === undefined) {
-        setNarCoinPackages(packages.map((pkg: any) => ({
-          amount: pkg.amount,
-          priceTon: pkg.price,
-          priceUsdt: pkg.price,
-        })))
-      } else {
-        setNarCoinPackages(packages)
-      }
+      setNarCoinPackages(packages.map((pkg: any) => ({
+        amount: pkg.amount || 0,
+        priceStars: pkg.priceStars || pkg.price || 0,
+        tributeLink: pkg.tributeLink || '',
+      })))
     } catch (error) {
       console.error('Failed to load nar-coin prices:', error)
     }
@@ -5278,11 +5274,14 @@ export default function Admin() {
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
                     <input
                       type="number"
+                      step="1"
+                      min="1"
                       placeholder="Количество NAR"
-                      value={pkg.amount}
+                      value={pkg.amount || ''}
                       onChange={(e) => {
+                        const value = e.target.value === '' ? 0 : parseFloat(e.target.value)
                         const newPackages = [...narCoinPackages]
-                        newPackages[idx].amount = parseFloat(e.target.value) || 0
+                        newPackages[idx].amount = isNaN(value) ? 0 : value
                         setNarCoinPackages(newPackages)
                       }}
                       style={{ flex: 1, padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
@@ -5296,37 +5295,22 @@ export default function Admin() {
                       Удалить
                     </button>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TON</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Цена TON"
-                        value={pkg.priceTon || 0}
-                        onChange={(e) => {
-                          const newPackages = [...narCoinPackages]
-                          newPackages[idx].priceTon = parseFloat(e.target.value) || 0
-                          setNarCoinPackages(newPackages)
-                        }}
-                        style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена USDT</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Цена USDT"
-                        value={pkg.priceUsdt || 0}
-                        onChange={(e) => {
-                          const newPackages = [...narCoinPackages]
-                          newPackages[idx].priceUsdt = parseFloat(e.target.value) || 0
-                          setNarCoinPackages(newPackages)
-                        }}
-                        style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
-                      />
-                    </div>
+                  <div style={{ marginBottom: '8px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена STARS ⭐</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Цена STARS"
+                      value={pkg.priceStars ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? 0 : parseFloat(e.target.value)
+                        const newPackages = [...narCoinPackages]
+                        newPackages[idx].priceStars = isNaN(value) ? 0 : value
+                        setNarCoinPackages(newPackages)
+                      }}
+                      style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                    />
                   </div>
                   <div style={{ marginTop: '8px' }}>
                     <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Ссылка TRIBUTE</label>
@@ -5345,7 +5329,7 @@ export default function Admin() {
                 </div>
               ))}
               <button
-                onClick={() => setNarCoinPackages([...narCoinPackages, { amount: 0, priceTon: 0, priceUsdt: 0, tributeLink: '' }])}
+                onClick={() => setNarCoinPackages([...narCoinPackages, { amount: 0, priceStars: 0, tributeLink: '' }])}
                 style={{ padding: '8px 16px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}
               >
                 + Добавить пакет
