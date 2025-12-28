@@ -278,11 +278,6 @@ export class PaymentService {
         throw new Error('Платежная система не вернула ссылку для оплаты. Убедитесь, что бот настроен для приема Stars платежей.');
       }
 
-      console.log('✅ STARS инвойс создан успешно:', {
-        invoice_link: invoiceLink.substring(0, 50) + '...',
-        invoice_id: result.invoice_payload,
-      });
-
       const invoiceId = result.invoice_payload || `stars_${Date.now()}`;
 
       // Извлекаем invoice slug из ссылки для использования в WebApp.openInvoice
@@ -314,9 +309,15 @@ export class PaymentService {
       }
 
       if (!invoice) {
-        console.error('Не удалось извлечь invoice slug из ссылки:', invoiceLink);
+        console.error('❌ Не удалось извлечь invoice slug из ссылки:', invoiceLink);
         throw new Error('Не удалось извлечь invoice slug из ссылки');
       }
+
+      console.log('✅ STARS инвойс создан успешно:', {
+        invoice_link: invoiceLink.substring(0, 50) + '...',
+        invoice_slug: invoice,
+        invoice_id: invoiceId,
+      });
 
       return {
         invoice: {
