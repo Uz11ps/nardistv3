@@ -514,16 +514,20 @@ export class PaymentService {
     
     // Проверяем, это webhook от Tribute или от Telegram
     // Tribute может отправлять данные в разных форматах:
-    // 1. { event: 'payment.completed', data: {...} }
-    // 2. { type: 'payment.completed', ... }
-    // 3. { payment: {...} }
-    // 4. Прямой формат с полями userId, amount и т.д.
+    // 1. { name: 'new_digital_product', payload: { user_id, telegram_user_id, ... } }
+    // 2. { event: 'payment.completed', data: {...} }
+    // 3. { type: 'payment.completed', ... }
+    // 4. { payment: {...} }
+    // 5. Прямой формат с полями userId, amount и т.д.
     
     const isTributeWebhook = 
+      update.name === 'new_digital_product' ||
+      (update.name && update.name.includes('product')) ||
       update.event === 'payment.completed' || 
       update.type === 'payment.completed' || 
       update.payment ||
       (update.data && (update.data.userId || update.data.user_id)) ||
+      (update.payload && (update.payload.telegram_user_id || update.payload.user_id)) ||
       (update.userId || update.user_id) ||
       (update.event && update.event.includes('payment')) ||
       (update.type && update.type.includes('payment'));
@@ -531,9 +535,11 @@ export class PaymentService {
     if (isTributeWebhook) {
       console.log('✅ Определен как Tribute webhook, вызываю handleTributeWebhook');
       console.log('✅ Причина определения:', {
+        hasName: update.name === 'new_digital_product',
         hasEvent: update.event === 'payment.completed',
         hasType: update.type === 'payment.completed',
         hasPayment: !!update.payment,
+        hasPayload: !!update.payload,
         hasDataWithUserId: !!(update.data && (update.data.userId || update.data.user_id)),
         hasDirectUserId: !!(update.userId || update.user_id),
       });
@@ -635,20 +641,68 @@ export class PaymentService {
       console.log('📥 ========== TRIBUTE WEBHOOK ПОЛУЧЕН ==========');
       console.log('📥 Полный webhook:', JSON.stringify(webhook, null, 2));
       
-      // Формат webhook от Tribute может быть разным, обрабатываем основные варианты
-      const paymentData = webhook.data || webhook.payment || webhook;
-      const userId = paymentData.userId || paymentData.user_id || paymentData.metadata?.userId || paymentData.user?.id;
-      const amount = paymentData.amount || paymentData.total_amount || 0;
-      const transactionId = paymentData.transactionId || paymentData.transaction_id || paymentData.id;
-      const type = paymentData.type || paymentData.metadata?.type || 'subscription';
+      // Формат webhook от Tribute может быть разным:
+      // 1. { name: 'new_digital_product', payload: { telegram_user_id, user_id, ... } }
+      // 2. { event: 'payment.completed', data: { userId, ... } }
+      // 3. { payment: { userId, ... } }
       
-      console.log('🔍 Парсинг Tribute webhook:', { userId, amount, transactionId, type });
+      let userId: string | null = null;
+      let telegramUserId: string | number | null = null;
+      const paymentData = webhook.payload || webhook.data || webhook.payment || webhook;
+      
+      // Пытаемся найти userId разными способами
+      if (webhook.payload) {
+        // Новый формат: { name: 'new_digital_product', payload: { telegram_user_id, ... } }
+        telegramUserId = webhook.payload.telegram_user_id || webhook.payload.telegramUserId;
+        const tributeUserId = webhook.payload.user_id || webhook.payload.userId;
+        
+        console.log('🔍 Формат webhook: new_digital_product');
+        console.log('🔍 telegram_user_id:', telegramUserId);
+        console.log('🔍 user_id (Tribute):', tributeUserId);
+        
+        // Если есть telegram_user_id, ищем пользователя по нему
+        if (telegramUserId) {
+          const user = await this.usersService.findByTelegramId(String(telegramUserId));
+          if (user) {
+            userId = user.id;
+            console.log(`✅ Пользователь найден по telegram_user_id: ${telegramUserId} -> userId: ${userId}`);
+          } else {
+            console.error(`❌ Пользователь не найден по telegram_user_id: ${telegramUserId}`);
+          }
+        }
+      }
+      
+      // Если userId не найден, пробуем другие варианты
+      if (!userId) {
+        userId = paymentData.userId || paymentData.user_id || paymentData.metadata?.userId || paymentData.user?.id;
+      }
+      
+      const amount = paymentData.amount || paymentData.total_amount || webhook.payload?.amount || 0;
+      const transactionId = paymentData.transactionId || paymentData.transaction_id || paymentData.id || webhook.payload?.transaction_id || webhook.payload?.purchase_id;
+      
+      // Определяем тип: subscription или nar_coin
+      // В новом формате можно определить по product_name или другим полям
+      let type = paymentData.type || paymentData.metadata?.type || 'subscription';
+      if (webhook.payload?.product_name) {
+        // Если product_name содержит "month" или похожее - это подписка
+        const productName = webhook.payload.product_name.toLowerCase();
+        if (productName.includes('month') || productName.includes('подписка') || productName.includes('subscription')) {
+          type = 'subscription';
+        } else {
+          type = 'nar_coin';
+        }
+      }
+      
+      console.log('🔍 Парсинг Tribute webhook:', { userId, telegramUserId, amount, transactionId, type });
       console.log('🔍 paymentData:', JSON.stringify(paymentData, null, 2));
       
       if (!userId) {
         console.error('❌ Tribute webhook: userId не найден в webhook');
         console.error('❌ Доступные поля в paymentData:', Object.keys(paymentData));
         console.error('❌ Доступные поля в webhook:', Object.keys(webhook));
+        if (telegramUserId) {
+          console.error(`❌ telegram_user_id найден (${telegramUserId}), но пользователь не найден в БД`);
+        }
         return;
       }
       
