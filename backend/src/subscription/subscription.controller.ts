@@ -46,10 +46,17 @@ export class SubscriptionController {
       return [];
     }
     
-    const paymentMethod = method?.toLowerCase() === 'usdt' ? 'usdt' : 'ton';
+    // Для TRIBUTE и STARS используем TON цены
+    const methodLower = method?.toLowerCase() || 'tribute';
+    const isTributeOrStars = methodLower === 'tribute' || methodLower === 'stars';
+    const currency = isTributeOrStars ? 'STARS' : (methodLower === 'usdt' ? 'USDT' : 'TON');
     
     const getPrice = (planPrices: { ton: number; usdt: number }) => {
-      return paymentMethod === 'usdt' ? planPrices.usdt : planPrices.ton;
+      // Для TRIBUTE и STARS используем TON цены
+      if (isTributeOrStars) {
+        return planPrices.ton;
+      }
+      return methodLower === 'usdt' ? planPrices.usdt : planPrices.ton;
     };
     
     return [
@@ -59,7 +66,7 @@ export class SubscriptionController {
         price: Number(getPrice(prices.month_1)), 
         priceTon: Number(prices.month_1.ton),
         priceUsdt: Number(prices.month_1.usdt),
-        currency: paymentMethod.toUpperCase(), 
+        currency, 
         badge: 'Попробовать' 
       },
       { 
@@ -68,7 +75,7 @@ export class SubscriptionController {
         price: Number(getPrice(prices.month_3)), 
         priceTon: Number(prices.month_3.ton),
         priceUsdt: Number(prices.month_3.usdt),
-        currency: paymentMethod.toUpperCase(), 
+        currency, 
         badge: 'Оптимально', 
         popular: true 
       },
@@ -78,7 +85,7 @@ export class SubscriptionController {
         price: Number(getPrice(prices.month_12)), 
         priceTon: Number(prices.month_12.ton),
         priceUsdt: Number(prices.month_12.usdt),
-        currency: paymentMethod.toUpperCase(), 
+        currency, 
         badge: 'Выгоднее' 
       },
     ];
@@ -90,19 +97,22 @@ export class SubscriptionController {
   @Get('nar-coin-packages')
   async getNarCoinPackages(@Query('method') method?: string) {
     const packages = await this.adminService.getNarCoinPrices();
-    const paymentMethod = method?.toLowerCase() === 'usdt' ? 'usdt' : 'ton';
+    const methodLower = method?.toLowerCase() || 'tribute';
+    const isTributeOrStars = methodLower === 'tribute' || methodLower === 'stars';
+    const currency = isTributeOrStars ? 'STARS' : (methodLower === 'usdt' ? 'USDT' : 'TON');
     
     return packages.map(pkg => {
-      const price = paymentMethod === 'usdt' 
-        ? Number(pkg.priceUsdt || 0)
-        : Number(pkg.priceTon || 0);
+      // Для TRIBUTE и STARS используем TON цены
+      const price = isTributeOrStars
+        ? Number(pkg.priceTon || 0)
+        : (methodLower === 'usdt' ? Number(pkg.priceUsdt || 0) : Number(pkg.priceTon || 0));
       
       return {
         amount: pkg.amount,
         price,
         priceTon: Number(pkg.priceTon || 0),
         priceUsdt: Number(pkg.priceUsdt || 0),
-        currency: paymentMethod.toUpperCase()
+        currency
       };
     });
   }
@@ -125,28 +135,24 @@ export class SubscriptionController {
       }
 
       // Преобразуем строку в enum (если пришла строка с фронтенда)
-      let method: PaymentMethod = PaymentMethod.TON;
+      let method: PaymentMethod = PaymentMethod.TRIBUTE;
       if (body.method) {
         if (typeof body.method === 'string') {
           const methodLower = body.method.toLowerCase();
-          if (methodLower === 'ton') {
-            method = PaymentMethod.TON;
-          } else if (methodLower === 'usdt') {
-            method = PaymentMethod.USDT;
-          } else if (methodLower === 'telegram_stars') {
+          if (methodLower === 'stars' || methodLower === 'telegram_stars') {
             method = PaymentMethod.TELEGRAM_STARS;
           } else if (methodLower === 'tribute') {
             method = PaymentMethod.TRIBUTE;
           } else {
-            method = PaymentMethod.TON; // По умолчанию
+            method = PaymentMethod.TRIBUTE; // По умолчанию TRIBUTE
           }
         } else {
           method = body.method;
         }
       }
       
-      // Если метод оплаты Tribute, создаем платеж через Telegram WebApp API
-      if (method === PaymentMethod.TRIBUTE) {
+      // Если метод оплаты Tribute или Stars, создаем платеж через Telegram WebApp API
+      if (method === PaymentMethod.TRIBUTE || method === PaymentMethod.TELEGRAM_STARS) {
         const prices = await this.adminService.getSubscriptionPrices();
         if (!prices) {
           throw new BadRequestException('Цены подписок не установлены. Обратитесь к администратору.');
@@ -312,28 +318,24 @@ export class SubscriptionController {
       }
 
       // Преобразуем строку в enum (если пришла строка с фронтенда)
-      let method: PaymentMethod = PaymentMethod.TON;
+      let method: PaymentMethod = PaymentMethod.TRIBUTE;
       if (body.method) {
         if (typeof body.method === 'string') {
           const methodLower = body.method.toLowerCase();
-          if (methodLower === 'ton') {
-            method = PaymentMethod.TON;
-          } else if (methodLower === 'usdt') {
-            method = PaymentMethod.USDT;
-          } else if (methodLower === 'telegram_stars') {
+          if (methodLower === 'stars' || methodLower === 'telegram_stars') {
             method = PaymentMethod.TELEGRAM_STARS;
           } else if (methodLower === 'tribute') {
             method = PaymentMethod.TRIBUTE;
           } else {
-            method = PaymentMethod.TON; // По умолчанию
+            method = PaymentMethod.TRIBUTE; // По умолчанию TRIBUTE
           }
         } else {
           method = body.method;
         }
       }
 
-      // Если метод оплаты Tribute, создаем платеж через Telegram WebApp API
-      if (method === PaymentMethod.TRIBUTE) {
+      // Если метод оплаты Tribute или Stars, создаем платеж через Telegram WebApp API
+      if (method === PaymentMethod.TRIBUTE || method === PaymentMethod.TELEGRAM_STARS) {
         const tributePayment = await this.paymentService.createTributePayment({
           userId: user.id,
           amount: price,

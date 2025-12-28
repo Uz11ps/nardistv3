@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import TonPaymentModal from '../components/TonPaymentModal'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
@@ -32,20 +31,10 @@ export default function Shop() {
   const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
   const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
   const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
-  const [paymentMethod, setPaymentMethod] = useState<'TON' | 'USDT' | 'TRIBUTE'>('TRIBUTE')
+  const [paymentMethod, setPaymentMethod] = useState<'TRIBUTE' | 'STARS'>('TRIBUTE')
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [showSkinPreview, setShowSkinPreview] = useState(false)
   const [previewSkin, setPreviewSkin] = useState<Skin | null>(null)
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [paymentData, setPaymentData] = useState<{
-    transactionId: string
-    walletAddress: string
-    amount: number
-    comment: string
-    method: 'TON' | 'USDT'
-    narAmount: number
-    expiresAt?: string | Date
-  } | null>(null)
 
   useEffect(() => {
     if (activeTab === 'coin') {
@@ -187,8 +176,8 @@ export default function Shop() {
         method: paymentMethod,
       })
       
-      // Если метод оплаты Tribute, открываем инвойс через WebApp API
-      if (paymentMethod === 'TRIBUTE' && response.data.invoice) {
+      // Открываем инвойс через WebApp API для TRIBUTE и STARS
+      if ((paymentMethod === 'TRIBUTE' || paymentMethod === 'STARS') && response.data.invoice) {
         const telegramWebApp = (window as any).Telegram?.WebApp
         if (!telegramWebApp) {
           throw new Error('Telegram WebApp не доступен. Откройте приложение через Telegram бота.')
@@ -209,19 +198,7 @@ export default function Shop() {
         return
       }
       
-      const { transactionId, walletAddress, amount: tonAmount, comment, method, narAmount, expiresAt } = response.data
-      
-      // Показываем модальное окно оплаты
-      setPaymentData({
-        transactionId,
-        walletAddress,
-        amount: tonAmount,
-        comment,
-        method: method === 'TON' ? 'TON' : 'USDT',
-        narAmount,
-        expiresAt,
-      })
-      setShowPaymentModal(true)
+      throw new Error('Неизвестный метод оплаты')
     } catch (error: any) {
       alert(error.response?.data?.message || error.message || 'Ошибка при создании платежа')
       console.error('Purchase failed:', error)
@@ -235,7 +212,8 @@ export default function Shop() {
     try {
       const userResponse = await apiClient.get('/users/me')
       useAuthStore.setState({ user: userResponse.data })
-      alert(`Покупка ${paymentData?.narAmount || 0} NAR успешна!`)
+      alert('Покупка успешна!')
+      await loadNarCoinPackages()
     } catch (error) {
       console.error('Failed to update user:', error)
     }
@@ -433,15 +411,15 @@ export default function Shop() {
                 Tribute ⭐
               </button>
               <button
-                onClick={() => setPaymentMethod('TON')}
+                onClick={() => setPaymentMethod('STARS')}
                 style={{
                   flex: 1,
                   padding: '10px 16px',
                   borderRadius: '8px',
-                  background: paymentMethod === 'TON' 
-                    ? 'linear-gradient(180deg, #0088CC 0%, #006699 100%)' 
+                  background: paymentMethod === 'STARS' 
+                    ? 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)' 
                     : '#3a3a3a',
-                  border: paymentMethod === 'TON' ? '2px solid #0088CC' : '1px solid #4a4a4a',
+                  border: paymentMethod === 'STARS' ? '2px solid #FFD700' : '1px solid #4a4a4a',
                   color: '#FFF',
                   fontSize: '14px',
                   fontWeight: '500',
@@ -449,26 +427,7 @@ export default function Shop() {
                   transition: 'all 0.2s',
                 }}
               >
-                TON
-              </button>
-              <button
-                onClick={() => setPaymentMethod('USDT')}
-                style={{
-                  flex: 1,
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  background: paymentMethod === 'USDT' 
-                    ? 'linear-gradient(180deg, #26A17B 0%, #1A7A5C 100%)' 
-                    : '#3a3a3a',
-                  border: paymentMethod === 'USDT' ? '2px solid #26A17B' : '1px solid #4a4a4a',
-                  color: '#FFF',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                USDT
+                Stars ⭐
               </button>
             </div>
 
@@ -783,23 +742,6 @@ export default function Shop() {
         </div>
       )}
 
-      {/* Модальное окно оплаты TON */}
-      {showPaymentModal && paymentData && (
-        <TonPaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => {
-            setShowPaymentModal(false)
-            setPaymentData(null)
-          }}
-          transactionId={paymentData.transactionId}
-          walletAddress={paymentData.walletAddress}
-          amount={paymentData.amount}
-          comment={paymentData.comment}
-          method={paymentData.method}
-          expiresAt={paymentData.expiresAt}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
 
       {/* Предпросмотр скина */}
       {showSkinPreview && previewSkin && (

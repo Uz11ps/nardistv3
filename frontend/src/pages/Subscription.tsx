@@ -4,7 +4,6 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Icon from '../components/Icon'
-import TonPaymentModal from '../components/TonPaymentModal'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import './Subscription.css'
@@ -58,16 +57,7 @@ export default function Subscription() {
   const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
   const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
   const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
-  const [paymentMethod, setPaymentMethod] = useState<'TON' | 'USDT' | 'TRIBUTE'>('TRIBUTE')
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [paymentData, setPaymentData] = useState<{
-    transactionId: string
-    walletAddress: string
-    amount: number
-    comment: string
-    method: 'TON' | 'USDT'
-    expiresAt?: string | Date
-  } | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<'TRIBUTE' | 'STARS'>('TRIBUTE')
 
   useEffect(() => {
     loadPlans()
@@ -121,8 +111,8 @@ export default function Subscription() {
       
       console.log('Payment transaction created:', response.data)
       
-      // Если метод оплаты Tribute, открываем инвойс через WebApp API
-      if (paymentMethod === 'TRIBUTE' && response.data.invoice) {
+      // Открываем инвойс через WebApp API для TRIBUTE и STARS
+      if ((paymentMethod === 'TRIBUTE' || paymentMethod === 'STARS') && response.data.invoice) {
         const telegramWebApp = (window as any).Telegram?.WebApp
         if (!telegramWebApp) {
           throw new Error('Telegram WebApp не доступен. Откройте приложение через Telegram бота.')
@@ -143,26 +133,7 @@ export default function Subscription() {
         return
       }
       
-      const { transactionId, walletAddress, amount, comment, method, expiresAt } = response.data
-      
-      if (!transactionId || !walletAddress || !amount || !comment) {
-        throw new Error('Неполные данные транзакции')
-      }
-      
-      // Показываем модальное окно оплаты
-      const paymentDataToSet = {
-        transactionId,
-        walletAddress,
-        amount,
-        comment,
-        method: (method?.toUpperCase() === 'TON' ? 'TON' : 'USDT') as 'TON' | 'USDT',
-        expiresAt,
-      }
-      
-      console.log('Setting payment data:', paymentDataToSet)
-      setPaymentData(paymentDataToSet)
-      setShowPaymentModal(true)
-      console.log('Payment modal should be open now')
+      throw new Error('Неизвестный метод оплаты')
     } catch (error: any) {
       console.error('Failed to create payment:', error)
       const errorMessage = error.response?.data?.message || error.message || 'Ошибка при создании платежа'
@@ -254,15 +225,15 @@ export default function Subscription() {
             Tribute ⭐
           </button>
           <button
-            onClick={() => setPaymentMethod('TON')}
+            onClick={() => setPaymentMethod('STARS')}
             style={{
               flex: 1,
               padding: '10px 16px',
               borderRadius: '8px',
-              background: paymentMethod === 'TON' 
-                ? 'linear-gradient(180deg, #0088CC 0%, #006699 100%)' 
+              background: paymentMethod === 'STARS' 
+                ? 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)' 
                 : '#3a3a3a',
-              border: paymentMethod === 'TON' ? '2px solid #0088CC' : '1px solid #4a4a4a',
+              border: paymentMethod === 'STARS' ? '2px solid #FFD700' : '1px solid #4a4a4a',
               color: '#FFF',
               fontSize: '14px',
               fontWeight: '500',
@@ -270,26 +241,7 @@ export default function Subscription() {
               transition: 'all 0.2s',
             }}
           >
-            TON
-          </button>
-          <button
-            onClick={() => setPaymentMethod('USDT')}
-            style={{
-              flex: 1,
-              padding: '10px 16px',
-              borderRadius: '8px',
-              background: paymentMethod === 'USDT' 
-                ? 'linear-gradient(180deg, #26A17B 0%, #1A7A5C 100%)' 
-                : '#3a3a3a',
-              border: paymentMethod === 'USDT' ? '2px solid #26A17B' : '1px solid #4a4a4a',
-              color: '#FFF',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            USDT
+            Stars ⭐
           </button>
         </div>
 
@@ -373,23 +325,6 @@ export default function Subscription() {
         </Card>
       </div>
 
-      {/* Модальное окно оплаты TON */}
-      {paymentData && (
-        <TonPaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => {
-            setShowPaymentModal(false)
-            setPaymentData(null)
-          }}
-          transactionId={paymentData.transactionId}
-          walletAddress={paymentData.walletAddress}
-          amount={paymentData.amount}
-          comment={paymentData.comment}
-          method={paymentData.method}
-          expiresAt={paymentData.expiresAt}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
     </div>
   )
 }
