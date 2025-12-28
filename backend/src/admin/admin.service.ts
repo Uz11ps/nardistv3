@@ -2731,14 +2731,14 @@ export class AdminService implements OnModuleInit {
       take: 50,
     });
 
-    // Группировка по кошелькам (toAddress)
-    const byWallet = await this.paymentTransactionsRepository
+    // Группировка по методам оплаты (toAddress больше не используется для STARS/TRIBUTE)
+    const byMethod = await this.paymentTransactionsRepository
       .createQueryBuilder('tx')
-      .select('tx.toAddress', 'address')
+      .select('tx.method', 'method')
       .addSelect('COUNT(*)', 'count')
       .addSelect('SUM(amount)', 'totalAmount')
       .where('status = :status', { status: PaymentStatus.COMPLETED })
-      .groupBy('tx.toAddress')
+      .groupBy('tx.method')
       .getRawMany();
 
     return {
@@ -2757,10 +2757,10 @@ export class AdminService implements OnModuleInit {
         count: parseInt(t.count),
         totalAmount: parseFloat(t.totalAmount || 0),
       })),
-      byWallet: byWallet.map(w => ({
-        address: w.address,
-        count: parseInt(w.count),
-        totalAmount: parseFloat(w.totalAmount || 0),
+      byMethod: byMethod.map(m => ({
+        method: m.method,
+        count: parseInt(m.count),
+        totalAmount: parseFloat(m.totalAmount || 0),
       })),
       transactions: latestTransactions.map(tx => ({
         ...tx,

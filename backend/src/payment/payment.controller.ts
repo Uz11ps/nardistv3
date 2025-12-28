@@ -11,27 +11,6 @@ export class PaymentController {
     private readonly paymentTransactionService: PaymentTransactionService,
   ) {}
 
-  @Post('ton/create')
-  @UseGuards(JwtAuthGuard)
-  async createTonPayment(
-    @CurrentUser() user: any,
-    @Body() body: { amount: number; description: string; type: 'subscription' | 'nar_coin' | 'skin' },
-  ) {
-    const request: PaymentRequest = {
-      userId: user.id,
-      amount: body.amount,
-      description: body.description || `Оплата: ${body.type}`,
-      type: body.type,
-    };
-
-    return this.paymentService.createTonPayment(request);
-  }
-
-  @Get('ton/status/:paymentId')
-  @UseGuards(JwtAuthGuard)
-  async getPaymentStatus(@Param('paymentId') paymentId: string) {
-    return this.paymentService.checkPaymentStatus(paymentId);
-  }
 
   @Post('webhook')
   async handleWebhook(@Body() update: any) {
