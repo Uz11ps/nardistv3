@@ -572,9 +572,9 @@ export default function Admin() {
       // Нормализуем данные для поддержки старого формата
       if (prices.month_1 && typeof prices.month_1 === 'number') {
         setSubscriptionPrices({
-          month_1: { ton: prices.month_1, usdt: prices.month_1 },
-          month_3: { ton: prices.month_3, usdt: prices.month_3 },
-          month_12: { ton: prices.month_12, usdt: prices.month_12 },
+          month_1: { tribute: prices.month_1, stars: prices.month_1 },
+          month_3: { tribute: prices.month_3, stars: prices.month_3 },
+          month_12: { tribute: prices.month_12, stars: prices.month_12 },
         })
       } else {
         setSubscriptionPrices(prices)
