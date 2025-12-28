@@ -2553,9 +2553,17 @@ export class AdminService implements OnModuleInit {
       // Поддержка старого формата для обратной совместимости
       if (prices.month_1 && typeof prices.month_1 === 'number') {
         return {
-          month_1: { ton: prices.month_1, usdt: prices.month_1 },
-          month_3: { ton: prices.month_3, usdt: prices.month_3 },
-          month_12: { ton: prices.month_12, usdt: prices.month_12 },
+          month_1: { stars: prices.month_1 },
+          month_3: { stars: prices.month_3 },
+          month_12: { stars: prices.month_12 },
+        };
+      }
+      // Если есть старый формат с ton/usdt, конвертируем в stars
+      if (prices.month_1 && (prices.month_1.ton || prices.month_1.usdt)) {
+        return {
+          month_1: { stars: prices.month_1.stars || prices.month_1.ton || prices.month_1.usdt || 0 },
+          month_3: { stars: prices.month_3?.stars || prices.month_3?.ton || prices.month_3?.usdt || 0 },
+          month_12: { stars: prices.month_12?.stars || prices.month_12?.ton || prices.month_12?.usdt || 0 },
         };
       }
       return prices;
@@ -2565,9 +2573,9 @@ export class AdminService implements OnModuleInit {
   }
 
   async updateSubscriptionPrices(prices: { 
-    month_1?: { ton?: number; usdt?: number }; 
-    month_3?: { ton?: number; usdt?: number }; 
-    month_12?: { ton?: number; usdt?: number } 
+    month_1?: { tribute?: number; stars?: number }; 
+    month_3?: { tribute?: number; stars?: number }; 
+    month_12?: { tribute?: number; stars?: number } 
   }) {
     let setting = await this.systemSettingsRepository.findOne({ where: { key: 'subscription_prices' } });
     const currentPrices = setting ? await this.getSubscriptionPrices() : null;
@@ -2578,9 +2586,9 @@ export class AdminService implements OnModuleInit {
       month_3: { ...currentPrices.month_3, ...(prices.month_3 || {}) },
       month_12: { ...currentPrices.month_12, ...(prices.month_12 || {}) },
     } : {
-      month_1: prices.month_1 || { ton: 0, usdt: 0 },
-      month_3: prices.month_3 || { ton: 0, usdt: 0 },
-      month_12: prices.month_12 || { ton: 0, usdt: 0 },
+      month_1: prices.month_1 || { tribute: 0, stars: 0 },
+      month_3: prices.month_3 || { tribute: 0, stars: 0 },
+      month_12: prices.month_12 || { tribute: 0, stars: 0 },
     };
     
     if (!setting) {

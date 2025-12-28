@@ -46,17 +46,22 @@ export class SubscriptionController {
       return [];
     }
     
-    // Для TRIBUTE и STARS используем TON цены
+    // Определяем метод оплаты
     const methodLower = method?.toLowerCase() || 'tribute';
-    const isTributeOrStars = methodLower === 'tribute' || methodLower === 'stars';
-    const currency = isTributeOrStars ? 'STARS' : (methodLower === 'usdt' ? 'USDT' : 'TON');
+    const isStars = methodLower === 'stars';
+    const isTribute = methodLower === 'tribute';
+    const currency = isStars ? 'STARS' : 'TRIBUTE';
     
-    const getPrice = (planPrices: { ton: number; usdt: number }) => {
-      // Для TRIBUTE и STARS используем TON цены
-      if (isTributeOrStars) {
-        return planPrices.ton;
+    const getPrice = (planPrices: { tribute?: number; stars?: number }) => {
+      // Для STARS используем цену STARS из админки
+      if (isStars) {
+        return planPrices.stars || 0;
       }
-      return methodLower === 'usdt' ? planPrices.usdt : planPrices.ton;
+      // Для TRIBUTE используем цену TRIBUTE из админки
+      if (isTribute) {
+        return planPrices.tribute || 0;
+      }
+      return 0;
     };
     
     return [
@@ -64,8 +69,8 @@ export class SubscriptionController {
         id: 'month_1', 
         name: '1 месяц', 
         price: Number(getPrice(prices.month_1)), 
-        priceTon: Number(prices.month_1.ton),
-        priceUsdt: Number(prices.month_1.usdt),
+        priceTribute: Number(prices.month_1?.tribute || 0),
+        priceStars: Number(prices.month_1?.stars || 0),
         currency, 
         badge: 'Попробовать' 
       },
@@ -73,8 +78,8 @@ export class SubscriptionController {
         id: 'month_3', 
         name: '3 месяца', 
         price: Number(getPrice(prices.month_3)), 
-        priceTon: Number(prices.month_3.ton),
-        priceUsdt: Number(prices.month_3.usdt),
+        priceTribute: Number(prices.month_3?.tribute || 0),
+        priceStars: Number(prices.month_3?.stars || 0),
         currency, 
         badge: 'Оптимально', 
         popular: true 
@@ -83,8 +88,8 @@ export class SubscriptionController {
         id: 'month_12', 
         name: '1 год', 
         price: Number(getPrice(prices.month_12)), 
-        priceTon: Number(prices.month_12.ton),
-        priceUsdt: Number(prices.month_12.usdt),
+        priceTribute: Number(prices.month_12?.tribute || 0),
+        priceStars: Number(prices.month_12?.stars || 0),
         currency, 
         badge: 'Выгоднее' 
       },
@@ -164,7 +169,11 @@ export class SubscriptionController {
           throw new BadRequestException(`Цена для плана ${planKey} не установлена. Обратитесь к администратору.`);
         }
         
-        const amount = Number(planPrices.ton);
+        // Для STARS используем цену STARS из админки
+        // Для TRIBUTE используем цену TRIBUTE из админки
+        const amount = method === PaymentMethod.TELEGRAM_STARS
+          ? Number(planPrices.stars || 0)
+          : Number(planPrices.tribute || 0);
         const planName = body.plan === SubscriptionPlan.MONTH_1 ? '1 месяц' : body.plan === SubscriptionPlan.MONTH_3 ? '3 месяца' : '1 год';
         
         // Для STARS используем прямой метод выплаты боту, для TRIBUTE - обычный метод

@@ -146,9 +146,9 @@ export default function Admin() {
   const [selectedTournament, setSelectedTournament] = useState<any>(null)
   const [editingUser, setEditingUser] = useState<any>(null)
   const [subscriptionPrices, setSubscriptionPrices] = useState<{ 
-    month_1?: { ton?: number; usdt?: number }; 
-    month_3?: { ton?: number; usdt?: number }; 
-    month_12?: { ton?: number; usdt?: number } 
+    month_1?: { tribute?: number; stars?: number }; 
+    month_3?: { tribute?: number; stars?: number }; 
+    month_12?: { tribute?: number; stars?: number } 
   } | null>(null)
   const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; priceTon: number; priceUsdt: number }>>([])
   const [editingSetting, setEditingSetting] = useState<{ key: string; value: any } | null>(null)
@@ -5127,27 +5127,27 @@ export default function Admin() {
               <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
                 <label style={{ display: 'block', marginBottom: '12px', color: '#fff', fontWeight: 'bold' }}>1 месяц</label>
                 <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TON</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TRIBUTE</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={subscriptionPrices?.month_1?.ton || ''}
+                    value={subscriptionPrices?.month_1?.tribute || ''}
                     onChange={(e) => setSubscriptionPrices({ 
                       ...(subscriptionPrices || {}), 
-                      month_1: { ...(subscriptionPrices?.month_1 || {}), ton: parseFloat(e.target.value) || 0 } 
+                      month_1: { ...(subscriptionPrices?.month_1 || {}), tribute: parseFloat(e.target.value) || 0 } 
                     })}
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена USDT</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена STARS ⭐</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={subscriptionPrices?.month_1?.usdt || ''}
+                    value={subscriptionPrices?.month_1?.stars || ''}
                     onChange={(e) => setSubscriptionPrices({ 
                       ...(subscriptionPrices || {}), 
-                      month_1: { ...(subscriptionPrices?.month_1 || {}), usdt: parseFloat(e.target.value) || 0 } 
+                      month_1: { ...(subscriptionPrices?.month_1 || {}), stars: parseFloat(e.target.value) || 0 } 
                     })}
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
@@ -5157,27 +5157,27 @@ export default function Admin() {
               <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
                 <label style={{ display: 'block', marginBottom: '12px', color: '#fff', fontWeight: 'bold' }}>3 месяца</label>
                 <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TON</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TRIBUTE</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={subscriptionPrices?.month_3?.ton || ''}
+                    value={subscriptionPrices?.month_3?.tribute || ''}
                     onChange={(e) => setSubscriptionPrices({ 
                       ...(subscriptionPrices || {}), 
-                      month_3: { ...(subscriptionPrices?.month_3 || {}), ton: parseFloat(e.target.value) || 0 } 
+                      month_3: { ...(subscriptionPrices?.month_3 || {}), tribute: parseFloat(e.target.value) || 0 } 
                     })}
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена USDT</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена STARS ⭐</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={subscriptionPrices?.month_3?.usdt || ''}
+                    value={subscriptionPrices?.month_3?.stars || ''}
                     onChange={(e) => setSubscriptionPrices({ 
                       ...(subscriptionPrices || {}), 
-                      month_3: { ...(subscriptionPrices?.month_3 || {}), usdt: parseFloat(e.target.value) || 0 } 
+                      month_3: { ...(subscriptionPrices?.month_3 || {}), stars: parseFloat(e.target.value) || 0 } 
                     })}
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
@@ -5187,27 +5187,27 @@ export default function Admin() {
               <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
                 <label style={{ display: 'block', marginBottom: '12px', color: '#fff', fontWeight: 'bold' }}>12 месяцев</label>
                 <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TON</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TRIBUTE</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={subscriptionPrices?.month_12?.ton || ''}
+                    value={subscriptionPrices?.month_12?.tribute || ''}
                     onChange={(e) => setSubscriptionPrices({ 
                       ...(subscriptionPrices || {}), 
-                      month_12: { ...(subscriptionPrices?.month_12 || {}), ton: parseFloat(e.target.value) || 0 } 
+                      month_12: { ...(subscriptionPrices?.month_12 || {}), tribute: parseFloat(e.target.value) || 0 } 
                     })}
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена USDT</label>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена STARS ⭐</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={subscriptionPrices?.month_12?.usdt || ''}
+                    value={subscriptionPrices?.month_12?.stars || ''}
                     onChange={(e) => setSubscriptionPrices({ 
                       ...(subscriptionPrices || {}), 
-                      month_12: { ...(subscriptionPrices?.month_12 || {}), usdt: parseFloat(e.target.value) || 0 } 
+                      month_12: { ...(subscriptionPrices?.month_12 || {}), stars: parseFloat(e.target.value) || 0 } 
                     })}
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
