@@ -1,7 +1,6 @@
 import { Controller, Get, Post, Body, UseGuards, Param, NotFoundException, BadRequestException, Query } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { PaymentTransactionService } from '../payment/payment-transaction.service';
-import { WalletService } from '../payment/wallet.service';
 import { PaymentService } from '../payment/payment.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -15,7 +14,6 @@ export class SubscriptionController {
   constructor(
     private readonly subscriptionService: SubscriptionService,
     private readonly paymentTransactionService: PaymentTransactionService,
-    private readonly walletService: WalletService,
     private readonly paymentService: PaymentService,
     @Inject(forwardRef(() => AdminService))
     private readonly adminService: AdminService,
@@ -134,7 +132,7 @@ export class SubscriptionController {
   }
 
   /**
-   * Создать транзакцию для оплаты подписки через TON/USDT
+   * Создать транзакцию для оплаты подписки через STARS/TRIBUTE
    */
   @Post('payment/create')
   @UseGuards(JwtAuthGuard)
@@ -229,22 +227,15 @@ export class SubscriptionController {
         method,
       );
 
-      // Получаем или создаем кошелек пользователя
-      const wallet = await this.walletService.getOrCreateWallet(user.id);
-
       return {
         transactionId: transaction.id,
-        walletAddress: wallet.address,
         amount: transaction.amount,
         comment: transaction.comment,
         method: String(transaction.method).toUpperCase(),
         status: transaction.status,
         expiresAt: transaction.expiresAt,
-        // Инструкции для пользователя
-        instructions: {
-          ton: `Отправьте ${transaction.amount} TON на адрес ${wallet.address} с комментарием: ${transaction.comment}`,
-          usdt: `Отправьте ${transaction.amount} USDT на адрес ${wallet.address} с комментарием: ${transaction.comment}`,
-        },
+        // Инструкции для пользователя (только для Stars/Tribute)
+        instructions: {},
       };
     } catch (error: any) {
       // Если это уже BadRequestException, просто пробрасываем
@@ -301,18 +292,6 @@ export class SubscriptionController {
     return transaction;
   }
 
-  /**
-   * Получить адрес кошелька пользователя
-   */
-  @Get('wallet')
-  @UseGuards(JwtAuthGuard)
-  async getWallet(@CurrentUser() user: any) {
-    const wallet = await this.walletService.getOrCreateWallet(user.id);
-    return {
-      address: wallet.address,
-      balance: await this.walletService.getWalletBalance(user.id),
-    };
-  }
 
   @Get('city-autobuild/status')
   @UseGuards(JwtAuthGuard)
@@ -329,9 +308,9 @@ export class SubscriptionController {
   }
 
   /**
-   * Создать транзакцию для покупки NAR-coin через TON/USDT
+   * Создать транзакцию для покупки NAR-coin через STARS/TRIBUTE
    * body.amount - количество NAR из пакета
-   * body.price - цена в TON/USDT из пакета (устанавливается админом)
+   * body.price - цена в Stars из пакета (устанавливается админом)
    */
   @Post('nar-coin/payment/create')
   @UseGuards(JwtAuthGuard)
@@ -413,7 +392,7 @@ export class SubscriptionController {
       }
 
       // Используем цену из пакета (установленную админом)
-      // price - это цена в TON/USDT для данного пакета
+      // price - это цена в Stars для данного пакета
       const transaction = await this.paymentTransactionService.createNarCoinTransaction(
         user.id,
         price, // Используем цену из пакета (конвертированную в число)
@@ -421,12 +400,8 @@ export class SubscriptionController {
         narAmount, // Передаем количество NAR из пакета (конвертированное в число)
       );
 
-      // Получаем или создаем кошелек пользователя
-      const wallet = await this.walletService.getOrCreateWallet(user.id);
-
       return {
         transactionId: transaction.id,
-        walletAddress: wallet.address,
         amount: transaction.amount,
         comment: transaction.comment,
         method: String(transaction.method).toUpperCase(),

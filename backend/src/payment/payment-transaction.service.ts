@@ -3,8 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, In } from 'typeorm';
 import { PaymentTransaction, PaymentStatus, PaymentMethod, PaymentType } from './payment-transaction.entity';
 import { SubscriptionPlan } from '../subscription/subscription.entity';
-import { TonService } from './ton.service';
-import { WalletService } from './wallet.service';
 import { Inject, forwardRef } from '@nestjs/common';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { UsersService } from '../users/users.service';
@@ -21,8 +19,6 @@ export class PaymentTransactionService {
   constructor(
     @InjectRepository(PaymentTransaction)
     private transactionRepository: Repository<PaymentTransaction>,
-    private tonService: TonService,
-    private walletService: WalletService,
     @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
     private usersService: UsersService,
@@ -32,13 +28,6 @@ export class PaymentTransactionService {
     private adminService: AdminService,
   ) {}
 
-  /**
-   * Получить курс TON к NAR из настроек
-   */
-  private async getTonRate(): Promise<number> {
-    const settings = await this.adminService.getSystemSettings();
-    return Number(settings.ton_exchange_rate) || 1000;
-  }
 
   /**
    * Получить цену подписки из настроек в зависимости от метода оплаты
@@ -57,17 +46,10 @@ export class PaymentTransactionService {
       throw new BadRequestException(`Цена для плана ${planKey} не установлена. Обратитесь к администратору.`);
     }
     
-    if (method === PaymentMethod.USDT) {
-      const price = Number(planPrices.usdt);
-      if (!price || price <= 0) {
-        throw new BadRequestException(`Цена USDT для плана ${planKey} не установлена. Обратитесь к администратору.`);
-      }
-      return price;
-    }
-    
-    const price = Number(planPrices.ton);
+    // Для STARS используем цену STARS из админки
+    const price = Number(planPrices.stars);
     if (!price || price <= 0) {
-      throw new BadRequestException(`Цена TON для плана ${planKey} не установлена. Обратитесь к администратору.`);
+      throw new BadRequestException(`Цена STARS для плана ${planKey} не установлена. Обратитесь к администратору.`);
     }
     return price;
   }
@@ -78,17 +60,14 @@ export class PaymentTransactionService {
   async createSubscriptionTransaction(
     userId: string,
     plan: SubscriptionPlan,
-    method: PaymentMethod = PaymentMethod.TON,
+    method: PaymentMethod = PaymentMethod.TELEGRAM_STARS,
   ): Promise<PaymentTransaction> {
-    // Получаем или создаем кошелек пользователя
-    const wallet = await this.walletService.getOrCreateWallet(userId);
-    
     // Определяем сумму платежа из настроек в зависимости от метода оплаты
     const amount = await this.getSubscriptionPrice(plan, method);
     
     // Генерируем комментарий для идентификации платежа (необязательный)
     const transactionId = `sub_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const comment = this.tonService.generatePaymentComment(userId, transactionId);
+    const comment = `${userId}_${transactionId}`;
 
     // Создаем транзакцию с временем истечения (15 минут)
     const expiresAt = new Date();
@@ -96,14 +75,12 @@ export class PaymentTransactionService {
 
     const transaction = this.transactionRepository.create({
       userId,
-      walletId: wallet.id,
       type: PaymentType.SUBSCRIPTION,
       method,
       status: PaymentStatus.PENDING,
       amount,
       subscriptionPlan: plan,
-      toAddress: wallet.address,
-      comment: comment, // Комментарий необязательный, но генерируем для удобства идентификации
+      comment: comment,
       expiresAt,
       metadata: {
         plan,
@@ -113,7 +90,7 @@ export class PaymentTransactionService {
     });
 
     const savedTransaction = await this.transactionRepository.save(transaction);
-    this.logger.log(`✅ Создана транзакция для подписки: userId=${userId}, plan=${plan}, amount=${amount} TON`);
+    this.logger.log(`✅ Создана транзакция для подписки: userId=${userId}, plan=${plan}, amount=${amount}`);
 
     return savedTransaction;
   }
@@ -121,22 +98,19 @@ export class PaymentTransactionService {
   /**
    * Создать транзакцию для покупки NAR-coin
    * @param userId ID пользователя
-   * @param amount Цена в TON/USDT из пакета (установлена админом)
+   * @param amount Цена в Stars из пакета (установлена админом)
    * @param method Метод оплаты
    * @param narAmount Количество NAR из пакета (установлено админом)
    */
   async createNarCoinTransaction(
     userId: string,
-    amount: number, // Цена в TON/USDT из пакета
-    method: PaymentMethod = PaymentMethod.TON,
+    amount: number, // Цена в Stars из пакета
+    method: PaymentMethod = PaymentMethod.TELEGRAM_STARS,
     narAmount?: number, // Количество NAR из пакета
   ): Promise<PaymentTransaction> {
-    // Получаем или создаем кошелек пользователя
-    const wallet = await this.walletService.getOrCreateWallet(userId);
-    
     // Генерируем комментарий для идентификации платежа (необязательный)
     const transactionId = `nar_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const comment = this.tonService.generatePaymentComment(userId, transactionId);
+    const comment = `${userId}_${transactionId}`;
 
     // Создаем транзакцию с временем истечения (15 минут)
     const expiresAt = new Date();
@@ -144,12 +118,10 @@ export class PaymentTransactionService {
 
     const transaction = this.transactionRepository.create({
       userId,
-      walletId: wallet.id,
       type: PaymentType.NAR_COIN,
       method,
       status: PaymentStatus.PENDING,
       amount, // Цена из пакета
-      toAddress: wallet.address,
       comment: comment,
       expiresAt,
       metadata: {
@@ -160,7 +132,7 @@ export class PaymentTransactionService {
     });
 
     const savedTransaction = await this.transactionRepository.save(transaction);
-    this.logger.log(`✅ Создана транзакция для покупки NAR-coin: userId=${userId}, amount=${amount} TON, narAmount=${narAmount || 0} NAR`);
+    this.logger.log(`✅ Создана транзакция для покупки NAR-coin: userId=${userId}, amount=${amount} Stars, narAmount=${narAmount || 0} NAR`);
 
     return savedTransaction;
   }
@@ -171,7 +143,7 @@ export class PaymentTransactionService {
   async getTransaction(transactionId: string): Promise<PaymentTransaction> {
     const transaction = await this.transactionRepository.findOne({
       where: { id: transactionId },
-      relations: ['wallet', 'subscription'],
+      relations: ['subscription'],
     });
 
     if (!transaction) {
@@ -243,47 +215,21 @@ export class PaymentTransactionService {
     }
 
     try {
-      // Проверяем транзакцию в блокчейне
-      // Передаем ожидаемую сумму и комментарий для более надежной проверки
-      const txInfo = await this.tonService.checkTransaction(
-        transaction.txHash,
-        transaction.toAddress,
-        Number(transaction.amount),
-        transaction.comment || undefined,
-      );
-
+      // Для Stars/Tribute платежей проверка транзакций не требуется
+      // Платежи обрабатываются через webhook от Telegram
       transaction.checkAttempts += 1;
-      this.logger.log(`🔍 Проверка транзакции ${transactionId}: attempts=${transaction.checkAttempts}, found=${txInfo.found}`);
-
-      if (txInfo.found) {
-        // Проверяем сумму (с небольшой погрешностью)
-        const amountDiff = Math.abs(txInfo.amount - Number(transaction.amount));
-        if (amountDiff > 0.01) {
-          this.logger.warn(`⚠️ Сумма транзакции не совпадает: ожидалось ${transaction.amount}, получено ${txInfo.amount}`);
-          // Все равно принимаем, но логируем предупреждение
-        }
-        
-        // Транзакция найдена
-        transaction.status = PaymentStatus.COMPLETED;
-        transaction.lt = txInfo.lt;
-        transaction.fromAddress = txInfo.fromAddress;
-        transaction.confirmedAt = new Date();
-        transaction.amount = txInfo.amount;
-
-        // Обрабатываем платеж
-        await this.processCompletedTransaction(transaction);
-
-        this.logger.log(`✅ Транзакция ${transactionId} подтверждена и обработана`);
-      } else {
-        // Транзакция еще не найдена - проверяем время истечения еще раз
-        if (transaction.expiresAt && now > transaction.expiresAt) {
-          transaction.status = PaymentStatus.FAILED;
-          transaction.lastError = 'Время на оплату истекло (15 минут)';
-          this.logger.warn(`⏰ Транзакция ${transactionId} истекла по времени`);
-        } else {
-          transaction.status = PaymentStatus.PROCESSING;
-          this.logger.log(`⏳ Транзакция ${transactionId} еще не найдена в блокчейне, статус: PROCESSING`);
-        }
+      this.logger.log(`🔍 Проверка транзакции ${transactionId}: attempts=${transaction.checkAttempts}`);
+      
+      // Для Stars/Tribute транзакции обрабатываются через webhook
+      // Если транзакция еще не обработана, проверяем время истечения
+      const now = new Date();
+      if (transaction.expiresAt && now > transaction.expiresAt) {
+        transaction.status = PaymentStatus.FAILED;
+        transaction.lastError = 'Время на оплату истекло (15 минут)';
+        this.logger.warn(`⏰ Транзакция ${transactionId} истекла по времени`);
+      } else if (transaction.status === PaymentStatus.PENDING) {
+        // Оставляем в статусе PENDING, webhook обработает
+        this.logger.log(`⏳ Транзакция ${transactionId} ожидает обработки через webhook`);
       }
 
       return await this.transactionRepository.save(transaction);
@@ -318,7 +264,6 @@ export class PaymentTransactionService {
    * Обработать завершенную транзакцию
    */
   async processCompletedTransaction(transaction: PaymentTransaction): Promise<void> {
-    const tonRate = await this.getTonRate();
 
     if (transaction.type === PaymentType.SUBSCRIPTION && transaction.subscriptionPlan) {
       // Создаем подписку
@@ -331,13 +276,7 @@ export class PaymentTransactionService {
       transaction.subscriptionId = subscription.id;
       await this.transactionRepository.save(transaction);
 
-      // Начисляем реферальный бонус
-      const narAmount = Math.floor(transaction.amount * tonRate);
-      await this.referralsService.processReferralBonus(
-        transaction.userId,
-        narAmount,
-        `Подписка ${transaction.subscriptionPlan}`,
-      );
+      // Реферальный бонус для подписок не начисляется (или можно настроить в админке)
 
       this.logger.log(`✅ Подписка активирована для пользователя ${transaction.userId}`);
     } else if (transaction.type === PaymentType.NAR_COIN) {

@@ -21,8 +21,6 @@ export enum PaymentStatus {
 }
 
 export enum PaymentMethod {
-  TON = 'ton',
-  USDT = 'usdt',
   TELEGRAM_STARS = 'telegram_stars',
   TRIBUTE = 'tribute', // Платежи через Tribute/Telegram WebApp
 }
@@ -86,16 +84,10 @@ export class PaymentTransaction {
   status: PaymentStatus;
 
   /**
-   * Сумма платежа в TON (или эквивалент для USDT)
+   * Сумма платежа в Stars
    */
   @Column({ type: 'decimal', precision: 18, scale: 9 })
   amount: number;
-
-  /**
-   * Сумма в USDT (если метод USDT)
-   */
-  @Column({ type: 'decimal', precision: 18, scale: 9, nullable: true })
-  usdtAmount: number;
 
   /**
    * План подписки (если type = SUBSCRIPTION)

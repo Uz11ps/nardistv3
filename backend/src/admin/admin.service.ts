@@ -38,9 +38,7 @@ import { CourseTask, TaskType } from '../academy/course-task.entity';
 import { CourseTaskProgress } from '../academy/course-task-progress.entity';
 import { NotificationTemplate, NotificationTemplateType } from './notification-template.entity';
 import { SystemSettings } from './system-settings.entity';
-import { WalletService } from '../payment/wallet.service';
 import { PaymentTransactionService } from '../payment/payment-transaction.service';
-import { TonService } from '../payment/ton.service';
 import { UserWallet } from '../payment/user-wallet.entity';
 import { PaymentTransaction, PaymentStatus } from '../payment/payment-transaction.entity';
 import { HistoryService } from '../history/history.service';
@@ -125,12 +123,8 @@ export class AdminService implements OnModuleInit {
     private configService: ConfigService,
     @Inject(forwardRef(() => NotificationsService))
     private notificationsService: NotificationsService,
-    @Inject(forwardRef(() => WalletService))
-    private walletService: WalletService,
     @Inject(forwardRef(() => PaymentTransactionService))
     private paymentTransactionService: PaymentTransactionService,
-    @Inject(forwardRef(() => TonService))
-    private tonService: TonService,
     @Inject(forwardRef(() => HistoryService))
     private historyService: HistoryService,
     private xpCalculator: XpCalculatorService,
@@ -138,10 +132,6 @@ export class AdminService implements OnModuleInit {
   ) {}
 
   async getStats() {
-    // Получаем курс TON из настроек или используем дефолтный 1000
-    const settings = await this.getSystemSettings();
-    const tonRate = Number(settings.ton_exchange_rate) || 1000;
-
     const totalUsers = await this.usersRepository.count({ where: { isGuest: false } });
     const activeUsers = await this.usersRepository
       .createQueryBuilder('user')
@@ -1744,58 +1734,6 @@ export class AdminService implements OnModuleInit {
    * Получить все кошельки пользователей с балансами
    * Возвращает ВСЕ кошельки, которые когда-либо были созданы игроками
    */
-  async getAllWallets(): Promise<any[]> {
-    const wallets = await this.walletService.getAllWallets();
-    
-    // Получаем балансы для всех кошельков параллельно
-    const walletsWithBalance = await Promise.all(
-      wallets.map(async (w) => {
-        try {
-          const balance = await this.tonService.getWalletBalance(w.address);
-          return {
-            id: w.id,
-            userId: w.userId,
-            username: w.user?.username || 'Unknown',
-            address: w.address,
-            walletType: w.walletType,
-            isActive: w.isActive,
-            createdAt: w.createdAt,
-            balance: balance,
-          };
-        } catch (error: any) {
-          this.logger.warn(`⚠️ Не удалось получить баланс для кошелька ${w.address}: ${error.message}`);
-          return {
-            id: w.id,
-            userId: w.userId,
-            username: w.user?.username || 'Unknown',
-            address: w.address,
-            walletType: w.walletType,
-            isActive: w.isActive,
-            createdAt: w.createdAt,
-            balance: 0,
-          };
-        }
-      })
-    );
-    
-    return walletsWithBalance;
-  }
-
-  /**
-   * Получить расшифрованный приватный ключ кошелька (только для админа)
-   */
-  async getWalletPrivateKey(walletId: string): Promise<{ privateKey: string; address: string }> {
-    const wallet = await this.walletsRepository.findOne({ where: { id: walletId } });
-    if (!wallet) {
-      throw new NotFoundException('Кошелек не найден');
-    }
-
-    const privateKey = await this.walletService.getDecryptedPrivateKey(walletId);
-    return {
-      privateKey,
-      address: wallet.address,
-    };
-  }
 
   /**
    * Получить транзакции пользователя
@@ -2558,12 +2496,12 @@ export class AdminService implements OnModuleInit {
           month_12: { stars: prices.month_12, tributeLink: '' },
         };
       }
-      // Если есть старый формат с ton/usdt, конвертируем в stars
-      if (prices.month_1 && (prices.month_1.ton || prices.month_1.usdt)) {
+      // Если есть старый формат, конвертируем в stars
+      if (prices.month_1 && ((prices.month_1 as any).ton || (prices.month_1 as any).usdt)) {
         return {
-          month_1: { stars: prices.month_1.stars || prices.month_1.ton || prices.month_1.usdt || 0, tributeLink: prices.month_1.tributeLink || '' },
-          month_3: { stars: prices.month_3?.stars || prices.month_3?.ton || prices.month_3?.usdt || 0, tributeLink: prices.month_3?.tributeLink || '' },
-          month_12: { stars: prices.month_12?.stars || prices.month_12?.ton || prices.month_12?.usdt || 0, tributeLink: prices.month_12?.tributeLink || '' },
+          month_1: { stars: prices.month_1.stars || (prices.month_1 as any).ton || (prices.month_1 as any).usdt || 0, tributeLink: prices.month_1.tributeLink || '' },
+          month_3: { stars: prices.month_3?.stars || (prices.month_3 as any)?.ton || (prices.month_3 as any)?.usdt || 0, tributeLink: prices.month_3?.tributeLink || '' },
+          month_12: { stars: prices.month_12?.stars || (prices.month_12 as any)?.ton || (prices.month_12 as any)?.usdt || 0, tributeLink: prices.month_12?.tributeLink || '' },
         };
       }
       // Убеждаемся что есть tributeLink
@@ -2615,10 +2553,10 @@ export class AdminService implements OnModuleInit {
       const packages = JSON.parse(setting.value);
       console.log('📥 Загрузка пакетов из БД (сырые данные):', JSON.stringify(packages, null, 2));
       
-      // Нормализуем данные - убираем старые поля TON/USDT, оставляем только STARS и TRIBUTE
+      // Нормализуем данные - оставляем только STARS и TRIBUTE
       const normalized = packages.map((pkg: any) => {
         // Поддержка старого формата для обратной совместимости
-        const priceStars = pkg.priceStars ?? (pkg.price || (pkg as any).priceTon || (pkg as any).priceUsdt || 0);
+        const priceStars = pkg.priceStars ?? (pkg.price || 0);
         const result = {
           amount: pkg.amount || 0,
           priceStars: priceStars,

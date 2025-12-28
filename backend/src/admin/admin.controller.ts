@@ -711,23 +711,6 @@ export class AdminController {
     return this.adminService.updateUserReferralSettings(userId, body);
   }
 
-  /**
-   * Получить все кошельки пользователей
-   */
-  @Get('wallets')
-  @UseGuards(AdminAuthGuard)
-  async getAllWallets(@CurrentUser() user: any) {
-    return this.adminService.getAllWallets();
-  }
-
-  /**
-   * Получить расшифрованный приватный ключ кошелька (только для админа)
-   */
-  @Get('wallets/:walletId/private-key')
-  @UseGuards(AdminAuthGuard)
-  async getWalletPrivateKey(@CurrentUser() user: any, @Param('walletId') walletId: string) {
-    return this.adminService.getWalletPrivateKey(walletId);
-  }
 
   /**
    * Получить транзакции пользователя

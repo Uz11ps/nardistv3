@@ -15,7 +15,6 @@ export class WalletService {
   constructor(
     @InjectRepository(UserWallet)
     private walletRepository: Repository<UserWallet>,
-    private tonService: TonService,
     private usersService: UsersService,
   ) {}
 
@@ -70,22 +69,9 @@ export class WalletService {
       return existingWallet;
     }
 
-    // Генерируем новый кошелек только если его еще нет
-    const walletData = await this.tonService.generateWallet();
-
-    // Шифруем приватный ключ
-    const { encrypted, iv } = this.tonService.encryptPrivateKey(walletData.privateKey);
-
-    // Создаем запись в БД
-    const wallet = this.walletRepository.create({
-      userId,
-      address: walletData.address,
-      encryptedPrivateKey: encrypted,
-      iv,
-      publicKey: walletData.publicKey,
-      walletType: walletData.walletType,
-      isActive: true,
-    });
+    // Кошельки TON больше не используются для платежей
+    // Создаем заглушку (если нужна для обратной совместимости)
+    throw new BadRequestException('Создание кошельков TON отключено. Используйте STARS или TRIBUTE для платежей.');
 
     const savedWallet = await this.walletRepository.save(wallet);
     this.logger.log(`✅ Создан кошелек для пользователя ${userId}: ${walletData.address}`);
@@ -114,7 +100,7 @@ export class WalletService {
       throw new NotFoundException('Кошелек не найден');
     }
 
-    return this.tonService.decryptPrivateKey(wallet.encryptedPrivateKey, wallet.iv);
+    throw new BadRequestException('Расшифровка приватных ключей TON отключена.');
   }
 
   /**
@@ -126,7 +112,8 @@ export class WalletService {
       return 0;
     }
 
-    return this.tonService.getWalletBalance(wallet.address);
+    // Баланс TON кошельков больше не используется
+    return 0;
   }
 
   /**

@@ -1,5 +1,5 @@
 import { Controller, Post, Body, UseGuards, Get, Param, BadRequestException } from '@nestjs/common';
-import { PaymentService, TonPaymentRequest } from './payment.service';
+import { PaymentService, PaymentRequest } from './payment.service';
 import { PaymentTransactionService } from './payment-transaction.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -17,7 +17,7 @@ export class PaymentController {
     @CurrentUser() user: any,
     @Body() body: { amount: number; description: string; type: 'subscription' | 'nar_coin' | 'skin' },
   ) {
-    const request: TonPaymentRequest = {
+    const request: PaymentRequest = {
       userId: user.id,
       amount: body.amount,
       description: body.description || `Оплата: ${body.type}`,

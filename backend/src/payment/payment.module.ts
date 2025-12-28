@@ -4,8 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
-import { TonService } from './ton.service';
-import { WalletService } from './wallet.service';
 import { PaymentTransactionService } from './payment-transaction.service';
 import { PaymentTransactionCheckerService } from './payment-transaction-checker.service';
 import { UserWallet } from './user-wallet.entity';
@@ -26,8 +24,8 @@ import { AdminModule } from '../admin/admin.module';
     forwardRef(() => AdminModule),
   ],
   controllers: [PaymentController],
-  providers: [PaymentService, TonService, WalletService, PaymentTransactionService, PaymentTransactionCheckerService],
-  exports: [PaymentService, TonService, WalletService, PaymentTransactionService],
+  providers: [PaymentService, PaymentTransactionService, PaymentTransactionCheckerService],
+  exports: [PaymentService, PaymentTransactionService],
 })
 export class PaymentModule {}
 

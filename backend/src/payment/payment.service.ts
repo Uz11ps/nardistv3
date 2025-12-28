@@ -8,15 +8,15 @@ import { ReferralsService } from '../referrals/referrals.service';
 import { PaymentTransactionService } from './payment-transaction.service';
 import { PaymentMethod, PaymentStatus } from './payment-transaction.entity';
 
-export interface TonPaymentRequest {
+export interface PaymentRequest {
   userId: string;
-  amount: number; // в TON
+  amount: number; // в Stars
   description: string;
   type?: 'subscription' | 'nar_coin' | 'skin';
   returnUrl?: string;
 }
 
-export interface TonPaymentResponse {
+export interface PaymentResponse {
   paymentId: string;
   paymentUrl: string;
   qrCode: string;
@@ -24,9 +24,7 @@ export interface TonPaymentResponse {
 
 @Injectable()
 export class PaymentService {
-  private readonly TON_API_URL = 'https://pay.tg';
   private readonly BOT_TOKEN: string;
-  private readonly TON_TO_NAR_RATE = 1000; // 1 TON = 1000 NAR
 
   constructor(
     private configService: ConfigService,
@@ -43,9 +41,9 @@ export class PaymentService {
   }
 
   /**
-   * Создать платеж через Telegram Stars (TON)
+   * Создать платеж через Telegram Stars
    */
-  async createTonPayment(request: TonPaymentRequest): Promise<TonPaymentResponse> {
+  async createTonPayment(request: PaymentRequest): Promise<PaymentResponse> {
     try {
       // Проверяем наличие токена бота
       if (!this.BOT_TOKEN || this.BOT_TOKEN.trim() === '') {
@@ -66,7 +64,7 @@ export class PaymentService {
           payload: JSON.stringify({
             userId: request.userId,
             amount: request.amount,
-            type: 'ton_payment',
+            type: 'payment',
           }),
           provider_token: '', // Для Stars не нужен
           currency: 'XTR', // Telegram Stars
@@ -151,7 +149,7 @@ export class PaymentService {
       }
 
       // Для всех остальных ошибок даем общее сообщение
-      console.error('Ошибка создания TON платежа:', error);
+      console.error('Ошибка создания платежа:', error);
       throw new Error(`Не удалось создать платеж. ${error.message || 'Неизвестная ошибка'}. Попробуйте позже или обратитесь в поддержку.`);
     }
   }
@@ -160,7 +158,7 @@ export class PaymentService {
    * Создать платеж через STARS (прямая выплата боту)
    * Возвращает данные инвойса для открытия через WebApp.openInvoice
    */
-  async createStarsPayment(request: TonPaymentRequest): Promise<{ invoice: any; invoiceId: string }> {
+  async createStarsPayment(request: PaymentRequest): Promise<{ invoice: any; invoiceId: string }> {
     try {
       if (!this.BOT_TOKEN || this.BOT_TOKEN.trim() === '') {
         throw new Error('Ошибка настройки: токен Telegram бота не настроен на сервере. Обратитесь в поддержку.');
@@ -364,7 +362,7 @@ export class PaymentService {
    * Создать платеж через Tribute
    * Возвращает ссылку на товар Tribute для открытия в браузере или Mini App
    */
-  async createTributePayment(request: TonPaymentRequest & { tributeLink: string }): Promise<{ tributeLink: string; invoiceId: string }> {
+  async createTributePayment(request: PaymentRequest & { tributeLink: string }): Promise<{ tributeLink: string; invoiceId: string }> {
     try {
       if (!request.tributeLink || request.tributeLink.trim() === '') {
         throw new Error('Ссылка на товар Tribute не настроена. Обратитесь к администратору.');
@@ -445,9 +443,8 @@ export class PaymentService {
         const method = payload.method || providerData.method || 'tribute';
         const amount = update.message.successful_payment.total_amount / 100; // Конвертируем из копеек (Stars)
         
-        // Конвертируем Stars в TON (1 Star = 1 TON примерно)
-        const tonAmount = amount;
-        const narAmount = tonAmount * this.TON_TO_NAR_RATE;
+        // Stars уже в правильном формате (amount в Stars)
+        const starsAmount = amount;
 
         // Если это платеж через Tribute или Stars, обновляем транзакцию
         if (method === 'tribute' || method === 'stars') {
@@ -469,7 +466,7 @@ export class PaymentService {
               t.method === expectedMethod &&
               ((type === 'subscription' && t.type === 'subscription') ||
                (type === 'nar_coin' && t.type === 'nar_coin')) &&
-              Math.abs(Number(t.amount) - tonAmount) < 0.1, // Погрешность 0.1 TON
+              Math.abs(Number(t.amount) - starsAmount) < 0.1, // Погрешность 0.1 Stars
           );
 
           if (transaction) {
@@ -483,39 +480,11 @@ export class PaymentService {
             };
             await this.paymentTransactionService.updateTransaction(transaction);
             
-            // Обрабатываем завершенную транзакцию
+            // Обрабатываем завершенную транзакцию (narAmount берется из metadata транзакции)
             await this.paymentTransactionService.processCompletedTransaction(transaction);
-            console.log(`✅ Tribute платеж обработан: transactionId=${transaction.id}, userId=${userId}`);
+            console.log(`✅ Платеж обработан: transactionId=${transaction.id}, userId=${userId}, method=${method}`);
             return;
           }
-        }
-
-        // Старая логика для обратной совместимости (если транзакция не найдена)
-        if (type === 'subscription') {
-          // Определяем план подписки по сумме
-          let plan: SubscriptionPlan;
-          if (tonAmount >= 22) {
-            plan = SubscriptionPlan.MONTH_12;
-          } else if (tonAmount >= 7) {
-            plan = SubscriptionPlan.MONTH_3;
-          } else {
-            plan = SubscriptionPlan.MONTH_1;
-          }
-          
-          await this.subscriptionService.createSubscription(userId, plan);
-          console.log(`Подписка активирована: userId=${userId}, plan=${plan}`);
-          
-          // Начисляем реферальный бонус (если есть реферер)
-          await this.referralsService.processReferralBonus(userId, narAmount, `Подписка ${plan}`);
-        } else {
-          // Начисляем NAR-coin
-          const user = await this.usersService.findOne(userId);
-          const currentBalance = Number(user.narCoin || 0);
-          await this.usersService.update(userId, { narCoin: currentBalance + narAmount });
-          console.log(`NAR-coin начислены: userId=${userId}, amount=${narAmount} NAR (${tonAmount} TON)`);
-          
-          // Начисляем реферальный бонус (если есть реферер)
-          await this.referralsService.processReferralBonus(userId, narAmount, 'Покупка NAR-coin');
         }
       } catch (error) {
         console.error(`Ошибка обработки платежа:`, error);
