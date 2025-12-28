@@ -145,7 +145,7 @@ export default function City() {
   const handleUpgradeBuilding = async (buildingId: string) => {
     try {
       setPurchasing(buildingId)
-      await apiClient.post(`/city/upgrade/${buildingId}`)
+      await apiClient.put(`/city/buildings/${buildingId}/upgrade`)
       
       const userRes = await apiClient.get('/users/me')
       updateUser(userRes.data)
