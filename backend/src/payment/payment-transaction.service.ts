@@ -360,13 +360,13 @@ export class PaymentTransactionService {
 
   /**
    * Проверить все pending и processing транзакции
-   * Вызывается периодически через cron
+   * Вызывается периодически через cron (настраивается в AdminService или AppService)
    */
   async checkPendingTransactions(): Promise<void> {
     this.logger.log('🔍 Начинаю проверку pending транзакций...');
     
     try {
-      // Находим все транзакции, которые нужно проверить
+      // Находим все транзакции, которые нужно проверить (PENDING и PROCESSING)
       const transactions = await this.transactionRepository.find({
         where: {
           status: In([PaymentStatus.PENDING, PaymentStatus.PROCESSING]),
@@ -375,45 +375,43 @@ export class PaymentTransactionService {
 
       this.logger.log(`📊 Найдено ${transactions.length} транзакций для проверки`);
 
-      let checked = 0;
-      let completed = 0;
-      let failed = 0;
+      let expired = 0;
 
       for (const transaction of transactions) {
         try {
-          // Пропускаем транзакции без хеша
-          if (!transaction.txHash) {
+          // Проверяем истечение времени (15 минут)
+          const now = new Date();
+          // Если есть expiresAt и время вышло
+          if (transaction.expiresAt && now > transaction.expiresAt) {
+            transaction.status = PaymentStatus.FAILED;
+            transaction.lastError = 'Время на оплату истекло (15 минут)';
+            await this.transactionRepository.save(transaction);
+            expired++;
+            this.logger.log(`⏳ Транзакция ${transaction.id} просрочена и переведена в FAILED`);
             continue;
           }
-
-          // Проверяем истечение времени
-          const now = new Date();
-          if (transaction.expiresAt && now > transaction.expiresAt) {
-            if (transaction.status !== PaymentStatus.FAILED) {
+          
+          // Для Stars/Tribute транзакций без expiresAt (старые) - устанавливаем failed если старше 15 мин
+          if (!transaction.expiresAt) {
+            const createdAt = new Date(transaction.createdAt);
+            const diffMs = now.getTime() - createdAt.getTime();
+            const diffMins = Math.round(diffMs / 60000);
+            
+            if (diffMins > 15) {
               transaction.status = PaymentStatus.FAILED;
               transaction.lastError = 'Время на оплату истекло (15 минут)';
               await this.transactionRepository.save(transaction);
-              failed++;
+              expired++;
+              this.logger.log(`⏳ Старая транзакция ${transaction.id} просрочена и переведена в FAILED`);
             }
-            continue;
           }
 
-          // Проверяем транзакцию в блокчейне
-          const updatedTransaction = await this.checkTransactionStatus(transaction.id);
-          
-          if (updatedTransaction.status === PaymentStatus.COMPLETED) {
-            completed++;
-          } else if (updatedTransaction.status === PaymentStatus.FAILED) {
-            failed++;
-          }
-          
-          checked++;
         } catch (error: any) {
           this.logger.error(`❌ Ошибка при проверке транзакции ${transaction.id}: ${error.message}`);
         }
       }
 
-      this.logger.log(`✅ Проверка завершена: проверено ${checked}, завершено ${completed}, провалено ${failed}`);
+      this.logger.log(`✅ Проверка завершена: просрочено ${expired}`);
     } catch (error: any) {
       this.logger.error(`❌ Ошибка при проверке pending транзакций: ${error.message}`);
     }

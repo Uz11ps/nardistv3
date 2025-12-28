@@ -6019,23 +6019,23 @@ export default function Admin() {
           <h2 style={{ marginBottom: '24px' }}>Статистика платежей</h2>
 
           <div className="stats-grid" style={{ marginBottom: '32px' }}>
-            <div className="stat-card">
-              <h3>Итоги (Completed)</h3>
-              <div className="stat-value">
-                {paymentStats.summary
-                  .filter((s: any) => s.status === 'completed')
-                  .reduce((acc: number, s: any) => acc + s.totalAmount, 0)
-                  .toFixed(2)} TON
+              <div className="stat-card">
+                <h3>Итоги (Completed)</h3>
+                <div className="stat-value">
+                  {paymentStats.summary
+                    .filter((s: any) => s.status === 'completed')
+                    .reduce((acc: number, s: any) => acc + s.totalAmount, 0)
+                    .toFixed(2)} STARS
+                </div>
+                <div className="stat-details">
+                  {paymentStats.summary.map((s: any) => (
+                    <div key={s.status} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{s.status.toUpperCase()}:</span>
+                      <span>{s.count} ({s.totalAmount.toFixed(2)} STARS)</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="stat-details">
-                {paymentStats.summary.map((s: any) => (
-                  <div key={s.status} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{s.status.toUpperCase()}:</span>
-                    <span>{s.count} ({s.totalAmount.toFixed(2)} TON)</span>
-                  </div>
-                ))}
-              </div>
-            </div>
 
             <div className="stat-card">
               <h3>По методам</h3>
@@ -6055,7 +6055,7 @@ export default function Admin() {
                 {paymentStats.byType.map((t: any) => (
                   <div key={t.type} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span style={{ fontWeight: 'bold' }}>{t.type === 'nar_coin' ? 'Покупка NAR' : 'Подписка'}:</span>
-                    <span>{t.count} транз. ({t.totalAmount.toFixed(2)} TON)</span>
+                    <span>{t.count} транз. ({t.totalAmount.toFixed(2)} STARS)</span>
                   </div>
                 ))}
               </div>
