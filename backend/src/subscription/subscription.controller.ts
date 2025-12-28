@@ -167,12 +167,20 @@ export class SubscriptionController {
         const amount = Number(planPrices.ton);
         const planName = body.plan === SubscriptionPlan.MONTH_1 ? '1 месяц' : body.plan === SubscriptionPlan.MONTH_3 ? '3 месяца' : '1 год';
         
-        const tributePayment = await this.paymentService.createTributePayment({
-          userId: user.id,
-          amount: amount,
-          description: `Премиум подписка ${planName}`,
-          type: 'subscription',
-        });
+        // Для STARS используем прямой метод выплаты боту, для TRIBUTE - обычный метод
+        const payment = method === PaymentMethod.TELEGRAM_STARS
+          ? await this.paymentService.createStarsPayment({
+              userId: user.id,
+              amount: amount,
+              description: `Премиум подписка ${planName}`,
+              type: 'subscription',
+            })
+          : await this.paymentService.createTributePayment({
+              userId: user.id,
+              amount: amount,
+              description: `Премиум подписка ${planName}`,
+              type: 'subscription',
+            });
 
         // Создаем транзакцию для отслеживания
         const transaction = await this.paymentTransactionService.createSubscriptionTransaction(
@@ -183,10 +191,10 @@ export class SubscriptionController {
 
         return {
           transactionId: transaction.id,
-          invoice: tributePayment.invoice,
-          invoiceId: tributePayment.invoiceId,
+          invoice: payment.invoice,
+          invoiceId: payment.invoiceId,
           amount: amount,
-          method: 'TRIBUTE',
+          method: method === PaymentMethod.TELEGRAM_STARS ? 'STARS' : 'TRIBUTE',
           status: transaction.status,
         };
       }
@@ -336,12 +344,20 @@ export class SubscriptionController {
 
       // Если метод оплаты Tribute или Stars, создаем платеж через Telegram WebApp API
       if (method === PaymentMethod.TRIBUTE || method === PaymentMethod.TELEGRAM_STARS) {
-        const tributePayment = await this.paymentService.createTributePayment({
-          userId: user.id,
-          amount: price,
-          description: `Покупка ${narAmount} NAR-coin`,
-          type: 'nar_coin',
-        });
+        // Для STARS используем прямой метод выплаты боту, для TRIBUTE - обычный метод
+        const payment = method === PaymentMethod.TELEGRAM_STARS
+          ? await this.paymentService.createStarsPayment({
+              userId: user.id,
+              amount: price,
+              description: `Покупка ${narAmount} NAR-coin`,
+              type: 'nar_coin',
+            })
+          : await this.paymentService.createTributePayment({
+              userId: user.id,
+              amount: price,
+              description: `Покупка ${narAmount} NAR-coin`,
+              type: 'nar_coin',
+            });
 
         // Создаем транзакцию для отслеживания
         const transaction = await this.paymentTransactionService.createNarCoinTransaction(
@@ -353,10 +369,10 @@ export class SubscriptionController {
 
         return {
           transactionId: transaction.id,
-          invoice: tributePayment.invoice,
-          invoiceId: tributePayment.invoiceId,
+          invoice: payment.invoice,
+          invoiceId: payment.invoiceId,
           amount: price,
-          method: 'TRIBUTE',
+          method: method === PaymentMethod.TELEGRAM_STARS ? 'STARS' : 'TRIBUTE',
           status: transaction.status,
           narAmount: narAmount,
         };
