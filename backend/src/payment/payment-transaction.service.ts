@@ -317,7 +317,7 @@ export class PaymentTransactionService {
   /**
    * Обработать завершенную транзакцию
    */
-  private async processCompletedTransaction(transaction: PaymentTransaction): Promise<void> {
+  async processCompletedTransaction(transaction: PaymentTransaction): Promise<void> {
     const tonRate = await this.getTonRate();
 
     if (transaction.type === PaymentType.SUBSCRIPTION && transaction.subscriptionPlan) {
