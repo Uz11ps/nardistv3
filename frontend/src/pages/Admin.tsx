@@ -1070,7 +1070,7 @@ export default function Admin() {
                     return true
                   }).map((user) => (
                     <tr key={user.id}>
-                      <td>{user.id.substring(0, 8)}...</td>
+                      <td>{user.id ? `${user.id.substring(0, 8)}...` : 'N/A'}</td>
                       <td>{user.nickname || user.username}</td>
                       <td>{user.level}</td>
                       <td>{Number(user.narCoin).toLocaleString()}</td>
@@ -1471,7 +1471,7 @@ export default function Admin() {
                     return true
                   }).map((game) => (
                     <tr key={game.id}>
-                      <td>{game.id.substring(0, 8)}...</td>
+                      <td>{game.id ? `${game.id.substring(0, 8)}...` : 'N/A'}</td>
                       <td>{game.mode === 'short' ? 'Короткие' : 'Длинные'}</td>
                       <td>
                         {game.status === 'finished' && <span className="badge finished">Завершена</span>}
@@ -6080,14 +6080,14 @@ export default function Admin() {
                   {paymentStats.transactions.map((tx: any) => (
                     <tr key={tx.id}>
                       <td>
-                        <div style={{ fontSize: '12px', color: '#aaa' }}>{tx.id.substring(0, 8)}...</div>
+                        <div style={{ fontSize: '12px', color: '#aaa' }}>{tx.id ? `${tx.id.substring(0, 8)}...` : 'N/A'}</div>
                         <div>{new Date(tx.createdAt).toLocaleString()}</div>
                       </td>
                       <td>
                         {tx.user ? (
                           <>
                             <div style={{ fontWeight: 'bold' }}>{tx.user.nickname || tx.user.username}</div>
-                            <div style={{ fontSize: '11px', color: '#aaa' }}>{tx.user.id.substring(0, 8)}...</div>
+                            <div style={{ fontSize: '11px', color: '#aaa' }}>{tx.user.id ? `${tx.user.id.substring(0, 8)}...` : 'N/A'}</div>
                           </>
                         ) : (
                           <span style={{ color: '#666' }}>Удален</span>
@@ -6114,8 +6114,8 @@ export default function Admin() {
                       </td>
                       <td>
                         <div style={{ fontSize: '11px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          <div><span style={{ color: '#aaa' }}>To:</span> {tx.toAddress.substring(0, 8)}...</div>
-                          {tx.txHash && <div><span style={{ color: '#aaa' }}>Hash:</span> {tx.txHash.substring(0, 8)}...</div>}
+                          <div><span style={{ color: '#aaa' }}>To:</span> {tx.toAddress ? `${tx.toAddress.substring(0, 8)}...` : 'N/A'}</div>
+                          {tx.txHash && <div><span style={{ color: '#aaa' }}>Hash:</span> {tx.txHash.length > 8 ? `${tx.txHash.substring(0, 8)}...` : tx.txHash}</div>}
                           {tx.comment && <div><span style={{ color: '#aaa' }}>Comm:</span> {tx.comment}</div>}
                         </div>
                       </td>
