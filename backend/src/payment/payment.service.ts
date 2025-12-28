@@ -40,7 +40,22 @@ export class PaymentService {
     private paymentTransactionService: PaymentTransactionService,
   ) {
     this.BOT_TOKEN = this.configService.get<string>('TELEGRAM_BOT_TOKEN') || '';
-    this.TRIBUTE_API_KEY = this.configService.get<string>('TRIBUTE_API_KEY') || '';
+    
+    // Читаем TRIBUTE_API_KEY из конфигурации
+    const tributeApiKeyRaw = this.configService.get<string>('TRIBUTE_API_KEY');
+    this.TRIBUTE_API_KEY = tributeApiKeyRaw || '';
+    
+    // Логируем для отладки (не показываем полный ключ)
+    if (this.TRIBUTE_API_KEY) {
+      const keyPreview = this.TRIBUTE_API_KEY.length > 10 
+        ? `${this.TRIBUTE_API_KEY.substring(0, 10)}...` 
+        : '***';
+      console.log(`✅ TRIBUTE_API_KEY загружен из конфигурации (длина: ${this.TRIBUTE_API_KEY.length}, превью: ${keyPreview})`);
+    } else {
+      console.warn(`⚠️ TRIBUTE_API_KEY не найден в конфигурации`);
+      console.warn(`   Проверьте, что переменная TRIBUTE_API_KEY установлена в .env файле`);
+      console.warn(`   Сырое значение из configService: ${tributeApiKeyRaw === undefined ? 'undefined' : tributeApiKeyRaw === null ? 'null' : `"${tributeApiKeyRaw}"`}`);
+    }
   }
 
   /**
@@ -56,11 +71,17 @@ export class PaymentService {
    * Подпись вычисляется от raw JSON body (строки)
    */
   verifyTributeWebhookSignature(body: string, signature: string): boolean {
-    if (!this.TRIBUTE_API_KEY) {
+    // Детальная проверка наличия ключа
+    const hasKey = !!this.TRIBUTE_API_KEY && this.TRIBUTE_API_KEY.trim() !== '';
+    
+    if (!hasKey) {
       console.warn('⚠️ TRIBUTE_API_KEY не настроен, пропускаем проверку подписи');
+      console.warn(`   Значение ключа: ${this.TRIBUTE_API_KEY === '' ? 'пустая строка' : this.TRIBUTE_API_KEY === undefined ? 'undefined' : this.TRIBUTE_API_KEY === null ? 'null' : `"${this.TRIBUTE_API_KEY}"`}`);
       console.warn('   Для безопасности рекомендуется настроить TRIBUTE_API_KEY в .env');
       return true; // Если ключ не настроен, пропускаем проверку (для обратной совместимости)
     }
+    
+    console.log(`✅ TRIBUTE_API_KEY найден, проверяю подпись (длина ключа: ${this.TRIBUTE_API_KEY.length})`);
 
     if (!signature) {
       console.error('❌ Tribute webhook: отсутствует подпись в заголовке trbt-signature');

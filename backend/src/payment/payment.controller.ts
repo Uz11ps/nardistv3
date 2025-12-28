@@ -19,8 +19,14 @@ export class PaymentController {
     @Headers('trbt-signature') signature: string,
     @Req() req: Request,
   ) {
+    console.log('📥 ========== WEBHOOK ПОЛУЧЕН ==========');
+    console.log(`📥 Есть ли заголовок trbt-signature: ${!!signature}`);
+    console.log(`📥 hasTributeApiKey(): ${this.paymentService.hasTributeApiKey()}`);
+    
     // Проверяем подпись для Tribute webhook (если есть заголовок trbt-signature)
     if (signature) {
+      console.log(`📥 Подпись получена (первые 20 символов): ${signature.substring(0, 20)}...`);
+      
       // ВАЖНО: Tribute вычисляет подпись от raw JSON body
       // В NestJS body уже распарсен, поэтому используем JSON.stringify
       // Для production рекомендуется использовать raw body middleware для точной проверки
@@ -41,6 +47,7 @@ export class PaymentController {
       // Если нет подписи, но это может быть webhook от Tribute - предупреждаем
       if (update.event === 'payment.completed' || update.type === 'payment.completed') {
         console.warn('⚠️ Получен Tribute webhook без подписи. Проверьте настройку TRIBUTE_API_KEY и webhook URL в панели Tribute.');
+        console.warn(`⚠️ hasTributeApiKey(): ${this.paymentService.hasTributeApiKey()}`);
       }
     }
 
