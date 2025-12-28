@@ -171,70 +171,151 @@ export class PaymentService {
       }
 
       // Создаем инвойс через Telegram Bot API для прямой выплаты боту
+      const invoicePayload = {
+        title: request.description,
+        description: request.description,
+        payload: JSON.stringify({
+          userId: request.userId,
+          amount: request.amount,
+          type: request.type || 'nar_coin',
+          method: 'stars',
+        }),
+        provider_token: '', // Для Stars не нужен
+        currency: 'XTR', // Telegram Stars
+        prices: [
+          {
+            label: request.description,
+            amount: Math.round(request.amount * 100), // Stars в копейках (1 Star = 100)
+          },
+        ],
+        max_tip_amount: 0,
+        suggested_tip_amounts: [],
+        provider_data: JSON.stringify({
+          userId: request.userId,
+          type: request.type || 'nar_coin',
+          method: 'stars',
+        }),
+      };
+
+      console.log('📤 Создание STARS инвойса:', {
+        url: `https://api.telegram.org/bot${this.BOT_TOKEN.substring(0, 10)}.../createInvoiceLink`,
+        payload: { ...invoicePayload, provider_token: '[HIDDEN]' },
+      });
+
       const invoiceResponse = await axios.post(
         `https://api.telegram.org/bot${this.BOT_TOKEN}/createInvoiceLink`,
-        {
-          title: request.description,
-          description: request.description,
-          payload: JSON.stringify({
-            userId: request.userId,
-            amount: request.amount,
-            type: request.type || 'nar_coin',
-            method: 'stars', // Прямая выплата боту
-          }),
-          provider_token: '', // Для Stars не нужен
-          currency: 'XTR', // Telegram Stars
-          prices: [
-            {
-              label: request.description,
-              amount: Math.round(request.amount * 100), // Stars в копейках (1 Star = 100)
-            },
-          ],
-          max_tip_amount: 0,
-          suggested_tip_amounts: [],
-          provider_data: JSON.stringify({
-            userId: request.userId,
-            type: request.type || 'nar_coin',
-            method: 'stars', // Прямая выплата боту
-          }),
-        },
+        invoicePayload,
         {
           timeout: 10000,
         },
       );
 
+      console.log('📥 Ответ от Telegram API:', {
+        ok: invoiceResponse.data?.ok,
+        error_code: invoiceResponse.data?.error_code,
+        description: invoiceResponse.data?.description,
+        has_result: !!invoiceResponse.data?.result,
+        result_keys: invoiceResponse.data?.result ? Object.keys(invoiceResponse.data.result) : [],
+      });
+
       if (!invoiceResponse.data) {
+        console.error('❌ Telegram API не вернул данные');
         throw new Error('Не получен ответ от платежной системы. Попробуйте позже.');
       }
 
       if (!invoiceResponse.data.ok) {
-        const errorDescription = invoiceResponse.data.description || invoiceResponse.data.error_code || 'Неизвестная ошибка';
-        console.error('Ошибка создания STARS инвойса:', invoiceResponse.data);
-        throw new Error(`Ошибка создания инвойса: ${errorDescription}`);
+        const errorCode = invoiceResponse.data.error_code;
+        const errorDescription = invoiceResponse.data.description || 'Неизвестная ошибка';
+        console.error('❌ Ошибка создания STARS инвойса:', {
+          error_code: errorCode,
+          description: errorDescription,
+          full_response: invoiceResponse.data,
+        });
+
+        // Специальные сообщения для частых ошибок
+        if (errorCode === 400) {
+          throw new Error(`Некорректный запрос: ${errorDescription}. Проверьте настройки бота для Stars платежей.`);
+        } else if (errorCode === 401) {
+          throw new Error('Ошибка авторизации. Проверьте токен бота.');
+        } else {
+          throw new Error(`Ошибка создания инвойса: ${errorDescription} (код: ${errorCode})`);
+        }
       }
 
       const result = invoiceResponse.data.result;
       if (!result) {
-        console.error('Ответ от Telegram API не содержит result:', invoiceResponse.data);
+        console.error('❌ Ответ от Telegram API не содержит result:', invoiceResponse.data);
         throw new Error('Платежная система вернула некорректный ответ. Попробуйте позже.');
       }
 
-      const invoiceLink = result.invoice_link;
-      if (!invoiceLink) {
-        console.error('Ответ от Telegram API не содержит invoice_link:', result);
-        throw new Error('Платежная система не вернула ссылку для оплаты. Попробуйте позже.');
+      // Telegram API может вернуть ссылку в разных форматах:
+      // 1. В поле invoice_link объекта result: https://t.me/invoice/XXXXX
+      // 2. Сам result как строка: https://t.me/$XXXXX (новый формат для Stars)
+      let invoiceLink: string | null = null;
+      
+      if (typeof result === 'string') {
+        // Новый формат: result - это прямая ссылка
+        invoiceLink = result;
+      } else if (result.invoice_link) {
+        // Старый формат: ссылка в поле invoice_link
+        invoiceLink = result.invoice_link;
+      } else {
+        // Ищем ссылку в других полях объекта
+        for (const key of Object.keys(result)) {
+          if (typeof result[key] === 'string' && result[key].startsWith('https://t.me/')) {
+            invoiceLink = result[key];
+            break;
+          }
+        }
       }
+
+      if (!invoiceLink) {
+        console.error('❌ Ответ от Telegram API не содержит ссылку:', {
+          result_keys: typeof result === 'object' ? Object.keys(result) : 'N/A (string)',
+          result: result,
+          result_type: typeof result,
+        });
+        throw new Error('Платежная система не вернула ссылку для оплаты. Убедитесь, что бот настроен для приема Stars платежей.');
+      }
+
+      console.log('✅ STARS инвойс создан успешно:', {
+        invoice_link: invoiceLink.substring(0, 50) + '...',
+        invoice_id: result.invoice_payload,
+      });
 
       const invoiceId = result.invoice_payload || `stars_${Date.now()}`;
 
-      // Извлекаем invoice_id из ссылки для использования в WebApp.openInvoice
-      // Формат ссылки: https://t.me/invoice/XXXXX
+      // Извлекаем invoice slug из ссылки для использования в WebApp.openInvoice
+      // Форматы ссылок:
+      // 1. https://t.me/invoice/XXXXX - старый формат
+      // 2. https://t.me/$XXXXX - новый формат для Stars
+      let invoice: string | null = null;
+      
+      // Пробуем извлечь из старого формата
       const invoiceMatch = invoiceLink.match(/\/invoice\/([^/?]+)/);
-      const invoice = invoiceMatch ? invoiceMatch[1] : null;
+      if (invoiceMatch) {
+        invoice = invoiceMatch[1];
+      } else {
+        // Пробуем извлечь из нового формата (https://t.me/$XXXXX)
+        const newFormatMatch = invoiceLink.match(/\/\$([^/?]+)/);
+        if (newFormatMatch) {
+          invoice = newFormatMatch[1];
+        } else {
+          // Если не удалось извлечь, используем всю ссылку после последнего /
+          const lastSlashIndex = invoiceLink.lastIndexOf('/');
+          if (lastSlashIndex !== -1) {
+            invoice = invoiceLink.substring(lastSlashIndex + 1);
+            // Убираем $ если есть
+            if (invoice.startsWith('$')) {
+              invoice = invoice.substring(1);
+            }
+          }
+        }
+      }
 
       if (!invoice) {
-        console.error('Не удалось извлечь invoice ID из ссылки:', invoiceLink);
-        throw new Error('Не удалось извлечь invoice ID из ссылки');
+        console.error('Не удалось извлечь invoice slug из ссылки:', invoiceLink);
+        throw new Error('Не удалось извлечь invoice slug из ссылки');
       }
 
       return {
@@ -244,15 +325,23 @@ export class PaymentService {
         invoiceId,
       };
     } catch (error: any) {
+      console.error('❌ Исключение при создании STARS платежа:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack?.substring(0, 500),
+      });
+
       if (error.response) {
         const status = error.response.status;
         const errorData = error.response.data;
 
         if (status === 401) {
-          throw new Error('Ошибка авторизации в платежной системе. Обратитесь в поддержку.');
+          throw new Error('Ошибка авторизации в платежной системе. Проверьте токен бота.');
         } else if (status === 400) {
           const description = errorData?.description || errorData?.error || 'Некорректный запрос';
-          throw new Error(`Ошибка запроса: ${description}. Проверьте данные и попробуйте снова.`);
+          const errorCode = errorData?.error_code;
+          throw new Error(`Ошибка запроса: ${description}${errorCode ? ` (код: ${errorCode})` : ''}. Проверьте настройки бота для Stars платежей.`);
         } else if (status >= 500) {
           throw new Error('Платежная система временно недоступна. Попробуйте позже.');
         }
@@ -262,8 +351,7 @@ export class PaymentService {
         throw error;
       }
 
-      console.error('Ошибка создания STARS платежа:', error);
-      throw new Error(`Не удалось создать платеж. ${error.message || 'Неизвестная ошибка'}. Попробуйте позже или обратитесь в поддержку.`);
+      throw new Error(`Не удалось создать платеж. ${error.message || 'Неизвестная ошибка'}. Проверьте логи сервера для деталей.`);
     }
   }
 
