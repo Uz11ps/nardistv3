@@ -2,7 +2,6 @@ import { Injectable, Logger, BadRequestException, NotFoundException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserWallet } from './user-wallet.entity';
-import { TonService } from './ton.service';
 import { UsersService } from '../users/users.service';
 
 /**
@@ -72,11 +71,6 @@ export class WalletService {
     // Кошельки TON больше не используются для платежей
     // Создаем заглушку (если нужна для обратной совместимости)
     throw new BadRequestException('Создание кошельков TON отключено. Используйте STARS или TRIBUTE для платежей.');
-
-    const savedWallet = await this.walletRepository.save(wallet);
-    this.logger.log(`✅ Создан кошелек для пользователя ${userId}: ${walletData.address}`);
-
-    return savedWallet;
   }
 
   /**
