@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { apiClient } from '../api/client'
 import Dice3D from './Dice3D'
+import DiceGif from './DiceGif'
 import './BackgammonBoard.css'
 
 interface BackgammonBoardProps {
@@ -1668,63 +1669,43 @@ export default function BackgammonBoard({
         <div
           style={{
             position: 'absolute',
-            left: `${dice3DPosition.x - dice3DPosition.size}px`,
-            top: `${dice3DPosition.y - dice3DPosition.size / 2}px`,
-            width: `${dice3DPosition.size * 2.5 * diceArray.length}px`,
-            height: `${dice3DPosition.size}px`,
+            left: `${dice3DPosition.x - dice3DPosition.size * 1.5}px`,
+            top: `${dice3DPosition.y - dice3DPosition.size * 0.75}px`,
+            width: `${dice3DPosition.size * 3}px`,
+            height: `${dice3DPosition.size * 1.5}px`,
             pointerEvents: 'none',
             display: 'flex',
             gap: '8px',
             alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {diceArray.map((dieValue, index) => {
-            const isUsed = usedDiceIndices.has(index)
-            const isDoubles = diceArray.length >= 2 && diceArray.every(d => d === diceArray[0])
-            
-            // Показываем использованные кубики полупрозрачными
-            const alpha = isUsed ? 0.3 : 1
-            
-            return (
-              <div
-                key={index}
-                style={{
-                  position: 'relative',
-                  opacity: alpha,
-                }}
-              >
-                <Dice3D
-                  values={[dieValue]}
-                  animating={diceAnimating}
-                  diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
-                />
-                {/* Показываем сколько ходов осталось при дубле на каждом неиспользованном кубике */}
-                {isDoubles && remainingMoves > 0 && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '-20px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: 'rgba(255, 0, 0, 0.8)',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: '20px',
-                      height: '20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '10px',
-                      fontWeight: 'bold',
-                      zIndex: 10,
-                    }}
-                  >
-                    {remainingMoves}
+          {/* Показываем гифку, если она доступна для данного состояния кубиков */}
+          <DiceGif 
+            dice={diceArray}
+            usedDiceIndices={usedDiceIndices}
+            animating={diceAnimating}
+            size={dice3DPosition.size}
+          />
+
+          {/* Если гифка не может быть показана (например, один кубик не-дубль уже использован), 
+              показываем старые 3D кубики для оставшихся значений */}
+          {(!diceAnimating && diceArray.length === 2 && usedDiceIndices.size > 0) && (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {diceArray.map((dieValue, index) => {
+                if (usedDiceIndices.has(index)) return null;
+                return (
+                  <div key={index} style={{ position: 'relative' }}>
+                    <Dice3D
+                      values={[dieValue]}
+                      animating={false}
+                      diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                    />
                   </div>
-                )}
-              </div>
-            )
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
