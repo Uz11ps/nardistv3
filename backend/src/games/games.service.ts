@@ -416,7 +416,10 @@ export class GamesService {
       const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
       // For bot games, player2Id is null, so we skip the check if it's a bot turn
       const isBotTurn = game.type === GameType.VS_BOT && game.player2Id === null && game.currentPlayer === 1;
-      if (!isBotTurn && currentPlayerId !== playerId) {
+      // For sandbox games, player1Id can move for both sides
+      const isSandboxTurn = game.type === GameType.SANDBOX && game.player1Id === playerId;
+      
+      if (!isBotTurn && !isSandboxTurn && currentPlayerId !== playerId) {
         throw new BadRequestException('Не ваш ход');
       }
     }
@@ -489,7 +492,10 @@ export class GamesService {
     const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
     // For bot games, player2Id is null, so we skip the check if it's a bot turn
     const isBotTurn = game.type === GameType.VS_BOT && game.player2Id === null && game.currentPlayer === 1;
-    if (!isBotTurn && currentPlayerId !== playerId) {
+    // For sandbox games, player1Id can move for both sides
+    const isSandboxTurn = game.type === GameType.SANDBOX && game.player1Id === playerId;
+    
+    if (!isBotTurn && !isSandboxTurn && currentPlayerId !== playerId) {
       throw new BadRequestException('Не ваш ход');
     }
 
@@ -1191,6 +1197,13 @@ export class GamesService {
 
     // Для игр с ботом: winnerId может быть null, если бот победил (это поражение игрока)
     const gameType: GameType = game.type;
+    
+    // Skip rewards for sandbox games
+    if (gameType === GameType.SANDBOX) {
+      this.logger.log(`🎮 Песочница ${game.id} завершена, награды не начисляются`);
+      return;
+    }
+    
     let loserId: string | null = null;
     
     if (game.winnerId) {
@@ -1734,6 +1747,47 @@ export class GamesService {
       if (error instanceof BadRequestException) {
         throw error;
       }
+      throw new BadRequestException(`Ошибка при создании игры: ${error.message || 'Неизвестная ошибка'}`);
+    }
+  }
+
+  async createSandboxGame(playerId: string, mode?: GameMode): Promise<Game> {
+    try {
+      const gameMode = mode || GameMode.LONG;
+      
+      const rngSeed = crypto.randomBytes(32).toString('hex');
+      const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
+
+      const engine = gameMode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
+      const initialState = engine.createInitialState();
+
+      const game = this.gamesRepository.create({
+        player1Id: playerId,
+        player2Id: null,
+        mode: gameMode,
+        type: GameType.SANDBOX,
+        stake: 0,
+        status: GameStatus.IN_PROGRESS,
+        gameState: initialState,
+        rngSeed,
+        rngHash,
+        currentPlayer: 0,
+        moveTimeLimit: 0, // No time limit for sandbox
+        player1TimeRemaining: 3600000, // 1 hour
+        player2TimeRemaining: 3600000,
+        lastMoveAt: new Date(),
+      });
+
+      const savedGame = await this.gamesRepository.save(game);
+      
+      // Сразу бросаем кубики
+      await this.rollDice(savedGame.id, playerId);
+      
+      this.logger.log(`🎮 Песочница создана: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}`);
+
+      return savedGame;
+    } catch (error) {
+      this.logger.error(`❌ Ошибка при создании песочницы для playerId=${playerId}:`, error);
       throw new BadRequestException(`Ошибка при создании игры: ${error.message || 'Неизвестная ошибка'}`);
     }
   }

@@ -50,7 +50,7 @@ export default function Academy() {
   const location = useLocation()
   const { materialId } = useParams<{ materialId?: string }>()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles'>('onboarding')
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'sandbox'>('onboarding')
   const [onboarding, setOnboarding] = useState<Onboarding[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [articles, setArticles] = useState<Article[]>([])
@@ -332,6 +332,7 @@ export default function Academy() {
         { id: 'onboarding', label: 'Онбординг', active: activeTab === 'onboarding', onClick: () => setActiveTab('onboarding') },
         { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
         { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
+        { id: 'sandbox', label: 'Песочница', active: activeTab === 'sandbox', onClick: () => setActiveTab('sandbox') },
       ]}
       rightAction={
         canCreateArticle && activeTab === 'articles' ? (
@@ -426,6 +427,57 @@ export default function Academy() {
               Создать курс (только для админов)
             </button>
           )}
+        </div>
+      )}
+
+      {/* Песочница */}
+      {activeTab === 'sandbox' && (
+        <div className="academy-sandbox">
+          <div className="academy-card sandbox-promo-card">
+            <div className="academy-card-content">
+              <h3 className="academy-card-title">Режим песочницы</h3>
+              <p className="academy-card-description">
+                В этом режиме вы можете играть сами с собой за обе стороны. 
+                Это идеальное место для тестирования стратегий, разбора позиций или просто тренировки.
+              </p>
+              <div className="sandbox-modes">
+                <div className="sandbox-mode-option">
+                  <h4>Длинные нарды</h4>
+                  <button 
+                    className="academy-card-button academy-card-button-primary"
+                    onClick={async () => {
+                      try {
+                        const response = await apiClient.post('/games/create-sandbox', { mode: 'long' })
+                        navigate(`/game/${response.data.id}`)
+                      } catch (error) {
+                        console.error('Failed to create sandbox:', error)
+                        alert('Ошибка при создании песочницы')
+                      }
+                    }}
+                  >
+                    Запустить
+                  </button>
+                </div>
+                <div className="sandbox-mode-option">
+                  <h4>Короткие нарды</h4>
+                  <button 
+                    className="academy-card-button academy-card-button-primary"
+                    onClick={async () => {
+                      try {
+                        const response = await apiClient.post('/games/create-sandbox', { mode: 'short' })
+                        navigate(`/game/${response.data.id}`)
+                      } catch (error) {
+                        console.error('Failed to create sandbox:', error)
+                        alert('Ошибка при создании песочницы')
+                      }
+                    }}
+                  >
+                    Запустить
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

@@ -98,6 +98,19 @@ export class GamesController {
     return this.gamesService.createBotGame(user.id, mode as any);
   }
 
+  @Post('create-sandbox')
+  @UseGuards(JwtAuthGuard)
+  async createSandboxGame(@CurrentUser() user: any, @Body() body?: { mode?: string }) {
+    try {
+      const mode = body?.mode === 'short' ? 'short' : 'long';
+      console.log('🎮 Создание песочницы:', { userId: user.id, mode });
+      return await this.gamesService.createSandboxGame(user.id, mode as any);
+    } catch (error) {
+      console.error('❌ Ошибка при создании песочницы:', error);
+      throw error;
+    }
+  }
+
   @Post(':id/possible-moves')
   @UseGuards(JwtAuthGuard)
   async getPossibleMoves(

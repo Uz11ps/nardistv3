@@ -457,7 +457,8 @@ export default function Game() {
         ? null
         : diceData
       
-      const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
+      const isSandbox = data.type === 'sandbox'
+      const canMove = isSandbox ? true : data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
       const isMyTurnNow = canMove
       const wasMyTurn = gameState?.canMove || false
       
@@ -980,7 +981,8 @@ export default function Game() {
   }
 
   const isPlayer1 = gameInfo.player1Id === user?.id
-  const isMyTurn = gameState?.canMove && gameStatus === 'in_progress'
+  const isSandbox = gameInfo?.type === 'sandbox'
+  const isMyTurn = (gameState?.canMove || isSandbox) && gameStatus === 'in_progress'
   const myPlayer = isPlayer1 ? gameInfo.player1 : gameInfo.player2
   const opponentPlayer = isPlayer1 ? gameInfo.player2 : gameInfo.player1
 

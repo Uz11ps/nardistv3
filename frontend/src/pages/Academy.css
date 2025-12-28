@@ -458,3 +458,56 @@
   padding-left: 36px;
 }
 
+/* Sandbox Styles */
+.sandbox-promo-card {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 24px;
+}
+
+.academy-card-description {
+  color: #B6B6B6;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 12px 0 24px;
+}
+
+.sandbox-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sandbox-mode-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sandbox-mode-option h4 {
+  margin: 0;
+  color: #FFF;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.academy-card-button-primary {
+  background: linear-gradient(180deg, #3390EC 0%, #1E5FA8 100%);
+  color: #FFF;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(30, 95, 168, 0.3);
+}
+
+.academy-card-button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(30, 95, 168, 0.4);
+}
+

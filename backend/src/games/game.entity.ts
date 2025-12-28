@@ -27,6 +27,7 @@ export enum GameType {
   VS_PLAYER = 'vs_player',
   VS_BOT = 'vs_bot',
   TOURNAMENT = 'tournament',
+  SANDBOX = 'sandbox',
 }
 
 @Entity('games')
