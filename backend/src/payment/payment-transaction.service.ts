@@ -181,6 +181,15 @@ export class PaymentTransactionService {
   }
 
   /**
+   * Найти транзакцию по внешнему ID (txHash)
+   */
+  async findByExternalId(externalId: string): Promise<PaymentTransaction | null> {
+    return this.transactionRepository.findOne({
+      where: { txHash: externalId },
+    });
+  }
+
+  /**
    * Обновить транзакцию
    */
   async updateTransaction(transaction: PaymentTransaction): Promise<PaymentTransaction> {

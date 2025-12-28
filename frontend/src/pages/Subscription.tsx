@@ -154,8 +154,20 @@ export default function Subscription() {
       // Для TRIBUTE открываем ссылку на товар Tribute
       if (paymentMethod === 'TRIBUTE' && response.data.tributeLink) {
         const transactionId = response.data.transactionId
-        // Открываем ссылку Tribute в новой вкладке или в текущем окне
-        window.open(response.data.tributeLink, '_blank')
+        const tributeLink = response.data.tributeLink
+        const telegramWebApp = (window as any).Telegram?.WebApp
+
+        // Открываем ссылку Tribute
+        if (telegramWebApp) {
+          if (tributeLink.includes('t.me/') || tributeLink.includes('tg://')) {
+            telegramWebApp.openTelegramLink(tributeLink)
+          } else {
+            telegramWebApp.openLink(tributeLink)
+          }
+        } else {
+          window.open(tributeLink, '_blank')
+        }
+        
         // Показываем сообщение пользователю
         alert('Открыта страница оплаты Tribute. После оплаты вернитесь в приложение.')
         

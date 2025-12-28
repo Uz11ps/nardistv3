@@ -591,6 +591,16 @@ export class PaymentService {
           // Ищем транзакцию по invoice payload (сохраняем invoiceId в metadata при создании)
           // Для упрощения используем invoice payload как идентификатор
           const invoiceId = payload.invoiceId || update.message.successful_payment.invoice_payload;
+          const telegramPaymentId = update.message.successful_payment.telegram_payment_charge_id;
+
+          // ПРОВЕРКА: Не была ли эта транзакция уже обработана
+          if (telegramPaymentId) {
+            const existingTransaction = await this.paymentTransactionService.findByExternalId(telegramPaymentId);
+            if (existingTransaction) {
+              console.warn(`⚠️ Telegram Stars: транзакция ${telegramPaymentId} уже была обработана (ID: ${existingTransaction.id})`);
+              return;
+            }
+          }
           
           // Определяем метод платежа
           const expectedMethod = method === 'stars' ? PaymentMethod.TELEGRAM_STARS : PaymentMethod.TRIBUTE;
@@ -613,10 +623,12 @@ export class PaymentService {
             // Обновляем транзакцию как завершенную
             transaction.status = PaymentStatus.COMPLETED;
             transaction.confirmedAt = new Date();
+            // Сохраняем telegram_payment_charge_id в txHash для предотвращения повторной обработки
+            transaction.txHash = telegramPaymentId;
             transaction.metadata = {
               ...transaction.metadata,
               invoiceId,
-              telegramPaymentId: update.message.successful_payment.telegram_payment_charge_id,
+              telegramPaymentId: telegramPaymentId,
             };
             await this.paymentTransactionService.updateTransaction(transaction);
             
@@ -678,8 +690,17 @@ export class PaymentService {
       }
       
       const amount = paymentData.amount || paymentData.total_amount || webhook.payload?.amount || 0;
-      const transactionId = paymentData.transactionId || paymentData.transaction_id || paymentData.id || webhook.payload?.transaction_id || webhook.payload?.purchase_id;
+      const tributeTransactionId = paymentData.transactionId || paymentData.transaction_id || paymentData.id || webhook.payload?.transaction_id || webhook.payload?.purchase_id;
       
+      if (tributeTransactionId) {
+        // Проверяем, не была ли эта транзакция уже обработана (по txHash)
+        const existingTransaction = await this.paymentTransactionService.findByExternalId(String(tributeTransactionId));
+        if (existingTransaction) {
+          console.warn(`⚠️ Tribute webhook: транзакция ${tributeTransactionId} уже была обработана (ID: ${existingTransaction.id})`);
+          return;
+        }
+      }
+
       // Определяем тип: subscription или nar_coin
       // В новом формате можно определить по product_name, product_id или другим полям
       let type = paymentData.type || paymentData.metadata?.type;
@@ -709,7 +730,7 @@ export class PaymentService {
         userId, 
         telegramUserId, 
         amount, 
-        transactionId, 
+        tributeTransactionId, 
         type,
         productName: webhook.payload?.product_name,
         productId: webhook.payload?.product_id,
@@ -791,9 +812,11 @@ export class PaymentService {
         // Обновляем транзакцию как завершенную
         transaction.status = PaymentStatus.COMPLETED;
         transaction.confirmedAt = new Date();
+        // Сохраняем ID транзакции Tribute в txHash для предотвращения повторной обработки
+        transaction.txHash = String(tributeTransactionId);
         transaction.metadata = {
           ...transaction.metadata,
-          tributeTransactionId: transactionId,
+          tributeTransactionId: tributeTransactionId,
           tributeWebhook: webhook,
         };
         await this.paymentTransactionService.updateTransaction(transaction);
