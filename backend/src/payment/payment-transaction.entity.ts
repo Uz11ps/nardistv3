@@ -23,7 +23,8 @@ export enum PaymentStatus {
 export enum PaymentMethod {
   TON = 'ton',
   USDT = 'usdt',
-  TELEGRAM_STARS = 'telegram_stars', // Позже
+  TELEGRAM_STARS = 'telegram_stars',
+  TRIBUTE = 'tribute', // Платежи через Tribute/Telegram WebApp
 }
 
 export enum PaymentType {

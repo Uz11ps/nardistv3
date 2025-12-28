@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, UseGuards, Param, NotFoundException, BadRe
 import { SubscriptionService } from './subscription.service';
 import { PaymentTransactionService } from '../payment/payment-transaction.service';
 import { WalletService } from '../payment/wallet.service';
+import { PaymentService } from '../payment/payment.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SubscriptionPlan } from './subscription.entity';
@@ -15,6 +16,7 @@ export class SubscriptionController {
     private readonly subscriptionService: SubscriptionService,
     private readonly paymentTransactionService: PaymentTransactionService,
     private readonly walletService: WalletService,
+    private readonly paymentService: PaymentService,
     @Inject(forwardRef(() => AdminService))
     private readonly adminService: AdminService,
   ) {}
@@ -133,6 +135,8 @@ export class SubscriptionController {
             method = PaymentMethod.USDT;
           } else if (methodLower === 'telegram_stars') {
             method = PaymentMethod.TELEGRAM_STARS;
+          } else if (methodLower === 'tribute') {
+            method = PaymentMethod.TRIBUTE;
           } else {
             method = PaymentMethod.TON; // По умолчанию
           }
@@ -140,6 +144,47 @@ export class SubscriptionController {
           method = body.method;
         }
       }
+      
+      // Если метод оплаты Tribute, создаем платеж через Telegram WebApp API
+      if (method === PaymentMethod.TRIBUTE) {
+        const prices = await this.adminService.getSubscriptionPrices();
+        if (!prices) {
+          throw new BadRequestException('Цены подписок не установлены. Обратитесь к администратору.');
+        }
+        
+        const planKey = body.plan === SubscriptionPlan.MONTH_1 ? 'month_1' : body.plan === SubscriptionPlan.MONTH_3 ? 'month_3' : 'month_12';
+        const planPrices = prices[planKey];
+        if (!planPrices) {
+          throw new BadRequestException(`Цена для плана ${planKey} не установлена. Обратитесь к администратору.`);
+        }
+        
+        const amount = Number(planPrices.ton);
+        const planName = body.plan === SubscriptionPlan.MONTH_1 ? '1 месяц' : body.plan === SubscriptionPlan.MONTH_3 ? '3 месяца' : '1 год';
+        
+        const tributePayment = await this.paymentService.createTributePayment({
+          userId: user.id,
+          amount: amount,
+          description: `Премиум подписка ${planName}`,
+          type: 'subscription',
+        });
+
+        // Создаем транзакцию для отслеживания
+        const transaction = await this.paymentTransactionService.createSubscriptionTransaction(
+          user.id,
+          body.plan,
+          method,
+        );
+
+        return {
+          transactionId: transaction.id,
+          invoice: tributePayment.invoice,
+          invoiceId: tributePayment.invoiceId,
+          amount: amount,
+          method: 'TRIBUTE',
+          status: transaction.status,
+        };
+      }
+
       const transaction = await this.paymentTransactionService.createSubscriptionTransaction(
         user.id,
         body.plan,
@@ -277,12 +322,42 @@ export class SubscriptionController {
             method = PaymentMethod.USDT;
           } else if (methodLower === 'telegram_stars') {
             method = PaymentMethod.TELEGRAM_STARS;
+          } else if (methodLower === 'tribute') {
+            method = PaymentMethod.TRIBUTE;
           } else {
             method = PaymentMethod.TON; // По умолчанию
           }
         } else {
           method = body.method;
         }
+      }
+
+      // Если метод оплаты Tribute, создаем платеж через Telegram WebApp API
+      if (method === PaymentMethod.TRIBUTE) {
+        const tributePayment = await this.paymentService.createTributePayment({
+          userId: user.id,
+          amount: price,
+          description: `Покупка ${narAmount} NAR-coin`,
+          type: 'nar_coin',
+        });
+
+        // Создаем транзакцию для отслеживания
+        const transaction = await this.paymentTransactionService.createNarCoinTransaction(
+          user.id,
+          price,
+          method,
+          narAmount,
+        );
+
+        return {
+          transactionId: transaction.id,
+          invoice: tributePayment.invoice,
+          invoiceId: tributePayment.invoiceId,
+          amount: price,
+          method: 'TRIBUTE',
+          status: transaction.status,
+          narAmount: narAmount,
+        };
       }
 
       // Используем цену из пакета (установленную админом)

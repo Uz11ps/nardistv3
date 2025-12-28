@@ -193,6 +193,29 @@ export class PaymentTransactionService {
   }
 
   /**
+   * Найти транзакции пользователя по методу оплаты
+   */
+  async findTransactionsByUserAndMethod(
+    userId: string,
+    method: PaymentMethod,
+  ): Promise<PaymentTransaction[]> {
+    return this.transactionRepository.find({
+      where: {
+        userId,
+        method,
+      },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Обновить транзакцию
+   */
+  async updateTransaction(transaction: PaymentTransaction): Promise<PaymentTransaction> {
+    return this.transactionRepository.save(transaction);
+  }
+
+  /**
    * Проверить транзакцию в блокчейне и обновить статус
    */
   async checkTransactionStatus(transactionId: string): Promise<PaymentTransaction> {

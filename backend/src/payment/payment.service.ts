@@ -5,6 +5,8 @@ import { UsersService } from '../users/users.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { SubscriptionPlan } from '../subscription/subscription.entity';
 import { ReferralsService } from '../referrals/referrals.service';
+import { PaymentTransactionService } from './payment-transaction.service';
+import { PaymentMethod, PaymentStatus } from './payment-transaction.entity';
 
 export interface TonPaymentRequest {
   userId: string;
@@ -34,6 +36,8 @@ export class PaymentService {
     private subscriptionService: SubscriptionService,
     @Inject(forwardRef(() => ReferralsService))
     private referralsService: ReferralsService,
+    @Inject(forwardRef(() => PaymentTransactionService))
+    private paymentTransactionService: PaymentTransactionService,
   ) {
     this.BOT_TOKEN = this.configService.get<string>('TELEGRAM_BOT_TOKEN') || '';
   }
@@ -153,6 +157,100 @@ export class PaymentService {
   }
 
   /**
+   * Создать платеж через Tribute (Telegram WebApp Invoice)
+   * Возвращает данные инвойса для открытия через WebApp.openInvoice
+   */
+  async createTributePayment(request: TonPaymentRequest): Promise<{ invoice: any; invoiceId: string }> {
+    try {
+      if (!this.BOT_TOKEN || this.BOT_TOKEN.trim() === '') {
+        throw new Error('Ошибка настройки: токен Telegram бота не настроен на сервере. Обратитесь в поддержку.');
+      }
+
+      if (!request.amount || request.amount <= 0) {
+        throw new Error('Некорректная сумма платежа. Сумма должна быть больше 0.');
+      }
+
+      // Создаем инвойс через Telegram Bot API для использования в WebApp.openInvoice
+      const invoiceResponse = await axios.post(
+        `https://api.telegram.org/bot${this.BOT_TOKEN}/createInvoiceLink`,
+        {
+          title: request.description,
+          description: request.description,
+          payload: JSON.stringify({
+            userId: request.userId,
+            amount: request.amount,
+            type: request.type || 'nar_coin',
+            method: 'tribute',
+          }),
+          provider_token: '', // Для Stars/TON не нужен
+          currency: 'XTR', // Telegram Stars
+          prices: [
+            {
+              label: request.description,
+              amount: Math.round(request.amount * 100), // Stars в копейках (1 Star = 100)
+            },
+          ],
+          max_tip_amount: 0,
+          suggested_tip_amounts: [],
+          provider_data: JSON.stringify({
+            userId: request.userId,
+            type: request.type || 'nar_coin',
+            method: 'tribute',
+          }),
+        },
+        {
+          timeout: 10000,
+        },
+      );
+
+      if (!invoiceResponse.data || !invoiceResponse.data.ok) {
+        const errorDescription = invoiceResponse.data?.description || 'Неизвестная ошибка';
+        throw new Error(`Ошибка создания инвойса: ${errorDescription}`);
+      }
+
+      const invoiceLink = invoiceResponse.data.result.invoice_link;
+      const invoiceId = invoiceResponse.data.result.invoice_payload || `tribute_${Date.now()}`;
+
+      // Извлекаем invoice_id из ссылки для использования в WebApp.openInvoice
+      // Формат ссылки: https://t.me/invoice/...
+      const invoiceMatch = invoiceLink.match(/\/invoice\/([^/?]+)/);
+      const invoice = invoiceMatch ? invoiceMatch[1] : null;
+
+      if (!invoice) {
+        throw new Error('Не удалось извлечь invoice ID из ссылки');
+      }
+
+      return {
+        invoice: {
+          slug: invoice,
+        },
+        invoiceId,
+      };
+    } catch (error: any) {
+      if (error.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+
+        if (status === 401) {
+          throw new Error('Ошибка авторизации в платежной системе. Обратитесь в поддержку.');
+        } else if (status === 400) {
+          const description = errorData?.description || errorData?.error || 'Некорректный запрос';
+          throw new Error(`Ошибка запроса: ${description}. Проверьте данные и попробуйте снова.`);
+        } else if (status >= 500) {
+          throw new Error('Платежная система временно недоступна. Попробуйте позже.');
+        }
+      }
+
+      if (error.message && error.message.includes('Ошибка')) {
+        throw error;
+      }
+
+      console.error('Ошибка создания Tribute платежа:', error);
+      throw new Error(`Не удалось создать платеж. ${error.message || 'Неизвестная ошибка'}. Попробуйте позже или обратитесь в поддержку.`);
+    }
+  }
+
+  /**
    * Проверить статус платежа
    */
   async checkPaymentStatus(paymentId: string): Promise<{ status: 'pending' | 'paid' | 'failed'; amount?: number }> {
@@ -165,28 +263,83 @@ export class PaymentService {
    * Обработать webhook от Telegram (для подтверждения платежа)
    */
   async handlePaymentWebhook(update: any): Promise<void> {
+    // Обработка pre_checkout_query (подтверждение платежа перед оплатой)
     if (update.pre_checkout_query) {
-      // Подтверждаем платеж
-      const payload = JSON.parse(update.pre_checkout_query.invoice_payload || '{}');
-      const userId = payload.userId;
-      const amount = payload.amount;
-
-      console.log(`Платеж подтвержден: userId=${userId}, amount=${amount}`);
+      try {
+        const payload = JSON.parse(update.pre_checkout_query.invoice_payload || '{}');
+        const method = payload.method || 'tribute';
+        
+        // Для Tribute всегда подтверждаем платеж
+        if (method === 'tribute') {
+          // Отправляем подтверждение через Bot API
+          await axios.post(
+            `https://api.telegram.org/bot${this.BOT_TOKEN}/answerPreCheckoutQuery`,
+            {
+              pre_checkout_query_id: update.pre_checkout_query.id,
+              ok: true,
+            },
+          );
+          console.log(`✅ Pre-checkout подтвержден для Tribute платежа`);
+        }
+      } catch (error) {
+        console.error('Ошибка обработки pre_checkout_query:', error);
+      }
     }
 
+    // Обработка успешного платежа
     if (update.message?.successful_payment) {
-      // Платеж успешно завершен
-      const payload = JSON.parse(update.message.successful_payment.invoice_payload || '{}');
-      const providerData = JSON.parse(update.message.successful_payment.provider_data || '{}');
-      const userId = payload.userId || providerData.userId;
-      const type = payload.type || providerData.type || 'nar_coin';
-      const amount = update.message.successful_payment.total_amount / 100; // Конвертируем из копеек (Stars)
-      
-      // Конвертируем Stars в TON (1 Star = 1 TON примерно)
-      const tonAmount = amount;
-      const narAmount = tonAmount * this.TON_TO_NAR_RATE;
-
       try {
+        const payload = JSON.parse(update.message.successful_payment.invoice_payload || '{}');
+        const providerData = JSON.parse(update.message.successful_payment.provider_data || '{}');
+        const userId = payload.userId || providerData.userId;
+        const type = payload.type || providerData.type || 'nar_coin';
+        const method = payload.method || providerData.method || 'tribute';
+        const amount = update.message.successful_payment.total_amount / 100; // Конвертируем из копеек (Stars)
+        
+        // Конвертируем Stars в TON (1 Star = 1 TON примерно)
+        const tonAmount = amount;
+        const narAmount = tonAmount * this.TON_TO_NAR_RATE;
+
+        // Если это платеж через Tribute, обновляем транзакцию
+        if (method === 'tribute') {
+          // Ищем транзакцию по invoice payload (сохраняем invoiceId в metadata при создании)
+          // Для упрощения используем invoice payload как идентификатор
+          const invoiceId = payload.invoiceId || update.message.successful_payment.invoice_payload;
+          
+          // Находим транзакцию по userId и методу TRIBUTE со статусом PENDING
+          const transactions = await this.paymentTransactionService.findTransactionsByUserAndMethod(
+            userId,
+            PaymentMethod.TRIBUTE,
+          );
+          
+          // Находим подходящую транзакцию (по типу и сумме)
+          const transaction = transactions.find(
+            (t) => 
+              t.status === PaymentStatus.PENDING &&
+              ((type === 'subscription' && t.type === 'subscription') ||
+               (type === 'nar_coin' && t.type === 'nar_coin')) &&
+              Math.abs(Number(t.amount) - tonAmount) < 0.1, // Погрешность 0.1 TON
+          );
+
+          if (transaction) {
+            // Обновляем транзакцию как завершенную
+            transaction.status = PaymentStatus.COMPLETED;
+            transaction.confirmedAt = new Date();
+            transaction.metadata = {
+              ...transaction.metadata,
+              invoiceId,
+              telegramPaymentId: update.message.successful_payment.telegram_payment_charge_id,
+            };
+            await this.paymentTransactionService.updateTransaction(transaction);
+            
+            // Обрабатываем завершенную транзакцию
+            await this.paymentTransactionService.processCompletedTransaction(transaction);
+            console.log(`✅ Tribute платеж обработан: transactionId=${transaction.id}, userId=${userId}`);
+            return;
+          }
+        }
+
+        // Старая логика для обратной совместимости (если транзакция не найдена)
         if (type === 'subscription') {
           // Определяем план подписки по сумме
           let plan: SubscriptionPlan;
@@ -214,7 +367,7 @@ export class PaymentService {
           await this.referralsService.processReferralBonus(userId, narAmount, 'Покупка NAR-coin');
         }
       } catch (error) {
-        console.error(`Ошибка обработки платежа: userId=${userId}`, error);
+        console.error(`Ошибка обработки платежа:`, error);
         throw error;
       }
     }

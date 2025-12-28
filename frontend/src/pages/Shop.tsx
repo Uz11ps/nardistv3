@@ -32,7 +32,7 @@ export default function Shop() {
   const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
   const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
   const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
-  const [paymentMethod, setPaymentMethod] = useState<'TON' | 'USDT'>('TON')
+  const [paymentMethod, setPaymentMethod] = useState<'TON' | 'USDT' | 'TRIBUTE'>('TRIBUTE')
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [showSkinPreview, setShowSkinPreview] = useState(false)
   const [previewSkin, setPreviewSkin] = useState<Skin | null>(null)
@@ -186,6 +186,28 @@ export default function Shop() {
         price: price, // цена в TON/USDT из пакета
         method: paymentMethod,
       })
+      
+      // Если метод оплаты Tribute, открываем инвойс через WebApp API
+      if (paymentMethod === 'TRIBUTE' && response.data.invoice) {
+        const telegramWebApp = (window as any).Telegram?.WebApp
+        if (!telegramWebApp) {
+          throw new Error('Telegram WebApp не доступен. Откройте приложение через Telegram бота.')
+        }
+
+        // Открываем инвойс через WebApp API
+        telegramWebApp.openInvoice(response.data.invoice.slug, (status: string) => {
+          if (status === 'paid') {
+            // Платеж успешен
+            handlePaymentSuccess()
+          } else if (status === 'cancelled') {
+            alert('Платеж отменен')
+          } else if (status === 'failed') {
+            alert('Ошибка при оплате')
+          }
+          setBuyingNarCoinAmount(null)
+        })
+        return
+      }
       
       const { transactionId, walletAddress, amount: tonAmount, comment, method, narAmount, expiresAt } = response.data
       
@@ -391,6 +413,25 @@ export default function Shop() {
               gap: '8px', 
               marginBottom: '16px'
             }}>
+              <button
+                onClick={() => setPaymentMethod('TRIBUTE')}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  background: paymentMethod === 'TRIBUTE' 
+                    ? 'linear-gradient(180deg, #3390EC 0%, #1E5FA8 100%)' 
+                    : '#3a3a3a',
+                  border: paymentMethod === 'TRIBUTE' ? '2px solid #3390EC' : '1px solid #4a4a4a',
+                  color: '#FFF',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                Tribute ⭐
+              </button>
               <button
                 onClick={() => setPaymentMethod('TON')}
                 style={{
