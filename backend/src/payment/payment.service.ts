@@ -681,19 +681,39 @@ export class PaymentService {
       const transactionId = paymentData.transactionId || paymentData.transaction_id || paymentData.id || webhook.payload?.transaction_id || webhook.payload?.purchase_id;
       
       // Определяем тип: subscription или nar_coin
-      // В новом формате можно определить по product_name или другим полям
-      let type = paymentData.type || paymentData.metadata?.type || 'subscription';
+      // В новом формате можно определить по product_name, product_id или другим полям
+      let type = paymentData.type || paymentData.metadata?.type;
+      
+      // Пытаемся определить тип по product_name
       if (webhook.payload?.product_name) {
-        // Если product_name содержит "month" или похожее - это подписка
         const productName = webhook.payload.product_name.toLowerCase();
-        if (productName.includes('month') || productName.includes('подписка') || productName.includes('subscription')) {
+        console.log(`🔍 Определение типа по product_name: "${productName}"`);
+        
+        if (productName.includes('month') || productName.includes('подписка') || productName.includes('subscription') || 
+            productName.includes('месяц') || productName.includes('год') || productName.includes('year')) {
           type = 'subscription';
-        } else {
+          console.log('✅ Определен тип: subscription (по product_name)');
+        } else if (productName.includes('nar') || productName.includes('coin') || productName.includes('монет')) {
           type = 'nar_coin';
+          console.log('✅ Определен тип: nar_coin (по product_name)');
         }
       }
       
-      console.log('🔍 Парсинг Tribute webhook:', { userId, telegramUserId, amount, transactionId, type });
+      // Если тип не определен, пробуем найти любую PENDING транзакцию TRIBUTE
+      // и определить тип по ней
+      if (!type) {
+        console.log('⚠️ Тип не определен из webhook, будем искать по транзакциям');
+      }
+      
+      console.log('🔍 Парсинг Tribute webhook:', { 
+        userId, 
+        telegramUserId, 
+        amount, 
+        transactionId, 
+        type,
+        productName: webhook.payload?.product_name,
+        productId: webhook.payload?.product_id,
+      });
       console.log('🔍 paymentData:', JSON.stringify(paymentData, null, 2));
       
       if (!userId) {
@@ -725,23 +745,47 @@ export class PaymentService {
         subscriptionPlan: t.subscriptionPlan,
       })));
 
-      // Находим подходящую транзакцию (берем самую свежую PENDING транзакцию нужного типа)
-      const matchingTransactions = transactions.filter(
-        (t) => 
-          t.status === PaymentStatus.PENDING &&
-          t.method === PaymentMethod.TRIBUTE &&
-          ((type === 'subscription' && t.type === 'subscription') ||
-           (type === 'nar_coin' && t.type === 'nar_coin')),
-      );
+      // Находим подходящую транзакцию
+      let matchingTransactions: any[] = [];
       
-      console.log(`   Подходящих транзакций: ${matchingTransactions.length}`);
+      if (type) {
+        // Если тип определен, ищем транзакции этого типа
+        matchingTransactions = transactions.filter(
+          (t) => 
+            t.status === PaymentStatus.PENDING &&
+            t.method === PaymentMethod.TRIBUTE &&
+            ((type === 'subscription' && t.type === 'subscription') ||
+             (type === 'nar_coin' && t.type === 'nar_coin')),
+        );
+        console.log(`   Подходящих транзакций типа ${type}: ${matchingTransactions.length}`);
+      } else {
+        // Если тип не определен, ищем любую PENDING транзакцию TRIBUTE
+        matchingTransactions = transactions.filter(
+          (t) => 
+            t.status === PaymentStatus.PENDING &&
+            t.method === PaymentMethod.TRIBUTE,
+        );
+        console.log(`   Подходящих PENDING транзакций TRIBUTE (любого типа): ${matchingTransactions.length}`);
+      }
       
+      // Берем самую свежую транзакцию
       const transaction = matchingTransactions
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]; // Берем самую свежую
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+      
+      // Если тип не был определен, определяем его по найденной транзакции
+      if (!type && transaction) {
+        type = transaction.type;
+        console.log(`✅ Тип определен по транзакции: ${type}`);
+      }
 
       if (transaction) {
         console.log(`✅ ========== НАЙДЕНА ТРАНЗАКЦИЯ ДЛЯ ОБРАБОТКИ ==========`);
-        console.log(`✅ transactionId=${transaction.id}, type=${transaction.type}, plan=${transaction.subscriptionPlan}`);
+        console.log(`✅ transactionId=${transaction.id}, type=${transaction.type}`);
+        if (transaction.type === 'subscription') {
+          console.log(`✅ План подписки: ${transaction.subscriptionPlan}`);
+        } else if (transaction.type === 'nar_coin') {
+          console.log(`✅ NAR-coin транзакция, narAmount из metadata: ${transaction.metadata?.narAmount || 'не указано'}`);
+        }
         console.log(`✅ Статус до обработки: ${transaction.status}`);
         
         // Обновляем транзакцию как завершенную
@@ -782,4 +826,5 @@ export class PaymentService {
     }
   }
 }
+
 
