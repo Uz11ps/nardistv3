@@ -948,9 +948,9 @@ export class AdminController {
   async updateSubscriptionPrices(
     @CurrentUser() user: any,
     @Body() body: {
-      month_1?: { ton?: number; usdt?: number };
-      month_3?: { ton?: number; usdt?: number };
-      month_12?: { ton?: number; usdt?: number };
+      month_1?: { tribute?: number; stars?: number };
+      month_3?: { tribute?: number; stars?: number };
+      month_12?: { tribute?: number; stars?: number };
     },
   ) {
     return this.adminService.updateSubscriptionPrices(body);
