@@ -500,13 +500,29 @@ export class PaymentService {
    * Обработать webhook от Telegram или Tribute (для подтверждения платежа)
    */
   async handlePaymentWebhook(update: any): Promise<void> {
+    console.log('🔄 ========== handlePaymentWebhook ВЫЗВАН ==========');
+    console.log('🔄 Тип webhook:', {
+      hasEvent: !!update.event,
+      event: update.event,
+      hasType: !!update.type,
+      type: update.type,
+      hasPayment: !!update.payment,
+      hasPreCheckoutQuery: !!update.pre_checkout_query,
+      hasMessage: !!update.message,
+      keys: Object.keys(update),
+    });
+    
     // Проверяем, это webhook от Tribute или от Telegram
     // Tribute обычно отправляет данные в формате { event: 'payment.completed', data: {...} }
     if (update.event === 'payment.completed' || update.type === 'payment.completed' || update.payment) {
+      console.log('✅ Определен как Tribute webhook, вызываю handleTributeWebhook');
       // Это webhook от Tribute
       await this.handleTributeWebhook(update);
+      console.log('✅ handleTributeWebhook завершен');
       return;
     }
+    
+    console.log('🔄 Не Tribute webhook, проверяю другие типы...');
     // Обработка pre_checkout_query (подтверждение платежа перед оплатой)
     if (update.pre_checkout_query) {
       try {

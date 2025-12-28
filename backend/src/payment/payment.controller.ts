@@ -51,7 +51,10 @@ export class PaymentController {
       }
     }
 
-    return this.paymentService.handlePaymentWebhook(update);
+    console.log('🔄 Вызываю handlePaymentWebhook с данными:', JSON.stringify(update, null, 2).substring(0, 500));
+    const result = await this.paymentService.handlePaymentWebhook(update);
+    console.log('✅ handlePaymentWebhook завершен');
+    return result;
   }
 
   /**
