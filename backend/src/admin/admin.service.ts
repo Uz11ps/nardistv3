@@ -2707,15 +2707,6 @@ export class AdminService implements OnModuleInit {
       .groupBy('status')
       .getRawMany();
 
-    const byMethod = await this.paymentTransactionsRepository
-      .createQueryBuilder('tx')
-      .select('method')
-      .addSelect('COUNT(*)', 'count')
-      .addSelect('SUM(amount)', 'totalAmount')
-      .where('status = :status', { status: PaymentStatus.COMPLETED })
-      .groupBy('method')
-      .getRawMany();
-
     const byType = await this.paymentTransactionsRepository
       .createQueryBuilder('tx')
       .select('type')
@@ -2756,11 +2747,6 @@ export class AdminService implements OnModuleInit {
         type: t.type,
         count: parseInt(t.count),
         totalAmount: parseFloat(t.totalAmount || 0),
-      })),
-      byMethod: byMethod.map(m => ({
-        method: m.method,
-        count: parseInt(m.count),
-        totalAmount: parseFloat(m.totalAmount || 0),
       })),
       transactions: latestTransactions.map(tx => ({
         ...tx,
