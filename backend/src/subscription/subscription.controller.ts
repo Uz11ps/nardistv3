@@ -290,22 +290,40 @@ export class SubscriptionController {
       throw new BadRequestException('Транзакция не принадлежит пользователю');
     }
 
-    // Для TRIBUTE платежей - если транзакция PENDING, пытаемся активировать подписку
+    // Для TRIBUTE платежей - если транзакция PENDING, пытаемся активировать подписку (fallback)
     if (transaction.method === PaymentMethod.TRIBUTE && transaction.status === PaymentStatus.PENDING) {
+      console.log(`🔄 Fallback: проверка статуса Tribute транзакции ${transactionId}`);
+      console.log(`🔄 userId=${transaction.userId}, type=${transaction.type}, plan=${transaction.subscriptionPlan}`);
+      
       // Проверяем, прошло ли достаточно времени с момента создания (минимум 5 секунд)
       const timeSinceCreation = Date.now() - transaction.createdAt.getTime();
+      console.log(`🔄 Время с момента создания: ${timeSinceCreation}ms`);
+      
       if (timeSinceCreation > 5000) {
+        console.log(`✅ Fallback: активирую подписку через проверку статуса (прошло >5 секунд)`);
+        
         // Для Tribute предполагаем, что если пользователь вернулся, оплата прошла
         // Обновляем транзакцию как завершенную и активируем подписку
         transaction.status = PaymentStatus.COMPLETED;
         transaction.confirmedAt = new Date();
+        transaction.metadata = {
+          ...transaction.metadata,
+          activatedViaFallback: true,
+          fallbackActivationTime: new Date().toISOString(),
+        };
         await this.paymentTransactionService.updateTransaction(transaction);
+        
+        console.log(`🔄 Fallback: вызываю processCompletedTransaction`);
         
         // Активируем подписку/начисляем NAR-coin
         await this.paymentTransactionService.processCompletedTransaction(transaction);
         
+        console.log(`✅ Fallback: подписка активирована через проверку статуса`);
+        
         // Получаем обновленную транзакцию
         return await this.paymentTransactionService.getTransaction(transactionId);
+      } else {
+        console.log(`⏳ Fallback: слишком рано для активации (прошло ${timeSinceCreation}ms, нужно >5000ms)`);
       }
     }
 

@@ -264,8 +264,13 @@ export class PaymentTransactionService {
    * Обработать завершенную транзакцию
    */
   async processCompletedTransaction(transaction: PaymentTransaction): Promise<void> {
+    this.logger.log(`🔄 ========== ОБРАБОТКА ЗАВЕРШЕННОЙ ТРАНЗАКЦИИ ==========`);
+    this.logger.log(`🔄 transactionId=${transaction.id}, type=${transaction.type}, userId=${transaction.userId}`);
+    this.logger.log(`🔄 subscriptionPlan=${transaction.subscriptionPlan}, method=${transaction.method}`);
 
     if (transaction.type === PaymentType.SUBSCRIPTION && transaction.subscriptionPlan) {
+      this.logger.log(`🔄 Создаю подписку для пользователя ${transaction.userId}, план: ${transaction.subscriptionPlan}`);
+      
       // Создаем подписку
       const subscription = await this.subscriptionService.createSubscription(
         transaction.userId,
@@ -273,12 +278,15 @@ export class PaymentTransactionService {
         transaction.id,
       );
 
+      this.logger.log(`✅ Подписка создана: subscriptionId=${subscription.id}`);
+
       transaction.subscriptionId = subscription.id;
       await this.transactionRepository.save(transaction);
 
       // Реферальный бонус для подписок не начисляется (или можно настроить в админке)
 
-      this.logger.log(`✅ Подписка активирована для пользователя ${transaction.userId}`);
+      this.logger.log(`✅ ========== ПОДПИСКА АКТИВИРОВАНА ==========`);
+      this.logger.log(`✅ userId=${transaction.userId}, subscriptionId=${subscription.id}, plan=${transaction.subscriptionPlan}`);
     } else if (transaction.type === PaymentType.NAR_COIN) {
       // Начисляем NAR-coin
       const user = await this.usersService.findOne(transaction.userId);
