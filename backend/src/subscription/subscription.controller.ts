@@ -196,7 +196,6 @@ export class SubscriptionController {
           }
           payment = await this.paymentService.createTributePayment({
             userId: user.id,
-            amount: amount,
             description: `Премиум подписка ${planName}`,
             type: 'subscription',
             tributeLink: tributeLink,
@@ -209,6 +208,15 @@ export class SubscriptionController {
           body.plan,
           method,
         );
+
+        // Сохраняем invoiceId в metadata для Tribute (чтобы можно было найти транзакцию по webhook)
+        if (payment.invoiceId) {
+          transaction.metadata = {
+            ...transaction.metadata,
+            invoiceId: payment.invoiceId,
+          };
+          await this.paymentTransactionService.updateTransaction(transaction);
+        }
 
         return {
           transactionId: transaction.id,
@@ -364,7 +372,6 @@ export class SubscriptionController {
           }
           payment = await this.paymentService.createTributePayment({
             userId: user.id,
-            amount: price,
             description: `Покупка ${narAmount} NAR-coin`,
             type: 'nar_coin',
             tributeLink: selectedPackage.tributeLink,
