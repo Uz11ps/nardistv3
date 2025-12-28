@@ -2613,29 +2613,45 @@ export class AdminService implements OnModuleInit {
     const setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
     if (setting) {
       const packages = JSON.parse(setting.value);
+      console.log('📥 Загрузка пакетов из БД (сырые данные):', JSON.stringify(packages, null, 2));
+      
       // Нормализуем данные - убираем старые поля TON/USDT, оставляем только STARS и TRIBUTE
-      return packages.map((pkg: any) => {
+      const normalized = packages.map((pkg: any) => {
         // Поддержка старого формата для обратной совместимости
-        const priceStars = pkg.priceStars || pkg.price || pkg.priceTon || pkg.priceUsdt || 0;
-        return {
+        const priceStars = pkg.priceStars ?? (pkg.price || (pkg as any).priceTon || (pkg as any).priceUsdt || 0);
+        const result = {
           amount: pkg.amount || 0,
           priceStars: priceStars,
           tributeLink: pkg.tributeLink || '',
         };
+        console.log(`📦 Нормализация:`, { original: pkg, result });
+        return result;
       });
+      
+      console.log('✅ Нормализованные пакеты:', JSON.stringify(normalized, null, 2));
+      return normalized;
     }
+    console.log('⚠️ Пакеты не найдены в БД');
     return [];
   }
 
   async updateNarCoinPrices(packages: Array<{ amount: number; priceStars?: number; tributeLink?: string }>) {
+    console.log('💾 Сохранение пакетов NAR-coin:', JSON.stringify(packages, null, 2));
+    
     let setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
     
     // Нормализуем пакеты - оставляем только STARS и TRIBUTE
-    const normalizedPackages = packages.map(pkg => ({
-      amount: pkg.amount || 0,
-      priceStars: pkg.priceStars || 0,
-      tributeLink: pkg.tributeLink || '',
-    }));
+    const normalizedPackages = packages.map(pkg => {
+      const normalized = {
+        amount: pkg.amount || 0,
+        priceStars: pkg.priceStars ?? 0,
+        tributeLink: pkg.tributeLink || '',
+      };
+      console.log(`📦 Нормализация пакета:`, { original: pkg, normalized });
+      return normalized;
+    });
+    
+    console.log('✅ Нормализованные пакеты:', JSON.stringify(normalizedPackages, null, 2));
     
     if (!setting) {
       setting = this.systemSettingsRepository.create({
@@ -2647,6 +2663,7 @@ export class AdminService implements OnModuleInit {
     }
     
     await this.systemSettingsRepository.save(setting);
+    console.log('💾 Пакеты сохранены в БД');
     return normalizedPackages;
   }
 

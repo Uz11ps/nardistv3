@@ -588,12 +588,15 @@ export default function Admin() {
     try {
       const response = await apiClient.get('/admin/prices/nar-coin')
       const packages = response.data
+      console.log('📥 Загружены пакеты NAR-coin:', JSON.stringify(packages, null, 2))
       // Нормализуем данные для поддержки старого формата
-      setNarCoinPackages(packages.map((pkg: any) => ({
+      const normalized = packages.map((pkg: any) => ({
         amount: pkg.amount || 0,
         priceStars: pkg.priceStars || pkg.price || 0,
         tributeLink: pkg.tributeLink || '',
-      })))
+      }))
+      console.log('📦 Нормализованные пакеты:', JSON.stringify(normalized, null, 2))
+      setNarCoinPackages(normalized)
     } catch (error) {
       console.error('Failed to load nar-coin prices:', error)
     }
@@ -5336,10 +5339,14 @@ export default function Admin() {
               </button>
               <button
                 onClick={async () => {
+                  console.log('📤 Отправка пакетов NAR-coin:', JSON.stringify(narCoinPackages, null, 2))
                   try {
-                    await apiClient.put('/admin/prices/nar-coin', { packages: narCoinPackages })
+                    const response = await apiClient.put('/admin/prices/nar-coin', { packages: narCoinPackages })
+                    console.log('✅ Ответ от сервера:', response.data)
                     alert('Пакеты NAR-coin обновлены')
+                    await loadNarCoinPrices()
                   } catch (error: any) {
+                    console.error('❌ Ошибка сохранения:', error)
                     alert('Ошибка: ' + (error.response?.data?.message || error.message))
                   }
                 }}

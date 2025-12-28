@@ -105,21 +105,23 @@ export class SubscriptionController {
   @Get('nar-coin-packages')
   async getNarCoinPackages(@Query('method') method?: string) {
     const packages = await this.adminService.getNarCoinPrices();
-    const methodLower = method?.toLowerCase() || 'tribute';
-    const isTributeOrStars = methodLower === 'tribute' || methodLower === 'stars';
-    const currency = isTributeOrStars ? 'STARS' : (methodLower === 'usdt' ? 'USDT' : 'TON');
+    const methodLower = method?.toLowerCase() || 'stars';
+    const isStars = methodLower === 'stars';
+    const currency = isStars ? 'STARS' : 'TRIBUTE';
+    
+    console.log('📦 Пакеты NAR-coin из админки:', JSON.stringify(packages, null, 2));
+    console.log('💰 Метод оплаты:', methodLower, 'Валюта:', currency);
     
     return packages.map(pkg => {
-      // Для TRIBUTE и STARS используем TON цены
-      const price = isTributeOrStars
-        ? Number(pkg.priceTon || 0)
-        : (methodLower === 'usdt' ? Number(pkg.priceUsdt || 0) : Number(pkg.priceTon || 0));
+      // Для STARS используем priceStars, для TRIBUTE - тоже priceStars (но цена контролируется Tribute)
+      const price = isStars ? Number(pkg.priceStars || 0) : 0;
+      
+      console.log(`📦 Пакет: amount=${pkg.amount}, priceStars=${pkg.priceStars}, price=${price}`);
       
       return {
         amount: pkg.amount,
         price,
-        priceTon: Number(pkg.priceTon || 0),
-        priceUsdt: Number(pkg.priceUsdt || 0),
+        priceStars: Number(pkg.priceStars || 0),
         currency
       };
     });
