@@ -153,10 +153,31 @@ export default function Subscription() {
 
       // Для TRIBUTE открываем ссылку на товар Tribute
       if (paymentMethod === 'TRIBUTE' && response.data.tributeLink) {
+        const transactionId = response.data.transactionId
         // Открываем ссылку Tribute в новой вкладке или в текущем окне
         window.open(response.data.tributeLink, '_blank')
         // Показываем сообщение пользователю
         alert('Открыта страница оплаты Tribute. После оплаты вернитесь в приложение.')
+        
+        // Проверяем статус транзакции каждые 3 секунды после возврата пользователя
+        const checkStatusInterval = setInterval(async () => {
+          try {
+            const statusResponse = await apiClient.get(`/subscription/payment/${transactionId}/status`)
+            if (statusResponse.data.status === 'completed') {
+              clearInterval(checkStatusInterval)
+              handlePaymentSuccess()
+            } else if (statusResponse.data.status === 'failed') {
+              clearInterval(checkStatusInterval)
+              alert('Платеж не прошел. Попробуйте снова.')
+            }
+          } catch (error) {
+            console.error('Ошибка проверки статуса:', error)
+          }
+        }, 3000)
+        
+        // Останавливаем проверку через 5 минут
+        setTimeout(() => clearInterval(checkStatusInterval), 300000)
+        
         setLoading(false)
         return
       }

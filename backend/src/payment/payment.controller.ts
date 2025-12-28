@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards, Get, Param, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Param, BadRequestException, Headers, Req, UnauthorizedException } from '@nestjs/common';
+import { Request } from 'express';
 import { PaymentService, PaymentRequest } from './payment.service';
 import { PaymentTransactionService } from './payment-transaction.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -13,7 +14,36 @@ export class PaymentController {
 
 
   @Post('webhook')
-  async handleWebhook(@Body() update: any) {
+  async handleWebhook(
+    @Body() update: any,
+    @Headers('trbt-signature') signature: string,
+    @Req() req: Request,
+  ) {
+    // Проверяем подпись для Tribute webhook (если есть заголовок trbt-signature)
+    if (signature) {
+      // ВАЖНО: Tribute вычисляет подпись от raw JSON body
+      // В NestJS body уже распарсен, поэтому используем JSON.stringify
+      // Для production рекомендуется использовать raw body middleware для точной проверки
+      const rawBody = JSON.stringify(update);
+      const isValid = this.paymentService.verifyTributeWebhookSignature(rawBody, signature);
+      
+      if (!isValid) {
+        console.error('❌ Tribute webhook: неверная подпись', {
+          signature: signature?.substring(0, 16) + '...',
+          bodyLength: rawBody.length,
+          hasApiKey: this.paymentService.hasTributeApiKey(),
+        });
+        throw new UnauthorizedException('Неверная подпись Tribute webhook');
+      }
+      
+      console.log('✅ Подпись Tribute webhook проверена успешно');
+    } else {
+      // Если нет подписи, но это может быть webhook от Tribute - предупреждаем
+      if (update.event === 'payment.completed' || update.type === 'payment.completed') {
+        console.warn('⚠️ Получен Tribute webhook без подписи. Проверьте настройку TRIBUTE_API_KEY и webhook URL в панели Tribute.');
+      }
+    }
+
     return this.paymentService.handlePaymentWebhook(update);
   }
 

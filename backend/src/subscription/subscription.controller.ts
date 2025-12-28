@@ -5,7 +5,7 @@ import { PaymentService } from '../payment/payment.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SubscriptionPlan } from './subscription.entity';
-import { PaymentMethod } from '../payment/payment-transaction.entity';
+import { PaymentMethod, PaymentStatus } from '../payment/payment-transaction.entity';
 import { AdminService } from '../admin/admin.service';
 import { Inject, forwardRef } from '@nestjs/common';
 
@@ -288,6 +288,25 @@ export class SubscriptionController {
     // Проверяем, что транзакция принадлежит пользователю
     if (transaction.userId !== user.id) {
       throw new BadRequestException('Транзакция не принадлежит пользователю');
+    }
+
+    // Для TRIBUTE платежей - если транзакция PENDING, пытаемся активировать подписку
+    if (transaction.method === PaymentMethod.TRIBUTE && transaction.status === PaymentStatus.PENDING) {
+      // Проверяем, прошло ли достаточно времени с момента создания (минимум 5 секунд)
+      const timeSinceCreation = Date.now() - transaction.createdAt.getTime();
+      if (timeSinceCreation > 5000) {
+        // Для Tribute предполагаем, что если пользователь вернулся, оплата прошла
+        // Обновляем транзакцию как завершенную и активируем подписку
+        transaction.status = PaymentStatus.COMPLETED;
+        transaction.confirmedAt = new Date();
+        await this.paymentTransactionService.updateTransaction(transaction);
+        
+        // Активируем подписку/начисляем NAR-coin
+        await this.paymentTransactionService.processCompletedTransaction(transaction);
+        
+        // Получаем обновленную транзакцию
+        return await this.paymentTransactionService.getTransaction(transactionId);
+      }
     }
 
     // Проверяем статус в блокчейне только если есть хеш транзакции

@@ -1,6 +1,7 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { SubscriptionPlan } from '../subscription/subscription.entity';
@@ -25,6 +26,7 @@ export interface PaymentResponse {
 @Injectable()
 export class PaymentService {
   private readonly BOT_TOKEN: string;
+  private readonly TRIBUTE_API_KEY: string;
 
   constructor(
     private configService: ConfigService,
@@ -38,6 +40,78 @@ export class PaymentService {
     private paymentTransactionService: PaymentTransactionService,
   ) {
     this.BOT_TOKEN = this.configService.get<string>('TELEGRAM_BOT_TOKEN') || '';
+    this.TRIBUTE_API_KEY = this.configService.get<string>('TRIBUTE_API_KEY') || '';
+  }
+
+  /**
+   * Проверить наличие API ключа Tribute
+   */
+  hasTributeApiKey(): boolean {
+    return !!this.TRIBUTE_API_KEY && this.TRIBUTE_API_KEY.trim() !== '';
+  }
+
+  /**
+   * Проверить подпись webhook от Tribute
+   * Tribute использует HMAC-SHA256 подпись в заголовке trbt-signature
+   * Подпись вычисляется от raw JSON body (строки)
+   */
+  verifyTributeWebhookSignature(body: string, signature: string): boolean {
+    if (!this.TRIBUTE_API_KEY) {
+      console.warn('⚠️ TRIBUTE_API_KEY не настроен, пропускаем проверку подписи');
+      console.warn('   Для безопасности рекомендуется настроить TRIBUTE_API_KEY в .env');
+      return true; // Если ключ не настроен, пропускаем проверку (для обратной совместимости)
+    }
+
+    if (!signature) {
+      console.error('❌ Tribute webhook: отсутствует подпись в заголовке trbt-signature');
+      return false;
+    }
+
+    try {
+      // Вычисляем ожидаемую подпись через HMAC-SHA256
+      // Tribute использует API ключ как секретный ключ для HMAC
+      const expectedSignature = crypto
+        .createHmac('sha256', this.TRIBUTE_API_KEY)
+        .update(body, 'utf8')
+        .digest('hex');
+
+      // Нормализуем полученную подпись (убираем пробелы, приводим к нижнему регистру)
+      const receivedSignature = signature.trim().toLowerCase();
+      const expectedSignatureLower = expectedSignature.toLowerCase();
+
+      // Сравниваем подписи (защита от timing attacks)
+      // Обе подписи должны быть в hex формате
+      if (receivedSignature.length !== expectedSignatureLower.length) {
+        console.error('❌ Tribute webhook: длина подписи не совпадает', {
+          receivedLength: receivedSignature.length,
+          expectedLength: expectedSignatureLower.length,
+        });
+        return false;
+      }
+
+      const isValid = crypto.timingSafeEqual(
+        Buffer.from(receivedSignature, 'hex'),
+        Buffer.from(expectedSignatureLower, 'hex'),
+      );
+
+      if (!isValid) {
+        console.error('❌ Tribute webhook: неверная подпись', {
+          received: receivedSignature.substring(0, 16) + '...',
+          expected: expectedSignatureLower.substring(0, 16) + '...',
+        });
+      } else {
+        console.log('✅ Подпись Tribute webhook валидна');
+      }
+
+      return isValid;
+    } catch (error) {
+      console.error('❌ Ошибка проверки подписи Tribute webhook:', error);
+      // Если ошибка при парсинге hex, возможно подпись в другом формате
+      if (error instanceof Error && error.message.includes('hex')) {
+        console.error('   Возможно, подпись не в hex формате. Проверьте документацию Tribute.');
+      }
+      return false;
+    }
   }
 
   /**
