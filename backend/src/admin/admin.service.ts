@@ -2748,6 +2748,9 @@ export class AdminService implements OnModuleInit {
         count: parseInt(t.count),
         totalAmount: parseFloat(t.totalAmount || 0),
       })),
+      // Добавляем пустой массив byWallet для совместимости с фронтендом, 
+      // если он все еще ожидает это поле, хотя мы убрали его использование
+      byWallet: [], 
       transactions: latestTransactions.map(tx => ({
         ...tx,
         amount: parseFloat(tx.amount.toString()),
