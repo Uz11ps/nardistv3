@@ -318,11 +318,13 @@ export class PaymentService {
       });
 
       // Для Stars платежей с форматом https://t.me/$XXXXX
-      // WebApp.openInvoice может требовать полную ссылку или slug с префиксом $
-      // Передаем и slug, и полную ссылку для совместимости
+      // WebApp.openInvoice требует slug с префиксом $
+      // Убеждаемся, что slug начинается с $
+      const invoiceSlug = invoice.startsWith('$') ? invoice : `$${invoice}`;
+      
       return {
         invoice: {
-          slug: invoice,
+          slug: invoiceSlug, // Slug с префиксом $ для WebApp.openInvoice
           url: invoiceLink, // Полная ссылка для Stars
         },
         invoiceId,
