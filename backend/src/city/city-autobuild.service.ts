@@ -270,8 +270,9 @@ export class CityAutobuildService {
           continue; // Пропускаем строения на максимальном уровне
         }
 
-        // Рассчитываем цену улучшения: basePrice * 1.4^level
-        const upgradePrice = Math.floor(Number(config.basePrice) * Math.pow(1.4, freshBuilding.level));
+        // Рассчитываем цену улучшения: basePrice * upgradeMultiplier^level
+        const multiplier = config.upgradeMultiplier || 1.15;
+        const upgradePrice = Math.floor(Number(config.basePrice) * Math.pow(multiplier, freshBuilding.level));
 
         // Проверяем баланс снова
         const updatedUser = await this.usersRepository.findOne({ where: { id: userId } });
@@ -358,7 +359,8 @@ export class CityAutobuildService {
         continue;
       }
 
-      const upgradePrice = Math.floor(Number(config.basePrice) * Math.pow(1.4, freshBuilding.level));
+      const multiplier = config.upgradeMultiplier || 1.15;
+      const upgradePrice = Math.floor(Number(config.basePrice) * Math.pow(multiplier, freshBuilding.level));
 
       // Проверяем баланс снова
       const updatedUser = await this.usersRepository.findOne({ where: { id: userId } });

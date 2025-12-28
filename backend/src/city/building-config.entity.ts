@@ -35,11 +35,11 @@ export class BuildingConfig {
   @Column({ type: 'int', default: 10 })
   maxLevel: number; // Максимальный уровень
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 1.4 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 1.15 })
   upgradeMultiplier: number; // Множитель для расчета стоимости улучшения (basePrice * multiplier^level)
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 1.2 })
-  incomeMultiplier: number; // Множитель для расчета дохода за уровень (baseIncomePerHour * multiplier^level)
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.07 })
+  incomeMultiplier: number; // Множитель для расчета дохода (baseIncomePerHour * (1 + multiplier * (level-1)))
 
   @Column({ type: 'jsonb', nullable: true })
   upgradeCosts: any; // Стоимость улучшения по уровням (опционально, если не используется формула)

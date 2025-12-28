@@ -271,7 +271,7 @@ export default function City() {
                   {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map(({ config, userBuilding }) => {
                     const accumulated = userBuilding ? calculateAccumulatedIncome(userBuilding, config) : 0
                     const upgradePrice = userBuilding 
-                      ? Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.4, userBuilding.level))
+                      ? Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.15, userBuilding.level))
                       : config.basePrice
 
                     const isDistrictLocked = !currentDistrict.isUnlocked;
@@ -439,7 +439,7 @@ export default function City() {
                   ? currentDistrict.buildings.find(b => b.config.id === showBuildingModal.id)?.userBuilding 
                   : null
                 const upgradePrice = userBuilding 
-                  ? Math.floor(showBuildingModal.basePrice * Math.pow(showBuildingModal.upgradeMultiplier || 1.4, userBuilding.level))
+                  ? Math.floor(showBuildingModal.basePrice * Math.pow(showBuildingModal.upgradeMultiplier || 1.15, userBuilding.level))
                   : showBuildingModal.basePrice
                 
                 return (

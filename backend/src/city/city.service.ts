@@ -67,7 +67,7 @@ export class CityService {
             baseIncomePerHour: Number(config.baseIncomePerHour),
             maxAccumulation: Number(config.maxAccumulation),
             maxLevel: config.maxLevel,
-            upgradeMultiplier: config.upgradeMultiplier || 1.4,
+            upgradeMultiplier: config.upgradeMultiplier || 1.15,
           },
           userBuilding: userBuilding ? {
             id: userBuilding.id,
@@ -129,7 +129,7 @@ export class CityService {
         baseIncomePerHour: Number(config.baseIncomePerHour),
         maxAccumulation: Number(config.maxAccumulation),
         maxLevel: config.maxLevel,
-        upgradeMultiplier: config.upgradeMultiplier || 1.4,
+        upgradeMultiplier: config.upgradeMultiplier || 1.15,
       }));
   }
 
@@ -180,9 +180,9 @@ export class CityService {
     const newBalance = Number(user.narCoin) - price;
     await this.usersService.update(userId, { narCoin: newBalance });
 
-    // Рассчитываем доход для уровня 1: baseIncomePerHour * incomeMultiplier^level (где level = 1)
-    const incomeMultiplier = config.incomeMultiplier || 1.2;
-    const incomePerHour = Math.floor(Number(config.baseIncomePerHour) * Math.pow(incomeMultiplier, 1));
+    // Рассчитываем доход для уровня 1: baseIncomePerHour * (1 + incomeMultiplier * (level - 1))
+    // Для уровня 1 это просто baseIncomePerHour
+    const incomePerHour = Number(config.baseIncomePerHour);
 
     // Создаем строение
     const building = this.buildingsRepository.create({
@@ -231,7 +231,7 @@ export class CityService {
     const user = await this.usersService.findOne(userId);
 
     // Рассчитываем цену улучшения: basePrice * upgradeMultiplier^level
-    const multiplier = config.upgradeMultiplier || 1.4;
+    const multiplier = config.upgradeMultiplier || 1.15;
     const upgradePrice = Math.floor(Number(config.basePrice) * Math.pow(multiplier, building.level));
     
     if (Number(user.narCoin) < upgradePrice) {
@@ -245,9 +245,9 @@ export class CityService {
     // Увеличиваем уровень
     building.level += 1;
 
-    // Рассчитываем новый доход: baseIncomePerHour * incomeMultiplier^level
-    const incomeMultiplier = config.incomeMultiplier || 1.2;
-    const newIncomePerHour = Math.floor(Number(config.baseIncomePerHour) * Math.pow(incomeMultiplier, building.level));
+    // Рассчитываем новый доход: baseIncomePerHour * (1 + incomeMultiplier * (level - 1))
+    const incomeMultiplier = config.incomeMultiplier || 0.07;
+    const newIncomePerHour = Math.floor(Number(config.baseIncomePerHour) * (1 + incomeMultiplier * (building.level - 1)));
     building.incomePerHour = newIncomePerHour.toString();
 
     await this.buildingsRepository.save(building);
