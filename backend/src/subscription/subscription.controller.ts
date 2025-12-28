@@ -173,26 +173,35 @@ export class SubscriptionController {
         }
         
         // Для STARS используем цену STARS из админки
-        // Для TRIBUTE используем цену TRIBUTE из админки
+        // Для TRIBUTE используем ссылку Tribute из админки
         const amount = method === PaymentMethod.TELEGRAM_STARS
           ? Number(planPrices.stars || 0)
           : Number(planPrices.tribute || 0);
         const planName = body.plan === SubscriptionPlan.MONTH_1 ? '1 месяц' : body.plan === SubscriptionPlan.MONTH_3 ? '3 месяца' : '1 год';
         
-        // Для STARS используем прямой метод выплаты боту, для TRIBUTE - обычный метод
-        const payment = method === PaymentMethod.TELEGRAM_STARS
-          ? await this.paymentService.createStarsPayment({
-              userId: user.id,
-              amount: amount,
-              description: `Премиум подписка ${planName}`,
-              type: 'subscription',
-            })
-          : await this.paymentService.createTributePayment({
-              userId: user.id,
-              amount: amount,
-              description: `Премиум подписка ${planName}`,
-              type: 'subscription',
-            });
+        // Для STARS используем прямой метод выплаты боту, для TRIBUTE - ссылку на товар Tribute
+        let payment: any;
+        if (method === PaymentMethod.TELEGRAM_STARS) {
+          payment = await this.paymentService.createStarsPayment({
+            userId: user.id,
+            amount: amount,
+            description: `Премиум подписка ${planName}`,
+            type: 'subscription',
+          });
+        } else {
+          // Для TRIBUTE получаем ссылку из админки
+          const tributeLink = planPrices.tributeLink || '';
+          if (!tributeLink) {
+            throw new BadRequestException('Ссылка на товар Tribute не настроена для этого плана. Обратитесь к администратору.');
+          }
+          payment = await this.paymentService.createTributePayment({
+            userId: user.id,
+            amount: amount,
+            description: `Премиум подписка ${planName}`,
+            type: 'subscription',
+            tributeLink: tributeLink,
+          });
+        }
 
         // Создаем транзакцию для отслеживания
         const transaction = await this.paymentTransactionService.createSubscriptionTransaction(
@@ -203,7 +212,8 @@ export class SubscriptionController {
 
         return {
           transactionId: transaction.id,
-          invoice: payment.invoice,
+          invoice: payment.invoice || null,
+          tributeLink: payment.tributeLink || null,
           invoiceId: payment.invoiceId,
           amount: amount,
           method: method === PaymentMethod.TELEGRAM_STARS ? 'STARS' : 'TRIBUTE',
@@ -356,20 +366,29 @@ export class SubscriptionController {
 
       // Если метод оплаты Tribute или Stars, создаем платеж через Telegram WebApp API
       if (method === PaymentMethod.TRIBUTE || method === PaymentMethod.TELEGRAM_STARS) {
-        // Для STARS используем прямой метод выплаты боту, для TRIBUTE - обычный метод
-        const payment = method === PaymentMethod.TELEGRAM_STARS
-          ? await this.paymentService.createStarsPayment({
-              userId: user.id,
-              amount: price,
-              description: `Покупка ${narAmount} NAR-coin`,
-              type: 'nar_coin',
-            })
-          : await this.paymentService.createTributePayment({
-              userId: user.id,
-              amount: price,
-              description: `Покупка ${narAmount} NAR-coin`,
-              type: 'nar_coin',
-            });
+        let payment: any;
+        if (method === PaymentMethod.TELEGRAM_STARS) {
+          payment = await this.paymentService.createStarsPayment({
+            userId: user.id,
+            amount: price,
+            description: `Покупка ${narAmount} NAR-coin`,
+            type: 'nar_coin',
+          });
+        } else {
+          // Для TRIBUTE получаем ссылку из пакета NAR-coin
+          const packages = await this.adminService.getNarCoinPrices();
+          const selectedPackage = packages.find((pkg: any) => pkg.amount === narAmount);
+          if (!selectedPackage || !selectedPackage.tributeLink) {
+            throw new BadRequestException('Ссылка на товар Tribute не настроена для этого пакета. Обратитесь к администратору.');
+          }
+          payment = await this.paymentService.createTributePayment({
+            userId: user.id,
+            amount: price,
+            description: `Покупка ${narAmount} NAR-coin`,
+            type: 'nar_coin',
+            tributeLink: selectedPackage.tributeLink,
+          });
+        }
 
         // Создаем транзакцию для отслеживания
         const transaction = await this.paymentTransactionService.createNarCoinTransaction(
@@ -381,7 +400,8 @@ export class SubscriptionController {
 
         return {
           transactionId: transaction.id,
-          invoice: payment.invoice,
+          invoice: payment.invoice || null,
+          tributeLink: payment.tributeLink || null,
           invoiceId: payment.invoiceId,
           amount: price,
           method: method === PaymentMethod.TELEGRAM_STARS ? 'STARS' : 'TRIBUTE',

@@ -176,8 +176,8 @@ export default function Shop() {
         method: paymentMethod,
       })
       
-      // Открываем инвойс через WebApp API для TRIBUTE и STARS
-      if ((paymentMethod === 'TRIBUTE' || paymentMethod === 'STARS') && response.data.invoice) {
+      // Для STARS открываем инвойс через WebApp API
+      if (paymentMethod === 'STARS' && response.data.invoice) {
         const telegramWebApp = (window as any).Telegram?.WebApp
         if (!telegramWebApp) {
           throw new Error('Telegram WebApp не доступен. Откройте приложение через Telegram бота.')
@@ -195,6 +195,16 @@ export default function Shop() {
           }
           setBuyingNarCoinAmount(null)
         })
+        return
+      }
+
+      // Для TRIBUTE открываем ссылку на товар Tribute
+      if (paymentMethod === 'TRIBUTE' && response.data.tributeLink) {
+        // Открываем ссылку Tribute в новой вкладке или в текущем окне
+        window.open(response.data.tributeLink, '_blank')
+        // Показываем сообщение пользователю
+        alert('Открыта страница оплаты Tribute. После оплаты вернитесь в приложение.')
+        setBuyingNarCoinAmount(null)
         return
       }
       

@@ -2553,29 +2553,34 @@ export class AdminService implements OnModuleInit {
       // Поддержка старого формата для обратной совместимости
       if (prices.month_1 && typeof prices.month_1 === 'number') {
         return {
-          month_1: { stars: prices.month_1 },
-          month_3: { stars: prices.month_3 },
-          month_12: { stars: prices.month_12 },
+          month_1: { stars: prices.month_1, tributeLink: '' },
+          month_3: { stars: prices.month_3, tributeLink: '' },
+          month_12: { stars: prices.month_12, tributeLink: '' },
         };
       }
       // Если есть старый формат с ton/usdt, конвертируем в stars
       if (prices.month_1 && (prices.month_1.ton || prices.month_1.usdt)) {
         return {
-          month_1: { stars: prices.month_1.stars || prices.month_1.ton || prices.month_1.usdt || 0 },
-          month_3: { stars: prices.month_3?.stars || prices.month_3?.ton || prices.month_3?.usdt || 0 },
-          month_12: { stars: prices.month_12?.stars || prices.month_12?.ton || prices.month_12?.usdt || 0 },
+          month_1: { stars: prices.month_1.stars || prices.month_1.ton || prices.month_1.usdt || 0, tributeLink: prices.month_1.tributeLink || '' },
+          month_3: { stars: prices.month_3?.stars || prices.month_3?.ton || prices.month_3?.usdt || 0, tributeLink: prices.month_3?.tributeLink || '' },
+          month_12: { stars: prices.month_12?.stars || prices.month_12?.ton || prices.month_12?.usdt || 0, tributeLink: prices.month_12?.tributeLink || '' },
         };
       }
-      return prices;
+      // Убеждаемся что есть tributeLink
+      return {
+        month_1: { ...prices.month_1, tributeLink: prices.month_1?.tributeLink || '' },
+        month_3: { ...prices.month_3, tributeLink: prices.month_3?.tributeLink || '' },
+        month_12: { ...prices.month_12, tributeLink: prices.month_12?.tributeLink || '' },
+      };
     }
     // Нет данных в админке
     return null;
   }
 
   async updateSubscriptionPrices(prices: { 
-    month_1?: { tribute?: number; stars?: number }; 
-    month_3?: { tribute?: number; stars?: number }; 
-    month_12?: { tribute?: number; stars?: number } 
+    month_1?: { tribute?: number; stars?: number; tributeLink?: string }; 
+    month_3?: { tribute?: number; stars?: number; tributeLink?: string }; 
+    month_12?: { tribute?: number; stars?: number; tributeLink?: string } 
   }) {
     let setting = await this.systemSettingsRepository.findOne({ where: { key: 'subscription_prices' } });
     const currentPrices = setting ? await this.getSubscriptionPrices() : null;
@@ -2586,9 +2591,9 @@ export class AdminService implements OnModuleInit {
       month_3: { ...currentPrices.month_3, ...(prices.month_3 || {}) },
       month_12: { ...currentPrices.month_12, ...(prices.month_12 || {}) },
     } : {
-      month_1: prices.month_1 || { tribute: 0, stars: 0 },
-      month_3: prices.month_3 || { tribute: 0, stars: 0 },
-      month_12: prices.month_12 || { tribute: 0, stars: 0 },
+      month_1: prices.month_1 || { tribute: 0, stars: 0, tributeLink: '' },
+      month_3: prices.month_3 || { tribute: 0, stars: 0, tributeLink: '' },
+      month_12: prices.month_12 || { tribute: 0, stars: 0, tributeLink: '' },
     };
     
     if (!setting) {
@@ -2614,14 +2619,19 @@ export class AdminService implements OnModuleInit {
           amount: pkg.amount,
           priceTon: pkg.price,
           priceUsdt: pkg.price,
+          tributeLink: pkg.tributeLink || '',
         }));
       }
-      return packages;
+      // Убеждаемся что есть tributeLink
+      return packages.map((pkg: any) => ({
+        ...pkg,
+        tributeLink: pkg.tributeLink || '',
+      }));
     }
     return [];
   }
 
-  async updateNarCoinPrices(packages: Array<{ amount: number; priceTon?: number; priceUsdt?: number }>) {
+  async updateNarCoinPrices(packages: Array<{ amount: number; priceTon?: number; priceUsdt?: number; tributeLink?: string }>) {
     let setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
     
     // Нормализуем пакеты - если пришёл старый формат, конвертируем

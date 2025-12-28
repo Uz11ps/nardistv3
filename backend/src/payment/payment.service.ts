@@ -268,95 +268,28 @@ export class PaymentService {
   }
 
   /**
-   * Создать платеж через Tribute (Telegram WebApp Invoice)
-   * Возвращает данные инвойса для открытия через WebApp.openInvoice
+   * Создать платеж через Tribute
+   * Возвращает ссылку на товар Tribute для открытия в браузере или Mini App
    */
-  async createTributePayment(request: TonPaymentRequest): Promise<{ invoice: any; invoiceId: string }> {
+  async createTributePayment(request: TonPaymentRequest & { tributeLink: string }): Promise<{ tributeLink: string; invoiceId: string }> {
     try {
-      if (!this.BOT_TOKEN || this.BOT_TOKEN.trim() === '') {
-        throw new Error('Ошибка настройки: токен Telegram бота не настроен на сервере. Обратитесь в поддержку.');
+      if (!request.tributeLink || request.tributeLink.trim() === '') {
+        throw new Error('Ссылка на товар Tribute не настроена. Обратитесь к администратору.');
       }
 
-      if (!request.amount || request.amount <= 0) {
-        throw new Error('Некорректная сумма платежа. Сумма должна быть больше 0.');
+      // Проверяем что ссылка валидная (должна быть ссылкой Tribute)
+      if (!request.tributeLink.includes('tribute.tg') && !request.tributeLink.includes('t.me/tribute')) {
+        throw new Error('Некорректная ссылка на товар Tribute. Проверьте настройки в админке.');
       }
 
-      // Создаем инвойс через Telegram Bot API для использования в WebApp.openInvoice
-      const invoiceResponse = await axios.post(
-        `https://api.telegram.org/bot${this.BOT_TOKEN}/createInvoiceLink`,
-        {
-          title: request.description,
-          description: request.description,
-          payload: JSON.stringify({
-            userId: request.userId,
-            amount: request.amount,
-            type: request.type || 'nar_coin',
-            method: 'tribute',
-          }),
-          provider_token: '', // Для Stars/TON не нужен
-          currency: 'XTR', // Telegram Stars
-          prices: [
-            {
-              label: request.description,
-              amount: Math.round(request.amount * 100), // Stars в копейках (1 Star = 100)
-            },
-          ],
-          max_tip_amount: 0,
-          suggested_tip_amounts: [],
-          provider_data: JSON.stringify({
-            userId: request.userId,
-            type: request.type || 'nar_coin',
-            method: 'tribute',
-          }),
-        },
-        {
-          timeout: 10000,
-        },
-      );
-
-      if (!invoiceResponse.data || !invoiceResponse.data.ok) {
-        const errorDescription = invoiceResponse.data?.description || 'Неизвестная ошибка';
-        throw new Error(`Ошибка создания инвойса: ${errorDescription}`);
-      }
-
-      const invoiceLink = invoiceResponse.data.result?.invoice_link;
-      if (!invoiceLink) {
-        throw new Error('Платежная система не вернула ссылку для оплаты. Попробуйте позже.');
-      }
-
-      const invoiceId = invoiceResponse.data.result.invoice_payload || `tribute_${Date.now()}`;
-
-      // Извлекаем invoice_id из ссылки для использования в WebApp.openInvoice
-      // Формат ссылки: https://t.me/invoice/...
-      const invoiceMatch = invoiceLink.match(/\/invoice\/([^/?]+)/);
-      const invoice = invoiceMatch ? invoiceMatch[1] : null;
-
-      if (!invoice) {
-        throw new Error('Не удалось извлечь invoice ID из ссылки');
-      }
+      const invoiceId = `tribute_${Date.now()}_${request.userId}`;
 
       return {
-        invoice: {
-          slug: invoice,
-        },
+        tributeLink: request.tributeLink,
         invoiceId,
       };
     } catch (error: any) {
-      if (error.response) {
-        const status = error.response.status;
-        const errorData = error.response.data;
-
-        if (status === 401) {
-          throw new Error('Ошибка авторизации в платежной системе. Обратитесь в поддержку.');
-        } else if (status === 400) {
-          const description = errorData?.description || errorData?.error || 'Некорректный запрос';
-          throw new Error(`Ошибка запроса: ${description}. Проверьте данные и попробуйте снова.`);
-        } else if (status >= 500) {
-          throw new Error('Платежная система временно недоступна. Попробуйте позже.');
-        }
-      }
-
-      if (error.message && error.message.includes('Ошибка')) {
+      if (error.message && error.message.includes('Ошибка') || error.message.includes('не настроена') || error.message.includes('Некорректная')) {
         throw error;
       }
 
