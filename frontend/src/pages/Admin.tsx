@@ -865,6 +865,16 @@ export default function Admin() {
           Прогрессия
         </button>
         <button
+          className={`admin-tab-btn ${activeTab === 'payments' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('payments')
+            loadPaymentStats()
+            loadSystemSettings()
+          }}
+        >
+          История платежей
+        </button>
+        <button
           className={`admin-tab-btn ${activeTab === 'equipment-config' ? 'active' : ''}`}
           onClick={() => {
             setActiveTab('equipment-config')
@@ -6049,111 +6059,6 @@ export default function Admin() {
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-
-          <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px', marginBottom: '32px' }}>
-            <h3 style={{ marginBottom: '20px' }}>Статистика по кошелькам получателям</h3>
-            <div className="admin-table-container">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Адрес кошелька</th>
-                    <th>Кол-во транзакций</th>
-                    <th>Сумма (TON)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paymentStats.byWallet.map((w: any) => (
-                    <tr key={w.address}>
-                      <td style={{ fontFamily: 'monospace', fontSize: '12px' }}>{w.address}</td>
-                      <td>{w.count}</td>
-                      <td style={{ fontWeight: 'bold', color: '#4caf50' }}>{w.totalAmount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div style={{ background: '#2a2a2a', padding: '24px', borderRadius: '12px', marginBottom: '32px' }}>
-            <h3 style={{ marginBottom: '20px' }}>Кошельки пользователей</h3>
-            <div className="admin-table-container">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Пользователь</th>
-                    <th>Адрес кошелька</th>
-                    <th>Баланс (TON)</th>
-                    <th>Тип</th>
-                    <th>Статус</th>
-                    <th>Создан</th>
-                    <th>Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {wallets.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', color: '#aaa', padding: '20px' }}>
-                        Кошельков не найдено
-                      </td>
-                    </tr>
-                  ) : (
-                    wallets.map((wallet) => (
-                      <tr key={wallet.id}>
-                        <td>
-                          <div style={{ fontWeight: 'bold' }}>{wallet.username || 'Unknown'}</div>
-                          <div style={{ fontSize: '11px', color: '#aaa' }}>{wallet.userId?.substring(0, 8)}...</div>
-                        </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: '12px' }}>{wallet.address}</td>
-                        <td style={{ fontWeight: 'bold', color: '#4caf50' }}>
-                          {typeof wallet.balance === 'number' ? wallet.balance.toFixed(4) : '0.0000'}
-                        </td>
-                        <td>{wallet.walletType || 'TON'}</td>
-                        <td>
-                          <span style={{ 
-                            padding: '4px 8px', 
-                            borderRadius: '4px', 
-                            background: wallet.isActive ? '#4caf50' : '#ff5722',
-                            color: '#fff',
-                            fontSize: '12px'
-                          }}>
-                            {wallet.isActive ? 'Активен' : 'Неактивен'}
-                          </span>
-                        </td>
-                        <td>{new Date(wallet.createdAt).toLocaleString('ru-RU')}</td>
-                        <td>
-                          <button
-                            onClick={async () => {
-                              try {
-                                const response = await apiClient.get(`/admin/wallets/${wallet.id}/private-key`)
-                                setWalletPrivateKeyModal({
-                                  wallet: wallet,
-                                  privateKey: response.data.privateKey,
-                                  address: response.data.address
-                                })
-                              } catch (error: any) {
-                                alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                              }
-                            }}
-                            style={{ 
-                              padding: '4px 8px', 
-                              background: '#4a9eff', 
-                              color: '#fff', 
-                              border: 'none', 
-                              borderRadius: '4px', 
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                          >
-                            Приватный ключ
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
             </div>
           </div>
 
