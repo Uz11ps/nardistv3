@@ -209,19 +209,19 @@ export class PaymentService {
 
       if (!invoiceResponse.data.ok) {
         const errorDescription = invoiceResponse.data.description || invoiceResponse.data.error_code || 'Неизвестная ошибка';
-        alert('Ошибка создания STARS инвойса:' + invoiceResponse.data);
+        console.error('Ошибка создания STARS инвойса:', invoiceResponse.data);
         throw new Error(`Ошибка создания инвойса: ${errorDescription}`);
       }
 
       const result = invoiceResponse.data.result;
       if (!result) {
-        alert('Ответ от Telegram API не содержит result: ' +invoiceResponse.data);
+        console.error('Ответ от Telegram API не содержит result:', invoiceResponse.data);
         throw new Error('Платежная система вернула некорректный ответ. Попробуйте позже.');
       }
 
       const invoiceLink = result.invoice_link;
       if (!invoiceLink) {
-        alert('Ответ от Telegram API не содержит invoice_link:' + result);
+        console.error('Ответ от Telegram API не содержит invoice_link:', result);
         throw new Error('Платежная система не вернула ссылку для оплаты. Попробуйте позже.');
       }
 
@@ -308,9 +308,16 @@ export class PaymentService {
   }
 
   /**
-   * Обработать webhook от Telegram (для подтверждения платежа)
+   * Обработать webhook от Telegram или Tribute (для подтверждения платежа)
    */
   async handlePaymentWebhook(update: any): Promise<void> {
+    // Проверяем, это webhook от Tribute или от Telegram
+    // Tribute обычно отправляет данные в формате { event: 'payment.completed', data: {...} }
+    if (update.event === 'payment.completed' || update.type === 'payment.completed' || update.payment) {
+      // Это webhook от Tribute
+      await this.handleTributeWebhook(update);
+      return;
+    }
     // Обработка pre_checkout_query (подтверждение платежа перед оплатой)
     if (update.pre_checkout_query) {
       try {
@@ -355,14 +362,14 @@ export class PaymentService {
           // Для упрощения используем invoice payload как идентификатор
           const invoiceId = payload.invoiceId || update.message.successful_payment.invoice_payload;
           
-          // Находим транзакцию по userId и методу TRIBUTE со статусом PENDING
+          // Определяем метод платежа
+          const expectedMethod = method === 'stars' ? PaymentMethod.TELEGRAM_STARS : PaymentMethod.TRIBUTE;
+          
+          // Находим транзакцию по userId и методу со статусом PENDING
           const transactions = await this.paymentTransactionService.findTransactionsByUserAndMethod(
             userId,
-            PaymentMethod.TRIBUTE,
+            expectedMethod,
           );
-          
-          // Находим подходящую транзакцию (по типу, сумме и методу)
-          const expectedMethod = method === 'stars' ? PaymentMethod.TELEGRAM_STARS : PaymentMethod.TRIBUTE;
           const transaction = transactions.find(
             (t) => 
               t.status === PaymentStatus.PENDING &&
@@ -421,6 +428,61 @@ export class PaymentService {
         console.error(`Ошибка обработки платежа:`, error);
         throw error;
       }
+    }
+  }
+
+  /**
+   * Обработать webhook от Tribute
+   */
+  private async handleTributeWebhook(webhook: any): Promise<void> {
+    try {
+      // Формат webhook от Tribute может быть разным, обрабатываем основные варианты
+      const paymentData = webhook.data || webhook.payment || webhook;
+      const userId = paymentData.userId || paymentData.user_id || paymentData.metadata?.userId;
+      const amount = paymentData.amount || paymentData.total_amount || 0;
+      const transactionId = paymentData.transactionId || paymentData.transaction_id || paymentData.id;
+      const type = paymentData.type || paymentData.metadata?.type || 'subscription';
+      
+      if (!userId) {
+        console.error('Tribute webhook: userId не найден', webhook);
+        return;
+      }
+
+      // Ищем транзакцию по userId и методу TRIBUTE со статусом PENDING
+      const transactions = await this.paymentTransactionService.findTransactionsByUserAndMethod(
+        userId,
+        PaymentMethod.TRIBUTE,
+      );
+
+      // Находим подходящую транзакцию
+      const transaction = transactions.find(
+        (t) => 
+          t.status === PaymentStatus.PENDING &&
+          t.method === PaymentMethod.TRIBUTE &&
+          ((type === 'subscription' && t.type === 'subscription') ||
+           (type === 'nar_coin' && t.type === 'nar_coin')),
+      );
+
+      if (transaction) {
+        // Обновляем транзакцию как завершенную
+        transaction.status = PaymentStatus.COMPLETED;
+        transaction.confirmedAt = new Date();
+        transaction.metadata = {
+          ...transaction.metadata,
+          tributeTransactionId: transactionId,
+          tributeWebhook: webhook,
+        };
+        await this.paymentTransactionService.updateTransaction(transaction);
+        
+        // Обрабатываем завершенную транзакцию
+        await this.paymentTransactionService.processCompletedTransaction(transaction);
+        console.log(`✅ Tribute платеж обработан через webhook: transactionId=${transaction.id}, userId=${userId}`);
+      } else {
+        console.warn(`Tribute webhook: транзакция не найдена для userId=${userId}, type=${type}`);
+      }
+    } catch (error) {
+      console.error('Ошибка обработки Tribute webhook:', error);
+      throw error;
     }
   }
 }

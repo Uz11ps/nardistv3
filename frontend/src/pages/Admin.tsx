@@ -146,11 +146,11 @@ export default function Admin() {
   const [selectedTournament, setSelectedTournament] = useState<any>(null)
   const [editingUser, setEditingUser] = useState<any>(null)
   const [subscriptionPrices, setSubscriptionPrices] = useState<{ 
-    month_1?: { tribute?: number; stars?: number }; 
-    month_3?: { tribute?: number; stars?: number }; 
-    month_12?: { tribute?: number; stars?: number } 
+    month_1?: { tribute?: number; stars?: number; tributeLink?: string }; 
+    month_3?: { tribute?: number; stars?: number; tributeLink?: string }; 
+    month_12?: { tribute?: number; stars?: number; tributeLink?: string } 
   } | null>(null)
-  const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; priceTon: number; priceUsdt: number }>>([])
+  const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; priceTon: number; priceUsdt: number; tributeLink?: string }>>([])
   const [editingSetting, setEditingSetting] = useState<{ key: string; value: any } | null>(null)
   const [districts, setDistricts] = useState<any[]>([])
   const [editingDistrict, setEditingDistrict] = useState<any>(null)
@@ -5139,7 +5139,7 @@ export default function Admin() {
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
                 </div>
-                <div>
+                <div style={{ marginBottom: '12px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена STARS ⭐</label>
                   <input
                     type="number"
@@ -5148,6 +5148,19 @@ export default function Admin() {
                     onChange={(e) => setSubscriptionPrices({ 
                       ...(subscriptionPrices || {}), 
                       month_1: { ...(subscriptionPrices?.month_1 || {}), stars: parseFloat(e.target.value) || 0 } 
+                    })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Ссылка TRIBUTE</label>
+                  <input
+                    type="text"
+                    placeholder="https://t.me/tribute/app?startapp=p123"
+                    value={subscriptionPrices?.month_1?.tributeLink || ''}
+                    onChange={(e) => setSubscriptionPrices({ 
+                      ...(subscriptionPrices || {}), 
+                      month_1: { ...(subscriptionPrices?.month_1 || {}), tributeLink: e.target.value } 
                     })}
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
@@ -5169,7 +5182,7 @@ export default function Admin() {
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
                 </div>
-                <div>
+                <div style={{ marginBottom: '12px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена STARS ⭐</label>
                   <input
                     type="number"
@@ -5178,6 +5191,19 @@ export default function Admin() {
                     onChange={(e) => setSubscriptionPrices({ 
                       ...(subscriptionPrices || {}), 
                       month_3: { ...(subscriptionPrices?.month_3 || {}), stars: parseFloat(e.target.value) || 0 } 
+                    })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Ссылка TRIBUTE</label>
+                  <input
+                    type="text"
+                    placeholder="https://t.me/tribute/app?startapp=p123"
+                    value={subscriptionPrices?.month_3?.tributeLink || ''}
+                    onChange={(e) => setSubscriptionPrices({ 
+                      ...(subscriptionPrices || {}), 
+                      month_3: { ...(subscriptionPrices?.month_3 || {}), tributeLink: e.target.value } 
                     })}
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
@@ -5199,7 +5225,7 @@ export default function Admin() {
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
                 </div>
-                <div>
+                <div style={{ marginBottom: '12px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена STARS ⭐</label>
                   <input
                     type="number"
@@ -5208,6 +5234,19 @@ export default function Admin() {
                     onChange={(e) => setSubscriptionPrices({ 
                       ...(subscriptionPrices || {}), 
                       month_12: { ...(subscriptionPrices?.month_12 || {}), stars: parseFloat(e.target.value) || 0 } 
+                    })}
+                    style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Ссылка TRIBUTE</label>
+                  <input
+                    type="text"
+                    placeholder="https://t.me/tribute/app?startapp=p123"
+                    value={subscriptionPrices?.month_12?.tributeLink || ''}
+                    onChange={(e) => setSubscriptionPrices({ 
+                      ...(subscriptionPrices || {}), 
+                      month_12: { ...(subscriptionPrices?.month_12 || {}), tributeLink: e.target.value } 
                     })}
                     style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
                   />
@@ -5289,10 +5328,24 @@ export default function Admin() {
                       />
                     </div>
                   </div>
+                  <div style={{ marginTop: '8px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Ссылка TRIBUTE</label>
+                    <input
+                      type="text"
+                      placeholder="https://t.me/tribute/app?startapp=p123"
+                      value={pkg.tributeLink || ''}
+                      onChange={(e) => {
+                        const newPackages = [...narCoinPackages]
+                        newPackages[idx].tributeLink = e.target.value
+                        setNarCoinPackages(newPackages)
+                      }}
+                      style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                    />
+                  </div>
                 </div>
               ))}
               <button
-                onClick={() => setNarCoinPackages([...narCoinPackages, { amount: 0, priceTon: 0, priceUsdt: 0 }])}
+                onClick={() => setNarCoinPackages([...narCoinPackages, { amount: 0, priceTon: 0, priceUsdt: 0, tributeLink: '' }])}
                 style={{ padding: '8px 16px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}
               >
                 + Добавить пакет
