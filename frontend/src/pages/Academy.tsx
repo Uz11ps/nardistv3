@@ -50,7 +50,7 @@ export default function Academy() {
   const location = useLocation()
   const { materialId } = useParams<{ materialId?: string }>()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'courses' | 'articles' | 'my-materials'>('courses')
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'sandbox' | 'my-materials'>('onboarding')
   const [activeFilter, setActiveFilter] = useState<'long' | 'short'>('long')
   const [onboarding, setOnboarding] = useState<Onboarding[]>([])
   const [courses, setCourses] = useState<Course[]>([])
@@ -330,8 +330,10 @@ export default function Academy() {
       title="Академия"
       subtitle="Повышай мастерство в нардах. Все материалы доступны к покупке"
       tabs={[
+        { id: 'onboarding', label: 'Онбординг', active: activeTab === 'onboarding', onClick: () => setActiveTab('onboarding') },
         { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
         { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
+        { id: 'sandbox', label: 'Песочница', active: activeTab === 'sandbox', onClick: () => setActiveTab('sandbox') },
         { id: 'my-materials', label: 'Мои материалы', active: activeTab === 'my-materials', onClick: () => setActiveTab('my-materials') },
       ]}
     >
@@ -350,6 +352,23 @@ export default function Academy() {
             >
               короткие нарды
             </button>
+          </div>
+        )}
+
+        {activeTab === 'onboarding' && (
+          <div className="academy-grid">
+            {getFilteredAndSortedItems(onboarding).map((item) => (
+              <div key={item.id} className="academy-grid-card" onClick={() => handleOpen(item)}>
+                <div className="academy-grid-card-icon">
+                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
+                    <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
+                  </svg>
+                </div>
+                <div className="academy-grid-card-title">{item.title}</div>
+                <div className="academy-grid-card-author">{item.author}</div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -384,6 +403,54 @@ export default function Academy() {
                 <div className="academy-grid-card-author">{article.author}</div>
               </div>
             ))}
+          </div>
+        )}
+
+        {activeTab === 'sandbox' && (
+          <div className="academy-sandbox">
+            <div className="academy-card sandbox-promo-card">
+              <div className="academy-card-content">
+                <h3 className="academy-card-title">Режим песочницы</h3>
+                <p className="academy-card-description">
+                  В этом режиме вы можете играть сами с собой за обе стороны. 
+                  Это идеальное место для тестирования стратегий, разбора позиций или просто тренировки.
+                </p>
+                <div className="sandbox-modes">
+                  <div className="sandbox-mode-option">
+                    <h4>Длинные нарды</h4>
+                    <button 
+                      className="academy-card-button academy-card-button-primary"
+                      onClick={async () => {
+                        try {
+                          const response = await apiClient.post('/games/create-sandbox', { mode: 'long' })
+                          navigate(`/game/${response.data.id}`)
+                        } catch (error) {
+                          alert('Ошибка при создании песочницы')
+                        }
+                      }}
+                    >
+                      Играть
+                    </button>
+                  </div>
+                  <div className="sandbox-mode-option">
+                    <h4>Короткие нарды</h4>
+                    <button 
+                      className="academy-card-button academy-card-button-primary"
+                      onClick={async () => {
+                        try {
+                          const response = await apiClient.post('/games/create-sandbox', { mode: 'short' })
+                          navigate(`/game/${response.data.id}`)
+                        } catch (error) {
+                          alert('Ошибка при создании песочницы')
+                        }
+                      }}
+                    >
+                      Играть
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
