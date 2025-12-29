@@ -32,8 +32,6 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
   const usedCount = usedDiceIndices.size;
   const remainingCount = totalDice - usedCount;
 
-  if (remainingCount === 0 || !animating) return null;
-
   // Увеличиваем размер в 3 раза (было 2.5 и 1.5, стало 7.5 и 4.5)
   const containerStyle: React.CSSProperties = {
     position: 'relative',
@@ -45,27 +43,32 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
     zIndex: 100,
   };
 
-  // Если один из кубиков (не дубль) использован, 
-  // мы не можем показать это на одной гифке, где два кубика.
-  // В этом случае возвращаем null, чтобы BackgammonBoard показал обычные Dice3D.
-  if (!isDoubles && usedCount > 0) {
-    return null;
-  }
+  if (remainingCount === 0) return null;
 
   return (
-    <div className="dice-gif-wrapper" style={containerStyle}>
-      <img 
-        key={gifPath}
-        src={gifPath} 
-        alt={`Dice ${d1} ${d2}`} 
-        style={{ 
-          width: '100%', 
-          height: '100%', 
-          objectFit: 'contain',
-        }} 
-      />
+    <div 
+      className="dice-gif-wrapper" 
+      style={{
+        ...containerStyle,
+        opacity: animating ? 1 : 0,
+        visibility: animating ? 'visible' : 'hidden',
+        transition: 'opacity 0.2s ease-in-out'
+      }}
+    >
+      {animating && (
+        <img 
+          key={`${d1}_${d2}_${gifKey}`}
+          src={gifPath} 
+          alt={`Dice ${d1} ${d2}`} 
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            objectFit: 'contain',
+          }} 
+        />
+      )}
       
-      {isDoubles && remainingCount > 0 && (
+      {isDoubles && remainingCount > 0 && animating && (
         <div style={{
           position: 'absolute',
           top: '-10px',

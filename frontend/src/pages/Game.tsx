@@ -595,14 +595,26 @@ export default function Game() {
     })
 
     socket.on('dice_rolled', (data: any) => {
+      console.log('🎲 dice_rolled received:', data);
+      if (data.dice) {
+        setGameState(prev => {
+          if (!prev) return null;
+          // Сохраняем формат кубиков как он пришел с сервера
+          return {
+            ...prev,
+            dice: data.dice
+          };
+        });
+      }
       setDiceAnimating(true)
-      setTimeout(() => {
+      // Очищаем предыдущий таймаут если он был
+      if ((window as any).diceAnimationTimeout) {
+        clearTimeout((window as any).diceAnimationTimeout);
+      }
+      (window as any).diceAnimationTimeout = setTimeout(() => {
         setDiceAnimating(false)
-        // Обновляем состояние с кубиками немедленно
-        // НЕ обновляем gameState здесь, чтобы не сбрасывать подсветку
-        // Сервер отправит game_state событие после dice_rolled, которое обновит полное состояние
-        // Но мы не будем обновлять gameState здесь, чтобы подсветка не сбрасывалась
-      }, 1500) // Увеличили время для красивой 3D анимации
+        delete (window as any).diceAnimationTimeout;
+      }, 3000)
     })
 
     socket.on('offset_updated', (data: any) => {

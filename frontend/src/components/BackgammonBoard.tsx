@@ -1690,20 +1690,28 @@ export default function BackgammonBoard({
       )}
       
       {/* Кубики - скрываем если все использованы (после подтверждения хода) */}
-      {diceArray && diceArray.length > 0 && dice3DPosition && usedDiceIndices.size < diceArray.length && (
+      {diceArray && diceArray.length > 0 && dice3DPosition && (diceAnimating || usedDiceIndices.size < diceArray.length) && (
         <div
           style={{
             position: 'absolute',
-            left: `${dice3DPosition.x - dice3DPosition.size * 3.75}px`,
-            top: `${dice3DPosition.y - dice3DPosition.size * 2.25}px`,
+            // Если идет анимация гифки, центрируем её по всей доске
+            // Если не идет, показываем 3D кубики в углу
+            left: diceAnimating 
+              ? '50%' 
+              : `${dice3DPosition.x - dice3DPosition.size * 3.75}px`,
+            top: diceAnimating 
+              ? '50%' 
+              : `${dice3DPosition.y - dice3DPosition.size * 2.25}px`,
             width: `${dice3DPosition.size * 7.5}px`,
             height: `${dice3DPosition.size * 4.5}px`,
+            transform: diceAnimating ? 'translate(-50%, -50%)' : 'none',
             pointerEvents: 'none',
             display: 'flex',
             gap: '8px',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
+            transition: 'all 0.3s ease-out',
           }}
         >
           {/* Показываем гифку, если она доступна для данного состояния кубиков */}
