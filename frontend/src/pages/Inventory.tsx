@@ -341,5 +341,4 @@ export default function Inventory() {
       </div>
     </PageLayout>
   )
-  )
 }
