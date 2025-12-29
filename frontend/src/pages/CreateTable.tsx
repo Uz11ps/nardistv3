@@ -88,62 +88,35 @@ export default function CreateTable() {
   return (
     <PageLayout title="Создать стол" subtitle="Подбор по рейтингу и режиму" showBack={true}>
       <div className="create-table-content">
-        <div className="create-table-card">
+        <div className="create-table-card-v2">
           {/* Ставка */}
-          <div className="create-table-field">
-            <div className="create-table-label">Выберите ставку для игры:</div>
-            <div className="stake-grid">
+          <div className="create-table-field-v2">
+            <div className="create-table-label-v2">Ставка:</div>
+            <div className="create-table-stake-grid">
               {stakeOptions.map((value) => (
-                <div
+                <button
                   key={value}
-                  className={`stake-chip-container ${stake === value ? 'selected' : ''}`}
+                  className={`create-table-stake-btn ${stake === value ? 'selected' : ''}`}
                   onClick={() => setStake(value)}
                 >
-                  <div className="stake-chip red">
-                    <div className="stake-chip-inner">
-                      {value}
-                    </div>
-                  </div>
-                </div>
+                  {value}
+                </button>
               ))}
             </div>
-
-            <div className="game-rules-card">
-              <div className="rules-header">Правила стола</div>
-              <div className="rules-row">
-                <span>Время на игру</span>
-                <span>60 сек</span>
-              </div>
-              <div className="rules-row">
-                <span>Время на ход</span>
-                <span>20 сек</span>
-              </div>
-              <div className="rules-row">
-                <span>Матч до</span>
-                <span>1</span>
-              </div>
-            </div>
-
-            {stake > 0 && (
-              <div className="stake-prize-info">
-                Приз за победу: {stake * 2 - Math.floor(stake * 2 * 0.1)} NAR
-                <span className="stake-commission"> (комиссия системы)</span>
-              </div>
-            )}
           </div>
 
-          {/* Тип нард */}
-          <div className="create-table-field">
-            <div className="create-table-label">Тип нард:</div>
-            <div className="toggle-group">
+          {/* Режим */}
+          <div className="create-table-field-v2">
+            <div className="create-table-label-v2">Режим:</div>
+            <div className="create-table-mode-toggle">
               <button
-                className={`toggle-btn ${mode === 'short' ? 'active' : ''}`}
+                className={`create-table-mode-btn ${mode === 'short' ? 'active' : ''}`}
                 onClick={() => setMode('short')}
               >
                 Короткие
               </button>
               <button
-                className={`toggle-btn ${mode === 'long' ? 'active' : ''}`}
+                className={`create-table-mode-btn ${mode === 'long' ? 'active' : ''}`}
                 onClick={() => setMode('long')}
               >
                 Длинные
@@ -152,10 +125,10 @@ export default function CreateTable() {
           </div>
 
           {/* Доступ */}
-          <div className="create-table-field">
-            <div className="create-table-label">Доступ:</div>
-            <div className="radio-group">
-              <label className="radio-option">
+          <div className="create-table-field-v2">
+            <div className="create-table-label-v2">Доступ:</div>
+            <div className="create-table-access-row">
+              <label className="create-table-radio">
                 <input
                   type="radio"
                   name="access"
@@ -165,7 +138,7 @@ export default function CreateTable() {
                 />
                 <span>Открытый</span>
               </label>
-              <label className="radio-option">
+              <label className="create-table-radio">
                 <input
                   type="radio"
                   name="access"
@@ -180,7 +153,7 @@ export default function CreateTable() {
             {access === 'private' && (
               <input
                 type="password"
-                className="create-table-password"
+                className="create-table-password-input"
                 placeholder="Введите пароль стола"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -188,10 +161,16 @@ export default function CreateTable() {
             )}
           </div>
 
+          <div className="create-table-info-v2">
+            Время на игру: 30 мин<br/>
+            Куб удвоения: да<br/>
+            Матч до: 10 побед
+          </div>
+
           <button
             onClick={handleCreateTable}
             disabled={loading}
-            className="create-table-submit-btn"
+            className="create-table-submit-btn-v2"
           >
             {loading ? 'Создание...' : 'Создать стол'}
           </button>

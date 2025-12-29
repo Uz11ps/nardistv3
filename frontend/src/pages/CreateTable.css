@@ -1,244 +1,124 @@
+/* Create Table Page Styles V2 */
+
 .create-table-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  padding: 0 16px 20px;
 }
 
-.create-table-card {
-  padding: 16px;
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 12px;
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+.create-table-card-v2 {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-.create-table-field {
-  margin-bottom: 24px;
+.create-table-field-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.create-table-field:last-of-type {
-  margin-bottom: 0;
-}
-
-.create-table-label {
+.create-table-label-v2 {
+  color: #888;
   font-size: 14px;
-  color: #FFF;
-  margin-bottom: 12px;
-  font-weight: 500;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.stake-grid {
+.create-table-stake-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-  margin: 20px 0;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
 
-.stake-chip-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.stake-chip-container:hover {
-  transform: scale(1.05);
-}
-
-.stake-chip-container.selected .stake-chip {
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.8), inset 0 0 10px rgba(255, 215, 0, 0.5);
-  border: 2px solid #ffd700;
-}
-
-.stake-chip {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  font-size: 16px;
-  border: 3px dashed rgba(255, 255, 255, 0.3);
-  position: relative;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.stake-chip.red {
-  background: radial-gradient(circle, #d32f2f 0%, #b71c1c 100%);
-  color: white;
-}
-
-.stake-chip-inner {
-  width: 55px;
-  height: 55px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.game-rules-card {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
-  padding: 15px;
-  margin-top: 20px;
+.create-table-stake-btn {
+  height: 44px;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.rules-header {
-  text-align: center;
-  color: #ffd700;
-  font-weight: bold;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  font-size: 14px;
-}
-
-.rules-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 14px;
-}
-
-.rules-row:last-of-type {
-  border-bottom: none;
-}
-
-.rules-row span:last-child {
-  color: #ffd700;
-  font-weight: 500;
-}
-
-.stake-prize-info {
-  margin-top: 12px;
-  padding: 10px;
-  background: rgba(255, 215, 0, 0.1);
-  border: 1px solid rgba(255, 215, 0, 0.3);
   border-radius: 8px;
-  font-size: 13px;
-  color: white;
-  text-align: center;
-  font-weight: 500;
+  color: #FFF;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.stake-commission {
-  font-size: 11px;
-  color: #aaa;
-  font-weight: 400;
+.create-table-stake-btn.selected {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
-.toggle-group {
+.create-table-mode-toggle {
   display: flex;
   gap: 8px;
 }
 
-.toggle-btn {
+.create-table-mode-btn {
   flex: 1;
-  padding: 12px;
-  background: #3a3a3a;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   color: #FFF;
-  border: 1px solid #4a4a4a;
-  border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  font-weight: 500;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.toggle-btn.active {
-  background: #3a3a3a;
-  color: #FFF;
-  border-color: #FFF;
-  border-width: 2px;
+.create-table-mode-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
-.radio-group {
+.create-table-access-row {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  gap: 20px;
 }
 
-.radio-option {
+.create-table-radio {
   display: flex;
   align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  font-size: 14px;
+  gap: 8px;
   color: #FFF;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  cursor: pointer;
 }
 
-.radio-option:hover {
+.create-table-radio input {
+  width: 18px;
+  height: 18px;
+  accent-color: #A32E2E;
+}
+
+.create-table-password-input {
+  width: 100%;
+  height: 48px;
   background: rgba(255, 255, 255, 0.05);
-}
-
-.radio-option input[type="radio"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: #ff3333;
-}
-
-.radio-option span {
-  font-weight: 500;
-}
-
-.create-table-password {
-  width: 100%;
-  margin-top: 12px;
-  padding: 12px;
-  background: #3a3a3a;
-  border: 1px solid #4a4a4a;
-  border-radius: 8px;
-  color: #FFF;
-  font-size: 14px;
-  transition: all 0.2s;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  outline: none;
-}
-
-.create-table-password:focus {
-  outline: none;
-  border-color: #ff3333;
-  box-shadow: 0 0 0 2px rgba(255, 51, 51, 0.2);
-}
-
-.create-table-submit-btn {
-  width: 100%;
-  height: 52px;
-  padding: 15px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  border: 0.1px solid #C93C3D;
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  padding: 0 16px;
   color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
+  font-size: 15px;
+  outline: none;
+}
+
+.create-table-info-v2 {
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.create-table-submit-btn-v2 {
+  width: 100%;
+  height: 60px;
+  background: linear-gradient(180deg, #A32E2E 0%, #681C1C 100%);
+  border: none;
+  border-radius: 16px;
+  color: #FFF;
+  font-size: 24px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  outline: none;
-}
-
-.create-table-submit-btn:hover:not(:disabled) {
-  transform: scale(1.02);
-  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
-}
-
-.create-table-submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  margin-top: 10px;
 }

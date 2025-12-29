@@ -1,158 +1,110 @@
-/* Game Tables Page Styles */
+/* Game Tables Page Styles V2 */
 
-.game-tables-content {
+.game-tables-content-v2 {
+  padding: 0 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.game-tables-list-v2 {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 60vh;
+}
+
+.game-table-card-v2 {
+  background: linear-gradient(135deg, #1C1D21 0%, #0B0C0E 100%);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.game-table-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.game-table-card-title {
+  color: #FFF;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.game-table-card-stake {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #FFD700;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.game-table-card-stake img {
+  width: 16px;
+  height: 16px;
+}
+
+.game-table-card-details {
+  color: #666;
+  font-size: 12px;
+}
+
+.game-table-card-btn {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 10px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.game-table-card-btn.join {
+  background: linear-gradient(180deg, #A32E2E 0%, #681C1C 100%);
+  color: #FFF;
+}
+
+.game-table-card-btn.observe {
+  background: #3a3a3a;
+  color: #FFF;
+}
+
+.game-tables-footer-v2 {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.game-tables-create-btn-v2 {
+  width: 100%;
+  height: 60px;
+  background: linear-gradient(180deg, #A32E2E 0%, #681C1C 100%);
+  border: none;
+  border-radius: 16px;
+  color: #FFF;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.game-tables-footer-text {
+  color: #666;
+  font-size: 13px;
 }
 
 .game-tables-loading,
 .game-tables-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
-}
-
-.game-tables-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.game-table-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 12px;
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
-}
-
-.game-table-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.game-table-title {
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.game-table-stake {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #ffd700;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.game-table-stake-icon {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-}
-
-.game-table-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.game-table-mode {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.game-table-players {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.game-table-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.game-table-btn {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s;
-}
-
-.game-table-btn-join {
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
-  color: #FFF;
-  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
-  border: 0.1px solid #C93C3D;
-}
-
-.game-table-btn-join:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
-}
-
-.game-table-btn-observe {
-  background: #3a3a3a;
-  color: #FFF;
-  border: 1px solid #FFF;
-}
-
-.game-table-btn-observe:hover {
-  background: #4a4a4a;
-}
-
-.game-tables-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 24px;
-}
-
-.game-tables-create-button {
-  width: 100%;
-  height: 52px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
-  border: 0.1px solid #C93C3D;
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.game-tables-create-button:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
-}
-
-.game-tables-footer-text {
   text-align: center;
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
+  padding: 40px;
+  color: #888;
 }

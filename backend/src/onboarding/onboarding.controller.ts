@@ -17,7 +17,7 @@ export class OnboardingController {
   @UseGuards(JwtAuthGuard)
   async completeProfile(
     @CurrentUser() user: any,
-    @Body() body: { nickname?: string; country?: string; avatarUrl?: string },
+    @Body() body: { nickname?: string; country?: string; gender?: string; avatarUrl?: string },
   ) {
     return this.onboardingService.completeProfileSetup(user.id, body);
   }

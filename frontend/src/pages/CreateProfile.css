@@ -3,62 +3,17 @@
 .create-profile-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-}
-
-.create-profile-avatar-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.create-profile-avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: #3a3a3a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border: 3px solid #4a4a4a;
-}
-
-.create-profile-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.create-profile-avatar-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.create-profile-use-telegram-btn {
-  background: none;
-  border: none;
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 0;
+  gap: 20px;
+  padding: 0 16px 20px;
 }
 
 .create-profile-form-card {
-  padding: 16px;
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 12px;
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  padding: 24px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .create-profile-field {
@@ -69,29 +24,29 @@
 }
 
 .create-profile-label {
-  color: #B6B6B6;
+  color: #666;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
 }
 
 .create-profile-input,
 .create-profile-select {
   width: 100%;
-  padding: 12px;
-  background: #3a3a3a;
-  border: 1px solid #4a4a4a;
-  border-radius: 8px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   color: #FFF;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 400;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 
 .create-profile-input:focus {
-  border-color: #C93C3D;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .create-profile-select {
@@ -102,8 +57,73 @@
 }
 
 .create-profile-select-arrow {
-  color: #666666;
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  opacity: 0.5;
+}
+
+.create-profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0;
+}
+
+.create-profile-avatar {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: #E0E0E0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.create-profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.create-profile-use-telegram-btn {
+  width: 100%;
+  padding: 12px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.create-profile-use-telegram-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.create-profile-submit-btn {
+  width: 100%;
+  height: 60px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(180deg, #A32E2E 0%, #681C1C 100%);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+}
+
+.create-profile-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
 }
 
 .create-profile-dropdown {
@@ -111,59 +131,26 @@
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: 4px;
-  max-height: 200px;
+  margin-top: 8px;
+  max-height: 240px;
   overflow-y: auto;
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 8px;
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25);
+  background: #1c1c1c;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   z-index: 100;
-  border: 1px solid #4a4a4a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .create-profile-dropdown-item {
-  padding: 12px;
+  padding: 14px 16px;
   cursor: pointer;
   color: #FFF;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
-  font-weight: 400;
-  border-bottom: 1px solid #3a3a3a;
   transition: background 0.2s;
 }
 
-.create-profile-dropdown-item:last-child {
-  border-bottom: none;
-}
-
 .create-profile-dropdown-item:hover {
-  background: #3a3a3a;
-}
-
-.create-profile-submit-btn {
-  width: 100%;
-  height: 52px;
-  padding: 15px 12px;
-  border-radius: 12px;
-  border: 0.1px solid #C93C3D;
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  outline: none;
-}
-
-.create-profile-submit-btn:hover:not(:disabled) {
-  transform: scale(1.02);
-  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
-}
-
-.create-profile-submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.05);
 }
 

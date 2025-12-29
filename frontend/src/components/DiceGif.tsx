@@ -8,33 +8,41 @@ interface DiceGifProps {
 }
 
 const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, size = 50 }) => {
+  const [gifKey, setGifKey] = React.useState(Date.now());
+
+  // Перезапускаем гифку при начале анимации
+  React.useEffect(() => {
+    if (animating) {
+      setGifKey(Date.now());
+    }
+  }, [animating]);
+
   if (!dice || dice.length < 2) return null;
 
-  // В нардах всегда бросаются две кости. Если дубль, то dice.length === 4.
-  // Нам нужны первые два значения для определения имени гифки.
   const d1 = dice[0];
   const d2 = dice[1];
   
-  // Формируем путь к гифке. Учитываем, что у нас есть и 1_2.gif и 2_1.gif
+  // Добавляем timestamp к пути, чтобы гифка проигралась с начала (даже если она зациклена в файле, 
+  // это гарантирует старт с 1 кадра при каждом броске)
   const gifName = `${d1}_${d2}.gif`;
-  const gifPath = `/img/cubiki/${gifName}`;
+  const gifPath = `/img/cubiki/${gifName}?t=${gifKey}`;
 
   const isDoubles = dice.length > 2;
   const totalDice = dice.length;
   const usedCount = usedDiceIndices.size;
   const remainingCount = totalDice - usedCount;
 
-  // Если все кубики использованы, ничего не показываем
-  if (remainingCount === 0) return null;
+  if (remainingCount === 0 || !animating) return null;
 
-  // Стиль контейнера
+  // Увеличиваем размер в 3 раза (было 2.5 и 1.5, стало 7.5 и 4.5)
   const containerStyle: React.CSSProperties = {
     position: 'relative',
-    width: size * 2.5,
-    height: size * 1.5,
+    width: size * 7.5,
+    height: size * 4.5,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 100,
   };
 
   // Если один из кубиков (не дубль) использован, 
@@ -47,6 +55,7 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
   return (
     <div className="dice-gif-wrapper" style={containerStyle}>
       <img 
+        key={gifPath}
         src={gifPath} 
         alt={`Dice ${d1} ${d2}`} 
         style={{ 

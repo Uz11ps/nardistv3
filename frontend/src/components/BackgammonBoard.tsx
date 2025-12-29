@@ -58,6 +58,7 @@ export default function BackgammonBoard({
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
   const [showBearOffButton, setShowBearOffButton] = useState<{ pointIndex: number; die: number; steps?: any[] } | null>(null)
+  const [coordinateSystem, setCoordinateSystem] = useState<'1-24' | 'A-D/1-24'>('1-24')
   const [animatingChecker, setAnimatingChecker] = useState<{
     from: number;
     to: number;
@@ -72,6 +73,20 @@ export default function BackgammonBoard({
   const clickTimeoutRef = useRef<number | null>(null)
   const isTripleClickRef = useRef<boolean>(false)
   
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await apiClient.get('/users/settings')
+        if (response.data?.coordinateSystem) {
+          setCoordinateSystem(response.data.coordinateSystem)
+        }
+      } catch (error) {
+        console.error('Failed to load coordinate system setting:', error)
+      }
+    }
+    loadSettings()
+  }, [])
+
   // Очистка таймаутов при размонтировании
   useEffect(() => {
     return () => {
@@ -662,10 +677,20 @@ export default function BackgammonBoard({
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       
+      const getCoordinateText = (num: number) => {
+        if (coordinateSystem === '1-24') return num.toString();
+        const quarter = Math.floor((num - 1) / 6);
+        const offset = (num - 1) % 6 + 1;
+        const letters = ['A', 'B', 'C', 'D'];
+        return `${letters[quarter]}${offset}`;
+      }
+
+      const coordText = getCoordinateText(pointNumber);
+      
       if (isTopRow) {
-        ctx.fillText(pointNumber.toString(), x, y + 15)
+        ctx.fillText(coordText, x, y + 15)
       } else {
-        ctx.fillText(pointNumber.toString(), x, y - 15)
+        ctx.fillText(coordText, x, y - 15)
       }
     }
 
@@ -1669,15 +1694,16 @@ export default function BackgammonBoard({
         <div
           style={{
             position: 'absolute',
-            left: `${dice3DPosition.x - dice3DPosition.size * 1.5}px`,
-            top: `${dice3DPosition.y - dice3DPosition.size * 0.75}px`,
-            width: `${dice3DPosition.size * 3}px`,
-            height: `${dice3DPosition.size * 1.5}px`,
+            left: `${dice3DPosition.x - dice3DPosition.size * 3.75}px`,
+            top: `${dice3DPosition.y - dice3DPosition.size * 2.25}px`,
+            width: `${dice3DPosition.size * 7.5}px`,
+            height: `${dice3DPosition.size * 4.5}px`,
             pointerEvents: 'none',
             display: 'flex',
             gap: '8px',
             alignItems: 'center',
             justifyContent: 'center',
+            zIndex: 1000,
           }}
         >
           {/* Показываем гифку, если она доступна для данного состояния кубиков */}
@@ -1688,22 +1714,61 @@ export default function BackgammonBoard({
             size={dice3DPosition.size}
           />
 
-          {/* Если гифка не может быть показана (например, один кубик не-дубль уже использован), 
-              показываем старые 3D кубики для оставшихся значений */}
-          {(!diceAnimating && diceArray.length === 2 && usedDiceIndices.size > 0) && (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {diceArray.map((dieValue, index) => {
-                if (usedDiceIndices.has(index)) return null;
-                return (
-                  <div key={index} style={{ position: 'relative' }}>
-                    <Dice3D
-                      values={[dieValue]}
-                      animating={false}
-                      diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
-                    />
-                  </div>
-                );
-              })}
+          {/* Если гифка не показывается (например, анимация закончилась), 
+              показываем старые 3D кубики для отображения результата */}
+          {!diceAnimating && (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {(() => {
+                const isDoubles = diceArray.length > 2;
+                if (isDoubles) {
+                  // Для дублей показываем один кубик с множителем
+                  const dieValue = diceArray[0];
+                  return (
+                    <div style={{ position: 'relative' }}>
+                      <Dice3D
+                        values={[dieValue]}
+                        animating={false}
+                        diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                      />
+                      {remainingMoves > 0 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '-10px',
+                          right: '-10px',
+                          background: 'rgba(232, 65, 66, 0.9)',
+                          color: 'white',
+                          borderRadius: '50%',
+                          width: '24px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                          zIndex: 10
+                        }}>
+                          x{remainingMoves}
+                        </div>
+                      )}
+                    </div>
+                  );
+                } else {
+                  // Для обычного броска показываем оставшиеся кубики
+                  return diceArray.map((dieValue, index) => {
+                    if (usedDiceIndices.has(index)) return null;
+                    return (
+                      <div key={index} style={{ position: 'relative' }}>
+                        <Dice3D
+                          values={[dieValue]}
+                          animating={false}
+                          diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                        />
+                      </div>
+                    );
+                  });
+                }
+              })()}
             </div>
           )}
         </div>

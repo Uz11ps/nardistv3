@@ -11,6 +11,7 @@ interface SettingsState {
   economicEvents: boolean
   clanEvents: boolean
   language: string
+  coordinateSystem: '1-24' | 'A-D/1-24'
 }
 
 export default function Settings() {
@@ -22,6 +23,7 @@ export default function Settings() {
     economicEvents: true,
     clanEvents: true,
     language: 'Русский',
+    coordinateSystem: '1-24',
   })
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function Settings() {
           economicEvents: response.data.economicEvents ?? true,
           clanEvents: response.data.clanEvents ?? true,
           language: response.data.language ?? 'Русский',
+          coordinateSystem: response.data.coordinateSystem ?? '1-24',
         })
       }
     } catch (error) {
@@ -125,7 +128,22 @@ export default function Settings() {
 
         <div className="settings-divider" />
 
-        {/* Настройки с навигацией */}
+        <div 
+          className="settings-item settings-item-clickable" 
+          onClick={() => {
+            const nextVal = settings.coordinateSystem === '1-24' ? 'A-D/1-24' : '1-24';
+            updateSetting('coordinateSystem', nextVal);
+          }}
+        >
+          <span className="settings-label">Система координат</span>
+          <div className="settings-item-value">
+            <span className="settings-value-text">{settings.coordinateSystem === '1-24' ? '1-24' : 'A, B, C, D/1-24'}</span>
+            <span className="settings-arrow">→</span>
+          </div>
+        </div>
+
+        <div className="settings-divider" />
+
         <div className="settings-item settings-item-clickable" onClick={handleLanguageClick}>
           <span className="settings-label">Язык</span>
           <div className="settings-item-value">

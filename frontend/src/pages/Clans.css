@@ -1,58 +1,48 @@
-/* Clans Page Styles */
-
-.clans-unavailable {
+/* Federations Welcome Page */
+.federations-welcome {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 60vh;
+  gap: 40px;
   padding: 40px 20px;
   text-align: center;
 }
 
-.clans-unavailable-icon {
-  width: 120px;
-  height: 120px;
-  margin-bottom: 24px;
+.federations-welcome-shield {
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 24px;
+  padding: 20px;
+}
+
+.federations-welcome-shield img {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
-.clans-unavailable-title {
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-.clans-unavailable-text {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  margin-bottom: 32px;
-  max-width: 300px;
-}
-
-.clans-play-button {
+.federations-welcome-btn {
   width: 100%;
   max-width: 300px;
-  height: 52px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
-  border: 0.1px solid #C93C3D;
+  height: 60px;
+  background: linear-gradient(180deg, #A32E2E 0%, #681C1C 100%);
+  border: none;
+  border-radius: 16px;
   color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
 }
 
-.clans-play-button:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
+.federations-welcome-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
 }
 
 .clans-loading {
@@ -63,107 +53,4 @@
   color: #B6B6B6;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
-}
-
-.clans-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 40px;
-  padding: 40px 20px;
-}
-
-.clans-profile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.clans-avatar-container {
-  position: relative;
-}
-
-.clans-avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: #3a3a3a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.clans-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.clans-avatar-placeholder {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-  opacity: 0.7;
-}
-
-.clans-username {
-  color: #FFF;
-  text-align: center;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.clans-level {
-  color: #B6B6B6;
-  text-align: center;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
-  font-weight: 400;
-}
-
-.clans-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-  max-width: 400px;
-}
-
-.clans-action-button {
-  width: 100%;
-  height: 52px;
-  border-radius: 12px;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.clans-action-create {
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
-  border: 0.1px solid #C93C3D;
-  color: #FFF;
-}
-
-.clans-action-create:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 7px 2px 9.4px 0 rgba(0, 0, 0, 0.31) inset;
-}
-
-.clans-action-find {
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
-  color: #FFF;
-}
-
-.clans-action-find:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }

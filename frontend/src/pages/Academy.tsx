@@ -50,7 +50,8 @@ export default function Academy() {
   const location = useLocation()
   const { materialId } = useParams<{ materialId?: string }>()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'sandbox'>('onboarding')
+  const [activeTab, setActiveTab] = useState<'courses' | 'articles' | 'my-materials'>('courses')
+  const [activeFilter, setActiveFilter] = useState<'long' | 'short'>('long')
   const [onboarding, setOnboarding] = useState<Onboarding[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [articles, setArticles] = useState<Article[]>([])
@@ -329,218 +330,90 @@ export default function Academy() {
       title="Академия"
       subtitle="Повышай мастерство в нардах. Все материалы доступны к покупке"
       tabs={[
-        { id: 'onboarding', label: 'Онбординг', active: activeTab === 'onboarding', onClick: () => setActiveTab('onboarding') },
         { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
         { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
-        { id: 'sandbox', label: 'Песочница', active: activeTab === 'sandbox', onClick: () => setActiveTab('sandbox') },
+        { id: 'my-materials', label: 'Мои материалы', active: activeTab === 'my-materials', onClick: () => setActiveTab('my-materials') },
       ]}
-      rightAction={
-        canCreateArticle && activeTab === 'articles' ? (
-          <button 
-            className="academy-create-article-button"
-            onClick={() => navigate('/academy/publish?type=article')}
-            title="Создать статью"
-          >
-            ✏️
-          </button>
-        ) : undefined
-      }
     >
-      {/* Галочка "Не отображать купленные" */}
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#B6B6B6', fontSize: '14px' }}>
-          <input
-            type="checkbox"
-            checked={hidePurchased}
-            onChange={(e) => setHidePurchased(e.target.checked)}
-            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-          />
-          Не отображать купленные
-        </label>
-      </div>
-
-      {/* Онбординг */}
-      {activeTab === 'onboarding' && (
-        <div className="academy-list">
-          {getFilteredAndSortedItems(onboarding).map((item) => (
-            <div key={item.id} className="academy-card">
-              <img src="/img/шляпа.png" alt="Onboarding" className="academy-card-icon" />
-              <div className="academy-card-content">
-                <div className="academy-card-header">
-                  <h3 className="academy-card-title">{item.title}</h3>
-                  {item.purchased ? (
-                    <span className="academy-card-status">
-                      {item.isCompleted ? 'Выполнено' : 'Куплено'}
-                    </span>
-                  ) : (
-                    <span className="academy-card-price">{item.price} NAR</span>
-                  )}
-                </div>
-                <p className="academy-card-author">{item.author}</p>
-              </div>
-              {item.purchased ? (
-                <button className="academy-card-button academy-card-button-open" onClick={() => handleOpen(item)}>
-                  Открыть
-                </button>
-              ) : (
-                <button className="academy-card-button academy-card-button-buy" onClick={() => setShowPurchaseModal(item)}>
-                  Купить
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      {/* Курсы */}
-      {activeTab === 'courses' && (
-        <div className="academy-list">
-          {getFilteredAndSortedItems(courses).map((course) => (
-            <div key={course.id} className="academy-card">
-              <img src="/img/шляпа.png" alt="Course" className="academy-card-icon" />
-              <div className="academy-card-content">
-                <div className="academy-card-header">
-                  <h3 className="academy-card-title">{course.title}</h3>
-                  {course.purchased ? (
-                    <span className="academy-card-status">
-                      {course.isCompleted ? 'Выполнено' : 'Куплено'}
-                    </span>
-                  ) : (
-                    <span className="academy-card-price">{course.price} NAR</span>
-                  )}
-                </div>
-                <p className="academy-card-author">{course.author}</p>
-              </div>
-              {course.purchased ? (
-                <button className="academy-card-button academy-card-button-open" onClick={() => handleOpen(course)}>
-                  Открыть
-                </button>
-              ) : (
-                <button className="academy-card-button academy-card-button-buy" onClick={() => setShowPurchaseModal(course)}>
-                  Купить
-                </button>
-              )}
-            </div>
-          ))}
-          {/* Игроки не могут создавать курсы - только админы */}
-          {user?.isAdmin && (
-            <button className="academy-publish-button" onClick={() => navigate('/academy/publish?type=course')}>
-              Создать курс (только для админов)
+      <div className="academy-content">
+        {(activeTab === 'courses' || activeTab === 'articles') && (
+          <div className="academy-filters">
+            <button 
+              className={`academy-filter-btn ${activeFilter === 'long' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('long')}
+            >
+              длинные нарды
             </button>
-          )}
-        </div>
-      )}
-
-      {/* Песочница */}
-      {activeTab === 'sandbox' && (
-        <div className="academy-sandbox">
-          <div className="academy-card sandbox-promo-card">
-            <div className="academy-card-content">
-              <h3 className="academy-card-title">Режим песочницы</h3>
-              <p className="academy-card-description">
-                В этом режиме вы можете играть сами с собой за обе стороны. 
-                Это идеальное место для тестирования стратегий, разбора позиций или просто тренировки.
-              </p>
-              <div className="sandbox-modes">
-                <div className="sandbox-mode-option">
-                  <h4>Длинные нарды</h4>
-                  <button 
-                    className="academy-card-button academy-card-button-primary"
-                    onClick={async () => {
-                      try {
-                        const response = await apiClient.post('/games/create-sandbox', { mode: 'long' })
-                        navigate(`/game/${response.data.id}`)
-                      } catch (error) {
-                        console.error('Failed to create sandbox:', error)
-                        alert('Ошибка при создании песочницы')
-                      }
-                    }}
-                  >
-                    Запустить
-                  </button>
-                </div>
-                <div className="sandbox-mode-option">
-                  <h4>Короткие нарды</h4>
-                  <button 
-                    className="academy-card-button academy-card-button-primary"
-                    onClick={async () => {
-                      try {
-                        const response = await apiClient.post('/games/create-sandbox', { mode: 'short' })
-                        navigate(`/game/${response.data.id}`)
-                      } catch (error) {
-                        console.error('Failed to create sandbox:', error)
-                        alert('Ошибка при создании песочницы')
-                      }
-                    }}
-                  >
-                    Запустить
-                  </button>
-                </div>
-              </div>
-            </div>
+            <button 
+              className={`academy-filter-btn ${activeFilter === 'short' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('short')}
+            >
+              короткие нарды
+            </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Статьи */}
-      {activeTab === 'articles' && (
-        <div className="academy-list">
-          {getFilteredAndSortedItems(articles).map((article) => (
-            <div key={article.id} className="academy-card">
-              <img src="/img/шляпа.png" alt="Article" className="academy-card-icon" />
-              <div className="academy-card-content">
-                <div className="academy-card-header">
-                  <h3 className="academy-card-title">{article.title}</h3>
-                  {article.purchased ? (
-                    <span className="academy-card-status">Куплено</span>
-                  ) : (
-                    <span className="academy-card-price">{article.price} NAR</span>
-                  )}
+        {activeTab === 'courses' && (
+          <div className="academy-grid">
+            {getFilteredAndSortedItems(courses).map((course) => (
+              <div key={course.id} className="academy-grid-card">
+                <div className="academy-grid-card-icon">
+                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
+                    <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
+                  </svg>
                 </div>
-                <p className="academy-card-author">{article.author}</p>
+                <div className="academy-grid-card-title">{course.title}</div>
+                <div className="academy-grid-card-author">{course.author}</div>
               </div>
-              {article.purchased ? (
-                <button className="academy-card-button academy-card-button-open" onClick={() => handleOpen(article)}>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'articles' && (
+          <div className="academy-grid">
+            {getFilteredAndSortedItems(articles).map((article) => (
+              <div key={article.id} className="academy-grid-card">
+                <div className="academy-grid-card-icon">
+                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
+                    <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
+                  </svg>
+                </div>
+                <div className="academy-grid-card-title">{article.title}</div>
+                <div className="academy-grid-card-author">{article.author}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'my-materials' && (
+          <div className="academy-my-materials">
+            {getFilteredAndSortedItems([...courses, ...articles, ...onboarding]).filter(item => item.purchased).map((item) => (
+              <div key={item.id} className="academy-my-material-card">
+                <div className="academy-my-material-icon">
+                  <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#FFF"/>
+                    <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#FFF" fillOpacity="0.5"/>
+                  </svg>
+                </div>
+                <div className="academy-my-material-content">
+                  <div className="academy-my-material-status">Куплено</div>
+                  <div className="academy-my-material-title">{item.title}</div>
+                  <div className="academy-my-material-author">{item.author}</div>
+                </div>
+                <button className="academy-my-material-open-btn" onClick={() => handleOpen(item)}>
                   Открыть
                 </button>
-              ) : (
-                <button className="academy-card-button academy-card-button-buy" onClick={() => setShowPurchaseModal(article)}>
-                  Купить
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Модальное окно покупки */}
-      {showPurchaseModal && (
-        <div className="academy-modal-overlay" onClick={() => setShowPurchaseModal(null)}>
-          <div className="academy-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="academy-modal-title">Купить материал</h3>
-            <p className="academy-modal-description">
-              {showPurchaseModal.title} за {showPurchaseModal.price} NAR?
-            </p>
-            <p className="academy-modal-balance">
-              Баланс: {Number(user?.narCoin || 0).toLocaleString()} NAR
-            </p>
-            <div className="academy-modal-actions">
-              <button
-                className="academy-modal-button academy-modal-button-primary"
-                onClick={() => handlePurchase(showPurchaseModal)}
-                disabled={Number(user?.narCoin || 0) < showPurchaseModal.price}
-              >
-                Да
-              </button>
-              <button
-                className="academy-modal-button academy-modal-button-secondary"
-                onClick={() => setShowPurchaseModal(null)}
-              >
-                Нет
-              </button>
-            </div>
+              </div>
+            ))}
+            
+            <button className="academy-publish-own-btn" onClick={() => navigate('/academy/publish')}>
+              Опубликовать свое
+            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </PageLayout>
   )
 }

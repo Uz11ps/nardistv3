@@ -113,66 +113,47 @@ export default function ClanMembers() {
 
   return (
     <PageLayout title="Участники" subtitle={`Всего участников: ${members.length}`} showBack={true}>
-      {/* Поисковая строка */}
-      <div className="clan-members-search-container">
-        <input
-          type="text"
-          className="clan-members-search-input"
-          placeholder="Поиск игрока"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      {/* Список участников */}
-      {filteredMembers.length === 0 ? (
-        <div className="clan-members-empty">
-          {searchQuery ? 'Участники не найдены' : 'Нет участников'}
+      <div className="clan-members-content">
+        <div className="clan-members-search-container">
+          <input
+            type="text"
+            className="clan-members-search-input"
+            placeholder="Поиск игрока"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      ) : (
-        <div className="clan-members-list">
-          {filteredMembers.map((member) => {
-            const userName = member.user.nickname || member.user.username || 'Без имени'
-            const isOnline = member.isOnline
 
-            return (
-              <div key={member.id} className="clan-members-item">
-                <div className="clan-members-item-content">
-                  {/* Аватар */}
-                  <div className="clan-members-avatar-container">
+        {filteredMembers.length === 0 ? (
+          <div className="clan-members-empty">
+            {searchQuery ? 'Участники не найдены' : 'Нет участников'}
+          </div>
+        ) : (
+          <div className="clan-members-grid">
+            {filteredMembers.map((member) => {
+              const userName = member.user.nickname || member.user.username || 'Без имени'
+              const roleName = member.role.toLowerCase() === 'leader' ? 'Лидер' : 
+                               member.role.toLowerCase() === 'officer' ? 'Офицер' : 'Участник'
+
+              return (
+                <div key={member.id} className="clan-members-card">
+                  <div className="clan-members-card-avatar">
                     {member.user.avatarUrl ? (
-                      <img
-                        src={member.user.avatarUrl}
-                        alt={userName}
-                        className="clan-members-avatar"
-                      />
+                      <img src={member.user.avatarUrl} alt={userName} />
                     ) : (
                       <div className="clan-members-avatar-placeholder">
-                        <img src="/img/челувек.png" alt="User" className="clan-members-avatar-icon" />
+                        <img src="/img/челувек.png" alt="User" />
                       </div>
                     )}
-                    {isOnline && <div className="clan-members-online-indicator" />}
                   </div>
-
-                  {/* Информация */}
-                  <div className="clan-members-info">
-                    <div className="clan-members-name">{userName}</div>
-                    <div className="clan-members-role">{getRoleName(member.role)}</div>
-                    <div className="clan-members-stats">
-                      Вклад +{formatContribution(member.contribution)} | Уровень {member.user.level}
-                    </div>
-                  </div>
-
-                  {/* Статус */}
-                  <div className="clan-members-status">
-                    {getStatusText(member)}
-                  </div>
+                  <div className="clan-members-card-name">{userName}</div>
+                  <div className="clan-members-card-role">{roleName}</div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
+      </div>
     </PageLayout>
   )
 }

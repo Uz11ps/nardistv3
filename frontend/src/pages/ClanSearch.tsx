@@ -20,7 +20,7 @@ export default function ClanSearch() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'active' | 'new' | 'top' | 'all'>('active')
+  const [activeTab, setActiveTab] = useState<'level' | 'members' | 'all'>('all')
   const [clans, setClans] = useState<Clan[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(false)
@@ -82,50 +82,44 @@ export default function ClanSearch() {
     )
   }
 
-  return (
     <PageLayout
-      title="Поиск федерации"
+      title="Поиск клана"
       subtitle="Выбирай по духу, рейтингу или числу участников - и присоединяйся"
       showBack={true}
       tabs={[
-        { id: 'active', label: 'Активные', active: activeTab === 'active', onClick: () => setActiveTab('active') },
-        { id: 'new', label: 'Новые', active: activeTab === 'new', onClick: () => setActiveTab('new') },
-        { id: 'top', label: 'Топ', active: activeTab === 'top', onClick: () => setActiveTab('top') },
+        { id: 'level', label: 'Уровень', active: activeTab === 'level', onClick: () => setActiveTab('level') },
+        { id: 'members', label: 'Участники', active: activeTab === 'members', onClick: () => setActiveTab('members') },
         { id: 'all', label: 'Все', active: activeTab === 'all', onClick: () => setActiveTab('all') },
       ]}
     >
-      {/* Поисковая строка */}
-      <div className="clan-search-input-container">
-        <input
-          type="text"
-          className="clan-search-input"
-          placeholder="Поиск федерации"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      {/* Список кланов */}
-      {loading ? (
-        <div className="clan-search-loading">Загрузка...</div>
-      ) : clans.length === 0 ? (
-        <div className="clan-search-empty">Федерации не найдены</div>
-      ) : (
-        <div className="clan-search-list">
-          {clans.map((clan) => (
-            <div key={clan.id} className="clan-search-item" onClick={() => handleClanClick(clan.id)}>
-              <img src="/img/кланы.png" alt="Clan" className="clan-search-icon" />
-              <div className="clan-search-info">
-                <div className="clan-search-name">{clan.name}</div>
-                <div className="clan-search-details">
-                  Уровень {clan.level} · {clan.memberCount} участника
-                </div>
-                <div className="clan-search-treasury">Казна: {formatTreasury(clan.treasury)} NAR</div>
-              </div>
-            </div>
-          ))}
+      <div className="clan-search-content">
+        <div className="clan-search-input-container">
+          <input
+            type="text"
+            className="clan-search-input"
+            placeholder="Поиск федерации"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      )}
+
+        {loading ? (
+          <div className="clan-search-loading">Загрузка...</div>
+        ) : clans.length === 0 ? (
+          <div className="clan-search-empty">Федерации не найдены</div>
+        ) : (
+          <div className="clan-search-grid">
+            {clans.map((clan) => (
+              <div key={clan.id} className="clan-search-card" onClick={() => handleClanClick(clan.id)}>
+                <div className="clan-search-card-icon">
+                  <img src="/img/кланы.png" alt="Clan" />
+                </div>
+                <div className="clan-search-card-name">{clan.name}</div>
+                <div className="clan-search-card-level">Уровень {clan.level}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </PageLayout>
-  )
 }

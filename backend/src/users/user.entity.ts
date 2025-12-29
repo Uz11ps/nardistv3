@@ -53,6 +53,9 @@ export class User {
   @Column({ type: 'bigint', default: 0 })
   totalReferralEarnings: bigint; // Общий доход от рефералов
 
+  @Column({ nullable: true })
+  gender: string;
+
   @Column({ default: 0 })
   level: number;
 

@@ -38,6 +38,7 @@ export class OnboardingService {
     profileData: {
       nickname?: string;
       country?: string;
+      gender?: string;
       avatarUrl?: string;
     },
   ): Promise<void> {
@@ -53,6 +54,10 @@ export class OnboardingService {
 
     if (profileData.country) {
       updateData.country = profileData.country;
+    }
+
+    if (profileData.gender) {
+      updateData.gender = profileData.gender;
     }
 
     if (profileData.avatarUrl) {

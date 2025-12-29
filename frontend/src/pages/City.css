@@ -1,436 +1,171 @@
-/* City Page Styles v2 (Hamster style) */
+/* City Page Styles V3 */
 
-.city-content-v2 {
-  padding: 0 12px 40px;
-  background: #000;
-  min-height: 100vh;
-}
-
-.city-v2-container {
+.city-content-v3 {
+  padding: 0 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
-/* Tabs */
-.city-tabs {
+.city-tabs-v3 {
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  padding: 16px 0;
+  padding-bottom: 4px;
   scrollbar-width: none;
-  -ms-overflow-style: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 16px;
 }
 
-.city-tabs::-webkit-scrollbar {
+.city-tabs-v3::-webkit-scrollbar {
   display: none;
 }
 
-.city-tab {
-  flex: 0 0 auto;
+.city-tab-v3 {
+  white-space: nowrap;
   padding: 10px 20px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #FFF;
   font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
   transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
-.city-tab.active {
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
-  color: #fff;
-  border-color: #C93C3D;
-  box-shadow: 0 4px 12px rgba(232, 65, 66, 0.3);
+.city-tab-v3.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
-.city-tab.locked {
-  opacity: 0.6;
+.city-tab-v3.locked {
+  opacity: 0.5;
 }
 
-.city-tab-lock {
-  font-size: 12px;
-}
-
-/* Grid */
-.city-buildings-grid {
+.city-grid-v3 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
 
-/* Building Card */
-.city-card-v2 {
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 16px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.city-card-v2:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.city-card-v2.disabled {
-  opacity: 0.7;
-  filter: grayscale(0.5);
-}
-
-.city-card-header {
-  display: flex;
-  gap: 10px;
-}
-
-.city-card-icon-wrapper {
-  width: 48px;
-  height: 48px;
-  background: #2a2a2a;
-  border-radius: 12px;
+.city-card-v3 {
+  aspect-ratio: 1;
+  background: #E0E0E0;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.city-card-icon {
+.city-card-v3.locked {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+.city-card-v3-icon {
   width: 100%;
   height: 100%;
-  object-fit: cover;
 }
 
-.city-card-title-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.city-card-name {
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 2px;
-  line-height: 1.2;
-}
-
-.city-card-profit {
-  color: #888;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.city-card-profit-value {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #fff;
-  font-size: 11px;
-  margin-top: 1px;
-}
-
-.city-card-coin-mini {
-  width: 12px;
-  height: 12px;
-}
-
-.city-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.city-card-lvl {
-  color: #888;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.city-card-price {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 4px 8px;
-  border-radius: 8px;
-}
-
-.city-card-price-value {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-/* Actions Overlay (Mobile friendly buttons) */
-.city-card-actions-overlay {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.city-card-action-btn {
+.city-card-v3-icon img {
   width: 100%;
-  padding: 8px;
-  border-radius: 10px;
-  border: none;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
+  height: 100%;
+  object-fit: contain;
 }
 
-.city-card-action-btn.collect {
-  background: linear-gradient(180deg, #4CAF50 0%, #388E3C 100%);
-  color: #fff;
-}
-
-.city-card-action-btn.upgrade {
-  background: linear-gradient(180deg, #2196F3 0%, #1976D2 100%);
-  color: #fff;
-}
-
-.city-card-action-btn.buy {
-  background: linear-gradient(180deg, #FF9800 0%, #F57C00 100%);
-  color: #fff;
-}
-
-.city-card-action-btn:disabled {
-  background: #333;
-  color: #666;
-  cursor: not-allowed;
-}
-
-.city-district-locked-banner {
-  background: rgba(232, 65, 66, 0.1);
-  border: 1px solid rgba(232, 65, 66, 0.3);
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  color: #E84142;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-/* Old styles kept for clan mode if needed, but updated to content-v2 */
-.city-section-title {
-  color: #fff;
-  font-size: 18px;
-  margin-bottom: 16px;
-}
-
-/* Loading */
-.city-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  color: #B6B6B6;
-}
-
-/* Модальные окна */
+/* Modal Styles */
 .city-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
-  padding: 20px;
-  backdrop-filter: blur(4px);
+  z-index: 1000;
 }
 
 .city-modal {
-  background: #1a1a1a;
+  background: #1c1c1c;
   border-radius: 20px;
-  width: 100%;
+  width: 90%;
   max-width: 400px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
-  animation: modalAppear 0.3s ease-out;
-}
-
-@keyframes modalAppear {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
 }
 
 .city-modal-header {
-  padding: 16px 20px;
+  padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .city-modal-header h3 {
   margin: 0;
-  color: #fff;
-  font-size: 18px;
+  color: #FFF;
 }
 
 .city-modal-header button {
   background: none;
   border: none;
-  color: #888;
+  color: #FFF;
   font-size: 24px;
   cursor: pointer;
 }
 
 .city-modal-content {
-  padding: 20px;
-  overflow-y: auto;
+  padding: 24px;
+}
+
+.city-modal-image-container {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #2a2a2a;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .city-modal-image {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 16px;
-}
-
-.city-modal-desc {
-  color: #ccc;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 20px;
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
 }
 
 .city-modal-stats {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
-  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .city-modal-stat {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
+  color: #FFF;
 }
 
 .city-modal-stat .label {
   color: #888;
 }
 
-.city-modal-stat .value {
-  color: #fff;
-  font-weight: 500;
-}
-
-.city-modal-stat .value.unlocked { color: #4CAF50; }
-.city-modal-stat .value.locked { color: #E84142; }
-
-.city-modal-info-text {
-  color: #999;
-  font-size: 13px;
-  font-style: italic;
-  line-height: 1.4;
-}
-
-.city-modal-footer-v2 {
-  margin-top: 24px;
-}
-
-.city-modal-actions-group {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.city-modal-info-row {
-  display: flex;
-  justify-content: space-between;
-  color: #888;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.city-max-lvl-badge {
-  background: rgba(76, 175, 80, 0.1);
-  color: #4CAF50;
-  padding: 12px;
-  border-radius: 12px;
+.city-max-lvl {
   text-align: center;
-  font-weight: 700;
-  font-size: 14px;
-  border: 1px solid rgba(76, 175, 80, 0.3);
+  color: #4CAF50;
+  font-weight: 600;
+  padding: 12px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 12px;
 }
 
-.city-modal-image-container {
-  width: 100%;
-  height: 180px;
-  background: #2a2a2a;
-  border-radius: 16px;
-  margin-bottom: 20px;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.city-modal-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-/* Инфо кнопки */
-.city-info-icon-btn, .city-building-info-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: #4a90e2;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  cursor: pointer;
-  margin-left: 8px;
-  transition: background 0.2s;
-}
-
-.city-info-icon-btn:hover, .city-building-info-btn:hover {
-  background: rgba(74, 144, 226, 0.2);
-}
-
-.city-building-name {
-  display: flex;
-  align-items: center;
+.city-loading {
+  text-align: center;
+  padding: 40px;
+  color: #888;
 }

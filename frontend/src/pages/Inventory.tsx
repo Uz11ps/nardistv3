@@ -277,74 +277,22 @@ export default function Inventory() {
 
   const renderSkinCard = (skin: Skin) => {
     const isSelected = selectedSkinIds.has(skin.id)
-    const maxDurability = skin.maxDurability || 100
-    const currentDurability = skin.currentDurability ?? maxDurability
-    const durabilityPercent = Math.round((currentDurability / maxDurability) * 100)
-    const needsRepair = currentDurability < maxDurability && skin.price && skin.price > 0
-    const repairCost = repairCosts.get(skin.id) || 0
-    
-    // Используем getImageUrl для единой обработки всех путей
     const imageUrl = getImageUrl(skin.imageUrl)
 
     return (
-      <Card key={skin.id} className="inventory-item">
-        <div className="inventory-item-content">
-          <div className="inventory-item-image-container">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={skin.name}
-                className="inventory-item-image"
-                onError={(e) => {
-                  console.error('Failed to load skin image:', imageUrl)
-                  e.currentTarget.style.display = 'none'
-                }}
-              />
-            ) : (
-              <div className="inventory-item-image-placeholder">
-                <div style={{ fontSize: '48px' }}>🎲</div>
-              </div>
-            )}
-          </div>
-          <div className="inventory-item-info">
-            <div className="inventory-item-name">{skin.name}</div>
-            <div className="inventory-item-rarity">
-              {getRarityName(skin.rarity)} • {skin.weight} кг
-            </div>
-            {skin.price !== undefined && skin.price !== null && (
-              <div className="inventory-item-durability">
-                <div className="inventory-item-durability-label">
-                  Прочность: {currentDurability} / {maxDurability}
-                </div>
-                <div className="inventory-item-durability-bar">
-                  <div 
-                    className={`inventory-item-durability-fill ${durabilityPercent < 20 ? 'low' : durabilityPercent < 50 ? 'medium' : 'high'}`}
-                    style={{ width: `${durabilityPercent}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="inventory-item-actions">
-            {needsRepair && (
-              <button
-                className="inventory-item-button repair"
-                onClick={() => handleRepairSkin(skin.id)}
-                disabled={repairingSkinId === skin.id || repairingSkinId !== null}
-              >
-                {repairingSkinId === skin.id ? 'Ремонт...' : `Починить (${repairCost} NAR)`}
-              </button>
-            )}
-            <button
-              className={`inventory-item-button ${isSelected ? 'equipped' : 'wear'}`}
-              onClick={() => !isSelected && handleSelectSkin(skin.id)}
-              disabled={selectingSkinId === skin.id || selectingSkinId !== null || isSelected || currentDurability === 0}
-            >
-              {isSelected ? 'Экипировано' : selectingSkinId === skin.id ? 'Надевание...' : currentDurability === 0 ? 'Сломан' : 'Надеть'}
-            </button>
-          </div>
+      <div 
+        key={skin.id} 
+        className={`inventory-grid-card ${isSelected ? 'selected' : ''}`}
+        onClick={() => !isSelected && handleSelectSkin(skin.id)}
+      >
+        <div className="inventory-grid-card-icon">
+          {imageUrl ? (
+            <img src={imageUrl} alt={skin.name} />
+          ) : (
+            <div className="inventory-grid-card-placeholder">🎲</div>
+          )}
         </div>
-      </Card>
+      </div>
     )
   }
 
@@ -352,8 +300,8 @@ export default function Inventory() {
     <PageLayout title="Инвентарь" showBack={true} tabs={tabs}>
       <div className="inventory-content">
         {activeTab === 'other' ? (
-          <>
-            {/* Подписка */}
+          /* ... existing other tab content ... */
+          <div className="inventory-other-list">
             <Card className="inventory-other-item">
               <div className="inventory-other-header">
                 <div className="inventory-other-icon">⭐</div>
@@ -378,115 +326,20 @@ export default function Inventory() {
                 </button>
               )}
             </Card>
-
-            {/* Настройки автобилда */}
-            {hasAutobuild && (
-              <Card className="inventory-autobuild-settings">
-            <h3 className="inventory-autobuild-title">⚙️ Настройки автобилда города</h3>
-            <div className="inventory-autobuild-content">
-              <div className="inventory-autobuild-field">
-                <label className="inventory-autobuild-label">Минимальный баланс (NAR):</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={autobuildSettings.minBalance}
-                  onChange={(e) => setAutobuildSettings({
-                    ...autobuildSettings,
-                    minBalance: parseInt(e.target.value) || 0,
-                  })}
-                  className="inventory-autobuild-input"
-                  placeholder="0"
-                />
-                <div className="inventory-autobuild-hint">
-                  Эта сумма всегда будет оставаться на балансе
-                </div>
-              </div>
-
-              <div className="inventory-autobuild-field">
-                <label className="inventory-autobuild-label">Стратегия прокачки:</label>
-                <div className="inventory-autobuild-strategy-buttons">
-                  <button
-                    className={`inventory-autobuild-strategy-btn ${autobuildSettings.strategy === 'balanced' ? 'active' : ''}`}
-                    onClick={() => setAutobuildSettings({
-                      ...autobuildSettings,
-                      strategy: 'balanced',
-                      priorityBuilding: null,
-                    })}
-                  >
-                    Равномерно
-                  </button>
-                  <button
-                    className={`inventory-autobuild-strategy-btn ${autobuildSettings.strategy === 'priority' ? 'active' : ''}`}
-                    onClick={() => setAutobuildSettings({
-                      ...autobuildSettings,
-                      strategy: 'priority',
-                    })}
-                  >
-                    Приоритет строения
-                  </button>
-                </div>
-              </div>
-
-              {autobuildSettings.strategy === 'priority' && (
-                <div className="inventory-autobuild-field">
-                  <label className="inventory-autobuild-label">Приоритетное строение:</label>
-                  <select
-                    value={autobuildSettings.priorityBuilding || ''}
-                    onChange={(e) => setAutobuildSettings({
-                      ...autobuildSettings,
-                      priorityBuilding: e.target.value || null,
-                    })}
-                    className="inventory-autobuild-select"
-                  >
-                    <option value="">Выберите строение</option>
-                    {buildings.map((building) => (
-                      <option key={building.id} value={building.type}>
-                        {building.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <button
-                className="inventory-autobuild-save-btn"
-                onClick={handleSaveAutobuildSettings}
-                disabled={savingSettings}
-              >
-                {savingSettings ? 'Сохранение...' : 'Сохранить настройки'}
-              </button>
-            </div>
-          </Card>
-            )}
-          </>
-        ) : (
-          <>
-        {loading ? (
-          <Card>
-            <div className="inventory-empty">Загрузка...</div>
-          </Card>
-        ) : getFilteredSkins().length === 0 ? (
-          <Card>
-            <div className="inventory-empty">
-              Инвентарь пуст. Купите скины в магазине!
-            </div>
-            <div style={{ marginTop: '16px', textAlign: 'center' }}>
-              <button 
-                className="inventory-item-button wear"
-                onClick={() => navigate('/shop')}
-              >
-                Перейти в магазин
-              </button>
-            </div>
-          </Card>
-        ) : (
-          <div className="inventory-list">
-            {getFilteredSkins().map((skin) => renderSkinCard(skin))}
           </div>
-        )}
-          </>
+        ) : (
+          <div className="inventory-grid">
+            {loading ? (
+              <div className="inventory-empty">Загрузка...</div>
+            ) : getFilteredSkins().length === 0 ? (
+              <div className="inventory-empty">Пусто</div>
+            ) : (
+              getFilteredSkins().map((skin) => renderSkinCard(skin))
+            )}
+          </div>
         )}
       </div>
     </PageLayout>
+  )
   )
 }

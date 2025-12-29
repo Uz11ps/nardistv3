@@ -10,37 +10,53 @@ export default function CreateProfile() {
   const { user } = useAuthStore()
   const [formData, setFormData] = useState({
     nickname: '',
-    name: '',
     country: '',
+    gender: 'Мужской',
     avatarUrl: '',
   })
   const [loading, setLoading] = useState(false)
-  const [countries] = useState([
-    'Россия',
-    'Украина',
-    'Беларусь',
-    'Казахстан',
-    'Узбекистан',
-    'Азербайджан',
-    'Армения',
-    'Грузия',
-    'Молдова',
-    'Кыргызстан',
-    'Таджикистан',
-    'Туркменистан',
-    'Другая',
-  ])
   const [showCountryDropdown, setShowCountryDropdown] = useState(false)
+  const [showGenderDropdown, setShowGenderDropdown] = useState(false)
+
+  const countries = [
+    'Австралия', 'Австрия', 'Азербайджан', 'Албания', 'Алжир', 'Ангола', 'Андорра', 'Антигуа и Барбуда', 'Аргентина', 'Армения', 'Афганистан',
+    'Багамские Острова', 'Бангладеш', 'Барбадос', 'Бахрейн', 'Беларусь', 'Белиз', 'Бельгия', 'Бенин', 'Болгария', 'Боливия', 'Босния и Герцеговина', 'Ботсвана', 'Бразилия', 'Бруней', 'Буркина-Фасо', 'Бурунди', 'Бутан',
+    'Вануату', 'Ватикан', 'Великобритания', 'Венгрия', 'Венесуэла', 'Вьетнам',
+    'Габон', 'Гаити', 'Гайана', 'Гамбия', 'Гана', 'Гватемала', 'Гвинея', 'Гвинея-Бисау', 'Германия', 'Гондурас', 'Гренада', 'Греция', 'Грузия',
+    'Дания', 'Джибути', 'Доминика', 'Доминиканская Республика',
+    'Египет',
+    'Замбия', 'Зимбабве',
+    'Израиль', 'Индия', 'Индонезия', 'Иордания', 'Ирак', 'Иран', 'Ирландия', 'Исландия', 'Испания', 'Италия',
+    'Йемен',
+    'Кабо-Верде', 'Казахстан', 'Камбоджа', 'Камерун', 'Канада', 'Катар', 'Кения', 'Кипр', 'Кирибати', 'Китай', 'Колумбия', 'Коморские Острова', 'Конго', 'ДР Конго', 'КНДР', 'Южная Корея', 'Коста-Рика', 'Кот-д\'Ивуар', 'Куба', 'Кувейт', 'Кыргызстан',
+    'Лаос', 'Латвия', 'Лесото', 'Либерия', 'Ливан', 'Ливия', 'Литва', 'Лихтенштейн', 'Люксембург',
+    'Маврикий', 'Мавритания', 'Мадагаскар', 'Малави', 'Малайзия', 'Мали', 'Мальдивы', 'Мальта', 'Марокко', 'Маршалловы Острова', 'Мексика', 'Микронезия', 'Мозамбик', 'Молдова', 'Монако', 'Монголия', 'Мьянма',
+    'Намибия', 'Науру', 'Непал', 'Нигер', 'Нигерия', 'Нидерланды', 'Никарагуа', 'Новая Зеландия', 'Норвегия',
+    'ОАЭ', 'Оман',
+    'Пакистан', 'Палау', 'Панама', 'Папуа — Новая Гвинея', 'Парагвай', 'Перу', 'Польша', 'Португалия',
+    'Россия', 'Руанда', 'Румыния',
+    'Сальвадор', 'Самоа', 'Сан-Марино', 'Сан-Томе и Принсипи', 'Саудовская Аравия', 'Северная Македония', 'Сейшельские Острова', 'Сенегал', 'Сент-Винсент и Гренадины', 'Сент-Китс и Невис', 'Сент-Люсия', 'Сербия', 'Сингапур', 'Сирия', 'Словакия', 'Словения', 'Соломоновы Острова', 'Сомали', 'Судан', 'Суринам', 'США', 'Сьерра-Леоне',
+    'Таджикистан', 'Таиланд', 'Танзания', 'Того', 'Тонга', 'Тринидад и Тобаго', 'Тувалу', 'Тунис', 'Туркменистан', 'Турция',
+    'Уганда', 'Узбекистан', 'Украина', 'Уругвай',
+    'Фиджи', 'Филиппины', 'Финляндия', 'Франция',
+    'Хорватия', 'ЦАР',
+    'Чад', 'Черногория', 'Чехия', 'Чили',
+    'Швейцария', 'Швеция', 'Шри-Ланка',
+    'Эквадор', 'Экваториальная Гвинея', 'Эритрея', 'Эсватини', 'Эстония', 'Эфиопия',
+    'ЮАР', 'Южный Судан',
+    'Ямайка', 'Япония'
+  ]
+
+  const genders = ['Мужской', 'Женский']
 
   useEffect(() => {
     if (user) {
-      // Заполняем данные из Telegram
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         nickname: user.nickname || user.username || '',
-        name: user.firstName || user.username || 'Алексей',
         country: user.country || 'Россия',
         avatarUrl: user.avatarUrl || '',
-      })
+      }))
     }
   }, [user])
 
@@ -55,6 +71,7 @@ export default function CreateProfile() {
       await apiClient.post('/onboarding/complete-profile', {
         nickname: formData.nickname,
         country: formData.country,
+        gender: formData.gender,
         avatarUrl: formData.avatarUrl,
       })
       window.location.href = '/onboarding/starter-kit'
@@ -74,7 +91,89 @@ export default function CreateProfile() {
   return (
     <PageLayout title="Создай свой профиль" showBack={true}>
       <div className="create-profile-content">
-        {/* Аватарка */}
+        <div className="create-profile-form-card">
+          <div className="create-profile-field">
+            <label className="create-profile-label">Никнейм</label>
+            <input
+              type="text"
+              value={formData.nickname}
+              onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+              placeholder="Никнейм"
+              className="create-profile-input"
+            />
+          </div>
+
+          <div className="create-profile-field">
+            <label className="create-profile-label">Страна</label>
+            <div
+              className="create-profile-select"
+              onClick={() => {
+                setShowCountryDropdown(!showCountryDropdown)
+                setShowGenderDropdown(false)
+              }}
+            >
+              <span>{formData.country || 'Выберите страну'}</span>
+              <span className="create-profile-select-arrow">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 18L15 12L9 6" stroke="#B6B6B6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </span>
+            </div>
+
+            {showCountryDropdown && (
+              <div className="create-profile-dropdown">
+                {countries.map((country) => (
+                  <div
+                    key={country}
+                    className="create-profile-dropdown-item"
+                    onClick={() => {
+                      setFormData({ ...formData, country })
+                      setShowCountryDropdown(false)
+                    }}
+                  >
+                    {country}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="create-profile-field">
+            <label className="create-profile-label">Пол</label>
+            <div
+              className="create-profile-select"
+              onClick={() => {
+                setShowGenderDropdown(!showGenderDropdown)
+                setShowCountryDropdown(false)
+              }}
+            >
+              <span>{formData.gender}</span>
+              <span className="create-profile-select-arrow">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 18L15 12L9 6" stroke="#B6B6B6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </span>
+            </div>
+
+            {showGenderDropdown && (
+              <div className="create-profile-dropdown">
+                {genders.map((gender) => (
+                  <div
+                    key={gender}
+                    className="create-profile-dropdown-item"
+                    onClick={() => {
+                      setFormData({ ...formData, gender })
+                      setShowGenderDropdown(false)
+                    }}
+                  >
+                    {gender}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="create-profile-avatar-section">
           <div className="create-profile-avatar">
             {formData.avatarUrl ? (
@@ -100,60 +199,6 @@ export default function CreateProfile() {
           </button>
         </div>
 
-        {/* Форма */}
-        <div className="create-profile-form-card">
-          <div className="create-profile-field">
-            <label className="create-profile-label">Логин</label>
-            <input
-              type="text"
-              value={formData.nickname}
-              onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-              placeholder="Логин"
-              className="create-profile-input"
-            />
-          </div>
-
-          <div className="create-profile-field">
-            <label className="create-profile-label">Имя</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Имя"
-              className="create-profile-input"
-            />
-          </div>
-
-          <div className="create-profile-field">
-            <label className="create-profile-label">Страна</label>
-            <div
-              className="create-profile-select"
-              onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-            >
-              <span>{formData.country || 'Выберите страну'}</span>
-              <span className="create-profile-select-arrow">→</span>
-            </div>
-
-            {showCountryDropdown && (
-              <div className="create-profile-dropdown">
-                {countries.map((country) => (
-                  <div
-                    key={country}
-                    className="create-profile-dropdown-item"
-                    onClick={() => {
-                      setFormData({ ...formData, country })
-                      setShowCountryDropdown(false)
-                    }}
-                  >
-                    {country}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Кнопка продолжить */}
         <button
           className="create-profile-submit-btn"
           onClick={handleSubmit}

@@ -132,72 +132,46 @@ export default function GameTables() {
 
   return (
     <PageLayout title="Список столов" showBack={true}>
-      <div className="game-tables-content">
+      <div className="game-tables-content-v2">
         {loading ? (
-          <Card>
-            <div style={{ textAlign: 'center', padding: '40px', color: '#aaaaaa' }}>
-              Загрузка...
-            </div>
-          </Card>
+          <div className="game-tables-loading">Загрузка...</div>
         ) : tables.length === 0 ? (
-          <Card>
-            <div style={{ textAlign: 'center', padding: '40px', color: '#aaaaaa' }}>
-              Нет доступных столов
-            </div>
-          </Card>
+          <div className="game-tables-empty">Нет доступных столов</div>
         ) : (
-          tables.map((table) => {
-            const tableNumber = getTableNumber(table.id)
-            const isFull = table.playerCount >= table.maxPlayers
-            
-            return (
-              <Card key={table.id} className="game-table-card">
-                <div className="game-table-header">
-                  <div className="game-table-title">Стол №{tableNumber}</div>
-                  <div className="game-table-stake">
-                    <img src="/img/narcoin.png" alt="coin" className="game-table-stake-icon" />
-                    <span>{table.stake.toLocaleString()} NAR</span>
+          <div className="game-tables-list-v2">
+            {tables.map((table) => {
+              const tableNumber = getTableNumber(table.id)
+              const isFull = table.playerCount >= table.maxPlayers
+              
+              return (
+                <div key={table.id} className="game-table-card-v2">
+                  <div className="game-table-card-info">
+                    <div className="game-table-card-title">Стол №{tableNumber}</div>
+                    <div className="game-table-card-stake">
+                      <img src="/img/narcoin.png" alt="coin" />
+                      <span>{table.stake.toLocaleString()} NAR</span>
+                    </div>
+                    <div className="game-table-card-details">
+                      {getGameModeName(table.mode)} {table.playerCount}/{table.maxPlayers}
+                    </div>
                   </div>
+                  
+                  <button
+                    className={`game-table-card-btn ${isFull ? 'observe' : 'join'}`}
+                    onClick={() => isFull ? handleObserveTable(table.id) : handleJoinTable(table.id)}
+                  >
+                    {isFull ? 'Наблюдать' : 'Войти'}
+                  </button>
                 </div>
-                
-                <div className="game-table-info">
-                  <div className="game-table-mode">{getGameModeName(table.mode)}</div>
-                  <div className="game-table-players">
-                    {table.playerCount}/{table.maxPlayers}
-                  </div>
-                </div>
-
-                <div className="game-table-actions">
-                  {isFull ? (
-                    <button
-                      className="game-table-btn game-table-btn-observe"
-                      onClick={() => handleObserveTable(table.id)}
-                    >
-                      Наблюдать
-                    </button>
-                  ) : (
-                    <button
-                      className="game-table-btn game-table-btn-join"
-                      onClick={() => handleJoinTable(table.id)}
-                    >
-                      Войти
-                    </button>
-                  )}
-                </div>
-              </Card>
-            )
-          })
+              )
+            })}
+          </div>
         )}
 
-        <div className="game-tables-footer">
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={() => navigate('/game/tables/create')}
-            className="game-tables-create-btn"
-          >
+        <div className="game-tables-footer-v2">
+          <button className="game-tables-create-btn-v2" onClick={() => navigate('/game/tables/create')}>
             Создать стол
-          </Button>
+          </button>
           <div className="game-tables-footer-text">
             Игры дают опыт, NAR-coin и рейтинг
           </div>

@@ -69,32 +69,19 @@ export default function Clans() {
   }
 
   return (
-    <PageLayout title="Федерации" showBack={true}>
-      <div className="clans-content">
-        {/* Профиль пользователя */}
-        <div className="clans-profile">
-          <div className="clans-avatar-container">
-            <div className="clans-avatar">
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.username} />
-              ) : (
-                <img src="/img/челувек.png" alt="User" className="clans-avatar-placeholder" />
-              )}
-            </div>
-          </div>
-          <div className="clans-username">{user?.nickname || user?.firstName || user?.username || 'Игрок'}</div>
-          <div className="clans-level">Уровень {user.level || 1}</div>
+    <PageLayout 
+      title="Федерации" 
+      subtitle={`создать федерацию можно с 15 уровня, а вступить в федерацию можно с 10 уровня, прокачайся, играй в турнирах и зарабатывай очки`}
+      showBack={true}
+    >
+      <div className="federations-welcome">
+        <div className="federations-welcome-shield">
+          <img src="/img/кланы.png" alt="Federations" />
         </div>
-
-        {/* Кнопки действий */}
-        <div className="clans-actions">
-          <button className="clans-action-button clans-action-create" onClick={() => navigate('/clans/create')}>
-            Создать федерацию
-          </button>
-          <button className="clans-action-button clans-action-find" onClick={() => navigate('/clans/search')}>
-            Найти федерацию
-          </button>
-        </div>
+        
+        <button className="federations-welcome-btn" onClick={() => navigate('/clans/search')}>
+          Играть
+        </button>
       </div>
     </PageLayout>
   )

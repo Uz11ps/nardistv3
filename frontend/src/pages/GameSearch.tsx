@@ -63,19 +63,19 @@ export default function GameSearch() {
   return (
     <PageLayout title="Поиск" subtitle="Подбор по рейтингу и режиму" showBack={true}>
       <div className="game-search-content">
-        <div className="game-search-card">
+        <div className="game-search-card-v2">
           {/* Режим */}
-          <div className="game-search-field">
-            <div className="game-search-label">Режим:</div>
-            <div className="toggle-group">
+          <div className="game-search-field-v2">
+            <div className="game-search-label-v2">Режим:</div>
+            <div className="mode-toggle-v2">
               <button
-                className={`toggle-btn ${mode === 'long' ? 'active' : ''}`}
+                className={`mode-toggle-btn-v2 ${mode === 'long' ? 'active' : ''}`}
                 onClick={() => setMode('long')}
               >
                 Длинные
               </button>
               <button
-                className={`toggle-btn ${mode === 'short' ? 'active' : ''}`}
+                className={`mode-toggle-btn-v2 ${mode === 'short' ? 'active' : ''}`}
                 onClick={() => setMode('short')}
               >
                 Короткие
@@ -84,72 +84,41 @@ export default function GameSearch() {
           </div>
 
           {/* Ставка */}
-          <div className="game-search-field">
-            <div className="game-search-label">Выберите ставку для игры:</div>
-            <div className="stake-grid">
+          <div className="game-search-field-v2">
+            <div className="game-search-label-v2">Ставка:</div>
+            <div className="stake-grid-v2">
               {stakeOptions.map((value) => (
-                <div
+                <button
                   key={value}
-                  className={`stake-chip-container ${stake === value ? 'selected' : ''}`}
+                  className={`stake-btn-v2 ${stake === value ? 'selected' : ''}`}
                   onClick={() => setStake(value)}
                 >
-                  <div className={`stake-chip ${value > 0 ? 'red' : 'free'}`}>
-                    <div className="stake-chip-inner">
-                      {value === 0 ? 'FREE' : value}
-                    </div>
-                  </div>
-                </div>
+                  {value === 0 ? 'FREE' : value}
+                </button>
               ))}
             </div>
-            
-            <div className="game-rules-card">
-              <div className="rules-header">Правила игры</div>
-              <div className="rules-row">
-                <span>Время на игру</span>
-                <span>60 сек</span>
-              </div>
-              <div className="rules-row">
-                <span>Время на ход</span>
-                <span>20 сек</span>
-              </div>
-              <div className="rules-row">
-                <span>Матч до</span>
-                <span>1</span>
-              </div>
-              <div className="rules-row">
-                <span>Куб удвоения</span>
-                <span>Да</span>
-              </div>
-              <div className="rules-official">
-                 <input type="checkbox" checked readOnly />
-                 <span>Официальные правила игры</span>
-              </div>
-            </div>
-
-            {stake > 0 && (
-              <div className="stake-prize-info">
-                Приз за победу: {stake * 2 - Math.floor(stake * 2 * 0.1)} NAR
-                <span className="stake-commission"> (комиссия системы)</span>
-              </div>
-            )}
           </div>
 
-          {/* Кнопка поиска */}
-          {!searching && (
-            <button onClick={handleStartSearch} className="game-search-start-btn">
+          <div className="game-search-info-v2">
+            Время на игру: 60 сек<br/>
+            Время на ход: 15 сек<br/>
+            Матч до: 1 победы<br/>
+            Куб удвоения: Да
+          </div>
+
+          {!searching ? (
+            <button onClick={handleStartSearch} className="game-search-start-btn-v2">
               Начать поиск
             </button>
+          ) : (
+            <div className="game-search-searching-v2">
+              <div className="searching-text-v2">Подбираем противника по рейтингу и ставке...</div>
+              <button className="game-search-cancel-btn-v2" onClick={handleCancelSearch}>
+                Отменить поиск
+              </button>
+            </div>
           )}
         </div>
-
-        {searching && (
-          <div className="game-search-searching">
-            <div className="searching-text">Подбираем противника по рейтингу и ставке...</div>
-            <button className="game-search-cancel-btn" onClick={handleCancelSearch}>
-              Отменить поиск
-            </button>
-          </div>
-        )}
       </div>
     </PageLayout>
   )
