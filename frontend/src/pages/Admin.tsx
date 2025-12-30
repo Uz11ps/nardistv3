@@ -4,6 +4,112 @@ import apiClient, { getImageUrl } from '../api/client'
 import BackgammonBoard from '../components/BackgammonBoard'
 import './Admin.css'
 
+interface Prize {
+  place: number
+  type: 'nar' | 'usd' | 'skin' | 'xp' | 'ticket'
+  amount?: number
+  skinId?: string
+}
+
+const normalizePrizes = (prizesData: any): Prize[] => {
+  if (!prizesData) return [];
+  if (Array.isArray(prizesData)) return prizesData;
+  if (typeof prizesData === 'object') {
+    return Object.entries(prizesData).map(([key, value]: [string, any]) => ({
+      place: parseInt(key),
+      ...value
+    }));
+  }
+  return [];
+}
+
+const PrizeEditor = ({ prizes, onChange, skins = [] }: { prizes: Prize[], onChange: (prizes: Prize[]) => void, skins: any[] }) => {
+  const addPrize = () => {
+    onChange([...prizes, { place: prizes.length + 1, type: 'nar', amount: 0 }])
+  }
+
+  const removePrize = (index: number) => {
+    const newPrizes = [...prizes]
+    newPrizes.splice(index, 1)
+    onChange(newPrizes)
+  }
+
+  const updatePrize = (index: number, field: keyof Prize, value: any) => {
+    const newPrizes = [...prizes]
+    newPrizes[index] = { ...newPrizes[index], [field]: value }
+    onChange(newPrizes)
+  }
+
+  return (
+    <div className="prize-editor">
+      {prizes.map((prize, index) => (
+        <div key={index} className="prize-row" style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+          <div style={{ width: '60px' }}>
+            <label style={{ fontSize: '10px', color: '#999' }}>Место</label>
+            <input 
+              type="number" 
+              value={prize.place} 
+              onChange={(e) => updatePrize(index, 'place', parseInt(e.target.value))}
+              style={{ width: '100%', padding: '4px', background: '#333', border: '1px solid #444', color: '#fff' }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: '10px', color: '#999' }}>Тип</label>
+            <select 
+              value={prize.type} 
+              onChange={(e) => updatePrize(index, 'type', e.target.value)}
+              style={{ width: '100%', padding: '4px', background: '#333', border: '1px solid #444', color: '#fff' }}
+            >
+              <option value="nar">NAR Coin</option>
+              <option value="usd">USD</option>
+              <option value="xp">XP</option>
+              <option value="skin">Скин</option>
+              <option value="ticket">Билет</option>
+            </select>
+          </div>
+          
+          {prize.type === 'skin' ? (
+            <div style={{ flex: 2 }}>
+              <label style={{ fontSize: '10px', color: '#999' }}>Скин</label>
+              <select 
+                value={prize.skinId || ''} 
+                onChange={(e) => updatePrize(index, 'skinId', e.target.value)}
+                style={{ width: '100%', padding: '4px', background: '#333', border: '1px solid #444', color: '#fff' }}
+              >
+                <option value="">Выберите скин</option>
+                {skins.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div style={{ flex: 2 }}>
+              <label style={{ fontSize: '10px', color: '#999' }}>Количество</label>
+              <input 
+                type="number" 
+                value={prize.amount || 0} 
+                onChange={(e) => updatePrize(index, 'amount', parseInt(e.target.value))}
+                style={{ width: '100%', padding: '4px', background: '#333', border: '1px solid #444', color: '#fff' }}
+              />
+            </div>
+          )}
+          
+          <button 
+            onClick={() => removePrize(index)}
+            style={{ marginTop: '14px', background: '#f44336', border: 'none', color: '#fff', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer' }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button 
+        onClick={addPrize} 
+        style={{ marginTop: '8px', padding: '4px 8px', background: '#444', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+      >
+        + Добавить приз
+      </button>
+    </div>
+  )
+}
+
 interface Stats {
   users: {
     total: number
@@ -181,7 +287,7 @@ export default function Admin() {
     registrationEnd: '',
     maxParticipants: 16, 
     entryFee: 0,
-    prizes: '' // JSON строка с наградами
+    prizes: [] as Prize[] // Массив с наградами
   })
   const [newArticle, setNewArticle] = useState({ 
     title: '', 
@@ -2205,12 +2311,11 @@ export default function Admin() {
                         />
                       </div>
                       <div className="form-group">
-                        <label>Награды (JSON)</label>
-                        <textarea
-                          value={newTournament.prizes}
-                          onChange={(e) => setNewTournament({ ...newTournament, prizes: e.target.value })}
-                          rows={3}
-                          placeholder='{"1": {"narCoin": 1000}, "2": {"narCoin": 500}}'
+                        <label>Награды</label>
+                        <PrizeEditor 
+                          prizes={newTournament.prizes} 
+                          onChange={(prizes) => setNewTournament({ ...newTournament, prizes })} 
+                          skins={skins}
                         />
                       </div>
                     </div>
@@ -2224,23 +2329,13 @@ export default function Admin() {
                           return
                         }
                         
-                        let prizes = null;
-                        if (newTournament.prizes && newTournament.prizes.trim()) {
-                          try {
-                            prizes = JSON.parse(newTournament.prizes);
-                          } catch (e) {
-                            alert('Ошибка в формате наград. Используйте валидный JSON.');
-                            return;
-                          }
-                        }
-
                         await apiClient.post('/admin/tournaments/create', {
                           ...newTournament,
                           registrationStart: new Date(newTournament.registrationStart).toISOString(),
                           registrationEnd: new Date(newTournament.registrationEnd).toISOString(),
                           startDate: new Date(newTournament.startDate).toISOString(),
                           status: 'registration',
-                          prizes: prizes,
+                          prizes: newTournament.prizes,
                         })
                         alert('Турнир создан!')
                         setShowCreateTournamentModal(false)
@@ -2348,6 +2443,14 @@ export default function Admin() {
                           type="datetime-local"
                           value={selectedTournament.startDate ? new Date(selectedTournament.startDate).toISOString().slice(0, 16) : ''}
                           onChange={(e) => setSelectedTournament({ ...selectedTournament, startDate: new Date(e.target.value).toISOString() })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Награды</label>
+                        <PrizeEditor 
+                          prizes={normalizePrizes(selectedTournament.prizes)} 
+                          onChange={(prizes) => setSelectedTournament({ ...selectedTournament, prizes })} 
+                          skins={skins}
                         />
                       </div>
                     </div>

@@ -47,10 +47,13 @@ import { UserWallet } from '../payment/user-wallet.entity';
 import { PaymentTransaction } from '../payment/payment-transaction.entity';
 import { ProgressionConfig } from '../progress/progression-config.entity';
 
+import { TournamentMatch } from '../tournaments/tournament-match.entity';
+import { TournamentTicket } from '../tournaments/tournament-ticket.entity';
+
 @Module({
   imports: [
     forwardRef(() => GamesModule),
-    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, CourseTask, CourseTaskProgress, SystemSettings, NotificationTemplate, UserWallet, PaymentTransaction, ProgressionConfig]),
+    TypeOrmModule.forFeature([User, Game, GameMove, Tournament, TournamentMatch, TournamentTicket, Article, Skin, UserSkin, Quest, QuestProgress, Clan, ClanMember, ClanTreasuryTransaction, Subscription, BuildingConfig, Building, DistrictConfig, Rating, Notification, UserMaterial, CourseTask, CourseTaskProgress, SystemSettings, NotificationTemplate, UserWallet, PaymentTransaction, ProgressionConfig]),
     ScheduleModule.forRoot(),
     forwardRef(() => AuthModule),
     JwtModule.registerAsync({

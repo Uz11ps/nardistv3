@@ -15,7 +15,9 @@ import { User } from '../users/user.entity';
 import { Game, GameMode, GameType, GameStatus } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
 import { Tournament, TournamentStatus } from '../tournaments/tournament.entity';
-import { Article } from '../academy/article.entity';
+import { TournamentMatch } from '../tournaments/tournament-match.entity';
+import { TournamentTicket } from '../tournaments/tournament-ticket.entity';
+import { Article, ArticleType } from '../academy/article.entity';
 import { Skin } from '../skins/skin.entity';
 import { UserSkin } from '../skins/user-skin.entity';
 import { Quest, QuestType, QuestTarget } from '../quests/quest.entity';
@@ -59,6 +61,10 @@ export class AdminService implements OnModuleInit {
     private movesRepository: Repository<GameMove>,
     @InjectRepository(Tournament)
     private tournamentsRepository: Repository<Tournament>,
+    @InjectRepository(TournamentMatch)
+    private tournamentMatchesRepository: Repository<TournamentMatch>,
+    @InjectRepository(TournamentTicket)
+    private tournamentTicketsRepository: Repository<TournamentTicket>,
     @InjectRepository(Article)
     private articlesRepository: Repository<Article>,
     @InjectRepository(Skin)
@@ -774,6 +780,15 @@ export class AdminService implements OnModuleInit {
     if (!tournament) {
       throw new NotFoundException('Турнир не найден');
     }
+
+    // Удаляем связанные матчи
+    await this.tournamentMatchesRepository.delete({ tournamentId: id });
+
+    // Удаляем билеты, привязанные к этому турниру
+    await this.tournamentTicketsRepository.delete({ tournamentId: id });
+    
+    // Обнуляем привязку использованных билетов (чтобы не нарушать целостность, но и не удалять историю)
+    await this.tournamentTicketsRepository.update({ usedInTournamentId: id }, { usedInTournamentId: null });
     
     await this.tournamentsRepository.remove(tournament);
     return { message: 'Турнир удален' };
