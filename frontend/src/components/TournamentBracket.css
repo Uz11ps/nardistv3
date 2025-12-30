@@ -1,21 +1,15 @@
 .bracket-container {
   width: 100%;
-  overflow: auto; /* Allow both vertical and horizontal scroll */
+  overflow: auto; /* Keep auto for fallback/wheel support, but hide scrollbar visually if preferred */
   padding: 10px 0;
-  max-height: 80vh; /* Limit height to allow vertical scrolling within the container */
-  scrollbar-width: thin;
-  scrollbar-color: #444 #1a1a1a;
+  max-height: 80vh;
+  cursor: grab; /* Show grab cursor to indicate draggability */
+  user-select: none; /* Prevent text selection while dragging */
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
 }
 
 .bracket-container::-webkit-scrollbar {
-  height: 6px;
-}
-.bracket-container::-webkit-scrollbar-track {
-  background: #1a1a1a;
-}
-.bracket-container::-webkit-scrollbar-thumb {
-  background-color: #444;
-  border-radius: 3px;
+  display: none; /* Hide scrollbar for Chrome/Safari/Edge */
 }
 
 .bracket-scroll {

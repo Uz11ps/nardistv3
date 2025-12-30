@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import './TournamentBracket.css'
 import { useNavigate } from 'react-router-dom'
 import Icon from './Icon'
@@ -34,6 +34,57 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const currentUserId = user?.id
+  const containerRef = useRef<HTMLDivElement>(null)
+  
+  // Drag to scroll logic
+  const [isDragging, setIsDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [startY, setStartY] = useState(0)
+  const [scrollLeft, setScrollLeft] = useState(0)
+  const [scrollTop, setScrollTop] = useState(0)
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only enable drag if not clicking on a clickable match
+    const target = e.target as HTMLElement
+    if (target.closest('.bracket-match.clickable')) return
+
+    setIsDragging(true)
+    if (containerRef.current) {
+      setStartX(e.pageX - containerRef.current.offsetLeft)
+      setStartY(e.pageY - containerRef.current.offsetTop)
+      setScrollLeft(containerRef.current.scrollLeft)
+      setScrollTop(containerRef.current.scrollTop)
+      containerRef.current.style.cursor = 'grabbing'
+    }
+  }
+
+  const handleMouseLeave = () => {
+    setIsDragging(false)
+    if (containerRef.current) {
+      containerRef.current.style.cursor = 'grab'
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+    if (containerRef.current) {
+      containerRef.current.style.cursor = 'grab'
+    }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !containerRef.current) return
+    e.preventDefault()
+    
+    const x = e.pageX - containerRef.current.offsetLeft
+    const y = e.pageY - containerRef.current.offsetTop
+    
+    const walkX = (x - startX) * 1.5 // Scroll speed multiplier
+    const walkY = (y - startY) * 1.5
+
+    containerRef.current.scrollLeft = scrollLeft - walkX
+    containerRef.current.scrollTop = scrollTop - walkY
+  }
 
   // Generate full bracket structure based on maxParticipants
   const buildFullBracket = (matches: BracketMatch[] = [], maxParticipants: number) => {
@@ -112,7 +163,14 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
   }
 
   return (
-    <div className="bracket-container">
+    <div 
+      className="bracket-container" 
+      ref={containerRef}
+      onMouseDown={handleMouseDown}
+      onMouseLeave={handleMouseLeave}
+      onMouseUp={handleMouseUp}
+      onMouseMove={handleMouseMove}
+    >
       <div className="bracket-scroll">
         <div className="bracket-rounds">
           {rounds.map((roundMatches, roundIndex) => {
