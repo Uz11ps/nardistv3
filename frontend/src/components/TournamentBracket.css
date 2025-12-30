@@ -1,26 +1,26 @@
 .bracket-container {
   width: 100%;
   overflow-x: auto;
-  padding: 20px 0;
+  padding: 10px 0;
   scrollbar-width: thin;
   scrollbar-color: #444 #1a1a1a;
 }
 
 .bracket-container::-webkit-scrollbar {
-  height: 8px;
+  height: 6px;
 }
 .bracket-container::-webkit-scrollbar-track {
   background: #1a1a1a;
 }
 .bracket-container::-webkit-scrollbar-thumb {
   background-color: #444;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .bracket-scroll {
   min-width: 100%;
   display: inline-block;
-  padding-right: 20px;
+  padding-right: 10px;
 }
 
 .bracket-rounds {
@@ -31,8 +31,8 @@
 .bracket-round {
   display: flex;
   flex-direction: column;
-  min-width: 240px;
-  margin-right: 50px; /* Space for lines */
+  min-width: 180px; /* Reduced from 240px */
+  margin-right: 30px; /* Reduced from 50px */
   position: relative;
 }
 
@@ -43,12 +43,12 @@
 .bracket-round-header {
   text-align: center;
   color: #888;
-  margin-bottom: 24px;
-  font-size: 12px;
+  margin-bottom: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   font-weight: 600;
-  height: 20px;
+  height: 16px;
 }
 
 .bracket-matches {
@@ -62,36 +62,36 @@
   position: relative;
   display: flex;
   align-items: center;
-  margin: 10px 0;
+  margin: 4px 0; /* Reduced from 10px */
 }
 
 .bracket-match {
   width: 100%;
   background: #1e1e1e;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid #333;
   transition: all 0.2s;
   position: relative;
   z-index: 2;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .bracket-match.clickable:hover {
   cursor: pointer;
   border-color: #666;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
 }
 
 .bracket-player {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 4px 8px; /* Reduced padding */
   background: #252525;
   color: #888;
-  font-size: 13px;
-  gap: 10px;
-  height: 40px;
+  font-size: 11px; /* Reduced font size */
+  gap: 6px;
+  height: 28px; /* Reduced height */
   transition: background 0.2s;
 }
 
@@ -111,8 +111,8 @@
 
 /* Стили для текущего пользователя */
 .bracket-player.current-user {
-  background: rgba(76, 175, 80, 0.15); /* Легкий зеленый фон */
-  border-left: 3px solid #4CAF50; /* Зеленая полоска слева */
+  background: rgba(76, 175, 80, 0.15);
+  border-left: 2px solid #4CAF50;
   color: #e8f5e9;
 }
 
@@ -126,16 +126,16 @@
 }
 
 .bracket-avatar {
-  width: 22px;
-  height: 22px;
+  width: 16px; /* Reduced size */
+  height: 16px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid #333;
 }
 
 .bracket-avatar-placeholder {
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #333;
   display: flex;
@@ -153,103 +153,28 @@
 
 .bracket-trophy {
   color: #FFD700;
+  font-size: 10px; /* Reduced icon size */
 }
 
 /* Connectors Logic */
 
-/* Incoming connector (left side stub) */
 .bracket-connector-incoming {
   position: absolute;
-  left: -25px; /* Half of margin */
+  left: -15px; /* Adjusted for new margin */
   top: 50%;
-  width: 25px;
-  height: 2px;
+  width: 15px;
+  height: 1px;
   background: #333;
   z-index: 1;
 }
 
-/* Outgoing connectors (right side) */
 .bracket-connector {
   position: absolute;
-  right: -25px;
-  width: 25px;
-  border-right: 2px solid #333; /* The vertical connecting line */
+  right: -15px;
+  width: 15px;
+  height: 1px; /* Thinner line */
+  background: #333;
+  border: none;
+  top: 50%;
   z-index: 1;
-}
-
-/* Connector for EVEN index matches (top of pair) - goes DOWN */
-.connector-down {
-  top: 50%;
-  height: 50%; /* Go down by 50% of THIS wrapper? No, needs to reach next wrapper. */
-  /* 
-     With flex space-around, the distance between match N (even) and match N+1 (odd)
-     is equal to the height of the wrapper + the dynamic gap.
-     
-     Actually, if we put the connector on the wrapper, we can't easily reach the sibling without known height.
-     
-     BUT, we can assume symmetry.
-     Height 100% of wrapper + half gap? 
-     
-     Let's try a simpler approach:
-     Use border-bottom on the top match's connector and border-top on the bottom match's connector?
-     
-     Actually, standard approach:
-     Top match: line goes right, then down.
-     Bottom match: line goes right, then up.
-     They meet at the vertical center of the pair.
-     
-     Since we can't perfectly calculate the vertical center without JS or rigid grid,
-     we will use a simplified approximation:
-     Top match: Border right, Border bottom.
-     Bottom match: Border right, Border top.
-     
-     BUT `height` is the issue.
-     We can set `bottom: -50%` ? No.
-     
-     Let's use a very large height and hide overflow? No.
-     
-     Let's stick to just horizontal lines if we can't do perfect tree.
-     The "The International" request implies quality.
-     
-     I will use a fixed height layout hack for the connector if possible.
-     Or just use the `::after` on wrapper for horizontal line, and rely on the user's brain to connect them.
-     
-     Actually, I can use `calc(100% + some_gap)`? 
-     
-     Let's try this:
-     .connector-down {
-         top: 50%;
-         height: 50%;  <-- This only covers the wrapper.
-         border-bottom: 2px solid #333;
-         border-right: 2px solid #333;
-     }
-     
-     Wait, if I use `position: absolute` relative to the wrapper, and the wrapper is just the card...
-     
-     Let's just use horizontal lines. It's clean and safe.
-     Tree lines are hard in pure CSS with flex-space-around.
-  */
-  
-  /* Resetting to just horizontal lines for safety and cleanness */
-  top: 50%;
-  height: 2px;
-  background: #333;
-  border: none;
-}
-
-.connector-up {
-  top: 50%;
-  height: 2px;
-  background: #333;
-  border: none;
-}
-
-/* Overriding specifically to show horizontal lines */
-.bracket-connector {
-    height: 2px;
-    background: #333;
-    border: none;
-    width: 25px;
-    right: -25px;
-    top: 50%;
 }
