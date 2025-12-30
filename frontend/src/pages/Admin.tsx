@@ -155,7 +155,7 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments' | 'equipment-config'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments' | 'equipment-config' | 'business'>('stats')
   const [onboardingTasks, setOnboardingTasks] = useState<any[]>([])
   const [onboardingStats, setOnboardingStats] = useState<any>(null)
   const [selectedSkinType, setSelectedSkinType] = useState<string>('')
@@ -652,6 +652,32 @@ export default function Admin() {
     }
   }
 
+  const [businessData, setBusinessData] = useState<any>({
+    districts: [],
+    businesses: [],
+    materials: [],
+    licenses: [],
+  })
+
+  const loadBusinessData = async () => {
+    try {
+      const [districtsRes, businessesRes, materialsRes, licensesRes] = await Promise.all([
+        apiClient.get('/admin/business/districts').catch(() => ({ data: [] })),
+        apiClient.get('/admin/business/businesses').catch(() => ({ data: [] })),
+        apiClient.get('/admin/business/materials').catch(() => ({ data: [] })),
+        apiClient.get('/admin/business/licenses').catch(() => ({ data: [] })),
+      ])
+      setBusinessData({
+        districts: districtsRes.data || [],
+        businesses: businessesRes.data || [],
+        materials: materialsRes.data || [],
+        licenses: licensesRes.data || [],
+      })
+    } catch (error) {
+      console.error('Failed to load business data:', error)
+    }
+  }
+
   const loadPaymentStats = async () => {
     try {
       const response = await apiClient.get('/admin/payment-stats')
@@ -988,6 +1014,15 @@ export default function Admin() {
           }}
         >
           Экипировка (v2.0)
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'business' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('business')
+            loadBusinessData()
+          }}
+        >
+          Бизнес
         </button>
         <button
           className={`admin-tab-btn ${activeTab === 'prices' ? 'active' : ''}`}
@@ -7427,6 +7462,77 @@ export default function Admin() {
                   Закрыть
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* РАЗДЕЛ БИЗНЕСА */}
+      {activeTab === 'business' && (
+        <div className="admin-section">
+          <h2>Управление бизнесом</h2>
+          
+          {/* Районы */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3>Районы</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+              {businessData.districts.map((district: any) => (
+                <div key={district.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                  <div><strong>{district.displayName}</strong></div>
+                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>{district.name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Бизнесы */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3>Бизнесы</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+              {businessData.businesses.map((business: any) => (
+                <div key={business.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                  <div><strong>{business.name}</strong></div>
+                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
+                    Класс: {business.businessClass} | Район: {business.district?.displayName || business.districtId}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
+                    Мин. уровень: {business.minLevel} | Пакет материалов: {business.materialPackage}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Материалы */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3>Материалы</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+              {businessData.materials.map((material: any) => (
+                <div key={material.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                  <div><strong>{material.name}</strong></div>
+                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
+                    Тип: {material.type} | Сорт: {material.sort}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Лицензии */}
+          <div>
+            <h3>Лицензии</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+              {businessData.licenses.map((license: any) => (
+                <div key={license.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
+                  <div><strong>{license.name}</strong></div>
+                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
+                    Код: {license.code} | Тип: {license.type}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
+                    Мин. уровень: {license.minLevel} | Цена: {license.currency === 'NAR' ? `${license.priceNar} NAR` : `${license.priceUsdt} USDT`}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

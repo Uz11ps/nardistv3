@@ -1018,5 +1018,79 @@ export class AdminController {
   async updateProgressionConfig(@CurrentUser() user: any, @Body() body: any) {
     return this.adminService.updateProgressionConfig(body);
   }
+
+  // ==================== BUSINESS MANAGEMENT ====================
+
+  @Get('business/districts')
+  @UseGuards(AdminAuthGuard)
+  async getDistricts(@CurrentUser() user: any) {
+    return this.adminService.getDistricts();
+  }
+
+  @Get('business/businesses')
+  @UseGuards(AdminAuthGuard)
+  async getBusinesses(@CurrentUser() user: any, @Query('districtId') districtId?: string) {
+    return this.adminService.getBusinesses(districtId);
+  }
+
+  @Post('business/businesses')
+  @UseGuards(AdminAuthGuard)
+  async createBusiness(@CurrentUser() user: any, @Body() body: any) {
+    return this.adminService.createBusiness(body);
+  }
+
+  @Put('business/businesses/:id')
+  @UseGuards(AdminAuthGuard)
+  async updateBusiness(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateBusiness(id, body);
+  }
+
+  @Delete('business/businesses/:id')
+  @UseGuards(AdminAuthGuard)
+  async deleteBusiness(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.adminService.deleteBusiness(id);
+  }
+
+  @Get('business/materials')
+  @UseGuards(AdminAuthGuard)
+  async getMaterials(@CurrentUser() user: any) {
+    return this.adminService.getMaterials();
+  }
+
+  @Post('business/materials')
+  @UseGuards(AdminAuthGuard)
+  async createMaterial(@CurrentUser() user: any, @Body() body: any) {
+    return this.adminService.createMaterial(body);
+  }
+
+  @Put('business/materials/:id')
+  @UseGuards(AdminAuthGuard)
+  async updateMaterial(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateMaterial(id, body);
+  }
+
+  @Get('business/licenses')
+  @UseGuards(AdminAuthGuard)
+  async getLicenses(@CurrentUser() user: any) {
+    return this.adminService.getLicenses();
+  }
+
+  @Post('business/licenses')
+  @UseGuards(AdminAuthGuard)
+  async createLicense(@CurrentUser() user: any, @Body() body: any) {
+    return this.adminService.createLicense(body);
+  }
+
+  @Put('business/licenses/:id')
+  @UseGuards(AdminAuthGuard)
+  async updateLicense(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateLicense(id, body);
+  }
+
+  @Delete('business/licenses/:id')
+  @UseGuards(AdminAuthGuard)
+  async deleteLicense(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.adminService.deleteLicense(id);
+  }
 }
 

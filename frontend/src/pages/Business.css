@@ -1,0 +1,140 @@
+.business-container {
+  padding: 20px;
+}
+
+.business-loading {
+  text-align: center;
+  padding: 40px;
+  color: #B6B6B6;
+}
+
+.business-districts {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.business-district-btn {
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #FFF;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.business-district-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.business-district-btn.active {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+}
+
+.business-my-businesses,
+.business-available {
+  margin-bottom: 32px;
+}
+
+.business-my-businesses h3,
+.business-available h3 {
+  color: #FFF;
+  margin-bottom: 16px;
+  font-size: 20px;
+}
+
+.business-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.business-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.business-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.business-card-header h4 {
+  color: #FFF;
+  margin: 0;
+  font-size: 18px;
+}
+
+.business-level {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.business-class {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.business-class-A {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196F3;
+}
+
+.business-class-B {
+  background: rgba(156, 39, 176, 0.2);
+  color: #9C27B0;
+}
+
+.business-class-C {
+  background: rgba(255, 152, 0, 0.2);
+  color: #FF9800;
+}
+
+.business-card-info {
+  color: #B6B6B6;
+  font-size: 14px;
+}
+
+.business-card-info > div {
+  margin-bottom: 8px;
+}
+
+.business-purchase-btn,
+.business-upgrade-btn,
+.business-collect-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 12px;
+  background: #4caf50;
+  color: #FFF;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.business-purchase-btn:hover,
+.business-upgrade-btn:hover,
+.business-collect-btn:hover {
+  background: #45a049;
+}
+
+.business-owned {
+  color: #4caf50;
+  font-weight: bold;
+  margin-top: 8px;
+}
+

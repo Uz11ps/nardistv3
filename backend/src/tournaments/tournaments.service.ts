@@ -225,6 +225,16 @@ export class TournamentsService {
     };
   }
 
+  async findReadyToStart(): Promise<Tournament[]> {
+    const now = new Date();
+    return this.tournamentsRepository
+      .createQueryBuilder('tournament')
+      .where('tournament.status = :status', { status: TournamentStatus.REGISTRATION })
+      .andWhere('tournament.startDate <= :now', { now })
+      .orderBy('tournament.startDate', 'ASC')
+      .getMany();
+  }
+
   /**
    * Получить таблицу результатов турнира
    */

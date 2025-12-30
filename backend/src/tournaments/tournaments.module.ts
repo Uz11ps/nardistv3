@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TournamentsService } from './tournaments.service';
@@ -13,9 +14,11 @@ import { RatingsModule } from '../ratings/ratings.module';
 import { UsersModule } from '../users/users.module';
 import { QuestsModule } from '../quests/quests.module';
 import { ProgressModule } from '../progress/progress.module';
+import { TournamentAutoStartService } from './tournament-auto-start.service';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -32,7 +35,7 @@ import { ProgressModule } from '../progress/progress.module';
     forwardRef(() => ProgressModule),
   ],
   controllers: [TournamentsController],
-  providers: [TournamentsService, TournamentTicketsService],
+  providers: [TournamentsService, TournamentTicketsService, TournamentAutoStartService],
   exports: [TournamentsService, TournamentTicketsService],
 })
 export class TournamentsModule {}

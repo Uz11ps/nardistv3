@@ -47,6 +47,10 @@ import { HistoryService } from '../history/history.service';
 import { XpCalculatorService } from '../progress/xp-calculator.service';
 import { ProgressionBranchesService } from '../progress/progression-branches.service';
 import { ProgressionConfig } from '../progress/progression-config.entity';
+import { Business } from '../business/business.entity';
+import { District } from '../business/district.entity';
+import { Material } from '../business/material.entity';
+import { License } from '../business/license.entity';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -109,6 +113,14 @@ export class AdminService implements OnModuleInit {
     private paymentTransactionsRepository: Repository<PaymentTransaction>,
     @InjectRepository(ProgressionConfig)
     private progressionConfigRepository: Repository<ProgressionConfig>,
+    @InjectRepository(Business)
+    private businessesRepository: Repository<Business>,
+    @InjectRepository(District)
+    private districtsRepository: Repository<District>,
+    @InjectRepository(Material)
+    private materialsRepository: Repository<Material>,
+    @InjectRepository(License)
+    private licensesRepository: Repository<License>,
     private usersService: UsersService,
     @Inject(forwardRef(() => TournamentsService))
     private tournamentsService: TournamentsService,
@@ -2984,6 +2996,87 @@ export class AdminService implements OnModuleInit {
     await this.progressionBranches.refreshConfig();
     
     return saved;
+  }
+
+  // ==================== BUSINESS MANAGEMENT ====================
+
+  async getDistricts() {
+    return this.districtsRepository.find({ order: { order: 'ASC' } });
+  }
+
+  async getBusinesses(districtId?: string) {
+    if (districtId) {
+      return this.businessesRepository.find({ where: { districtId }, relations: ['district'], order: { order: 'ASC' } });
+    }
+    return this.businessesRepository.find({ relations: ['district'], order: { order: 'ASC' } });
+  }
+
+  async createBusiness(data: any) {
+    const business = this.businessesRepository.create(data);
+    return this.businessesRepository.save(business);
+  }
+
+  async updateBusiness(id: string, data: any) {
+    const business = await this.businessesRepository.findOne({ where: { id } });
+    if (!business) {
+      throw new NotFoundException('Бизнес не найден');
+    }
+    Object.assign(business, data);
+    return this.businessesRepository.save(business);
+  }
+
+  async deleteBusiness(id: string) {
+    const business = await this.businessesRepository.findOne({ where: { id } });
+    if (!business) {
+      throw new NotFoundException('Бизнес не найден');
+    }
+    await this.businessesRepository.remove(business);
+    return { success: true };
+  }
+
+  async getMaterials() {
+    return this.materialsRepository.find({ order: { type: 'ASC', sort: 'ASC' } });
+  }
+
+  async createMaterial(data: any) {
+    const material = this.materialsRepository.create(data);
+    return this.materialsRepository.save(material);
+  }
+
+  async updateMaterial(id: string, data: any) {
+    const material = await this.materialsRepository.findOne({ where: { id } });
+    if (!material) {
+      throw new NotFoundException('Материал не найден');
+    }
+    Object.assign(material, data);
+    return this.materialsRepository.save(material);
+  }
+
+  async getLicenses() {
+    return this.licensesRepository.find({ order: { minLevel: 'ASC' } });
+  }
+
+  async createLicense(data: any) {
+    const license = this.licensesRepository.create(data);
+    return this.licensesRepository.save(license);
+  }
+
+  async updateLicense(id: string, data: any) {
+    const license = await this.licensesRepository.findOne({ where: { id } });
+    if (!license) {
+      throw new NotFoundException('Лицензия не найдена');
+    }
+    Object.assign(license, data);
+    return this.licensesRepository.save(license);
+  }
+
+  async deleteLicense(id: string) {
+    const license = await this.licensesRepository.findOne({ where: { id } });
+    if (!license) {
+      throw new NotFoundException('Лицензия не найдена');
+    }
+    await this.licensesRepository.remove(license);
+    return { success: true };
   }
 }
 
