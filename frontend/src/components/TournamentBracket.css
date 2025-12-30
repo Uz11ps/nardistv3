@@ -109,6 +109,18 @@
     color: #FFF;
 }
 
+/* Стили для текущего пользователя */
+.bracket-player.current-user {
+  background: rgba(76, 175, 80, 0.15); /* Легкий зеленый фон */
+  border-left: 3px solid #4CAF50; /* Зеленая полоска слева */
+  color: #e8f5e9;
+}
+
+.bracket-player.current-user .bracket-player-name {
+  color: #e8f5e9;
+  font-weight: 500;
+}
+
 .bracket-player.empty {
   color: #444;
 }

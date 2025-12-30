@@ -2,6 +2,7 @@ import React from 'react'
 import './TournamentBracket.css'
 import { useNavigate } from 'react-router-dom'
 import Icon from './Icon'
+import { useAuthStore } from '../store/authStore'
 
 interface BracketMatch {
   id: string
@@ -31,6 +32,8 @@ interface TournamentBracketProps {
 
 export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, maxParticipants = 16 }) => {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const currentUserId = user?.id
 
   // Generate full bracket structure based on maxParticipants
   const buildFullBracket = (matches: BracketMatch[] = [], maxParticipants: number) => {
@@ -127,7 +130,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
                         className={`bracket-match ${match.gameId ? 'clickable' : ''}`}
                         onClick={() => match.gameId && navigate(`/game/${match.gameId}`)}
                       >
-                        <div className={`bracket-player ${match.winnerId === match.player1?.id ? 'winner' : ''} ${!match.player1 ? 'empty' : ''}`}>
+                        <div className={`bracket-player ${match.winnerId === match.player1?.id ? 'winner' : ''} ${!match.player1 ? 'empty' : ''} ${match.player1?.id === currentUserId ? 'current-user' : ''}`}>
                            {match.player1?.avatarUrl ? (
                              <img src={match.player1.avatarUrl} className="bracket-avatar" alt="" />
                            ) : (
@@ -136,7 +139,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
                            <span className="bracket-player-name">{match.player1?.nickname || match.player1?.username || '-'}</span>
                            {match.winnerId === match.player1?.id && <Icon name="trophy" size={12} className="bracket-trophy" />}
                         </div>
-                        <div className={`bracket-player ${match.winnerId === match.player2?.id ? 'winner' : ''} ${!match.player2 ? 'empty' : ''}`}>
+                        <div className={`bracket-player ${match.winnerId === match.player2?.id ? 'winner' : ''} ${!match.player2 ? 'empty' : ''} ${match.player2?.id === currentUserId ? 'current-user' : ''}`}>
                            {match.player2?.avatarUrl ? (
                              <img src={match.player2.avatarUrl} className="bracket-avatar" alt="" />
                            ) : (
