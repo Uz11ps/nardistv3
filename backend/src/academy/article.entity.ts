@@ -7,6 +7,12 @@ import {
   Index,
 } from 'typeorm';
 
+export enum ArticleType {
+  ARTICLE = 'article',
+  COURSE = 'course',
+  ONBOARDING = 'onboarding',
+}
+
 @Entity('articles')
 export class Article {
   @PrimaryGeneratedColumn('uuid')
