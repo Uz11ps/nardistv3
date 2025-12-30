@@ -274,12 +274,12 @@ export default function Tournaments() {
               </div>
 
               {/* Турнирная сетка */}
-              {tournamentDetail.matches && tournamentDetail.matches.length > 0 && (
+              {(tournamentDetail.matches && tournamentDetail.matches.length > 0) || tournamentDetail.format === 'bracket' ? (
                 <div className="tournament-modal-section">
                   <h4 className="tournament-modal-section-title">Турнирная сетка</h4>
-                  <TournamentBracket matches={tournamentDetail.matches} />
+                  <TournamentBracket matches={tournamentDetail.matches || []} maxParticipants={tournamentDetail.maxParticipants} />
                 </div>
-              )}
+              ) : null}
 
               {/* Кнопка регистрации */}
               {!tournamentDetail.registered && tournamentDetail.status === 'registration' && (

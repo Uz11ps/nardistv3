@@ -26,26 +26,80 @@ interface BracketMatch {
 
 interface TournamentBracketProps {
   matches: BracketMatch[]
+  maxParticipants?: number
 }
 
-export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches }) => {
+export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, maxParticipants = 16 }) => {
   const navigate = useNavigate()
 
-  const buildBracket = (matches: BracketMatch[]) => {
-    if (!matches || matches.length === 0) return []
-    const maxRound = Math.max(...matches.map(m => m.round), 0)
+  // Generate full bracket structure based on maxParticipants
+  const buildFullBracket = (matches: BracketMatch[] = [], maxParticipants: number) => {
+    // Determine the bracket size (next power of 2)
+    const capacity = Math.pow(2, Math.ceil(Math.log2(maxParticipants)))
+    const totalRounds = Math.log2(capacity)
+    
     const rounds: Array<Array<BracketMatch>> = []
     
-    for (let round = 0; round <= maxRound; round++) {
-      const roundMatches = matches
-        .filter(m => m.round === round)
-        .sort((a, b) => a.matchNumber - b.matchNumber)
+    for (let round = 0; round < totalRounds; round++) {
+      const matchesInRound = capacity / Math.pow(2, round + 1)
+      const roundMatches: BracketMatch[] = []
+      
+      for (let matchNum = 0; matchNum < matchesInRound; matchNum++) {
+        // Find existing match in data
+        const existingMatch = matches.find(m => m.round === round && m.matchNumber === matchNum)
+        
+        if (existingMatch) {
+          roundMatches.push(existingMatch)
+        } else {
+          // Check if we have registered players for Round 0 that haven't been assigned a match ID yet
+          // In the backend, registered users are stored as matches with round=0 and sequential matchNumber
+          // BUT they are not paired yet. They are just "slots".
+          // matchNumber 0, 1, 2, 3...
+          
+          // If round is 0, we can try to fill slots with players from the "registration" matches list
+          // if the backend provides them in a flat list.
+          
+          // However, the standard `matches` array passed here usually contains valid match structures.
+          // If we are in registration phase, `matches` might be a list of user entries (round=0).
+          
+          let player1, player2;
+          
+          if (round === 0) {
+             // Try to find player in slot 1 (index 2*matchNum) and slot 2 (index 2*matchNum + 1)
+             // This assumes `matches` contains raw registration entries with sequential matchNumbers 0, 1, 2...
+             // and NO pairing logic applied yet.
+             // This is a heuristic for visualization before tournament start.
+             
+             // Check if `matches` contains "unpaired" entries (player2 is null, status scheduled/bye)
+             const isRegistrationList = matches.every(m => m.round === 0 && !m.player2);
+             
+             if (isRegistrationList) {
+                 const p1Entry = matches.find(m => m.matchNumber === matchNum * 2);
+                 const p2Entry = matches.find(m => m.matchNumber === matchNum * 2 + 1);
+                 
+                 if (p1Entry) player1 = p1Entry.player1;
+                 if (p2Entry) player2 = p2Entry.player1; // Yes, player1 of the entry
+             }
+          }
+
+          // Create placeholder
+          roundMatches.push({
+            id: `placeholder-${round}-${matchNum}`,
+            round,
+            matchNumber: matchNum,
+            status: 'scheduled',
+            player1,
+            player2,
+          })
+        }
+      }
       rounds.push(roundMatches)
     }
+    
     return rounds
   }
 
-  const rounds = buildBracket(matches)
+  const rounds = buildFullBracket(matches, maxParticipants)
 
   const getRoundName = (roundIndex: number, totalRounds: number) => {
     if (roundIndex === totalRounds - 1) return 'Финал'
@@ -54,39 +108,12 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches })
     return `Раунд ${roundIndex + 1}`
   }
 
-  // Helper to pair matches for rendering lines
-  // Returns array of [match1, match2] or [match1] if odd
-  const pairMatches = (matches: BracketMatch[]) => {
-    const pairs: Array<Array<BracketMatch>> = []
-    for (let i = 0; i < matches.length; i += 2) {
-      if (i + 1 < matches.length) {
-        pairs.push([matches[i], matches[i + 1]])
-      } else {
-        pairs.push([matches[i]])
-      }
-    }
-    return pairs
-  }
-
   return (
     <div className="bracket-container">
       <div className="bracket-scroll">
         <div className="bracket-rounds">
           {rounds.map((roundMatches, roundIndex) => {
             const isLastRound = roundIndex === rounds.length - 1
-            // Only pair if it's not the last round (or even if it is, for consistency)
-            // Actually, for visual structure, we render pairs.
-            // But subsequent rounds have fewer matches.
-            // The pairing is visual only for the connector.
-            
-            // Note: In a proper bracket, Round N has M matches. Round N+1 has M/2 matches.
-            // We want to render Round N matches in pairs so we can draw the connector between them.
-            
-            // However, just rendering a flat list with flex space-around works well for alignment 
-            // because flexbox distributes space evenly, naturally aligning the single match in next round 
-            // between the two matches of previous round.
-            
-            // Let's stick to flat list rendering but add class for connectors
             
             return (
               <div key={roundIndex} className="bracket-round">
@@ -120,16 +147,6 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches })
                         </div>
                       </div>
                       
-                      {/* 
-                          Draw lines: 
-                          If this is an even index match (0, 2, 4...) and not last round, 
-                          we need a connector that goes DOWN and RIGHT.
-                          
-                          If this is an odd index match (1, 3, 5...) and not last round,
-                          we need a connector that goes UP and RIGHT.
-                          
-                          CSS will handle the shapes based on classes.
-                      */}
                       {!isLastRound && (
                         <div className={`bracket-connector ${matchIndex % 2 === 0 ? 'connector-down' : 'connector-up'}`}></div>
                       )}

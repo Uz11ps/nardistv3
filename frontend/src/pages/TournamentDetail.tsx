@@ -187,15 +187,7 @@ export default function TournamentDetail() {
         {/* Контент вкладки "Матчи" - Турнирная сетка */}
         {activeTab === 'matches' && (
           <div className="tournament-detail-tab-content">
-            {(!tournament.matches || tournament.matches.length === 0) ? (
-              <Card>
-                <div style={{ textAlign: 'center', padding: '40px', color: '#aaaaaa' }}>
-                  Матчи еще не сформированы
-                </div>
-              </Card>
-            ) : (
-              <TournamentBracket matches={tournament.matches || []} />
-            )}
+            <TournamentBracket matches={tournament.matches || []} maxParticipants={tournament.maxParticipants} />
           </div>
         )}
 
