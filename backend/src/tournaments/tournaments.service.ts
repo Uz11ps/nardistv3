@@ -106,9 +106,35 @@ export class TournamentsService {
         registered = !!userMatch;
       }
 
-      // Вычисляем призовой фонд: взнос * количество участников
+      // Вычисляем призовой фонд: Сумма всех призов типа 'nar'
       const entryFee = Number(tournament.entryFee || 0);
-      const prizePool = entryFee * tournament.currentParticipants;
+      let prizePool = 0;
+      
+      if (tournament.prizes) {
+        let prizes = tournament.prizes;
+        // Нормализация призов (если это объект или массив)
+        if (!Array.isArray(prizes) && typeof prizes === 'object') {
+           prizes = Object.values(prizes);
+        }
+        
+        if (Array.isArray(prizes)) {
+           prizePool = prizes.reduce((acc, prize) => {
+             // Суммируем только призы в NAR, либо если тип не указан но есть amount (старый формат)
+             if ((prize.type === 'nar' || !prize.type) && prize.amount) {
+               return acc + Number(prize.amount);
+             }
+             return acc;
+           }, 0);
+        }
+      }
+      
+      // Если призов нет, используем старую логику или 0 (но пользователь просил фиксированный пул)
+      if (prizePool === 0 && (!tournament.prizes || (Array.isArray(tournament.prizes) && tournament.prizes.length === 0))) {
+         // Fallback? Нет, пользователь сказал "формируется админами". Значит если 0, то 0.
+         // Но для обратной совместимости можно оставить entryFee * participants, если prizes вообще нет?
+         // Пользователь был категоричен: "не кол-вом взносов".
+         prizePool = 0;
+      }
 
       // Вычисляем текущий раунд и общее количество раундов (для bracket формата)
       let currentRound = 0;
@@ -163,7 +189,24 @@ export class TournamentsService {
 
     // Вычисляем доп. поля, аналогично findAll
     const entryFee = Number(tournament.entryFee || 0);
-    const prizePool = entryFee * tournament.currentParticipants;
+    
+    // Вычисляем призовой фонд: Сумма всех призов типа 'nar'
+    let prizePool = 0;
+    if (tournament.prizes) {
+      let prizes = tournament.prizes;
+      if (!Array.isArray(prizes) && typeof prizes === 'object') {
+         prizes = Object.values(prizes);
+      }
+      
+      if (Array.isArray(prizes)) {
+         prizePool = prizes.reduce((acc, prize) => {
+           if ((prize.type === 'nar' || !prize.type) && prize.amount) {
+             return acc + Number(prize.amount);
+           }
+           return acc;
+         }, 0);
+      }
+    }
 
     let currentRound = 0;
     let totalRounds = 0;
@@ -324,7 +367,11 @@ export class TournamentsService {
   }
 
   async register(tournamentId: string, userId: string): Promise<void> {
-    const tournament = await this.findOne(tournamentId);
+    // Получаем чистую сущность Tournament без доп. полей, чтобы избежать ошибок при сохранении
+    const tournament = await this.tournamentsRepository.findOne({ where: { id: tournamentId } });
+    if (!tournament) {
+      throw new NotFoundException('Турнир не найден');
+    }
     
     if (tournament.status !== TournamentStatus.REGISTRATION) {
       throw new BadRequestException('Регистрация закрыта');
