@@ -144,7 +144,7 @@ export class TournamentsService {
     return result;
   }
 
-  async findOne(id: string): Promise<Tournament> {
+  async findOne(id: string, userId?: string): Promise<any> {
     const tournament = await this.tournamentsRepository.findOne({
       where: { id },
       relations: ['matches', 'matches.player1', 'matches.player2'],
@@ -152,7 +152,34 @@ export class TournamentsService {
     if (!tournament) {
       throw new NotFoundException('Турнир не найден');
     }
-    return tournament;
+
+    let registered = false;
+    if (userId && tournament.matches) {
+      // Проверяем регистрацию - пользователь зарегистрирован, если он player1 в матче
+      // Ищем в загруженных матчах, чтобы не делать лишний запрос
+      const userMatch = tournament.matches.find(m => m.player1?.id === userId || m.player1Id === userId);
+      registered = !!userMatch;
+    }
+
+    // Вычисляем доп. поля, аналогично findAll
+    const entryFee = Number(tournament.entryFee || 0);
+    const prizePool = entryFee * tournament.currentParticipants;
+
+    let currentRound = 0;
+    let totalRounds = 0;
+    if (tournament.format === TournamentFormat.BRACKET && tournament.matches && tournament.matches.length > 0) {
+      const rounds = new Set(tournament.matches.map(m => m.round));
+      totalRounds = Math.ceil(Math.log2(tournament.maxParticipants));
+      currentRound = Math.max(...Array.from(rounds), 0) + 1;
+    }
+
+    return {
+      ...tournament,
+      registered,
+      prizePool,
+      currentRound: currentRound > 0 ? currentRound : undefined,
+      totalRounds: totalRounds > 0 ? totalRounds : undefined,
+    };
   }
 
   /**
@@ -301,6 +328,10 @@ export class TournamentsService {
     
     if (tournament.status !== TournamentStatus.REGISTRATION) {
       throw new BadRequestException('Регистрация закрыта');
+    }
+
+    if (new Date() > tournament.registrationEnd) {
+      throw new BadRequestException('Время регистрации истекло');
     }
 
     // Пересчитываем текущее количество участников на основе реальных матчей

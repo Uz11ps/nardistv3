@@ -26,8 +26,9 @@ export class TournamentsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.tournamentsService.findOne(id);
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    const userId = req?.user?.id;
+    return this.tournamentsService.findOne(id, userId);
   }
 
   @Get(':id/results')

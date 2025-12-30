@@ -124,10 +124,14 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
              // and NO pairing logic applied yet.
              // This is a heuristic for visualization before tournament start.
              
-             // Check if `matches` contains "unpaired" entries (player2 is null, status scheduled/bye)
-             const isRegistrationList = matches.every(m => m.round === 0 && !m.player2);
+             // Check if `matches` contains "unpaired" entries.
+             // We use a looser check: if there are ANY round 0 matches with matchNumber >= matchesInRound,
+             // it DEFINITELY means we are in registration mode because actual bracket round 0 indices 
+             // only go up to (capacity/2 - 1).
+             // E.g. 16 players -> 8 matches (indices 0-7). If we see matchNumber 8, it's a registration entry.
+             const isRegistrationList = matches.some(m => m.round === 0 && m.matchNumber >= matchesInRound);
              
-             if (isRegistrationList) {
+             if (isRegistrationList || matches.every(m => m.round === 0 && !m.player2)) {
                  const p1Entry = matches.find(m => m.matchNumber === matchNum * 2);
                  const p2Entry = matches.find(m => m.matchNumber === matchNum * 2 + 1);
                  
