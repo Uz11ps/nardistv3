@@ -1,7 +1,8 @@
 .bracket-container {
   width: 100%;
-  overflow-x: auto;
+  overflow: auto; /* Allow both vertical and horizontal scroll */
   padding: 10px 0;
+  max-height: 80vh; /* Limit height to allow vertical scrolling within the container */
   scrollbar-width: thin;
   scrollbar-color: #444 #1a1a1a;
 }
