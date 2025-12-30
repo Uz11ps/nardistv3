@@ -93,6 +93,13 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
     const totalRounds = Math.log2(capacity)
     
     const rounds: Array<Array<BracketMatch>> = []
+    const registrationPool = new Map<number, BracketMatch>()
+
+    matches.forEach((m) => {
+      if (m.round === 0 && !m.player2 && typeof m.matchNumber === 'number') {
+        registrationPool.set(m.matchNumber, m)
+      }
+    })
     
     for (let round = 0; round < totalRounds; round++) {
       const matchesInRound = capacity / Math.pow(2, round + 1)
@@ -103,7 +110,18 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
         const existingMatch = matches.find(m => m.round === round && m.matchNumber === matchNum)
         
         if (existingMatch) {
-          roundMatches.push(existingMatch)
+          let player2 = existingMatch.player2
+          if (!player2 && round === 0) {
+            const partnerEntry = registrationPool.get(matchNum * 2 + 1)
+            if (partnerEntry) {
+              player2 = partnerEntry.player1
+              registrationPool.delete(matchNum * 2 + 1)
+            }
+          }
+          roundMatches.push({
+            ...existingMatch,
+            player2,
+          })
         } else {
           // Check if we have registered players for Round 0 that haven't been assigned a match ID yet
           // In the backend, registered users are stored as matches with round=0 and sequential matchNumber
@@ -119,24 +137,15 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
           let player1, player2;
           
           if (round === 0) {
-             // Try to find player in slot 1 (index 2*matchNum) and slot 2 (index 2*matchNum + 1)
-             // This assumes `matches` contains raw registration entries with sequential matchNumbers 0, 1, 2...
-             // and NO pairing logic applied yet.
-             // This is a heuristic for visualization before tournament start.
-             
-             // Check if `matches` contains "unpaired" entries.
-             // We use a looser check: if there are ANY round 0 matches with matchNumber >= matchesInRound,
-             // it DEFINITELY means we are in registration mode because actual bracket round 0 indices 
-             // only go up to (capacity/2 - 1).
-             // E.g. 16 players -> 8 matches (indices 0-7). If we see matchNumber 8, it's a registration entry.
-             const isRegistrationList = matches.some(m => m.round === 0 && m.matchNumber >= matchesInRound);
-             
-             if (isRegistrationList || matches.every(m => m.round === 0 && !m.player2)) {
-                 const p1Entry = matches.find(m => m.matchNumber === matchNum * 2);
-                 const p2Entry = matches.find(m => m.matchNumber === matchNum * 2 + 1);
-                 
-                 if (p1Entry) player1 = p1Entry.player1;
-                 if (p2Entry) player2 = p2Entry.player1; // Yes, player1 of the entry
+             const p1Entry = registrationPool.get(matchNum * 2)
+             const p2Entry = registrationPool.get(matchNum * 2 + 1)
+             if (p1Entry) {
+               player1 = p1Entry.player1
+               registrationPool.delete(matchNum * 2)
+             }
+             if (p2Entry) {
+               player2 = p2Entry.player1
+               registrationPool.delete(matchNum * 2 + 1)
              }
           }
 
