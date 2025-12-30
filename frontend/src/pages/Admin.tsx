@@ -2109,7 +2109,7 @@ export default function Admin() {
                     registrationEnd: '',
                     maxParticipants: 16, 
                     entryFee: 0,
-                    prizes: '',
+                    prizes: [],
                   })
                   setShowCreateTournamentModal(true)
                 }}
