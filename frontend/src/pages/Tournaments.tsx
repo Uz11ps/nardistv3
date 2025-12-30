@@ -46,6 +46,8 @@ interface TournamentMatch {
   gameId?: string
 }
 
+import { TournamentBracket } from '../components/TournamentBracket'
+
 export default function Tournaments() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'active' | 'future'>('active')
@@ -108,19 +110,6 @@ export default function Tournaments() {
 
   const getModeName = (mode: string) => {
     return mode === 'long' ? 'Длинные' : 'Короткие'
-  }
-
-  const buildBracket = (matches: TournamentMatch[] = []) => {
-    if (!matches || matches.length === 0) return { rounds: [] }
-    const maxRound = Math.max(...matches.map(m => m.round), 0)
-    const rounds: Array<Array<TournamentMatch>> = []
-    for (let round = 0; round <= maxRound; round++) {
-      const roundMatches = matches
-        .filter(m => m.round === round)
-        .sort((a, b) => a.matchNumber - b.matchNumber)
-      rounds.push(roundMatches)
-    }
-    return { rounds }
   }
 
   return (
@@ -288,24 +277,7 @@ export default function Tournaments() {
               {tournamentDetail.matches && tournamentDetail.matches.length > 0 && (
                 <div className="tournament-modal-section">
                   <h4 className="tournament-modal-section-title">Турнирная сетка</h4>
-                  <div className="tournament-modal-bracket">
-                    {buildBracket(tournamentDetail.matches).rounds.map((round, roundIndex) => (
-                      <div key={roundIndex} className="tournament-modal-round">
-                        <div className="tournament-modal-round-title">Раунд {roundIndex + 1}</div>
-                        {round.map((match) => (
-                          <div key={match.id} className="tournament-modal-match">
-                            <div className="tournament-modal-match-player">
-                              {match.player1?.username || match.player1?.nickname || 'TBD'}
-                            </div>
-                            <div className="tournament-modal-match-vs">vs</div>
-                            <div className="tournament-modal-match-player">
-                              {match.player2?.username || match.player2?.nickname || 'TBD'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                  <TournamentBracket matches={tournamentDetail.matches} />
                 </div>
               )}
 

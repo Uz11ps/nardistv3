@@ -5,6 +5,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
+import { TournamentBracket } from '../components/TournamentBracket'
 import './TournamentDetail.css'
 
 interface Tournament {
@@ -83,23 +84,6 @@ export default function TournamentDetail() {
     return mode === 'long' ? 'Длинные' : 'Короткие'
   }
 
-  const buildBracket = (matches: TournamentMatch[] = []) => {
-    if (!matches || matches.length === 0) return { rounds: [] }
-
-    // Определяем количество раундов
-    const maxRound = Math.max(...matches.map(m => m.round), 0)
-    const rounds: Array<Array<TournamentMatch>> = []
-
-    for (let round = 0; round <= maxRound; round++) {
-      const roundMatches = matches
-        .filter(m => m.round === round)
-        .sort((a, b) => a.matchNumber - b.matchNumber)
-      rounds.push(roundMatches)
-    }
-
-    return { rounds }
-  }
-
   const getRoundName = (round: number, totalRounds: number) => {
     if (round === totalRounds - 1) return 'Финал'
     if (round === totalRounds - 2) return 'Полуфинал'
@@ -127,8 +111,9 @@ export default function TournamentDetail() {
     )
   }
 
-  const { rounds } = buildBracket(tournament.matches || [])
-  const totalRounds = rounds.length
+  const totalRounds = tournament.matches && tournament.matches.length > 0 
+    ? Math.max(...tournament.matches.map(m => m.round)) + 1 
+    : 0
 
   return (
     <div className="app-container page-transition">
@@ -181,7 +166,7 @@ export default function TournamentDetail() {
                 <div className="tournament-info-row">
                   <span className="tournament-info-label">Призовой фонд:</span>
                   <span className="tournament-info-value gold">
-                    {tournament.prizePool.toLocaleString()} NAR
+                  {tournament.prizePool.toLocaleString()} NAR
                   </span>
                 </div>
               )}
@@ -202,85 +187,14 @@ export default function TournamentDetail() {
         {/* Контент вкладки "Матчи" - Турнирная сетка */}
         {activeTab === 'matches' && (
           <div className="tournament-detail-tab-content">
-            {rounds.length === 0 ? (
+            {(!tournament.matches || tournament.matches.length === 0) ? (
               <Card>
                 <div style={{ textAlign: 'center', padding: '40px', color: '#aaaaaa' }}>
                   Матчи еще не сформированы
                 </div>
               </Card>
             ) : (
-              <div className="tournament-bracket">
-                {/* Заголовок раундов */}
-                <div className="tournament-bracket-header">
-                  {rounds.map((_, index) => (
-                    <span key={index} className="tournament-bracket-round-header">
-                      {getRoundName(index, totalRounds)}
-                      {index < rounds.length - 1 && ' - '}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Сетка */}
-                <div className="tournament-bracket-grid">
-                  {rounds.map((roundMatches, roundIndex) => (
-                    <div key={roundIndex} className="tournament-bracket-round">
-                      {roundMatches.map((match, matchIndex) => (
-                        <Card
-                          key={match.id}
-                          className="tournament-bracket-match"
-                          onClick={() => match.gameId && navigate(`/game/${match.gameId}`)}
-                        >
-                          <div className="tournament-bracket-match-player">
-                            {match.player1 ? (
-                              <>
-                                <div className="tournament-bracket-match-avatar">
-                                  {match.player1.avatarUrl ? (
-                                    <img src={match.player1.avatarUrl} alt={match.player1.username} />
-                                  ) : (
-                                    <Icon name="user" size={24} />
-                                  )}
-                                </div>
-                                <div className="tournament-bracket-match-name">
-                                  {match.player1.nickname || match.player1.username}
-                                </div>
-                                {match.winnerId === match.player1.id && (
-                                  <Icon name="trophy" size={16} style={{ color: 'var(--color-gold)' }} />
-                                )}
-                              </>
-                            ) : (
-                              <div className="tournament-bracket-match-empty">-</div>
-                            )}
-                          </div>
-                          
-                          <div className="tournament-bracket-match-vs">VS</div>
-                          
-                          <div className="tournament-bracket-match-player">
-                            {match.player2 ? (
-                              <>
-                                <div className="tournament-bracket-match-avatar">
-                                  {match.player2.avatarUrl ? (
-                                    <img src={match.player2.avatarUrl} alt={match.player2.username} />
-                                  ) : (
-                                    <Icon name="user" size={24} />
-                                  )}
-                                </div>
-                                <div className="tournament-bracket-match-name">
-                                  {match.player2.nickname || match.player2.username}
-                                </div>
-                                {match.winnerId === match.player2.id && (
-                                  <Icon name="trophy" size={16} style={{ color: 'var(--color-gold)' }} />
-                                )}
-                              </>
-                            ) : (
-                              <div className="tournament-bracket-match-empty">-</div>
-                            )}
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <TournamentBracket matches={tournament.matches || []} />
             )}
           </div>
         )}
@@ -327,4 +241,3 @@ export default function TournamentDetail() {
       </div>    </div>
   )
 }
-
