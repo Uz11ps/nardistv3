@@ -18,6 +18,7 @@ import { QuestTarget } from '../quests/quest.entity';
 import { TrainingService } from '../training/training.service';
 import { TaskType } from '../training/training-task.entity';
 import { TournamentsService } from '../tournaments/tournaments.service';
+import { GamesGateway } from './games.gateway';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -52,6 +53,8 @@ export class GamesService {
     private branchesService: ProgressionBranchesService,
     @Inject(forwardRef(() => TournamentsService))
     private tournamentsService: TournamentsService,
+    @Inject(forwardRef(() => GamesGateway))
+    private gamesGateway: GamesGateway,
   ) {}
 
   async create(
@@ -1846,5 +1849,79 @@ export class GamesService {
     }
 
     return this.gamesRepository.save(game);
+  }
+
+  async setupSandboxBoard(
+    gameId: string,
+    playerId: string,
+    setup: { points: number[]; bar?: { white: number; black: number }; bearOff?: { white: number; black: number } },
+  ): Promise<Game> {
+    const game = await this.findOne(gameId);
+    
+    if (game.type !== GameType.SANDBOX) {
+      throw new BadRequestException('Этот метод доступен только для свободного стола');
+    }
+
+    if (game.player1Id !== playerId) {
+      throw new BadRequestException('Вы не владелец этого свободного стола');
+    }
+
+    // Обновляем состояние доски
+    const currentState = game.gameState || {};
+    game.gameState = {
+      ...currentState,
+      points: setup.points || currentState.points,
+      bar: setup.bar || currentState.bar || { white: 0, black: 0 },
+      bearOff: setup.bearOff || currentState.bearOff || { white: 0, black: 0 },
+    };
+
+    const savedGame = await this.gamesRepository.save(game);
+    
+    // Уведомляем через WebSocket
+    this.gamesGateway.server.to(`game:${gameId}`).emit('sandbox_board_updated', {
+      gameState: savedGame.gameState,
+    });
+
+    return savedGame;
+  }
+
+  async setSandboxDice(gameId: string, playerId: string, dice: number[], player?: number): Promise<Game> {
+    const game = await this.findOne(gameId);
+    
+    if (game.type !== GameType.SANDBOX) {
+      throw new BadRequestException('Этот метод доступен только для свободного стола');
+    }
+
+    if (game.player1Id !== playerId) {
+      throw new BadRequestException('Вы не владелец этого свободного стола');
+    }
+
+    if (!Array.isArray(dice) || dice.length !== 2 || dice[0] < 1 || dice[0] > 6 || dice[1] < 1 || dice[1] > 6) {
+      throw new BadRequestException('Некорректные значения кубиков');
+    }
+
+    const targetPlayer = player !== undefined ? player : game.currentPlayer;
+    
+    // Обновляем состояние кубиков
+    const currentState = game.gameState || {};
+    game.gameState = {
+      ...currentState,
+      dice: dice,
+    };
+
+    // Устанавливаем текущего игрока, если указан
+    if (player !== undefined) {
+      game.currentPlayer = player;
+    }
+
+    const savedGame = await this.gamesRepository.save(game);
+    
+    // Уведомляем через WebSocket
+    this.gamesGateway.server.to(`game:${gameId}`).emit('sandbox_dice_updated', {
+      dice: dice,
+      currentPlayer: savedGame.currentPlayer,
+    });
+
+    return savedGame;
   }
 }

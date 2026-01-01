@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
+import RichTextEditor from '../components/RichTextEditor'
 import { apiClient } from '../api/client'
 import './Academy.css'
 
@@ -306,12 +307,10 @@ export default function Academy() {
 
           <div className="academy-publish-field">
             <label className="academy-publish-label">Контент</label>
-            <textarea
-              className="academy-publish-textarea"
-              placeholder="Вставьте текст"
+            <RichTextEditor
               value={publishForm.content}
-              onChange={(e) => setPublishForm({ ...publishForm, content: e.target.value })}
-              rows={8}
+              onChange={(content) => setPublishForm({ ...publishForm, content })}
+              placeholder="Введите текст статьи. Используйте панель инструментов для форматирования, добавления заголовков, списков и изображений."
             />
           </div>
 

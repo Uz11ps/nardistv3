@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
 import BackgammonBoard from '../components/BackgammonBoard'
+import SandboxControls from '../components/SandboxControls'
 import Dice from '../components/Dice'
 import Icon from '../components/Icon'
 import Button from '../components/Button'
@@ -1302,6 +1303,44 @@ export default function Game() {
                 player1Name={gameInfo?.player1?.nickname || gameInfo?.player1?.username}
                 player2Name={gameInfo?.player2?.nickname || gameInfo?.player2?.username || 'Бот'}
               />
+              {isSandbox && (
+                <SandboxControls
+                  gameId={gameId || ''}
+                  gameState={gameState}
+                  currentPlayer={gameState?.currentPlayer || 0}
+                  onBoardUpdate={() => {
+                    // Перезагружаем состояние игры
+                    if (gameId) {
+                      apiClient.get(`/games/${gameId}`).then((response) => {
+                        const data = response.data
+                        const diceData = data.gameState?.dice
+                        const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
+                          ? { die1: diceData[0], die2: diceData[1] } 
+                          : null
+                        const barRaw = data.gameState?.bar || [0, 0]
+                        const bar = Array.isArray(barRaw) 
+                          ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+                          : barRaw
+                        const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+                        const bearOff = Array.isArray(bearOffRaw)
+                          ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+                          : bearOffRaw
+                        const points = Array.isArray(data.gameState?.points) 
+                          ? [...data.gameState.points] 
+                          : []
+                        setGameState({
+                          points,
+                          bar,
+                          bearOff,
+                          currentPlayer: data.currentPlayer || 0,
+                          dice: formattedDice,
+                          canMove: true,
+                        })
+                      }).catch(console.error)
+                    }
+                  }}
+                />
+              )}
             </div>
           )}
         </div>

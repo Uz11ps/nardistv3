@@ -163,4 +163,24 @@ export class GamesController {
     
     return game;
   }
+
+  @Post(':id/sandbox/setup-board')
+  @UseGuards(JwtAuthGuard)
+  async setupSandboxBoard(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { points: number[]; bar?: { white: number; black: number }; bearOff?: { white: number; black: number } },
+  ) {
+    return this.gamesService.setupSandboxBoard(id, user.id, body);
+  }
+
+  @Post(':id/sandbox/set-dice')
+  @UseGuards(JwtAuthGuard)
+  async setSandboxDice(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { dice: number[]; player?: number },
+  ) {
+    return this.gamesService.setSandboxDice(id, user.id, body.dice, body.player);
+  }
 }
