@@ -623,21 +623,30 @@ export default function Game() {
     })
 
     // Обработчик dice_rolled - используем именованную функцию для возможности удаления
+    // Используем Set для хранения обработанных eventId
+    const processedEventsRef = useRef<Set<string>>(new Set());
+    
     const handleDiceRolled = (data: any) => {
       if (!data.dice) {
         console.log('⚠️ dice_rolled event without dice data, skipping');
         return;
       }
       
-      // Используем eventId для дедупликации, если он есть, иначе используем diceKey
-      const eventKey = data.eventId || JSON.stringify(data.dice);
+      // Используем eventId для дедупликации, если он есть, иначе используем diceKey + timestamp
+      const eventId = data.eventId || `${JSON.stringify(data.dice)}_${Date.now()}`;
       const diceKey = JSON.stringify(data.dice);
       
-      console.log('🎲 dice_rolled received:', data, 'eventKey:', eventKey.substring(0, 80));
+      console.log('🎲 dice_rolled received:', data, 'eventId:', eventId.substring(0, 80));
       
-      // СТРОГАЯ защита от дублирования: проверяем через ref ПЕРЕД любыми действиями
-      if (lastDiceRollRef.current === eventKey || lastDiceRollRef.current === diceKey) {
-        console.log('⚠️ Duplicate dice_rolled event detected, skipping');
+      // СТРОГАЯ защита от дублирования: проверяем через Set обработанных событий
+      if (processedEventsRef.current.has(eventId)) {
+        console.log('⚠️ Duplicate dice_rolled event detected (eventId in Set), skipping');
+        return;
+      }
+      
+      // Также проверяем по diceKey, если eventId нет
+      if (!data.eventId && lastDiceRollRef.current === diceKey) {
+        console.log('⚠️ Duplicate dice_rolled event detected (same dice key), skipping');
         return;
       }
       
@@ -647,8 +656,11 @@ export default function Game() {
         return;
       }
       
-      // Сохраняем ключ СРАЗУ, чтобы предотвратить повторную обработку
-      lastDiceRollRef.current = eventKey;
+      // Добавляем eventId в Set обработанных событий СРАЗУ
+      processedEventsRef.current.add(eventId);
+      lastDiceRollRef.current = diceKey;
+      
+      console.log('✅ Processing dice_rolled event, eventId:', eventId.substring(0, 80));
       
       // Обновляем состояние кубиков
       if (data.dice) {
@@ -668,9 +680,16 @@ export default function Game() {
       (window as any).diceAnimationTimeout = setTimeout(() => {
         setDiceAnimating(false);
         delete (window as any).diceAnimationTimeout;
-        // Очищаем ключ после завершения анимации (с небольшой задержкой для безопасности)
+        // Очищаем ключ и eventId после завершения анимации (с небольшой задержкой для безопасности)
         setTimeout(() => {
           lastDiceRollRef.current = '';
+          processedEventsRef.current.delete(eventId);
+          // Очищаем старые события из Set (оставляем только последние 10)
+          if (processedEventsRef.current.size > 10) {
+            const eventsArray = Array.from(processedEventsRef.current);
+            processedEventsRef.current.clear();
+            eventsArray.slice(-10).forEach(id => processedEventsRef.current.add(id));
+          }
         }, 500);
       }, 4000);
     };

@@ -13,6 +13,7 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
   const isAnimatingRef = React.useRef(false);
   const lastDiceRef = React.useRef<string>('');
   const gifStartedRef = React.useRef(false);
+  const lastGifKeyRef = React.useRef<number>(0);
 
   // Перезапускаем гифку только при переходе из неактивного состояния в активное
   // И только если кубики действительно изменились
@@ -21,20 +22,31 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
     
     // СТРОГАЯ защита: если GIF уже запущен с теми же кубиками и анимация активна, не перезапускаем
     if (gifStartedRef.current && lastDiceRef.current === diceKey && animating) {
+      console.log('🎬 DiceGif: GIF already started with same dice, skipping');
       return;
     }
     
     // Если анимация уже идет с теми же кубиками, не перезапускаем
     if (isAnimatingRef.current && lastDiceRef.current === diceKey) {
+      console.log('🎬 DiceGif: Animation already running with same dice, skipping');
+      return;
+    }
+    
+    // Если gifKey не изменился, значит это повторный рендер, не перезапускаем
+    if (animating && gifKey === lastGifKeyRef.current && gifStartedRef.current) {
+      console.log('🎬 DiceGif: Same gifKey, skipping restart');
       return;
     }
     
     if (animating && !prevAnimatingRef.current) {
       // Только при переходе с false на true - перезапускаем GIF
+      const newGifKey = Date.now();
+      console.log('🎬 DiceGif: Starting animation, diceKey:', diceKey, 'gifKey:', newGifKey);
       isAnimatingRef.current = true;
       gifStartedRef.current = true;
       lastDiceRef.current = diceKey;
-      setGifKey(Date.now());
+      lastGifKeyRef.current = newGifKey;
+      setGifKey(newGifKey);
     }
     
     if (!animating) {
@@ -42,11 +54,12 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
       isAnimatingRef.current = false;
       setTimeout(() => {
         gifStartedRef.current = false;
+        console.log('🎬 DiceGif: Animation finished, flags reset');
       }, 200);
     }
     
     prevAnimatingRef.current = animating;
-  }, [animating, dice]);
+  }, [animating, dice, gifKey]);
 
   if (!dice || dice.length < 2) return null;
 
