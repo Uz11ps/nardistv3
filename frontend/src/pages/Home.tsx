@@ -69,7 +69,18 @@ export default function Home() {
         loadPlayerStats()
       } catch (error) {
         console.error('Ошибка при загрузке статистики:', error)
-        setStats({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
+        setStats({ 
+          narCoin: 0, 
+          xp: 0, 
+          level: 1, 
+          energy: 100, 
+          maxEnergy: 100,
+          lives: 5,
+          maxLives: 5,
+          economy: 0,
+          power: 0,
+          incomePerHour: 0
+        })
       }
     }
   }, [user])
@@ -109,13 +120,16 @@ export default function Home() {
       })
       // Конвертируем в тысячи для отображения
       const incomeInK = totalIncome / 1000
+      // Загружаем данные пользователя для получения актуальных значений
+      const userResponse = await apiClient.get('/users/me').catch(() => ({ data: user }))
+      const currentUser = userResponse.data || user
       setStats(prev => ({ 
         ...prev, 
         incomePerHour: incomeInK,
-        economy: user?.economySp || 0,
-        power: user?.powerSp || 0,
-        lives: user?.lives || 5,
-        maxLives: user?.maxLives || 5,
+        economy: currentUser?.economySp || 0,
+        power: currentUser?.powerSp || 0,
+        lives: currentUser?.lives || 5,
+        maxLives: currentUser?.maxLives || 5,
       }))
     } catch (error) {
       // Игнорируем ошибки
