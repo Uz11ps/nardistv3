@@ -24,6 +24,9 @@ interface BackgammonBoardProps {
   player2Id?: string
   player1Name?: string
   player2Name?: string
+  isSandbox?: boolean
+  onSandboxCheckerDrop?: (pointIndex: number, checkerColor: 'white' | 'black') => void
+  onSandboxCheckerRemove?: (pointIndex: number) => void
 }
 
 export default function BackgammonBoard({
@@ -43,6 +46,9 @@ export default function BackgammonBoard({
   player1Skins,
   player2Skins,
   mySkins,
+  isSandbox = false,
+  onSandboxCheckerDrop,
+  onSandboxCheckerRemove,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)

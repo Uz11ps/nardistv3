@@ -1382,44 +1382,256 @@ export default function Game() {
                 player2Id={gameInfo?.player2Id}
                 player1Name={gameInfo?.player1?.nickname || gameInfo?.player1?.username}
                 player2Name={gameInfo?.player2?.nickname || gameInfo?.player2?.username || 'Бот'}
+                isSandbox={isSandbox}
+                onSandboxCheckerDrop={isSandbox ? async (pointIndex: number, checkerColor: 'white' | 'black') => {
+                  if (!gameId) return
+                  try {
+                    const currentPoints = [...(gameState.points || Array(24).fill(0))]
+                    const currentValue = currentPoints[pointIndex] || 0
+                    
+                    // Если клик с Shift - удаляем шашку
+                    if (window.event && (window.event as KeyboardEvent).shiftKey) {
+                      if (checkerColor === 'white' && currentValue > 0) {
+                        currentPoints[pointIndex] = currentValue - 1
+                      } else if (checkerColor === 'black' && currentValue < 0) {
+                        currentPoints[pointIndex] = currentValue + 1
+                      }
+                    } else {
+                      // Добавляем шашку
+                      if (checkerColor === 'white') {
+                        currentPoints[pointIndex] = currentValue + 1
+                      } else {
+                        currentPoints[pointIndex] = currentValue - 1
+                      }
+                    }
+                    
+                    await apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+                      points: currentPoints,
+                      bar: gameState.bar || { white: 0, black: 0 },
+                      bearOff: gameState.bearOff || { white: 0, black: 0 },
+                    })
+                    
+                    // Обновляем состояние
+                    if (gameId) {
+                      const response = await apiClient.get(`/games/${gameId}`)
+                      const data = response.data
+                      const barRaw = data.gameState?.bar || [0, 0]
+                      const bar = Array.isArray(barRaw) 
+                        ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+                        : barRaw
+                      const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+                      const bearOff = Array.isArray(bearOffRaw)
+                        ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+                        : bearOffRaw
+                      const points = Array.isArray(data.gameState?.points) 
+                        ? [...data.gameState.points] 
+                        : []
+                      setGameState({
+                        points,
+                        bar,
+                        bearOff,
+                        currentPlayer: data.currentPlayer || 0,
+                        dice: gameState.dice,
+                        canMove: true,
+                        verificationSalt: data.verificationSalt,
+                        p1Rolls: data.p1Rolls,
+                        p2Rolls: data.p2Rolls,
+                      })
+                    }
+                  } catch (error: any) {
+                    alert(error.response?.data?.message || 'Ошибка обновления доски')
+                  }
+                } : undefined}
+                onSandboxCheckerRemove={isSandbox ? async (pointIndex: number) => {
+                  if (!gameId) return
+                  try {
+                    const currentPoints = [...(gameState.points || Array(24).fill(0))]
+                    const currentValue = currentPoints[pointIndex] || 0
+                    
+                    if (currentValue > 0) {
+                      currentPoints[pointIndex] = currentValue - 1
+                    } else if (currentValue < 0) {
+                      currentPoints[pointIndex] = currentValue + 1
+                    }
+                    
+                    await apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+                      points: currentPoints,
+                      bar: gameState.bar || { white: 0, black: 0 },
+                      bearOff: gameState.bearOff || { white: 0, black: 0 },
+                    })
+                    
+                    // Обновляем состояние
+                    if (gameId) {
+                      const response = await apiClient.get(`/games/${gameId}`)
+                      const data = response.data
+                      const barRaw = data.gameState?.bar || [0, 0]
+                      const bar = Array.isArray(barRaw) 
+                        ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+                        : barRaw
+                      const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+                      const bearOff = Array.isArray(bearOffRaw)
+                        ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+                        : bearOffRaw
+                      const points = Array.isArray(data.gameState?.points) 
+                        ? [...data.gameState.points] 
+                        : []
+                      setGameState({
+                        points,
+                        bar,
+                        bearOff,
+                        currentPlayer: data.currentPlayer || 0,
+                        dice: gameState.dice,
+                        canMove: true,
+                        verificationSalt: data.verificationSalt,
+                        p1Rolls: data.p1Rolls,
+                        p2Rolls: data.p2Rolls,
+                      })
+                    }
+                  } catch (error: any) {
+                    alert(error.response?.data?.message || 'Ошибка обновления доски')
+                  }
+                } : undefined}
               />
               {isSandbox && (
-                <SandboxControls
-                  gameId={gameId || ''}
-                  gameState={gameState}
-                  currentPlayer={gameState?.currentPlayer || 0}
-                  onBoardUpdate={() => {
-                    // Перезагружаем состояние игры
-                    if (gameId) {
-                      apiClient.get(`/games/${gameId}`).then((response) => {
-                        const data = response.data
-                        const diceData = data.gameState?.dice
-                        const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
-                          ? { die1: diceData[0], die2: diceData[1] } 
-                          : null
-                        const barRaw = data.gameState?.bar || [0, 0]
-                        const bar = Array.isArray(barRaw) 
-                          ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
-                          : barRaw
-                        const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
-                        const bearOff = Array.isArray(bearOffRaw)
-                          ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
-                          : bearOffRaw
-                        const points = Array.isArray(data.gameState?.points) 
-                          ? [...data.gameState.points] 
-                          : []
-                        setGameState({
-                          points,
-                          bar,
-                          bearOff,
-                          currentPlayer: data.currentPlayer || 0,
-                          dice: formattedDice,
-                          canMove: true,
+                <>
+                  <SandboxControls
+                    gameId={gameId || ''}
+                    gameState={gameState}
+                    currentPlayer={gameState?.currentPlayer || 0}
+                    onBoardUpdate={() => {
+                      // Перезагружаем состояние игры
+                      if (gameId) {
+                        apiClient.get(`/games/${gameId}`).then((response) => {
+                          const data = response.data
+                          const diceData = data.gameState?.dice
+                          const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
+                            ? { die1: diceData[0], die2: diceData[1] } 
+                            : null
+                          const barRaw = data.gameState?.bar || [0, 0]
+                          const bar = Array.isArray(barRaw) 
+                            ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+                            : barRaw
+                          const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+                          const bearOff = Array.isArray(bearOffRaw)
+                            ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+                            : bearOffRaw
+                          const points = Array.isArray(data.gameState?.points) 
+                            ? [...data.gameState.points] 
+                            : []
+                          setGameState({
+                            points,
+                            bar,
+                            bearOff,
+                            currentPlayer: data.currentPlayer || 0,
+                            dice: formattedDice,
+                            canMove: true,
+                          })
+                        }).catch(console.error)
+                      }
+                    }}
+                  />
+                  <CheckerContainer
+                    onCheckerDrop={async (pointIndex: number, checkerColor: 'white' | 'black') => {
+                      if (!gameId) return
+                      try {
+                        const currentPoints = [...(gameState.points || Array(24).fill(0))]
+                        const currentValue = currentPoints[pointIndex] || 0
+                        
+                        // Добавляем шашку
+                        if (checkerColor === 'white') {
+                          currentPoints[pointIndex] = currentValue + 1
+                        } else {
+                          currentPoints[pointIndex] = currentValue - 1
+                        }
+                        
+                        await apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+                          points: currentPoints,
+                          bar: gameState.bar || { white: 0, black: 0 },
+                          bearOff: gameState.bearOff || { white: 0, black: 0 },
                         })
-                      }).catch(console.error)
-                    }
-                  }}
-                />
+                        
+                        // Обновляем состояние
+                        if (gameId) {
+                          const response = await apiClient.get(`/games/${gameId}`)
+                          const data = response.data
+                          const barRaw = data.gameState?.bar || [0, 0]
+                          const bar = Array.isArray(barRaw) 
+                            ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+                            : barRaw
+                          const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+                          const bearOff = Array.isArray(bearOffRaw)
+                            ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+                            : bearOffRaw
+                          const points = Array.isArray(data.gameState?.points) 
+                            ? [...data.gameState.points] 
+                            : []
+                          setGameState({
+                            points,
+                            bar,
+                            bearOff,
+                            currentPlayer: data.currentPlayer || 0,
+                            dice: gameState.dice,
+                            canMove: true,
+                            verificationSalt: data.verificationSalt,
+                            p1Rolls: data.p1Rolls,
+                            p2Rolls: data.p2Rolls,
+                          })
+                        }
+                      } catch (error: any) {
+                        alert(error.response?.data?.message || 'Ошибка обновления доски')
+                      }
+                    }}
+                    onCheckerRemove={async (pointIndex: number) => {
+                      if (!gameId) return
+                      try {
+                        const currentPoints = [...(gameState.points || Array(24).fill(0))]
+                        const currentValue = currentPoints[pointIndex] || 0
+                        
+                        if (currentValue > 0) {
+                          currentPoints[pointIndex] = currentValue - 1
+                        } else if (currentValue < 0) {
+                          currentPoints[pointIndex] = currentValue + 1
+                        }
+                        
+                        await apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+                          points: currentPoints,
+                          bar: gameState.bar || { white: 0, black: 0 },
+                          bearOff: gameState.bearOff || { white: 0, black: 0 },
+                        })
+                        
+                        // Обновляем состояние
+                        if (gameId) {
+                          const response = await apiClient.get(`/games/${gameId}`)
+                          const data = response.data
+                          const barRaw = data.gameState?.bar || [0, 0]
+                          const bar = Array.isArray(barRaw) 
+                            ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+                            : barRaw
+                          const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+                          const bearOff = Array.isArray(bearOffRaw)
+                            ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+                            : bearOffRaw
+                          const points = Array.isArray(data.gameState?.points) 
+                            ? [...data.gameState.points] 
+                            : []
+                          setGameState({
+                            points,
+                            bar,
+                            bearOff,
+                            currentPlayer: data.currentPlayer || 0,
+                            dice: gameState.dice,
+                            canMove: true,
+                            verificationSalt: data.verificationSalt,
+                            p1Rolls: data.p1Rolls,
+                            p2Rolls: data.p2Rolls,
+                          })
+                        }
+                      } catch (error: any) {
+                        alert(error.response?.data?.message || 'Ошибка обновления доски')
+                      }
+                    }}
+                  />
+                </>
               )}
             </div>
           )}
