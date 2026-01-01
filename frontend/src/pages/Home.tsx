@@ -107,7 +107,16 @@ export default function Home() {
           totalIncome += Number(building.incomePerHour) || 0
         }
       })
-      setStats(prev => ({ ...prev, incomePerHour: totalIncome }))
+      // Конвертируем в тысячи для отображения
+      const incomeInK = totalIncome / 1000
+      setStats(prev => ({ 
+        ...prev, 
+        incomePerHour: incomeInK,
+        economy: user?.economySp || 0,
+        power: user?.powerSp || 0,
+        lives: user?.lives || 5,
+        maxLives: user?.maxLives || 5,
+      }))
     } catch (error) {
       // Игнорируем ошибки
     }

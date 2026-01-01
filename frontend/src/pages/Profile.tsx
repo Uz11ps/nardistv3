@@ -299,16 +299,18 @@ export default function Profile() {
 
             {/* Карточки достижений и бонусов */}
             <div className="profile-cards-grid-v2">
-              {/* Бонусы к экономике */}
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={`economy-${i}`} className="profile-card-v2">
+              {/* Показываем достижения и бонусы */}
+              {achievements.filter(a => a.unlocked).slice(0, 6).map((achievement) => (
+                <div key={achievement.id} className="profile-card-v2">
                   <div className="profile-card-text-v2">+10 к экономике</div>
                 </div>
               ))}
-              {/* Сертификаты */}
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={`cert-${i}`} className="profile-card-v2">
-                  <div className="profile-card-text-v2">сертификат</div>
+              {/* Заполняем оставшиеся места бонусами или сертификатами */}
+              {Array.from({ length: Math.max(0, 12 - achievements.filter(a => a.unlocked).length) }).map((_, i) => (
+                <div key={`bonus-${i}`} className="profile-card-v2">
+                  <div className="profile-card-text-v2">
+                    {i % 2 === 0 ? '+10 к экономике' : 'сертификат'}
+                  </div>
                 </div>
               ))}
             </div>
