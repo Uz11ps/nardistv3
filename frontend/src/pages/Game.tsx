@@ -605,6 +605,13 @@ export default function Game() {
 
     socket.on('dice_rolled', (data: any) => {
       console.log('🎲 dice_rolled received:', data);
+      
+      // Защита от дублирования: не запускаем анимацию, если она уже идет
+      if ((window as any).diceAnimationTimeout) {
+        console.log('⚠️ Dice animation already running, skipping duplicate');
+        return;
+      }
+      
       if (data.dice) {
         setGameState(prev => {
           if (!prev) return null;
@@ -616,10 +623,6 @@ export default function Game() {
         });
       }
       setDiceAnimating(true)
-      // Очищаем предыдущий таймаут если он был
-      if ((window as any).diceAnimationTimeout) {
-        clearTimeout((window as any).diceAnimationTimeout);
-      }
       // Увеличиваем время анимации до 4 секунд, чтобы пользователь мог посмотреть результат
       // После этого кубики остаются закрепленными на доске
       (window as any).diceAnimationTimeout = setTimeout(() => {

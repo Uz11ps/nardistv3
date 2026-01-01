@@ -9,12 +9,16 @@ interface DiceGifProps {
 
 const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, size = 50 }) => {
   const [gifKey, setGifKey] = React.useState(Date.now());
+  const prevAnimatingRef = React.useRef(false);
 
-  // Перезапускаем гифку при начале анимации
+  // Перезапускаем гифку только при переходе из неактивного состояния в активное
+  // Это предотвращает повторный запуск, если animating уже был true
   React.useEffect(() => {
-    if (animating) {
+    if (animating && !prevAnimatingRef.current) {
+      // Только при переходе с false на true - перезапускаем GIF
       setGifKey(Date.now());
     }
+    prevAnimatingRef.current = animating;
   }, [animating]);
 
   if (!dice || dice.length < 2) return null;
