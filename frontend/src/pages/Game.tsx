@@ -613,7 +613,7 @@ export default function Game() {
       }
       
       if (data.dice) {
-        setGameState(prev => {
+        setGameState((prev) => {
           if (!prev) return null;
           // Сохраняем формат кубиков как он пришел с сервера
           return {
@@ -622,13 +622,16 @@ export default function Game() {
           };
         });
       }
-      setDiceAnimating(true)
+      
+      // Запускаем анимацию кубиков
+      setDiceAnimating(true);
+      
       // Увеличиваем время анимации до 4 секунд, чтобы пользователь мог посмотреть результат
       // После этого кубики остаются закрепленными на доске
       (window as any).diceAnimationTimeout = setTimeout(() => {
-        setDiceAnimating(false)
+        setDiceAnimating(false);
         delete (window as any).diceAnimationTimeout;
-      }, 4000)
+      }, 4000);
     })
 
     socket.on('offset_updated', (data: any) => {
