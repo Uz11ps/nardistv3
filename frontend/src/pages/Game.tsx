@@ -635,7 +635,7 @@ export default function Game() {
       const eventId = data.eventId || `${JSON.stringify(data.dice)}_${Date.now()}`;
       const diceKey = JSON.stringify(data.dice);
       
-      console.log('🎲 dice_rolled received:', data, 'eventId:', eventId.substring(0, 80));
+      console.log('🎲 dice_rolled received:', data, 'eventId:', eventId.substring(0, 80), 'diceAnimatingRef:', diceAnimatingRef.current);
       
       // СТРОГАЯ защита от дублирования: проверяем через Set обработанных событий
       if (processedEventsRef.current.has(eventId)) {
