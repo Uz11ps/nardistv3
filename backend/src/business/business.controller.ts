@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Query } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { BusinessService } from './business.service';
 import { MaterialService } from './material.service';
 import { LicenseService } from './license.service';

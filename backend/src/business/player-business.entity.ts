@@ -25,10 +25,10 @@ export class PlayerBusiness {
   level: number; // Уровень бизнеса (1-10)
 
   @Column({ type: 'bigint', default: 0 })
-  narAccumulated: number; // Накопленные NAR (не собраны)
+  narAccumulated: bigint; // Накопленные NAR (не собраны)
 
   @Column({ type: 'bigint', default: 0 })
-  materialsAccumulated: number; // Накопленные материалы (не собраны)
+  materialsAccumulated: bigint; // Накопленные материалы (не собраны)
 
   @Column({ type: 'timestamp', nullable: true })
   lastCollectedAt: Date; // Время последнего сбора

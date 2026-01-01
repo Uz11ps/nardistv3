@@ -9,7 +9,6 @@ import { UsersService } from '../users/users.service';
 import { getBusinessConfig, getBusinessLevelConfig, BUSINESS_CLASS_A, BUSINESS_CLASS_B, BUSINESS_CLASS_C } from './business-economy.config';
 import { MaterialPackage } from './business.entity';
 import { MaterialService } from './material.service';
-import { DistrictName } from './district.entity';
 
 @Injectable()
 export class BusinessService {

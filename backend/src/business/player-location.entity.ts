@@ -7,7 +7,7 @@ export class PlayerLocation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, { nullable: false, unique: true })
+  @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'playerId' })
   player: User;
 
