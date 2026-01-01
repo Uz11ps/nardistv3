@@ -327,8 +327,9 @@ export default function Game() {
         setPlayer2Timer(timeLimitSeconds)
         
         // Если игра началась и это наш ход, но кубиков нет - бросаем их
+        // НО НЕ для sandbox игр - там пользователь сам управляет всем
         const canMoveNow = game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1
-        if (canMoveNow && !formattedDice && !isBotGame) {
+        if (canMoveNow && !formattedDice && !isBotGame && game.type !== 'sandbox') {
           setTimeout(() => {
             const socket = getSocket()
             if (socket) {
@@ -792,12 +793,13 @@ export default function Game() {
           if (data.game) {
             setGameInfo(data.game)
             // Автоматически загружаем игру и бросаем кубики
+            // НО НЕ для sandbox игр - там пользователь сам управляет всем
             loadGame().then(() => {
               // Небольшая задержка для обновления состояния
               setTimeout(() => {
                 const socket = getSocket()
-                if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1)) {
-                  // Если это наш ход, бросаем кубики
+                if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1) && data.game.type !== 'sandbox') {
+                  // Если это наш ход, бросаем кубики (но не для sandbox)
                   socket.emit('roll_dice', { gameId })
                 }
               }, 300)
