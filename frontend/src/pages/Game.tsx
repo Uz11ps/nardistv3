@@ -607,7 +607,7 @@ export default function Game() {
       console.log('🎲 dice_rolled received:', data);
       
       // Защита от дублирования: не запускаем анимацию, если она уже идет
-      if ((window as any).diceAnimationTimeout) {
+      if ((window as any).diceAnimationTimeout || diceAnimating) {
         console.log('⚠️ Dice animation already running, skipping duplicate');
         return;
       }
