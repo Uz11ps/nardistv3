@@ -1712,6 +1712,29 @@ export default function BackgammonBoard({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onDragOver={(e) => {
+          if (isSandbox) {
+            e.preventDefault()
+            e.stopPropagation()
+          }
+        }}
+        onDrop={(e) => {
+          if (isSandbox && onSandboxCheckerDrop && canvasRef.current) {
+            e.preventDefault()
+            e.stopPropagation()
+            const checkerColor = e.dataTransfer.getData('text/plain') as 'white' | 'black'
+            if (checkerColor === 'white' || checkerColor === 'black') {
+              const rect = canvasRef.current.getBoundingClientRect()
+              const x = e.clientX - rect.left
+              const y = e.clientY - rect.top
+              const pointIndex = getPointAtPosition(x, y, canvasRef.current)
+              if (pointIndex !== null && pointIndex !== 24 && pointIndex !== 25) {
+                // Не позволяем бросать на бар
+                onSandboxCheckerDrop(pointIndex, checkerColor)
+              }
+            }
+          }
+        }}
         style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} // Отключаем стандартные жесты браузера и Telegram
       />
       
