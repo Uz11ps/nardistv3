@@ -329,10 +329,8 @@ export default function Academy() {
       title="Академия"
       subtitle="Повышай мастерство в нардах. Все материалы доступны к покупке"
       tabs={[
-        { id: 'onboarding', label: 'Онбординг', active: activeTab === 'onboarding', onClick: () => setActiveTab('onboarding') },
         { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
         { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
-        { id: 'sandbox', label: 'Песочница', active: activeTab === 'sandbox', onClick: () => setActiveTab('sandbox') },
         { id: 'my-materials', label: 'Мои материалы', active: activeTab === 'my-materials', onClick: () => setActiveTab('my-materials') },
       ]}
     >
