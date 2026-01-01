@@ -31,6 +31,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
   private moveTimeoutCheckInterval: NodeJS.Timeout | null = null;
 
   constructor(
+    @Inject(forwardRef(() => GamesService))
     private gamesService: GamesService,
     private jwtService: JwtService,
     private configService: ConfigService,
