@@ -487,7 +487,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       }
       
       let gameState = await this.gamesService.getGameState(data.gameId);
-      this.server.to(`game:${data.gameId}`).emit('dice_rolled', { dice, playerId: userId });
+      // Отправляем событие с уникальным ID для предотвращения дублирования на клиенте
+      const eventId = `${data.gameId}_${Date.now()}_${userId}`;
+      this.server.to(`game:${data.gameId}`).emit('dice_rolled', { dice, playerId: userId, eventId });
       
       // Проверяем наличие ходов после броска
       const possibleMoves = await this.gamesService.getPossibleMoves(data.gameId, userId);
@@ -586,10 +588,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         
         const gameStateAfterDice = await this.gamesService.getGameState(gameId);
         
-        // Emit dice rolled event
+        // Emit dice rolled event с уникальным ID для предотвращения дублирования
+        const eventId = `${gameId}_${Date.now()}_bot`;
         this.server.to(`game:${gameId}`).emit('dice_rolled', { 
           dice: botDice, 
-          playerId: null 
+          playerId: null,
+          eventId
         });
         this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
         

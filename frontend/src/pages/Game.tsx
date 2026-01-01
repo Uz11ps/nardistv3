@@ -629,15 +629,15 @@ export default function Game() {
         return;
       }
       
+      // Используем eventId для дедупликации, если он есть, иначе используем diceKey
+      const eventKey = data.eventId || JSON.stringify(data.dice);
       const diceKey = JSON.stringify(data.dice);
-      const currentTime = Date.now();
-      const eventSignature = `${diceKey}_${currentTime}`;
       
-      console.log('🎲 dice_rolled received:', data, 'signature:', eventSignature.substring(0, 60));
+      console.log('🎲 dice_rolled received:', data, 'eventKey:', eventKey.substring(0, 80));
       
-      // СТРОГАЯ защита от дублирования: проверяем через ref
-      if (lastDiceRollRef.current === diceKey) {
-        console.log('⚠️ Duplicate dice_rolled event detected (same dice key), skipping');
+      // СТРОГАЯ защита от дублирования: проверяем через ref ПЕРЕД любыми действиями
+      if (lastDiceRollRef.current === eventKey || lastDiceRollRef.current === diceKey) {
+        console.log('⚠️ Duplicate dice_rolled event detected, skipping');
         return;
       }
       
@@ -647,39 +647,32 @@ export default function Game() {
         return;
       }
       
-      // Проверяем состояние через функциональное обновление
-      setDiceAnimating((prevAnimating) => {
-        if (prevAnimating) {
-          console.log('⚠️ Dice animation state is already true, skipping');
-          return prevAnimating;
-        }
-        
-        // Сохраняем ключ СРАЗУ перед запуском анимации
-        lastDiceRollRef.current = diceKey;
-        
-        if (data.dice) {
-          setGameState((prev) => {
-            if (!prev) return null;
-            // Сохраняем формат кубиков как он пришел с сервера
-            return {
-              ...prev,
-              dice: data.dice
-            };
-          });
-        }
-        
-        // Запускаем таймаут для остановки анимации через 4 секунды
-        (window as any).diceAnimationTimeout = setTimeout(() => {
-          setDiceAnimating(false);
-          delete (window as any).diceAnimationTimeout;
-          // Очищаем ключ после завершения анимации (с небольшой задержкой для безопасности)
-          setTimeout(() => {
-            lastDiceRollRef.current = '';
-          }, 100);
-        }, 4000);
-        
-        return true; // Устанавливаем анимацию в true
-      });
+      // Сохраняем ключ СРАЗУ, чтобы предотвратить повторную обработку
+      lastDiceRollRef.current = eventKey;
+      
+      // Обновляем состояние кубиков
+      if (data.dice) {
+        setGameState((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            dice: data.dice
+          };
+        });
+      }
+      
+      // Запускаем анимацию
+      setDiceAnimating(true);
+      
+      // Запускаем таймаут для остановки анимации через 4 секунды
+      (window as any).diceAnimationTimeout = setTimeout(() => {
+        setDiceAnimating(false);
+        delete (window as any).diceAnimationTimeout;
+        // Очищаем ключ после завершения анимации (с небольшой задержкой для безопасности)
+        setTimeout(() => {
+          lastDiceRollRef.current = '';
+        }, 500);
+      }, 4000);
     };
     
     socket.on('dice_rolled', handleDiceRolled);
