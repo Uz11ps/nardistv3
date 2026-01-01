@@ -679,10 +679,11 @@ export default function Game() {
       }
       
       // Если это начало нашего хода - запускаем таймер и бросаем кубики если их нет
+      // НО НЕ для sandbox игр - там пользователь сам управляет всем
       if (isMyTurnNow && !wasMyTurn) {
         setMoveTimer(20)
         
-        if (!formattedDice && data.status === 'in_progress') {
+        if (!formattedDice && data.status === 'in_progress' && data.type !== 'sandbox') {
           // Автоматически бросаем кубики для следующего игрока (как в боте)
           setTimeout(() => {
             const socket = getSocket()
