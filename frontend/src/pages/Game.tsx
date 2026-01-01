@@ -448,6 +448,24 @@ export default function Game() {
       return
     }
 
+    // ВАЖНО: Отключаем все предыдущие обработчики перед добавлением новых
+    // Это предотвращает множественные подписки на одно событие
+    socket.off('game_state')
+    socket.off('move_made')
+    socket.off('dice_rolled')
+    socket.off('game_finished')
+    socket.off('offset_updated')
+    socket.off('timer_update')
+
+    // ВАЖНО: Отключаем все предыдущие обработчики перед добавлением новых
+    // Это предотвращает множественные подписки на одно событие
+    socket.off('game_state')
+    socket.off('move_made')
+    socket.off('dice_rolled')
+    socket.off('game_finished')
+    socket.off('offset_updated')
+    socket.off('timer_update')
+
     socket.emit('join_game', { gameId })
 
     socket.on('game_state', (data: any) => {
@@ -603,36 +621,60 @@ export default function Game() {
       }
     })
 
-    socket.on('dice_rolled', (data: any) => {
-      console.log('🎲 dice_rolled received:', data);
+    // Обработчик dice_rolled - используем именованную функцию для возможности удаления
+    // Используем useRef для отслеживания последнего обработанного события
+    const lastDiceRollRef = useRef<string>('');
+    
+    const handleDiceRolled = (data: any) => {
+      const diceKey = data.dice ? JSON.stringify(data.dice) + '_' + Date.now() : '';
+      console.log('🎲 dice_rolled received:', data, 'key:', diceKey);
+      
+      // Защита от дублирования: проверяем, не обрабатывали ли мы уже это событие
+      if (lastDiceRollRef.current === diceKey) {
+        console.log('⚠️ Duplicate dice_rolled event detected, skipping');
+        return;
+      }
       
       // Защита от дублирования: не запускаем анимацию, если она уже идет
-      if ((window as any).diceAnimationTimeout || diceAnimating) {
+      if ((window as any).diceAnimationTimeout) {
         console.log('⚠️ Dice animation already running, skipping duplicate');
         return;
       }
       
-      if (data.dice) {
-        setGameState((prev) => {
-          if (!prev) return null;
-          // Сохраняем формат кубиков как он пришел с сервера
-          return {
-            ...prev,
-            dice: data.dice
-          };
-        });
-      }
+      // Сохраняем ключ последнего обработанного события
+      lastDiceRollRef.current = diceKey;
       
-      // Запускаем анимацию кубиков
-      setDiceAnimating(true);
-      
-      // Увеличиваем время анимации до 4 секунд, чтобы пользователь мог посмотреть результат
-      // После этого кубики остаются закрепленными на доске
-      (window as any).diceAnimationTimeout = setTimeout(() => {
-        setDiceAnimating(false);
-        delete (window as any).diceAnimationTimeout;
-      }, 4000);
-    })
+      // Дополнительная проверка через функциональное обновление состояния
+      setDiceAnimating((prevAnimating) => {
+        if (prevAnimating) {
+          console.log('⚠️ Dice animation state is already true, skipping');
+          return prevAnimating;
+        }
+        
+        if (data.dice) {
+          setGameState((prev) => {
+            if (!prev) return null;
+            // Сохраняем формат кубиков как он пришел с сервера
+            return {
+              ...prev,
+              dice: data.dice
+            };
+          });
+        }
+        
+        // Запускаем таймаут для остановки анимации через 4 секунды
+        (window as any).diceAnimationTimeout = setTimeout(() => {
+          setDiceAnimating(false);
+          delete (window as any).diceAnimationTimeout;
+          // Очищаем ключ после завершения анимации
+          lastDiceRollRef.current = '';
+        }, 4000);
+        
+        return true; // Устанавливаем анимацию в true
+      });
+    };
+    
+    socket.on('dice_rolled', handleDiceRolled);
 
     socket.on('offset_updated', (data: any) => {
       // Важно: gameInfo должен быть загружен, иначе не можем определить, кто мы
