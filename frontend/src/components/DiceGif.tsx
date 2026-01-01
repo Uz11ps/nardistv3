@@ -20,26 +20,20 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
   React.useEffect(() => {
     const diceKey = dice ? dice.join(',') : '';
     
-    // СТРОГАЯ защита: если GIF уже запущен с теми же кубиками и анимация активна, не перезапускаем
+    // СТРОГАЯ защита: если анимация уже идет, НИКОГДА не перезапускаем
+    if (isAnimatingRef.current) {
+      console.log('🎬 DiceGif: Animation already in progress, skipping all restarts');
+      return;
+    }
+    
+    // Если GIF уже запущен с теми же кубиками и анимация активна, не перезапускаем
     if (gifStartedRef.current && lastDiceRef.current === diceKey && animating) {
       console.log('🎬 DiceGif: GIF already started with same dice, skipping');
       return;
     }
     
-    // Если анимация уже идет с теми же кубиками, не перезапускаем
-    if (isAnimatingRef.current && lastDiceRef.current === diceKey) {
-      console.log('🎬 DiceGif: Animation already running with same dice, skipping');
-      return;
-    }
-    
-    // Если gifKey не изменился, значит это повторный рендер, не перезапускаем
-    if (animating && gifKey === lastGifKeyRef.current && gifStartedRef.current) {
-      console.log('🎬 DiceGif: Same gifKey, skipping restart');
-      return;
-    }
-    
+    // Только при переходе с false на true - перезапускаем GIF
     if (animating && !prevAnimatingRef.current) {
-      // Только при переходе с false на true - перезапускаем GIF
       const newGifKey = Date.now();
       console.log('🎬 DiceGif: Starting animation, diceKey:', diceKey, 'gifKey:', newGifKey);
       isAnimatingRef.current = true;
@@ -49,17 +43,17 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
       setGifKey(newGifKey);
     }
     
-    if (!animating) {
-      // Когда анимация завершается, сбрасываем флаги с задержкой
+    if (!animating && prevAnimatingRef.current) {
+      // Когда анимация завершается (переход с true на false), сбрасываем флаги с задержкой
       isAnimatingRef.current = false;
       setTimeout(() => {
         gifStartedRef.current = false;
         console.log('🎬 DiceGif: Animation finished, flags reset');
-      }, 200);
+      }, 500); // Увеличиваем задержку до 500мс для надежности
     }
     
     prevAnimatingRef.current = animating;
-  }, [animating, dice, gifKey]);
+  }, [animating, dice]); // Убрали gifKey из зависимостей, чтобы избежать повторных запусков
 
   if (!dice || dice.length < 2) return null;
 

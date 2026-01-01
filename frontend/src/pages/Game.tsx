@@ -135,6 +135,7 @@ export default function Game() {
 
   const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
+  const diceAnimatingRef = useRef<boolean>(false) // Ref для синхронной проверки состояния анимации
   const lastDiceRollRef = useRef<string>('') // Отслеживание последнего обработанного события dice_rolled
   const processedEventsRef = useRef<Set<string>>(new Set()) // Set для отслеживания обработанных eventId
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
@@ -654,6 +655,12 @@ export default function Game() {
         return;
       }
       
+      // Дополнительная защита: проверяем через ref (синхронно)
+      if (diceAnimatingRef.current) {
+        console.log('⚠️ Dice animation already active (ref), skipping duplicate');
+        return;
+      }
+      
       // Добавляем eventId в Set обработанных событий СРАЗУ
       processedEventsRef.current.add(eventId);
       lastDiceRollRef.current = diceKey;
@@ -671,11 +678,13 @@ export default function Game() {
         });
       }
       
-      // Запускаем анимацию
+      // Запускаем анимацию ОДИН раз - устанавливаем ref СРАЗУ
+      diceAnimatingRef.current = true;
       setDiceAnimating(true);
       
       // Запускаем таймаут для остановки анимации через 4 секунды
       (window as any).diceAnimationTimeout = setTimeout(() => {
+        diceAnimatingRef.current = false; // Сбрасываем ref
         setDiceAnimating(false);
         delete (window as any).diceAnimationTimeout;
         // Очищаем ключ и eventId после завершения анимации (с небольшой задержкой для безопасности)
