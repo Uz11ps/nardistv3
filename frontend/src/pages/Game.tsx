@@ -451,20 +451,88 @@ export default function Game() {
       return
     }
 
-    // ВАЖНО: Отключаем все предыдущие обработчики перед добавлением новых
-    // Это предотвращает множественные подписки на одно событие
-    socket.off('game_state')
-    socket.off('move_made')
-    socket.off('dice_rolled')
-    socket.off('game_finished')
-    socket.off('offset_updated')
-    socket.off('timer_update')
+    // Обработчик dice_rolled - объявляем ДО регистрации, чтобы можно было удалить
+    const handleDiceRolled = (data: any) => {
+      if (!data.dice) {
+        console.log('⚠️ dice_rolled event without dice data, skipping');
+        return;
+      }
+      
+      // Используем eventId для дедупликации, если он есть, иначе используем diceKey + timestamp
+      const eventId = data.eventId || `${JSON.stringify(data.dice)}_${Date.now()}`;
+      const diceKey = JSON.stringify(data.dice);
+      
+      console.log('🎲 dice_rolled received:', data, 'eventId:', eventId.substring(0, 80), 'diceAnimatingRef:', diceAnimatingRef.current);
+      
+      // СТРОГАЯ защита от дублирования: проверяем через Set обработанных событий
+      if (processedEventsRef.current.has(eventId)) {
+        console.log('⚠️ Duplicate dice_rolled event detected (eventId in Set), skipping');
+        return;
+      }
+      
+      // Также проверяем по diceKey, если eventId нет
+      if (!data.eventId && lastDiceRollRef.current === diceKey) {
+        console.log('⚠️ Duplicate dice_rolled event detected (same dice key), skipping');
+        return;
+      }
+      
+      // Защита от дублирования: не запускаем анимацию, если она уже идет
+      if ((window as any).diceAnimationTimeout) {
+        console.log('⚠️ Dice animation timeout already exists, skipping duplicate');
+        return;
+      }
+      
+      // Дополнительная защита: проверяем через ref (синхронно)
+      if (diceAnimatingRef.current) {
+        console.log('⚠️ Dice animation already active (ref), skipping duplicate');
+        return;
+      }
+      
+      // Добавляем eventId в Set обработанных событий СРАЗУ
+      processedEventsRef.current.add(eventId);
+      lastDiceRollRef.current = diceKey;
+      
+      console.log('✅ Processing dice_rolled event, eventId:', eventId.substring(0, 80));
+      
+      // Обновляем состояние кубиков
+      if (data.dice) {
+        setGameState((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            dice: data.dice
+          };
+        });
+      }
+      
+      // Запускаем анимацию ОДИН раз - устанавливаем ref СРАЗУ
+      diceAnimatingRef.current = true;
+      setDiceAnimating(true);
+      
+      // Запускаем таймаут для остановки анимации через 4 секунды
+      (window as any).diceAnimationTimeout = setTimeout(() => {
+        diceAnimatingRef.current = false; // Сбрасываем ref
+        setDiceAnimating(false);
+        delete (window as any).diceAnimationTimeout;
+        // Очищаем ключ и eventId после завершения анимации (с небольшой задержкой для безопасности)
+        setTimeout(() => {
+          lastDiceRollRef.current = '';
+          processedEventsRef.current.delete(eventId);
+          // Очищаем старые события из Set (оставляем только последние 10)
+          if (processedEventsRef.current.size > 10) {
+            const eventsArray = Array.from(processedEventsRef.current);
+            processedEventsRef.current.clear();
+            eventsArray.slice(-10).forEach(id => processedEventsRef.current.add(id));
+          }
+        }, 500);
+      }, 4000);
+    };
 
     // ВАЖНО: Отключаем все предыдущие обработчики перед добавлением новых
     // Это предотвращает множественные подписки на одно событие
     socket.off('game_state')
     socket.off('move_made')
-    socket.off('dice_rolled')
+    socket.off('dice_rolled', handleDiceRolled) // Отключаем конкретную функцию
     socket.off('game_finished')
     socket.off('offset_updated')
     socket.off('timer_update')
@@ -624,83 +692,6 @@ export default function Game() {
       }
     })
 
-    // Обработчик dice_rolled - используем именованную функцию для возможности удаления
-    const handleDiceRolled = (data: any) => {
-      if (!data.dice) {
-        console.log('⚠️ dice_rolled event without dice data, skipping');
-        return;
-      }
-      
-      // Используем eventId для дедупликации, если он есть, иначе используем diceKey + timestamp
-      const eventId = data.eventId || `${JSON.stringify(data.dice)}_${Date.now()}`;
-      const diceKey = JSON.stringify(data.dice);
-      
-      console.log('🎲 dice_rolled received:', data, 'eventId:', eventId.substring(0, 80), 'diceAnimatingRef:', diceAnimatingRef.current);
-      
-      // СТРОГАЯ защита от дублирования: проверяем через Set обработанных событий
-      if (processedEventsRef.current.has(eventId)) {
-        console.log('⚠️ Duplicate dice_rolled event detected (eventId in Set), skipping');
-        return;
-      }
-      
-      // Также проверяем по diceKey, если eventId нет
-      if (!data.eventId && lastDiceRollRef.current === diceKey) {
-        console.log('⚠️ Duplicate dice_rolled event detected (same dice key), skipping');
-        return;
-      }
-      
-      // Защита от дублирования: не запускаем анимацию, если она уже идет
-      if ((window as any).diceAnimationTimeout) {
-        console.log('⚠️ Dice animation timeout already exists, skipping duplicate');
-        return;
-      }
-      
-      // Дополнительная защита: проверяем через ref (синхронно)
-      if (diceAnimatingRef.current) {
-        console.log('⚠️ Dice animation already active (ref), skipping duplicate');
-        return;
-      }
-      
-      // Добавляем eventId в Set обработанных событий СРАЗУ
-      processedEventsRef.current.add(eventId);
-      lastDiceRollRef.current = diceKey;
-      
-      console.log('✅ Processing dice_rolled event, eventId:', eventId.substring(0, 80));
-      
-      // Обновляем состояние кубиков
-      if (data.dice) {
-        setGameState((prev) => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            dice: data.dice
-          };
-        });
-      }
-      
-      // Запускаем анимацию ОДИН раз - устанавливаем ref СРАЗУ
-      diceAnimatingRef.current = true;
-      setDiceAnimating(true);
-      
-      // Запускаем таймаут для остановки анимации через 4 секунды
-      (window as any).diceAnimationTimeout = setTimeout(() => {
-        diceAnimatingRef.current = false; // Сбрасываем ref
-        setDiceAnimating(false);
-        delete (window as any).diceAnimationTimeout;
-        // Очищаем ключ и eventId после завершения анимации (с небольшой задержкой для безопасности)
-        setTimeout(() => {
-          lastDiceRollRef.current = '';
-          processedEventsRef.current.delete(eventId);
-          // Очищаем старые события из Set (оставляем только последние 10)
-          if (processedEventsRef.current.size > 10) {
-            const eventsArray = Array.from(processedEventsRef.current);
-            processedEventsRef.current.clear();
-            eventsArray.slice(-10).forEach(id => processedEventsRef.current.add(id));
-          }
-        }, 500);
-      }, 4000);
-    };
-    
     socket.on('dice_rolled', handleDiceRolled);
 
     socket.on('offset_updated', (data: any) => {
