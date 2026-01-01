@@ -354,7 +354,8 @@ export default function BackgammonBoard({
   
   // Определение позиции для кубиков
   // Кубики показываются на стороне игрока, у которого сейчас ход
-  useEffect(() => {
+  // Позиция адаптируется к размеру экрана и обновляется при изменении размера
+  const updateDicePosition = useCallback(() => {
     if (!containerRef.current) return
     
     const container = containerRef.current
@@ -362,29 +363,63 @@ export default function BackgammonBoard({
     const width = rect.width
     const height = rect.height
     
+    // Размер кубиков адаптируется к размеру доски
+    const diceSize = Math.min(width, height) * 0.08
+    const diceWidth = diceSize * 7.5
+    const diceHeight = diceSize * 4.5
+    
     // Player1 (белые, currentPlayer === 0): кубики внизу справа
     // Player2 (черные, currentPlayer === 1): кубики вверху слева
     // Показываем кубики на стороне игрока, у которого сейчас ход
+    // Учитываем размер кубиков, чтобы они не выходили за границы доски
     
     let xPos: number
     let yPos: number
     
     if (currentPlayer === 0) {
-      // Player1 - внизу справа
-      xPos = width * 0.85
-      yPos = height * 0.85
+      // Player1 - внизу справа, но с отступом от края
+      xPos = Math.min(width * 0.85, width - diceWidth / 2 - 10)
+      yPos = Math.min(height * 0.85, height - diceHeight / 2 - 10)
     } else {
-      // Player2 - вверху слева
-      xPos = width * 0.15
-      yPos = height * 0.15
+      // Player2 - вверху слева, но с отступом от края
+      xPos = Math.max(width * 0.15, diceWidth / 2 + 10)
+      yPos = Math.max(height * 0.15, diceHeight / 2 + 10)
     }
 
     setDice3DPosition({
       x: xPos,
       y: yPos,
-      size: Math.min(width, height) * 0.08,
+      size: diceSize,
     })
   }, [currentPlayer])
+
+  useEffect(() => {
+    updateDicePosition()
+    
+    // Обновляем позицию при изменении размера окна
+    const handleResize = () => {
+      updateDicePosition()
+    }
+    
+    window.addEventListener('resize', handleResize)
+    
+    // Также используем ResizeObserver для отслеживания изменения размера контейнера
+    if (containerRef.current) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateDicePosition()
+      })
+      resizeObserver.observe(containerRef.current)
+      
+      return () => {
+        window.removeEventListener('resize', handleResize)
+        resizeObserver.disconnect()
+      }
+    }
+    
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [currentPlayer, updateDicePosition])
   
   // Вспомогательная функция для получения координат точки
   const getPointCoordinates = useCallback((pointIndex: number, canvas: HTMLCanvasElement) => {
@@ -1696,26 +1731,26 @@ export default function BackgammonBoard({
         })()
       )}
       
-      {/* Кубики - показываем на стороне игрока, у которого ход, закрепляем после анимации */}
+      {/* Кубики - показываем на стороне игрока, у которого ход, закрепляем после анимации внутри доски */}
       {diceArray && diceArray.length > 0 && dice3DPosition && usedDiceIndices.size < diceArray.length && (
         <div
           style={{
             position: 'absolute',
             // Если идет анимация гифки, показываем её на стороне игрока с ходом (внизу для player1, вверху для player2)
-            // После анимации показываем 3D кубики на той же стороне (закрепленные)
+            // После анимации показываем 3D кубики на той же стороне (закрепленные внутри доски)
             left: diceAnimating 
               ? '50%'
-              : `${dice3DPosition.x - dice3DPosition.size * 3.75}px`,
+              : `${dice3DPosition.x}px`,
             top: diceAnimating 
               ? currentPlayer === 0
                 ? '75%'  // Player1 - внизу доски
                 : '25%'  // Player2 - вверху доски
-              : `${dice3DPosition.y - dice3DPosition.size * 2.25}px`,
+              : `${dice3DPosition.y}px`,
             width: `${dice3DPosition.size * 7.5}px`,
             height: `${dice3DPosition.size * 4.5}px`,
             transform: diceAnimating 
               ? 'translate(-50%, -50%)'
-              : 'none',
+              : 'translate(-50%, -50%)', // Центрируем кубики относительно их позиции
             pointerEvents: 'none',
             display: 'flex',
             gap: '8px',
@@ -1723,6 +1758,9 @@ export default function BackgammonBoard({
             justifyContent: 'center',
             zIndex: 1000,
             transition: diceAnimating ? 'none' : 'all 0.5s ease-out',
+            // Гарантируем, что кубики не выходят за границы доски
+            maxWidth: '100%',
+            maxHeight: '100%',
           }}
         >
           {/* Показываем гифку, если она доступна для данного состояния кубиков */}
