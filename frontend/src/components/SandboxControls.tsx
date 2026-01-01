@@ -104,8 +104,9 @@ export default function SandboxControls({ gameId, gameState, currentPlayer, onBo
                 className={currentPlayer === 0 ? 'active' : ''}
                 onClick={async () => {
                   try {
+                    // Переключаем игрока без установки кубиков
                     await apiClient.post(`/games/${gameId}/sandbox/set-dice`, {
-                      dice: [dice1, dice2],
+                      dice: [],
                       player: 0,
                     })
                     onBoardUpdate()
@@ -120,8 +121,9 @@ export default function SandboxControls({ gameId, gameState, currentPlayer, onBo
                 className={currentPlayer === 1 ? 'active' : ''}
                 onClick={async () => {
                   try {
+                    // Переключаем игрока без установки кубиков
                     await apiClient.post(`/games/${gameId}/sandbox/set-dice`, {
-                      dice: [dice1, dice2],
+                      dice: [],
                       player: 1,
                     })
                     onBoardUpdate()
@@ -133,6 +135,9 @@ export default function SandboxControls({ gameId, gameState, currentPlayer, onBo
                 Черные
               </button>
             </div>
+            <p style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+              Выберите игрока для расстановки фишек. Положительные значения = белые, отрицательные = черные.
+            </p>
           </div>
 
           <div className="sandbox-section">

@@ -1761,8 +1761,23 @@ export class GamesService {
       const rngSeed = crypto.randomBytes(32).toString('hex');
       const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
 
-      const engine = gameMode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
-      const initialState = engine.createInitialState();
+      // Создаем пустое состояние доски для свободного стола
+      // Пользователь сам расставит все фишки
+      const emptyState = {
+        points: Array(24).fill(0), // Все точки пустые
+        bar: [0, 0], // Бар пустой
+        borneOff: [0, 0], // Вынос пустой
+        currentPlayer: 0,
+        dice: [], // Кубики не брошены
+        ...(gameMode === GameMode.LONG ? {
+          movesFromHead: 0,
+          movesFromPoint: {},
+        } : {
+          canDouble: true,
+          cubeValue: 1,
+          cubeOwner: -1,
+        }),
+      };
 
       const game = this.gamesRepository.create({
         player1Id: playerId,
@@ -1771,7 +1786,7 @@ export class GamesService {
         type: GameType.SANDBOX,
         stake: 0,
         status: GameStatus.IN_PROGRESS,
-        gameState: initialState,
+        gameState: emptyState,
         rngSeed,
         rngHash,
         currentPlayer: 0,
@@ -1783,14 +1798,13 @@ export class GamesService {
 
       const savedGame = await this.gamesRepository.save(game);
       
-      // Сразу бросаем кубики
-      await this.rollDice(savedGame.id, playerId);
+      // НЕ бросаем кубики автоматически - пользователь сам установит их через панель управления
       
-      this.logger.log(`🎮 Песочница создана: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}`);
+      this.logger.log(`🎮 Свободный стол создан: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}`);
 
       return savedGame;
     } catch (error) {
-      this.logger.error(`❌ Ошибка при создании песочницы для playerId=${playerId}:`, error);
+      this.logger.error(`❌ Ошибка при создании свободного стола для playerId=${playerId}:`, error);
       throw new BadRequestException(`Ошибка при создании игры: ${error.message || 'Неизвестная ошибка'}`);
     }
   }
@@ -1894,6 +1908,20 @@ export class GamesService {
 
     if (game.player1Id !== playerId) {
       throw new BadRequestException('Вы не владелец этого свободного стола');
+    }
+
+    // Если dice пустой массив, просто переключаем игрока без установки кубиков
+    if (dice.length === 0) {
+      if (player !== undefined) {
+        game.currentPlayer = player;
+        const savedGame = await this.gamesRepository.save(game);
+        this.gamesGateway.server.to(`game:${gameId}`).emit('sandbox_board_updated', {
+          gameState: savedGame.gameState,
+          currentPlayer: savedGame.currentPlayer,
+        });
+        return savedGame;
+      }
+      throw new BadRequestException('Необходимо указать игрока или кубики');
     }
 
     if (!Array.isArray(dice) || dice.length !== 2 || dice[0] < 1 || dice[0] > 6 || dice[1] < 1 || dice[1] > 6) {
