@@ -59,7 +59,7 @@ export default function BackgammonBoard({
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
-  const [dragging, setDragging] = useState<{ pointIndex: number; offsetX: number; offsetY: number } | null>(null)
+  const [dragging, setDragging] = useState<{ pointIndex: number; offsetX: number; offsetY: number; checkerColor?: 'white' | 'black' } | null>(null)
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
@@ -1375,10 +1375,8 @@ export default function BackgammonBoard({
       const checkerColor = getBearOffAtPosition(x, y, canvas)
       if (checkerColor) {
         // Начинаем перетаскивание шашки из bearOff
-        setDragging({ pointIndex: -1, offsetX: x, offsetY: y })
+        setDragging({ pointIndex: -1, offsetX: x, offsetY: y, checkerColor })
         setDragPosition({ x, y })
-        // Сохраняем цвет шашки в dataTransfer для drop
-        e.dataTransfer?.setData('text/plain', checkerColor)
         return
       }
       return
@@ -1495,6 +1493,15 @@ export default function BackgammonBoard({
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
     
+    // В sandbox режиме обновляем позицию перетаскивания из bearOff
+    if (isSandbox && dragging && dragging.pointIndex === -1) {
+      setDragPosition({ x, y })
+      // Подсвечиваем точку под курсором
+      const pointIndex = getPointAtPosition(x, y, canvas)
+      setHoveredPoint(pointIndex !== null && pointIndex !== 24 && pointIndex !== 25 && pointIndex !== -1 ? pointIndex : null)
+      return
+    }
+    
     if (dragging) {
       setDragPosition({ x, y })
       const hovered = getPointAtPosition(x, y, canvas)
@@ -1512,6 +1519,18 @@ export default function BackgammonBoard({
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
+    
+    // В sandbox режиме обрабатываем drop из bearOff
+    if (isSandbox && dragging.pointIndex === -1 && dragging.checkerColor && onSandboxCheckerDrop) {
+      const targetPoint = getPointAtPosition(x, y, canvas)
+      if (targetPoint !== null && targetPoint !== 24 && targetPoint !== 25 && targetPoint !== -1) {
+        onSandboxCheckerDrop(targetPoint, dragging.checkerColor)
+      }
+      setDragging(null)
+      setDragPosition(null)
+      setHoveredPoint(null)
+      return
+    }
     
     // Сохраняем исходную точку перетаскивания
     const fromPoint = dragging.pointIndex
