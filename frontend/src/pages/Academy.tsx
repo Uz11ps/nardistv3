@@ -51,7 +51,7 @@ export default function Academy() {
   const location = useLocation()
   const { materialId } = useParams<{ materialId?: string }>()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'sandbox' | 'my-materials'>('onboarding')
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'free-table' | 'my-materials'>('onboarding')
   const [activeFilter, setActiveFilter] = useState<'long' | 'short'>('long')
   const [onboarding, setOnboarding] = useState<Onboarding[]>([])
   const [courses, setCourses] = useState<Course[]>([])
@@ -331,6 +331,7 @@ export default function Academy() {
       tabs={[
         { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
         { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
+        { id: 'free-table', label: 'Свободный стол', active: activeTab === 'free-table', onClick: () => setActiveTab('free-table') },
         { id: 'my-materials', label: 'Мои материалы', active: activeTab === 'my-materials', onClick: () => setActiveTab('my-materials') },
       ]}
     >
@@ -403,14 +404,14 @@ export default function Academy() {
           </div>
         )}
 
-        {activeTab === 'sandbox' && (
+        {activeTab === 'free-table' && (
           <div className="academy-sandbox">
             <div className="academy-card sandbox-promo-card">
               <div className="academy-card-content">
-                <h3 className="academy-card-title">Режим песочницы</h3>
+                <h3 className="academy-card-title">Свободный стол</h3>
                 <p className="academy-card-description">
-                  В этом режиме вы можете играть сами с собой за обе стороны. 
-                  Это идеальное место для тестирования стратегий, разбора позиций или просто тренировки.
+                  В свободном столе вы можете расставить шашки как хотите, установить нужные кубики и тренироваться. 
+                  Идеально для разбора позиций и изучения игры.
                 </p>
                 <div className="sandbox-modes">
                   <div className="sandbox-mode-option">
@@ -421,12 +422,12 @@ export default function Academy() {
                         try {
                           const response = await apiClient.post('/games/create-sandbox', { mode: 'long' })
                           navigate(`/game/${response.data.id}`)
-                        } catch (error) {
-                          alert('Ошибка при создании песочницы')
+                        } catch (error: any) {
+                          alert(error.response?.data?.message || 'Ошибка при создании свободного стола')
                         }
                       }}
                     >
-                      Играть
+                      Зайти в свободный стол
                     </button>
                   </div>
                   <div className="sandbox-mode-option">
@@ -437,12 +438,12 @@ export default function Academy() {
                         try {
                           const response = await apiClient.post('/games/create-sandbox', { mode: 'short' })
                           navigate(`/game/${response.data.id}`)
-                        } catch (error) {
-                          alert('Ошибка при создании песочницы')
+                        } catch (error: any) {
+                          alert(error.response?.data?.message || 'Ошибка при создании свободного стола')
                         }
                       }}
                     >
-                      Играть
+                      Зайти в свободный стол
                     </button>
                   </div>
                 </div>
