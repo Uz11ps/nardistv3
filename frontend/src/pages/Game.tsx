@@ -135,6 +135,7 @@ export default function Game() {
 
   const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
+  const lastDiceRollRef = useRef<string>('') // Отслеживание последнего обработанного события dice_rolled
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
   const [player2Ready, setPlayer2Ready] = useState<boolean>(false)
@@ -622,16 +623,17 @@ export default function Game() {
     })
 
     // Обработчик dice_rolled - используем именованную функцию для возможности удаления
-    // Используем useRef для отслеживания последнего обработанного события
-    const lastDiceRollRef = useRef<string>('');
+    let lastProcessedDiceKey = ''; // Переменная замыкания для отслеживания последнего события
     
     const handleDiceRolled = (data: any) => {
-      const diceKey = data.dice ? JSON.stringify(data.dice) + '_' + Date.now() : '';
-      console.log('🎲 dice_rolled received:', data, 'key:', diceKey);
+      const diceKey = data.dice ? JSON.stringify(data.dice) : '';
+      const eventKey = diceKey + '_' + (data.playerId || 'null') + '_' + Date.now();
+      console.log('🎲 dice_rolled received:', data, 'eventKey:', eventKey.substring(0, 50));
       
       // Защита от дублирования: проверяем, не обрабатывали ли мы уже это событие
-      if (lastDiceRollRef.current === diceKey) {
-        console.log('⚠️ Duplicate dice_rolled event detected, skipping');
+      // Используем короткое окно (100мс) для определения дубликатов
+      if (lastProcessedDiceKey === diceKey && (window as any).diceAnimationTimeout) {
+        console.log('⚠️ Duplicate dice_rolled event detected (same dice, animation running), skipping');
         return;
       }
       
@@ -642,7 +644,7 @@ export default function Game() {
       }
       
       // Сохраняем ключ последнего обработанного события
-      lastDiceRollRef.current = diceKey;
+      lastProcessedDiceKey = diceKey;
       
       // Дополнительная проверка через функциональное обновление состояния
       setDiceAnimating((prevAnimating) => {
@@ -667,7 +669,7 @@ export default function Game() {
           setDiceAnimating(false);
           delete (window as any).diceAnimationTimeout;
           // Очищаем ключ после завершения анимации
-          lastDiceRollRef.current = '';
+          lastProcessedDiceKey = '';
         }, 4000);
         
         return true; // Устанавливаем анимацию в true
