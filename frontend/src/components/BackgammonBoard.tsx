@@ -59,9 +59,11 @@ export default function BackgammonBoard({
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
-  const [dragging, setDragging] = useState<{ pointIndex: number; offsetX: number; offsetY: number; checkerColor?: 'white' | 'black' } | null>(null)
+  const [dragging, setDragging] = useState<{ pointIndex: number; offsetX: number; offsetY: number; checkerColor?: 'white' | 'black'; freeMove?: boolean } | null>(null)
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
+  const longPressTimerRef = useRef<number | null>(null)
+  const longPressStartRef = useRef<{ x: number; y: number; pointIndex: number } | null>(null)
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
   const [showBearOffButton, setShowBearOffButton] = useState<{ pointIndex: number; die: number; steps?: any[] } | null>(null)
   const [coordinateSystem, setCoordinateSystem] = useState<'1-24' | 'A-D/1-24'>('1-24')
@@ -1365,13 +1367,13 @@ export default function BackgammonBoard({
     
     if (!canvasRef.current) return
     
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
     // В sandbox режиме обрабатываем перетаскивание из bearOff
     if (isSandbox) {
-      const canvas = canvasRef.current
-      const rect = canvas.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      
       const checkerColor = getBearOffAtPosition(x, y, canvas)
       if (checkerColor) {
         // Начинаем перетаскивание шашки из bearOff
@@ -1379,10 +1381,46 @@ export default function BackgammonBoard({
         setDragPosition({ x, y })
         return
       }
-      return
+      
+      // В sandbox режиме разрешаем обычные ходы, если есть кубики
+      const hasDice = dice && dice.length > 0
+      if (!hasDice) {
+        // Если нет кубиков, проверяем клик по шашке для долгого зажатия
+        const pointIndex = getPointAtPosition(x, y, canvas)
+        if (pointIndex !== null && pointIndex !== 24 && pointIndex !== 25 && pointIndex !== -1) {
+          const points = virtualGameState?.points || []
+          const pointValue = points[pointIndex] || 0
+          const isMyChecker = isPlayer1 ? pointValue > 0 : pointValue < 0
+          
+          if (isMyChecker) {
+            // Сохраняем начальную позицию для долгого зажатия
+            longPressStartRef.current = { x, y, pointIndex }
+            // Запускаем таймер долгого зажатия (5 секунд)
+            longPressTimerRef.current = window.setTimeout(() => {
+              if (longPressStartRef.current) {
+                // Активируем режим свободного перемещения
+                const { pointIndex: startPoint } = longPressStartRef.current
+                const { x: pointX, y: pointY } = getPointCoordinates(startPoint, canvas)
+                setDragging({ 
+                  pointIndex: startPoint, 
+                  offsetX: x - pointX, 
+                  offsetY: y - pointY,
+                  freeMove: true 
+                })
+                setDragPosition({ x, y })
+                longPressStartRef.current = null
+              }
+            }, 5000)
+          }
+        }
+        return
+      }
+      
+      // Если есть кубики, разрешаем обычные ходы
+      if (!canMove || !isMyTurn) return
+    } else {
+      if (!canMove || !isMyTurn) return
     }
-    
-    if (!canMove || !isMyTurn) return
     
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
