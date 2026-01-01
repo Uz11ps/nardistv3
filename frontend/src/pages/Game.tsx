@@ -599,7 +599,8 @@ export default function Game() {
       }
 
       // Если это начало нашего хода и кубиков нет - бросаем их автоматически
-      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice) {
+      // НО НЕ для sandbox игр - там пользователь сам управляет всем
+      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && gameInfo?.type !== 'sandbox') {
         setTimeout(() => {
           const socket = getSocket()
           if (socket) {
