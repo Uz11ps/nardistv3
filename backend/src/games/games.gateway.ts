@@ -612,10 +612,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           }
         }
         
-        // Делаем ход бота с задержкой 0-5 секунд
+        // Делаем ход бота с задержкой 10 секунд, чтобы игрок мог увидеть кубики и ход бота
         try {
-          // Случайная задержка от 0 до 5 секунд для более естественного поведения бота
-          const delay = Math.floor(Math.random() * 5000);
+          // Задержка 10 секунд после броска кубиков, чтобы игрок мог увидеть результат
+          const delay = 10000;
           this.logger.log(`🤖 Bot move delay: ${delay}ms for gameId=${gameId}`);
           await new Promise(resolve => setTimeout(resolve, delay));
           

@@ -377,12 +377,12 @@ export default function BackgammonBoard({
     let yPos: number
     
     if (currentPlayer === 0) {
-      // Player1 - внизу справа, но с отступом от края
-      xPos = Math.min(width * 0.85, width - diceWidth / 2 - 10)
+      // Player1 - внизу справа, но с отступом от края, сдвигаем левее на 10px
+      xPos = Math.min(width * 0.85, width - diceWidth / 2 - 10) - 10
       yPos = Math.min(height * 0.85, height - diceHeight / 2 - 10)
     } else {
-      // Player2 - вверху слева, но с отступом от края
-      xPos = Math.max(width * 0.15, diceWidth / 2 + 10)
+      // Player2 - вверху слева, но с отступом от края, сдвигаем левее на 10px
+      xPos = Math.max(width * 0.15, diceWidth / 2 + 10) - 10
       yPos = Math.max(height * 0.15, diceHeight / 2 + 10)
     }
 
@@ -1044,13 +1044,19 @@ export default function BackgammonBoard({
     if (!animatingChecker) return
 
     let animationFrame: number
-    const duration = 300 // мс
+    // Увеличиваем длительность анимации для более плавного движения (особенно для бота)
+    const duration = 600 // мс (было 300)
 
     const animate = (time: number) => {
       const elapsed = time - animatingChecker.startTime
-      const progress = Math.min(elapsed / duration, 1)
+      // Используем easing функцию для более плавной анимации
+      const linearProgress = Math.min(elapsed / duration, 1)
+      // Ease-in-out для плавного ускорения и замедления
+      const progress = linearProgress < 0.5 
+        ? 2 * linearProgress * linearProgress 
+        : 1 - Math.pow(-2 * linearProgress + 2, 3) / 2
 
-      if (progress < 1) {
+      if (linearProgress < 1) {
         setAnimatingChecker(prev => prev ? { ...prev, progress } : null)
         animationFrame = requestAnimationFrame(animate)
       } else {
