@@ -136,6 +136,7 @@ export default function Game() {
   const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
   const lastDiceRollRef = useRef<string>('') // Отслеживание последнего обработанного события dice_rolled
+  const processedEventsRef = useRef<Set<string>>(new Set()) // Set для отслеживания обработанных eventId
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
   const [player2Ready, setPlayer2Ready] = useState<boolean>(false)
@@ -623,9 +624,6 @@ export default function Game() {
     })
 
     // Обработчик dice_rolled - используем именованную функцию для возможности удаления
-    // Используем Set для хранения обработанных eventId
-    const processedEventsRef = useRef<Set<string>>(new Set());
-    
     const handleDiceRolled = (data: any) => {
       if (!data.dice) {
         console.log('⚠️ dice_rolled event without dice data, skipping');
