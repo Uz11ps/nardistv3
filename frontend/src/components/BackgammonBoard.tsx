@@ -1340,17 +1340,17 @@ export default function BackgammonBoard({
     const leftContainerX = 0
     const rightContainerX = width - bearOffWidth
     
+    const bearOff = virtualGameState?.bearOff || { white: 0, black: 0 }
+    
     // Белые шашки в bearOff (справа снизу для player1)
     const whiteX = isPlayer1 ? rightContainerX : leftContainerX
-    if (x >= whiteX && x <= whiteX + bearOffWidth && y >= height - 100 && y <= height) {
-      const bearOff = virtualGameState?.bearOff || { white: 0, black: 0 }
+    if (x >= whiteX && x <= whiteX + bearOffWidth && y >= height - 150 && y <= height) {
       if (bearOff.white > 0) return 'white'
     }
     
     // Черные шашки в bearOff (слева сверху для player1)
     const blackX = isPlayer1 ? leftContainerX : rightContainerX
-    if (x >= blackX && x <= blackX + bearOffWidth && y >= 0 && y <= 100) {
-      const bearOff = virtualGameState?.bearOff || { white: 0, black: 0 }
+    if (x >= blackX && x <= blackX + bearOffWidth && y >= 0 && y <= 150) {
       if (bearOff.black > 0) return 'black'
     }
     
