@@ -1389,27 +1389,31 @@ export default function Game() {
                   try {
                     const currentPoints = [...(gameState.points || Array(24).fill(0))]
                     const currentValue = currentPoints[pointIndex] || 0
+                    const currentBearOff = { ...(gameState.bearOff || { white: 0, black: 0 }) }
                     
-                    // Если клик с Shift - удаляем шашку
-                    if (window.event && (window.event as KeyboardEvent).shiftKey) {
-                      if (checkerColor === 'white' && currentValue > 0) {
-                        currentPoints[pointIndex] = currentValue - 1
-                      } else if (checkerColor === 'black' && currentValue < 0) {
-                        currentPoints[pointIndex] = currentValue + 1
-                      }
+                    // Проверяем, есть ли шашки в bearOff
+                    if (checkerColor === 'white' && currentBearOff.white <= 0) {
+                      alert('Нет белых шашек в лоте')
+                      return
+                    }
+                    if (checkerColor === 'black' && currentBearOff.black <= 0) {
+                      alert('Нет черных шашек в лоте')
+                      return
+                    }
+                    
+                    // Уменьшаем bearOff и добавляем шашку на точку
+                    if (checkerColor === 'white') {
+                      currentBearOff.white = currentBearOff.white - 1
+                      currentPoints[pointIndex] = currentValue + 1
                     } else {
-                      // Добавляем шашку
-                      if (checkerColor === 'white') {
-                        currentPoints[pointIndex] = currentValue + 1
-                      } else {
-                        currentPoints[pointIndex] = currentValue - 1
-                      }
+                      currentBearOff.black = currentBearOff.black - 1
+                      currentPoints[pointIndex] = currentValue - 1
                     }
                     
                     await apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
                       points: currentPoints,
                       bar: gameState.bar || { white: 0, black: 0 },
-                      bearOff: gameState.bearOff || { white: 0, black: 0 },
+                      bearOff: currentBearOff,
                     })
                     
                     // Обновляем состояние

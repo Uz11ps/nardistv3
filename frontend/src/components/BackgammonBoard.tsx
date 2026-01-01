@@ -1331,12 +1331,60 @@ export default function BackgammonBoard({
     setValidTargetPoints(new Set())
   }
 
+  // Проверка клика по bearOff области для sandbox
+  const getBearOffAtPosition = useCallback((x: number, y: number, canvas: HTMLCanvasElement): 'white' | 'black' | null => {
+    if (!isSandbox) return null
+    const width = canvas.width
+    const height = canvas.height
+    const bearOffWidth = width * 0.06
+    const leftContainerX = 0
+    const rightContainerX = width - bearOffWidth
+    
+    // Белые шашки в bearOff (справа снизу для player1)
+    const whiteX = isPlayer1 ? rightContainerX : leftContainerX
+    if (x >= whiteX && x <= whiteX + bearOffWidth && y >= height - 100 && y <= height) {
+      const bearOff = virtualGameState?.bearOff || { white: 0, black: 0 }
+      if (bearOff.white > 0) return 'white'
+    }
+    
+    // Черные шашки в bearOff (слева сверху для player1)
+    const blackX = isPlayer1 ? leftContainerX : rightContainerX
+    if (x >= blackX && x <= blackX + bearOffWidth && y >= 0 && y <= 100) {
+      const bearOff = virtualGameState?.bearOff || { white: 0, black: 0 }
+      if (bearOff.black > 0) return 'black'
+    }
+    
+    return null
+  }, [isSandbox, isPlayer1, virtualGameState])
+
   // Обработка начала перетаскивания
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // console.log('MouseDown', { canMove, isMyTurn, dragging })
     // Блокируем ходы во время анимации хода
     if (animatingChecker) return
-    if (!canMove || !isMyTurn || !canvasRef.current) return
+    
+    if (!canvasRef.current) return
+    
+    // В sandbox режиме обрабатываем перетаскивание из bearOff
+    if (isSandbox) {
+      const canvas = canvasRef.current
+      const rect = canvas.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      
+      const checkerColor = getBearOffAtPosition(x, y, canvas)
+      if (checkerColor) {
+        // Начинаем перетаскивание шашки из bearOff
+        setDragging({ pointIndex: -1, offsetX: x, offsetY: y })
+        setDragPosition({ x, y })
+        // Сохраняем цвет шашки в dataTransfer для drop
+        e.dataTransfer?.setData('text/plain', checkerColor)
+        return
+      }
+      return
+    }
+    
+    if (!canMove || !isMyTurn) return
     
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()

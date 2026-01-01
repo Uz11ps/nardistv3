@@ -1762,11 +1762,11 @@ export class GamesService {
       const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
 
       // Создаем пустое состояние доски для свободного стола
-      // Пользователь сам расставит все фишки
+      // Все шашки находятся в bearOff (лот), откуда их можно брать для расстановки
       const emptyState = {
         points: Array(24).fill(0), // Все точки пустые
         bar: [0, 0], // Бар пустой
-        borneOff: [0, 0], // Вынос пустой
+        borneOff: [15, 15], // Вынос заполнен: 15 белых и 15 черных шашек
         currentPlayer: 0,
         dice: [], // Кубики не брошены
         ...(gameMode === GameMode.LONG ? {
