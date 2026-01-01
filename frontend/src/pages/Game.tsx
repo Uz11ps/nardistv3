@@ -636,7 +636,7 @@ export default function Game() {
       console.log('🎲 dice_rolled received:', data, 'signature:', eventSignature.substring(0, 60));
       
       // СТРОГАЯ защита от дублирования: проверяем через ref
-      if (lastDiceRollProcessedRef.current === diceKey) {
+      if (lastDiceRollRef.current === diceKey) {
         console.log('⚠️ Duplicate dice_rolled event detected (same dice key), skipping');
         return;
       }
@@ -655,7 +655,7 @@ export default function Game() {
         }
         
         // Сохраняем ключ СРАЗУ перед запуском анимации
-        lastDiceRollProcessedRef.current = diceKey;
+        lastDiceRollRef.current = diceKey;
         
         if (data.dice) {
           setGameState((prev) => {
@@ -674,7 +674,7 @@ export default function Game() {
           delete (window as any).diceAnimationTimeout;
           // Очищаем ключ после завершения анимации (с небольшой задержкой для безопасности)
           setTimeout(() => {
-            lastDiceRollProcessedRef.current = '';
+            lastDiceRollRef.current = '';
           }, 100);
         }, 4000);
         
