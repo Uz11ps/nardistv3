@@ -623,35 +623,39 @@ export default function Game() {
     })
 
     // Обработчик dice_rolled - используем именованную функцию для возможности удаления
-    let lastProcessedDiceKey = ''; // Переменная замыкания для отслеживания последнего события
-    
     const handleDiceRolled = (data: any) => {
-      const diceKey = data.dice ? JSON.stringify(data.dice) : '';
-      const eventKey = diceKey + '_' + (data.playerId || 'null') + '_' + Date.now();
-      console.log('🎲 dice_rolled received:', data, 'eventKey:', eventKey.substring(0, 50));
+      if (!data.dice) {
+        console.log('⚠️ dice_rolled event without dice data, skipping');
+        return;
+      }
       
-      // Защита от дублирования: проверяем, не обрабатывали ли мы уже это событие
-      // Используем короткое окно (100мс) для определения дубликатов
-      if (lastProcessedDiceKey === diceKey && (window as any).diceAnimationTimeout) {
-        console.log('⚠️ Duplicate dice_rolled event detected (same dice, animation running), skipping');
+      const diceKey = JSON.stringify(data.dice);
+      const currentTime = Date.now();
+      const eventSignature = `${diceKey}_${currentTime}`;
+      
+      console.log('🎲 dice_rolled received:', data, 'signature:', eventSignature.substring(0, 60));
+      
+      // СТРОГАЯ защита от дублирования: проверяем через ref
+      if (lastDiceRollProcessedRef.current === diceKey) {
+        console.log('⚠️ Duplicate dice_rolled event detected (same dice key), skipping');
         return;
       }
       
       // Защита от дублирования: не запускаем анимацию, если она уже идет
       if ((window as any).diceAnimationTimeout) {
-        console.log('⚠️ Dice animation already running, skipping duplicate');
+        console.log('⚠️ Dice animation timeout already exists, skipping duplicate');
         return;
       }
       
-      // Сохраняем ключ последнего обработанного события
-      lastProcessedDiceKey = diceKey;
-      
-      // Дополнительная проверка через функциональное обновление состояния
+      // Проверяем состояние через функциональное обновление
       setDiceAnimating((prevAnimating) => {
         if (prevAnimating) {
           console.log('⚠️ Dice animation state is already true, skipping');
           return prevAnimating;
         }
+        
+        // Сохраняем ключ СРАЗУ перед запуском анимации
+        lastDiceRollProcessedRef.current = diceKey;
         
         if (data.dice) {
           setGameState((prev) => {
@@ -668,8 +672,10 @@ export default function Game() {
         (window as any).diceAnimationTimeout = setTimeout(() => {
           setDiceAnimating(false);
           delete (window as any).diceAnimationTimeout;
-          // Очищаем ключ после завершения анимации
-          lastProcessedDiceKey = '';
+          // Очищаем ключ после завершения анимации (с небольшой задержкой для безопасности)
+          setTimeout(() => {
+            lastDiceRollProcessedRef.current = '';
+          }, 100);
         }, 4000);
         
         return true; // Устанавливаем анимацию в true
