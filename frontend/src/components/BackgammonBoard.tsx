@@ -1551,6 +1551,13 @@ export default function BackgammonBoard({
   
   // Обработка отпускания мыши
   const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Отменяем таймер долгого зажатия при отпускании мыши
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    longPressStartRef.current = null
+    
     if (!dragging || !canvasRef.current) return
     
     const canvas = canvasRef.current
@@ -1558,16 +1565,57 @@ export default function BackgammonBoard({
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
     
-    // В sandbox режиме обрабатываем drop из bearOff
-    if (isSandbox && dragging.pointIndex === -1 && dragging.checkerColor && onSandboxCheckerDrop) {
-      const targetPoint = getPointAtPosition(x, y, canvas)
-      if (targetPoint !== null && targetPoint !== 24 && targetPoint !== 25 && targetPoint !== -1) {
-        onSandboxCheckerDrop(targetPoint, dragging.checkerColor)
+    // В sandbox режиме обрабатываем drop из bearOff или свободное перемещение
+    if (isSandbox) {
+      // Drop из bearOff
+      if (dragging.pointIndex === -1 && dragging.checkerColor && onSandboxCheckerDrop) {
+        const targetPoint = getPointAtPosition(x, y, canvas)
+        if (targetPoint !== null && targetPoint !== 24 && targetPoint !== 25 && targetPoint !== -1) {
+          onSandboxCheckerDrop(targetPoint, dragging.checkerColor)
+        }
+        setDragging(null)
+        setDragPosition(null)
+        setHoveredPoint(null)
+        return
       }
-      setDragging(null)
-      setDragPosition(null)
-      setHoveredPoint(null)
-      return
+      
+      // Свободное перемещение (долгое зажатие)
+      if (dragging.freeMove && dragging.pointIndex >= 0 && dragging.pointIndex < 24) {
+        const targetPoint = getPointAtPosition(x, y, canvas)
+        if (targetPoint !== null && targetPoint !== 24 && targetPoint !== 25 && targetPoint !== -1 && targetPoint < 24) {
+          const fromPoint = dragging.pointIndex
+          const points = virtualGameState?.points || []
+          const fromValue = points[fromPoint] || 0
+          
+          // Перемещаем шашку только если есть шашка на исходной точке
+          if (fromValue !== 0 && fromPoint !== targetPoint) {
+            const currentPoints = [...points]
+            if (fromValue > 0) {
+              currentPoints[fromPoint] = fromValue - 1
+              currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
+            } else if (fromValue < 0) {
+              currentPoints[fromPoint] = fromValue + 1
+              currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) - 1
+            }
+            
+            // Обновляем доску через API
+            if (gameId) {
+              apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+                points: currentPoints,
+                bar: gameState?.bar || { white: 0, black: 0 },
+                bearOff: gameState?.bearOff || { white: 0, black: 0 },
+              }).then(() => {
+                // Перезагружаем состояние игры через событие
+                window.dispatchEvent(new CustomEvent('sandbox-board-updated'))
+              }).catch(console.error)
+            }
+          }
+        }
+        setDragging(null)
+        setDragPosition(null)
+        setHoveredPoint(null)
+        return
+      }
     }
     
     // Сохраняем исходную точку перетаскивания
