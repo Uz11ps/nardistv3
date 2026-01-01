@@ -612,10 +612,12 @@ export default function Game() {
       if ((window as any).diceAnimationTimeout) {
         clearTimeout((window as any).diceAnimationTimeout);
       }
+      // Увеличиваем время анимации до 4 секунд, чтобы пользователь мог посмотреть результат
+      // После этого кубики остаются закрепленными на доске
       (window as any).diceAnimationTimeout = setTimeout(() => {
         setDiceAnimating(false)
         delete (window as any).diceAnimationTimeout;
-      }, 3000)
+      }, 4000)
     })
 
     socket.on('offset_updated', (data: any) => {

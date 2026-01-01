@@ -353,7 +353,7 @@ export default function BackgammonBoard({
   }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, pendingMoves, gameState, gameMode, isPlayer1]) // pendingMoves нужен для использования в fetchPossibleMoves
   
   // Определение позиции для кубиков
-  // Мои кубики на моей части доски, его кубики на его части
+  // Кубики показываются на стороне игрока, у которого сейчас ход
   useEffect(() => {
     if (!containerRef.current) return
     
@@ -362,22 +362,29 @@ export default function BackgammonBoard({
     const width = rect.width
     const height = rect.height
     
-    // Для player1 (белые): кубики внизу справа
-    // Для player2 (черные): кубики вверху слева
-    // Показываем кубики текущего игрока на его части доски
+    // Player1 (белые, currentPlayer === 0): кубики внизу справа
+    // Player2 (черные, currentPlayer === 1): кубики вверху слева
+    // Показываем кубики на стороне игрока, у которого сейчас ход
     
-    const currentPlayerIsMe = (currentPlayer === 0 && isPlayer1) || (currentPlayer === 1 && !isPlayer1)
+    let xPos: number
+    let yPos: number
     
-    // Новая логика: Мои кубики всегда справа, кубики соперника всегда слева
-    const xPos = currentPlayerIsMe ? width * 0.85 : width * 0.15;
-    const yPos = currentPlayerIsMe ? height * 0.85 : height * 0.15;
+    if (currentPlayer === 0) {
+      // Player1 - внизу справа
+      xPos = width * 0.85
+      yPos = height * 0.85
+    } else {
+      // Player2 - вверху слева
+      xPos = width * 0.15
+      yPos = height * 0.15
+    }
 
     setDice3DPosition({
       x: xPos,
       y: yPos,
       size: Math.min(width, height) * 0.08,
     })
-  }, [isPlayer1, currentPlayer, isMyTurn, canMove])
+  }, [currentPlayer])
   
   // Вспомогательная функция для получения координат точки
   const getPointCoordinates = useCallback((pointIndex: number, canvas: HTMLCanvasElement) => {
@@ -1689,29 +1696,33 @@ export default function BackgammonBoard({
         })()
       )}
       
-      {/* Кубики - скрываем если все использованы (после подтверждения хода) */}
-      {diceArray && diceArray.length > 0 && dice3DPosition && (diceAnimating || usedDiceIndices.size < diceArray.length) && (
+      {/* Кубики - показываем на стороне игрока, у которого ход, закрепляем после анимации */}
+      {diceArray && diceArray.length > 0 && dice3DPosition && usedDiceIndices.size < diceArray.length && (
         <div
           style={{
             position: 'absolute',
-            // Если идет анимация гифки, центрируем её по всей доске
-            // Если не идет, показываем 3D кубики в углу
+            // Если идет анимация гифки, показываем её на стороне игрока с ходом (внизу для player1, вверху для player2)
+            // После анимации показываем 3D кубики на той же стороне (закрепленные)
             left: diceAnimating 
-              ? '50%' 
+              ? '50%'
               : `${dice3DPosition.x - dice3DPosition.size * 3.75}px`,
             top: diceAnimating 
-              ? '50%' 
+              ? currentPlayer === 0
+                ? '75%'  // Player1 - внизу доски
+                : '25%'  // Player2 - вверху доски
               : `${dice3DPosition.y - dice3DPosition.size * 2.25}px`,
             width: `${dice3DPosition.size * 7.5}px`,
             height: `${dice3DPosition.size * 4.5}px`,
-            transform: diceAnimating ? 'translate(-50%, -50%)' : 'none',
+            transform: diceAnimating 
+              ? 'translate(-50%, -50%)'
+              : 'none',
             pointerEvents: 'none',
             display: 'flex',
             gap: '8px',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
-            transition: 'all 0.3s ease-out',
+            transition: diceAnimating ? 'none' : 'all 0.5s ease-out',
           }}
         >
           {/* Показываем гифку, если она доступна для данного состояния кубиков */}
