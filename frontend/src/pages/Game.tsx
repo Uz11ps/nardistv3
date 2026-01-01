@@ -458,6 +458,10 @@ export default function Game() {
         ? null
         : diceData
       
+      // Проверяем, изменились ли кубики (для запуска анимации)
+      const prevDice = gameState?.dice
+      const diceChanged = JSON.stringify(prevDice) !== JSON.stringify(formattedDice) && formattedDice !== null
+      
       const isSandbox = data.type === 'sandbox'
       const canMove = isSandbox ? true : data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
       const isMyTurnNow = canMove
@@ -492,6 +496,18 @@ export default function Game() {
       const newStatus = data.status || 'waiting'
       setGameStatus(newStatus)
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+      
+      // Запускаем анимацию кубиков, если они изменились
+      if (diceChanged && formattedDice) {
+        setDiceAnimating(true)
+        if ((window as any).diceAnimationTimeout) {
+          clearTimeout((window as any).diceAnimationTimeout);
+        }
+        (window as any).diceAnimationTimeout = setTimeout(() => {
+          setDiceAnimating(false)
+          delete (window as any).diceAnimationTimeout;
+        }, 4000)
+      }
       
       // Обновляем таймеры из данных сервера, если они есть
       if (data.player1Timer !== undefined) {
@@ -532,6 +548,11 @@ export default function Game() {
           ? { die1: diceData[0], die2: diceData[1] }
           : diceData // Для дублей (4 элемента) или других случаев сохраняем массив
         : null
+      
+      // Проверяем, изменились ли кубики (для запуска анимации)
+      const prevDice = gameState?.dice
+      const diceChanged = JSON.stringify(prevDice) !== JSON.stringify(formattedDice) && formattedDice !== null
+      
       const isMyTurnNow = canMove
       const wasMyTurn = gameState?.canMove || false
       
@@ -572,6 +593,18 @@ export default function Game() {
       })
       setGameStatus(data.status || 'in_progress')
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+      
+      // Запускаем анимацию кубиков, если они изменились (важно для игры с ботом)
+      if (diceChanged && formattedDice) {
+        setDiceAnimating(true)
+        if ((window as any).diceAnimationTimeout) {
+          clearTimeout((window as any).diceAnimationTimeout);
+        }
+        (window as any).diceAnimationTimeout = setTimeout(() => {
+          setDiceAnimating(false)
+          delete (window as any).diceAnimationTimeout;
+        }, 4000)
+      }
       
       // Сбрасываем таймер при смене хода
       if (!isMyTurnNow && wasMyTurn) {
