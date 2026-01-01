@@ -12,11 +12,17 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
   const prevAnimatingRef = React.useRef(false);
   const isAnimatingRef = React.useRef(false);
   const lastDiceRef = React.useRef<string>('');
+  const gifStartedRef = React.useRef(false);
 
   // Перезапускаем гифку только при переходе из неактивного состояния в активное
   // И только если кубики действительно изменились
   React.useEffect(() => {
     const diceKey = dice ? dice.join(',') : '';
+    
+    // СТРОГАЯ защита: если GIF уже запущен с теми же кубиками и анимация активна, не перезапускаем
+    if (gifStartedRef.current && lastDiceRef.current === diceKey && animating) {
+      return;
+    }
     
     // Если анимация уже идет с теми же кубиками, не перезапускаем
     if (isAnimatingRef.current && lastDiceRef.current === diceKey) {
@@ -26,13 +32,17 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
     if (animating && !prevAnimatingRef.current) {
       // Только при переходе с false на true - перезапускаем GIF
       isAnimatingRef.current = true;
+      gifStartedRef.current = true;
       lastDiceRef.current = diceKey;
       setGifKey(Date.now());
     }
     
     if (!animating) {
-      // Когда анимация завершается, сбрасываем флаг
+      // Когда анимация завершается, сбрасываем флаги с задержкой
       isAnimatingRef.current = false;
+      setTimeout(() => {
+        gifStartedRef.current = false;
+      }, 200);
     }
     
     prevAnimatingRef.current = animating;
