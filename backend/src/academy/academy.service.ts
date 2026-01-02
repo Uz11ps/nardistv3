@@ -526,7 +526,8 @@ export class AcademyService {
     const passed = correct === total; // Прошел если все ответы правильные
 
     // Если тест пройден и еще не был пройден ранее, выдаем награду
-    if (passed && !userMaterial.quizPassed) {
+    const wasAlreadyPassed = userMaterial.quizPassed || false;
+    if (passed && !wasAlreadyPassed) {
       userMaterial.quizPassed = true;
       userMaterial.quizPassedAt = new Date();
 
@@ -557,7 +558,7 @@ export class AcademyService {
       correct,
       total,
       passed,
-      reward: passed && !userMaterial.quizPassed ? course.rewards || { narCoin: course.rewardNarCoin, xp: course.rewardXP } : undefined,
+      reward: passed && !wasAlreadyPassed ? course.rewards || { narCoin: course.rewardNarCoin, xp: course.rewardXP } : undefined,
     };
   }
 }
