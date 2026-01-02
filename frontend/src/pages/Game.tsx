@@ -459,9 +459,11 @@ export default function Game() {
 
   const createBotGame = async (gameMode: 'short' | 'long' = 'long') => {
     try {
+      console.log('🤖 Создание игры с ботом, сбрасываем флаги смещения')
       const response = await apiClient.post('/games/create-bot', { mode: gameMode })
       // Сбрасываем флаг подтверждения смещения для новой игры
       setOffsetConfirmed(false)
+      setShowOffsetModal(false)
       navigate(`/game/${response.data.id}`)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Неизвестная ошибка'
