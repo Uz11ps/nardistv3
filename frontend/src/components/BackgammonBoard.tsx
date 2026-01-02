@@ -1373,92 +1373,58 @@ export default function BackgammonBoard({
     
     const canvas = canvasRef.current
     
-    // Сохраняем исходную точку перетаскивания
-    const fromPoint = dragging.pointIndex
+    const targetPoint = getPointAtPosition(x, y, canvas)
     
-    // У TouchEnd нет координат в e.touches, используем последнюю позицию dragPosition
-    if (dragPosition) {
-      const x = dragPosition.x
-      const y = dragPosition.y
-      
-      // В sandbox режиме обрабатываем drop из bearOff или свободное перемещение
-      if (isSandbox) {
-        // Drop из bearOff
-        if (dragging.pointIndex === -1 && dragging.checkerColor && onSandboxCheckerDrop) {
-          const targetPoint = getPointAtPosition(x, y, canvas)
-          if (targetPoint !== null && targetPoint !== 24 && targetPoint !== 25 && targetPoint !== -1) {
-            onSandboxCheckerDrop(targetPoint, dragging.checkerColor)
+    // В sandbox режиме обрабатываем drop в мусорку или другие специальные действия
+    if (isSandbox) {
+      // 1. Drop в мусорку (из любой точки)
+      if (targetPoint === -3) {
+        const points = virtualGameState?.points || []
+        const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
+        const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
+        const currentPoints = [...points]
+        let hasChecker = false
+
+        if (fromPoint === 24) {
+          if (currentBar.white > 0) {
+            currentBar.white--
+            hasChecker = true
           }
-          setDragging(null)
-          setDragPosition(null)
-          setHoveredPoint(null)
-          return
+        } else if (fromPoint === 25) {
+          if (currentBar.black > 0) {
+            currentBar.black--
+            hasChecker = true
+          }
+        } else if (fromPoint >= 0 && fromPoint < 24) {
+          const val = currentPoints[fromPoint]
+          if (val !== 0) {
+            currentPoints[fromPoint] = val > 0 ? val - 1 : val + 1
+            hasChecker = true
+          }
+        } else if (fromPoint === -1 && dragging.checkerColor) {
+          // Удаление из bearOff
+          if (dragging.checkerColor === 'white') {
+            if (currentBearOff.white > 0) {
+              currentBearOff.white--
+              hasChecker = true
+            }
+          } else {
+            if (currentBearOff.black > 0) {
+              currentBearOff.black--
+              hasChecker = true
+            }
+          }
         }
-        
-        // Свободное перемещение (долгое зажатие)
-        if (dragging.freeMove && dragging.pointIndex !== -1) {
-          const targetPoint = getPointAtPosition(x, y, canvas)
-          if (targetPoint !== null && fromPoint !== targetPoint) {
-            const points = virtualGameState?.points || []
-            const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
-            const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
-            const currentPoints = [...points]
-            
-            let isWhite = false
-            let hasChecker = false
-            
-            // 1. Убираем шашку из исходной точки
-            if (fromPoint === 24) {
-              if (currentBar.white > 0) {
-                currentBar.white--
-                isWhite = true
-                hasChecker = true
-              }
-            } else if (fromPoint === 25) {
-              if (currentBar.black > 0) {
-                currentBar.black--
-                isWhite = false
-                hasChecker = true
-              }
-            } else if (fromPoint >= 0 && fromPoint < 24) {
-              const val = currentPoints[fromPoint]
-              if (val !== 0) {
-                isWhite = val > 0
-                currentPoints[fromPoint] = isWhite ? val - 1 : val + 1
-                hasChecker = true
-              }
-            }
-            
-                  if (hasChecker) {
-                    // 2. Добавляем в целевую точку (или удаляем)
-                    if (targetPoint === -1) {
-                      if (isWhite) currentBearOff.white++
-                      else currentBearOff.black++
-                    } else if (targetPoint === -3) {
-                      // МУСОРКА: Просто удаляем шашку
-                      console.log('🗑️ Шашка удалена в мусорку (touch)')
-                    } else if (targetPoint === 24) {
-                currentBar.white++
-              } else if (targetPoint === 25) {
-                currentBar.black++
-              } else if (targetPoint >= 0 && targetPoint < 24) {
-                if (isWhite) {
-                  currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
-                } else {
-                  currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) - 1
-                }
-              }
-              
-              if (gameId) {
-                apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
-                  points: currentPoints,
-                  bar: currentBar,
-                  bearOff: currentBearOff,
-                }).then(() => {
-                  window.dispatchEvent(new CustomEvent('sandbox-board-updated'))
-                }).catch(console.error)
-              }
-            }
+
+        if (hasChecker) {
+          if (gameId) {
+            apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+              points: currentPoints,
+              bar: currentBar,
+              bearOff: currentBearOff,
+            }).then(() => {
+              window.dispatchEvent(new CustomEvent('sandbox-board-updated'))
+            }).catch(console.error)
           }
           setDragging(null)
           setDragPosition(null)
@@ -1467,9 +1433,88 @@ export default function BackgammonBoard({
         }
       }
 
-      const targetPoint = getPointAtPosition(x, y, canvas)
+      // 2. Drop из bearOff
+      if (fromPoint === -1 && dragging.checkerColor && onSandboxCheckerDrop) {
+        if (targetPoint !== null && targetPoint !== 24 && targetPoint !== 25 && targetPoint !== -1) {
+          onSandboxCheckerDrop(targetPoint, dragging.checkerColor)
+        }
+        setDragging(null)
+        setDragPosition(null)
+        setHoveredPoint(null)
+        return
+      }
       
-      // Критически важно: проверяем, что целевая точка не является исходной точкой перетаскивания
+      // 3. Свободное перемещение (долгое зажатие)
+      if (dragging.freeMove && fromPoint !== -1) {
+        if (targetPoint !== null && fromPoint !== targetPoint) {
+          const points = virtualGameState?.points || []
+          const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
+          const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
+          const currentPoints = [...points]
+          
+          let isWhite = false
+          let hasChecker = false
+          
+          // 1. Убираем шашку из исходной точки
+          if (fromPoint === 24) {
+            if (currentBar.white > 0) {
+              currentBar.white--
+              isWhite = true
+              hasChecker = true
+            }
+          } else if (fromPoint === 25) {
+            if (currentBar.black > 0) {
+              currentBar.black--
+              isWhite = false
+              hasChecker = true
+            }
+          } else if (fromPoint >= 0 && fromPoint < 24) {
+            const val = currentPoints[fromPoint]
+            if (val !== 0) {
+              isWhite = val > 0
+              currentPoints[fromPoint] = isWhite ? val - 1 : val + 1
+              hasChecker = true
+            }
+          }
+          
+          if (hasChecker) {
+            // 2. Добавляем в целевую точку (или удаляем)
+            if (targetPoint === -1) {
+              if (isWhite) currentBearOff.white++
+              else currentBearOff.black++
+            } else if (targetPoint === 24) {
+              currentBar.white++
+            } else if (targetPoint === 25) {
+              currentBar.black++
+            } else if (targetPoint >= 0 && targetPoint < 24) {
+              if (isWhite) {
+                currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
+              } else {
+                currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) - 1
+              }
+            }
+            
+            if (gameId) {
+              apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+                points: currentPoints,
+                bar: currentBar,
+                bearOff: currentBearOff,
+              }).then(() => {
+                window.dispatchEvent(new CustomEvent('sandbox-board-updated'))
+              }).catch(console.error)
+            }
+          }
+        }
+        setDragging(null)
+        setDragPosition(null)
+        setHoveredPoint(null)
+        return
+      }
+    }
+
+    const targetPoint = getPointAtPosition(x, y, canvas)
+    
+    // Критически важно: проверяем, что целевая точка не является исходной точкой перетаскивания
       // и что ход действительно существует для ИСХОДНОЙ точки (fromPoint)
       if (targetPoint !== null && targetPoint !== fromPoint) {
         if (targetPoint === -1) {
@@ -1759,14 +1804,68 @@ export default function BackgammonBoard({
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
-    // Сохраняем исходную точку перетаскивания
-    const fromPoint = dragging.pointIndex
+    const targetPoint = getPointAtPosition(x, y, canvas)
     
-    // В sandbox режиме обрабатываем drop из bearOff или свободное перемещение
+    // В sandbox режиме обрабатываем drop в мусорку или другие специальные действия
     if (isSandbox) {
-      // Drop из bearOff
-      if (dragging.pointIndex === -1 && dragging.checkerColor && onSandboxCheckerDrop) {
-        const targetPoint = getPointAtPosition(x, y, canvas)
+      // 1. Drop в мусорку (из любой точки)
+      if (targetPoint === -3) {
+        const points = virtualGameState?.points || []
+        const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
+        const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
+        const currentPoints = [...points]
+        let hasChecker = false
+
+        if (fromPoint === 24) {
+          if (currentBar.white > 0) {
+            currentBar.white--
+            hasChecker = true
+          }
+        } else if (fromPoint === 25) {
+          if (currentBar.black > 0) {
+            currentBar.black--
+            hasChecker = true
+          }
+        } else if (fromPoint >= 0 && fromPoint < 24) {
+          const val = currentPoints[fromPoint]
+          if (val !== 0) {
+            currentPoints[fromPoint] = val > 0 ? val - 1 : val + 1
+            hasChecker = true
+          }
+        } else if (fromPoint === -1 && dragging.checkerColor) {
+          // Удаление из bearOff
+          if (dragging.checkerColor === 'white') {
+            if (currentBearOff.white > 0) {
+              currentBearOff.white--
+              hasChecker = true
+            }
+          } else {
+            if (currentBearOff.black > 0) {
+              currentBearOff.black--
+              hasChecker = true
+            }
+          }
+        }
+
+        if (hasChecker) {
+          if (gameId) {
+            apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+              points: currentPoints,
+              bar: currentBar,
+              bearOff: currentBearOff,
+            }).then(() => {
+              window.dispatchEvent(new CustomEvent('sandbox-board-updated'))
+            }).catch(console.error)
+          }
+          setDragging(null)
+          setDragPosition(null)
+          setHoveredPoint(null)
+          return
+        }
+      }
+
+      // 2. Drop из bearOff в обычную точку
+      if (fromPoint === -1 && dragging.checkerColor && onSandboxCheckerDrop) {
         if (targetPoint !== null && targetPoint !== 24 && targetPoint !== 25 && targetPoint !== -1) {
           onSandboxCheckerDrop(targetPoint, dragging.checkerColor)
         }
@@ -1776,9 +1875,8 @@ export default function BackgammonBoard({
         return
       }
       
-      // Свободное перемещение (долгое зажатие)
-      if (dragging.freeMove && dragging.pointIndex !== -1) {
-        const targetPoint = getPointAtPosition(x, y, canvas)
+      // 3. Свободное перемещение (долгое зажатие)
+      if (dragging.freeMove && fromPoint !== -1) {
         if (targetPoint !== null && fromPoint !== targetPoint) {
           const points = virtualGameState?.points || []
           const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
@@ -1810,23 +1908,16 @@ export default function BackgammonBoard({
             }
           }
           
-            if (hasChecker) {
-              // 2. Добавляем в целевую точку (или удаляем)
-              if (targetPoint === -1) {
-                // Перемещение в bearOff (удаление с доски)
-                if (isWhite) currentBearOff.white++
-                else currentBearOff.black++
-              } else if (targetPoint === -3) {
-                // МУСОРКА: Просто удаляем шашку, ничего не добавляем в bearOff
-                console.log('🗑️ Шашка удалена в мусорку')
-              } else if (targetPoint === 24) {
-              // Перемещение на белый бар
+          if (hasChecker) {
+            // 2. Добавляем в целевую точку (или удаляем)
+            if (targetPoint === -1) {
+              if (isWhite) currentBearOff.white++
+              else currentBearOff.black++
+            } else if (targetPoint === 24) {
               currentBar.white++
             } else if (targetPoint === 25) {
-              // Перемещение на черный бар
               currentBar.black++
             } else if (targetPoint >= 0 && targetPoint < 24) {
-              // Перемещение на другую точку
               if (isWhite) {
                 currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
               } else {
@@ -1834,14 +1925,12 @@ export default function BackgammonBoard({
               }
             }
             
-            // Обновляем доску через API
             if (gameId) {
               apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
                 points: currentPoints,
                 bar: currentBar,
                 bearOff: currentBearOff,
               }).then(() => {
-                // Перезагружаем состояние игры через событие
                 window.dispatchEvent(new CustomEvent('sandbox-board-updated'))
               }).catch(console.error)
             }
@@ -1853,8 +1942,6 @@ export default function BackgammonBoard({
         return
       }
     }
-    
-    const targetPoint = getPointAtPosition(x, y, canvas)
     
     // Критически важно: проверяем, что целевая точка не является исходной точкой перетаскивания
     // и что ход действительно существует для ИСХОДНОЙ точки (fromPoint)
