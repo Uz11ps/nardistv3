@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import BottomNav from './BottomNav'
 import './PageLayout.css'
 
 interface PageLayoutProps {
@@ -9,9 +10,18 @@ interface PageLayoutProps {
   showBack?: boolean
   tabs?: Array<{ id: string; label: string; active?: boolean; onClick?: () => void }>
   rightAction?: ReactNode
+  showBottomNav?: boolean
 }
 
-export default function PageLayout({ title, subtitle, children, showBack = true, tabs, rightAction }: PageLayoutProps) {
+export default function PageLayout({ 
+  title, 
+  subtitle, 
+  children, 
+  showBack = true, 
+  tabs, 
+  rightAction,
+  showBottomNav = true 
+}: PageLayoutProps) {
   const navigate = useNavigate()
 
   return (
@@ -54,6 +64,7 @@ export default function PageLayout({ title, subtitle, children, showBack = true,
         {/* Content */}
         <div className="page-layout-body">{children}</div>
       </div>
+      {showBottomNav && <BottomNav />}
     </div>
   )
 }

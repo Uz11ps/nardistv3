@@ -554,3 +554,175 @@
     padding: 14px;
   }
 }
+
+/* Новый дизайн V3 */
+.home-container-v3 {
+  min-height: 100vh;
+  background: #1a1a1a;
+  color: #FFF;
+  padding-bottom: 80px; /* Для BottomNav */
+}
+
+.home-header-v3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 60px 20px 20px;
+}
+
+.home-header-main-v3 {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.home-avatar-v3 {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  background: #222;
+  flex-shrink: 0;
+}
+
+.home-avatar-v3 img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-user-info-v3 {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-username-v3 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.home-currencies-v3 {
+  display: flex;
+  gap: 12px;
+}
+
+.home-currency-item-v3 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.home-level-v3 {
+  margin-top: 4px;
+  width: 140px;
+}
+
+.home-level-info-v3 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.home-level-progress-bar-v3 {
+  width: 100%;
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.home-level-progress-fill-v3 {
+  height: 100%;
+  background: #E84142;
+  border-radius: 3px;
+}
+
+.home-federations-btn-v3 {
+  background: #2a2a2a;
+  border: none;
+  border-radius: 12px;
+  color: #FFF;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.home-stats-grid-v3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 0 20px;
+  margin-top: 20px;
+}
+
+.home-stat-card-v3 {
+  background: #222;
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.home-stat-card-v3:nth-child(n+4) {
+  grid-column: span 1;
+}
+
+/* Для 4-го и 5-го элемента сделаем сетку 2 колонки ниже */
+.home-stats-grid-v3 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.home-stat-card-v3:nth-child(1),
+.home-stat-card-v3:nth-child(2),
+.home-stat-card-v3:nth-child(3) {
+  grid-column: span 2;
+}
+
+.home-stat-card-v3:nth-child(4),
+.home-stat-card-v3:nth-child(5) {
+  grid-column: span 3;
+}
+
+.home-stat-label-v3 {
+  font-size: 12px;
+  color: #888;
+}
+
+.home-stat-value-v3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.home-central-logo-container-v3 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 40px;
+}
+
+.home-central-logo-circle-v3 {
+  width: 280px;
+  height: 280px;
+  background: #222;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  box-shadow: 0 0 50px rgba(0,0,0,0.5);
+}
+
+.home-central-logo-v3 {
+  width: 200px;
+  height: auto;
+}

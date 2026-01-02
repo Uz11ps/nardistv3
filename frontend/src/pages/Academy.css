@@ -282,3 +282,71 @@
   margin-bottom: 32px;
 }
 
+/* Sandbox Mode Styles */
+.academy-sandbox {
+  padding: 0 4px;
+}
+
+.sandbox-promo-card {
+  background: linear-gradient(180deg, #1C1D21 0%, #0B0C0E 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.academy-card-title {
+  color: #FFF;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.academy-card-description {
+  color: #B6B6B6;
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.sandbox-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sandbox-mode-option h4 {
+  color: #FFF;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.academy-card-button {
+  width: 100%;
+  height: 54px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.academy-card-button-primary {
+  background: linear-gradient(180deg, #A32E2E 0%, #681C1C 100%);
+  color: #FFF;
+  box-shadow: 0 4px 15px rgba(163, 46, 46, 0.2);
+}
+
+.academy-card-button-primary:active {
+  transform: scale(0.98);
+}
+
+.academy-card-button-primary:hover {
+  filter: brightness(1.1);
+}
+

@@ -1,15 +1,16 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import Icon from './Icon'
+import './BottomNav.css'
 
 export default function BottomNav() {
   const navigate = useNavigate()
   const location = useLocation()
 
   const navItems = [
-    { path: '/', icon: 'dice', label: 'Играть' },
+    { path: '/', icon: 'home', label: 'Главная' },
+    { path: '/academy', icon: 'book', label: 'Академия' },
+    { path: '/shop', icon: 'shop', label: 'Магазин' },
     { path: '/city', icon: 'city', label: 'Город' },
-    { path: '/tournaments', icon: 'trophy', label: 'Турниры' },
-    { path: '/profile', icon: 'user', label: 'Профиль' },
   ]
 
   return (

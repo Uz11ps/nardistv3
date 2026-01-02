@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { apiClient } from '../api/client'
+import BottomNav from '../components/BottomNav'
 import './Home.css'
 
 interface Stats {
@@ -168,108 +169,96 @@ export default function Home() {
   ]
 
   return (
-    <div className="app-container page-transition">
+    <div className="home-container-v3">
       {/* Хедер с профилем */}
-      <div className="home-header-v2">
-        <div className="home-header-left-v2">
-          <div className="home-avatar-v2" onClick={() => navigate('/profile')}>
+      <div className="home-header-v3">
+        <div className="home-header-main-v3">
+          <div className="home-avatar-v3" onClick={() => navigate('/profile')}>
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt={user.username} />
             ) : (
-              <div className="home-avatar-placeholder-v2">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <div className="home-avatar-placeholder-v3">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#B6B6B6"/>
                   <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="#B6B6B6"/>
                 </svg>
               </div>
             )}
-            {hasNotifications && <div className="home-avatar-notification-v2" />}
+            {hasNotifications && <div className="home-avatar-notification-v3" />}
           </div>
-          <div className="home-user-info-v2">
-            <div className="home-username-v2">{user?.nickname || user?.username || 'Игрок'}</div>
-            <div className="home-currencies-v2">
-              <div className="home-currency-item-v2">
-                <span className="home-currency-icon-v2">💰</span>
+          <div className="home-user-info-v3">
+            <div className="home-username-v3">{user?.nickname || user?.username || 'Игрок'}</div>
+            <div className="home-currencies-v3">
+              <div className="home-currency-item-v3">
+                <span className="home-currency-icon-v3">💰</span>
                 <span>{stats.narCoin.toLocaleString()}</span>
               </div>
-              <div className="home-currency-item-v2">
-                <span className="home-currency-icon-v2" style={{ color: '#4caf50' }}>💎</span>
+              <div className="home-currency-item-v3">
+                <span className="home-currency-icon-v3" style={{ color: '#4caf50' }}>💎</span>
                 <span style={{ color: '#4caf50' }}>{(stats.narCoin / 10).toLocaleString()}</span>
               </div>
             </div>
-            <div className="home-level-v2">
-              <span>Lvl {stats.level}</span>
-              {levelProgress && (
-                <div className="home-level-progress-v2">
-                  <div className="home-level-progress-bar-v2">
-                    <div 
-                      className="home-level-progress-fill-v2" 
-                      style={{ width: `${levelProgress.progress * 100}%` }}
-                    />
-                  </div>
-                  <span className="home-level-progress-text-v2">
-                    {levelProgress.currentXP - levelProgress.xpForCurrentLevel}/{levelProgress.xpNeededForNextLevel}
-                  </span>
-                </div>
-              )}
+            <div className="home-level-v3">
+              <div className="home-level-info-v3">
+                <span>Lvl {stats.level}</span>
+                <span className="home-level-progress-text-v3">
+                  {levelProgress ? `${levelProgress.currentXP - levelProgress.xpForCurrentLevel}/${levelProgress.xpNeededForNextLevel}` : '50/100'}
+                </span>
+              </div>
+              <div className="home-level-progress-bar-v3">
+                <div 
+                  className="home-level-progress-fill-v3" 
+                  style={{ width: `${levelProgress?.progress ? levelProgress.progress * 100 : 50}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
         <button 
-          className="home-federations-btn-v2"
+          className="home-federations-btn-v3"
           onClick={() => navigate('/clans')}
-          disabled={(user?.level || 0) < 10}
         >
           Федерации
         </button>
       </div>
 
-      <div className="home-content-v2">
+      <div className="home-content-v3">
         {/* Статистика */}
-        <div className="home-stats-grid-v2">
-          <div className="home-stat-card-v2">
-            <div className="home-stat-label-v2">Экономика</div>
-            <div className="home-stat-value-v2">{stats.economy}</div>
+        <div className="home-stats-grid-v3">
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Экономика</div>
+            <div className="home-stat-value-v3">{stats.economy}</div>
           </div>
-          <div className="home-stat-card-v2">
-            <div className="home-stat-label-v2">Сила</div>
-            <div className="home-stat-value-v2">{stats.power}</div>
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Сила</div>
+            <div className="home-stat-value-v3">{stats.power}</div>
           </div>
-          <div className="home-stat-card-v2">
-            <div className="home-stat-label-v2">Доход в час</div>
-            <div className="home-stat-value-v2">
-              <span className="home-stat-icon-v2">💰</span>
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Доход в час</div>
+            <div className="home-stat-value-v3">
+              <span className="home-stat-icon-v3">💰</span>
               +{stats.incomePerHour.toLocaleString()}K
             </div>
           </div>
-          <div className="home-stat-card-v2">
-            <div className="home-stat-label-v2">Жизнь</div>
-            <div className="home-stat-value-v2">{stats.lives}/{stats.maxLives}</div>
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Жизнь</div>
+            <div className="home-stat-value-v3">{stats.lives}/{stats.maxLives}</div>
           </div>
-          <div className="home-stat-card-v2">
-            <div className="home-stat-label-v2">Энергия</div>
-            <div className="home-stat-value-v2">{stats.energy}/{stats.maxEnergy}</div>
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Энергия</div>
+            <div className="home-stat-value-v3">{stats.energy}/{stats.maxEnergy}</div>
           </div>
         </div>
 
-        {/* Главное меню */}
-        <div className="home-main-menu-v2">
-          {mainMenuItems.map((item) => {
-            const isDisabled = item.disabled
-            return (
-              <button
-                key={item.path}
-                onClick={() => !isDisabled && navigate(item.path)}
-                className="home-main-menu-item-v2"
-                disabled={isDisabled}
-              >
-                <img src={item.icon} alt={item.title} className="home-main-menu-icon-v2" />
-                <span className="home-main-menu-title-v2">{item.title}</span>
-              </button>
-            )
-          })}
+        {/* Центральное лого */}
+        <div className="home-central-logo-container-v3">
+          <div className="home-central-logo-circle-v3">
+            <img src="/img/logo.png" alt="Nardis" className="home-central-logo-v3" />
+          </div>
         </div>
       </div>
+
+      <BottomNav />
     </div>
   )
 }
