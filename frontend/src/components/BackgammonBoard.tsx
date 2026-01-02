@@ -584,10 +584,11 @@ export default function BackgammonBoard({
 
     // Проверка мусорки в sandbox режиме
     if (isSandbox) {
-      const trashSize = 60
-      const trashX = 20
-      const trashY = height - trashSize - 20
-      if (actualX >= trashX && actualX <= trashX + trashSize && actualY >= trashY && actualY <= trashY + trashSize) {
+      // Мусорка в левом нижнем углу, максимально доступная зона
+      const trashSize = 120
+      const trashX = 0
+      const trashY = height - trashSize
+      if (actualX >= trashX && actualX <= trashX + trashSize && actualY >= trashY && actualY <= height) {
         return -3 // Код для мусорки
       }
     }
@@ -983,43 +984,40 @@ export default function BackgammonBoard({
 
     // Отрисовка "мусорки" в sandbox режиме
     if (isSandbox) {
-      const trashSize = 60
-      const trashX = 20
-      const trashY = height - trashSize - 20
+      const trashSize = 120
+      const trashX = 0
+      const trashY = height - trashSize
       
       ctx.save()
-      // Фон мусорки
-      ctx.fillStyle = hoveredPoint === -3 ? 'rgba(255, 0, 0, 0.4)' : 'rgba(255, 0, 0, 0.2)'
-      ctx.strokeStyle = hoveredPoint === -3 ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 0, 0, 0.5)'
-      ctx.lineWidth = 2
+      // Фон мусорки - более яркий красный градиент для зоны удаления
+      const gradient = ctx.createRadialGradient(
+        trashX + trashSize / 2, trashY + trashSize / 2, 10,
+        trashX + trashSize / 2, trashY + trashSize / 2, trashSize / 2
+      )
+      gradient.addColorStop(0, hoveredPoint === -3 ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 0, 0, 0.4)')
+      gradient.addColorStop(1, hoveredPoint === -3 ? 'rgba(150, 0, 0, 0.6)' : 'rgba(100, 0, 0, 0.2)')
       
-      // Рисуем скругленный прямоугольник
-      ctx.beginPath()
-      const r = 10
-      ctx.moveTo(trashX + r, trashY)
-      ctx.lineTo(trashX + trashSize - r, trashY)
-      ctx.quadraticCurveTo(trashX + trashSize, trashY, trashX + trashSize, trashY + r)
-      ctx.lineTo(trashX + trashSize, trashY + trashSize - r)
-      ctx.quadraticCurveTo(trashX + trashSize, trashY + trashSize, trashX + trashSize - r, trashY + trashSize)
-      ctx.lineTo(trashX + r, trashY + trashSize)
-      ctx.quadraticCurveTo(trashX, trashY + trashSize, trashX, trashY + trashSize - r)
-      ctx.lineTo(trashX, trashY + r)
-      ctx.quadraticCurveTo(trashX, trashY, trashX + r, trashY)
-      ctx.closePath()
+      ctx.fillStyle = gradient
+      ctx.strokeStyle = hoveredPoint === -3 ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.5)'
+      ctx.lineWidth = 3
       
-      ctx.fill()
-      ctx.stroke()
+      // Рисуем квадратную зону в углу
+      ctx.fillRect(trashX, trashY, trashSize, trashSize)
+      ctx.strokeRect(trashX, trashY, trashSize, trashSize)
       
       // Иконка мусорки
-      ctx.font = '30px Arial'
+      ctx.font = '48px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText('🗑️', trashX + trashSize / 2, trashY + trashSize / 2)
+      ctx.shadowBlur = 10
+      ctx.shadowColor = 'rgba(0,0,0,0.5)'
+      ctx.fillText('🗑️', trashX + trashSize / 2, trashY + trashSize / 2 - 8)
       
       // Текст
-      ctx.font = 'bold 12px Arial'
-      ctx.fillStyle = '#ff4d4d'
-      ctx.fillText('МУСОР', trashX + trashSize / 2, trashY + trashSize + 15)
+      ctx.font = 'bold 14px Arial'
+      ctx.fillStyle = '#fff'
+      ctx.shadowBlur = 4
+      ctx.fillText('УДАЛИТЬ', trashX + trashSize / 2, trashY + trashSize - 15)
       ctx.restore()
     }
 
@@ -1386,53 +1384,7 @@ export default function BackgammonBoard({
       if (isSandbox) {
         // 1. Drop в мусорку (из любой точки)
         if (targetPoint === -3) {
-          const points = virtualGameState?.points || []
-          const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
-          const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
-          const currentPoints = [...points]
-          let hasChecker = false
-
-          if (fromPoint === 24) {
-            if (currentBar.white > 0) {
-              currentBar.white--
-              hasChecker = true
-            }
-          } else if (fromPoint === 25) {
-            if (currentBar.black > 0) {
-              currentBar.black--
-              hasChecker = true
-            }
-          } else if (fromPoint >= 0 && fromPoint < 24) {
-            const val = currentPoints[fromPoint]
-            if (val !== 0) {
-              currentPoints[fromPoint] = val > 0 ? val - 1 : val + 1
-              hasChecker = true
-            }
-          } else if (fromPoint === -1 && dragging.checkerColor) {
-            // Удаление из bearOff
-            if (dragging.checkerColor === 'white') {
-              if (currentBearOff.white > 0) {
-                currentBearOff.white--
-                hasChecker = true
-              }
-            } else {
-              if (currentBearOff.black > 0) {
-                currentBearOff.black--
-                hasChecker = true
-              }
-            }
-          }
-
-          if (hasChecker) {
-            if (gameId) {
-              apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
-                points: currentPoints,
-                bar: currentBar,
-                bearOff: currentBearOff,
-              }).then(() => {
-                window.dispatchEvent(new CustomEvent('sandbox-board-updated'))
-              }).catch(console.error)
-            }
+          if (handleRemoveChecker(fromPoint, dragging.checkerColor)) {
             setDragging(null)
             setDragPosition(null)
             setHoveredPoint(null)
@@ -1572,9 +1524,65 @@ export default function BackgammonBoard({
     if (x >= blackX && x <= blackX + bearOffWidth && y >= 0 && y <= 150) {
       if (bearOff.black > 0) return 'black'
     }
-    
-    return null
   }, [isSandbox, isPlayer1, virtualGameState])
+
+  // Вспомогательная функция для удаления шашки (мусорка)
+  const handleRemoveChecker = useCallback((fromPoint: number, checkerColor?: 'white' | 'black') => {
+    if (!gameId || !virtualGameState) return false
+
+    const points = virtualGameState.points || []
+    const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
+    const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
+    const currentPoints = [...points]
+    let hasChecker = false
+
+    console.log('🗑️ Попытка удаления шашки:', { fromPoint, checkerColor })
+
+    if (fromPoint === 24) {
+      if (currentBar.white > 0) {
+        currentBar.white--
+        hasChecker = true
+      }
+    } else if (fromPoint === 25) {
+      if (currentBar.black > 0) {
+        currentBar.black--
+        hasChecker = true
+      }
+    } else if (fromPoint >= 0 && fromPoint < 24) {
+      const val = currentPoints[fromPoint]
+      if (val !== 0) {
+        currentPoints[fromPoint] = val > 0 ? val - 1 : val + 1
+        hasChecker = true
+      }
+    } else if (fromPoint === -1 && checkerColor) {
+      if (checkerColor === 'white') {
+        if (currentBearOff.white > 0) {
+          currentBearOff.white--
+          hasChecker = true
+        }
+      } else {
+        if (currentBearOff.black > 0) {
+          currentBearOff.black--
+          hasChecker = true
+        }
+      }
+    }
+
+    if (hasChecker) {
+      console.log('🗑️ Шашка успешно удалена, обновляем доску')
+      apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+        points: currentPoints,
+        bar: currentBar,
+        bearOff: currentBearOff,
+      }).then(() => {
+        window.dispatchEvent(new CustomEvent('sandbox-board-updated'))
+      }).catch(console.error)
+      return true
+    }
+    
+    console.log('🗑️ Не удалось найти шашку для удаления')
+    return false
+  }, [virtualGameState, gameId])
 
   // Обработка начала перетаскивания
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1817,53 +1825,7 @@ export default function BackgammonBoard({
     if (isSandbox) {
       // 1. Drop в мусорку (из любой точки)
       if (targetPoint === -3) {
-        const points = virtualGameState?.points || []
-        const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
-        const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
-        const currentPoints = [...points]
-        let hasChecker = false
-
-        if (fromPoint === 24) {
-          if (currentBar.white > 0) {
-            currentBar.white--
-            hasChecker = true
-          }
-        } else if (fromPoint === 25) {
-          if (currentBar.black > 0) {
-            currentBar.black--
-            hasChecker = true
-          }
-        } else if (fromPoint >= 0 && fromPoint < 24) {
-          const val = currentPoints[fromPoint]
-          if (val !== 0) {
-            currentPoints[fromPoint] = val > 0 ? val - 1 : val + 1
-            hasChecker = true
-          }
-        } else if (fromPoint === -1 && dragging.checkerColor) {
-          // Удаление из bearOff
-          if (dragging.checkerColor === 'white') {
-            if (currentBearOff.white > 0) {
-              currentBearOff.white--
-              hasChecker = true
-            }
-          } else {
-            if (currentBearOff.black > 0) {
-              currentBearOff.black--
-              hasChecker = true
-            }
-          }
-        }
-
-        if (hasChecker) {
-          if (gameId) {
-            apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
-              points: currentPoints,
-              bar: currentBar,
-              bearOff: currentBearOff,
-            }).then(() => {
-              window.dispatchEvent(new CustomEvent('sandbox-board-updated'))
-            }).catch(console.error)
-          }
+        if (handleRemoveChecker(fromPoint, dragging.checkerColor)) {
           setDragging(null)
           setDragPosition(null)
           setHoveredPoint(null)
