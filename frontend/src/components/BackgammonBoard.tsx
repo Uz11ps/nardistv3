@@ -581,9 +581,19 @@ export default function BackgammonBoard({
       const isMySide = isPlayer1 ? isRightTarget : (gameMode === 'long' ? isLeftTarget : isRightTarget)
       if (isMySide) return -1
     }
+
+    // Проверка мусорки в sandbox режиме
+    if (isSandbox) {
+      const trashSize = 60
+      const trashX = 20
+      const trashY = height - trashSize - 20
+      if (actualX >= trashX && actualX <= trashX + trashSize && actualY >= trashY && actualY <= trashY + trashSize) {
+        return -3 // Код для мусорки
+      }
+    }
     
     return null
-  }, [gameState, isPlayer1, gameMode])
+  }, [gameState, isPlayer1, gameMode, isSandbox])
   
   // Отрисовка доски
   const drawBoard = useCallback(() => {
@@ -970,6 +980,48 @@ export default function BackgammonBoard({
     ctx.lineWidth = 1
     ctx.strokeRect(leftContainerX, 0, bearOffWidth, height)
     ctx.strokeRect(rightContainerX, 0, bearOffWidth, height)
+
+    // Отрисовка "мусорки" в sandbox режиме
+    if (isSandbox) {
+      const trashSize = 60
+      const trashX = 20
+      const trashY = height - trashSize - 20
+      
+      ctx.save()
+      // Фон мусорки
+      ctx.fillStyle = hoveredPoint === -3 ? 'rgba(255, 0, 0, 0.4)' : 'rgba(255, 0, 0, 0.2)'
+      ctx.strokeStyle = hoveredPoint === -3 ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 0, 0, 0.5)'
+      ctx.lineWidth = 2
+      
+      // Рисуем скругленный прямоугольник
+      ctx.beginPath()
+      const r = 10
+      ctx.moveTo(trashX + r, trashY)
+      ctx.lineTo(trashX + trashSize - r, trashY)
+      ctx.quadraticCurveTo(trashX + trashSize, trashY, trashX + trashSize, trashY + r)
+      ctx.lineTo(trashX + trashSize, trashY + trashSize - r)
+      ctx.quadraticCurveTo(trashX + trashSize, trashY + trashSize, trashX + trashSize - r, trashY + trashSize)
+      ctx.lineTo(trashX + r, trashY + trashSize)
+      ctx.quadraticCurveTo(trashX, trashY + trashSize, trashX, trashY + trashSize - r)
+      ctx.lineTo(trashX, trashY + r)
+      ctx.quadraticCurveTo(trashX, trashY, trashX + r, trashY)
+      ctx.closePath()
+      
+      ctx.fill()
+      ctx.stroke()
+      
+      // Иконка мусорки
+      ctx.font = '30px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('🗑️', trashX + trashSize / 2, trashY + trashSize / 2)
+      
+      // Текст
+      ctx.font = 'bold 12px Arial'
+      ctx.fillStyle = '#ff4d4d'
+      ctx.fillText('МУСОР', trashX + trashSize / 2, trashY + trashSize + 15)
+      ctx.restore()
+    }
 
     // Отрисовка номеров точек
     ctx.font = 'bold 12px Arial'
@@ -1377,12 +1429,15 @@ export default function BackgammonBoard({
               }
             }
             
-            if (hasChecker) {
-              // 2. Добавляем в целевую точку (или удаляем)
-              if (targetPoint === -1) {
-                if (isWhite) currentBearOff.white++
-                else currentBearOff.black++
-              } else if (targetPoint === 24) {
+                  if (hasChecker) {
+                    // 2. Добавляем в целевую точку (или удаляем)
+                    if (targetPoint === -1) {
+                      if (isWhite) currentBearOff.white++
+                      else currentBearOff.black++
+                    } else if (targetPoint === -3) {
+                      // МУСОРКА: Просто удаляем шашку
+                      console.log('🗑️ Шашка удалена в мусорку (touch)')
+                    } else if (targetPoint === 24) {
                 currentBar.white++
               } else if (targetPoint === 25) {
                 currentBar.black++
@@ -1755,13 +1810,16 @@ export default function BackgammonBoard({
             }
           }
           
-          if (hasChecker) {
-            // 2. Добавляем в целевую точку (или удаляем)
-            if (targetPoint === -1) {
-              // Перемещение в bearOff (удаление с доски)
-              if (isWhite) currentBearOff.white++
-              else currentBearOff.black++
-            } else if (targetPoint === 24) {
+            if (hasChecker) {
+              // 2. Добавляем в целевую точку (или удаляем)
+              if (targetPoint === -1) {
+                // Перемещение в bearOff (удаление с доски)
+                if (isWhite) currentBearOff.white++
+                else currentBearOff.black++
+              } else if (targetPoint === -3) {
+                // МУСОРКА: Просто удаляем шашку, ничего не добавляем в bearOff
+                console.log('🗑️ Шашка удалена в мусорку')
+              } else if (targetPoint === 24) {
               // Перемещение на белый бар
               currentBar.white++
             } else if (targetPoint === 25) {
