@@ -73,6 +73,19 @@ export default function Profile() {
     }
   }
 
+  const loadGameHistory = async () => {
+    try {
+      setLoadingHistory(true)
+      const response = await apiClient.get('/history/games').catch(() => ({ data: [] }))
+      setGameHistory(response.data || [])
+    } catch (error) {
+      console.error('Failed to load game history:', error)
+      setGameHistory([])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
   const loadSkillPoints = async () => {
     try {
       const response = await apiClient.get('/progress/skill-points').catch(() => ({ data: skillPoints }))
