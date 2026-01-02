@@ -83,7 +83,7 @@ export default function Academy() {
     } else {
       loadData()
     }
-  }, [activeTab, materialId, isMaterialPage])
+  }, [activeTab, materialId, isMaterialPage, activeFilter])
 
   useEffect(() => {
     // Проверяем параметр type из URL
@@ -138,8 +138,22 @@ export default function Academy() {
   }
 
   // Функция фильтрации и сортировки элементов
-  const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean }>(items: T[]): T[] => {
+  const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean; title?: string }>(items: T[]): T[] => {
     let filtered = items
+
+    // Фильтрация по типу нард (только для курсов и статей)
+    if (activeTab === 'courses' || activeTab === 'articles') {
+      filtered = filtered.filter(item => {
+        if (!item.title) return true
+        const titleLower = item.title.toLowerCase()
+        if (activeFilter === 'long') {
+          return titleLower.includes('длинн') || titleLower.includes('длинные')
+        } else if (activeFilter === 'short') {
+          return titleLower.includes('коротк') || titleLower.includes('короткие')
+        }
+        return true
+      })
+    }
 
     // Если включена галочка "Не отображать купленные", скрываем купленные
     if (hidePurchased) {
@@ -398,7 +412,7 @@ export default function Academy() {
         {activeTab === 'courses' && (
           <div className="academy-grid">
             {getFilteredAndSortedItems(courses).map((course) => (
-              <div key={course.id} className="academy-grid-card">
+              <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
                 <div className="academy-grid-card-icon">
                   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
@@ -415,7 +429,7 @@ export default function Academy() {
         {activeTab === 'articles' && (
           <div className="academy-grid">
             {getFilteredAndSortedItems(articles).map((article) => (
-              <div key={article.id} className="academy-grid-card">
+              <div key={article.id} className="academy-grid-card" onClick={() => handleOpen(article)}>
                 <div className="academy-grid-card-icon">
                   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
