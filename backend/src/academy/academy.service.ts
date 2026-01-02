@@ -130,6 +130,7 @@ export class AcademyService {
     const article = this.articlesRepository.create({
       ...articleData,
       isApproved: isAdmin, // Статьи администратора автоматически одобрены
+      isVerified: isAdmin, // Статьи администратора также сразу верифицированы
     });
     return this.articlesRepository.save(article);
   }
@@ -210,17 +211,16 @@ export class AcademyService {
   }
 
   async getArticles(userId?: string, includePending: boolean = false): Promise<any[]> {
-    const whereCondition: any = { type: 'article' };
+    const query = this.articlesRepository.createQueryBuilder('article')
+      .where('article.type = :type', { type: 'article' });
     
-    // Если не администратор, показываем только одобренные статьи
+    // Если не администратор, показываем только одобренные или верифицированные статьи
     if (!includePending) {
-      whereCondition.isApproved = true;
+      query.andWhere('(article.isApproved = true OR article.isVerified = true)');
     }
     
-    const articles = await this.articlesRepository.find({
-      where: whereCondition,
-      order: { createdAt: 'DESC' },
-    });
+    query.orderBy('article.createdAt', 'DESC');
+    const articles = await query.getMany();
 
     // Получаем купленные материалы пользователя, если userId передан
     const purchasedArticleIds = userId
@@ -240,6 +240,8 @@ export class AcademyService {
       views: article.views,
       isCompleted: false, // Статьи нельзя выполнить
       gameMode: article.gameMode || 'long',
+      isApproved: article.isApproved,
+      isVerified: article.isVerified,
     }));
   }
 
@@ -466,6 +468,10 @@ export class AcademyService {
     }
 
     course.isVerified = true;
+    // Если это статья, также отмечаем как одобренную для отображения в списке
+    if (course.type === 'article') {
+      course.isApproved = true;
+    }
     course.verifiedBy = verifiedBy;
     course.verifiedAt = new Date();
     return this.articlesRepository.save(course);
