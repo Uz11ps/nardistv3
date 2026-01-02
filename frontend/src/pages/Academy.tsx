@@ -146,10 +146,16 @@ export default function Academy() {
       filtered = filtered.filter(item => {
         if (!item.title) return true
         const titleLower = item.title.toLowerCase()
+        const isLong = titleLower.includes('длинн') || titleLower.includes('длинные')
+        const isShort = titleLower.includes('коротк') || titleLower.includes('короткие')
+        const isGeneral = !isLong && !isShort // Общий курс (не относится ни к длинным, ни к коротким)
+        
         if (activeFilter === 'long') {
-          return titleLower.includes('длинн') || titleLower.includes('длинные')
+          // Показываем курсы по длинным нардам И общие курсы
+          return isLong || isGeneral
         } else if (activeFilter === 'short') {
-          return titleLower.includes('коротк') || titleLower.includes('короткие')
+          // Показываем курсы по коротким нардам И общие курсы
+          return isShort || isGeneral
         }
         return true
       })
