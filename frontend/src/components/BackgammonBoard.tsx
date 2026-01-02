@@ -1384,40 +1384,43 @@ export default function BackgammonBoard({
       
       // В sandbox режиме разрешаем обычные ходы, если есть кубики
       const hasDice = dice && (Array.isArray(dice) ? dice.length > 0 : (dice.die1 !== undefined || dice.die2 !== undefined))
-      if (!hasDice) {
-        // Если нет кубиков, проверяем клик по шашке для долгого зажатия
-        const pointIndex = getPointAtPosition(x, y, canvas)
-        if (pointIndex !== null && pointIndex !== 24 && pointIndex !== 25 && pointIndex !== -1) {
-          const points = virtualGameState?.points || []
-          const pointValue = points[pointIndex] || 0
-          const isMyChecker = isPlayer1 ? pointValue > 0 : pointValue < 0
-          
-          if (isMyChecker) {
-            // Сохраняем начальную позицию для долгого зажатия
-            longPressStartRef.current = { x, y, pointIndex }
-            // Запускаем таймер долгого зажатия (5 секунд)
-            longPressTimerRef.current = window.setTimeout(() => {
-              if (longPressStartRef.current) {
-                // Активируем режим свободного перемещения
-                const { pointIndex: startPoint } = longPressStartRef.current
-                const { x: pointX, y: pointY } = getPointCoordinates(startPoint, canvas)
-                setDragging({ 
-                  pointIndex: startPoint, 
-                  offsetX: x - pointX, 
-                  offsetY: y - pointY,
-                  freeMove: true 
-                })
-                setDragPosition({ x, y })
-                longPressStartRef.current = null
-              }
-            }, 5000)
-          }
+      
+      // Проверяем клик по шашке для долгого зажатия (работает всегда, даже с кубиками)
+      const pointIndex = getPointAtPosition(x, y, canvas)
+      if (pointIndex !== null && pointIndex !== 24 && pointIndex !== 25 && pointIndex !== -1) {
+        const points = virtualGameState?.points || []
+        const pointValue = points[pointIndex] || 0
+        const isMyChecker = isPlayer1 ? pointValue > 0 : pointValue < 0
+        
+        if (isMyChecker) {
+          // Сохраняем начальную позицию для долгого зажатия
+          longPressStartRef.current = { x, y, pointIndex }
+          // Запускаем таймер долгого зажатия (5 секунд)
+          longPressTimerRef.current = window.setTimeout(() => {
+            if (longPressStartRef.current && canvasRef.current) {
+              // Активируем режим свободного перемещения
+              const { pointIndex: startPoint, x: startX, y: startY } = longPressStartRef.current
+              const { x: pointX, y: pointY } = getPointCoordinates(startPoint, canvasRef.current)
+              setDragging({ 
+                pointIndex: startPoint, 
+                offsetX: startX - pointX, 
+                offsetY: startY - pointY,
+                freeMove: true 
+              })
+              setDragPosition({ x: startX, y: startY })
+              longPressStartRef.current = null
+            }
+          }, 5000)
         }
+      }
+      
+      // Если нет кубиков, не разрешаем обычные ходы
+      if (!hasDice) {
         return
       }
       
-      // Если есть кубики, разрешаем обычные ходы
-      if (!canMove || !isMyTurn) return
+      // Если есть кубики, разрешаем обычные ходы (в sandbox всегда можно ходить)
+      if (!canMove) return
     } else {
       if (!canMove || !isMyTurn) return
     }
@@ -1526,13 +1529,27 @@ export default function BackgammonBoard({
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
     
-    // В sandbox режиме обновляем позицию перетаскивания из bearOff
-    if (isSandbox && dragging && dragging.pointIndex === -1) {
-      setDragPosition({ x, y })
-      // Подсвечиваем точку под курсором
-      const pointIndex = getPointAtPosition(x, y, canvas)
-      setHoveredPoint(pointIndex !== null && pointIndex !== 24 && pointIndex !== 25 && pointIndex !== -1 ? pointIndex : null)
-      return
+    // Если началось движение мыши, отменяем таймер долгого зажатия (если переместились больше чем на 5 пикселей)
+    if (longPressTimerRef.current && longPressStartRef.current) {
+      const startPos = longPressStartRef.current
+      const distance = Math.sqrt(Math.pow(x - startPos.x, 2) + Math.pow(y - startPos.y, 2))
+      // Если переместились больше чем на 5 пикселей, отменяем долгое зажатие
+      if (distance > 5) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+        longPressStartRef.current = null
+      }
+    }
+    
+    // В sandbox режиме обновляем позицию перетаскивания из bearOff или свободного перемещения
+    if (isSandbox && dragging) {
+      if (dragging.pointIndex === -1 || dragging.freeMove) {
+        setDragPosition({ x, y })
+        // Подсвечиваем точку под курсором
+        const pointIndex = getPointAtPosition(x, y, canvas)
+        setHoveredPoint(pointIndex !== null && pointIndex !== 24 && pointIndex !== 25 && pointIndex !== -1 ? pointIndex : null)
+        return
+      }
     }
     
     if (dragging) {
