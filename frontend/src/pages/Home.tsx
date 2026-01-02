@@ -195,10 +195,6 @@ export default function Home() {
                 <img src="/img/narcoin.png" alt="NAR" className="home-currency-img-v3" />
                 <span>{stats.narCoin.toLocaleString()}</span>
               </div>
-              <div className="home-currency-item-v3">
-                <img src="/img/f5e34ff1a863605caef73dc379a2d9700935880e.png" alt="T" className="home-currency-img-v3" />
-                <span>{(stats.narCoin / 10).toLocaleString()}</span>
-              </div>
             </div>
           </div>
         </div>

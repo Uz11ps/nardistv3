@@ -316,19 +316,19 @@ export default function Profile() {
             {/* Карточки достижений и бонусов */}
             <div className="profile-cards-grid-v2">
               {/* Показываем достижения и бонусы */}
-              {achievements.filter(a => a.unlocked).slice(0, 6).map((achievement) => (
-                <div key={achievement.id} className="profile-card-v2">
-                  <div className="profile-card-text-v2">+10 к экономике</div>
-                </div>
-              ))}
-              {/* Заполняем оставшиеся места бонусами или сертификатами */}
-              {Array.from({ length: Math.max(0, 12 - achievements.filter(a => a.unlocked).length) }).map((_, i) => (
-                <div key={`bonus-${i}`} className="profile-card-v2">
-                  <div className="profile-card-text-v2">
-                    {i % 2 === 0 ? '+10 к экономике' : 'сертификат'}
+              {achievements.filter(a => a.isUnlocked || a.unlocked).length > 0 ? (
+                achievements.filter(a => a.isUnlocked || a.unlocked).slice(0, 12).map((achievement) => (
+                  <div key={achievement.id} className="profile-card-v2" title={achievement.description}>
+                    <div className="profile-card-text-v2" style={{ fontSize: '10px' }}>
+                      {achievement.title}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="profile-card-v2 empty" style={{ width: '100%', gridColumn: '1 / -1', background: 'transparent', border: '1px dashed #444' }}>
+                  <div className="profile-card-text-v2" style={{ color: '#888' }}>Нет достижений</div>
                 </div>
-              ))}
+              )}
             </div>
 
         {/* Усиления */}
