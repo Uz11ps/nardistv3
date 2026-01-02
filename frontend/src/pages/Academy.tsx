@@ -220,6 +220,7 @@ export default function Academy() {
         await apiClient.post('/admin/academy/create', {
           title: publishForm.title,
           content: publishForm.content,
+          gameMode: publishForm.gameMode,
           type: 'course',
           isPaid: publishForm.price > 0,
           price: publishForm.price,

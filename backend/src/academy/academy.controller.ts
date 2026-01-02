@@ -53,6 +53,16 @@ export class AcademyController {
     return this.academyService.findOne(id, user?.id);
   }
 
+  @Post('publish')
+  @UseGuards(JwtAuthGuard)
+  async publish(@CurrentUser() user: any, @Body() publishData: any) {
+    return this.academyService.create({ 
+      ...publishData, 
+      author: user.username || user.nickname || 'Пользователь',
+      authorId: user.id
+    }, user.isAdmin);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@CurrentUser() user: any, @Body() articleData: any) {
