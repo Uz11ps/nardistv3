@@ -1373,6 +1373,8 @@ export default function BackgammonBoard({
     
     const canvas = canvasRef.current
     
+    // Сохраняем исходную точку перетаскивания
+    const fromPoint = dragging.pointIndex
     const targetPoint = getPointAtPosition(x, y, canvas)
     
     // В sandbox режиме обрабатываем drop в мусорку или другие специальные действия
@@ -1804,6 +1806,8 @@ export default function BackgammonBoard({
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
+    // Сохраняем исходную точку перетаскивания
+    const fromPoint = dragging.pointIndex
     const targetPoint = getPointAtPosition(x, y, canvas)
     
     // В sandbox режиме обрабатываем drop в мусорку или другие специальные действия
