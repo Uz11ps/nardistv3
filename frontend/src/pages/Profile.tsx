@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import SkillPointsModal from '../components/SkillPointsModal'
 import EnhancementDetailModal from '../components/EnhancementDetailModal'
+import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
 import './Profile.css'
 
@@ -31,9 +32,11 @@ export default function Profile() {
     avatarUrl: '',
   })
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'stats' | 'premium'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'premium' | 'analytics'>('stats')
   const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null)
   const [achievements, setAchievements] = useState<any[]>([])
+  const [gameHistory, setGameHistory] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -451,7 +454,47 @@ export default function Profile() {
           </div>
         </div>
       </>
-    ) : (
+    ) : activeTab === 'analytics' ? (
+          <div className="profile-analytics-tab">
+            {loadingHistory ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#B6B6B6' }}>
+                Загрузка истории игр...
+              </div>
+            ) : gameHistory.length === 0 ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#B6B6B6' }}>
+                История игр пуста
+              </div>
+            ) : (
+              <div className="profile-analytics-list">
+                {gameHistory.map((game) => (
+                  <div key={game.id} className="profile-analytics-item">
+                    <div className="analytics-item-header">
+                      <div className="analytics-item-info">
+                        <div className="analytics-item-players">
+                          {game.player1?.nickname || game.player1?.username || 'Игрок 1'} vs {game.player2?.nickname || game.player2?.username || 'Игрок 2'}
+                        </div>
+                        <div className="analytics-item-meta">
+                          {game.mode === 'long' ? 'Длинные нарды' : 'Короткие нарды'} • {new Date(game.createdAt).toLocaleDateString('ru-RU')}
+                        </div>
+                      </div>
+                      <div className="analytics-item-score">
+                        {game.player1Score} : {game.player2Score}
+                      </div>
+                    </div>
+                    <div className="analytics-item-actions">
+                      <button 
+                        className="analytics-view-btn"
+                        onClick={() => navigate(`/game/result/${game.id}`)}
+                      >
+                        Просмотр аналитики
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
           <div className="profile-premium-tab">
             <div className={`premium-status-card ${hasPremium ? 'active' : 'inactive'}`}>
               <div className="premium-status-header">

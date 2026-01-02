@@ -1998,7 +1998,7 @@ export class GamesService {
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
 
-    const variation = game.mode === 'LONG' ? 'LongNarde' : 'ShortNarde';
+    const variation = game.mode === GameMode.LONG ? 'LongNarde' : 'ShortNarde';
     const eventDate = formatDate(game.createdAt);
     const eventTime = formatTime(game.createdAt);
     const eventBegin = formatDateTime(game.createdAt);
@@ -2044,8 +2044,8 @@ export class GamesService {
           // Конвертируем индексы точек в номера точек
           // Для длинных нард: 0-23 -> 24-1 (0 = точка 24, 23 = точка 1)
           // Для коротких нард: 0-23 -> 1-24 (0 = точка 1, 23 = точка 24)
-          const fromPoint = game.mode === 'LONG' ? (24 - from) : (from + 1);
-          const toPoint = game.mode === 'LONG' ? (24 - to) : (to + 1);
+          const fromPoint = game.mode === GameMode.LONG ? (24 - from) : (from + 1);
+          const toPoint = game.mode === GameMode.LONG ? (24 - to) : (to + 1);
           return `${fromPoint}/${toPoint}`;
         })
         .filter(Boolean)

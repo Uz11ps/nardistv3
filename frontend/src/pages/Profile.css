@@ -789,6 +789,76 @@
 }
 
 /* Премиум вкладка */
+.profile-analytics-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-analytics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-analytics-item {
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.analytics-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.analytics-item-info {
+  flex: 1;
+}
+
+.analytics-item-players {
+  color: #FFF;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.analytics-item-meta {
+  color: #999;
+  font-size: 14px;
+}
+
+.analytics-item-score {
+  color: #FFF;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.analytics-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.analytics-view-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.analytics-view-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
 .profile-premium-tab {
   display: flex;
   flex-direction: column;
