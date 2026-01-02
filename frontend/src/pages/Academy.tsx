@@ -43,6 +43,7 @@ interface MaterialSection {
 }
 
 interface MaterialDetail extends Course {
+  type?: string
   sections?: MaterialSection[]
   content?: string
   quiz?: {

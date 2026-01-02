@@ -15,13 +15,13 @@ interface QuizProps {
     questions: Question[]
   }
   quizPassed?: boolean
-  onComplete?: (result: { correct: number; total: number; passed: boolean }) => void
+  onComplete?: (result: { correct: number; total: number; passed: boolean; reward?: any }) => void
 }
 
 export default function Quiz({ courseId, quiz, quizPassed = false, onComplete }: QuizProps) {
   const [selectedAnswers, setSelectedAnswers] = useState<{ [questionId: number]: number }>({})
   const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState<{ correct: number; total: number; passed: boolean } | null>(null)
+  const [result, setResult] = useState<{ correct: number; total: number; passed: boolean; reward?: any } | null>(null)
 
   const handleAnswerSelect = (questionId: number, answerIndex: number) => {
     if (quizPassed || result) return // Не позволяем менять ответы после прохождения
