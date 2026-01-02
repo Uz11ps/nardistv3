@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import RichTextEditor from '../components/RichTextEditor'
+import Quiz from '../components/Quiz'
 import { apiClient } from '../api/client'
 import './Academy.css'
 
@@ -44,6 +45,16 @@ interface MaterialSection {
 interface MaterialDetail extends Course {
   sections?: MaterialSection[]
   content?: string
+  quiz?: {
+    questions: Array<{
+      id: number
+      question: string
+      options: string[]
+      correctAnswer: number
+    }>
+  }
+  quizPassed?: boolean
+  quizPassedAt?: string | null
 }
 
 export default function Academy() {
@@ -222,6 +233,19 @@ export default function Academy() {
             ))
           ) : (
             <div className="academy-material-content-text" dangerouslySetInnerHTML={{ __html: materialDetail.content || 'Содержание отсутствует' }} />
+          )}
+          
+          {/* Тест для курсов */}
+          {materialDetail.quiz && materialDetail.type === 'course' && (
+            <Quiz
+              courseId={materialDetail.id}
+              quiz={materialDetail.quiz}
+              quizPassed={materialDetail.quizPassed || false}
+              onComplete={(result) => {
+                // Обновляем статус после прохождения теста
+                setMaterialDetail(prev => prev ? { ...prev, quizPassed: result.passed } : null)
+              }}
+            />
           )}
         </div>
       </PageLayout>

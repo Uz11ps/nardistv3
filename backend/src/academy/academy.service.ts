@@ -93,6 +93,16 @@ export class AcademyService {
           order: 0,
         }];
       }
+
+      // Добавляем quiz из assignment, если он есть
+      if (article.assignment && article.assignment.quiz) {
+        result.quiz = article.assignment.quiz;
+        // Если курс куплен, проверяем статус прохождения теста
+        if (purchased && userMaterial) {
+          result.quizPassed = userMaterial.quizPassed || false;
+          result.quizPassedAt = userMaterial.quizPassedAt || null;
+        }
+      }
     }
 
     return result;
@@ -472,6 +482,83 @@ export class AcademyService {
 
     Object.assign(article, articleData);
     return this.articlesRepository.save(article);
+  }
+
+  /**
+   * Отправить ответы на тест курса
+   */
+  async submitQuiz(
+    userId: string,
+    courseId: string,
+    answers: { questionId: number; answer: number }[],
+  ): Promise<{ correct: number; total: number; passed: boolean; reward?: any }> {
+    const course = await this.articlesRepository.findOne({ where: { id: courseId, type: 'course' } });
+    if (!course) {
+      throw new NotFoundException('Курс не найден');
+    }
+
+    // Проверяем, что курс куплен
+    const userMaterial = await this.userMaterialsRepository.findOne({
+      where: { userId, articleId: courseId },
+    });
+    if (!userMaterial) {
+      throw new BadRequestException('Курс не куплен');
+    }
+
+    // Проверяем наличие теста в assignment
+    if (!course.assignment || !course.assignment.quiz || !course.assignment.quiz.questions) {
+      throw new BadRequestException('Тест не найден в курсе');
+    }
+
+    const quiz = course.assignment.quiz;
+    const questions = quiz.questions;
+    let correct = 0;
+
+    // Проверяем ответы
+    for (const answer of answers) {
+      const question = questions.find((q: any) => q.id === answer.questionId);
+      if (question && question.correctAnswer === answer.answer) {
+        correct++;
+      }
+    }
+
+    const total = questions.length;
+    const passed = correct === total; // Прошел если все ответы правильные
+
+    // Если тест пройден и еще не был пройден ранее, выдаем награду
+    if (passed && !userMaterial.quizPassed) {
+      userMaterial.quizPassed = true;
+      userMaterial.quizPassedAt = new Date();
+
+      // Выдаем награды из курса
+      if (course.rewards && course.rewards.length > 0) {
+        const user = await this.usersService.findOne(userId);
+        for (const reward of course.rewards) {
+          if (reward.narCoin) {
+            await this.usersService.update(userId, {
+              narCoin: (user.narCoin || 0) + Number(reward.narCoin),
+            });
+          }
+          if (reward.xp) {
+            // XP добавляется через другой механизм, если нужно
+          }
+        }
+      } else if (course.rewardNarCoin) {
+        const user = await this.usersService.findOne(userId);
+        await this.usersService.update(userId, {
+          narCoin: (user.narCoin || 0) + Number(course.rewardNarCoin),
+        });
+      }
+
+      await this.userMaterialsRepository.save(userMaterial);
+    }
+
+    return {
+      correct,
+      total,
+      passed,
+      reward: passed && !userMaterial.quizPassed ? course.rewards || { narCoin: course.rewardNarCoin, xp: course.rewardXP } : undefined,
+    };
   }
 }
 

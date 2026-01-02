@@ -177,5 +177,16 @@ export class AcademyController {
   async getOnboardingTasks(@CurrentUser() user: any) {
     return this.courseTasksService.getOnboardingTasks(user.id);
   }
+
+  // Тесты для курсов
+  @Post('courses/:courseId/quiz/submit')
+  @UseGuards(JwtAuthGuard)
+  async submitQuiz(
+    @CurrentUser() user: any,
+    @Param('courseId') courseId: string,
+    @Body() answers: { questionId: number; answer: number }[],
+  ) {
+    return this.academyService.submitQuiz(user.id, courseId, answers);
+  }
 }
 

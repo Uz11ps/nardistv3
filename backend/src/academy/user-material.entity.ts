@@ -33,6 +33,12 @@ export class UserMaterial {
   @Column({ type: 'int' })
   pricePaid: number; // Цена, которую заплатил пользователь
 
+  @Column({ default: false })
+  quizPassed: boolean; // Пройден ли тест курса
+
+  @Column({ type: 'timestamp', nullable: true })
+  quizPassedAt: Date; // Дата прохождения теста
+
   @CreateDateColumn()
   purchasedAt: Date;
 }
