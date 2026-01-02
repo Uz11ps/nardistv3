@@ -146,7 +146,18 @@ export default function Game() {
   const [opponentOffset, setOpponentOffset] = useState<number>(1)
   const lastSentOffsetRef = useRef<number | null>(null) // Отслеживаем последний отправленный offset
   const [showOffsetModal, setShowOffsetModal] = useState<boolean>(false)
+  const showOffsetModalRef = useRef<boolean>(false)
   const [offsetConfirmed, setOffsetConfirmed] = useState<boolean>(false)
+  const offsetConfirmedRef = useRef<boolean>(false)
+
+  // Синхронизируем рефы с состоянием
+  useEffect(() => {
+    showOffsetModalRef.current = showOffsetModal
+  }, [showOffsetModal])
+
+  useEffect(() => {
+    offsetConfirmedRef.current = offsetConfirmed
+  }, [offsetConfirmed])
   const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -334,8 +345,8 @@ export default function Game() {
         p1Offset: game.p1Offset,
         p2Offset: game.p2Offset,
         myCurrentOffset,
-        offsetConfirmed,
-        showOffsetModal
+        offsetConfirmed: offsetConfirmedRef.current,
+        showOffsetModal: showOffsetModalRef.current
       })
       
       if (game.type !== 'sandbox') {
@@ -343,7 +354,7 @@ export default function Game() {
         
         // Показываем модальное окно, если смещение равно значению по умолчанию (1)
         // и еще не было подтверждено, независимо от статуса игры
-        if (myCurrentOffsetValue === 1 && !offsetConfirmed) {
+        if (myCurrentOffsetValue === 1 && !offsetConfirmedRef.current && !showOffsetModalRef.current) {
           console.log('✅ [loadGame] Показываем модальное окно выбора смещения')
           // Используем requestAnimationFrame для гарантии, что состояние обновилось
           requestAnimationFrame(() => {
@@ -353,7 +364,7 @@ export default function Game() {
         } else {
           console.log('❌ [loadGame] Модальное окно НЕ показываем:', {
             myCurrentOffsetValue,
-            offsetConfirmed,
+            offsetConfirmed: offsetConfirmedRef.current,
             reason: myCurrentOffsetValue === 1 ? 'offsetConfirmed=true' : `offset=${myCurrentOffsetValue} != 1`
           })
         }
@@ -643,12 +654,13 @@ export default function Game() {
           p1Offset: data.p1Offset,
           p2Offset: data.p2Offset,
           myCurrentOffset,
-          offsetConfirmed,
-          showOffsetModal
+          offsetConfirmed: offsetConfirmedRef.current,
+          showOffsetModal: showOffsetModalRef.current
         })
         
         // Показываем модальное окно, если смещение равно значению по умолчанию (1) и еще не было подтверждено
-        if (myCurrentOffset === 1 && !offsetConfirmed) {
+        // Также проверяем, что модальное окно еще не открыто
+        if (myCurrentOffset === 1 && !offsetConfirmedRef.current && !showOffsetModalRef.current) {
           console.log('✅ [WebSocket] Показываем модальное окно выбора смещения')
           requestAnimationFrame(() => {
             setShowOffsetModal(true)
@@ -657,8 +669,9 @@ export default function Game() {
         } else {
           console.log('❌ [WebSocket] Модальное окно НЕ показываем:', {
             myCurrentOffset,
-            offsetConfirmed,
-            reason: myCurrentOffset === 1 ? 'offsetConfirmed=true' : `offset=${myCurrentOffset} != 1`
+            offsetConfirmed: offsetConfirmedRef.current,
+            showOffsetModal: showOffsetModalRef.current,
+            reason: myCurrentOffset !== 1 ? `offset=${myCurrentOffset} != 1` : (offsetConfirmedRef.current ? 'offsetConfirmed=true' : 'showOffsetModal=true')
           })
         }
       }
