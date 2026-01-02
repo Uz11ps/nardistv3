@@ -327,10 +327,28 @@ export default function Game() {
       // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
       // Показываем, если игра в статусе 'waiting', не sandbox, и смещение еще не было установлено на сервере
       if (game.status === 'waiting' && game.type !== 'sandbox') {
-        // Проверяем, что смещение еще не было установлено на сервере
-        const myOffsetNotSet = isP1 ? !game.p1Offset : !game.p2Offset
-        if (!offsetConfirmed && myOffsetNotSet) {
-          setShowOffsetModal(true)
+        // Проверяем, что смещение еще не было установлено на сервере (null или undefined)
+        const myOffsetNotSet = isP1 
+          ? (game.p1Offset === null || game.p1Offset === undefined)
+          : (game.p2Offset === null || game.p2Offset === undefined)
+        
+        console.log('🔍 Проверка показа модального окна смещения:', {
+          status: game.status,
+          type: game.type,
+          isP1,
+          p1Offset: game.p1Offset,
+          p2Offset: game.p2Offset,
+          myOffsetNotSet,
+          offsetConfirmed
+        })
+        
+        // Показываем модальное окно, если смещение не установлено
+        if (myOffsetNotSet) {
+          console.log('✅ Показываем модальное окно выбора смещения')
+          // Небольшая задержка, чтобы убедиться, что состояние обновилось
+          setTimeout(() => {
+            setShowOffsetModal(true)
+          }, 100)
         }
       }
       
@@ -603,10 +621,26 @@ export default function Game() {
       // Показываем модальное окно выбора смещения при статусе 'waiting' для всех типов игр (кроме sandbox)
       if (newStatus === 'waiting' && data.type !== 'sandbox') {
         const isP1 = data.player1Id === user?.id
-        // Проверяем, что смещение еще не было установлено на сервере
-        const myOffsetNotSet = isP1 ? !data.p1Offset : !data.p2Offset
-        if (!offsetConfirmed && myOffsetNotSet) {
-          setShowOffsetModal(true)
+        // Проверяем, что смещение еще не было установлено на сервере (null или undefined)
+        const myOffsetNotSet = isP1 
+          ? (data.p1Offset === null || data.p1Offset === undefined)
+          : (data.p2Offset === null || data.p2Offset === undefined)
+        
+        console.log('🔍 WebSocket: Проверка показа модального окна смещения:', {
+          status: newStatus,
+          type: data.type,
+          isP1,
+          p1Offset: data.p1Offset,
+          p2Offset: data.p2Offset,
+          myOffsetNotSet
+        })
+        
+        // Показываем модальное окно, если смещение не установлено
+        if (myOffsetNotSet) {
+          console.log('✅ WebSocket: Показываем модальное окно выбора смещения')
+          setTimeout(() => {
+            setShowOffsetModal(true)
+          }, 100)
         }
       }
       
