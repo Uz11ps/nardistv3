@@ -864,12 +864,29 @@ export default function BackgammonBoard({
     
     // Отрисовка перетаскиваемой шашки (самый верхний слой)
     if (dragging && dragPosition) {
-      const { pointWidth: pW, pointHeight: pH } = getPointCoordinates(dragging.pointIndex, canvas)
+      // Для pointIndex: -1 (bear-off) используем стандартный размер точки
+      const coords = getPointCoordinates(dragging.pointIndex === -1 ? 0 : dragging.pointIndex, canvas)
+      const pW = coords.pointWidth
+      const pH = coords.pointHeight
       const checkerSize = Math.min(pW * 0.85, pH * 0.15)
       const dragX = dragPosition.x - dragging.offsetX
       const dragY = dragPosition.y - dragging.offsetY
       
-      drawChecker(dragX, dragY, checkerSize, isPlayer1, isPlayer1, 0.9)
+      // Определяем цвет шашки для отрисовки при перетаскивании
+      let isWhite = isPlayer1
+      if (isSandbox) {
+        if (dragging.pointIndex === -1) {
+          isWhite = dragging.checkerColor === 'white'
+        } else if (dragging.pointIndex === 24) {
+          isWhite = true
+        } else if (dragging.pointIndex === 25) {
+          isWhite = false
+        } else if (dragging.pointIndex >= 0) {
+          isWhite = (virtualGameState?.points[dragging.pointIndex] || 0) > 0
+        }
+      }
+      
+      drawChecker(dragX, dragY, checkerSize, isWhite, isPlayer1, 0.9)
     }
 
     // Отрисовка анимируемой шашки
@@ -1611,7 +1628,19 @@ export default function BackgammonBoard({
       const checkerColor = getBearOffAtPosition(x, y, canvas)
       if (checkerColor) {
         // Начинаем перетаскивание шашки из bearOff
-        setDragging({ pointIndex: -1, offsetX: x, offsetY: y, checkerColor })
+        // Рассчитываем координаты центра области для корректного отображения перетаскивания
+        const bWidth = canvas.width * 0.06
+        const lContainerX = 0
+        const rContainerX = canvas.width - bWidth
+        const areaX = (checkerColor === 'white' ? (isPlayer1 ? rContainerX : lContainerX) : (isPlayer1 ? lContainerX : rContainerX)) + bWidth / 2
+        const areaY = checkerColor === 'white' ? canvas.height - 75 : 75
+        
+        setDragging({ 
+          pointIndex: -1, 
+          offsetX: x - areaX, 
+          offsetY: y - areaY, 
+          checkerColor 
+        })
         setDragPosition({ x, y })
         return
       }
@@ -1627,13 +1656,11 @@ export default function BackgammonBoard({
         
         let pointValue = 0
         if (pointIndex === 24) pointValue = bar.white
-        else if (pointIndex === 25) pointValue = bar.black
+        else if (pointIndex === 25) pointValue = -bar.black // Используем минус для черных
         else pointValue = points[pointIndex] || 0
         
         // В sandbox разрешаем перетаскивать любую шашку (не только свою)
-        const canDragInSandbox = pointValue !== 0
-        
-        if (canDragInSandbox) {
+        if (pointValue !== 0) {
           // Сохраняем начальную позицию для долгого зажатия
           longPressStartRef.current = { x, y, pointIndex }
           // Запускаем таймер долгого зажатия (300мс для sandbox)
@@ -1656,18 +1683,11 @@ export default function BackgammonBoard({
       }
       
       // Если нет кубиков, не разрешаем обычные ходы
-      if (!hasDice) {
-        return
-      }
-      
-      // Если есть кубики, разрешаем обычные ходы (в sandbox всегда можно ходить)
-      if (!canMove) return
     } else {
       if (!canMove || !isMyTurn) return
     }
     
     const pointIndex = getPointAtPosition(x, y, canvas)
-    // console.log('Clicked at', x, y, 'Point:', pointIndex)
     
     if (pointIndex === null) {
       setSelectedPoint(null)
@@ -1677,13 +1697,12 @@ export default function BackgammonBoard({
     }
     
     // Для коротких нард: если есть шашки на баре, блокируем клики по точкам на доске
-    if (gameMode === 'short') {
+    if (gameMode === 'short' && !isSandbox) { // В sandbox не блокируем
       const bar = virtualGameState?.bar || { white: 0, black: 0 }
-      const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
+      const activePlayer = isPlayer1 ? 0 : 1
       const hasBarCheckers = activePlayer === 0 ? bar.white > 0 : bar.black > 0
       
       if (hasBarCheckers && pointIndex !== 24 && pointIndex !== 25) {
-        // Есть шашки на баре и кликнули не по бару - блокируем
         setSelectedPoint(null)
         setValidTargetPoints(new Set())
         setShowBearOffButton(null)
@@ -1691,64 +1710,41 @@ export default function BackgammonBoard({
       }
     }
     
-    // Используем virtualGameState для проверки наличия шашки с учетом уже сделанных ходов
     const points = virtualGameState?.points || []
     let pointValue = 0
     
     if (pointIndex === 24 || pointIndex === 25) {
-      // Для бара проверяем наличие шашек на баре
       const bar = virtualGameState?.bar || { white: 0, black: 0 }
-      const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
-      const isMyBarIndex = (pointIndex === 24 && activePlayer === 0) || (pointIndex === 25 && activePlayer === 1)
-      if (isMyBarIndex) {
-        pointValue = activePlayer === 0 ? bar.white : -bar.black
-      }
+      if (pointIndex === 24) pointValue = bar.white
+      else pointValue = -bar.black
     } else if (pointIndex >= 0 && pointIndex < points.length) {
       pointValue = points[pointIndex]
     }
     
-    // Для бара проверяем не только pointValue, но и наличие шашек на баре
-    if (pointIndex === 24 || pointIndex === 25) {
-      const bar = virtualGameState?.bar || { white: 0, black: 0 }
-      const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
-      const isMyBarIndex = (pointIndex === 24 && activePlayer === 0) || (pointIndex === 25 && activePlayer === 1)
-      if (!isMyBarIndex || pointValue === 0) {
-        setSelectedPoint(null)
-        setValidTargetPoints(new Set())
-        setShowBearOffButton(null)
-        return
-      }
-    } else if (pointValue === 0) {
+    if (pointValue === 0 && pointIndex !== -3) { // Разрешаем клик по мусорке
       setSelectedPoint(null)
       setValidTargetPoints(new Set())
       setShowBearOffButton(null)
       return
     }
     
-    // Проверяем, моя ли это шашка
-    // В sandbox режиме "моя" шашка определяется текущим currentPlayer (0 - белые, 1 - черные)
-    const isMyChecker = isSandbox 
-      ? (currentPlayer === 0 ? pointValue > 0 : pointValue < 0)
-      : (isPlayer1 ? pointValue > 0 : pointValue < 0)
-    const isMyBar = isSandbox
-      ? ((pointIndex === 24 && currentPlayer === 0) || (pointIndex === 25 && currentPlayer === 1))
+    // В sandbox разрешаем тащить ЛЮБУЮ шашку (свою или чужую)
+    const isMyChecker = isSandbox ? pointValue !== 0 : (isPlayer1 ? pointValue > 0 : pointValue < 0)
+    const isMyBar = isSandbox 
+      ? (pointIndex === 24 ? (virtualGameState?.bar?.white || 0) > 0 : (pointIndex === 25 ? (virtualGameState?.bar?.black || 0) > 0 : false))
       : ((pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1))
     
-    if (!isMyChecker && !isMyBar) {
+    if (!isMyChecker && !isMyBar && pointIndex !== -3) {
       setSelectedPoint(null)
       setValidTargetPoints(new Set())
       setShowBearOffButton(null)
       return
     }
     
-    // Разрешаем захватить шашку, даже если нет ходов, для визуального отклика
-    // Но подсветим цели только если ходы есть
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+    const { x: pX, y: pY } = getPointCoordinates(pointIndex, canvas)
     
-    const { x: pointX, y: pointY } = getPointCoordinates(pointIndex, canvas)
-    
-    // Начинаем перетаскивание
-    setDragging({ pointIndex, offsetX: x - pointX, offsetY: y - pointY })
+    setDragging({ pointIndex, offsetX: x - pX, offsetY: y - pY })
     setDragPosition({ x, y })
     setSelectedPoint(pointIndex)
     
