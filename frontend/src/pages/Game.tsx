@@ -326,23 +326,23 @@ export default function Game() {
       
       // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
       // Показываем, если игра в статусе 'waiting', не sandbox
+      console.log('🔍 [loadGame] Проверка показа модального окна смещения:', {
+        status: game.status,
+        type: game.type,
+        isP1,
+        p1Offset: game.p1Offset,
+        p2Offset: game.p2Offset,
+        myCurrentOffset,
+        offsetConfirmed,
+        showOffsetModal
+      })
+      
       if (game.status === 'waiting' && game.type !== 'sandbox') {
-        const myCurrentOffset = isP1 ? game.p1Offset : game.p2Offset
-        
-        console.log('🔍 [loadGame] Проверка показа модального окна смещения:', {
-          status: game.status,
-          type: game.type,
-          isP1,
-          p1Offset: game.p1Offset,
-          p2Offset: game.p2Offset,
-          myCurrentOffset,
-          offsetConfirmed,
-          showOffsetModal
-        })
+        const myCurrentOffsetValue = isP1 ? game.p1Offset : game.p2Offset
         
         // Показываем модальное окно, если смещение равно значению по умолчанию (1)
-        // и еще не было подтверждено, или если модальное окно еще не показывалось
-        if (myCurrentOffset === 1 && !offsetConfirmed) {
+        // и еще не было подтверждено
+        if (myCurrentOffsetValue === 1 && !offsetConfirmed) {
           console.log('✅ [loadGame] Показываем модальное окно выбора смещения')
           // Используем requestAnimationFrame для гарантии, что состояние обновилось
           requestAnimationFrame(() => {
@@ -351,11 +351,16 @@ export default function Game() {
           })
         } else {
           console.log('❌ [loadGame] Модальное окно НЕ показываем:', {
-            myCurrentOffset,
+            myCurrentOffsetValue,
             offsetConfirmed,
-            reason: myCurrentOffset === 1 ? 'offsetConfirmed=true' : 'offset != 1'
+            reason: myCurrentOffsetValue === 1 ? 'offsetConfirmed=true' : `offset=${myCurrentOffsetValue} != 1`
           })
         }
+      } else {
+        console.log('❌ [loadGame] Модальное окно НЕ показываем - неподходящий статус или тип:', {
+          status: game.status,
+          type: game.type
+        })
       }
       
       if (game.status === 'in_progress') {
