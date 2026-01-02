@@ -1702,6 +1702,9 @@ export default function BackgammonBoard({
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
+
+    // Сохраняем исходную точку перетаскивания
+    const fromPoint = dragging.pointIndex
     
     // В sandbox режиме обрабатываем drop из bearOff или свободное перемещение
     if (isSandbox) {
@@ -1792,8 +1795,6 @@ export default function BackgammonBoard({
       }
     }
     
-    // Сохраняем исходную точку перетаскивания
-    const fromPoint = dragging.pointIndex
     const targetPoint = getPointAtPosition(x, y, canvas)
     
     // Критически важно: проверяем, что целевая точка не является исходной точкой перетаскивания
