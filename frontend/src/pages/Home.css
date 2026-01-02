@@ -757,6 +757,16 @@
   position: relative;
   box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.05);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.home-central-logo-circle-v3:hover {
+  transform: scale(1.05);
+  box-shadow: 0 25px 60px rgba(0,0,0,0.7), inset 0 0 25px rgba(255,255,255,0.08);
+}
+
+.home-central-logo-circle-v3:active {
+  transform: scale(0.98);
 }
 
 .home-central-logo-v3 {

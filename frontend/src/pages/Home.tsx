@@ -253,7 +253,7 @@ export default function Home() {
 
         {/* Центральное лого */}
         <div className="home-central-logo-container-v3">
-          <div className="home-central-logo-circle-v3">
+          <div className="home-central-logo-circle-v3" onClick={() => navigate('/game/modes')} style={{ cursor: 'pointer' }}>
             <img src="/img/logo.png" alt="Nardis" className="home-central-logo-v3" />
           </div>
         </div>
