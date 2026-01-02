@@ -74,10 +74,11 @@ export class GamesService {
         { player2Id: player1Id, status: GameStatus.IN_PROGRESS },
       ],
     });
-    // Фильтруем только действительно активные игры (исключаем игры с ботом)
+    // Фильтруем только действительно активные игры (исключаем игры с ботом и sandbox)
     const trulyActivePlayer1Games = player1ActiveGames.filter(game => 
       (game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS) &&
-      game.type !== GameType.VS_BOT
+      game.type !== GameType.VS_BOT &&
+      game.type !== GameType.SANDBOX
     );
     if (trulyActivePlayer1Games.length > 0) {
       throw new BadRequestException('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
@@ -93,10 +94,11 @@ export class GamesService {
           { player2Id, status: GameStatus.IN_PROGRESS },
         ],
       });
-      // Фильтруем только действительно активные игры (исключаем игры с ботом)
+      // Фильтруем только действительно активные игры (исключаем игры с ботом и sandbox)
       const trulyActivePlayer2Games = player2ActiveGames.filter(game => 
         (game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS) &&
-        game.type !== GameType.VS_BOT
+        game.type !== GameType.VS_BOT &&
+        game.type !== GameType.SANDBOX
       );
       if (trulyActivePlayer2Games.length > 0) {
         throw new BadRequestException('Соперник уже находится в активной игре.');
@@ -390,10 +392,11 @@ export class GamesService {
         relations: [],
       });
 
-      // Фильтруем только действительно активные игры (исключаем игры с ботом)
+      // Фильтруем только действительно активные игры (исключаем игры с ботом и sandbox)
       const trulyActiveGames = activeGames.filter(game => 
         (game.status === GameStatus.IN_PROGRESS || game.status === GameStatus.WAITING) &&
-        game.type !== GameType.VS_BOT
+        game.type !== GameType.VS_BOT &&
+        game.type !== GameType.SANDBOX
       );
 
       if (trulyActiveGames.length > 0) {
@@ -1701,10 +1704,11 @@ export class GamesService {
           { player2Id: playerId, status: GameStatus.IN_PROGRESS },
         ],
       });
-      // Фильтруем только действительно активные игры (исключаем игры с ботом)
+      // Фильтруем только действительно активные игры (исключаем игры с ботом и sandbox)
       const trulyActivePlayer1Games = player1ActiveGames.filter(game => 
         (game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS) &&
-        game.type !== GameType.VS_BOT
+        game.type !== GameType.VS_BOT &&
+        game.type !== GameType.SANDBOX
       );
       if (trulyActivePlayer1Games.length > 0) {
         throw new BadRequestException('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
