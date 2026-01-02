@@ -895,7 +895,11 @@ export class GamesService {
     }
 
     const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
-    if (currentPlayerId !== playerId) {
+    
+    // В sandbox режиме только player1Id может делать ходы за обе стороны
+    const isSandboxTurn = game.type === GameType.SANDBOX && game.player1Id === playerId;
+    
+    if (!isSandboxTurn && currentPlayerId !== playerId) {
       throw new BadRequestException('Не ваш ход');
     }
 

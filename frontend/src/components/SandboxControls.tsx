@@ -94,7 +94,20 @@ export default function SandboxControls({ gameId, gameState, currentPlayer, onBo
                 onChange={(e) => setDice2(parseInt(e.target.value) || 1)}
               />
             </div>
-            <button onClick={handleSetDice}>Установить кубики</button>
+            <div className="dice-buttons">
+              <button onClick={handleSetDice}>Установить</button>
+              <button onClick={async () => {
+                try {
+                  await apiClient.post(`/games/${gameId}/sandbox/set-dice`, {
+                    dice: [],
+                    player: currentPlayer,
+                  })
+                  onBoardUpdate()
+                } catch (error: any) {
+                  alert(error.response?.data?.message || 'Ошибка')
+                }
+              }} className="clear-btn">Сбросить</button>
+            </div>
           </div>
 
           <div className="sandbox-section">

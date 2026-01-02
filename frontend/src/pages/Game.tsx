@@ -161,6 +161,14 @@ export default function Game() {
   const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  useEffect(() => {
+    const handleBoardUpdate = () => {
+      loadGame()
+    }
+    window.addEventListener('sandbox-board-updated', handleBoardUpdate)
+    return () => window.removeEventListener('sandbox-board-updated', handleBoardUpdate)
+  }, [gameId])
+
   const mode = searchParams.get('mode')
   const isBotGame = mode === 'bot'
   const createdBotGameRef = useRef(false)

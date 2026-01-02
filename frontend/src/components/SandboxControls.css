@@ -140,12 +140,20 @@
   color: #aaa;
 }
 
-.bar-bearoff-editor input {
-  padding: 8px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  color: #FFF;
-  font-size: 14px;
+.dice-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.dice-buttons button {
+  flex: 1;
+}
+
+.clear-btn {
+  background: #444 !important;
+}
+
+.clear-btn:hover {
+  background: #555 !important;
 }
 
