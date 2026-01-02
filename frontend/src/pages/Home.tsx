@@ -33,11 +33,11 @@ export default function Home() {
   const [stats, setStats] = useState<Stats>({ 
     narCoin: 0, 
     xp: 0, 
-    level: 1, 
-    energy: 100, 
-    maxEnergy: 100,
-    lives: 5,
-    maxLives: 5,
+    level: 0, 
+    energy: 0, 
+    maxEnergy: 0,
+    lives: 0,
+    maxLives: 0,
     economy: 0,
     power: 0,
     incomePerHour: 0
@@ -54,11 +54,11 @@ export default function Home() {
         setStats({
           narCoin: Number(narCoin) || 0,
           xp: Number(xp) || 0,
-          level: user.level || 1,
-          energy: user.energy || 100,
-          maxEnergy: user.maxEnergy || 100,
-          lives: user.lives || 5,
-          maxLives: user.maxLives || 5,
+          level: user.level !== undefined ? user.level : 0,
+          energy: user.energy !== undefined ? user.energy : 100,
+          maxEnergy: user.maxEnergy !== undefined ? user.maxEnergy : 100,
+          lives: user.lives !== undefined ? user.lives : 5,
+          maxLives: user.maxLives !== undefined ? user.maxLives : 5,
           economy: user.economySp || 0,
           power: user.powerSp || 0,
           incomePerHour: 0, // Будет загружено отдельно
@@ -213,12 +213,12 @@ export default function Home() {
       <div className="home-level-section-v3">
         <div className="home-level-info-v3">
           <span>Lvl {stats.level}</span>
-          <span>{levelProgress ? `${levelProgress.currentXP - levelProgress.xpForCurrentLevel}/${levelProgress.xpNeededForNextLevel}` : '50/100'}</span>
+          <span>{levelProgress ? `${levelProgress.currentXP}/${levelProgress.xpNeededForNextLevel + levelProgress.xpForCurrentLevel}` : `${stats.xp}`}</span>
         </div>
         <div className="home-level-progress-bar-v3">
           <div 
             className="home-level-progress-fill-v3" 
-            style={{ width: `${levelProgress?.progress ? levelProgress.progress * 100 : 50}%` }}
+            style={{ width: `${levelProgress?.progress ? levelProgress.progress * 100 : 0}%` }}
           />
         </div>
       </div>

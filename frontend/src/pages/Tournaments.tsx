@@ -151,7 +151,8 @@ export default function Tournaments() {
                 </div>
                 {activeTab === 'active' && tournament.status === 'in_progress' && tournament.currentRound && tournament.totalRounds && (
                   <div className="tournament-detail">
-                    Раунд {tournament.currentRound} из {tournament.totalRounds} • Осталось {tournament.timeRemaining || '5:24'}
+                    Раунд {tournament.currentRound} из {tournament.totalRounds}
+                    {tournament.timeRemaining && ` • Осталось ${tournament.timeRemaining}`}
                   </div>
                 )}
                 {activeTab === 'active' && tournament.status === 'registration' && tournament.registrationEnd && (
