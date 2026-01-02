@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
 import BackgammonBoard from '../components/BackgammonBoard'
+import SandboxControls from '../components/SandboxControls'
 import Dice from '../components/Dice'
 import Icon from '../components/Icon'
 import Button from '../components/Button'
@@ -134,6 +135,9 @@ export default function Game() {
 
   const [showExitModal, setShowExitModal] = useState<boolean>(false) // Модальное окно выхода
   const [diceAnimating, setDiceAnimating] = useState<boolean>(false)
+  const diceAnimatingRef = useRef<boolean>(false) // Ref для синхронной проверки состояния анимации
+  const lastDiceRollRef = useRef<string>('') // Отслеживание последнего обработанного события dice_rolled
+  const processedEventsRef = useRef<Set<string>>(new Set()) // Set для отслеживания обработанных eventId
   const [playerSkins, setPlayerSkins] = useState<{ player1: any; player2: any; mySkins: any }>({ player1: null, player2: null, mySkins: null })
   const [player1Ready, setPlayer1Ready] = useState<boolean>(false)
   const [player2Ready, setPlayer2Ready] = useState<boolean>(false)
@@ -141,8 +145,29 @@ export default function Game() {
   const [myOffset, setMyOffset] = useState<number>(1)
   const [opponentOffset, setOpponentOffset] = useState<number>(1)
   const lastSentOffsetRef = useRef<number | null>(null) // Отслеживаем последний отправленный offset
+  const [showOffsetModal, setShowOffsetModal] = useState<boolean>(false)
+  const showOffsetModalRef = useRef<boolean>(false)
+  const [offsetConfirmed, setOffsetConfirmed] = useState<boolean>(false)
+  const offsetConfirmedRef = useRef<boolean>(false)
+
+  // Синхронизируем рефы с состоянием
+  useEffect(() => {
+    showOffsetModalRef.current = showOffsetModal
+  }, [showOffsetModal])
+
+  useEffect(() => {
+    offsetConfirmedRef.current = offsetConfirmed
+  }, [offsetConfirmed])
   const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    const handleBoardUpdate = () => {
+      loadGame()
+    }
+    window.addEventListener('sandbox-board-updated', handleBoardUpdate)
+    return () => window.removeEventListener('sandbox-board-updated', handleBoardUpdate)
+  }, [gameId])
 
   const mode = searchParams.get('mode')
   const isBotGame = mode === 'bot'
@@ -150,6 +175,9 @@ export default function Game() {
 
   useEffect(() => {
     if (gameId) {
+      // Сбрасываем флаг подтверждения смещения при загрузке новой игры
+      setOffsetConfirmed(false)
+      setShowOffsetModal(false)
       loadGame()
       connectToGame()
       createdBotGameRef.current = false
@@ -309,12 +337,47 @@ export default function Game() {
       
       // Загружаем смещения игроков
       const isP1 = game.player1Id === user?.id
-      if (isP1) {
-        setMyOffset(game.p1Offset || 1)
-        setOpponentOffset(game.p2Offset || 1)
+      const myCurrentOffset = isP1 ? (game.p1Offset || 1) : (game.p2Offset || 1)
+      const opponentCurrentOffset = isP1 ? (game.p2Offset || 1) : (game.p1Offset || 1)
+      
+      setMyOffset(myCurrentOffset)
+      setOpponentOffset(opponentCurrentOffset)
+      
+      // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
+      // Показываем, если смещение равно значению по умолчанию (1) и еще не было подтверждено
+      // Показываем независимо от статуса игры (waiting или in_progress)
+      console.log('🔍 [loadGame] Проверка показа модального окна смещения:', {
+        status: game.status,
+        type: game.type,
+        isP1,
+        p1Offset: game.p1Offset,
+        p2Offset: game.p2Offset,
+        myCurrentOffset,
+        offsetConfirmed: offsetConfirmedRef.current,
+        showOffsetModal: showOffsetModalRef.current
+      })
+      
+      if (game.type !== 'sandbox') {
+        const myCurrentOffsetValue = isP1 ? game.p1Offset : game.p2Offset
+        
+        // Показываем модальное окно, если смещение равно значению по умолчанию (1)
+        // и еще не было подтверждено, независимо от статуса игры
+        if (myCurrentOffsetValue === 1 && !offsetConfirmedRef.current && !showOffsetModalRef.current) {
+          console.log('✅ [loadGame] Показываем модальное окно выбора смещения')
+          // Используем requestAnimationFrame для гарантии, что состояние обновилось
+          requestAnimationFrame(() => {
+            setShowOffsetModal(true)
+            console.log('✅ [loadGame] showOffsetModal установлен в true')
+          })
+        } else {
+          console.log('❌ [loadGame] Модальное окно НЕ показываем:', {
+            myCurrentOffsetValue,
+            offsetConfirmed: offsetConfirmedRef.current,
+            reason: myCurrentOffsetValue === 1 ? 'offsetConfirmed=true' : `offset=${myCurrentOffsetValue} != 1`
+          })
+        }
       } else {
-        setMyOffset(game.p2Offset || 1)
-        setOpponentOffset(game.p1Offset || 1)
+        console.log('❌ [loadGame] Модальное окно НЕ показываем - sandbox игра')
       }
       
       if (game.status === 'in_progress') {
@@ -323,8 +386,9 @@ export default function Game() {
         setPlayer2Timer(timeLimitSeconds)
         
         // Если игра началась и это наш ход, но кубиков нет - бросаем их
+        // НО НЕ для sandbox игр - там пользователь сам управляет всем
         const canMoveNow = game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1
-        if (canMoveNow && !formattedDice && !isBotGame) {
+        if (canMoveNow && !formattedDice && !isBotGame && game.type !== 'sandbox') {
           setTimeout(() => {
             const socket = getSocket()
             if (socket) {
@@ -423,7 +487,11 @@ export default function Game() {
 
   const createBotGame = async (gameMode: 'short' | 'long' = 'long') => {
     try {
+      console.log('🤖 Создание игры с ботом, сбрасываем флаги смещения')
       const response = await apiClient.post('/games/create-bot', { mode: gameMode })
+      // Сбрасываем флаг подтверждения смещения для новой игры
+      setOffsetConfirmed(false)
+      setShowOffsetModal(false)
       navigate(`/game/${response.data.id}`)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Неизвестная ошибка'
@@ -447,6 +515,92 @@ export default function Game() {
       return
     }
 
+    // Обработчик dice_rolled - объявляем ДО регистрации, чтобы можно было удалить
+    const handleDiceRolled = (data: any) => {
+      if (!data.dice) {
+        console.log('⚠️ dice_rolled event without dice data, skipping');
+        return;
+      }
+      
+      // Используем eventId для дедупликации, если он есть, иначе используем diceKey + timestamp
+      const eventId = data.eventId || `${JSON.stringify(data.dice)}_${Date.now()}`;
+      const diceKey = JSON.stringify(data.dice);
+      
+      console.log('🎲 dice_rolled received:', data, 'eventId:', eventId.substring(0, 80), 'diceAnimatingRef:', diceAnimatingRef.current);
+      
+      // СТРОГАЯ защита от дублирования: проверяем через Set обработанных событий
+      if (processedEventsRef.current.has(eventId)) {
+        console.log('⚠️ Duplicate dice_rolled event detected (eventId in Set), skipping');
+        return;
+      }
+      
+      // Также проверяем по diceKey, если eventId нет
+      if (!data.eventId && lastDiceRollRef.current === diceKey) {
+        console.log('⚠️ Duplicate dice_rolled event detected (same dice key), skipping');
+        return;
+      }
+      
+      // Защита от дублирования: не запускаем анимацию, если она уже идет
+      if ((window as any).diceAnimationTimeout) {
+        console.log('⚠️ Dice animation timeout already exists, skipping duplicate');
+        return;
+      }
+      
+      // Дополнительная защита: проверяем через ref (синхронно)
+      if (diceAnimatingRef.current) {
+        console.log('⚠️ Dice animation already active (ref), skipping duplicate');
+        return;
+      }
+      
+      // Добавляем eventId в Set обработанных событий СРАЗУ
+      processedEventsRef.current.add(eventId);
+      lastDiceRollRef.current = diceKey;
+      
+      console.log('✅ Processing dice_rolled event, eventId:', eventId.substring(0, 80));
+      
+      // Обновляем состояние кубиков
+      if (data.dice) {
+        setGameState((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            dice: data.dice
+          };
+        });
+      }
+      
+      // Запускаем анимацию ОДИН раз - устанавливаем ref СРАЗУ
+      diceAnimatingRef.current = true;
+      setDiceAnimating(true);
+      
+      // Запускаем таймаут для остановки анимации через 4 секунды
+      (window as any).diceAnimationTimeout = setTimeout(() => {
+        diceAnimatingRef.current = false; // Сбрасываем ref
+        setDiceAnimating(false);
+        delete (window as any).diceAnimationTimeout;
+        // Очищаем ключ и eventId после завершения анимации (с небольшой задержкой для безопасности)
+        setTimeout(() => {
+          lastDiceRollRef.current = '';
+          processedEventsRef.current.delete(eventId);
+          // Очищаем старые события из Set (оставляем только последние 10)
+          if (processedEventsRef.current.size > 10) {
+            const eventsArray = Array.from(processedEventsRef.current);
+            processedEventsRef.current.clear();
+            eventsArray.slice(-10).forEach(id => processedEventsRef.current.add(id));
+          }
+        }, 500);
+      }, 4000);
+    };
+
+    // ВАЖНО: Отключаем все предыдущие обработчики перед добавлением новых
+    // Это предотвращает множественные подписки на одно событие
+    socket.off('game_state')
+    socket.off('move_made')
+    socket.off('dice_rolled', handleDiceRolled) // Отключаем конкретную функцию
+    socket.off('game_finished')
+    socket.off('offset_updated')
+    socket.off('timer_update')
+
     socket.emit('join_game', { gameId })
 
     socket.on('game_state', (data: any) => {
@@ -456,6 +610,10 @@ export default function Game() {
         : (Array.isArray(diceData) && diceData.length === 0) || !diceData
         ? null
         : diceData
+      
+      // Проверяем, изменились ли кубики (для запуска анимации)
+      // НЕ запускаем анимацию здесь, т.к. она уже запускается в dice_rolled событии
+      // Это предотвращает дублирование анимации
       
       const isSandbox = data.type === 'sandbox'
       const canMove = isSandbox ? true : data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
@@ -489,6 +647,43 @@ export default function Game() {
         p2Rolls: data.p2Rolls,
       })
       const newStatus = data.status || 'waiting'
+      
+      // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
+      // Показываем, если смещение равно значению по умолчанию (1) и еще не было подтверждено
+      // Показываем независимо от статуса игры (waiting или in_progress)
+      if (data.type !== 'sandbox') {
+        const isP1 = data.player1Id === user?.id
+        const myCurrentOffset = isP1 ? data.p1Offset : data.p2Offset
+        
+        console.log('🔍 [WebSocket] Проверка показа модального окна смещения:', {
+          status: newStatus,
+          type: data.type,
+          isP1,
+          p1Offset: data.p1Offset,
+          p2Offset: data.p2Offset,
+          myCurrentOffset,
+          offsetConfirmed: offsetConfirmedRef.current,
+          showOffsetModal: showOffsetModalRef.current
+        })
+        
+        // Показываем модальное окно, если смещение равно значению по умолчанию (1) и еще не было подтверждено
+        // Также проверяем, что модальное окно еще не открыто
+        if (myCurrentOffset === 1 && !offsetConfirmedRef.current && !showOffsetModalRef.current) {
+          console.log('✅ [WebSocket] Показываем модальное окно выбора смещения')
+          requestAnimationFrame(() => {
+            setShowOffsetModal(true)
+            console.log('✅ [WebSocket] showOffsetModal установлен в true')
+          })
+        } else {
+          console.log('❌ [WebSocket] Модальное окно НЕ показываем:', {
+            myCurrentOffset,
+            offsetConfirmed: offsetConfirmedRef.current,
+            showOffsetModal: showOffsetModalRef.current,
+            reason: myCurrentOffset !== 1 ? `offset=${myCurrentOffset} != 1` : (offsetConfirmedRef.current ? 'offsetConfirmed=true' : 'showOffsetModal=true')
+          })
+        }
+      }
+      
       setGameStatus(newStatus)
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
       
@@ -505,7 +700,8 @@ export default function Game() {
       }
 
       // Если это начало нашего хода и кубиков нет - бросаем их автоматически
-      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice) {
+      // НО НЕ для sandbox игр - там пользователь сам управляет всем
+      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && gameInfo?.type !== 'sandbox') {
         setTimeout(() => {
           const socket = getSocket()
           if (socket) {
@@ -531,6 +727,10 @@ export default function Game() {
           ? { die1: diceData[0], die2: diceData[1] }
           : diceData // Для дублей (4 элемента) или других случаев сохраняем массив
         : null
+      
+      // НЕ запускаем анимацию здесь, т.к. она уже запускается в dice_rolled событии
+      // Это предотвращает дублирование анимации
+      
       const isMyTurnNow = canMove
       const wasMyTurn = gameState?.canMove || false
       
@@ -579,10 +779,11 @@ export default function Game() {
       }
       
       // Если это начало нашего хода - запускаем таймер и бросаем кубики если их нет
+      // НО НЕ для sandbox игр - там пользователь сам управляет всем
       if (isMyTurnNow && !wasMyTurn) {
         setMoveTimer(20)
         
-        if (!formattedDice && data.status === 'in_progress') {
+        if (!formattedDice && data.status === 'in_progress' && data.type !== 'sandbox') {
           // Автоматически бросаем кубики для следующего игрока (как в боте)
           setTimeout(() => {
             const socket = getSocket()
@@ -594,28 +795,7 @@ export default function Game() {
       }
     })
 
-    socket.on('dice_rolled', (data: any) => {
-      console.log('🎲 dice_rolled received:', data);
-      if (data.dice) {
-        setGameState(prev => {
-          if (!prev) return null;
-          // Сохраняем формат кубиков как он пришел с сервера
-          return {
-            ...prev,
-            dice: data.dice
-          };
-        });
-      }
-      setDiceAnimating(true)
-      // Очищаем предыдущий таймаут если он был
-      if ((window as any).diceAnimationTimeout) {
-        clearTimeout((window as any).diceAnimationTimeout);
-      }
-      (window as any).diceAnimationTimeout = setTimeout(() => {
-        setDiceAnimating(false)
-        delete (window as any).diceAnimationTimeout;
-      }, 3000)
-    })
+    socket.on('dice_rolled', handleDiceRolled);
 
     socket.on('offset_updated', (data: any) => {
       // Важно: gameInfo должен быть загружен, иначе не можем определить, кто мы
@@ -714,12 +894,13 @@ export default function Game() {
           if (data.game) {
             setGameInfo(data.game)
             // Автоматически загружаем игру и бросаем кубики
+            // НО НЕ для sandbox игр - там пользователь сам управляет всем
             loadGame().then(() => {
               // Небольшая задержка для обновления состояния
               setTimeout(() => {
                 const socket = getSocket()
-                if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1)) {
-                  // Если это наш ход, бросаем кубики
+                if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1) && data.game.type !== 'sandbox') {
+                  // Если это наш ход, бросаем кубики (но не для sandbox)
                   socket.emit('roll_dice', { gameId })
                 }
               }, 300)
@@ -899,6 +1080,27 @@ export default function Game() {
     } catch (error) {
       // Если ошибка, сбрасываем отслеживание
       lastSentOffsetRef.current = null
+    }
+  }
+
+  const handleConfirmOffset = async () => {
+    if (!gameId) return
+    try {
+      // Отправляем текущее значение смещения на сервер
+      await apiClient.post(`/games/${gameId}/offset`, { offset: myOffset })
+      setOffsetConfirmed(true)
+      setShowOffsetModal(false)
+      
+      // Для игр с ботом автоматически начинаем игру после выбора смещения
+      if (isBotGame || gameInfo?.type === 'vs_bot') {
+        // Игра с ботом начнется автоматически
+      } else if (gameInfo?.type === 'vs_player' || gameInfo?.type === 'tournament') {
+        // Для игр с игроком или турниров - ждем готовности обоих игроков
+        // Кнопка "Готов" уже есть в интерфейсе
+      }
+    } catch (error) {
+      console.error('Ошибка при сохранении смещения:', error)
+      alert('Не удалось сохранить смещение. Попробуйте еще раз.')
     }
   }
 
@@ -1228,7 +1430,26 @@ export default function Game() {
                   <h3>Контроль честности</h3>
                   <div className="hash-display">
                     <div>Хеш последовательности (SHA-256):</div>
-                    <code>{gameInfo.rngHash ? (JSON.parse(gameInfo.rngHash).p1Hash.substring(0, 16) + '...') : '---'}</code>
+                    <code>
+                      {(() => {
+                        try {
+                          if (typeof gameInfo.rngHash === 'string') {
+                            // Пытаемся распарсить как JSON
+                            const parsed = JSON.parse(gameInfo.rngHash)
+                            if (parsed && parsed.p1Hash) {
+                              return parsed.p1Hash.substring(0, 16) + '...'
+                            }
+                          }
+                          // Если это не JSON или не объект с p1Hash, показываем первые 16 символов строки
+                          return gameInfo.rngHash ? gameInfo.rngHash.substring(0, 16) + '...' : '---'
+                        } catch (e) {
+                          // Если не удалось распарсить, показываем первые 16 символов
+                          return typeof gameInfo.rngHash === 'string' 
+                            ? gameInfo.rngHash.substring(0, 16) + '...'
+                            : '---'
+                        }
+                      })()}
+                    </code>
                   </div>
                   
                   <div className="offset-selector">
@@ -1301,7 +1522,160 @@ export default function Game() {
                 player2Id={gameInfo?.player2Id}
                 player1Name={gameInfo?.player1?.nickname || gameInfo?.player1?.username}
                 player2Name={gameInfo?.player2?.nickname || gameInfo?.player2?.username || 'Бот'}
+                isSandbox={isSandbox}
+                onSandboxCheckerDrop={isSandbox ? async (pointIndex: number, checkerColor: 'white' | 'black') => {
+                  if (!gameId) return
+                  try {
+                    const currentPoints = [...(gameState.points || Array(24).fill(0))]
+                    const currentValue = currentPoints[pointIndex] || 0
+                    const currentBearOff = { ...(gameState.bearOff || { white: 0, black: 0 }) }
+                    
+                    // Проверяем, есть ли шашки в bearOff
+                    if (checkerColor === 'white' && currentBearOff.white <= 0) {
+                      alert('Нет белых шашек в лоте')
+                      return
+                    }
+                    if (checkerColor === 'black' && currentBearOff.black <= 0) {
+                      alert('Нет черных шашек в лоте')
+                      return
+                    }
+                    
+                    // Уменьшаем bearOff и добавляем шашку на точку
+                    if (checkerColor === 'white') {
+                      currentBearOff.white = currentBearOff.white - 1
+                      currentPoints[pointIndex] = currentValue + 1
+                    } else {
+                      currentBearOff.black = currentBearOff.black - 1
+                      currentPoints[pointIndex] = currentValue - 1
+                    }
+                    
+                    await apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+                      points: currentPoints,
+                      bar: gameState.bar || { white: 0, black: 0 },
+                      bearOff: currentBearOff,
+                    })
+                    
+                    // Обновляем состояние
+                    if (gameId) {
+                      const response = await apiClient.get(`/games/${gameId}`)
+                      const data = response.data
+                      const barRaw = data.gameState?.bar || [0, 0]
+                      const bar = Array.isArray(barRaw) 
+                        ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+                        : barRaw
+                      const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+                      const bearOff = Array.isArray(bearOffRaw)
+                        ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+                        : bearOffRaw
+                      const points = Array.isArray(data.gameState?.points) 
+                        ? [...data.gameState.points] 
+                        : []
+                      setGameState({
+                        points,
+                        bar,
+                        bearOff,
+                        currentPlayer: data.currentPlayer || 0,
+                        dice: gameState.dice,
+                        canMove: true,
+                        verificationSalt: data.verificationSalt,
+                        p1Rolls: data.p1Rolls,
+                        p2Rolls: data.p2Rolls,
+                      })
+                    }
+                  } catch (error: any) {
+                    alert(error.response?.data?.message || 'Ошибка обновления доски')
+                  }
+                } : undefined}
+                onSandboxCheckerRemove={isSandbox ? async (pointIndex: number) => {
+                  if (!gameId) return
+                  try {
+                    const currentPoints = [...(gameState.points || Array(24).fill(0))]
+                    const currentValue = currentPoints[pointIndex] || 0
+                    
+                    if (currentValue > 0) {
+                      currentPoints[pointIndex] = currentValue - 1
+                    } else if (currentValue < 0) {
+                      currentPoints[pointIndex] = currentValue + 1
+                    }
+                    
+                    await apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
+                      points: currentPoints,
+                      bar: gameState.bar || { white: 0, black: 0 },
+                      bearOff: gameState.bearOff || { white: 0, black: 0 },
+                    })
+                    
+                    // Обновляем состояние
+                    if (gameId) {
+                      const response = await apiClient.get(`/games/${gameId}`)
+                      const data = response.data
+                      const barRaw = data.gameState?.bar || [0, 0]
+                      const bar = Array.isArray(barRaw) 
+                        ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+                        : barRaw
+                      const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+                      const bearOff = Array.isArray(bearOffRaw)
+                        ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+                        : bearOffRaw
+                      const points = Array.isArray(data.gameState?.points) 
+                        ? [...data.gameState.points] 
+                        : []
+                      setGameState({
+                        points,
+                        bar,
+                        bearOff,
+                        currentPlayer: data.currentPlayer || 0,
+                        dice: gameState.dice,
+                        canMove: true,
+                        verificationSalt: data.verificationSalt,
+                        p1Rolls: data.p1Rolls,
+                        p2Rolls: data.p2Rolls,
+                      })
+                    }
+                  } catch (error: any) {
+                    alert(error.response?.data?.message || 'Ошибка обновления доски')
+                  }
+                } : undefined}
               />
+              {isSandbox && (
+                <>
+                  <SandboxControls
+                    gameId={gameId || ''}
+                    gameState={gameState}
+                    currentPlayer={gameState?.currentPlayer || 0}
+                    onBoardUpdate={() => {
+                      // Перезагружаем состояние игры
+                      if (gameId) {
+                        apiClient.get(`/games/${gameId}`).then((response) => {
+                          const data = response.data
+                          const diceData = data.gameState?.dice
+                          const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
+                            ? { die1: diceData[0], die2: diceData[1] } 
+                            : null
+                          const barRaw = data.gameState?.bar || [0, 0]
+                          const bar = Array.isArray(barRaw) 
+                            ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+                            : barRaw
+                          const bearOffRaw = data.gameState?.bearOff || data.gameState?.borneOff || [0, 0]
+                          const bearOff = Array.isArray(bearOffRaw)
+                            ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+                            : bearOffRaw
+                          const points = Array.isArray(data.gameState?.points) 
+                            ? [...data.gameState.points] 
+                            : []
+                          setGameState({
+                            points,
+                            bar,
+                            bearOff,
+                            currentPlayer: data.currentPlayer || 0,
+                            dice: formattedDice,
+                            canMove: true,
+                          })
+                        }).catch(console.error)
+                      }
+                    }}
+                  />
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1375,6 +1749,74 @@ export default function Game() {
             <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
               <Button variant="primary" onClick={handleConfirmExit} style={{ flex: 1 }}>Да, сдаться</Button>
               <Button variant="secondary" onClick={() => setShowExitModal(false)} style={{ flex: 1 }}>Нет</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно выбора смещения */}
+      {showOffsetModal && gameInfo && gameInfo.type !== 'sandbox' && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%' }}>
+            <h2>Выбор смещения</h2>
+            <p style={{ marginBottom: '20px', color: '#999' }}>
+              Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 100).
+            </p>
+            
+            <div className="offset-selector">
+              <label>Ваше смещение (1-100):</label>
+              <p className="offset-hint" style={{ fontSize: '12px', color: '#999', marginBottom: '12px' }}>
+                Смещение влияет на выбор начальной позиции в последовательности бросков кубиков
+              </p>
+              <input 
+                type="range" 
+                min="1" 
+                max="100" 
+                value={myOffset} 
+                onChange={handleOffsetChange}
+              />
+              <div className="offset-values">
+                <span>Вы: <strong>{myOffset}</strong></span>
+                {opponentOffset > 0 && (
+                  <span>Соперник: <strong>{opponentOffset}</strong></span>
+                )}
+              </div>
+            </div>
+
+            {gameInfo.rngHash && (
+              <div className="hash-display" style={{ marginBottom: '20px', fontSize: '12px' }}>
+                <div style={{ marginBottom: '8px' }}>Хеш последовательности (SHA-256):</div>
+                <code style={{ fontSize: '11px', wordBreak: 'break-all' }}>
+                  {(() => {
+                    try {
+                      if (typeof gameInfo.rngHash === 'string') {
+                        // Пытаемся распарсить как JSON
+                        const parsed = JSON.parse(gameInfo.rngHash)
+                        if (parsed && parsed.p1Hash) {
+                          return parsed.p1Hash.substring(0, 16) + '...'
+                        }
+                      }
+                      // Если это не JSON или не объект с p1Hash, показываем первые 16 символов строки
+                      return gameInfo.rngHash.substring(0, 16) + '...'
+                    } catch (e) {
+                      // Если не удалось распарсить, показываем первые 16 символов
+                      return typeof gameInfo.rngHash === 'string' 
+                        ? gameInfo.rngHash.substring(0, 16) + '...'
+                        : '---'
+                    }
+                  })()}
+                </code>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <Button 
+                variant="primary" 
+                onClick={handleConfirmOffset} 
+                style={{ flex: 1 }}
+              >
+                Подтвердить
+              </Button>
             </div>
           </div>
         </div>

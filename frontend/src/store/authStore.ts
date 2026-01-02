@@ -15,6 +15,10 @@ interface User {
   narCoin: number | bigint
   energy?: number
   maxEnergy?: number
+  lives?: number
+  maxLives?: number
+  economySp?: number
+  powerSp?: number
   isTrainer?: boolean
   isAdmin?: boolean
   isGuest?: boolean

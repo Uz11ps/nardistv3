@@ -60,6 +60,9 @@ export class Article {
   @Column({ default: false })
   isApproved: boolean; // Одобрена ли статья администратором (для пользовательских статей)
 
+  @Column({ default: 'long' })
+  gameMode: string; // 'long' | 'short'
+
   @Column({ nullable: true })
   approvedBy: string; // ID администратора, который одобрил статью
 

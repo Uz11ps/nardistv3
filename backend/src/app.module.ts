@@ -33,6 +33,7 @@ import { PaymentModule } from './payment/payment.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { PolicyModule } from './policy/policy.module';
+import { BusinessModule } from './business/business.module';
 
 @Module({
   imports: [
@@ -96,6 +97,7 @@ import { PolicyModule } from './policy/policy.module';
     NotificationsModule,
     AchievementsModule,
     PolicyModule,
+    BusinessModule,
   ],
   controllers: [AppController],
   providers: [AppService],

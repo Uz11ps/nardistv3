@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 
@@ -167,6 +168,28 @@ export default function GameResult() {
             <span className="card-subtitle">{movesCount}</span>
           </div>
 
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span className="card-subtitle">Режим:</span>
+            <span className="card-subtitle">{gameData.mode === 'long' ? 'Длинные нарды' : 'Короткие нарды'}</span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span className="card-subtitle">Тип игры:</span>
+            <span className="card-subtitle">
+              {gameData.type === 'vs_player' ? 'Против игрока' : 
+               gameData.type === 'vs_bot' ? 'Против бота' : 
+               gameData.type === 'tournament' ? 'Турнир' : 
+               gameData.type === 'sandbox' ? 'Свободный стол' : 'Неизвестно'}
+            </span>
+          </div>
+
+          {stake > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <span className="card-subtitle">Ставка:</span>
+              <span className="card-subtitle">{stake} NAR</span>
+            </div>
+          )}
+
           {(isWinner || !isWinner) && (
             <div style={{ marginTop: '16px', padding: '12px', background: '#3a3a3a', borderRadius: '8px' }}>
               <div style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '4px' }}>Награды:</div>
@@ -181,6 +204,48 @@ export default function GameResult() {
             </div>
           )}
         </Card>
+
+        {/* Подробная аналитика */}
+        <Card style={{ marginBottom: '20px', textAlign: 'left' }}>
+          <div className="card-title" style={{ marginBottom: '16px' }}>Подробная аналитика</div>
+          
+          <div style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '12px' }}>
+            Среднее время на ход: {movesCount > 0 ? Math.floor(duration / movesCount) : 0} сек
+          </div>
+          
+          <div style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '12px' }}>
+            Ходов в минуту: {duration > 0 ? Math.round((movesCount / duration) * 60 * 10) / 10 : 0}
+          </div>
+
+          <div style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '12px' }}>
+            Дата игры: {gameData.createdAt ? new Date(gameData.createdAt).toLocaleString('ru-RU') : 'Неизвестно'}
+          </div>
+
+          {gameData.player1 && gameData.player2 && (
+            <div style={{ marginTop: '16px', padding: '12px', background: '#3a3a3a', borderRadius: '8px' }}>
+              <div style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '8px' }}>Игроки:</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#FFF' }}>{gameData.player1?.nickname || gameData.player1?.username || 'Игрок 1'}</span>
+                  <span style={{ color: score.player1 > score.player2 ? '#4caf50' : '#aaa' }}>
+                    {score.player1} {score.player1 > score.player2 ? '🏆' : ''}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#FFF' }}>{gameData.player2?.nickname || gameData.player2?.username || 'Игрок 2'}</span>
+                  <span style={{ color: score.player2 > score.player1 ? '#4caf50' : '#aaa' }}>
+                    {score.player2} {score.player2 > score.player1 ? '🏆' : ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Аналитика игры */}
+        {gameId && (
+          <GameAnalytics gameId={gameId} />
+        )}
 
         {/* Действия */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

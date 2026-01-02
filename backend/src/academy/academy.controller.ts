@@ -53,6 +53,16 @@ export class AcademyController {
     return this.academyService.findOne(id, user?.id);
   }
 
+  @Post('publish')
+  @UseGuards(JwtAuthGuard)
+  async publish(@CurrentUser() user: any, @Body() publishData: any) {
+    return this.academyService.create({ 
+      ...publishData, 
+      author: user.username || user.nickname || 'Пользователь',
+      authorId: user.id
+    }, user.isAdmin);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@CurrentUser() user: any, @Body() articleData: any) {
@@ -176,6 +186,17 @@ export class AcademyController {
   @UseGuards(JwtAuthGuard)
   async getOnboardingTasks(@CurrentUser() user: any) {
     return this.courseTasksService.getOnboardingTasks(user.id);
+  }
+
+  // Тесты для курсов
+  @Post('courses/:courseId/quiz/submit')
+  @UseGuards(JwtAuthGuard)
+  async submitQuiz(
+    @CurrentUser() user: any,
+    @Param('courseId') courseId: string,
+    @Body() answers: { questionId: number; answer: number }[],
+  ) {
+    return this.academyService.submitQuiz(user.id, courseId, answers);
   }
 }
 

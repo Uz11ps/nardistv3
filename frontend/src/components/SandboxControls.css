@@ -1,0 +1,159 @@
+.sandbox-controls {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+.sandbox-toggle-btn {
+  padding: 12px 20px;
+  background: #E84142;
+  border: none;
+  border-radius: 8px;
+  color: #FFF;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(232, 65, 66, 0.3);
+  transition: all 0.2s;
+}
+
+.sandbox-toggle-btn:hover {
+  background: #C93C3D;
+  transform: scale(1.05);
+}
+
+.sandbox-panel {
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  width: 300px;
+  max-height: 500px;
+  overflow-y: auto;
+  background: #1C1D21;
+  border: 1px solid #3a3a3a;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.sandbox-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.sandbox-section:last-child {
+  border-bottom: none;
+}
+
+.sandbox-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #FFF;
+}
+
+.dice-inputs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dice-inputs input {
+  flex: 1;
+  padding: 8px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #FFF;
+  font-size: 16px;
+  text-align: center;
+}
+
+.sandbox-section button {
+  width: 100%;
+  padding: 10px;
+  background: #3a3a3a;
+  border: none;
+  border-radius: 6px;
+  color: #FFF;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sandbox-section button:hover {
+  background: #4a4a4a;
+}
+
+.player-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.player-selector button {
+  flex: 1;
+  padding: 10px;
+  background: #3a3a3a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #FFF;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.player-selector button.active {
+  background: #E84142;
+  border-color: #E84142;
+}
+
+.point-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.point-editor input {
+  padding: 8px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #FFF;
+  font-size: 14px;
+}
+
+.bar-bearoff-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bar-bearoff-editor > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bar-bearoff-editor label {
+  font-size: 14px;
+  color: #aaa;
+}
+
+.dice-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.dice-buttons button {
+  flex: 1;
+}
+
+.clear-btn {
+  background: #444 !important;
+}
+
+.clear-btn:hover {
+  background: #555 !important;
+}
+

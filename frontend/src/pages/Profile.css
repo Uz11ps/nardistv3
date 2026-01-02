@@ -6,6 +6,141 @@
   gap: 20px;
 }
 
+/* Новый дизайн V2 */
+.profile-header-v2 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.profile-avatar-v2 {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: #B6B6B6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profile-avatar-img-v2 {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-placeholder-v2 {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #B6B6B6;
+}
+
+.profile-name-v2 {
+  color: #FFF;
+  text-align: center;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.profile-level-v2 {
+  color: #B6B6B6;
+  text-align: center;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.profile-divider-v2 {
+  width: 100%;
+  height: 1px;
+  background: #3a3a3a;
+  margin-top: 8px;
+}
+
+.profile-cards-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.profile-card-v2 {
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+}
+
+.profile-card-text-v2 {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.profile-bottom-menu-v2 {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px 16px 0 0;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.profile-bottom-menu-item-v2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 8px;
+}
+
+.profile-bottom-menu-item-v2:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.profile-bottom-menu-icon-v2 {
+  font-size: 24px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-bottom-menu-title-v2 {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  flex: 1;
+}
+
+.profile-bottom-menu-arrow-v2 {
+  color: #B6B6B6;
+  font-size: 18px;
+  font-weight: 300;
+}
+
 .profile-header {
   display: flex;
   flex-direction: column;
@@ -654,6 +789,76 @@
 }
 
 /* Премиум вкладка */
+.profile-analytics-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-analytics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-analytics-item {
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.analytics-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.analytics-item-info {
+  flex: 1;
+}
+
+.analytics-item-players {
+  color: #FFF;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.analytics-item-meta {
+  color: #999;
+  font-size: 14px;
+}
+
+.analytics-item-score {
+  color: #FFF;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.analytics-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.analytics-view-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.analytics-view-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
 .profile-premium-tab {
   display: flex;
   flex-direction: column;

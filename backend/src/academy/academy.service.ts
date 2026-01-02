@@ -41,11 +41,12 @@ export class AcademyService {
 
     // Проверяем доступность материала
     let purchased = false;
+    let userMaterial = null;
     if (!article.isPaid) {
       purchased = true; // Бесплатные материалы доступны всем
     } else if (userId) {
       // Проверяем, куплен ли платный материал
-      const userMaterial = await this.userMaterialsRepository.findOne({
+      userMaterial = await this.userMaterialsRepository.findOne({
         where: { userId, articleId: id },
       });
       purchased = !!userMaterial;
@@ -93,6 +94,16 @@ export class AcademyService {
           order: 0,
         }];
       }
+
+      // Добавляем quiz из assignment, если он есть
+      if (article.assignment && article.assignment.quiz) {
+        result.quiz = article.assignment.quiz;
+        // Если курс куплен, проверяем статус прохождения теста
+        if (purchased && userMaterial) {
+          result.quizPassed = userMaterial.quizPassed || false;
+          result.quizPassedAt = userMaterial.quizPassedAt || null;
+        }
+      }
     }
 
     return result;
@@ -119,6 +130,7 @@ export class AcademyService {
     const article = this.articlesRepository.create({
       ...articleData,
       isApproved: isAdmin, // Статьи администратора автоматически одобрены
+      isVerified: isAdmin, // Статьи администратора также сразу верифицированы
     });
     return this.articlesRepository.save(article);
   }
@@ -191,6 +203,7 @@ export class AcademyService {
         views: article.views,
         isVerified: article.isVerified,
         isCompleted,
+        gameMode: article.gameMode,
       });
     }
 
@@ -198,17 +211,16 @@ export class AcademyService {
   }
 
   async getArticles(userId?: string, includePending: boolean = false): Promise<any[]> {
-    const whereCondition: any = { type: 'article' };
+    const query = this.articlesRepository.createQueryBuilder('article')
+      .where('article.type = :type', { type: 'article' });
     
-    // Если не администратор, показываем только одобренные статьи
+    // Если не администратор, показываем только одобренные или верифицированные статьи
     if (!includePending) {
-      whereCondition.isApproved = true;
+      query.andWhere('(article.isApproved = true OR article.isVerified = true)');
     }
     
-    const articles = await this.articlesRepository.find({
-      where: whereCondition,
-      order: { createdAt: 'DESC' },
-    });
+    query.orderBy('article.createdAt', 'DESC');
+    const articles = await query.getMany();
 
     // Получаем купленные материалы пользователя, если userId передан
     const purchasedArticleIds = userId
@@ -227,6 +239,9 @@ export class AcademyService {
       isPaid: article.isPaid,
       views: article.views,
       isCompleted: false, // Статьи нельзя выполнить
+      gameMode: article.gameMode,
+      isApproved: article.isApproved,
+      isVerified: article.isVerified,
     }));
   }
 
@@ -281,6 +296,7 @@ export class AcademyService {
         isPaid: false,
         views: article.views,
         isCompleted,
+        gameMode: article.gameMode,
       });
     }
 
@@ -389,7 +405,7 @@ export class AcademyService {
   async createUserArticle(
     userId: string,
     slotId: string,
-    articleData: { title: string; content: string; telegraphData?: any },
+    articleData: { title: string; content: string; gameMode?: string; telegraphData?: any },
   ): Promise<Article> {
     const slot = await this.articleSlotsRepository.findOne({ where: { id: slotId, userId } });
     if (!slot) {
@@ -406,6 +422,7 @@ export class AcademyService {
     const article = this.articlesRepository.create({
       title: articleData.title,
       content: articleData.content,
+      gameMode: articleData.gameMode || 'long',
       telegraphData: articleData.telegraphData,
       author: user.username || user.telegramId?.toString() || 'Пользователь',
       authorId: userId,
@@ -426,7 +443,7 @@ export class AcademyService {
 
   async createUserCourse(
     userId: string,
-    courseData: { title: string; description?: string; content: string; price: number },
+    courseData: { title: string; description?: string; content: string; price: number; gameMode?: string },
   ): Promise<Article> {
     const user = await this.usersService.findOne(userId);
 
@@ -434,6 +451,7 @@ export class AcademyService {
     const course = this.articlesRepository.create({
       title: courseData.title,
       content: courseData.content || courseData.description || '',
+      gameMode: courseData.gameMode || 'long',
       author: user.nickname || user.username || user.telegramId?.toString() || 'Пользователь',
       authorId: userId,
       type: 'course',
@@ -451,6 +469,10 @@ export class AcademyService {
     }
 
     course.isVerified = true;
+    // Если это статья, также отмечаем как одобренную для отображения в списке
+    if (course.type === 'article') {
+      course.isApproved = true;
+    }
     course.verifiedBy = verifiedBy;
     course.verifiedAt = new Date();
     return this.articlesRepository.save(course);
@@ -472,6 +494,86 @@ export class AcademyService {
 
     Object.assign(article, articleData);
     return this.articlesRepository.save(article);
+  }
+
+  /**
+   * Отправить ответы на тест курса
+   */
+  async submitQuiz(
+    userId: string,
+    courseId: string,
+    answers: { questionId: number; answer: number }[],
+  ): Promise<{ correct: number; total: number; passed: boolean; reward?: any }> {
+    const course = await this.articlesRepository.findOne({ where: { id: courseId, type: 'course' } });
+    if (!course) {
+      throw new NotFoundException('Курс не найден');
+    }
+
+    // Проверяем, что курс куплен
+    const userMaterial = await this.userMaterialsRepository.findOne({
+      where: { userId, articleId: courseId },
+    });
+    if (!userMaterial) {
+      throw new BadRequestException('Курс не куплен');
+    }
+
+    // Проверяем наличие теста в assignment
+    if (!course.assignment || !course.assignment.quiz || !course.assignment.quiz.questions) {
+      throw new BadRequestException('Тест не найден в курсе');
+    }
+
+    const quiz = course.assignment.quiz;
+    const questions = quiz.questions;
+    let correct = 0;
+
+    // Проверяем ответы
+    for (const answer of answers) {
+      const question = questions.find((q: any) => q.id === answer.questionId);
+      if (question && question.correctAnswer === answer.answer) {
+        correct++;
+      }
+    }
+
+    const total = questions.length;
+    const passed = correct === total; // Прошел если все ответы правильные
+
+    // Если тест пройден и еще не был пройден ранее, выдаем награду
+    const wasAlreadyPassed = userMaterial.quizPassed || false;
+    if (passed && !wasAlreadyPassed) {
+      userMaterial.quizPassed = true;
+      userMaterial.quizPassedAt = new Date();
+
+      // Выдаем награды из курса
+      if (course.rewards && course.rewards.length > 0) {
+        const user = await this.usersService.findOne(userId);
+        for (const reward of course.rewards) {
+          if (reward.narCoin) {
+            const currentNarCoin = typeof user.narCoin === 'bigint' ? Number(user.narCoin) : (user.narCoin || 0);
+            await this.usersService.update(userId, {
+              narCoin: currentNarCoin + Number(reward.narCoin),
+            });
+          }
+          if (reward.xp) {
+            // XP добавляется через другой механизм, если нужно
+          }
+        }
+      } else if (course.rewardNarCoin) {
+        const user = await this.usersService.findOne(userId);
+        const currentNarCoin = typeof user.narCoin === 'bigint' ? Number(user.narCoin) : (user.narCoin || 0);
+        await this.usersService.update(userId, {
+          narCoin: currentNarCoin + Number(course.rewardNarCoin),
+        });
+      }
+
+      await this.userMaterialsRepository.save(userMaterial);
+    }
+
+    return {
+      correct,
+      total,
+      passed,
+      reward: passed && !wasAlreadyPassed ? course.rewards || { narCoin: course.rewardNarCoin, xp: course.rewardXP } : undefined,
+    };
   }
 }
 

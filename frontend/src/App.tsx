@@ -43,6 +43,7 @@ import ClanMembers from './pages/ClanMembers'
 import Policy from './pages/Policy'
 import Referrals from './pages/Referrals'
 import FairPlayVerification from './pages/FairPlayVerification'
+import Business from './pages/Business'
 
 function App() {
   const [initialized, setInitialized] = useState(false)
@@ -280,6 +281,7 @@ function App() {
               <Route path="/clans/:clanId/members" element={<ClanMembers />} />
               <Route path="/clans/:clanId" element={<ClanDetail />} />
               <Route path="/policy/:type" element={<Policy />} />
+              <Route path="/business" element={<Business />} />
             </>
           )}
         </Routes>

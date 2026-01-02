@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
+import RichTextEditor from '../components/RichTextEditor'
+import Quiz from '../components/Quiz'
 import { apiClient } from '../api/client'
 import './Academy.css'
 
@@ -13,6 +15,7 @@ interface Course {
   purchased: boolean
   isCompleted?: boolean
   description?: string
+  gameMode?: 'long' | 'short'
 }
 
 interface Article {
@@ -22,6 +25,7 @@ interface Article {
   price: number
   purchased: boolean
   isCompleted?: boolean
+  gameMode?: 'long' | 'short'
 }
 
 interface Onboarding {
@@ -31,6 +35,7 @@ interface Onboarding {
   price: number
   purchased: boolean
   isCompleted?: boolean
+  gameMode?: 'long' | 'short'
 }
 
 interface MaterialSection {
@@ -41,8 +46,19 @@ interface MaterialSection {
 }
 
 interface MaterialDetail extends Course {
+  type?: string
   sections?: MaterialSection[]
   content?: string
+  quiz?: {
+    questions: Array<{
+      id: number
+      question: string
+      options: string[]
+      correctAnswer: number
+    }>
+  }
+  quizPassed?: boolean
+  quizPassedAt?: string | null
 }
 
 export default function Academy() {
@@ -50,13 +66,20 @@ export default function Academy() {
   const location = useLocation()
   const { materialId } = useParams<{ materialId?: string }>()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'sandbox' | 'my-materials'>('onboarding')
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'free-table' | 'my-materials'>('onboarding')
   const [activeFilter, setActiveFilter] = useState<'long' | 'short'>('long')
   const [onboarding, setOnboarding] = useState<Onboarding[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [showPurchaseModal, setShowPurchaseModal] = useState<Course | Article | Onboarding | null>(null)
-  const [publishForm, setPublishForm] = useState({ title: '', description: '', type: 'article' as 'article' | 'course', price: 25, content: '' })
+  const [publishForm, setPublishForm] = useState({ 
+    title: '', 
+    description: '', 
+    type: 'article' as 'article' | 'course', 
+    price: 25, 
+    content: '',
+    gameMode: 'long' as 'long' | 'short'
+  })
   const [publishing, setPublishing] = useState(false)
   const [materialDetail, setMaterialDetail] = useState<MaterialDetail | null>(null)
   const [hidePurchased, setHidePurchased] = useState(false)
@@ -70,7 +93,7 @@ export default function Academy() {
     } else {
       loadData()
     }
-  }, [activeTab, materialId, isMaterialPage])
+  }, [activeTab, materialId, isMaterialPage, activeFilter])
 
   useEffect(() => {
     // Проверяем параметр type из URL
@@ -125,8 +148,33 @@ export default function Academy() {
   }
 
   // Функция фильтрации и сортировки элементов
-  const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean }>(items: T[]): T[] => {
+  const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean; title?: string; gameMode?: string }>(items: T[]): T[] => {
     let filtered = items
+
+    // Фильтрация по типу нард (только для курсов и статей)
+    if (activeTab === 'courses' || activeTab === 'articles') {
+      filtered = filtered.filter(item => {
+        const titleLower = (item.title || '').toLowerCase()
+        const isLongKeyword = titleLower.includes('длинн')
+        const isShortKeyword = titleLower.includes('коротк')
+        
+        // 1. Приоритет - ключевые слова в названии (для автоматического распределения старых материалов)
+        if (isLongKeyword && !isShortKeyword) {
+          return activeFilter === 'long'
+        }
+        if (isShortKeyword && !isLongKeyword) {
+          return activeFilter === 'short'
+        }
+        
+        // 2. Если ключевых слов нет или они спорные, используем поле gameMode
+        if (item.gameMode && (item.gameMode === 'long' || item.gameMode === 'short')) {
+          return item.gameMode === activeFilter
+        }
+        
+        // 3. Если ничего не определено, по умолчанию относим к длинным нардам
+        return activeFilter === 'long'
+      })
+    }
 
     // Если включена галочка "Не отображать купленные", скрываем купленные
     if (hidePurchased) {
@@ -177,6 +225,7 @@ export default function Academy() {
         await apiClient.post('/admin/academy/create', {
           title: publishForm.title,
           content: publishForm.content,
+          gameMode: publishForm.gameMode,
           type: 'course',
           isPaid: publishForm.price > 0,
           price: publishForm.price,
@@ -222,6 +271,19 @@ export default function Academy() {
           ) : (
             <div className="academy-material-content-text" dangerouslySetInnerHTML={{ __html: materialDetail.content || 'Содержание отсутствует' }} />
           )}
+          
+          {/* Тест для курсов */}
+          {materialDetail.quiz && materialDetail.type === 'course' && (
+            <Quiz
+              courseId={materialDetail.id}
+              quiz={materialDetail.quiz}
+              quizPassed={materialDetail.quizPassed || false}
+              onComplete={(result) => {
+                // Обновляем статус после прохождения теста
+                setMaterialDetail(prev => prev ? { ...prev, quizPassed: result.passed } : null)
+              }}
+            />
+          )}
         </div>
       </PageLayout>
     )
@@ -256,7 +318,27 @@ export default function Academy() {
           </div>
 
           <div className="academy-publish-field">
-            <label className="academy-publish-label">Тип</label>
+            <label className="academy-publish-label">Тип нард</label>
+            <div className="academy-publish-mode-selector">
+              <button
+                type="button"
+                className={`academy-publish-mode-btn ${publishForm.gameMode === 'long' ? 'active' : ''}`}
+                onClick={() => setPublishForm({ ...publishForm, gameMode: 'long' })}
+              >
+                Длинные
+              </button>
+              <button
+                type="button"
+                className={`academy-publish-mode-btn ${publishForm.gameMode === 'short' ? 'active' : ''}`}
+                onClick={() => setPublishForm({ ...publishForm, gameMode: 'short' })}
+              >
+                Короткие
+              </button>
+            </div>
+          </div>
+
+          <div className="academy-publish-field">
+            <label className="academy-publish-label">Тип контента</label>
             {user?.isAdmin ? (
               <div className="academy-publish-type-buttons">
                 <button
@@ -271,33 +353,23 @@ export default function Academy() {
                   className={`academy-publish-type-button ${publishForm.type === 'course' ? 'active' : ''}`}
                   onClick={() => setPublishForm({ ...publishForm, type: 'course' })}
                 >
-                  Курс (только для админов)
+                  Курс
                 </button>
               </div>
             ) : (
-              <div style={{ 
-                padding: '12px', 
-                background: '#2a2a2a', 
-                borderRadius: '8px', 
-                color: '#B6B6B6',
-                fontSize: '14px'
-              }}>
-                Игроки могут создавать только <strong style={{ color: '#FFF' }}>статьи</strong>. 
-                Статьи проходят верификацию администратором перед публикацией.
-                <br />
-                <small style={{ color: '#999', fontSize: '12px' }}>
-                  Курсы создаются только администраторами в админ-панели.
-                </small>
+              <div className="academy-publish-info">
+                Игроки могут создавать только <strong>статьи</strong>. 
+                Курсы создаются администраторами.
               </div>
             )}
           </div>
 
           <div className="academy-publish-field">
-            <label className="academy-publish-label">Стоимость</label>
+            <label className="academy-publish-label">Стоимость (NAR)</label>
             <input
               type="number"
               className="academy-publish-input"
-              placeholder="25 NAR"
+              placeholder="25"
               value={publishForm.price}
               onChange={(e) => setPublishForm({ ...publishForm, price: parseInt(e.target.value) || 0 })}
               min="0"
@@ -306,17 +378,15 @@ export default function Academy() {
 
           <div className="academy-publish-field">
             <label className="academy-publish-label">Контент</label>
-            <textarea
-              className="academy-publish-textarea"
-              placeholder="Вставьте текст"
+            <RichTextEditor
               value={publishForm.content}
-              onChange={(e) => setPublishForm({ ...publishForm, content: e.target.value })}
-              rows={8}
+              onChange={(content) => setPublishForm({ ...publishForm, content })}
+              placeholder="Начните писать..."
             />
           </div>
 
           <button type="submit" className="academy-publish-submit-button" disabled={publishing}>
-            {publishing ? 'Публикация...' : 'Опубликовать'}
+            {publishing ? 'Публикация...' : 'Опубликовать материал'}
           </button>
         </form>
       </PageLayout>
@@ -330,10 +400,9 @@ export default function Academy() {
       title="Академия"
       subtitle="Повышай мастерство в нардах. Все материалы доступны к покупке"
       tabs={[
-        { id: 'onboarding', label: 'Онбординг', active: activeTab === 'onboarding', onClick: () => setActiveTab('onboarding') },
         { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
         { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
-        { id: 'sandbox', label: 'Песочница', active: activeTab === 'sandbox', onClick: () => setActiveTab('sandbox') },
+        { id: 'free-table', label: 'Свободный стол', active: activeTab === 'free-table', onClick: () => setActiveTab('free-table') },
         { id: 'my-materials', label: 'Мои материалы', active: activeTab === 'my-materials', onClick: () => setActiveTab('my-materials') },
       ]}
     >
@@ -375,7 +444,7 @@ export default function Academy() {
         {activeTab === 'courses' && (
           <div className="academy-grid">
             {getFilteredAndSortedItems(courses).map((course) => (
-              <div key={course.id} className="academy-grid-card">
+              <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
                 <div className="academy-grid-card-icon">
                   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
@@ -392,7 +461,7 @@ export default function Academy() {
         {activeTab === 'articles' && (
           <div className="academy-grid">
             {getFilteredAndSortedItems(articles).map((article) => (
-              <div key={article.id} className="academy-grid-card">
+              <div key={article.id} className="academy-grid-card" onClick={() => handleOpen(article)}>
                 <div className="academy-grid-card-icon">
                   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
@@ -406,14 +475,14 @@ export default function Academy() {
           </div>
         )}
 
-        {activeTab === 'sandbox' && (
+        {activeTab === 'free-table' && (
           <div className="academy-sandbox">
             <div className="academy-card sandbox-promo-card">
               <div className="academy-card-content">
-                <h3 className="academy-card-title">Режим песочницы</h3>
+                <h3 className="academy-card-title">Свободный стол</h3>
                 <p className="academy-card-description">
-                  В этом режиме вы можете играть сами с собой за обе стороны. 
-                  Это идеальное место для тестирования стратегий, разбора позиций или просто тренировки.
+                  В свободном столе вы можете расставить шашки как хотите, установить нужные кубики и тренироваться. 
+                  Идеально для разбора позиций и изучения игры.
                 </p>
                 <div className="sandbox-modes">
                   <div className="sandbox-mode-option">
@@ -424,12 +493,12 @@ export default function Academy() {
                         try {
                           const response = await apiClient.post('/games/create-sandbox', { mode: 'long' })
                           navigate(`/game/${response.data.id}`)
-                        } catch (error) {
-                          alert('Ошибка при создании песочницы')
+                        } catch (error: any) {
+                          alert(error.response?.data?.message || 'Ошибка при создании свободного стола')
                         }
                       }}
                     >
-                      Играть
+                      Зайти в свободный стол
                     </button>
                   </div>
                   <div className="sandbox-mode-option">
@@ -440,12 +509,12 @@ export default function Academy() {
                         try {
                           const response = await apiClient.post('/games/create-sandbox', { mode: 'short' })
                           navigate(`/game/${response.data.id}`)
-                        } catch (error) {
-                          alert('Ошибка при создании песочницы')
+                        } catch (error: any) {
+                          alert(error.response?.data?.message || 'Ошибка при создании свободного стола')
                         }
                       }}
                     >
-                      Играть
+                      Зайти в свободный стол
                     </button>
                   </div>
                 </div>

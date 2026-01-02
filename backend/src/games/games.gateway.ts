@@ -31,6 +31,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
   private moveTimeoutCheckInterval: NodeJS.Timeout | null = null;
 
   constructor(
+    @Inject(forwardRef(() => GamesService))
     private gamesService: GamesService,
     private jwtService: JwtService,
     private configService: ConfigService,
@@ -315,6 +316,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       // Используем moveTimeLimit из каждой игры индивидуально
 
       for (const game of activeGames) {
+        // Пропускаем свободный стол - там нет таймаутов
+        if (game.type === GameType.SANDBOX) {
+          continue;
+        }
+
         // Используем lastMoveAt, если он установлен, иначе используем createdAt для первых ходов
         // Таймер должен работать с самого начала игры, даже если кубики еще не брошены
         const referenceTime = game.lastMoveAt 
@@ -486,7 +492,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       }
       
       let gameState = await this.gamesService.getGameState(data.gameId);
-      this.server.to(`game:${data.gameId}`).emit('dice_rolled', { dice, playerId: userId });
+      // Отправляем событие с уникальным ID для предотвращения дублирования на клиенте
+      const eventId = `${data.gameId}_${Date.now()}_${userId}`;
+      this.server.to(`game:${data.gameId}`).emit('dice_rolled', { dice, playerId: userId, eventId });
       
       // Проверяем наличие ходов после броска
       const possibleMoves = await this.gamesService.getPossibleMoves(data.gameId, userId);
@@ -585,10 +593,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         
         const gameStateAfterDice = await this.gamesService.getGameState(gameId);
         
-        // Emit dice rolled event
+        // Emit dice rolled event с уникальным ID для предотвращения дублирования
+        const eventId = `${gameId}_${Date.now()}_bot`;
         this.server.to(`game:${gameId}`).emit('dice_rolled', { 
           dice: botDice, 
-          playerId: null 
+          playerId: null,
+          eventId
         });
         this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
         
@@ -611,10 +621,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           }
         }
         
-        // Делаем ход бота с задержкой 0-5 секунд
+        // Делаем ход бота с задержкой 10 секунд, чтобы игрок мог увидеть кубики и ход бота
         try {
-          // Случайная задержка от 0 до 5 секунд для более естественного поведения бота
-          const delay = Math.floor(Math.random() * 5000);
+          // Задержка 10 секунд после броска кубиков, чтобы игрок мог увидеть результат
+          const delay = 10000;
           this.logger.log(`🤖 Bot move delay: ${delay}ms for gameId=${gameId}`);
           await new Promise(resolve => setTimeout(resolve, delay));
           

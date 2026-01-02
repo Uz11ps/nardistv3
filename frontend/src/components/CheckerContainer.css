@@ -1,0 +1,100 @@
+.checker-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(42, 42, 42, 0.95);
+  border: 2px solid #555;
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  min-width: 200px;
+}
+
+.checker-container-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #FFF;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.checker-pool {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checker-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checker-group-label {
+  font-size: 12px;
+  color: #B6B6B6;
+  text-align: center;
+}
+
+.checker-stack {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.checker {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: grab;
+  transition: transform 0.2s;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+.checker:active {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+
+.checker-white {
+  background: linear-gradient(135deg, #FFF 0%, #E0E0E0 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.checker-black {
+  background: linear-gradient(135deg, #333 0%, #000 100%);
+  box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
+}
+
+.checker-container-hint {
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+  margin-top: 12px;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .checker-container {
+    bottom: 10px;
+    right: 10px;
+    padding: 12px;
+    min-width: 160px;
+  }
+  
+  .checker-stack {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .checker {
+    width: 20px;
+    height: 20px;
+  }
+}
+

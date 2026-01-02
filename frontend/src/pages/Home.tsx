@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { apiClient } from '../api/client'
+import BottomNav from '../components/BottomNav'
 import './Home.css'
 
 interface Stats {
@@ -10,6 +11,11 @@ interface Stats {
   level: number
   energy: number
   maxEnergy: number
+  lives: number
+  maxLives: number
+  economy: number
+  power: number
+  incomePerHour: number
 }
 
 interface LevelProgress {
@@ -24,7 +30,18 @@ interface LevelProgress {
 export default function Home() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [stats, setStats] = useState<Stats>({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
+  const [stats, setStats] = useState<Stats>({ 
+    narCoin: 0, 
+    xp: 0, 
+    level: 1, 
+    energy: 100, 
+    maxEnergy: 100,
+    lives: 5,
+    maxLives: 5,
+    economy: 0,
+    power: 0,
+    incomePerHour: 0
+  })
   const [hasPremium, setHasPremium] = useState(false)
   const [hasNotifications, setHasNotifications] = useState(false)
   const [levelProgress, setLevelProgress] = useState<LevelProgress | null>(null)
@@ -40,14 +57,31 @@ export default function Home() {
           level: user.level || 1,
           energy: user.energy || 100,
           maxEnergy: user.maxEnergy || 100,
+          lives: user.lives || 5,
+          maxLives: user.maxLives || 5,
+          economy: user.economySp || 0,
+          power: user.powerSp || 0,
+          incomePerHour: 0, // Будет загружено отдельно
         })
         checkPremium()
         checkNotifications()
         loadEnergy()
         loadLevelProgress()
+        loadPlayerStats()
       } catch (error) {
         console.error('Ошибка при загрузке статистики:', error)
-        setStats({ narCoin: 0, xp: 0, level: 1, energy: 100, maxEnergy: 100 })
+        setStats({ 
+          narCoin: 0, 
+          xp: 0, 
+          level: 1, 
+          energy: 100, 
+          maxEnergy: 100,
+          lives: 5,
+          maxLives: 5,
+          economy: 0,
+          power: 0,
+          incomePerHour: 0
+        })
       }
     }
   }, [user])
@@ -69,6 +103,35 @@ export default function Home() {
     try {
       const response = await apiClient.get('/progress/level-progress')
       setLevelProgress(response.data)
+    } catch (error) {
+      // Игнорируем ошибки
+    }
+  }
+
+  const loadPlayerStats = async () => {
+    try {
+      // Загружаем доход в час из города
+      const cityResponse = await apiClient.get('/city/my-buildings').catch(() => ({ data: [] }))
+      const buildings = cityResponse.data || []
+      let totalIncome = 0
+      buildings.forEach((building: any) => {
+        if (building.incomePerHour) {
+          totalIncome += Number(building.incomePerHour) || 0
+        }
+      })
+      // Конвертируем в тысячи для отображения
+      const incomeInK = totalIncome / 1000
+      // Загружаем данные пользователя для получения актуальных значений
+      const userResponse = await apiClient.get('/users/me').catch(() => ({ data: user }))
+      const currentUser = userResponse.data || user
+      setStats(prev => ({ 
+        ...prev, 
+        incomePerHour: incomeInK,
+        economy: currentUser?.economySp || 0,
+        power: currentUser?.powerSp || 0,
+        lives: currentUser?.lives || 5,
+        maxLives: currentUser?.maxLives || 5,
+      }))
     } catch (error) {
       // Игнорируем ошибки
     }
@@ -98,107 +161,105 @@ export default function Home() {
     return null
   }
 
-  const menuItems = [
-    { icon: '/img/зарик.png', iconColor: '#ff3333', title: 'Играть', path: '/game/modes' },
-    { icon: '/img/кубок.png', iconColor: '#ffd700', title: 'Турниры', path: '/tournaments' },
-    { icon: '/img/челувек.png', iconColor: '#aaaaaa', title: 'Профиль', path: '/profile' },
-    { icon: '/img/шляпа.png', iconColor: '#aaaaaa', title: 'Курсы', path: '/academy' },
-    { icon: '/img/город.png', iconColor: '#ffd700', title: 'Город', path: '/city' },
-    { icon: '/img/кланы.png', iconColor: '#ffd700', title: 'Федерации', path: '/clans', disabled: (user?.level || 0) < 10 },
+  const mainMenuItems = [
+    { icon: '/img/зарик.png', title: 'Играть', path: '/game/modes' },
+    { icon: '/img/шляпа.png', title: 'Курсы', path: '/academy' },
+    { icon: '/img/город.png', title: 'Город', path: '/city' },
+    { icon: '/img/кланы.png', title: 'Кланы', path: '/clans', disabled: (user?.level || 0) < 10 },
   ]
 
   return (
-    <div className="app-container page-transition">
+    <div className="home-container-v3 page-transition">
+      <div className="home-background-overlay" />
+      
       {/* Хедер с профилем */}
-      <div className="home-header">
-        <div className="home-header-left">
-          <div className="home-avatar-container">
-            <div className="home-avatar" onClick={() => navigate('/profile')}>
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.username} />
-              ) : (
-                <div className="home-avatar-placeholder">
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#B6B6B6"/>
-                    <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="#B6B6B6"/>
-                  </svg>
-                </div>
-              )}
-              {hasNotifications && <div className="home-avatar-notification" />}
-            </div>
-          </div>
-          <div className="home-user-info">
-            <div className="home-username">{user?.nickname || user?.username || 'Игрок'}</div>
-            <div className="home-level">Уровень {stats.level}</div>
-          </div>
-        </div>
-        <div className="home-header-right">
-          <div className="home-currency">
-            <img src="/img/narcoin.png" alt="coin" className="home-currency-icon" />
-            <span>{stats.narCoin.toLocaleString()}</span>
-          </div>
-          <div className="home-energy">
-            <img src="/img/молния.png" alt="energy" className="home-energy-icon" />
-            <span>{stats.energy}/{stats.maxEnergy}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="home-content">
-        {/* Прогресс-бар уровня */}
-        {levelProgress && (
-          <div className="home-level-progress-container">
-            <div className="home-level-progress-bar">
-              <div 
-                className="home-level-progress-fill" 
-                style={{ width: `${levelProgress.progress * 100}%` }}
-              />
-            </div>
-            <div className="home-level-progress-info">
-              <span className="home-level-progress-text">
-                {levelProgress.currentXP - levelProgress.xpForCurrentLevel} / {levelProgress.xpNeededForNextLevel} XP
-              </span>
-              <span className="home-level-progress-level">
-                Уровень {levelProgress.currentLevel} → {levelProgress.currentLevel + 1}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Меню */}
-        <div className="home-menu">
-          {menuItems.map((item) => {
-            const isDisabled = item.disabled
-            return (
-              <div
-                key={item.path}
-                onClick={() => !isDisabled && navigate(item.path)}
-                className="home-menu-item"
-                style={{
-                  opacity: isDisabled ? 0.5 : 1,
-                  cursor: isDisabled ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <div className="home-menu-item-content">
-                  <img 
-                    src={item.icon} 
-                    alt={item.title}
-                    className="home-menu-icon"
-                    style={{ 
-                      opacity: isDisabled ? 0.5 : 1,
-                      filter: isDisabled ? 'grayscale(100%)' : 'none'
-                    }} 
-                  />
-                  <span className="home-menu-item-title">{item.title}</span>
-                  {isDisabled && (
-                    <span className="home-menu-item-disabled">(с 20 уровня)</span>
-                  )}
-                </div>
+      <div className="home-header-v3">
+        <div className="home-header-main-v3">
+          <div className="home-avatar-v3" onClick={() => navigate('/profile')}>
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.username} />
+            ) : (
+              <div className="home-avatar-placeholder-v3">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#B6B6B6"/>
+                  <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="#B6B6B6"/>
+                </svg>
               </div>
-            )
-          })}
+            )}
+            {hasNotifications && <div className="home-avatar-notification-v3" />}
+          </div>
+          <div className="home-user-info-v3">
+            <div className="home-username-v3">{user?.nickname || user?.username || 'Игрок'}</div>
+            <div className="home-currencies-v3">
+              <div className="home-currency-item-v3">
+                <img src="/img/narcoin.png" alt="NAR" className="home-currency-img-v3" />
+                <span>{stats.narCoin.toLocaleString()}</span>
+              </div>
+              <div className="home-currency-item-v3">
+                <img src="/img/f5e34ff1a863605caef73dc379a2d9700935880e.png" alt="T" className="home-currency-img-v3" />
+                <span>{(stats.narCoin / 10).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button 
+          className="home-federations-btn-v3"
+          onClick={() => navigate('/clans')}
+        >
+          Федерации
+        </button>
+      </div>
+
+      <div className="home-level-section-v3">
+        <div className="home-level-info-v3">
+          <span>Lvl {stats.level}</span>
+          <span>{levelProgress ? `${levelProgress.currentXP - levelProgress.xpForCurrentLevel}/${levelProgress.xpNeededForNextLevel}` : '50/100'}</span>
+        </div>
+        <div className="home-level-progress-bar-v3">
+          <div 
+            className="home-level-progress-fill-v3" 
+            style={{ width: `${levelProgress?.progress ? levelProgress.progress * 100 : 50}%` }}
+          />
         </div>
       </div>
+
+      <div className="home-content-v3">
+        {/* Статистика */}
+        <div className="home-stats-grid-v3">
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Экономика</div>
+            <div className="home-stat-value-v3">{stats.economy}</div>
+          </div>
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Сила</div>
+            <div className="home-stat-value-v3">{stats.power}</div>
+          </div>
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Доход в час</div>
+            <div className="home-stat-value-v3">
+              <img src="/img/narcoin.png" alt="NAR" className="home-stat-icon-img-v3" />
+              <span>+{stats.incomePerHour.toLocaleString()}K</span>
+            </div>
+          </div>
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Жизнь</div>
+            <div className="home-stat-value-v3">{stats.lives}/{stats.maxLives}</div>
+          </div>
+          <div className="home-stat-card-v3">
+            <div className="home-stat-label-v3">Энергия</div>
+            <div className="home-stat-value-v3">{stats.energy}/{stats.maxEnergy}</div>
+          </div>
+        </div>
+
+        {/* Центральное лого */}
+        <div className="home-central-logo-container-v3">
+          <div className="home-central-logo-circle-v3" onClick={() => navigate('/game/modes')} style={{ cursor: 'pointer' }}>
+            <img src="/img/logo.png" alt="Nardis" className="home-central-logo-v3" />
+          </div>
+        </div>
+      </div>
+
+      <BottomNav />
     </div>
   )
 }

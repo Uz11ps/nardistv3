@@ -18,6 +18,7 @@ import { QuestTarget } from '../quests/quest.entity';
 import { TrainingService } from '../training/training.service';
 import { TaskType } from '../training/training-task.entity';
 import { TournamentsService } from '../tournaments/tournaments.service';
+import { GamesGateway } from './games.gateway';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -52,6 +53,8 @@ export class GamesService {
     private branchesService: ProgressionBranchesService,
     @Inject(forwardRef(() => TournamentsService))
     private tournamentsService: TournamentsService,
+    @Inject(forwardRef(() => GamesGateway))
+    private gamesGateway: GamesGateway,
   ) {}
 
   async create(
@@ -71,10 +74,11 @@ export class GamesService {
         { player2Id: player1Id, status: GameStatus.IN_PROGRESS },
       ],
     });
-    // Фильтруем только действительно активные игры (исключаем игры с ботом)
+    // Фильтруем только действительно активные игры (исключаем игры с ботом и sandbox)
     const trulyActivePlayer1Games = player1ActiveGames.filter(game => 
       (game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS) &&
-      game.type !== GameType.VS_BOT
+      game.type !== GameType.VS_BOT &&
+      game.type !== GameType.SANDBOX
     );
     if (trulyActivePlayer1Games.length > 0) {
       throw new BadRequestException('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
@@ -90,10 +94,11 @@ export class GamesService {
           { player2Id, status: GameStatus.IN_PROGRESS },
         ],
       });
-      // Фильтруем только действительно активные игры (исключаем игры с ботом)
+      // Фильтруем только действительно активные игры (исключаем игры с ботом и sandbox)
       const trulyActivePlayer2Games = player2ActiveGames.filter(game => 
         (game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS) &&
-        game.type !== GameType.VS_BOT
+        game.type !== GameType.VS_BOT &&
+        game.type !== GameType.SANDBOX
       );
       if (trulyActivePlayer2Games.length > 0) {
         throw new BadRequestException('Соперник уже находится в активной игре.');
@@ -387,10 +392,11 @@ export class GamesService {
         relations: [],
       });
 
-      // Фильтруем только действительно активные игры (исключаем игры с ботом)
+      // Фильтруем только действительно активные игры (исключаем игры с ботом и sandbox)
       const trulyActiveGames = activeGames.filter(game => 
         (game.status === GameStatus.IN_PROGRESS || game.status === GameStatus.WAITING) &&
-        game.type !== GameType.VS_BOT
+        game.type !== GameType.VS_BOT &&
+        game.type !== GameType.SANDBOX
       );
 
       if (trulyActiveGames.length > 0) {
@@ -546,7 +552,7 @@ export class GamesService {
           updatedGame.player2TimeRemaining = newTimeRemaining;
         }
         
-        if (newTimeRemaining <= 0) {
+        if (game.type !== GameType.SANDBOX && newTimeRemaining <= 0) {
           updatedGame.status = GameStatus.FINISHED;
           updatedGame.winnerId = isPlayer1 ? updatedGame.player2Id : updatedGame.player1Id;
           if (updatedGame.winnerId === updatedGame.player1Id) {
@@ -784,7 +790,7 @@ export class GamesService {
       this.logger.log(`⏱️ Player ${oldCurrentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id} move completed: ${moveTimeSeconds.toFixed(2)}s (excess: ${excessTime.toFixed(2)}s), remaining: ${(newTimeRemaining / 1000).toFixed(2)}s`);
       
       // Если общее время закончилось, завершаем игру
-      if (newTimeRemaining <= 0) {
+      if (game.type !== GameType.SANDBOX && newTimeRemaining <= 0) {
         this.logger.warn(`⏱️ Player ${oldCurrentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id} ran out of total time (${excessTime.toFixed(2)}s excess)`);
         // Завершаем игру в пользу противника
         updatedGame.status = GameStatus.FINISHED;
@@ -812,7 +818,8 @@ export class GamesService {
       }
     }
 
-    if (engine.isGameFinished(currentState)) {
+    // В свободном столе игра никогда не заканчивается автоматически
+    if (game.type !== GameType.SANDBOX && engine.isGameFinished(currentState)) {
       const winner = engine.getWinner(currentState);
       updatedGame.status = GameStatus.FINISHED;
       if (winner === 0) {
@@ -889,12 +896,22 @@ export class GamesService {
     }
 
     const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
-    if (currentPlayerId !== playerId) {
+    
+    // В sandbox режиме только player1Id может делать ходы за обе стороны
+    const isSandboxTurn = game.type === GameType.SANDBOX && game.player1Id === playerId;
+    
+    if (!isSandboxTurn && currentPlayerId !== playerId) {
       throw new BadRequestException('Не ваш ход');
     }
 
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     let state = game.gameState;
+    
+    // ВАЖНО: Синхронизируем currentPlayer из сущности Game в gameState
+    // Это критично для корректной работы движка в sandbox режиме
+    if (state && state.currentPlayer !== game.currentPlayer) {
+      state = { ...state, currentPlayer: game.currentPlayer };
+    }
     
     // Определяем, является ли этот ход первым в игре для этого режима (Long)
     const isFirstMoveOfGame = game.mode === GameMode.LONG && (game.moves || []).length < 2;
@@ -1698,10 +1715,11 @@ export class GamesService {
           { player2Id: playerId, status: GameStatus.IN_PROGRESS },
         ],
       });
-      // Фильтруем только действительно активные игры (исключаем игры с ботом)
+      // Фильтруем только действительно активные игры (исключаем игры с ботом и sandbox)
       const trulyActivePlayer1Games = player1ActiveGames.filter(game => 
         (game.status === GameStatus.WAITING || game.status === GameStatus.IN_PROGRESS) &&
-        game.type !== GameType.VS_BOT
+        game.type !== GameType.VS_BOT &&
+        game.type !== GameType.SANDBOX
       );
       if (trulyActivePlayer1Games.length > 0) {
         throw new BadRequestException('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
@@ -1758,8 +1776,23 @@ export class GamesService {
       const rngSeed = crypto.randomBytes(32).toString('hex');
       const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
 
-      const engine = gameMode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
-      const initialState = engine.createInitialState();
+      // Создаем пустое состояние доски для свободного стола
+      // Все шашки находятся в bearOff (лот), откуда их можно брать для расстановки
+      const emptyState = {
+        points: Array(24).fill(0), // Все точки пустые
+        bar: [0, 0], // Бар пустой
+        borneOff: [15, 15], // Вынос заполнен: 15 белых и 15 черных шашек
+        currentPlayer: 0,
+        dice: [], // Кубики не брошены
+        ...(gameMode === GameMode.LONG ? {
+          movesFromHead: 0,
+          movesFromPoint: {},
+        } : {
+          canDouble: true,
+          cubeValue: 1,
+          cubeOwner: -1,
+        }),
+      };
 
       const game = this.gamesRepository.create({
         player1Id: playerId,
@@ -1768,7 +1801,7 @@ export class GamesService {
         type: GameType.SANDBOX,
         stake: 0,
         status: GameStatus.IN_PROGRESS,
-        gameState: initialState,
+        gameState: emptyState,
         rngSeed,
         rngHash,
         currentPlayer: 0,
@@ -1780,14 +1813,13 @@ export class GamesService {
 
       const savedGame = await this.gamesRepository.save(game);
       
-      // Сразу бросаем кубики
-      await this.rollDice(savedGame.id, playerId);
+      // НЕ бросаем кубики автоматически - пользователь сам установит их через панель управления
       
-      this.logger.log(`🎮 Песочница создана: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}`);
+      this.logger.log(`🎮 Свободный стол создан: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}`);
 
       return savedGame;
     } catch (error) {
-      this.logger.error(`❌ Ошибка при создании песочницы для playerId=${playerId}:`, error);
+      this.logger.error(`❌ Ошибка при создании свободного стола для playerId=${playerId}:`, error);
       throw new BadRequestException(`Ошибка при создании игры: ${error.message || 'Неизвестная ошибка'}`);
     }
   }
@@ -1846,5 +1878,285 @@ export class GamesService {
     }
 
     return this.gamesRepository.save(game);
+  }
+
+  async setupSandboxBoard(
+    gameId: string,
+    playerId: string,
+    setup: { points: number[]; bar?: { white: number; black: number }; bearOff?: { white: number; black: number } },
+  ): Promise<Game> {
+    const game = await this.findOne(gameId);
+    
+    if (game.type !== GameType.SANDBOX) {
+      throw new BadRequestException('Этот метод доступен только для свободного стола');
+    }
+
+    if (game.player1Id !== playerId) {
+      throw new BadRequestException('Вы не владелец этого свободного стола');
+    }
+
+    // Обновляем состояние доски
+    const currentState = game.gameState || {};
+    game.gameState = {
+      ...currentState,
+      points: setup.points || currentState.points,
+      bar: setup.bar || currentState.bar || { white: 0, black: 0 },
+      bearOff: setup.bearOff || currentState.bearOff || { white: 0, black: 0 },
+    };
+
+    const savedGame = await this.gamesRepository.save(game);
+    
+    // Уведомляем через WebSocket
+    this.gamesGateway.server.to(`game:${gameId}`).emit('sandbox_board_updated', {
+      gameState: savedGame.gameState,
+    });
+
+    return savedGame;
+  }
+
+  async setSandboxDice(gameId: string, playerId: string, dice: number[], player?: number): Promise<Game> {
+    const game = await this.findOne(gameId);
+    
+    if (game.type !== GameType.SANDBOX) {
+      throw new BadRequestException('Этот метод доступен только для свободного стола');
+    }
+
+    if (game.player1Id !== playerId) {
+      throw new BadRequestException('Вы не владелец этого свободного стола');
+    }
+
+    // Если dice пустой массив, просто переключаем игрока без установки кубиков
+    if (dice.length === 0) {
+      if (player !== undefined) {
+        game.currentPlayer = player;
+        // Синхронизируем с gameState для движка
+        if (game.gameState) {
+          game.gameState.currentPlayer = player;
+        }
+        const savedGame = await this.gamesRepository.save(game);
+        this.gamesGateway.server.to(`game:${gameId}`).emit('sandbox_board_updated', {
+          gameState: savedGame.gameState,
+          currentPlayer: savedGame.currentPlayer,
+        });
+        return savedGame;
+      }
+      throw new BadRequestException('Необходимо указать игрока или кубики');
+    }
+
+    if (!Array.isArray(dice) || dice.length !== 2 || dice[0] < 1 || dice[0] > 6 || dice[1] < 1 || dice[1] > 6) {
+      throw new BadRequestException('Некорректные значения кубиков');
+    }
+
+    const targetPlayer = player !== undefined ? player : game.currentPlayer;
+    
+    // В sandbox режиме при установке дублей расширяем их до 4 значений
+    let finalDice = dice;
+    if (dice[0] === dice[1]) {
+      finalDice = [dice[0], dice[0], dice[0], dice[0]];
+    }
+
+    // Обновляем состояние кубиков
+    const currentState = game.gameState || {};
+    game.gameState = {
+      ...currentState,
+      dice: finalDice,
+      currentPlayer: targetPlayer, // Синхронизируем для движка
+    };
+
+    // Устанавливаем текущего игрока
+    game.currentPlayer = targetPlayer;
+
+    const savedGame = await this.gamesRepository.save(game);
+    
+    // Уведомляем через WebSocket
+    this.gamesGateway.server.to(`game:${gameId}`).emit('sandbox_dice_updated', {
+      dice: finalDice,
+      currentPlayer: savedGame.currentPlayer,
+    });
+
+    return savedGame;
+  }
+
+  async getGameAnalytics(gameId: string): Promise<any> {
+    const game = await this.gamesRepository.findOne({
+      where: { id: gameId },
+      relations: ['player1', 'player2'],
+    });
+
+    if (!game) {
+      throw new NotFoundException('Игра не найдена');
+    }
+
+    // Загружаем все ходы игры
+    const moves = await this.movesRepository.find({
+      where: { gameId },
+      order: { moveNumber: 'ASC', createdAt: 'ASC' },
+      relations: ['player'],
+    });
+
+    // Форматируем данные для аналитики
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}.${month}.${day}`;
+    };
+
+    const formatTime = (date: Date) => {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}.${minutes}`;
+    };
+
+    const formatDateTime = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+    const variation = game.mode === GameMode.LONG ? 'LongNarde' : 'ShortNarde';
+    const eventDate = formatDate(game.createdAt);
+    const eventTime = formatTime(game.createdAt);
+    const eventBegin = formatDateTime(game.createdAt);
+    const eventEnd = game.updatedAt ? formatDateTime(game.updatedAt) : formatDateTime(new Date());
+
+    const player1Name = game.player1?.username || game.player1?.nickname || 'Player 1';
+    const player1Id = game.player1?.id || '';
+    const player2Name = game.player2?.username || game.player2?.nickname || 'Bot' || 'Player 2';
+    const player2Id = game.player2?.id || '';
+
+    // Форматируем ходы - группируем по игрокам и чередуем
+    const player1Moves: Array<{ moveNumber: number; dice: string; moves: string }> = [];
+    const player2Moves: Array<{ moveNumber: number; dice: string; moves: string }> = [];
+    let moveNumber = 1;
+    let lastPlayerId: string | null = null;
+
+    for (const move of moves) {
+      const dice = Array.isArray(move.dice) ? move.dice : [];
+      const moveList = Array.isArray(move.moves) ? move.moves : [];
+      
+      // Определяем, чей это ход
+      const isPlayer1 = move.playerId === game.player1Id;
+      
+      // Если сменился игрок, увеличиваем номер хода
+      if (lastPlayerId !== null && move.playerId !== lastPlayerId) {
+        moveNumber++;
+      }
+      lastPlayerId = move.playerId;
+
+      // Форматируем кубики
+      const diceStr = dice.length >= 2 ? `${dice[0]}${dice[1]}` : dice.join('');
+      
+      // Форматируем ходы в формате "from/to"
+      const movesStr = moveList
+        .map((m: any) => {
+          const from = m.from !== undefined ? m.from : m.fromPoint;
+          const to = m.to !== undefined ? m.to : m.toPoint;
+          
+          if (from === undefined || to === undefined) {
+            return '';
+          }
+          
+          // Конвертируем индексы точек в номера точек
+          // Для длинных нард: 0-23 -> 24-1 (0 = точка 24, 23 = точка 1)
+          // Для коротких нард: 0-23 -> 1-24 (0 = точка 1, 23 = точка 24)
+          const fromPoint = game.mode === GameMode.LONG ? (24 - from) : (from + 1);
+          const toPoint = game.mode === GameMode.LONG ? (24 - to) : (to + 1);
+          return `${fromPoint}/${toPoint}`;
+        })
+        .filter(Boolean)
+        .join(' ');
+
+      if (movesStr) {
+        const moveData = { moveNumber, dice: diceStr, moves: movesStr };
+        if (isPlayer1) {
+          player1Moves.push(moveData);
+        } else {
+          player2Moves.push(moveData);
+        }
+      }
+    }
+
+    // Объединяем ходы игроков попарно (как в примере)
+    const formattedMoves: string[] = [];
+    const maxMoves = Math.max(player1Moves.length, player2Moves.length);
+    
+    for (let i = 0; i < maxMoves; i++) {
+      const p1Move = player1Moves[i];
+      const p2Move = player2Moves[i];
+      
+      if (p1Move) {
+        formattedMoves.push(`  ${p1Move.moveNumber}) ${p1Move.dice}: ${p1Move.moves}`);
+      }
+      if (p2Move) {
+        formattedMoves.push(`  ${p2Move.moveNumber}) ${p2Move.dice}: ${p2Move.moves}`);
+      }
+    }
+
+    // Определяем результат
+    const result = game.winnerId === game.player1Id 
+      ? `0-${game.player2Score || 1}` 
+      : game.winnerId === game.player2Id 
+        ? `${game.player1Score || 1}-0` 
+        : '0-0';
+
+    // Формируем текст аналитики
+    const analyticsText = `; [Site "NardGammon"]
+; [Variation "${variation}"]
+; [Crawford "On"]
+; [EventDate "${eventDate}"]
+; [EventTime "${eventTime}"]
+; [Match ID "${gameId}"]
+; [EventBegin "${eventBegin}"]
+; [EventEnd "${eventEnd}"]
+; [Player 1 "${player1Name} ( ${player1Id} )"]
+; [Player 2 "${player2Name} ( ${player2Id} )"]
+; [Jacoby "Off"]
+; [Beaver "Off"]
+; [CubeLimit "1"]
+; [Game 1 "ID: ${gameId}. Start offset: white(${game.p1Offset}) black(${game.p2Offset}) "]
+; [Result "${result}"]
+
+ 0 point match
+
+ Game 1
+ ${player1Name} : ${game.player1Score || 0}                      ${player2Name} : ${game.player2Score || 0}
+${formattedMoves.join('\n')}
+                                  ${game.winnerId === game.player2Id ? 'Wins 2 points and the match' : game.winnerId === game.player1Id ? 'Wins 2 points and the match' : ''}`;
+
+    return {
+      text: analyticsText,
+      game: {
+        id: game.id,
+        mode: game.mode,
+        type: game.type,
+        player1: {
+          id: game.player1Id,
+          name: player1Name,
+          score: game.player1Score || 0,
+        },
+        player2: {
+          id: game.player2Id,
+          name: player2Name,
+          score: game.player2Score || 0,
+        },
+        winnerId: game.winnerId,
+        createdAt: game.createdAt,
+        updatedAt: game.updatedAt,
+        p1Offset: game.p1Offset,
+        p2Offset: game.p2Offset,
+      },
+      moves: moves.map(move => ({
+        moveNumber: move.moveNumber,
+        playerId: move.playerId,
+        dice: move.dice,
+        moves: move.moves,
+        createdAt: move.createdAt,
+      })),
+    };
   }
 }

@@ -1,15 +1,16 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import Icon from './Icon'
+import './BottomNav.css'
 
 export default function BottomNav() {
   const navigate = useNavigate()
   const location = useLocation()
 
   const navItems = [
-    { path: '/', icon: 'dice', label: 'Играть' },
-    { path: '/city', icon: 'city', label: 'Город' },
-    { path: '/tournaments', icon: 'trophy', label: 'Турниры' },
-    { path: '/profile', icon: 'user', label: 'Профиль' },
+    { path: '/', icon: '/img/Vectorhome.png', label: 'Главная' },
+    { path: '/academy', icon: '/img/fi-rr-book-alt.png', label: 'Академия' },
+    { path: '/shop', icon: '/img/fi-rr-shop.png', label: 'Магазин' },
+    { path: '/city', icon: '/img/fi-rs-building.png', label: 'Город' },
   ]
 
   return (
@@ -22,7 +23,7 @@ export default function BottomNav() {
           style={{ transition: 'all 0.2s ease' }}
         >
           <span className="nav-item-icon">
-            <Icon name={item.icon} size={24} />
+            <img src={item.icon} alt={item.label} style={{ width: '24px', height: '24px', opacity: location.pathname === item.path ? 1 : 0.5 }} />
           </span>
           <span>{item.label}</span>
         </button>

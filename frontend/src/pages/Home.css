@@ -5,6 +5,7 @@
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
+  background: #1a1a1a;
 }
 
 .app-container.page-transition::before {
@@ -19,6 +20,7 @@
   background-attachment: fixed;
   transform: rotate(180deg);
   z-index: 0;
+  opacity: 0.3;
 }
 
 .app-container.page-transition > * {
@@ -296,31 +298,516 @@
   letter-spacing: -0.4px;
 }
 
+/* Новый дизайн V2 */
+.home-header-v2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 16px;
+  padding-top: 60px;
+}
+
+.home-header-left-v2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.home-avatar-v2 {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #B6B6B6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.home-avatar-v2 img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-avatar-placeholder-v2 {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #B6B6B6;
+}
+
+.home-avatar-notification-v2 {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  background: #C93C3D;
+  border: 2px solid #0B0C0E;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.home-user-info-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.home-username-v2 {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.home-currencies-v2 {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.home-currency-item-v2 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.home-currency-icon-v2 {
+  font-size: 16px;
+}
+
+.home-level-v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #B6B6B6;
+  font-size: 14px;
+}
+
+.home-level-progress-v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.home-level-progress-bar-v2 {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.home-level-progress-fill-v2 {
+  height: 100%;
+  background: #E84142;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.home-level-progress-text-v2 {
+  font-size: 12px;
+  color: #B6B6B6;
+  white-space: nowrap;
+}
+
+.home-federations-btn-v2 {
+  padding: 8px 16px;
+  background: #3a3a3a;
+  border: none;
+  border-radius: 8px;
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.home-federations-btn-v2:hover:not(:disabled) {
+  background: #4a4a4a;
+}
+
+.home-federations-btn-v2:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.home-content-v2 {
+  padding: 0 16px 20px;
+}
+
+.home-stats-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.home-stat-card-v2 {
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-stat-label-v2 {
+  color: #B6B6B6;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.home-stat-value-v2 {
+  color: #FFF;
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-stat-icon-v2 {
+  font-size: 18px;
+}
+
+.home-main-menu-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.home-main-menu-item-v2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-align: left;
+}
+
+.home-main-menu-item-v2:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35);
+}
+
+.home-main-menu-item-v2:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.home-main-menu-icon-v2 {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.home-main-menu-title-v2 {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  flex: 1;
+}
+
 @media (max-width: 480px) {
-  .home-header {
+  .home-header-v2 {
     padding: 16px;
     padding-top: 50px;
   }
 
-  .home-username {
-    font-size: 28px;
+  .home-username-v2 {
+    font-size: 18px;
   }
 
-  .home-level-progress-container {
-    margin: 16px 12px 12px 12px;
+  .home-stats-grid-v2 {
+    gap: 8px;
+  }
+
+  .home-stat-card-v2 {
     padding: 12px;
   }
 
-  .home-menu {
-    padding: 0 12px;
+  .home-main-menu-item-v2 {
+    padding: 14px;
   }
+}
 
-  .home-menu-item {
-    height: 65px;
-    padding: 12px 10px;
+/* Новый дизайн V3 */
+.home-container-v3 {
+  min-height: 100vh;
+  background: #0B0C0E;
+  color: #FFF;
+  padding-bottom: 80px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.home-background-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/img/App2.png') no-repeat center center;
+  background-size: cover;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.home-header-v3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 50px 20px 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.home-header-main-v3 {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.home-avatar-v3 {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  background: #1C1D21;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.home-avatar-v3 img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-user-info-v3 {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-username-v3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #FFF;
+}
+
+.home-currencies-v3 {
+  display: flex;
+  gap: 10px;
+}
+
+.home-currency-item-v3 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #FFF;
+}
+
+.home-currency-img-v3 {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.home-federations-btn-v3 {
+  background: rgba(28, 29, 33, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #FFF;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.home-level-section-v3 {
+  padding: 0 20px;
+  margin-top: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.home-level-info-v3 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.home-level-progress-bar-v3 {
+  width: 100%;
+  height: 10px;
+  background: #2A2B2F;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.home-level-progress-fill-v3 {
+  height: 100%;
+  background: #E84142;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(232, 65, 66, 0.3);
+}
+
+.home-content-v3 {
+  position: relative;
+  z-index: 1;
+}
+
+.home-stats-grid-v3 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  padding: 20px;
+}
+
+.home-stat-card-v3 {
+  background: #1C1D21;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.home-stat-card-v3:nth-child(1),
+.home-stat-card-v3:nth-child(2),
+.home-stat-card-v3:nth-child(3) {
+  grid-column: span 2;
+}
+
+.home-stat-card-v3:nth-child(4),
+.home-stat-card-v3:nth-child(5) {
+  grid-column: span 3;
+}
+
+.home-stat-label-v3 {
+  font-size: 12px;
+  color: #888;
+  font-weight: 500;
+}
+
+.home-stat-value-v3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFF;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-stat-icon-img-v3 {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.home-central-logo-container-v3 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 30px;
+}
+
+.home-central-logo-circle-v3 {
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, #2A2B2F 0%, #1C1D21 100%);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.home-central-logo-circle-v3:hover {
+  transform: scale(1.05);
+  box-shadow: 0 25px 60px rgba(0,0,0,0.7), inset 0 0 25px rgba(255,255,255,0.08);
+}
+
+.home-central-logo-circle-v3:active {
+  transform: scale(0.98);
+}
+
+.home-central-logo-v3 {
+  width: 200px;
+  height: auto;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+}
+
+@media (max-width: 400px) {
+  .home-header-v3 {
+    padding: 40px 16px 10px;
   }
-
-  .home-menu-text {
-    font-size: 24px;
+  
+  .home-avatar-v3 {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .home-username-v3 {
+    font-size: 20px;
+  }
+  
+  .home-central-logo-circle-v3 {
+    width: 220px;
+    height: 220px;
+  }
+  
+  .home-central-logo-v3 {
+    width: 160px;
+  }
+  
+  .home-stats-grid-v3 {
+    padding: 16px;
+    gap: 6px;
+  }
+  
+  .home-stat-card-v3 {
+    padding: 10px 4px;
+  }
+  
+  .home-stat-value-v3 {
+    font-size: 14px;
   }
 }

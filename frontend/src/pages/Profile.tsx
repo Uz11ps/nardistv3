@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import SkillPointsModal from '../components/SkillPointsModal'
 import EnhancementDetailModal from '../components/EnhancementDetailModal'
+import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
 import './Profile.css'
 
@@ -31,8 +32,11 @@ export default function Profile() {
     avatarUrl: '',
   })
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'stats' | 'premium'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'premium' | 'analytics'>('stats')
   const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null)
+  const [achievements, setAchievements] = useState<any[]>([])
+  const [gameHistory, setGameHistory] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -43,6 +47,7 @@ export default function Profile() {
       })
       checkPremium()
       loadSkillPoints()
+      loadAchievements()
       
       // Проверяем, завершена ли настройка профиля (первичное создание)
       // Если нет - перенаправляем на создание профиля
@@ -58,6 +63,28 @@ export default function Profile() {
         })
     }
   }, [user, navigate])
+
+  const loadAchievements = async () => {
+    try {
+      const response = await apiClient.get('/achievements').catch(() => ({ data: [] }))
+      setAchievements(response.data || [])
+    } catch (error) {
+      console.error('Failed to load achievements:', error)
+    }
+  }
+
+  const loadGameHistory = async () => {
+    try {
+      setLoadingHistory(true)
+      const response = await apiClient.get('/history/games').catch(() => ({ data: [] }))
+      setGameHistory(response.data || [])
+    } catch (error) {
+      console.error('Failed to load game history:', error)
+      setGameHistory([])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
 
   const loadSkillPoints = async () => {
     try {
@@ -264,25 +291,45 @@ export default function Profile() {
         {activeTab === 'stats' ? (
           <>
             {/* Профиль пользователя */}
-            <div className="profile-header">
-          <div className="profile-avatar-container">
-            <div className="profile-avatar">
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.username} className="profile-avatar-img" />
-              ) : (
-                <div className="profile-avatar-placeholder">
-                  <img src="/img/челувек.png" alt="User" className="profile-avatar-icon" />
-                </div>
-              )}
+            <div className="profile-header-v2">
+              <div className="profile-avatar-v2">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.username} className="profile-avatar-img-v2" />
+                ) : (
+                  <div className="profile-avatar-placeholder-v2">
+                    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#B6B6B6"/>
+                      <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="#B6B6B6"/>
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div className="profile-name-v2">
+                {user?.nickname || user?.firstName || user?.username || 'Алексей'}
+              </div>
+              <div className="profile-level-v2">
+                Уровень {stats.level}
+              </div>
+              <div className="profile-divider-v2" />
             </div>
-          </div>
-          <div className="profile-name">
-            {user?.nickname || user?.firstName || user?.username || 'Игрок'}
-          </div>
-          <div className="profile-level">
-            Уровень {stats.level}
-          </div>
-        </div>
+
+            {/* Карточки достижений и бонусов */}
+            <div className="profile-cards-grid-v2">
+              {/* Показываем достижения и бонусы */}
+              {achievements.filter(a => a.unlocked).slice(0, 6).map((achievement) => (
+                <div key={achievement.id} className="profile-card-v2">
+                  <div className="profile-card-text-v2">+10 к экономике</div>
+                </div>
+              ))}
+              {/* Заполняем оставшиеся места бонусами или сертификатами */}
+              {Array.from({ length: Math.max(0, 12 - achievements.filter(a => a.unlocked).length) }).map((_, i) => (
+                <div key={`bonus-${i}`} className="profile-card-v2">
+                  <div className="profile-card-text-v2">
+                    {i % 2 === 0 ? '+10 к экономике' : 'сертификат'}
+                  </div>
+                </div>
+              ))}
+            </div>
 
         {/* Усиления */}
         <div className="profile-enhancements-card">
@@ -392,24 +439,75 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Меню */}
-        <div className="profile-menu">
-          {menuItems.map((item) => (
-            <div
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className="profile-menu-item"
-            >
-              <div className="profile-menu-item-content">
-                <img src={item.icon} alt={item.title} className="profile-menu-item-icon" />
-                <span className="profile-menu-item-title">{item.title}</span>
-                <span className="profile-menu-item-arrow">→</span>
-              </div>
-            </div>
-          ))}
+        {/* Нижнее меню */}
+        <div className="profile-bottom-menu-v2">
+          <div
+            onClick={() => navigate('/inventory')}
+            className="profile-bottom-menu-item-v2"
+          >
+            <span className="profile-bottom-menu-icon-v2">📦</span>
+            <span className="profile-bottom-menu-title-v2">Инвентарь</span>
+            <span className="profile-bottom-menu-arrow-v2">→</span>
+          </div>
+          <div
+            onClick={() => navigate('/history')}
+            className="profile-bottom-menu-item-v2"
+          >
+            <span className="profile-bottom-menu-icon-v2">📊</span>
+            <span className="profile-bottom-menu-title-v2">Аналитика</span>
+            <span className="profile-bottom-menu-arrow-v2">→</span>
+          </div>
+          <div
+            onClick={() => navigate('/settings')}
+            className="profile-bottom-menu-item-v2"
+          >
+            <span className="profile-bottom-menu-icon-v2">⚙️</span>
+            <span className="profile-bottom-menu-title-v2">Настройки</span>
+            <span className="profile-bottom-menu-arrow-v2">→</span>
+          </div>
         </div>
       </>
-    ) : (
+    ) : activeTab === 'analytics' ? (
+          <div className="profile-analytics-tab">
+            {loadingHistory ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#B6B6B6' }}>
+                Загрузка истории игр...
+              </div>
+            ) : gameHistory.length === 0 ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#B6B6B6' }}>
+                История игр пуста
+              </div>
+            ) : (
+              <div className="profile-analytics-list">
+                {gameHistory.map((game) => (
+                  <div key={game.id} className="profile-analytics-item">
+                    <div className="analytics-item-header">
+                      <div className="analytics-item-info">
+                        <div className="analytics-item-players">
+                          {game.player1?.nickname || game.player1?.username || 'Игрок 1'} vs {game.player2?.nickname || game.player2?.username || 'Игрок 2'}
+                        </div>
+                        <div className="analytics-item-meta">
+                          {game.mode === 'long' ? 'Длинные нарды' : 'Короткие нарды'} • {new Date(game.createdAt).toLocaleDateString('ru-RU')}
+                        </div>
+                      </div>
+                      <div className="analytics-item-score">
+                        {game.player1Score} : {game.player2Score}
+                      </div>
+                    </div>
+                    <div className="analytics-item-actions">
+                      <button 
+                        className="analytics-view-btn"
+                        onClick={() => navigate(`/game/result/${game.id}`)}
+                      >
+                        Просмотр аналитики
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
           <div className="profile-premium-tab">
             <div className={`premium-status-card ${hasPremium ? 'active' : 'inactive'}`}>
               <div className="premium-status-header">
