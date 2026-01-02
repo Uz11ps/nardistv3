@@ -296,6 +296,7 @@ export default function Admin() {
     isPaid: false, 
     price: 0,
     rewards: '', // JSON строка с наградами (может быть несколько)
+    gameMode: 'long',
   })
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
@@ -2548,6 +2549,17 @@ export default function Admin() {
                 />
               </div>
               <div className="form-group">
+                <label>Тип нард (Длинные/Короткие)</label>
+                <select
+                  value={newArticle.gameMode}
+                  onChange={(e) => setNewArticle({ ...newArticle, gameMode: e.target.value })}
+                  style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                >
+                  <option value="long">Длинные</option>
+                  <option value="short">Короткие</option>
+                </select>
+              </div>
+              <div className="form-group">
                 <label>
                   <input
                     type="checkbox"
@@ -2604,6 +2616,7 @@ export default function Admin() {
                     isPaid: false, 
                     price: 0,
                     rewards: '',
+                    gameMode: 'long',
                   })
                   // Перезагружаем данные
                   const response = await apiClient.get('/admin/academy')
@@ -3332,6 +3345,115 @@ export default function Admin() {
                       onMouseLeave={(e) => e.currentTarget.style.background = '#3a3a3a'}
                     >
                       Закрыть
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Модальное окно редактирования материала */}
+            {editingArticle && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  padding: '20px',
+                }}
+                onClick={() => setEditingArticle(null)}
+              >
+                <div
+                  style={{
+                    background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    maxWidth: '800px',
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    border: '1px solid #3a3a3a',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h2 style={{ color: '#FFF', marginBottom: '20px' }}>Редактирование материала</h2>
+                  
+                  <div className="form-group" style={{ marginBottom: '16px' }}>
+                    <label style={{ color: '#B6B6B6', display: 'block', marginBottom: '8px' }}>Название</label>
+                    <input
+                      type="text"
+                      value={editingArticle.title}
+                      onChange={(e) => setEditingArticle({ ...editingArticle, title: e.target.value })}
+                      style={{ width: '100%', padding: '10px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '8px', color: '#FFF' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '16px' }}>
+                    <label style={{ color: '#B6B6B6', display: 'block', marginBottom: '8px' }}>Тип нард</label>
+                    <select
+                      value={editingArticle.gameMode || 'long'}
+                      onChange={(e) => setEditingArticle({ ...editingArticle, gameMode: e.target.value })}
+                      style={{ width: '100%', padding: '10px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '8px', color: '#FFF' }}
+                    >
+                      <option value="long">Длинные</option>
+                      <option value="short">Короткие</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '16px' }}>
+                    <label style={{ color: '#B6B6B6', display: 'block', marginBottom: '8px' }}>Контент (HTML)</label>
+                    <textarea
+                      value={editingArticle.content}
+                      onChange={(e) => setEditingArticle({ ...editingArticle, content: e.target.value })}
+                      rows={10}
+                      style={{ width: '100%', padding: '10px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '8px', color: '#FFF', fontFamily: 'monospace' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await apiClient.put(`/admin/academy/${editingArticle.id}`, editingArticle)
+                          alert('Материал обновлен!')
+                          setEditingArticle(null)
+                          loadStats()
+                        } catch (error: any) {
+                          alert('Ошибка при обновлении: ' + (error.response?.data?.message || error.message))
+                        }
+                      }}
+                      style={{
+                        padding: '10px 24px',
+                        background: 'linear-gradient(180deg, #4a9eff 0%, #2196F3 100%)',
+                        color: '#FFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                      }}
+                    >
+                      Сохранить
+                    </button>
+                    <button
+                      onClick={() => setEditingArticle(null)}
+                      style={{
+                        padding: '10px 24px',
+                        background: '#3a3a3a',
+                        color: '#FFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                      }}
+                    >
+                      Отмена
                     </button>
                   </div>
                 </div>

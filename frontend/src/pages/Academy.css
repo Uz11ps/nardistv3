@@ -260,3 +260,25 @@
   cursor: not-allowed;
 }
 
+/* Material Detail Content Styles */
+.academy-material-content {
+  color: #FFF;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.academy-material-content img,
+.academy-material-content-text img,
+.academy-material-section-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 16px auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.academy-material-section {
+  margin-bottom: 32px;
+}
+

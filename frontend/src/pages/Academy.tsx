@@ -15,6 +15,7 @@ interface Course {
   purchased: boolean
   isCompleted?: boolean
   description?: string
+  gameMode?: 'long' | 'short'
 }
 
 interface Article {
@@ -24,6 +25,7 @@ interface Article {
   price: number
   purchased: boolean
   isCompleted?: boolean
+  gameMode?: 'long' | 'short'
 }
 
 interface Onboarding {
@@ -33,6 +35,7 @@ interface Onboarding {
   price: number
   purchased: boolean
   isCompleted?: boolean
+  gameMode?: 'long' | 'short'
 }
 
 interface MaterialSection {
@@ -151,19 +154,19 @@ export default function Academy() {
     // Фильтрация по типу нард (только для курсов и статей)
     if (activeTab === 'courses' || activeTab === 'articles') {
       filtered = filtered.filter(item => {
-        // Если есть явное поле gameMode, используем его
+        // Если есть явное поле gameMode, используем его (приоритет)
         if (item.gameMode) {
           return item.gameMode === activeFilter
         }
         
-        // Fallback на ключевые слова в названии
+        // Fallback на ключевые слова в названии для старых материалов
         if (!item.title) return true
         const titleLower = item.title.toLowerCase()
         const isLong = titleLower.includes('длинн') || titleLower.includes('длинные')
         const isShort = titleLower.includes('коротк') || titleLower.includes('короткие')
         
         if (activeFilter === 'long') {
-          return isLong
+          return isLong || (!isLong && !isShort) // Показываем длинные или если тип не определен (как длинные по умолчанию)
         } else if (activeFilter === 'short') {
           return isShort
         }
