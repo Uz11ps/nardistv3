@@ -906,6 +906,12 @@ export class GamesService {
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     let state = game.gameState;
     
+    // ВАЖНО: Синхронизируем currentPlayer из сущности Game в gameState
+    // Это критично для корректной работы движка в sandbox режиме
+    if (state && state.currentPlayer !== game.currentPlayer) {
+      state = { ...state, currentPlayer: game.currentPlayer };
+    }
+    
     // Определяем, является ли этот ход первым в игре для этого режима (Long)
     const isFirstMoveOfGame = game.mode === GameMode.LONG && (game.moves || []).length < 2;
 
@@ -1922,6 +1928,10 @@ export class GamesService {
     if (dice.length === 0) {
       if (player !== undefined) {
         game.currentPlayer = player;
+        // Синхронизируем с gameState для движка
+        if (game.gameState) {
+          game.gameState.currentPlayer = player;
+        }
         const savedGame = await this.gamesRepository.save(game);
         this.gamesGateway.server.to(`game:${gameId}`).emit('sandbox_board_updated', {
           gameState: savedGame.gameState,
@@ -1943,12 +1953,11 @@ export class GamesService {
     game.gameState = {
       ...currentState,
       dice: dice,
+      currentPlayer: targetPlayer, // Синхронизируем для движка
     };
 
-    // Устанавливаем текущего игрока, если указан
-    if (player !== undefined) {
-      game.currentPlayer = player;
-    }
+    // Устанавливаем текущего игрока
+    game.currentPlayer = targetPlayer;
 
     const savedGame = await this.gamesRepository.save(game);
     

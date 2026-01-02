@@ -310,12 +310,13 @@ export default function BackgammonBoard({
         // Для коротких нард: преобразуем from: -1 в 24 (белые) или 25 (черные) для бара
         if (gameMode === 'short') {
           const bar = gameState?.bar || { white: 0, black: 0 }
-          const hasBarCheckers = isPlayer1 ? bar.white > 0 : bar.black > 0
+          const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
+          const hasBarCheckers = activePlayer === 0 ? bar.white > 0 : bar.black > 0
           
           flatMoves = flatMoves.map(move => {
             // Преобразуем from: -1 в 24 (белые) или 25 (черные)
             if (move.from === -1) {
-              return { ...move, from: isPlayer1 ? 24 : 25 }
+              return { ...move, from: activePlayer === 0 ? 24 : 25 }
             }
             return move
           })
@@ -323,7 +324,7 @@ export default function BackgammonBoard({
           // Если есть шашки на баре и нет pendingMoves - фильтруем, оставляем только ходы с бара
           // Если есть pendingMoves, значит уже начали ход с бара, показываем все возможные ходы
           if (hasBarCheckers && pendingMoves.length === 0) {
-            flatMoves = flatMoves.filter(move => move.from === (isPlayer1 ? 24 : 25))
+            flatMoves = flatMoves.filter(move => move.from === (activePlayer === 0 ? 24 : 25))
           }
         }
         
@@ -358,7 +359,7 @@ export default function BackgammonBoard({
       cancelled = true
       if (timeoutId !== null) window.clearTimeout(timeoutId)
     }
-  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, pendingMoves, gameState, gameMode, isPlayer1]) // pendingMoves нужен для использования в fetchPossibleMoves
+  }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, pendingMoves, gameState, gameMode, isPlayer1, isSandbox, currentPlayer]) // pendingMoves нужен для использования в fetchPossibleMoves
   
   // Определение позиции для кубиков
   // Кубики показываются на стороне игрока, у которого сейчас ход
@@ -1213,18 +1214,15 @@ export default function BackgammonBoard({
         
         let pointValue = 0
         if (pointIndex === 24) pointValue = bar.white
-        else if (pointIndex === 25) pointValue = bar.black
+        else if (pointIndex === 25) pointValue = -bar.black // Для черных используем отрицательное значение
         else pointValue = points[pointIndex] || 0
         
         // В sandbox разрешаем перетаскивать любую шашку за обе стороны
         // В sandbox режиме "моя" шашка определяется текущим currentPlayer (0 - белые, 1 - черные)
-        const isMyChecker = isSandbox 
-          ? (currentPlayer === 0 ? pointValue > 0 : pointValue < 0)
-          : (isPlayer1 ? pointValue > 0 : pointValue < 0)
+        const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
+        const isMyChecker = activePlayer === 0 ? pointValue > 0 : pointValue < 0
         
-        const isMyBar = isSandbox
-          ? ((pointIndex === 24 && currentPlayer === 0 && pointValue > 0) || (pointIndex === 25 && currentPlayer === 1 && pointValue > 0))
-          : ((pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1))
+        const isMyBar = (pointIndex === 24 && activePlayer === 0 && pointValue > 0) || (pointIndex === 25 && activePlayer === 1 && pointValue < 0)
         
         if (isMyChecker || isMyBar) {
           // В sandbox режиме активируем долгое зажатие и на таче
@@ -1559,7 +1557,8 @@ export default function BackgammonBoard({
     // Для коротких нард: если есть шашки на баре, блокируем клики по точкам на доске
     if (gameMode === 'short') {
       const bar = virtualGameState?.bar || { white: 0, black: 0 }
-      const hasBarCheckers = isPlayer1 ? bar.white > 0 : bar.black > 0
+      const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
+      const hasBarCheckers = activePlayer === 0 ? bar.white > 0 : bar.black > 0
       
       if (hasBarCheckers && pointIndex !== 24 && pointIndex !== 25) {
         // Есть шашки на баре и кликнули не по бару - блокируем
@@ -1577,9 +1576,10 @@ export default function BackgammonBoard({
     if (pointIndex === 24 || pointIndex === 25) {
       // Для бара проверяем наличие шашек на баре
       const bar = virtualGameState?.bar || { white: 0, black: 0 }
-      const isMyBarIndex = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
+      const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
+      const isMyBarIndex = (pointIndex === 24 && activePlayer === 0) || (pointIndex === 25 && activePlayer === 1)
       if (isMyBarIndex) {
-        pointValue = isPlayer1 ? bar.white : bar.black
+        pointValue = activePlayer === 0 ? bar.white : -bar.black
       }
     } else if (pointIndex >= 0 && pointIndex < points.length) {
       pointValue = points[pointIndex]
@@ -1588,7 +1588,8 @@ export default function BackgammonBoard({
     // Для бара проверяем не только pointValue, но и наличие шашек на баре
     if (pointIndex === 24 || pointIndex === 25) {
       const bar = virtualGameState?.bar || { white: 0, black: 0 }
-      const isMyBarIndex = (pointIndex === 24 && isPlayer1) || (pointIndex === 25 && !isPlayer1)
+      const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
+      const isMyBarIndex = (pointIndex === 24 && activePlayer === 0) || (pointIndex === 25 && activePlayer === 1)
       if (!isMyBarIndex || pointValue === 0) {
         setSelectedPoint(null)
         setValidTargetPoints(new Set())
