@@ -536,8 +536,9 @@ export class AcademyService {
         const user = await this.usersService.findOne(userId);
         for (const reward of course.rewards) {
           if (reward.narCoin) {
+            const currentNarCoin = typeof user.narCoin === 'bigint' ? Number(user.narCoin) : (user.narCoin || 0);
             await this.usersService.update(userId, {
-              narCoin: (user.narCoin || 0) + Number(reward.narCoin),
+              narCoin: currentNarCoin + Number(reward.narCoin),
             });
           }
           if (reward.xp) {
@@ -546,8 +547,9 @@ export class AcademyService {
         }
       } else if (course.rewardNarCoin) {
         const user = await this.usersService.findOne(userId);
+        const currentNarCoin = typeof user.narCoin === 'bigint' ? Number(user.narCoin) : (user.narCoin || 0);
         await this.usersService.update(userId, {
-          narCoin: (user.narCoin || 0) + Number(course.rewardNarCoin),
+          narCoin: currentNarCoin + Number(course.rewardNarCoin),
         });
       }
 
