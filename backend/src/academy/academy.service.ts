@@ -202,6 +202,7 @@ export class AcademyService {
         views: article.views,
         isVerified: article.isVerified,
         isCompleted,
+        gameMode: article.gameMode || 'long',
       });
     }
 
@@ -238,6 +239,7 @@ export class AcademyService {
       isPaid: article.isPaid,
       views: article.views,
       isCompleted: false, // Статьи нельзя выполнить
+      gameMode: article.gameMode || 'long',
     }));
   }
 
@@ -400,7 +402,7 @@ export class AcademyService {
   async createUserArticle(
     userId: string,
     slotId: string,
-    articleData: { title: string; content: string; telegraphData?: any },
+    articleData: { title: string; content: string; gameMode?: string; telegraphData?: any },
   ): Promise<Article> {
     const slot = await this.articleSlotsRepository.findOne({ where: { id: slotId, userId } });
     if (!slot) {
@@ -417,6 +419,7 @@ export class AcademyService {
     const article = this.articlesRepository.create({
       title: articleData.title,
       content: articleData.content,
+      gameMode: articleData.gameMode || 'long',
       telegraphData: articleData.telegraphData,
       author: user.username || user.telegramId?.toString() || 'Пользователь',
       authorId: userId,
@@ -437,7 +440,7 @@ export class AcademyService {
 
   async createUserCourse(
     userId: string,
-    courseData: { title: string; description?: string; content: string; price: number },
+    courseData: { title: string; description?: string; content: string; price: number; gameMode?: string },
   ): Promise<Article> {
     const user = await this.usersService.findOne(userId);
 
@@ -445,6 +448,7 @@ export class AcademyService {
     const course = this.articlesRepository.create({
       title: courseData.title,
       content: courseData.content || courseData.description || '',
+      gameMode: courseData.gameMode || 'long',
       author: user.nickname || user.username || user.telegramId?.toString() || 'Пользователь',
       authorId: userId,
       type: 'course',

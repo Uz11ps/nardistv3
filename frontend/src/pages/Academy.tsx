@@ -69,7 +69,14 @@ export default function Academy() {
   const [courses, setCourses] = useState<Course[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [showPurchaseModal, setShowPurchaseModal] = useState<Course | Article | Onboarding | null>(null)
-  const [publishForm, setPublishForm] = useState({ title: '', description: '', type: 'article' as 'article' | 'course', price: 25, content: '' })
+  const [publishForm, setPublishForm] = useState({ 
+    title: '', 
+    description: '', 
+    type: 'article' as 'article' | 'course', 
+    price: 25, 
+    content: '',
+    gameMode: 'long' as 'long' | 'short'
+  })
   const [publishing, setPublishing] = useState(false)
   const [materialDetail, setMaterialDetail] = useState<MaterialDetail | null>(null)
   const [hidePurchased, setHidePurchased] = useState(false)
@@ -138,22 +145,26 @@ export default function Academy() {
   }
 
   // Функция фильтрации и сортировки элементов
-  const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean; title?: string }>(items: T[]): T[] => {
+  const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean; title?: string; gameMode?: string }>(items: T[]): T[] => {
     let filtered = items
 
     // Фильтрация по типу нард (только для курсов и статей)
     if (activeTab === 'courses' || activeTab === 'articles') {
       filtered = filtered.filter(item => {
+        // Если есть явное поле gameMode, используем его
+        if (item.gameMode) {
+          return item.gameMode === activeFilter
+        }
+        
+        // Fallback на ключевые слова в названии
         if (!item.title) return true
         const titleLower = item.title.toLowerCase()
         const isLong = titleLower.includes('длинн') || titleLower.includes('длинные')
         const isShort = titleLower.includes('коротк') || titleLower.includes('короткие')
         
         if (activeFilter === 'long') {
-          // Показываем только курсы по длинным нардам
           return isLong
         } else if (activeFilter === 'short') {
-          // Показываем только курсы по коротким нардам
           return isShort
         }
         return true
@@ -301,7 +312,27 @@ export default function Academy() {
           </div>
 
           <div className="academy-publish-field">
-            <label className="academy-publish-label">Тип</label>
+            <label className="academy-publish-label">Тип нард</label>
+            <div className="academy-publish-mode-selector">
+              <button
+                type="button"
+                className={`academy-publish-mode-btn ${publishForm.gameMode === 'long' ? 'active' : ''}`}
+                onClick={() => setPublishForm({ ...publishForm, gameMode: 'long' })}
+              >
+                Длинные
+              </button>
+              <button
+                type="button"
+                className={`academy-publish-mode-btn ${publishForm.gameMode === 'short' ? 'active' : ''}`}
+                onClick={() => setPublishForm({ ...publishForm, gameMode: 'short' })}
+              >
+                Короткие
+              </button>
+            </div>
+          </div>
+
+          <div className="academy-publish-field">
+            <label className="academy-publish-label">Тип контента</label>
             {user?.isAdmin ? (
               <div className="academy-publish-type-buttons">
                 <button
@@ -316,33 +347,23 @@ export default function Academy() {
                   className={`academy-publish-type-button ${publishForm.type === 'course' ? 'active' : ''}`}
                   onClick={() => setPublishForm({ ...publishForm, type: 'course' })}
                 >
-                  Курс (только для админов)
+                  Курс
                 </button>
               </div>
             ) : (
-              <div style={{ 
-                padding: '12px', 
-                background: '#2a2a2a', 
-                borderRadius: '8px', 
-                color: '#B6B6B6',
-                fontSize: '14px'
-              }}>
-                Игроки могут создавать только <strong style={{ color: '#FFF' }}>статьи</strong>. 
-                Статьи проходят верификацию администратором перед публикацией.
-                <br />
-                <small style={{ color: '#999', fontSize: '12px' }}>
-                  Курсы создаются только администраторами в админ-панели.
-                </small>
+              <div className="academy-publish-info">
+                Игроки могут создавать только <strong>статьи</strong>. 
+                Курсы создаются администраторами.
               </div>
             )}
           </div>
 
           <div className="academy-publish-field">
-            <label className="academy-publish-label">Стоимость</label>
+            <label className="academy-publish-label">Стоимость (NAR)</label>
             <input
               type="number"
               className="academy-publish-input"
-              placeholder="25 NAR"
+              placeholder="25"
               value={publishForm.price}
               onChange={(e) => setPublishForm({ ...publishForm, price: parseInt(e.target.value) || 0 })}
               min="0"
@@ -354,12 +375,12 @@ export default function Academy() {
             <RichTextEditor
               value={publishForm.content}
               onChange={(content) => setPublishForm({ ...publishForm, content })}
-              placeholder="Введите текст статьи. Используйте панель инструментов для форматирования, добавления заголовков, списков и изображений."
+              placeholder="Начните писать..."
             />
           </div>
 
           <button type="submit" className="academy-publish-submit-button" disabled={publishing}>
-            {publishing ? 'Публикация...' : 'Опубликовать'}
+            {publishing ? 'Публикация...' : 'Опубликовать материал'}
           </button>
         </form>
       </PageLayout>
