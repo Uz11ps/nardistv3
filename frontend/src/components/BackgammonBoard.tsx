@@ -1383,7 +1383,7 @@ export default function BackgammonBoard({
       }
       
       // В sandbox режиме разрешаем обычные ходы, если есть кубики
-      const hasDice = dice && dice.length > 0
+      const hasDice = dice && (Array.isArray(dice) ? dice.length > 0 : (dice.die1 !== undefined || dice.die2 !== undefined))
       if (!hasDice) {
         // Если нет кубиков, проверяем клик по шашке для долгого зажатия
         const pointIndex = getPointAtPosition(x, y, canvas)
@@ -1421,11 +1421,6 @@ export default function BackgammonBoard({
     } else {
       if (!canMove || !isMyTurn) return
     }
-    
-    const canvas = canvasRef.current
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
     
     const pointIndex = getPointAtPosition(x, y, canvas)
     // console.log('Clicked at', x, y, 'Point:', pointIndex)
