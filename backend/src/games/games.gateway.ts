@@ -316,6 +316,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       // Используем moveTimeLimit из каждой игры индивидуально
 
       for (const game of activeGames) {
+        // Пропускаем свободный стол - там нет таймаутов
+        if (game.type === GameType.SANDBOX) {
+          continue;
+        }
+
         // Используем lastMoveAt, если он установлен, иначе используем createdAt для первых ходов
         // Таймер должен работать с самого начала игры, даже если кубики еще не брошены
         const referenceTime = game.lastMoveAt 

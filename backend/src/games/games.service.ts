@@ -552,7 +552,7 @@ export class GamesService {
           updatedGame.player2TimeRemaining = newTimeRemaining;
         }
         
-        if (newTimeRemaining <= 0) {
+        if (game.type !== GameType.SANDBOX && newTimeRemaining <= 0) {
           updatedGame.status = GameStatus.FINISHED;
           updatedGame.winnerId = isPlayer1 ? updatedGame.player2Id : updatedGame.player1Id;
           if (updatedGame.winnerId === updatedGame.player1Id) {
@@ -790,7 +790,7 @@ export class GamesService {
       this.logger.log(`⏱️ Player ${oldCurrentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id} move completed: ${moveTimeSeconds.toFixed(2)}s (excess: ${excessTime.toFixed(2)}s), remaining: ${(newTimeRemaining / 1000).toFixed(2)}s`);
       
       // Если общее время закончилось, завершаем игру
-      if (newTimeRemaining <= 0) {
+      if (game.type !== GameType.SANDBOX && newTimeRemaining <= 0) {
         this.logger.warn(`⏱️ Player ${oldCurrentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id} ran out of total time (${excessTime.toFixed(2)}s excess)`);
         // Завершаем игру в пользу противника
         updatedGame.status = GameStatus.FINISHED;
@@ -818,7 +818,8 @@ export class GamesService {
       }
     }
 
-    if (engine.isGameFinished(currentState)) {
+    // В свободном столе игра никогда не заканчивается автоматически
+    if (game.type !== GameType.SANDBOX && engine.isGameFinished(currentState)) {
       const winner = engine.getWinner(currentState);
       updatedGame.status = GameStatus.FINISHED;
       if (winner === 0) {
@@ -1948,11 +1949,17 @@ export class GamesService {
 
     const targetPlayer = player !== undefined ? player : game.currentPlayer;
     
+    // В sandbox режиме при установке дублей расширяем их до 4 значений
+    let finalDice = dice;
+    if (dice[0] === dice[1]) {
+      finalDice = [dice[0], dice[0], dice[0], dice[0]];
+    }
+
     // Обновляем состояние кубиков
     const currentState = game.gameState || {};
     game.gameState = {
       ...currentState,
-      dice: dice,
+      dice: finalDice,
       currentPlayer: targetPlayer, // Синхронизируем для движка
     };
 
@@ -1963,7 +1970,7 @@ export class GamesService {
     
     // Уведомляем через WebSocket
     this.gamesGateway.server.to(`game:${gameId}`).emit('sandbox_dice_updated', {
-      dice: dice,
+      dice: finalDice,
       currentPlayer: savedGame.currentPlayer,
     });
 
