@@ -1747,7 +1747,24 @@ export default function Game() {
               <div className="hash-display" style={{ marginBottom: '20px', fontSize: '12px' }}>
                 <div style={{ marginBottom: '8px' }}>Хеш последовательности (SHA-256):</div>
                 <code style={{ fontSize: '11px', wordBreak: 'break-all' }}>
-                  {gameInfo.rngHash ? (JSON.parse(gameInfo.rngHash).p1Hash.substring(0, 16) + '...') : '---'}
+                  {(() => {
+                    try {
+                      if (typeof gameInfo.rngHash === 'string') {
+                        // Пытаемся распарсить как JSON
+                        const parsed = JSON.parse(gameInfo.rngHash)
+                        if (parsed && parsed.p1Hash) {
+                          return parsed.p1Hash.substring(0, 16) + '...'
+                        }
+                      }
+                      // Если это не JSON или не объект с p1Hash, показываем первые 16 символов строки
+                      return gameInfo.rngHash.substring(0, 16) + '...'
+                    } catch (e) {
+                      // Если не удалось распарсить, показываем первые 16 символов
+                      return typeof gameInfo.rngHash === 'string' 
+                        ? gameInfo.rngHash.substring(0, 16) + '...'
+                        : '---'
+                    }
+                  })()}
                 </code>
               </div>
             )}
