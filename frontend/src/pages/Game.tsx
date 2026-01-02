@@ -325,12 +325,12 @@ export default function Game() {
       setOpponentOffset(opponentCurrentOffset)
       
       // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
-      // Показываем, если игра в статусе 'waiting', не sandbox, и смещение еще не было установлено на сервере
+      // Показываем, если игра в статусе 'waiting', не sandbox, и смещение еще не было подтверждено
       if (game.status === 'waiting' && game.type !== 'sandbox') {
-        // Проверяем, что смещение еще не было установлено на сервере (null или undefined)
-        const myOffsetNotSet = isP1 
-          ? (game.p1Offset === null || game.p1Offset === undefined)
-          : (game.p2Offset === null || game.p2Offset === undefined)
+        // Проверяем, что смещение еще не было установлено пользователем
+        // По умолчанию смещение равно 1, поэтому проверяем, что оно равно 1 и еще не было подтверждено
+        const myCurrentOffset = isP1 ? game.p1Offset : game.p2Offset
+        const myOffsetNotSet = myCurrentOffset === 1 && !offsetConfirmed
         
         console.log('🔍 Проверка показа модального окна смещения:', {
           status: game.status,
@@ -338,11 +338,12 @@ export default function Game() {
           isP1,
           p1Offset: game.p1Offset,
           p2Offset: game.p2Offset,
+          myCurrentOffset,
           myOffsetNotSet,
           offsetConfirmed
         })
         
-        // Показываем модальное окно, если смещение не установлено
+        // Показываем модальное окно, если смещение равно значению по умолчанию (1) и еще не было подтверждено
         if (myOffsetNotSet) {
           console.log('✅ Показываем модальное окно выбора смещения')
           // Небольшая задержка, чтобы убедиться, что состояние обновилось
@@ -623,10 +624,10 @@ export default function Game() {
       // Показываем модальное окно выбора смещения при статусе 'waiting' для всех типов игр (кроме sandbox)
       if (newStatus === 'waiting' && data.type !== 'sandbox') {
         const isP1 = data.player1Id === user?.id
-        // Проверяем, что смещение еще не было установлено на сервере (null или undefined)
-        const myOffsetNotSet = isP1 
-          ? (data.p1Offset === null || data.p1Offset === undefined)
-          : (data.p2Offset === null || data.p2Offset === undefined)
+        // Проверяем, что смещение еще не было установлено пользователем
+        // По умолчанию смещение равно 1, поэтому проверяем, что оно равно 1 и еще не было подтверждено
+        const myCurrentOffset = isP1 ? data.p1Offset : data.p2Offset
+        const myOffsetNotSet = myCurrentOffset === 1 && !offsetConfirmed
         
         console.log('🔍 WebSocket: Проверка показа модального окна смещения:', {
           status: newStatus,
@@ -634,10 +635,12 @@ export default function Game() {
           isP1,
           p1Offset: data.p1Offset,
           p2Offset: data.p2Offset,
-          myOffsetNotSet
+          myCurrentOffset,
+          myOffsetNotSet,
+          offsetConfirmed
         })
         
-        // Показываем модальное окно, если смещение не установлено
+        // Показываем модальное окно, если смещение равно значению по умолчанию (1) и еще не было подтверждено
         if (myOffsetNotSet) {
           console.log('✅ WebSocket: Показываем модальное окно выбора смещения')
           setTimeout(() => {
