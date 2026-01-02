@@ -41,11 +41,12 @@ export class AcademyService {
 
     // Проверяем доступность материала
     let purchased = false;
+    let userMaterial = null;
     if (!article.isPaid) {
       purchased = true; // Бесплатные материалы доступны всем
     } else if (userId) {
       // Проверяем, куплен ли платный материал
-      const userMaterial = await this.userMaterialsRepository.findOne({
+      userMaterial = await this.userMaterialsRepository.findOne({
         where: { userId, articleId: id },
       });
       purchased = !!userMaterial;
