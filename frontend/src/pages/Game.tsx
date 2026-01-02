@@ -325,7 +325,8 @@ export default function Game() {
       setOpponentOffset(opponentCurrentOffset)
       
       // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
-      // Показываем, если игра в статусе 'waiting', не sandbox
+      // Показываем, если смещение равно значению по умолчанию (1) и еще не было подтверждено
+      // Показываем независимо от статуса игры (waiting или in_progress)
       console.log('🔍 [loadGame] Проверка показа модального окна смещения:', {
         status: game.status,
         type: game.type,
@@ -337,11 +338,11 @@ export default function Game() {
         showOffsetModal
       })
       
-      if (game.status === 'waiting' && game.type !== 'sandbox') {
+      if (game.type !== 'sandbox') {
         const myCurrentOffsetValue = isP1 ? game.p1Offset : game.p2Offset
         
         // Показываем модальное окно, если смещение равно значению по умолчанию (1)
-        // и еще не было подтверждено
+        // и еще не было подтверждено, независимо от статуса игры
         if (myCurrentOffsetValue === 1 && !offsetConfirmed) {
           console.log('✅ [loadGame] Показываем модальное окно выбора смещения')
           // Используем requestAnimationFrame для гарантии, что состояние обновилось
@@ -357,10 +358,7 @@ export default function Game() {
           })
         }
       } else {
-        console.log('❌ [loadGame] Модальное окно НЕ показываем - неподходящий статус или тип:', {
-          status: game.status,
-          type: game.type
-        })
+        console.log('❌ [loadGame] Модальное окно НЕ показываем - sandbox игра')
       }
       
       if (game.status === 'in_progress') {
@@ -631,8 +629,10 @@ export default function Game() {
       })
       const newStatus = data.status || 'waiting'
       
-      // Показываем модальное окно выбора смещения при статусе 'waiting' для всех типов игр (кроме sandbox)
-      if (newStatus === 'waiting' && data.type !== 'sandbox') {
+      // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
+      // Показываем, если смещение равно значению по умолчанию (1) и еще не было подтверждено
+      // Показываем независимо от статуса игры (waiting или in_progress)
+      if (data.type !== 'sandbox') {
         const isP1 = data.player1Id === user?.id
         const myCurrentOffset = isP1 ? data.p1Offset : data.p2Offset
         
@@ -658,7 +658,7 @@ export default function Game() {
           console.log('❌ [WebSocket] Модальное окно НЕ показываем:', {
             myCurrentOffset,
             offsetConfirmed,
-            reason: myCurrentOffset === 1 ? 'offsetConfirmed=true' : 'offset != 1'
+            reason: myCurrentOffset === 1 ? 'offsetConfirmed=true' : `offset=${myCurrentOffset} != 1`
           })
         }
       }
@@ -1715,7 +1715,7 @@ export default function Game() {
       )}
 
       {/* Модальное окно выбора смещения */}
-      {showOffsetModal && gameInfo && gameInfo.type !== 'sandbox' && gameStatus === 'waiting' && (
+      {showOffsetModal && gameInfo && gameInfo.type !== 'sandbox' && (
         <div className="modal-overlay" style={{ zIndex: 10000 }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%' }}>
             <h2>Выбор смещения</h2>
