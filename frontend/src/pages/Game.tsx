@@ -318,17 +318,20 @@ export default function Game() {
       
       // Загружаем смещения игроков
       const isP1 = game.player1Id === user?.id
-      if (isP1) {
-        setMyOffset(game.p1Offset || 1)
-        setOpponentOffset(game.p2Offset || 1)
-      } else {
-        setMyOffset(game.p2Offset || 1)
-        setOpponentOffset(game.p1Offset || 1)
-      }
+      const myCurrentOffset = isP1 ? (game.p1Offset || 1) : (game.p2Offset || 1)
+      const opponentCurrentOffset = isP1 ? (game.p2Offset || 1) : (game.p1Offset || 1)
+      
+      setMyOffset(myCurrentOffset)
+      setOpponentOffset(opponentCurrentOffset)
       
       // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
-      if (game.status === 'waiting' && game.type !== 'sandbox' && !offsetConfirmed) {
-        setShowOffsetModal(true)
+      // Показываем, если игра в статусе 'waiting', не sandbox, и смещение еще не было установлено на сервере
+      if (game.status === 'waiting' && game.type !== 'sandbox') {
+        // Проверяем, что смещение еще не было установлено на сервере
+        const myOffsetNotSet = isP1 ? !game.p1Offset : !game.p2Offset
+        if (!offsetConfirmed && myOffsetNotSet) {
+          setShowOffsetModal(true)
+        }
       }
       
       if (game.status === 'in_progress') {
@@ -598,8 +601,13 @@ export default function Game() {
       const newStatus = data.status || 'waiting'
       
       // Показываем модальное окно выбора смещения при статусе 'waiting' для всех типов игр (кроме sandbox)
-      if (newStatus === 'waiting' && data.type !== 'sandbox' && !offsetConfirmed) {
-        setShowOffsetModal(true)
+      if (newStatus === 'waiting' && data.type !== 'sandbox') {
+        const isP1 = data.player1Id === user?.id
+        // Проверяем, что смещение еще не было установлено на сервере
+        const myOffsetNotSet = isP1 ? !data.p1Offset : !data.p2Offset
+        if (!offsetConfirmed && myOffsetNotSet) {
+          setShowOffsetModal(true)
+        }
       }
       
       setGameStatus(newStatus)
