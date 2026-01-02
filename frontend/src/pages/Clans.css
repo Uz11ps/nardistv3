@@ -3,20 +3,24 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 40px;
-  padding: 40px 20px;
+  gap: 30px;
+  padding: 20px;
   text-align: center;
+  min-height: 60vh;
+  justify-content: center;
 }
 
 .federations-welcome-shield {
-  width: 160px;
-  height: 160px;
+  width: 140px;
+  height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 30px;
   padding: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .federations-welcome-shield img {
@@ -27,22 +31,21 @@
 
 .federations-welcome-btn {
   width: 100%;
-  max-width: 300px;
-  height: 60px;
+  max-width: 280px;
+  height: 54px;
   background: linear-gradient(180deg, #A32E2E 0%, #681C1C 100%);
   border: none;
-  border-radius: 16px;
+  border-radius: 14px;
   color: #FFF;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(163, 46, 46, 0.2);
   transition: all 0.2s;
 }
 
-.federations-welcome-btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
+.federations-welcome-btn:active {
+  transform: scale(0.98);
 }
 
 .clans-loading {
@@ -50,7 +53,53 @@
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  color: #B6B6B6;
+  color: #888;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
+}
+
+/* Unavailable Page Styles */
+.clans-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 20px;
+  min-height: 60vh;
+}
+
+.clans-unavailable-icon {
+  width: 120px;
+  height: 120px;
+  opacity: 0.5;
+  margin-bottom: 10px;
+}
+
+.clans-unavailable-title {
+  color: #FFF;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.clans-unavailable-text {
+  color: #888;
+  font-size: 15px;
+  line-height: 1.5;
+  max-width: 280px;
+}
+
+.clans-play-button {
+  margin-top: 10px;
+  width: 100%;
+  max-width: 240px;
+  height: 50px;
+  background: #2a2a2a;
+  border: none;
+  border-radius: 12px;
+  color: #FFF;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
 }

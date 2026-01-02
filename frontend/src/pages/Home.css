@@ -558,32 +558,50 @@
 /* Новый дизайн V3 */
 .home-container-v3 {
   min-height: 100vh;
-  background: #1a1a1a;
+  background: #0B0C0E;
   color: #FFF;
-  padding-bottom: 80px; /* Для BottomNav */
+  padding-bottom: 80px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.home-background-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/img/App2.png') no-repeat center center;
+  background-size: cover;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .home-header-v3 {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 60px 20px 20px;
+  align-items: center;
+  padding: 50px 20px 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .home-header-main-v3 {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
 }
 
 .home-avatar-v3 {
-  width: 70px;
-  height: 70px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
-  background: #222;
+  background: #1C1D21;
   flex-shrink: 0;
+  position: relative;
 }
 
 .home-avatar-v3 img {
@@ -595,17 +613,18 @@
 .home-user-info-v3 {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .home-username-v3 {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
+  color: #FFF;
 }
 
 .home-currencies-v3 {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .home-currency-item-v3 {
@@ -613,73 +632,79 @@
   align-items: center;
   gap: 4px;
   font-size: 14px;
+  color: #FFF;
 }
 
-.home-level-v3 {
-  margin-top: 4px;
-  width: 140px;
+.home-currency-img-v3 {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.home-federations-btn-v3 {
+  background: rgba(28, 29, 33, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #FFF;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.home-level-section-v3 {
+  padding: 0 20px;
+  margin-top: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .home-level-info-v3 {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 14px;
   color: #888;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .home-level-progress-bar-v3 {
   width: 100%;
-  height: 6px;
-  background: #333;
-  border-radius: 3px;
+  height: 10px;
+  background: #2A2B2F;
+  border-radius: 5px;
   overflow: hidden;
 }
 
 .home-level-progress-fill-v3 {
   height: 100%;
   background: #E84142;
-  border-radius: 3px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(232, 65, 66, 0.3);
 }
 
-.home-federations-btn-v3 {
-  background: #2a2a2a;
-  border: none;
-  border-radius: 12px;
-  color: #FFF;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
+.home-content-v3 {
+  position: relative;
+  z-index: 1;
 }
 
 .home-stats-grid-v3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  padding: 0 20px;
-  margin-top: 20px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  padding: 20px;
 }
 
 .home-stat-card-v3 {
-  background: #222;
+  background: #1C1D21;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
-  padding: 12px;
+  padding: 12px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   text-align: center;
-}
-
-.home-stat-card-v3:nth-child(n+4) {
-  grid-column: span 1;
-}
-
-/* Для 4-го и 5-го элемента сделаем сетку 2 колонки ниже */
-.home-stats-grid-v3 {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
 }
 
 .home-stat-card-v3:nth-child(1),
@@ -696,33 +721,83 @@
 .home-stat-label-v3 {
   font-size: 12px;
   color: #888;
+  font-weight: 500;
 }
 
 .home-stat-value-v3 {
   font-size: 16px;
   font-weight: 700;
+  color: #FFF;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-stat-icon-img-v3 {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .home-central-logo-container-v3 {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 40px;
+  margin-top: 30px;
 }
 
 .home-central-logo-circle-v3 {
-  width: 280px;
-  height: 280px;
-  background: #222;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, #2A2B2F 0%, #1C1D21 100%);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
-  box-shadow: 0 0 50px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .home-central-logo-v3 {
   width: 200px;
   height: auto;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+}
+
+@media (max-width: 400px) {
+  .home-header-v3 {
+    padding: 40px 16px 10px;
+  }
+  
+  .home-avatar-v3 {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .home-username-v3 {
+    font-size: 20px;
+  }
+  
+  .home-central-logo-circle-v3 {
+    width: 220px;
+    height: 220px;
+  }
+  
+  .home-central-logo-v3 {
+    width: 160px;
+  }
+  
+  .home-stats-grid-v3 {
+    padding: 16px;
+    gap: 6px;
+  }
+  
+  .home-stat-card-v3 {
+    padding: 10px 4px;
+  }
+  
+  .home-stat-value-v3 {
+    font-size: 14px;
+  }
 }

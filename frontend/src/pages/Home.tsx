@@ -169,7 +169,9 @@ export default function Home() {
   ]
 
   return (
-    <div className="home-container-v3">
+    <div className="home-container-v3 page-transition">
+      <div className="home-background-overlay" />
+      
       {/* Хедер с профилем */}
       <div className="home-header-v3">
         <div className="home-header-main-v3">
@@ -190,26 +192,12 @@ export default function Home() {
             <div className="home-username-v3">{user?.nickname || user?.username || 'Игрок'}</div>
             <div className="home-currencies-v3">
               <div className="home-currency-item-v3">
-                <span className="home-currency-icon-v3">💰</span>
+                <img src="/img/narcoin.png" alt="NAR" className="home-currency-img-v3" />
                 <span>{stats.narCoin.toLocaleString()}</span>
               </div>
               <div className="home-currency-item-v3">
-                <span className="home-currency-icon-v3" style={{ color: '#4caf50' }}>💎</span>
-                <span style={{ color: '#4caf50' }}>{(stats.narCoin / 10).toLocaleString()}</span>
-              </div>
-            </div>
-            <div className="home-level-v3">
-              <div className="home-level-info-v3">
-                <span>Lvl {stats.level}</span>
-                <span className="home-level-progress-text-v3">
-                  {levelProgress ? `${levelProgress.currentXP - levelProgress.xpForCurrentLevel}/${levelProgress.xpNeededForNextLevel}` : '50/100'}
-                </span>
-              </div>
-              <div className="home-level-progress-bar-v3">
-                <div 
-                  className="home-level-progress-fill-v3" 
-                  style={{ width: `${levelProgress?.progress ? levelProgress.progress * 100 : 50}%` }}
-                />
+                <img src="/img/f5e34ff1a863605caef73dc379a2d9700935880e.png" alt="T" className="home-currency-img-v3" />
+                <span>{(stats.narCoin / 10).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -220,6 +208,19 @@ export default function Home() {
         >
           Федерации
         </button>
+      </div>
+
+      <div className="home-level-section-v3">
+        <div className="home-level-info-v3">
+          <span>Lvl {stats.level}</span>
+          <span>{levelProgress ? `${levelProgress.currentXP - levelProgress.xpForCurrentLevel}/${levelProgress.xpNeededForNextLevel}` : '50/100'}</span>
+        </div>
+        <div className="home-level-progress-bar-v3">
+          <div 
+            className="home-level-progress-fill-v3" 
+            style={{ width: `${levelProgress?.progress ? levelProgress.progress * 100 : 50}%` }}
+          />
+        </div>
       </div>
 
       <div className="home-content-v3">
@@ -236,8 +237,8 @@ export default function Home() {
           <div className="home-stat-card-v3">
             <div className="home-stat-label-v3">Доход в час</div>
             <div className="home-stat-value-v3">
-              <span className="home-stat-icon-v3">💰</span>
-              +{stats.incomePerHour.toLocaleString()}K
+              <img src="/img/narcoin.png" alt="NAR" className="home-stat-icon-img-v3" />
+              <span>+{stats.incomePerHour.toLocaleString()}K</span>
             </div>
           </div>
           <div className="home-stat-card-v3">
