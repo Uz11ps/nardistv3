@@ -154,23 +154,25 @@ export default function Academy() {
     // Фильтрация по типу нард (только для курсов и статей)
     if (activeTab === 'courses' || activeTab === 'articles') {
       filtered = filtered.filter(item => {
-        // Если есть явное поле gameMode, используем его (приоритет)
-        if (item.gameMode) {
+        const titleLower = (item.title || '').toLowerCase()
+        const isLongKeyword = titleLower.includes('длинн')
+        const isShortKeyword = titleLower.includes('коротк')
+        
+        // 1. Приоритет - ключевые слова в названии (для автоматического распределения старых материалов)
+        if (isLongKeyword && !isShortKeyword) {
+          return activeFilter === 'long'
+        }
+        if (isShortKeyword && !isLongKeyword) {
+          return activeFilter === 'short'
+        }
+        
+        // 2. Если ключевых слов нет или они спорные, используем поле gameMode
+        if (item.gameMode && (item.gameMode === 'long' || item.gameMode === 'short')) {
           return item.gameMode === activeFilter
         }
         
-        // Fallback на ключевые слова в названии для старых материалов
-        if (!item.title) return true
-        const titleLower = item.title.toLowerCase()
-        const isLong = titleLower.includes('длинн') || titleLower.includes('длинные')
-        const isShort = titleLower.includes('коротк') || titleLower.includes('короткие')
-        
-        if (activeFilter === 'long') {
-          return isLong || (!isLong && !isShort) // Показываем длинные или если тип не определен (как длинные по умолчанию)
-        } else if (activeFilter === 'short') {
-          return isShort
-        }
-        return true
+        // 3. Если ничего не определено, по умолчанию относим к длинным нардам
+        return activeFilter === 'long'
       })
     }
 

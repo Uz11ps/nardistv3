@@ -203,7 +203,7 @@ export class AcademyService {
         views: article.views,
         isVerified: article.isVerified,
         isCompleted,
-        gameMode: article.gameMode || 'long',
+        gameMode: article.gameMode,
       });
     }
 
@@ -239,7 +239,7 @@ export class AcademyService {
       isPaid: article.isPaid,
       views: article.views,
       isCompleted: false, // Статьи нельзя выполнить
-      gameMode: article.gameMode || 'long',
+      gameMode: article.gameMode,
       isApproved: article.isApproved,
       isVerified: article.isVerified,
     }));
@@ -296,6 +296,7 @@ export class AcademyService {
         isPaid: false,
         views: article.views,
         isCompleted,
+        gameMode: article.gameMode,
       });
     }
 
