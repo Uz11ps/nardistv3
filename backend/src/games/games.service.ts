@@ -2009,9 +2009,10 @@ export class GamesService {
     const player2Name = game.player2?.username || game.player2?.nickname || 'Bot' || 'Player 2';
     const player2Id = game.player2?.id || '';
 
-    // Форматируем ходы
-    const formattedMoves: string[] = [];
-    let currentMoveNumber = 1;
+    // Форматируем ходы - группируем по игрокам и чередуем
+    const player1Moves: Array<{ moveNumber: number; dice: string; moves: string }> = [];
+    const player2Moves: Array<{ moveNumber: number; dice: string; moves: string }> = [];
+    let moveNumber = 1;
     let lastPlayerId: string | null = null;
 
     for (const move of moves) {
@@ -2021,13 +2022,11 @@ export class GamesService {
       // Определяем, чей это ход
       const isPlayer1 = move.playerId === game.player1Id;
       
-      // Если это новый ход (сменился игрок или увеличился номер хода)
-      if (move.playerId !== lastPlayerId) {
-        if (lastPlayerId !== null) {
-          currentMoveNumber++;
-        }
-        lastPlayerId = move.playerId;
+      // Если сменился игрок, увеличиваем номер хода
+      if (lastPlayerId !== null && move.playerId !== lastPlayerId) {
+        moveNumber++;
       }
+      lastPlayerId = move.playerId;
 
       // Форматируем кубики
       const diceStr = dice.length >= 2 ? `${dice[0]}${dice[1]}` : dice.join('');
@@ -2037,15 +2036,44 @@ export class GamesService {
         .map((m: any) => {
           const from = m.from !== undefined ? m.from : m.fromPoint;
           const to = m.to !== undefined ? m.to : m.toPoint;
-          // Конвертируем индексы точек в номера точек (0-23 -> 24-1 для длинных нард)
+          
+          if (from === undefined || to === undefined) {
+            return '';
+          }
+          
+          // Конвертируем индексы точек в номера точек
+          // Для длинных нард: 0-23 -> 24-1 (0 = точка 24, 23 = точка 1)
+          // Для коротких нард: 0-23 -> 1-24 (0 = точка 1, 23 = точка 24)
           const fromPoint = game.mode === 'LONG' ? (24 - from) : (from + 1);
           const toPoint = game.mode === 'LONG' ? (24 - to) : (to + 1);
           return `${fromPoint}/${toPoint}`;
         })
+        .filter(Boolean)
         .join(' ');
 
       if (movesStr) {
-        formattedMoves.push(`  ${currentMoveNumber}) ${diceStr}: ${movesStr}`);
+        const moveData = { moveNumber, dice: diceStr, moves: movesStr };
+        if (isPlayer1) {
+          player1Moves.push(moveData);
+        } else {
+          player2Moves.push(moveData);
+        }
+      }
+    }
+
+    // Объединяем ходы игроков попарно (как в примере)
+    const formattedMoves: string[] = [];
+    const maxMoves = Math.max(player1Moves.length, player2Moves.length);
+    
+    for (let i = 0; i < maxMoves; i++) {
+      const p1Move = player1Moves[i];
+      const p2Move = player2Moves[i];
+      
+      if (p1Move) {
+        formattedMoves.push(`  ${p1Move.moveNumber}) ${p1Move.dice}: ${p1Move.moves}`);
+      }
+      if (p2Move) {
+        formattedMoves.push(`  ${p2Move.moveNumber}) ${p2Move.dice}: ${p2Move.moves}`);
       }
     }
 
