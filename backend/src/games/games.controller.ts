@@ -54,6 +54,12 @@ export class GamesController {
     return this.gamesService.getGameState(id);
   }
 
+  @Get(':id/analytics')
+  @UseGuards(JwtAuthGuard)
+  async getGameAnalytics(@Param('id') id: string) {
+    return this.gamesService.getGameAnalytics(id);
+  }
+
   @Get(':id/skins')
   @UseGuards(JwtAuthGuard)
   async getGameSkins(@Param('id') id: string) {

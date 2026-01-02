@@ -1956,4 +1956,159 @@ export class GamesService {
 
     return savedGame;
   }
+
+  async getGameAnalytics(gameId: string): Promise<any> {
+    const game = await this.gamesRepository.findOne({
+      where: { id: gameId },
+      relations: ['player1', 'player2'],
+    });
+
+    if (!game) {
+      throw new NotFoundException('Игра не найдена');
+    }
+
+    // Загружаем все ходы игры
+    const moves = await this.movesRepository.find({
+      where: { gameId },
+      order: { moveNumber: 'ASC', createdAt: 'ASC' },
+      relations: ['player'],
+    });
+
+    // Форматируем данные для аналитики
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}.${month}.${day}`;
+    };
+
+    const formatTime = (date: Date) => {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}.${minutes}`;
+    };
+
+    const formatDateTime = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+    const variation = game.mode === 'LONG' ? 'LongNarde' : 'ShortNarde';
+    const eventDate = formatDate(game.createdAt);
+    const eventTime = formatTime(game.createdAt);
+    const eventBegin = formatDateTime(game.createdAt);
+    const eventEnd = game.updatedAt ? formatDateTime(game.updatedAt) : formatDateTime(new Date());
+
+    const player1Name = game.player1?.username || game.player1?.nickname || 'Player 1';
+    const player1Id = game.player1?.id || '';
+    const player2Name = game.player2?.username || game.player2?.nickname || 'Bot' || 'Player 2';
+    const player2Id = game.player2?.id || '';
+
+    // Форматируем ходы
+    const formattedMoves: string[] = [];
+    let currentMoveNumber = 1;
+    let lastPlayerId: string | null = null;
+
+    for (const move of moves) {
+      const dice = Array.isArray(move.dice) ? move.dice : [];
+      const moveList = Array.isArray(move.moves) ? move.moves : [];
+      
+      // Определяем, чей это ход
+      const isPlayer1 = move.playerId === game.player1Id;
+      
+      // Если это новый ход (сменился игрок или увеличился номер хода)
+      if (move.playerId !== lastPlayerId) {
+        if (lastPlayerId !== null) {
+          currentMoveNumber++;
+        }
+        lastPlayerId = move.playerId;
+      }
+
+      // Форматируем кубики
+      const diceStr = dice.length >= 2 ? `${dice[0]}${dice[1]}` : dice.join('');
+      
+      // Форматируем ходы в формате "from/to"
+      const movesStr = moveList
+        .map((m: any) => {
+          const from = m.from !== undefined ? m.from : m.fromPoint;
+          const to = m.to !== undefined ? m.to : m.toPoint;
+          // Конвертируем индексы точек в номера точек (0-23 -> 24-1 для длинных нард)
+          const fromPoint = game.mode === 'LONG' ? (24 - from) : (from + 1);
+          const toPoint = game.mode === 'LONG' ? (24 - to) : (to + 1);
+          return `${fromPoint}/${toPoint}`;
+        })
+        .join(' ');
+
+      if (movesStr) {
+        formattedMoves.push(`  ${currentMoveNumber}) ${diceStr}: ${movesStr}`);
+      }
+    }
+
+    // Определяем результат
+    const result = game.winnerId === game.player1Id 
+      ? `0-${game.player2Score || 1}` 
+      : game.winnerId === game.player2Id 
+        ? `${game.player1Score || 1}-0` 
+        : '0-0';
+
+    // Формируем текст аналитики
+    const analyticsText = `; [Site "NardGammon"]
+; [Variation "${variation}"]
+; [Crawford "On"]
+; [EventDate "${eventDate}"]
+; [EventTime "${eventTime}"]
+; [Match ID "${gameId}"]
+; [EventBegin "${eventBegin}"]
+; [EventEnd "${eventEnd}"]
+; [Player 1 "${player1Name} ( ${player1Id} )"]
+; [Player 2 "${player2Name} ( ${player2Id} )"]
+; [Jacoby "Off"]
+; [Beaver "Off"]
+; [CubeLimit "1"]
+; [Game 1 "ID: ${gameId}. Start offset: white(${game.p1Offset}) black(${game.p2Offset}) "]
+; [Result "${result}"]
+
+ 0 point match
+
+ Game 1
+ ${player1Name} : ${game.player1Score || 0}                      ${player2Name} : ${game.player2Score || 0}
+${formattedMoves.join('\n')}
+                                  ${game.winnerId === game.player2Id ? 'Wins 2 points and the match' : game.winnerId === game.player1Id ? 'Wins 2 points and the match' : ''}`;
+
+    return {
+      text: analyticsText,
+      game: {
+        id: game.id,
+        mode: game.mode,
+        type: game.type,
+        player1: {
+          id: game.player1Id,
+          name: player1Name,
+          score: game.player1Score || 0,
+        },
+        player2: {
+          id: game.player2Id,
+          name: player2Name,
+          score: game.player2Score || 0,
+        },
+        winnerId: game.winnerId,
+        createdAt: game.createdAt,
+        updatedAt: game.updatedAt,
+        p1Offset: game.p1Offset,
+        p2Offset: game.p2Offset,
+      },
+      moves: moves.map(move => ({
+        moveNumber: move.moveNumber,
+        playerId: move.playerId,
+        dice: move.dice,
+        moves: move.moves,
+        createdAt: move.createdAt,
+      })),
+    };
+  }
 }

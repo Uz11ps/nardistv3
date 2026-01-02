@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 
@@ -240,6 +241,11 @@ export default function GameResult() {
             </div>
           )}
         </Card>
+
+        {/* Аналитика игры */}
+        {gameId && (
+          <GameAnalytics gameId={gameId} />
+        )}
 
         {/* Действия */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
