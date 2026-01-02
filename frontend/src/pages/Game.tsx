@@ -145,6 +145,8 @@ export default function Game() {
   const [myOffset, setMyOffset] = useState<number>(1)
   const [opponentOffset, setOpponentOffset] = useState<number>(1)
   const lastSentOffsetRef = useRef<number | null>(null) // Отслеживаем последний отправленный offset
+  const [showOffsetModal, setShowOffsetModal] = useState<boolean>(false)
+  const [offsetConfirmed, setOffsetConfirmed] = useState<boolean>(false)
   const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -154,6 +156,9 @@ export default function Game() {
 
   useEffect(() => {
     if (gameId) {
+      // Сбрасываем флаг подтверждения смещения при загрузке новой игры
+      setOffsetConfirmed(false)
+      setShowOffsetModal(false)
       loadGame()
       connectToGame()
       createdBotGameRef.current = false
@@ -321,6 +326,11 @@ export default function Game() {
         setOpponentOffset(game.p1Offset || 1)
       }
       
+      // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
+      if (game.status === 'waiting' && game.type !== 'sandbox' && !offsetConfirmed) {
+        setShowOffsetModal(true)
+      }
+      
       if (game.status === 'in_progress') {
         const timeLimitSeconds = game.moveTimeLimit ? Math.floor(game.moveTimeLimit / 1000) : 60
         setPlayer1Timer(timeLimitSeconds)
@@ -429,6 +439,8 @@ export default function Game() {
   const createBotGame = async (gameMode: 'short' | 'long' = 'long') => {
     try {
       const response = await apiClient.post('/games/create-bot', { mode: gameMode })
+      // Сбрасываем флаг подтверждения смещения для новой игры
+      setOffsetConfirmed(false)
       navigate(`/game/${response.data.id}`)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Неизвестная ошибка'
@@ -584,6 +596,12 @@ export default function Game() {
         p2Rolls: data.p2Rolls,
       })
       const newStatus = data.status || 'waiting'
+      
+      // Показываем модальное окно выбора смещения при статусе 'waiting' для всех типов игр (кроме sandbox)
+      if (newStatus === 'waiting' && data.type !== 'sandbox' && !offsetConfirmed) {
+        setShowOffsetModal(true)
+      }
+      
       setGameStatus(newStatus)
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
       
@@ -980,6 +998,27 @@ export default function Game() {
     } catch (error) {
       // Если ошибка, сбрасываем отслеживание
       lastSentOffsetRef.current = null
+    }
+  }
+
+  const handleConfirmOffset = async () => {
+    if (!gameId) return
+    try {
+      // Отправляем текущее значение смещения на сервер
+      await apiClient.post(`/games/${gameId}/offset`, { offset: myOffset })
+      setOffsetConfirmed(true)
+      setShowOffsetModal(false)
+      
+      // Для игр с ботом автоматически начинаем игру после выбора смещения
+      if (isBotGame || gameInfo?.type === 'vs_bot') {
+        // Игра с ботом начнется автоматически
+      } else if (gameInfo?.type === 'vs_player' || gameInfo?.type === 'tournament') {
+        // Для игр с игроком или турниров - ждем готовности обоих игроков
+        // Кнопка "Готов" уже есть в интерфейсе
+      }
+    } catch (error) {
+      console.error('Ошибка при сохранении смещения:', error)
+      alert('Не удалось сохранить смещение. Попробуйте еще раз.')
     }
   }
 
@@ -1609,6 +1648,57 @@ export default function Game() {
             <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
               <Button variant="primary" onClick={handleConfirmExit} style={{ flex: 1 }}>Да, сдаться</Button>
               <Button variant="secondary" onClick={() => setShowExitModal(false)} style={{ flex: 1 }}>Нет</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно выбора смещения */}
+      {showOffsetModal && gameInfo && gameInfo.type !== 'sandbox' && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%' }}>
+            <h2>Выбор смещения</h2>
+            <p style={{ marginBottom: '20px', color: '#999' }}>
+              Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 100).
+            </p>
+            
+            <div className="offset-selector">
+              <label>Ваше смещение (1-100):</label>
+              <p className="offset-hint" style={{ fontSize: '12px', color: '#999', marginBottom: '12px' }}>
+                Смещение влияет на выбор начальной позиции в последовательности бросков кубиков
+              </p>
+              <input 
+                type="range" 
+                min="1" 
+                max="100" 
+                value={myOffset} 
+                onChange={handleOffsetChange}
+              />
+              <div className="offset-values">
+                <span>Вы: <strong>{myOffset}</strong></span>
+                {opponentOffset > 0 && (
+                  <span>Соперник: <strong>{opponentOffset}</strong></span>
+                )}
+              </div>
+            </div>
+
+            {gameInfo.rngHash && (
+              <div className="hash-display" style={{ marginBottom: '20px', fontSize: '12px' }}>
+                <div style={{ marginBottom: '8px' }}>Хеш последовательности (SHA-256):</div>
+                <code style={{ fontSize: '11px', wordBreak: 'break-all' }}>
+                  {gameInfo.rngHash ? (JSON.parse(gameInfo.rngHash).p1Hash.substring(0, 16) + '...') : '---'}
+                </code>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <Button 
+                variant="primary" 
+                onClick={handleConfirmOffset} 
+                style={{ flex: 1 }}
+              >
+                Подтвердить
+              </Button>
             </div>
           </div>
         </div>
