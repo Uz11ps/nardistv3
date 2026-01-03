@@ -6,6 +6,8 @@ import Button from '../components/Button'
 import Icon from '../components/Icon'
 import { apiClient } from '../api/client'
 import { TournamentBracket } from '../components/TournamentBracket'
+import { useAuthStore } from '../store/authStore'
+import { formatDateTime } from '../utils/dateUtils'
 import './TournamentDetail.css'
 
 interface Tournament {
@@ -55,6 +57,8 @@ interface TournamentMatch {
 export default function TournamentDetail() {
   const { tournamentId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const timezone = user?.timezone || 'Europe/Moscow'
   const [activeTab, setActiveTab] = useState<'table' | 'matches' | 'results' | 'winner'>('table')
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [loading, setLoading] = useState(true)
@@ -162,6 +166,10 @@ export default function TournamentDetail() {
         {activeTab === 'table' && (
           <div className="tournament-detail-tab-content">
             <Card className="tournament-info-card">
+              <div className="tournament-info-row">
+                <span className="tournament-info-label">Начало:</span>
+                <span className="tournament-info-value">{formatDateTime(tournament.startDate, timezone)}</span>
+              </div>
               <div className="tournament-info-row">
                 <span className="tournament-info-label">Формат:</span>
                 <span className="tournament-info-value">1x1 - {getModeName(tournament.mode)}</span>
