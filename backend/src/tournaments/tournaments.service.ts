@@ -84,17 +84,23 @@ export class TournamentsService {
     for (const tournament of tournaments) {
       let registered = false;
       // Пересчитываем currentParticipants для каждого турнира
-      // Считаем только регистрационные матчи (round: 0), если турнир еще в статусе REGISTRATION
+      // Считаем только регистрационные матчи (round: 0), если турнир еще в статусе REGISTRATION или REGISTRATION_END
       // Если турнир уже начат, используем currentParticipants как есть
       let actualParticipants = tournament.currentParticipants;
-      if (tournament.status === TournamentStatus.REGISTRATION || tournament.status === TournamentStatus.UPCOMING) {
-        actualParticipants = await this.matchesRepository.count({
+      if (tournament.status === TournamentStatus.REGISTRATION || tournament.status === TournamentStatus.REGISTRATION_END || tournament.status === TournamentStatus.UPCOMING) {
+        // Считаем уникальных участников из обоих полей (player1Id и player2Id)
+        const registrationMatches = await this.matchesRepository.find({
           where: { 
             tournamentId: tournament.id,
             round: 0,
-            player1Id: Not(IsNull()),
           },
         });
+        const uniqueParticipants = new Set<string>();
+        registrationMatches.forEach(m => {
+          if (m.player1Id) uniqueParticipants.add(m.player1Id);
+          if (m.player2Id) uniqueParticipants.add(m.player2Id);
+        });
+        actualParticipants = uniqueParticipants.size;
       }
       if (tournament.currentParticipants !== actualParticipants) {
         tournament.currentParticipants = actualParticipants;
@@ -244,11 +250,26 @@ export class TournamentsService {
     };
   }
 
+  async closeRegistrations(): Promise<void> {
+    const now = new Date();
+    const tournaments = await this.tournamentsRepository
+      .createQueryBuilder('tournament')
+      .where('tournament.status = :status', { status: TournamentStatus.REGISTRATION })
+      .andWhere('tournament.registrationEnd <= :now', { now })
+      .getMany();
+
+    for (const tournament of tournaments) {
+      tournament.status = TournamentStatus.REGISTRATION_END;
+      await this.tournamentsRepository.save(tournament);
+      this.logger.log(`Регистрация закрыта для турнира ${tournament.id} (${tournament.name})`);
+    }
+  }
+
   async findReadyToStart(): Promise<Tournament[]> {
     const now = new Date();
     return this.tournamentsRepository
       .createQueryBuilder('tournament')
-      .where('tournament.status = :status', { status: TournamentStatus.REGISTRATION })
+      .where('tournament.status IN (:...statuses)', { statuses: [TournamentStatus.REGISTRATION, TournamentStatus.REGISTRATION_END] })
       .andWhere('tournament.startDate <= :now', { now })
       .orderBy('tournament.startDate', 'ASC')
       .getMany();
@@ -261,7 +282,7 @@ export class TournamentsService {
     
     return this.tournamentsRepository
       .createQueryBuilder('tournament')
-      .where('tournament.status = :status', { status: TournamentStatus.REGISTRATION })
+      .where('tournament.status IN (:...statuses)', { statuses: [TournamentStatus.REGISTRATION, TournamentStatus.REGISTRATION_END] })
       .andWhere('tournament.startDate >= :minDate', { minDate })
       .andWhere('tournament.startDate <= :maxDate', { maxDate })
       .orderBy('tournament.startDate', 'ASC')
@@ -444,13 +465,19 @@ export class TournamentsService {
 
     // Пересчитываем текущее количество участников на основе РЕГИСТРАЦИОННЫХ матчей (round: 0)
     // Важно: считаем только матчи round: 0, потому что после старта турнира создается сетка
-    const actualParticipants = await this.matchesRepository.count({
+    // Считаем уникальных участников из обоих полей (player1Id и player2Id)
+    const registrationMatches = await this.matchesRepository.find({
       where: { 
         tournamentId,
         round: 0, // ТОЛЬКО регистрационные матчи
-        player1Id: Not(IsNull()),
       },
     });
+    const uniqueParticipants = new Set<string>();
+    registrationMatches.forEach(m => {
+      if (m.player1Id) uniqueParticipants.add(m.player1Id);
+      if (m.player2Id) uniqueParticipants.add(m.player2Id);
+    });
+    const actualParticipants = uniqueParticipants.size;
 
     // Синхронизируем currentParticipants с реальным количеством
     if (tournament.currentParticipants !== actualParticipants) {
@@ -529,6 +556,10 @@ export class TournamentsService {
       } else if (!freeSlot.player2Id) {
         freeSlot.player2Id = userId;
       }
+      // Устанавливаем scheduledAt если его еще нет
+      if (!freeSlot.scheduledAt) {
+        freeSlot.scheduledAt = tournament.startDate;
+      }
       await this.matchesRepository.save(freeSlot);
     } else {
       // Нет свободных ячеек, создаем новую
@@ -539,6 +570,7 @@ export class TournamentsService {
         round: 0,
         matchNumber: allMatches.length,
         status: MatchStatus.SCHEDULED,
+        scheduledAt: tournament.startDate,
       });
     }
 
@@ -557,7 +589,7 @@ export class TournamentsService {
   async startTournament(tournamentId: string): Promise<void> {
     const tournament = await this.findOne(tournamentId);
     
-    if (tournament.status !== TournamentStatus.REGISTRATION) {
+    if (tournament.status !== TournamentStatus.REGISTRATION && tournament.status !== TournamentStatus.REGISTRATION_END) {
       throw new BadRequestException('Турнир не может быть запущен');
     }
 
@@ -595,11 +627,19 @@ export class TournamentsService {
         return; // Нет участников
       }
 
-      const rounds = Math.ceil(Math.log2(participantCount));
+      // Подсчитываем количество матчей в round 0 (количество ячеек в сетке)
+      // Каждый матч round 0 - это одна ячейка (может быть полной или неполной)
+      const matchesInRound0 = existingMatches.length;
+      
+      // Количество раундов = количество раундов от round 0 до финала
+      // Если в round 0 есть N матчей, нужно создать раунды до тех пор, пока не останется 1 матч (финал)
+      let currentRoundMatches = matchesInRound0;
+      let round = 1;
       
       // Создаем пустые матчи для следующих раундов (будут заполнены победителями)
-      for (let round = 1; round < rounds; round++) {
-        const matchesInRound = Math.floor(participantCount / Math.pow(2, round + 1));
+      while (currentRoundMatches > 1) {
+        const matchesInRound = Math.floor(currentRoundMatches / 2);
+        
         for (let matchNum = 0; matchNum < matchesInRound; matchNum++) {
           // Проверяем, не существует ли уже такой матч
           const existingMatch = await this.matchesRepository.findOne({
@@ -621,6 +661,32 @@ export class TournamentsService {
             });
           }
         }
+        
+        // Если нечетное количество матчей, последний проходит автоматически (bye)
+        if (currentRoundMatches % 2 === 1) {
+          const byeMatchNum = matchesInRound;
+          const existingByeMatch = await this.matchesRepository.findOne({
+            where: {
+              tournamentId: tournament.id,
+              round,
+              matchNumber: byeMatchNum,
+            },
+          });
+          
+          if (!existingByeMatch) {
+            await this.matchesRepository.save({
+              tournamentId: tournament.id,
+              round,
+              matchNumber: byeMatchNum,
+              player1Id: null, // Будет заполнено при продвижении
+              player2Id: null,
+              status: MatchStatus.SCHEDULED,
+            });
+          }
+        }
+        
+        currentRoundMatches = Math.ceil(currentRoundMatches / 2);
+        round++;
       }
       return;
     }

@@ -80,6 +80,15 @@ export class TournamentAutoStartService {
     }
   }
 
+  @Cron(CronExpression.EVERY_MINUTE)
+  async checkRegistrationEnd() {
+    try {
+      await this.tournamentsService.closeRegistrations();
+    } catch (error) {
+      this.logger.error(`Ошибка при закрытии регистраций: ${error.message}`);
+    }
+  }
+
   private async sendNotificationToRegisteredPlayers(tournament: any): Promise<void> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не настроен, уведомления не будут отправлены');
