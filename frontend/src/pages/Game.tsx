@@ -841,7 +841,12 @@ export default function Game() {
         const moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 20
         const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
-        const isOvertime = data.isOvertime || false
+        let isOvertime = data.isOvertime || false
+        
+        // Это предотвращает отображение овертайма при первом броске кубиков
+        if (moveTimeRemaining >= 19.5) {
+          isOvertime = false
+        }
         
         lastTimerUpdateRef.current = Date.now() // Обновляем время последнего синхронизации
         
