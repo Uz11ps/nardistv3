@@ -193,6 +193,7 @@ export class UsersService {
     economicEvents?: boolean;
     clanEvents?: boolean;
     language?: string;
+    timezone?: string;
   }) {
     const user = await this.findOne(userId);
     
