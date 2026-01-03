@@ -224,29 +224,48 @@ export default function TournamentDetail() {
             ) : (
               <div className="tournament-results-list">
                 {tournament.matches
-                  .filter(m => m.status === 'finished')
-                  .map((match) => (
-                    <Card key={match.id} className="tournament-result-card">
-                      <div className="tournament-result-round">
-                        {getRoundName(match.round, totalRounds)}
-                      </div>
-                      <div className="tournament-result-players">
-                        <div className={`tournament-result-player ${match.winnerId === match.player1?.id ? 'winner' : ''}`}>
-                          {match.player1?.nickname || match.player1?.username || '-'}
-                          {match.winnerId === match.player1?.id && (
-                            <Icon name="trophy" size={16} style={{ color: 'var(--color-gold)' }} />
-                          )}
+                  .sort((a, b) => b.round - a.round || a.matchNumber - b.matchNumber)
+                  .map((match) => {
+                    const getStatusText = (status: string) => {
+                      switch (status) {
+                        case 'finished': return 'Завершен'
+                        case 'in_progress': return 'В процессе'
+                        case 'scheduled': return 'Запланирован'
+                        case 'bye': return 'Автопроход'
+                        default: return status
+                      }
+                    }
+                    
+                    return (
+                      <Card key={match.id} className="tournament-result-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <div className="tournament-result-round">
+                            {getRoundName(match.round, totalRounds)}
+                          </div>
+                          <div style={{ 
+                            fontSize: '12px', 
+                            fontWeight: '500',
+                            color: match.status === 'finished' ? 'var(--color-success)' : 
+                                   match.status === 'in_progress' ? 'var(--color-primary)' : 
+                                   'var(--color-text-secondary)'
+                          }}>
+                            {getStatusText(match.status)}
+                          </div>
                         </div>
-                        <div className="tournament-result-vs">VS</div>
-                        <div className={`tournament-result-player ${match.winnerId === match.player2?.id ? 'winner' : ''}`}>
-                          {match.player2?.nickname || match.player2?.username || '-'}
-                          {match.winnerId === match.player2?.id && (
-                            <Icon name="trophy" size={16} style={{ color: 'var(--color-gold)' }} />
-                          )}
+                        <div className="tournament-result-players">
+                          <div className={`tournament-result-player ${match.winnerId === match.player1?.id ? 'winner' : ''}`}>
+                            {match.player1?.nickname || match.player1?.username || '-'}
+                            {match.winnerId === match.player1?.id && ' 🏆'}
+                          </div>
+                          <div className="tournament-result-vs">VS</div>
+                          <div className={`tournament-result-player ${match.winnerId === match.player2?.id ? 'winner' : ''}`}>
+                            {match.player2?.nickname || match.player2?.username || '-'}
+                            {match.winnerId === match.player2?.id && ' 🏆'}
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    )
+                  })}
               </div>
             )}
           </div>
