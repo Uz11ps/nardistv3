@@ -4,7 +4,7 @@ import { Repository, In, Not, IsNull } from 'typeorm';
 import { Tournament, TournamentFormat, TournamentStatus } from './tournament.entity';
 import { TournamentMatch, MatchStatus } from './tournament-match.entity';
 import { GamesService } from '../games/games.service';
-import { GameMode, GameType } from '../games/game.entity';
+import { GameMode, GameType, GameStatus } from '../games/game.entity';
 import { UsersService } from '../users/users.service';
 import { QuestsService } from '../quests/quests.service';
 import { QuestTarget } from '../quests/quest.entity';
@@ -654,6 +654,14 @@ export class TournamentsService {
     match.status = MatchStatus.FINISHED;
     await this.matchesRepository.save(match);
 
+    // Определяем проигравшего
+    const loserId = match.player1Id === winnerId ? match.player2Id : match.player1Id;
+    
+    // Завершаем все активные игры проигравшего игрока в этом турнире
+    if (loserId) {
+      await this.finishPlayerTournamentGames(match.tournamentId, loserId);
+    }
+
     // Начисляем XP за победу в турнире
     // Базовый XP за победу в турнире выше, чем в обычной игре
     // Формула: базовый XP * (1 + множитель за раунд)
@@ -663,7 +671,6 @@ export class TournamentsService {
     const winnerXP = baseTournamentXP * roundMultiplier;
     
     // Проигравший получает меньше XP
-    const loserId = match.player1Id === winnerId ? match.player2Id : match.player1Id;
     const loserXP = Math.floor(baseTournamentXP * 0.5 * roundMultiplier);
     
     try {
@@ -765,6 +772,9 @@ export class TournamentsService {
         tournament.winnerId = finalMatch.winnerId;
         tournament.endDate = new Date();
         await this.tournamentsRepository.save(tournament);
+        
+        // Завершаем все активные игры турнира
+        await this.finishAllTournamentGames(tournament.id);
         
         // Распределяем награды (перезагружаем турнир с актуальными данными)
         const savedTournament = await this.tournamentsRepository.findOne({
@@ -977,6 +987,113 @@ export class TournamentsService {
     await this.matchesRepository.save(match);
 
     return { gameId: game.id };
+  }
+
+  /**
+   * Завершает все активные игры турнира
+   */
+  private async finishAllTournamentGames(tournamentId: string): Promise<void> {
+    try {
+      // Находим все матчи турнира с активными играми
+      const matches = await this.matchesRepository.find({
+        where: {
+          tournamentId,
+          gameId: Not(IsNull()),
+        },
+      });
+
+      for (const match of matches) {
+        if (!match.gameId) continue;
+        
+        try {
+          const game = await this.gamesService.findOne(match.gameId);
+          
+          // Завершаем только активные игры (waiting или in_progress)
+          if (game.status === 'waiting' || game.status === 'in_progress') {
+            // Определяем победителя: если матч завершен, используем winnerId из матча
+            // Иначе завершаем игру как ничью (оба проиграли)
+            let winnerId: string | null = null;
+            if (match.status === MatchStatus.FINISHED && match.winnerId) {
+              winnerId = match.winnerId;
+            }
+            
+            // Если есть победитель, завершаем игру с ним
+            if (winnerId) {
+              game.status = GameStatus.FINISHED;
+              game.winnerId = winnerId;
+              if (winnerId === game.player1Id) {
+                game.player1Score = 1;
+                game.player2Score = 0;
+              } else {
+                game.player1Score = 0;
+                game.player2Score = 1;
+              }
+            } else {
+              // Нет победителя - завершаем как ABANDONED
+              game.status = GameStatus.ABANDONED;
+            }
+            
+            await this.gamesService['gamesRepository'].save(game);
+            this.logger.log(`Завершена игра ${game.id} турнира ${tournamentId}`);
+          }
+        } catch (error) {
+          this.logger.error(`Ошибка при завершении игры ${match.gameId} турнира ${tournamentId}:`, error);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Ошибка при завершении игр турнира ${tournamentId}:`, error);
+    }
+  }
+
+  /**
+   * Завершает все активные игры игрока в турнире (при выбытии)
+   */
+  async finishPlayerTournamentGames(tournamentId: string, playerId: string): Promise<void> {
+    try {
+      // Находим все матчи турнира с участием игрока
+      const matches = await this.matchesRepository.find({
+        where: [
+          { tournamentId, player1Id: playerId, gameId: Not(IsNull()) },
+          { tournamentId, player2Id: playerId, gameId: Not(IsNull()) },
+        ],
+      });
+
+      for (const match of matches) {
+        if (!match.gameId) continue;
+        
+        try {
+          const game = await this.gamesService.findOne(match.gameId);
+          
+          // Завершаем только активные игры
+          if (game.status === 'waiting' || game.status === 'in_progress') {
+            // Определяем победителя (противник выбывшего игрока)
+            const winnerId = game.player1Id === playerId ? game.player2Id : game.player1Id;
+            
+            if (winnerId) {
+              game.status = GameStatus.FINISHED;
+              game.winnerId = winnerId;
+              if (winnerId === game.player1Id) {
+                game.player1Score = 1;
+                game.player2Score = 0;
+              } else {
+                game.player1Score = 0;
+                game.player2Score = 1;
+              }
+            } else {
+              // Нет противника - завершаем как ABANDONED
+              game.status = GameStatus.ABANDONED;
+            }
+            
+            await this.gamesService['gamesRepository'].save(game);
+            this.logger.log(`Завершена игра ${game.id} игрока ${playerId} в турнире ${tournamentId}`);
+          }
+        } catch (error) {
+          this.logger.error(`Ошибка при завершении игры ${match.gameId} игрока ${playerId} в турнире ${tournamentId}:`, error);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Ошибка при завершении игр игрока ${playerId} в турнире ${tournamentId}:`, error);
+    }
   }
 
   /**

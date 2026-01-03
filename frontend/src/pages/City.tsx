@@ -133,7 +133,10 @@ export default function City() {
               className={`city-tab-v3 ${selectedDistrictId === district.id ? 'active' : ''} ${!district.isUnlocked ? 'locked' : ''}`}
               onClick={() => setSelectedDistrictId(district.id)}
             >
-              {district.name}
+              <span>{district.name}</span>
+              {!district.isUnlocked && (
+                <span className="city-tab-unlock-text">разблокируется с {district.requiredLevel}</span>
+              )}
             </button>
           ))}
         </div>

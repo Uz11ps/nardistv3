@@ -1253,57 +1253,59 @@ export default function Game() {
         {/* Левая панель (ландшафт) */}
         {isLandscape && (
           <div className="game-side-panel left">
-            <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
-              <div className="game-player-name">
-                {opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}
-                <div className="pip-count-display">
-                  {pipCounts.player2}
-                  {pipDiff.player2 !== null && pipDiff.player2 !== 0 && (
-                    <span className={`pip-diff ${pipDiff.player2 < 0 ? 'good' : 'bad'}`}>
-                      ({pipDiff.player2 > 0 ? '+' : ''}{pipDiff.player2})
-                    </span>
-                  )}
+              <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
+                <div className="game-player-name">
+                  {opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}
+                  <div className="pip-count-display">
+                    {pipCounts.player2}
+                    {pipDiff.player2 !== null && pipDiff.player2 !== 0 && (
+                      <span className={`pip-diff ${pipDiff.player2 < 0 ? 'good' : 'bad'}`}>
+                        ({pipDiff.player2 > 0 ? '+' : ''}{pipDiff.player2})
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="game-player-avatar">
+                  {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
+                  {gameStatus === 'in_progress' && (() => {
+                    // Таймер противника (всегда слева)
+                    // Если я player1, то противник = player2
+                    // Если я player2, то противник = player1
+                    const opponentTimer = isPlayer1 ? player2Timer : player1Timer
+                    const opponentTotalTime = isPlayer1 ? totalTimeRemaining.player2 : totalTimeRemaining.player1
+                    const isOvertime = opponentTimer <= 0 || isInOvertime
+                    const progress = isOvertime 
+                      ? Math.max(0, Math.min(1, opponentTotalTime / 60))
+                      : Math.max(0, Math.min(1, opponentTimer / 20))
+                    return (
+                      <svg className="game-player-timer-ring" viewBox="0 0 100 100">
+                        <circle
+                          className="game-player-timer-ring-bg"
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke="rgba(255, 255, 255, 0.1)"
+                          strokeWidth="6"
+                        />
+                        <circle
+                          className={`game-player-timer-ring-progress ${isOvertime ? 'overtime' : 'normal'}`}
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke={isOvertime ? '#FF9800' : '#4caf50'}
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          strokeDasharray={2 * Math.PI * 45}
+                          strokeDashoffset={2 * Math.PI * 45 * (1 - progress)}
+                          transform="rotate(-90 50 50)"
+                        />
+                      </svg>
+                    )
+                  })()}
                 </div>
               </div>
-              <div className="game-player-avatar">
-                {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
-                {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && (() => {
-                  // Время на ход ВСЕГДА 20 секунд
-                  // Если player2Timer > 0, значит еще не начался овертайм (зеленая)
-                  // Если player2Timer <= 0, значит овертайм - показываем общее время (желтая)
-                  const isOvertime = player2Timer <= 0 || isInOvertime
-                  const progress = isOvertime 
-                    ? Math.max(0, Math.min(1, totalTimeRemaining.player2 / 60))
-                    : Math.max(0, Math.min(1, player2Timer / 20))
-                  return (
-                    <svg className="game-player-timer-ring" viewBox="0 0 100 100">
-                      <circle
-                        className="game-player-timer-ring-bg"
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        fill="none"
-                        stroke="rgba(255, 255, 255, 0.1)"
-                        strokeWidth="6"
-                      />
-                      <circle
-                        className={`game-player-timer-ring-progress ${isOvertime ? 'overtime' : 'normal'}`}
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        fill="none"
-                        stroke={isOvertime ? '#FF9800' : '#4caf50'}
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                        strokeDasharray={2 * Math.PI * 45}
-                        strokeDashoffset={2 * Math.PI * 45 * (1 - progress)}
-                        transform="rotate(-90 50 50)"
-                      />
-                    </svg>
-                  )
-                })()}
-              </div>
-            </div>
             
             <div className="game-score-side">
               <div className="game-score-label">до 3</div>
@@ -1334,15 +1336,21 @@ export default function Game() {
                   </button>
                 </>
               )}
+              {/* Противник слева */}
               <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
                 <div className="game-player-avatar">
                   {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
-                  {!isPlayer1 && gameState?.currentPlayer === 1 && gameStatus === 'in_progress' && (() => {
-                    const isOvertime = player2Timer <= 0 || isInOvertime
+                  {gameStatus === 'in_progress' && (() => {
+                    // Таймер противника (всегда слева)
+                    // Если я player1, то противник = player2
+                    // Если я player2, то противник = player1
+                    const opponentTimer = isPlayer1 ? player2Timer : player1Timer
+                    const opponentTotalTime = isPlayer1 ? totalTimeRemaining.player2 : totalTimeRemaining.player1
+                    const isOvertime = opponentTimer <= 0 || isInOvertime
                     const progress = isOvertime 
-                      ? Math.max(0, Math.min(1, totalTimeRemaining.player2 / 60))
-                      : Math.max(0, Math.min(1, player2Timer / 20))
+                      ? Math.max(0, Math.min(1, opponentTotalTime / 60))
+                      : Math.max(0, Math.min(1, opponentTimer / 20))
                     return (
                       <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                         <circle
@@ -1372,22 +1380,26 @@ export default function Game() {
                   })()}
                 </div>
               </div>
+              {/* Счет в центре */}
               <div className="game-score-section">
                 <div className="game-score-label">до 3</div>
                 <div className="game-score">{score.player1}:{score.player2}</div>
               </div>
+              {/* Я справа */}
               <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
                 <div className="game-player-avatar">
                   {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
-                  {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && (() => {
-                    // Время на ход ВСЕГДА 20 секунд
-                    // Если player1Timer > 0, значит еще не начался овертайм (зеленая)
-                    // Если player1Timer <= 0, значит овертайм - показываем общее время (желтая)
-                    const isOvertime = player1Timer <= 0 || isInOvertime
+                  {gameStatus === 'in_progress' && (() => {
+                    // Мой таймер (всегда справа)
+                    // Если я player1, то мой таймер = player1Timer
+                    // Если я player2, то мой таймер = player2Timer
+                    const myTimer = isPlayer1 ? player1Timer : player2Timer
+                    const myTotalTime = isPlayer1 ? totalTimeRemaining.player1 : totalTimeRemaining.player2
+                    const isOvertime = myTimer <= 0 || isInOvertime
                     const progress = isOvertime 
-                      ? Math.max(0, Math.min(1, totalTimeRemaining.player1 / 60))
-                      : Math.max(0, Math.min(1, player1Timer / 20))
+                      ? Math.max(0, Math.min(1, myTotalTime / 60))
+                      : Math.max(0, Math.min(1, myTimer / 20))
                     return (
                       <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                         <circle
@@ -1698,14 +1710,16 @@ export default function Game() {
               </div>
               <div className="game-player-avatar">
                 {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
-                {isPlayer1 && gameState?.currentPlayer === 0 && gameStatus === 'in_progress' && (() => {
-                  // Время на ход ВСЕГДА 20 секунд
-                  // Если player1Timer > 0, значит еще не начался овертайм (зеленая)
-                  // Если player1Timer <= 0, значит овертайм - показываем общее время (желтая)
-                  const isOvertime = player1Timer <= 0 || isInOvertime
+                {gameStatus === 'in_progress' && (() => {
+                  // Мой таймер (всегда справа)
+                  // Если я player1, то мой таймер = player1Timer
+                  // Если я player2, то мой таймер = player2Timer
+                  const myTimer = isPlayer1 ? player1Timer : player2Timer
+                  const myTotalTime = isPlayer1 ? totalTimeRemaining.player1 : totalTimeRemaining.player2
+                  const isOvertime = myTimer <= 0 || isInOvertime
                   const progress = isOvertime 
-                    ? Math.max(0, Math.min(1, totalTimeRemaining.player1 / 60))
-                    : Math.max(0, Math.min(1, player1Timer / 20))
+                    ? Math.max(0, Math.min(1, myTotalTime / 60))
+                    : Math.max(0, Math.min(1, myTimer / 20))
                   return (
                     <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                       <circle

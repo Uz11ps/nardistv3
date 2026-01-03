@@ -29,6 +29,10 @@
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .city-tab-v3.active {
@@ -38,6 +42,12 @@
 
 .city-tab-v3.locked {
   opacity: 0.5;
+}
+
+.city-tab-unlock-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 400;
 }
 
 .city-grid-v3 {

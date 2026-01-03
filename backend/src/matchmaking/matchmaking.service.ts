@@ -4,6 +4,8 @@ import { GameMode, GameType, GameStatus } from '../games/game.entity';
 import { RatingsService } from '../ratings/ratings.service';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { UsersService } from '../users/users.service';
+import { TournamentMatch } from '../tournaments/tournament-match.entity';
+import { TournamentStatus } from '../tournaments/tournament.entity';
 import Redis from 'ioredis';
 
 interface QueueEntry {
@@ -32,6 +34,7 @@ export class MatchmakingService {
 
   /**
    * Проверяет, находится ли игрок уже в активной игре (исключая finished, abandoned и игры с ботом)
+   * Также исключает игры из завершенных турниров или игры, где игрок уже выбыл
    */
   async isUserInActiveGame(userId: string): Promise<{ isInGame: boolean; gameId?: string }> {
     // Ищем игры где пользователь является player1 или player2 и статус waiting или in_progress
@@ -49,11 +52,59 @@ export class MatchmakingService {
     // - исключаем finished и abandoned
     // - исключаем игры с ботом (type === 'vs_bot')
     // - исключаем sandbox игры (type === 'sandbox')
-    const trulyActiveGames = activeGames.filter(game => 
-      (game.status === 'waiting' || game.status === 'in_progress') && 
-      game.type !== 'vs_bot' &&
-      game.type !== 'sandbox'
-    );
+    // - исключаем игры из завершенных турниров или игры, где игрок уже выбыл
+    const trulyActiveGames = [];
+    
+    for (const game of activeGames) {
+      if (game.status !== 'waiting' && game.status !== 'in_progress') continue;
+      if (game.type === 'vs_bot' || game.type === 'sandbox') continue;
+      
+      // Для турнирных игр проверяем статус турнира и выбытие игрока
+      if (game.type === 'tournament') {
+        try {
+          // Используем connection manager для получения репозитория TournamentMatch
+          const connection = this.gamesService['gamesRepository'].manager.connection;
+          const matchRepo = connection.getRepository(TournamentMatch);
+          
+          const match = await matchRepo.findOne({
+            where: { gameId: game.id },
+            relations: ['tournament'],
+          });
+          
+          if (match && match.tournament) {
+            // Если турнир завершен - игра не активна
+            if (match.tournament.status === TournamentStatus.FINISHED || match.tournament.status === TournamentStatus.CANCELLED) {
+              continue;
+            }
+            
+            // Проверяем, не выбыл ли игрок (нет активных матчей с участием игрока)
+            const playerMatches = await matchRepo.find({
+              where: [
+                { tournamentId: match.tournament.id, player1Id: userId },
+                { tournamentId: match.tournament.id, player2Id: userId },
+              ],
+            });
+            
+            // Если все матчи игрока завершены и он не победитель - выбыл
+            const hasActiveMatch = playerMatches.some(m => 
+              m.status === 'scheduled' || m.status === 'in_progress'
+            );
+            
+            if (!hasActiveMatch) {
+              // Проверяем, не является ли игрок победителем турнира
+              if (match.tournament.winnerId !== userId) {
+                continue; // Игрок выбыл
+              }
+            }
+          }
+        } catch (error) {
+          // Если не удалось проверить - считаем игру активной (безопаснее)
+          this.logger.warn(`Не удалось проверить статус турнира для игры ${game.id}:`, error);
+        }
+      }
+      
+      trulyActiveGames.push(game);
+    }
 
     if (trulyActiveGames.length > 0) {
       return { isInGame: true, gameId: trulyActiveGames[0].id };
