@@ -53,10 +53,8 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
       gifStartedRef.current = true;
       lastDiceRef.current = diceKey;
       
-      // Используем setTimeout для setGifKey, чтобы избежать немедленного повторного рендера
-      setTimeout(() => {
-        setGifKey(newGifKey);
-      }, 0);
+      // СРАЗУ обновляем ключ, чтобы гифка перезапустилась
+      setGifKey(newGifKey);
     }
     
     if (!animating && prevAnimatingRef.current) {

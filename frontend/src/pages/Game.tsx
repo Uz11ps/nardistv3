@@ -573,7 +573,7 @@ export default function Game() {
       diceAnimatingRef.current = true;
       setDiceAnimating(true);
       
-      // Запускаем таймаут для остановки анимации через 4 секунды
+      // Запускаем таймаут для остановки анимации через 1.8 секунды
       (window as any).diceAnimationTimeout = setTimeout(() => {
         diceAnimatingRef.current = false; // Сбрасываем ref
         setDiceAnimating(false);
@@ -588,8 +588,8 @@ export default function Game() {
             processedEventsRef.current.clear();
             eventsArray.slice(-10).forEach(id => processedEventsRef.current.add(id));
           }
-        }, 500);
-      }, 4000);
+        }, 200); // Уменьшили задержку очистки
+      }, 1800);
     };
 
     // ВАЖНО: Отключаем все предыдущие обработчики перед добавлением новых
