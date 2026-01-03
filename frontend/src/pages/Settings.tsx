@@ -12,10 +12,13 @@ interface SettingsState {
   clanEvents: boolean
   language: string
   coordinateSystem: '1-24' | 'A-D/1-24'
+  timezone: string
 }
 
 export default function Settings() {
   const navigate = useNavigate()
+  const { user, updateUser } = useAuthStore()
+  const [showTimezoneModal, setShowTimezoneModal] = useState(false)
   const [settings, setSettings] = useState<SettingsState>({
     vibration: true,
     sound: true,
@@ -24,6 +27,7 @@ export default function Settings() {
     clanEvents: true,
     language: 'Русский',
     coordinateSystem: '1-24',
+    timezone: 'Europe/Moscow',
   })
 
   useEffect(() => {
@@ -42,6 +46,7 @@ export default function Settings() {
           clanEvents: response.data.clanEvents ?? true,
           language: response.data.language ?? 'Русский',
           coordinateSystem: response.data.coordinateSystem ?? '1-24',
+          timezone: response.data.timezone ?? 'Europe/Moscow',
         })
       }
     } catch (error) {
@@ -154,6 +159,19 @@ export default function Settings() {
 
         <div className="settings-divider" />
 
+        <div 
+          className="settings-item settings-item-clickable" 
+          onClick={() => setShowTimezoneModal(true)}
+        >
+          <span className="settings-label">Часовой пояс</span>
+          <div className="settings-item-value">
+            <span className="settings-value-text">{getTimezoneLabel(settings.timezone)}</span>
+            <span className="settings-arrow">→</span>
+          </div>
+        </div>
+
+        <div className="settings-divider" />
+
         <div className="settings-item settings-item-clickable" onClick={handlePrivacyPolicy}>
           <span className="settings-label">Политика конфиденциальности</span>
           <span className="settings-arrow">→</span>
@@ -166,6 +184,38 @@ export default function Settings() {
           <span className="settings-arrow">→</span>
         </div>
       </div>
+
+      {/* Модальное окно выбора часового пояса */}
+      {showTimezoneModal && (
+        <div className="settings-modal-overlay" onClick={() => setShowTimezoneModal(false)}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-modal-header">
+              <h3 className="settings-modal-title">Выберите часовой пояс</h3>
+              <button 
+                className="settings-modal-close"
+                onClick={() => setShowTimezoneModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="settings-modal-content">
+              {TIMEZONES.map((tz) => (
+                <div
+                  key={tz.value}
+                  className={`settings-timezone-item ${settings.timezone === tz.value ? 'active' : ''}`}
+                  onClick={() => {
+                    updateSetting('timezone', tz.value)
+                    setShowTimezoneModal(false)
+                  }}
+                >
+                  {tz.label}
+                  {settings.timezone === tz.value && <span className="settings-timezone-check">✓</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   )
 }

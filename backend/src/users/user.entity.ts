@@ -177,6 +177,9 @@ export class User {
   @Column({ default: true })
   clanEvents: boolean; // События федерации
 
+  @Column({ default: 'Europe/Moscow' })
+  timezone: string; // Часовой пояс пользователя (IANA timezone)
+
   @CreateDateColumn()
   createdAt: Date;
 

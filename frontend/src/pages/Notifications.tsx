@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import { apiClient } from '../api/client'
+import { useAuthStore } from '../store/authStore'
+import { formatRelativeTime } from '../utils/dateUtils'
 import './Notifications.css'
 
 interface Notification {
@@ -14,6 +16,8 @@ interface Notification {
 }
 
 export default function Notifications() {
+  const { user } = useAuthStore()
+  const timezone = user?.timezone || 'Europe/Moscow'
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -53,19 +57,6 @@ export default function Notifications() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const minutes = Math.floor(diff / (1000 * 60))
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
-    if (minutes < 60) return `${minutes} минут назад`
-    if (hours < 24) return `${hours} часа назад`
-    if (days < 7) return `${days} дней назад`
-    return date.toLocaleDateString('ru-RU')
-  }
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -131,7 +122,7 @@ export default function Notifications() {
                     {notification.message}
                   </div>
                   <div className="notifications-item-time">
-                    {formatDate(notification.createdAt)}
+                    {formatRelativeTime(notification.createdAt, timezone)}
                   </div>
                 </div>
               </Card>

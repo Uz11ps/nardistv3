@@ -91,3 +91,101 @@
   background: rgba(255, 255, 255, 0.1);
   margin: 0 16px;
 }
+
+/* Timezone Modal */
+.settings-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.settings-modal {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-modal-title {
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.settings-modal-close {
+  background: none;
+  border: none;
+  color: #B6B6B6;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.settings-modal-close:hover {
+  color: #FFF;
+}
+
+.settings-modal-content {
+  padding: 8px;
+  max-height: calc(90vh - 80px);
+  overflow-y: auto;
+}
+
+.settings-timezone-item {
+  padding: 16px;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 8px;
+  margin: 4px;
+}
+
+.settings-timezone-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.settings-timezone-item.active {
+  background: rgba(232, 65, 66, 0.1);
+  color: #E84142;
+}
+
+.settings-timezone-check {
+  color: #E84142;
+  font-weight: bold;
+  font-size: 18px;
+}

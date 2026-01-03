@@ -2,6 +2,8 @@
 import { useParams } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
+import { useAuthStore } from '../store/authStore'
+import { formatRelativeTime } from '../utils/dateUtils'
 import './ClanMembers.css'
 
 interface ClanMember {
@@ -21,6 +23,8 @@ interface ClanMember {
 
 export default function ClanMembers() {
   const { clanId } = useParams<{ clanId: string }>()
+  const { user } = useAuthStore()
+  const timezone = user?.timezone || 'Europe/Moscow'
   const [members, setMembers] = useState<ClanMember[]>([])
   const [filteredMembers, setFilteredMembers] = useState<ClanMember[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -81,26 +85,7 @@ export default function ClanMembers() {
       return 'Никогда'
     }
     
-    const lastSeen = new Date(member.lastSeenAt)
-    const now = new Date()
-    const diff = now.getTime() - lastSeen.getTime()
-    const minutes = Math.floor(diff / (1000 * 60))
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
-    if (minutes < 60) {
-      return `${minutes} мин. назад`
-    }
-    if (hours < 24) {
-      return `${hours}ч назад`
-    }
-    if (days === 1) {
-      return 'Вчера'
-    }
-    if (days < 7) {
-      return `${days} дн. назад`
-    }
-    return lastSeen.toLocaleDateString('ru-RU')
+    return formatRelativeTime(member.lastSeenAt, timezone)
   }
 
   if (loading) {

@@ -182,6 +182,7 @@ export class UsersService {
       economicEvents: user.economicEvents ?? true,
       clanEvents: user.clanEvents ?? true,
       language: user.languageCode === 'ru' ? 'Русский' : user.languageCode,
+      timezone: user.timezone ?? 'Europe/Moscow',
     };
   }
 
@@ -213,6 +214,9 @@ export class UsersService {
     if (settings.language !== undefined) {
       // Преобразуем русский язык в код
       user.languageCode = settings.language === 'Русский' ? 'ru' : settings.language;
+    }
+    if (settings.timezone !== undefined) {
+      user.timezone = settings.timezone;
     }
     
     return this.usersRepository.save(user);

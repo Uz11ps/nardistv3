@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
+import { useAuthStore } from '../store/authStore'
+import { formatDateTime } from '../utils/dateUtils'
 import './Tournaments.css'
 
 interface Tournament {
@@ -50,6 +52,8 @@ import { TournamentBracket } from '../components/TournamentBracket'
 
 export default function Tournaments() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const timezone = user?.timezone || 'Europe/Moscow'
   const [activeTab, setActiveTab] = useState<'active' | 'future'>('active')
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null)
@@ -157,7 +161,7 @@ export default function Tournaments() {
                 )}
                 {activeTab === 'active' && tournament.status === 'registration' && tournament.registrationEnd && (
                   <div className="tournament-detail">
-                    Регистрация до: {new Date(tournament.registrationEnd).toLocaleString()}
+                    Регистрация до: {formatDateTime(tournament.registrationEnd, timezone)}
                   </div>
                 )}
               </div>
@@ -195,7 +199,7 @@ export default function Tournaments() {
                 <div className="tournament-modal-info-row">
                   <span className="tournament-modal-label">Начало:</span>
                   <span className="tournament-modal-value">
-                    {new Date(tournamentDetail.startDate).toLocaleString('ru-RU')}
+                    {formatDateTime(tournamentDetail.startDate, timezone)}
                   </span>
                 </div>
                 <div className="tournament-modal-info-row">

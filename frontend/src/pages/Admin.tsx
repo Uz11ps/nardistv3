@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import apiClient, { getImageUrl } from '../api/client'
 import BackgammonBoard from '../components/BackgammonBoard'
+import { formatDateTime, formatDateOnly } from '../utils/dateUtils'
 import './Admin.css'
 
 interface Prize {
@@ -1143,7 +1144,7 @@ export default function Admin() {
                   stats.games.last7Days.map((item) => (
                     <div key={item.date} className="games-bar">
                       <div className="games-date">
-                        {item.date ? new Date(item.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) : 'N/A'}
+                        {item.date ? formatDateOnly(item.date, 'Europe/Moscow') : 'N/A'}
                       </div>
                       <div className="games-count">{item.count}</div>
                     </div>
@@ -1622,7 +1623,7 @@ export default function Admin() {
                       </td>
                       <td>{game.player1?.nickname || game.player1?.username || 'N/A'}</td>
                       <td>{game.player2?.nickname || game.player2?.username || 'Бот'}</td>
-                      <td>{new Date(game.createdAt).toLocaleString()}</td>
+                      <td>{formatDateTime(game.createdAt, 'Europe/Moscow')}</td>
                       <td>
                         <div className="btn-group">
                           <button                           onClick={async () => {
@@ -2224,11 +2225,11 @@ export default function Admin() {
                     <div className="tournament-card-dates">
                       <div className="date-item">
                         <span className="label">Регистрация:</span>
-                        <span className="value">{t.registrationStart ? new Date(t.registrationStart).toLocaleDateString() : '-'} - {t.registrationEnd ? new Date(t.registrationEnd).toLocaleDateString() : '-'}</span>
+                        <span className="value">{t.registrationStart ? formatDateOnly(t.registrationStart, 'Europe/Moscow') : '-'} - {t.registrationEnd ? formatDateOnly(t.registrationEnd, 'Europe/Moscow') : '-'}</span>
                       </div>
                       <div className="date-item">
                         <span className="label">Старт:</span>
-                        <span className="value">{t.startDate ? new Date(t.startDate).toLocaleString() : '-'}</span>
+                        <span className="value">{t.startDate ? formatDateTime(t.startDate, 'Europe/Moscow') : '-'}</span>
                       </div>
                     </div>
 
@@ -4306,7 +4307,7 @@ export default function Admin() {
                       <td>{quest.rewardXP || 0}</td>
                       <td>{quest.isPremium ? 'Да' : 'Нет'}</td>
                       <td>
-                        {new Date(quest.startDate).toLocaleDateString()} - {new Date(quest.endDate).toLocaleDateString()}
+                        {formatDateOnly(quest.startDate, 'Europe/Moscow')} - {formatDateOnly(quest.endDate, 'Europe/Moscow')}
                       </td>
                       <td>
                         <div className="btn-group">
@@ -6395,7 +6396,7 @@ export default function Admin() {
                     <tr key={tx.id}>
                       <td>
                         <div style={{ fontSize: '12px', color: '#aaa' }}>{tx.id ? `${tx.id.substring(0, 8)}...` : 'N/A'}</div>
-                        <div>{new Date(tx.createdAt).toLocaleString()}</div>
+                        <div>{formatDateTime(tx.createdAt, 'Europe/Moscow')}</div>
                       </td>
                       <td>
                         {tx.user ? (
@@ -7612,7 +7613,7 @@ export default function Admin() {
                       <strong>Статус:</strong> {walletPrivateKeyModal.wallet.isActive ? 'Активен' : 'Неактивен'}
                     </div>
                     <div>
-                      <strong>Создан:</strong> {new Date(walletPrivateKeyModal.wallet.createdAt).toLocaleString('ru-RU')}
+                      <strong>Создан:</strong> {formatDateTime(walletPrivateKeyModal.wallet.createdAt, 'Europe/Moscow')}
                     </div>
                   </div>
                 </div>

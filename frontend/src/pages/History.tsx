@@ -4,6 +4,7 @@ import PageLayout from '../components/PageLayout'
 import BackgammonBoard from '../components/BackgammonBoard'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
+import { formatRelativeTime } from '../utils/dateUtils'
 import './History.css'
 
 interface GameHistory {
@@ -26,6 +27,7 @@ interface GameHistory {
 export default function History() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const timezone = user?.timezone || 'Europe/Moscow'
   const [games, setGames] = useState<GameHistory[]>([])
   const [filter, setFilter] = useState<'all' | 'wins' | 'losses' | 'bot'>('all')
   const [modeFilter, setModeFilter] = useState<'all' | 'short' | 'long'>('all')
@@ -219,17 +221,6 @@ export default function History() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
-    if (days === 0) return 'Сегодня'
-    if (days === 1) return 'Вчера'
-    if (days < 7) return `${days} дней назад`
-    return date.toLocaleDateString('ru-RU')
-  }
 
   return (
     <PageLayout title="История игр" showBack={true}>

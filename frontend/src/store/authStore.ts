@@ -22,6 +22,7 @@ interface User {
   isTrainer?: boolean
   isAdmin?: boolean
   isGuest?: boolean
+  timezone?: string
 }
 
 interface AuthState {

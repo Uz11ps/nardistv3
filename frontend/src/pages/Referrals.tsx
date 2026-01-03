@@ -205,13 +205,7 @@ export default function Referrals() {
                   <div className="referrals-earning-info">
                     <div className="referrals-earning-description">{earning.description}</div>
                     <div className="referrals-earning-date">
-                      {new Date(earning.createdAt).toLocaleDateString('ru-RU', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatDateTime(earning.createdAt, timezone)}
                     </div>
                   </div>
                   <div className="referrals-earning-amount">

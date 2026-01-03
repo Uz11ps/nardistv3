@@ -36,4 +36,8 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   birthday?: string; // Дата в формате YYYY-MM-DD
+
+  @IsString()
+  @IsOptional()
+  timezone?: string; // IANA timezone (например, 'Europe/Moscow', 'America/New_York')
 }
