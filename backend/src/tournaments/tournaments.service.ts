@@ -686,7 +686,15 @@ export class TournamentsService {
   }
 
   private async advanceTournament(tournamentId: string): Promise<void> {
-    const tournament = await this.findOne(tournamentId);
+    // Загружаем турнир через репозиторий, а не через findOne (который возвращает DTO)
+    const tournament = await this.tournamentsRepository.findOne({
+      where: { id: tournamentId },
+    });
+    
+    if (!tournament) {
+      this.logger.error(`Турнир ${tournamentId} не найден при попытке продвижения`);
+      return;
+    }
     
     if (tournament.format === TournamentFormat.BRACKET) {
       await this.advanceBracketTournament(tournament);
@@ -734,17 +742,29 @@ export class TournamentsService {
 
     // Если это финальный раунд, завершаем турнир и распределяем награды
     const totalRounds = Math.ceil(Math.log2(tournament.currentParticipants));
-    if (maxFinishedRound >= totalRounds - 1) {
+    const finalRoundNumber = totalRounds - 1;
+    
+    this.logger.log(`Проверка финального раунда: maxFinishedRound=${maxFinishedRound}, totalRounds=${totalRounds}, finalRoundNumber=${finalRoundNumber}, currentParticipants=${tournament.currentParticipants}`);
+    
+    if (maxFinishedRound >= finalRoundNumber) {
       // Определяем победителя турнира (победитель финального матча)
       const finalMatch = currentRoundMatches.find(m => m.round === maxFinishedRound);
       if (finalMatch && finalMatch.winnerId) {
+        this.logger.log(`Завершение турнира ${tournament.id}: победитель ${finalMatch.winnerId}`);
         tournament.status = TournamentStatus.FINISHED;
         tournament.winnerId = finalMatch.winnerId;
         tournament.endDate = new Date();
         await this.tournamentsRepository.save(tournament);
         
-        // Распределяем награды
-        await this.distributePrizes(tournament);
+        // Распределяем награды (перезагружаем турнир с актуальными данными)
+        const savedTournament = await this.tournamentsRepository.findOne({
+          where: { id: tournament.id },
+        });
+        if (savedTournament) {
+          await this.distributePrizes(savedTournament);
+        }
+      } else {
+        this.logger.warn(`Финальный матч не найден или нет победителя для турнира ${tournament.id}`);
       }
       return;
     }
