@@ -202,7 +202,7 @@ export class GamesService {
       mode,
       type,
       stake,
-      status: player2Id ? GameStatus.IN_PROGRESS : GameStatus.WAITING,
+      status: GameStatus.WAITING, // Игра всегда создается в WAITING, переходит в IN_PROGRESS когда оба игрока выберут смещение
       gameState: initialState,
       rngSeed,
       rngHash,
@@ -211,11 +211,13 @@ export class GamesService {
       verificationSalt,
       p1Offset: 1,
       p2Offset: 1,
+      p1OffsetChosenAt: null,
+      p2OffsetChosenAt: null,
       currentPlayer: 0,
       moveTimeLimit: moveTimeLimit,
       player1TimeRemaining: 60000, // 60 секунд общего времени
       player2TimeRemaining: 60000, // 60 секунд общего времени
-      lastMoveAt: player2Id ? new Date() : undefined, // Устанавливаем lastMoveAt если игра сразу начинается
+      lastMoveAt: undefined, // Устанавливается когда игра переходит в IN_PROGRESS
       skinData,
     });
 
@@ -1869,12 +1871,47 @@ export class GamesService {
       throw new BadRequestException('Смещение должно быть от 1 до 100');
     }
 
+    const now = new Date();
     if (game.player1Id === playerId) {
       game.p1Offset = offset;
+      game.p1OffsetChosenAt = now;
     } else if (game.player2Id === playerId) {
       game.p2Offset = offset;
+      game.p2OffsetChosenAt = now;
     } else {
       throw new BadRequestException('Вы не участник этой игры');
+    }
+
+    // Проверяем, выбрали ли оба игрока смещение
+    // Смещение считается выбранным, если установлено время выбора (p1OffsetChosenAt/p2OffsetChosenAt)
+    const p1OffsetChosen = game.p1OffsetChosenAt !== null;
+    const p2OffsetChosen = game.p2OffsetChosenAt !== null;
+
+    // Если оба игрока выбрали смещение, переводим игру в IN_PROGRESS и определяем первого ходящего
+    if (p1OffsetChosen && p2OffsetChosen && game.player2Id && game.status === GameStatus.WAITING) {
+      // Определяем первого ходящего через начальный бросок кубиков
+      const p1StartIdx = ((game.p1Offset - 1) * 2 + game.p2Offset) % (game.p1Rolls?.length || 1000);
+      const p2StartIdx = ((game.p2Offset - 1) * 2 + game.p1Offset) % (game.p2Rolls?.length || 1000);
+      
+      const p1FirstRoll = game.p1Rolls && game.p1Rolls.length > p1StartIdx 
+        ? game.p1Rolls[p1StartIdx] 
+        : [Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1];
+      const p2FirstRoll = game.p2Rolls && game.p2Rolls.length > p2StartIdx 
+        ? game.p2Rolls[p2StartIdx] 
+        : [Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1];
+      
+      // Определяем кто ходит первым по сумме кубиков
+      const sum1 = p1FirstRoll[0] + p1FirstRoll[1];
+      const sum2 = p2FirstRoll[0] + p2FirstRoll[1];
+      
+      // Если суммы равны, выбираем player1
+      const firstPlayer = sum1 >= sum2 ? 0 : 1;
+      
+      game.status = GameStatus.IN_PROGRESS;
+      game.currentPlayer = firstPlayer;
+      game.lastMoveAt = now;
+      
+      this.logger.log(`Game ${game.id} started after offset selection. P1: [${p1FirstRoll.join(', ')}] (sum=${sum1}), P2: [${p2FirstRoll.join(', ')}] (sum=${sum2}). First player: ${firstPlayer === 0 ? 'P1' : 'P2'}`);
     }
 
     return this.gamesRepository.save(game);
@@ -2158,5 +2195,89 @@ ${formattedMoves.join('\n')}
         createdAt: move.createdAt,
       })),
     };
+  }
+
+  /**
+   * Проверка и обработка таймаутов выбора смещения
+   * Турниры: 3 минуты
+   * Обычные игры: 30 секунд
+   */
+  async checkAndProcessOffsetTimeouts(): Promise<void> {
+    const now = new Date();
+    
+    // Находим игры в статусе WAITING, где второй игрок не выбрал смещение
+    const waitingGames = await this.gamesRepository.find({
+      where: {
+        status: GameStatus.WAITING,
+      },
+    });
+
+    for (const game of waitingGames) {
+      try {
+        // Пропускаем игры без второго игрока или sandbox
+        if (!game.player2Id || game.type === GameType.SANDBOX || game.type === GameType.VS_BOT) {
+          continue;
+        }
+
+        // Определяем таймаут в зависимости от типа игры
+        const timeoutMs = game.type === GameType.TOURNAMENT 
+          ? 3 * 60 * 1000  // 3 минуты для турниров
+          : 30 * 1000;     // 30 секунд для обычных игр
+
+        // Проверяем, выбрали ли игроки смещение
+        const p1OffsetChosen = game.p1OffsetChosenAt !== null;
+        const p2OffsetChosen = game.p2OffsetChosenAt !== null;
+
+        // Если оба выбрали - пропускаем (игра должна была перейти в IN_PROGRESS)
+        if (p1OffsetChosen && p2OffsetChosen) {
+          continue;
+        }
+
+        // Определяем время начала отсчета (createdAt игры)
+        const startTime = game.createdAt || new Date();
+        const elapsed = now.getTime() - startTime.getTime();
+
+        // Проверяем таймаут для player1
+        if (!p1OffsetChosen && elapsed >= timeoutMs) {
+          this.logger.warn(`Таймаут выбора смещения для player1 в игре ${game.id}`);
+          // Засчитываем поражение player1, победитель - player2
+          await this.resignGameOnOffsetTimeout(game.id, game.player1Id);
+          continue;
+        }
+
+        // Проверяем таймаут для player2
+        if (!p2OffsetChosen && elapsed >= timeoutMs) {
+          this.logger.warn(`Таймаут выбора смещения для player2 в игре ${game.id}`);
+          // Засчитываем поражение player2, победитель - player1
+          await this.resignGameOnOffsetTimeout(game.id, game.player2Id);
+          continue;
+        }
+      } catch (error) {
+        this.logger.error(`Ошибка при обработке таймаута смещения для игры ${game.id}: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Засчитывает поражение игроку при таймауте выбора смещения
+   */
+  private async resignGameOnOffsetTimeout(gameId: string, timeoutPlayerId: string): Promise<void> {
+    const game = await this.findOne(gameId);
+    
+    // Проверяем, что игра еще в статусе WAITING
+    if (game.status !== GameStatus.WAITING) {
+      return;
+    }
+
+    // Определяем победителя (противник игрока, не выбравшего смещение)
+    const winnerId = game.player1Id === timeoutPlayerId ? game.player2Id : game.player1Id;
+    
+    if (!winnerId) {
+      this.logger.error(`Не удалось определить победителя для игры ${gameId}`);
+      return;
+    }
+
+    // Завершаем игру через resignGame (автоматически засчитает поражение)
+    await this.resignGame(gameId, timeoutPlayerId);
   }
 }

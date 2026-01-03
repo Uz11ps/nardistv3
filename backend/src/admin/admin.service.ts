@@ -673,45 +673,8 @@ export class AdminService implements OnModuleInit {
         game.stake = data.stake;
       }
 
-      // Если оба игрока есть, автоматически делаем начальный бросок кубиков для определения первого ходящего
-      if (player2Id && game.status === GameStatus.IN_PROGRESS) {
-        try {
-          // Используем ту же формулу что и в rollDice для определения индекса начального броска
-          // Формула: (Смещение игрока - 1) * 2 + Смещение соперника
-          const p1Offset = game.p1Offset || 1;
-          const p2Offset = game.p2Offset || 1;
-          
-          // Для player1: (p1Offset - 1) * 2 + p2Offset
-          const p1StartIdx = ((p1Offset - 1) * 2 + p2Offset) % (game.p1Rolls?.length || 1000);
-          // Для player2: (p2Offset - 1) * 2 + p1Offset
-          const p2StartIdx = ((p2Offset - 1) * 2 + p1Offset) % (game.p2Rolls?.length || 1000);
-          
-          // Берем начальный бросок каждого игрока для определения первого ходящего
-          const p1FirstRoll = game.p1Rolls && game.p1Rolls.length > p1StartIdx ? game.p1Rolls[p1StartIdx] : [Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1];
-          const p2FirstRoll = game.p2Rolls && game.p2Rolls.length > p2StartIdx ? game.p2Rolls[p2StartIdx] : [Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1];
-          
-          // Определяем кто ходит первым по сумме кубиков
-          const sum1 = p1FirstRoll[0] + p1FirstRoll[1];
-          const sum2 = p2FirstRoll[0] + p2FirstRoll[1];
-          
-          // Если суммы равны, выбираем player1 (можно доработать чтобы бросать еще раз)
-          const firstPlayerId = sum1 >= sum2 ? player1Id : player2Id;
-          const firstPlayer = firstPlayerId === player1Id ? 0 : 1;
-          
-          // Устанавливаем первого ходящего
-          await this.gamesRepository.update(game.id, { currentPlayer: firstPlayer });
-          
-          // Теперь делаем рабочий бросок для первого ходящего (это его первый ход)
-          // rollDice автоматически использует правильный индекс на основе playerMovesCount (который будет 0 для первого хода)
-          // Это означает что он возьмет тот же индекс что и для начального броска, но это ОК т.к. начальный бросок был только для определения первого ходящего и не сохранялся
-          await this.gamesService.rollDice(game.id, firstPlayerId, false);
-          
-          this.logger.log(`Game ${game.id} started with initial dice roll. P1: [${p1FirstRoll.join(', ')}] (sum=${sum1}, idx=${p1StartIdx}), P2: [${p2FirstRoll.join(', ')}] (sum=${sum2}, idx=${p2StartIdx}). First player: ${firstPlayerId} (player ${firstPlayer})`);
-        } catch (error) {
-          this.logger.error(`Error during initial dice roll for game ${game.id}:`, error);
-          // Не падаем, игра уже создана
-        }
-      }
+      // Игра теперь остается в WAITING до выбора смещения обоими игроками
+      // Начальный бросок кубиков произойдет автоматически после выбора смещения обоими игроками
 
       // Если указан tournamentId, связываем игру с турниром
       if (data.tournamentId) {

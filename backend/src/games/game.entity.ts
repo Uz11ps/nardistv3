@@ -96,6 +96,12 @@ export class Game {
   @Column({ default: 1 })
   p2Offset: number; // Смещение, выбранное игроком 2
 
+  @Column({ type: 'timestamp', nullable: true })
+  p1OffsetChosenAt: Date; // Время выбора смещения игроком 1
+
+  @Column({ type: 'timestamp', nullable: true })
+  p2OffsetChosenAt: Date; // Время выбора смещения игроком 2
+
   @Column({ type: 'text', nullable: true })
   verificationSalt: string; // Соль для хеширования (раскрывается в конце игры)
 

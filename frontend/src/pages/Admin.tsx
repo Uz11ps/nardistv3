@@ -2304,7 +2304,7 @@ export default function Admin() {
                       </div>
                       <div className="form-row-v2">
                         <div className="form-group">
-                          <label>Начало регистрации</label>
+                          <label>Начало регистрации (MSK, UTC+3)</label>
                           <input
                             type="datetime-local"
                             value={newTournament.registrationStart}
@@ -2312,7 +2312,7 @@ export default function Admin() {
                           />
                         </div>
                         <div className="form-group">
-                          <label>Конец регистрации</label>
+                          <label>Конец регистрации (MSK, UTC+3)</label>
                           <input
                             type="datetime-local"
                             value={newTournament.registrationEnd}
@@ -2322,7 +2322,7 @@ export default function Admin() {
                       </div>
                       <div className="form-row-v2">
                         <div className="form-group">
-                          <label>Дата начала турнира</label>
+                          <label>Дата начала турнира (MSK, UTC+3)</label>
                           <input
                             type="datetime-local"
                             value={newTournament.startDate}
@@ -2365,11 +2365,18 @@ export default function Admin() {
                           return
                         }
                         
+                        // Конвертируем время из MSK (UTC+3) в UTC при создании
+                        const mskToUtc = (mskDateTime: string) => {
+                          const mskDate = new Date(mskDateTime + ':00')
+                          const utcDate = new Date(mskDate.getTime() - 3 * 60 * 60 * 1000)
+                          return utcDate.toISOString()
+                        }
+                        
                         await apiClient.post('/admin/tournaments/create', {
                           ...newTournament,
-                          registrationStart: new Date(newTournament.registrationStart).toISOString(),
-                          registrationEnd: new Date(newTournament.registrationEnd).toISOString(),
-                          startDate: new Date(newTournament.startDate).toISOString(),
+                          registrationStart: mskToUtc(newTournament.registrationStart),
+                          registrationEnd: mskToUtc(newTournament.registrationEnd),
+                          startDate: mskToUtc(newTournament.startDate),
                           status: 'registration',
                           prizes: newTournament.prizes,
                         })
@@ -2457,28 +2464,75 @@ export default function Admin() {
                       </div>
                       <div className="form-row-v2">
                         <div className="form-group">
-                          <label>Начало регистрации</label>
+                          <label>Начало регистрации (MSK, UTC+3)</label>
                           <input
                             type="datetime-local"
-                            value={selectedTournament.registrationStart ? new Date(selectedTournament.registrationStart).toISOString().slice(0, 16) : ''}
-                            onChange={(e) => setSelectedTournament({ ...selectedTournament, registrationStart: new Date(e.target.value).toISOString() })}
+                            value={selectedTournament.registrationStart ? (() => {
+                              // Время в БД в UTC, конвертируем в MSK (UTC+3)
+                              const utcDate = new Date(selectedTournament.registrationStart)
+                              // Добавляем 3 часа и создаем новую дату для правильной обработки перехода через день
+                              const mskDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000)
+                              const year = mskDate.getUTCFullYear()
+                              const month = String(mskDate.getUTCMonth() + 1).padStart(2, '0')
+                              const day = String(mskDate.getUTCDate()).padStart(2, '0')
+                              const hours = String(mskDate.getUTCHours()).padStart(2, '0')
+                              const minutes = String(mskDate.getUTCMinutes()).padStart(2, '0')
+                              return `${year}-${month}-${day}T${hours}:${minutes}`
+                            })() : ''}
+                            onChange={(e) => {
+                              // Пользователь вводит время в MSK (UTC+3), конвертируем в UTC
+                              const mskDate = new Date(e.target.value + ':00') // Добавляем секунды для парсинга
+                              // Вычитаем 3 часа для конвертации MSK -> UTC
+                              const utcDate = new Date(mskDate.getTime() - 3 * 60 * 60 * 1000)
+                              setSelectedTournament({ ...selectedTournament, registrationStart: utcDate.toISOString() })
+                            }}
                           />
                         </div>
                         <div className="form-group">
-                          <label>Окончание регистрации</label>
+                          <label>Окончание регистрации (MSK, UTC+3)</label>
                           <input
                             type="datetime-local"
-                            value={selectedTournament.registrationEnd ? new Date(selectedTournament.registrationEnd).toISOString().slice(0, 16) : ''}
-                            onChange={(e) => setSelectedTournament({ ...selectedTournament, registrationEnd: new Date(e.target.value).toISOString() })}
+                            value={selectedTournament.registrationEnd ? (() => {
+                              // Время в БД в UTC, конвертируем в MSK (UTC+3)
+                              const utcDate = new Date(selectedTournament.registrationEnd)
+                              const mskDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000)
+                              const year = mskDate.getUTCFullYear()
+                              const month = String(mskDate.getUTCMonth() + 1).padStart(2, '0')
+                              const day = String(mskDate.getUTCDate()).padStart(2, '0')
+                              const hours = String(mskDate.getUTCHours()).padStart(2, '0')
+                              const minutes = String(mskDate.getUTCMinutes()).padStart(2, '0')
+                              return `${year}-${month}-${day}T${hours}:${minutes}`
+                            })() : ''}
+                            onChange={(e) => {
+                              // Пользователь вводит время в MSK (UTC+3), конвертируем в UTC
+                              const mskDate = new Date(e.target.value + ':00')
+                              const utcDate = new Date(mskDate.getTime() - 3 * 60 * 60 * 1000)
+                              setSelectedTournament({ ...selectedTournament, registrationEnd: utcDate.toISOString() })
+                            }}
                           />
                         </div>
                       </div>
                       <div className="form-group">
-                        <label>Дата начала</label>
+                        <label>Дата начала (MSK, UTC+3)</label>
                         <input
                           type="datetime-local"
-                          value={selectedTournament.startDate ? new Date(selectedTournament.startDate).toISOString().slice(0, 16) : ''}
-                          onChange={(e) => setSelectedTournament({ ...selectedTournament, startDate: new Date(e.target.value).toISOString() })}
+                          value={selectedTournament.startDate ? (() => {
+                            // Время в БД в UTC, конвертируем в MSK (UTC+3)
+                            const utcDate = new Date(selectedTournament.startDate)
+                            const mskDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000)
+                            const year = mskDate.getUTCFullYear()
+                            const month = String(mskDate.getUTCMonth() + 1).padStart(2, '0')
+                            const day = String(mskDate.getUTCDate()).padStart(2, '0')
+                            const hours = String(mskDate.getUTCHours()).padStart(2, '0')
+                            const minutes = String(mskDate.getUTCMinutes()).padStart(2, '0')
+                            return `${year}-${month}-${day}T${hours}:${minutes}`
+                          })() : ''}
+                          onChange={(e) => {
+                            // Пользователь вводит время в MSK (UTC+3), конвертируем в UTC
+                            const mskDate = new Date(e.target.value + ':00')
+                            const utcDate = new Date(mskDate.getTime() - 3 * 60 * 60 * 1000)
+                            setSelectedTournament({ ...selectedTournament, startDate: utcDate.toISOString() })
+                          }}
                         />
                       </div>
                       <div className="form-group">

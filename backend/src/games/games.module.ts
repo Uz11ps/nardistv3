@@ -2,9 +2,11 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { GamesService } from './games.service';
 import { GamesController } from './games.controller';
 import { GamesGateway } from './games.gateway';
+import { GamesOffsetTimeoutService } from './games-offset-timeout.service';
 import { Game } from './game.entity';
 import { GameMove } from './game-move.entity';
 import { PlayerMatchHistory } from './player-match-history.entity';
@@ -22,6 +24,7 @@ import { TournamentsModule } from '../tournaments/tournaments.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([Game, GameMove, PlayerMatchHistory]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -44,7 +47,7 @@ import { TournamentsModule } from '../tournaments/tournaments.module';
     forwardRef(() => TournamentsModule),
   ],
   controllers: [GamesController],
-  providers: [GamesService, GamesGateway, BackgammonEngine, LongBackgammonEngine],
+  providers: [GamesService, GamesGateway, GamesOffsetTimeoutService, BackgammonEngine, LongBackgammonEngine],
   exports: [GamesService, GamesGateway, BackgammonEngine, LongBackgammonEngine],
 })
 export class GamesModule {}
