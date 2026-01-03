@@ -453,12 +453,18 @@ export class TournamentsService {
     }
 
     // Проверяем регистрацию через matches (player1Id или player2Id)
-    // Проверяем только матчи, где пользователь является player1 (зарегистрированным участником)
+    // Проверяем, не зарегистрирован ли игрок уже в любом матче турнира
     const existingMatch = await this.matchesRepository.findOne({
-      where: { 
-        tournamentId, 
-        player1Id: userId,
-      },
+      where: [
+        { 
+          tournamentId, 
+          player1Id: userId,
+        },
+        {
+          tournamentId,
+          player2Id: userId,
+        },
+      ],
     });
 
     if (existingMatch) {
@@ -539,7 +545,10 @@ export class TournamentsService {
       order: { matchNumber: 'ASC' },
     });
 
-    const participants = registeredMatches.map(m => m.player1Id).filter(id => id !== null);
+    // Извлекаем участников и убираем дубликаты (на случай, если по каким-то причинам есть несколько матчей с одним игроком)
+    const participants = Array.from(new Set(
+      registeredMatches.map(m => m.player1Id).filter(id => id !== null) as string[]
+    ));
     const rounds = Math.ceil(Math.log2(participants.length));
 
     // Удаляем ВСЕ старые матчи round 0 (они были созданы при регистрации)
