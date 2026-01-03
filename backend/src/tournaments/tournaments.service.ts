@@ -175,8 +175,15 @@ export class TournamentsService {
       where: { id },
       relations: ['matches', 'matches.player1', 'matches.player2'],
     });
+    
     if (!tournament) {
       throw new NotFoundException('Турнир не найден');
+    }
+    
+    // Если есть победитель, загружаем его данные
+    let winner = null;
+    if (tournament.winnerId) {
+      winner = await this.usersService.findOne(tournament.winnerId);
     }
 
     let registered = false;
@@ -219,6 +226,12 @@ export class TournamentsService {
     return {
       ...tournament,
       registered,
+      winner: winner ? {
+        id: winner.id,
+        username: winner.username,
+        nickname: winner.nickname,
+        avatarUrl: winner.avatarUrl,
+      } : null,
       prizePool,
       currentRound: currentRound > 0 ? currentRound : undefined,
       totalRounds: totalRounds > 0 ? totalRounds : undefined,
@@ -719,15 +732,19 @@ export class TournamentsService {
       return; // Еще есть незавершенные матчи в текущем раунде
     }
 
-    // Если это финальный раунд, завершаем турнир
+    // Если это финальный раунд, завершаем турнир и распределяем награды
     const totalRounds = Math.ceil(Math.log2(tournament.currentParticipants));
     if (maxFinishedRound >= totalRounds - 1) {
       // Определяем победителя турнира (победитель финального матча)
       const finalMatch = currentRoundMatches.find(m => m.round === maxFinishedRound);
       if (finalMatch && finalMatch.winnerId) {
         tournament.status = TournamentStatus.FINISHED;
+        tournament.winnerId = finalMatch.winnerId;
         tournament.endDate = new Date();
         await this.tournamentsRepository.save(tournament);
+        
+        // Распределяем награды
+        await this.distributePrizes(tournament);
       }
       return;
     }
@@ -929,6 +946,117 @@ export class TournamentsService {
     await this.matchesRepository.save(match);
 
     return { gameId: game.id };
+  }
+
+  /**
+   * Распределение наград по местам при завершении турнира
+   */
+  private async distributePrizes(tournament: Tournament): Promise<void> {
+    if (!tournament.prizes) {
+      return; // Нет наград для распределения
+    }
+
+    // Нормализуем награды в массив
+    let prizes = tournament.prizes;
+    if (!Array.isArray(prizes) && typeof prizes === 'object') {
+      prizes = Object.values(prizes);
+    }
+
+    if (!Array.isArray(prizes) || prizes.length === 0) {
+      return; // Нет наград
+    }
+
+    // Получаем места участников
+    const places = await this.getTournamentPlaces(tournament);
+    
+    // Группируем награды по местам
+    const prizesByPlace: { [place: number]: any[] } = {};
+    for (const prize of prizes) {
+      const place = prize.place || prize.Place;
+      if (place && places[place]) {
+        if (!prizesByPlace[place]) {
+          prizesByPlace[place] = [];
+        }
+        prizesByPlace[place].push(prize);
+      }
+    }
+
+    // Распределяем награды
+    for (const [place, prizeList] of Object.entries(prizesByPlace)) {
+      const playerId = places[parseInt(place)];
+      if (!playerId) {
+        continue;
+      }
+
+      for (const prize of prizeList) {
+        const type = prize.type || prize.Type || 'nar';
+        const amount = Number(prize.amount || prize.Amount || prize.quantity || prize.Quantity || 0);
+        
+        if (amount <= 0) {
+          continue;
+        }
+
+        try {
+          if (type === 'nar' || type === 'NAR Coin' || !type) {
+            // Начисляем NAR-coin
+            const user = await this.usersService.findOne(playerId);
+            if (user) {
+              const currentBalance = Number(user.narCoin || 0);
+              await this.usersService.update(playerId, {
+                narCoin: currentBalance + amount,
+              });
+              this.logger.log(`💰 Начислено ${amount} NAR-coin игроку ${playerId} за ${place} место в турнире ${tournament.id}`);
+            }
+          } else if (type === 'xp' || type === 'XP') {
+            // Начисляем XP
+            if (this.progressService) {
+              await this.progressService.addXP(playerId, amount);
+              this.logger.log(`⭐ Начислено ${amount} XP игроку ${playerId} за ${place} место в турнире ${tournament.id}`);
+            }
+          }
+        } catch (error) {
+          this.logger.error(`Ошибка при начислении награды игроку ${playerId}: ${error.message}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Определяет места участников в турнире
+   * Для bracket-турнира:
+   * - 1 место: победитель финала
+   * - 2 место: проигравший в финале
+   */
+  private async getTournamentPlaces(tournament: Tournament): Promise<{ [place: number]: string }> {
+    const places: { [place: number]: string } = {};
+
+    if (tournament.format === TournamentFormat.BRACKET) {
+      // Получаем финальный матч
+      const totalRounds = Math.ceil(Math.log2(tournament.currentParticipants));
+      const finalRound = totalRounds - 1;
+
+      const finalMatches = await this.matchesRepository.find({
+        where: {
+          tournamentId: tournament.id,
+          round: finalRound,
+        },
+      });
+
+      const finalMatch = finalMatches[0];
+      if (finalMatch) {
+        if (finalMatch.winnerId) {
+          places[1] = finalMatch.winnerId;
+        }
+        // Проигравший в финале - это игрок, который не является победителем
+        if (finalMatch.player1Id && finalMatch.player1Id !== finalMatch.winnerId) {
+          places[2] = finalMatch.player1Id;
+        } else if (finalMatch.player2Id && finalMatch.player2Id !== finalMatch.winnerId) {
+          places[2] = finalMatch.player2Id;
+        }
+      }
+    }
+
+    return places;
   }
 }
 

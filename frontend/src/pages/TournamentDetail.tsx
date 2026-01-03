@@ -21,6 +21,13 @@ interface Tournament {
   startDate: string
   registered?: boolean
   matches?: TournamentMatch[]
+  winnerId?: string
+  winner?: {
+    id: string
+    username: string
+    nickname?: string
+    avatarUrl?: string
+  }
 }
 
 interface TournamentMatch {
@@ -48,7 +55,7 @@ interface TournamentMatch {
 export default function TournamentDetail() {
   const { tournamentId } = useParams()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'table' | 'matches' | 'results'>('table')
+  const [activeTab, setActiveTab] = useState<'table' | 'matches' | 'results' | 'winner'>('table')
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -141,6 +148,14 @@ export default function TournamentDetail() {
           >
             Результаты
           </button>
+          {tournament.status === 'finished' && tournament.winnerId && (
+            <button
+              className={`tournament-detail-tab ${activeTab === 'winner' ? 'active' : ''}`}
+              onClick={() => setActiveTab('winner')}
+            >
+              Победитель
+            </button>
+          )}
         </div>
 
         {/* Контент вкладки "Таблица" */}
@@ -236,6 +251,41 @@ export default function TournamentDetail() {
             )}
           </div>
         )}
-      </div>    </div>
+
+        {/* Контент вкладки "Победитель" */}
+        {activeTab === 'winner' && tournament.winner && (
+          <div className="tournament-detail-tab-content">
+            <Card className="tournament-info-card">
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--color-gold)' }}>
+                  🏆 Победитель турнира
+                </div>
+                {tournament.winner.avatarUrl && (
+                  <img 
+                    src={tournament.winner.avatarUrl} 
+                    alt={tournament.winner.username}
+                    style={{ 
+                      width: '120px', 
+                      height: '120px', 
+                      borderRadius: '50%', 
+                      marginBottom: '20px',
+                      border: '3px solid var(--color-gold)'
+                    }} 
+                  />
+                )}
+                <div style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px', color: 'var(--color-text-primary)' }}>
+                  {tournament.winner.nickname || tournament.winner.username}
+                </div>
+                {tournament.winner.nickname && (
+                  <div style={{ fontSize: '14px', color: 'var(--color-text-secondary)', marginBottom: '20px' }}>
+                    @{tournament.winner.username}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

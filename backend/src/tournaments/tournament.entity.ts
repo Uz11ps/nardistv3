@@ -80,6 +80,9 @@ export class Tournament {
   @Column({ type: 'jsonb', nullable: true })
   prizes: any;
 
+  @Column({ nullable: true })
+  winnerId: string; // ID победителя турнира
+
   @OneToMany(() => TournamentMatch, (match) => match.tournament)
   matches: TournamentMatch[];
 
