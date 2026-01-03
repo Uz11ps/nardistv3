@@ -584,6 +584,8 @@ export class GamesService {
 
     // Проверяем валидность всех ходов
     let currentState = JSON.parse(JSON.stringify(game.gameState));
+    // ВАЖНО: Синхронизируем currentPlayer из game в currentState перед применением ходов
+    currentState.currentPlayer = game.currentPlayer;
     const diceCopy = [...dice];
 
     // Разворачиваем комбинированные ходы (те, у которых есть steps) в последовательность обычных
@@ -765,7 +767,10 @@ export class GamesService {
     // Перезагружаем игру чтобы TypeORM знал о новом ходе и не пытался синхронизировать relations
     const updatedGame = await this.findOne(gameId);
     const oldCurrentPlayer = updatedGame.currentPlayer; // Сохраняем старый игрока для проверки смены хода
-    updatedGame.gameState = currentState;
+    
+    // ВАЖНО: Сохраняем новое состояние ПОСЛЕ перезагрузки, чтобы не потерять изменения
+    // Используем глубокую копию, чтобы избежать проблем с ссылками
+    updatedGame.gameState = JSON.parse(JSON.stringify(currentState));
     updatedGame.currentPlayer = currentState.currentPlayer;
     
     // Вычисляем время, затраченное на ход (ДО обновления lastMoveAt)
