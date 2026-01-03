@@ -572,7 +572,60 @@ export class TournamentsService {
   }
 
   private async createBracketMatches(tournament: Tournament): Promise<void> {
-    // Получаем всех зарегистрированных участников (player1Id из матчей round 0)
+    // Получаем все матчи round 0 (игроки уже в сетке после регистрации)
+    const existingMatches = await this.matchesRepository.find({
+      where: {
+        tournamentId: tournament.id,
+        round: 0,
+      },
+      order: { matchNumber: 'ASC' },
+    });
+
+    // Если сетка уже создана (есть матчи round 0 с игроками), просто создаем пустые матчи для следующих раундов
+    if (existingMatches.length > 0) {
+      // Собираем всех участников из существующих матчей
+      const participants = new Set<string>();
+      existingMatches.forEach(m => {
+        if (m.player1Id) participants.add(m.player1Id);
+        if (m.player2Id) participants.add(m.player2Id);
+      });
+      
+      const participantCount = participants.size;
+      if (participantCount === 0) {
+        return; // Нет участников
+      }
+
+      const rounds = Math.ceil(Math.log2(participantCount));
+      
+      // Создаем пустые матчи для следующих раундов (будут заполнены победителями)
+      for (let round = 1; round < rounds; round++) {
+        const matchesInRound = Math.floor(participantCount / Math.pow(2, round + 1));
+        for (let matchNum = 0; matchNum < matchesInRound; matchNum++) {
+          // Проверяем, не существует ли уже такой матч
+          const existingMatch = await this.matchesRepository.findOne({
+            where: {
+              tournamentId: tournament.id,
+              round,
+              matchNumber: matchNum,
+            },
+          });
+          
+          if (!existingMatch) {
+            await this.matchesRepository.save({
+              tournamentId: tournament.id,
+              round,
+              matchNumber: matchNum,
+              player1Id: null, // Будет заполнено победителем предыдущего раунда
+              player2Id: null,
+              status: MatchStatus.SCHEDULED,
+            });
+          }
+        }
+      }
+      return;
+    }
+
+    // Старая логика для обратной совместимости (если сетка еще не создана)
     const registeredMatches = await this.matchesRepository.find({
       where: {
         tournamentId: tournament.id,
@@ -582,19 +635,16 @@ export class TournamentsService {
       order: { matchNumber: 'ASC' },
     });
 
-    // Извлекаем участников и убираем дубликаты (на случай, если по каким-то причинам есть несколько матчей с одним игроком)
     const participants = Array.from(new Set(
       registeredMatches.map(m => m.player1Id).filter(id => id !== null) as string[]
     ));
     const rounds = Math.ceil(Math.log2(participants.length));
 
-    // Удаляем ВСЕ старые матчи round 0 (они были созданы при регистрации)
     await this.matchesRepository.delete({
       tournamentId: tournament.id,
       round: 0,
     });
 
-    // Создаем новые матчи первого раунда с парами участников
     const matchesInFirstRound = Math.floor(participants.length / 2);
     
     for (let matchNum = 0; matchNum < matchesInFirstRound; matchNum++) {
@@ -608,11 +658,10 @@ export class TournamentsService {
         player1Id,
         player2Id,
         status: MatchStatus.SCHEDULED,
-        scheduledAt: tournament.startDate, // Устанавливаем время начала матча
+        scheduledAt: tournament.startDate,
       });
     }
 
-    // Если нечетное количество участников, последний проходит автоматически (BYE)
     if (participants.length % 2 === 1) {
       const byePlayerId = participants[participants.length - 1];
       await this.matchesRepository.save({
@@ -622,11 +671,10 @@ export class TournamentsService {
         player1Id: byePlayerId,
         player2Id: null,
         status: MatchStatus.BYE,
-        winnerId: byePlayerId, // Автоматический проход
+        winnerId: byePlayerId,
       });
     }
 
-    // Создаем пустые матчи для следующих раундов (будут заполнены победителями)
     for (let round = 1; round < rounds; round++) {
       const matchesInRound = Math.floor(participants.length / Math.pow(2, round + 1));
       for (let matchNum = 0; matchNum < matchesInRound; matchNum++) {
@@ -634,7 +682,7 @@ export class TournamentsService {
           tournamentId: tournament.id,
           round,
           matchNumber: matchNum,
-          player1Id: null, // Будет заполнено победителем предыдущего раунда
+          player1Id: null,
           player2Id: null,
           status: MatchStatus.SCHEDULED,
         });
