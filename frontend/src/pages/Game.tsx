@@ -843,6 +843,7 @@ export default function Game() {
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
         let isOvertime = data.isOvertime || false
         
+        // Если таймер на ход близок к 20 (начало хода), сбрасываем овертайм
         // Это предотвращает отображение овертайма при первом броске кубиков
         if (moveTimeRemaining >= 19.5) {
           isOvertime = false
