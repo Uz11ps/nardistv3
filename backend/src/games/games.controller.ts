@@ -168,7 +168,8 @@ export class GamesController {
     });
     
     // Если игра только что началась (оба выбрали смещение), отправляем обновленное состояние
-    if (game.status === 'in_progress') {
+    // Пропускаем для игр с ботом - там события отправляются через другие механизмы
+    if (game.status === 'in_progress' && game.type !== 'vs_bot') {
       const updatedGame = await this.gamesService.findOne(id);
       const gameState = await this.gamesService.getGameState(id);
       

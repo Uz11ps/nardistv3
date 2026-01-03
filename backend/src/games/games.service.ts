@@ -65,6 +65,15 @@ export class GamesService {
     stake: number = 0,
     moveTimeLimit: number = 60000,
   ): Promise<Game> {
+    // Нормализуем stake (защита от NaN, null, undefined, bigint)
+    const normalizedStake = (stake !== null && stake !== undefined && !isNaN(stake) && isFinite(stake)) 
+      ? Math.max(0, Number(stake)) 
+      : 0;
+    
+    // Нормализуем moveTimeLimit (защита от NaN, null, undefined)
+    const normalizedMoveTimeLimit = (moveTimeLimit !== null && moveTimeLimit !== undefined && !isNaN(moveTimeLimit) && isFinite(moveTimeLimit))
+      ? Math.max(0, Number(moveTimeLimit))
+      : 60000;
     // Проверяем, не находится ли player1 уже в активной игре (исключаем finished, abandoned и игры с ботом)
     const player1ActiveGames = await this.gamesRepository.find({
       where: [
@@ -124,28 +133,28 @@ export class GamesService {
     }
 
     // Если игра на ставки, проверяем баланс и блокируем средства
-    if (stake > 0 && type === GameType.VS_PLAYER) {
+    if (normalizedStake > 0 && type === GameType.VS_PLAYER) {
       const player1 = await this.usersService.findOne(player1Id);
       const player1Balance = Number(player1.narCoin);
-      if (player1Balance < stake) {
+      if (player1Balance < normalizedStake) {
         throw new BadRequestException('Недостаточно NAR-coin для ставки');
       }
       // Блокируем ставку (вычитаем сразу, вернем проигравшему позже при завершении)
-      const newPlayer1Balance = player1Balance - stake;
+      const newPlayer1Balance = player1Balance - normalizedStake;
       await this.usersService.update(player1Id, { narCoin: newPlayer1Balance });
-      this.logger.log(`💰 Ставка списана у игрока ${player1Id}: -${stake} NAR (было ${player1Balance}, стало ${newPlayer1Balance})`);
+      this.logger.log(`💰 Ставка списана у игрока ${player1Id}: -${normalizedStake} NAR (было ${player1Balance}, стало ${newPlayer1Balance})`);
 
       if (player2Id) {
         const player2 = await this.usersService.findOne(player2Id);
         const player2Balance = Number(player2.narCoin);
-        if (player2Balance < stake) {
+        if (player2Balance < normalizedStake) {
           // Возвращаем деньги player1
           await this.usersService.update(player1Id, { narCoin: player1Balance });
           throw new BadRequestException('У противника недостаточно NAR-coin для ставки');
         }
-        const newPlayer2Balance = player2Balance - stake;
+        const newPlayer2Balance = player2Balance - normalizedStake;
         await this.usersService.update(player2Id, { narCoin: newPlayer2Balance });
-        this.logger.log(`💰 Ставка списана у игрока ${player2Id}: -${stake} NAR (было ${player2Balance}, стало ${newPlayer2Balance})`);
+        this.logger.log(`💰 Ставка списана у игрока ${player2Id}: -${normalizedStake} NAR (было ${player2Balance}, стало ${newPlayer2Balance})`);
       }
     }
 
@@ -201,7 +210,7 @@ export class GamesService {
       player2Id,
       mode,
       type,
-      stake,
+      stake: normalizedStake,
       status: GameStatus.WAITING, // Игра всегда создается в WAITING, переходит в IN_PROGRESS когда оба игрока выберут смещение
       gameState: initialState,
       rngSeed,
@@ -214,7 +223,7 @@ export class GamesService {
       p1OffsetChosenAt: null,
       p2OffsetChosenAt: null,
       currentPlayer: 0,
-      moveTimeLimit: moveTimeLimit,
+      moveTimeLimit: normalizedMoveTimeLimit,
       player1TimeRemaining: 60000, // 60 секунд общего времени
       player2TimeRemaining: 60000, // 60 секунд общего времени
       lastMoveAt: undefined, // Устанавливается когда игра переходит в IN_PROGRESS

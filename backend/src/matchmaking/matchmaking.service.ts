@@ -48,9 +48,11 @@ export class MatchmakingService {
     // Фильтруем только действительно активные игры:
     // - исключаем finished и abandoned
     // - исключаем игры с ботом (type === 'vs_bot')
+    // - исключаем sandbox игры (type === 'sandbox')
     const trulyActiveGames = activeGames.filter(game => 
       (game.status === 'waiting' || game.status === 'in_progress') && 
-      game.type !== 'vs_bot'
+      game.type !== 'vs_bot' &&
+      game.type !== 'sandbox'
     );
 
     if (trulyActiveGames.length > 0) {
