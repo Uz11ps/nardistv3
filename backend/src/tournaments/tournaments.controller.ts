@@ -57,5 +57,16 @@ export class TournamentsController {
       })),
     };
   }
+
+  @Post(':id/matches/:matchId/start')
+  @UseGuards(JwtAuthGuard)
+  async startMatch(
+    @Param('id') tournamentId: string,
+    @Param('matchId') matchId: string,
+    @CurrentUser() user: any,
+  ) {
+    const result = await this.tournamentsService.startMatch(matchId, user.id);
+    return result;
+  }
 }
 

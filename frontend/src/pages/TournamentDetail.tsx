@@ -42,6 +42,7 @@ interface TournamentMatch {
   }
   winnerId?: string
   gameId?: string
+  scheduledAt?: string
 }
 
 export default function TournamentDetail() {
@@ -187,7 +188,12 @@ export default function TournamentDetail() {
         {/* Контент вкладки "Матчи" - Турнирная сетка */}
         {activeTab === 'matches' && (
           <div className="tournament-detail-tab-content">
-            <TournamentBracket matches={tournament.matches || []} maxParticipants={tournament.maxParticipants} />
+            <TournamentBracket 
+              matches={tournament.matches || []} 
+              maxParticipants={tournament.maxParticipants}
+              tournamentId={tournament.id}
+              tournamentStatus={tournament.status}
+            />
           </div>
         )}
 

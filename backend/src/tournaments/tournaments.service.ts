@@ -235,6 +235,34 @@ export class TournamentsService {
       .getMany();
   }
 
+  async findTournamentsStartingAt(targetDate: Date): Promise<Tournament[]> {
+    const tolerance = 60 * 1000; // 1 минута погрешности
+    const minDate = new Date(targetDate.getTime() - tolerance);
+    const maxDate = new Date(targetDate.getTime() + tolerance);
+    
+    return this.tournamentsRepository
+      .createQueryBuilder('tournament')
+      .where('tournament.status = :status', { status: TournamentStatus.REGISTRATION })
+      .andWhere('tournament.startDate >= :minDate', { minDate })
+      .andWhere('tournament.startDate <= :maxDate', { maxDate })
+      .orderBy('tournament.startDate', 'ASC')
+      .getMany();
+  }
+
+  async getRegisteredPlayers(tournamentId: string): Promise<string[]> {
+    const matches = await this.matchesRepository.find({
+      where: {
+        tournamentId,
+        player1Id: Not(IsNull()),
+      },
+    });
+    return matches.map(m => m.player1Id).filter(id => id !== null) as string[];
+  }
+
+  async getUserById(userId: string): Promise<any> {
+    return this.usersService.findOne(userId);
+  }
+
   /**
    * Получить таблицу результатов турнира
    */
@@ -280,6 +308,8 @@ export class TournamentsService {
         } : null,
         winnerId: match.winnerId,
         status: match.status,
+        scheduledAt: match.scheduledAt,
+        gameId: match.gameId,
       });
     });
 
@@ -513,6 +543,7 @@ export class TournamentsService {
         existingMatch.player1Id = player1Id;
         existingMatch.player2Id = player2Id;
         existingMatch.status = MatchStatus.SCHEDULED;
+        existingMatch.scheduledAt = tournament.startDate; // Устанавливаем время начала матча
         await this.matchesRepository.save(existingMatch);
       } else {
         await this.matchesRepository.save({
@@ -522,6 +553,7 @@ export class TournamentsService {
           player1Id,
           player2Id,
           status: MatchStatus.SCHEDULED,
+          scheduledAt: tournament.startDate, // Устанавливаем время начала матча
         });
       }
     }
@@ -702,8 +734,9 @@ export class TournamentsService {
 
     // Создаем матчи следующего раунда с победителями
     const nextRound = maxFinishedRound + 1;
+    // Фильтруем только матчи с победителями (пропускаем матчи, где оба игрока пропустили)
     const winners = currentRoundMatches
-      .filter(m => m.winnerId)
+      .filter(m => m.winnerId) // Только матчи с победителем (игнорируем матчи, где оба пропустили)
       .map(m => m.winnerId)
       .sort((a, b) => {
         // Сортируем по matchNumber для правильного распределения
@@ -731,6 +764,7 @@ export class TournamentsService {
         nextMatch.player1Id = player1Id;
         nextMatch.player2Id = player2Id;
         nextMatch.status = MatchStatus.SCHEDULED;
+        nextMatch.scheduledAt = new Date(); // Матч следующего раунда начинается сразу после завершения предыдущего
         await this.matchesRepository.save(nextMatch);
       } else {
         await this.matchesRepository.save({
@@ -740,6 +774,7 @@ export class TournamentsService {
           player1Id,
           player2Id,
           status: MatchStatus.SCHEDULED,
+          scheduledAt: new Date(), // Матч следующего раунда начинается сразу после завершения предыдущего
         });
       }
     }
@@ -792,6 +827,108 @@ export class TournamentsService {
       tournament.endDate = new Date();
       await this.tournamentsRepository.save(tournament);
     }
+  }
+
+  /**
+   * Проверка и обработка таймаутов матчей (автоматическое поражение при неявке)
+   */
+  async checkAndProcessMatchTimeouts(): Promise<void> {
+    const now = new Date();
+    const threeMinutesInMs = 3 * 60 * 1000;
+    
+    // Находим матчи, которые должны были начаться более 3 минут назад, но еще не начаты
+    const timeoutMatches = await this.matchesRepository
+      .createQueryBuilder('match')
+      .where('match.status = :status', { status: MatchStatus.SCHEDULED })
+      .andWhere('match.scheduledAt IS NOT NULL')
+      .andWhere('match.scheduledAt <= :timeoutDate', { 
+        timeoutDate: new Date(now.getTime() - threeMinutesInMs) 
+      })
+      .andWhere('match.player1Id IS NOT NULL')
+      .andWhere('match.player2Id IS NOT NULL')
+      .andWhere('match.gameId IS NULL')
+      .getMany();
+
+    for (const match of timeoutMatches) {
+      try {
+        // Оба игрока пропустили - оба вылетают (матч завершается без победителя)
+        this.logger.warn(`Матч ${match.id} пропущен обоими игроками, оба вылетают`);
+        
+        // Устанавливаем статус как FINISHED без winnerId (оба проиграли)
+        match.status = MatchStatus.FINISHED;
+        await this.matchesRepository.save(match);
+        
+        // Продвигаем турнир (обработает случай, когда оба игрока пропустили)
+        await this.advanceTournament(match.tournamentId);
+      } catch (error) {
+        this.logger.error(`Ошибка при обработке таймаута матча ${match.id}: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Старт матча по нажатию игрока
+   */
+  async startMatch(matchId: string, userId: string): Promise<{ gameId: string }> {
+    const match = await this.matchesRepository.findOne({
+      where: { id: matchId },
+      relations: ['tournament'],
+    });
+
+    if (!match) {
+      throw new NotFoundException('Матч не найден');
+    }
+
+    // Проверяем, что пользователь является участником матча
+    if (match.player1Id !== userId && match.player2Id !== userId) {
+      throw new BadRequestException('Вы не являетесь участником этого матча');
+    }
+
+    // Проверяем статус матча
+    if (match.status !== MatchStatus.SCHEDULED) {
+      throw new BadRequestException('Матч уже начат или завершен');
+    }
+
+    // Проверяем, что матч еще не создан
+    if (match.gameId) {
+      return { gameId: match.gameId };
+    }
+
+    // Проверяем, что оба игрока назначены
+    if (!match.player1Id || !match.player2Id) {
+      throw new BadRequestException('Оба игрока должны быть назначены для старта матча');
+    }
+
+    // Проверяем окно входа (3 минуты после scheduledAt)
+    if (match.scheduledAt) {
+      const now = new Date();
+      const entryWindowEnd = new Date(match.scheduledAt.getTime() + 3 * 60 * 1000);
+      
+      if (now > entryWindowEnd) {
+        // Время окна входа истекло, определяем победителя (тот, кто нажал)
+        match.winnerId = userId;
+        match.status = MatchStatus.FINISHED;
+        await this.matchesRepository.save(match);
+        
+        await this.advanceTournament(match.tournamentId);
+        throw new BadRequestException('Время входа в матч истекло');
+      }
+    }
+
+    // Создаем игру
+    const game = await this.gamesService.create(
+      match.player1Id,
+      match.player2Id,
+      match.tournament.mode,
+      GameType.TOURNAMENT,
+    );
+
+    // Обновляем матч
+    match.gameId = game.id;
+    match.status = MatchStatus.IN_PROGRESS;
+    await this.matchesRepository.save(match);
+
+    return { gameId: game.id };
   }
 }
 

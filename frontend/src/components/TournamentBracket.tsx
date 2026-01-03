@@ -3,6 +3,7 @@ import './TournamentBracket.css'
 import { useNavigate } from 'react-router-dom'
 import Icon from './Icon'
 import { useAuthStore } from '../store/authStore'
+import { apiClient } from '../api/client'
 
 interface BracketMatch {
   id: string
@@ -23,18 +24,27 @@ interface BracketMatch {
   }
   winnerId?: string
   gameId?: string
+  scheduledAt?: string
 }
 
 interface TournamentBracketProps {
   matches: BracketMatch[]
   maxParticipants?: number
+  tournamentId?: string
+  tournamentStatus?: string
 }
 
-export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, maxParticipants = 16 }) => {
+export const TournamentBracket: React.FC<TournamentBracketProps> = ({ 
+  matches, 
+  maxParticipants = 16,
+  tournamentId,
+  tournamentStatus,
+}) => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const currentUserId = user?.id
   const containerRef = useRef<HTMLDivElement>(null)
+  const [startingMatchId, setStartingMatchId] = useState<string | null>(null)
   
   // Drag to scroll logic
   const [isDragging, setIsDragging] = useState(false)
@@ -46,7 +56,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
   const handleMouseDown = (e: React.MouseEvent) => {
     // Only enable drag if not clicking on a clickable match
     const target = e.target as HTMLElement
-    if (target.closest('.bracket-match.clickable')) return
+    if (target.closest('.bracket-match.clickable') || target.closest('.bracket-match.clickable-start')) return
 
     setIsDragging(true)
     if (containerRef.current) {
@@ -168,6 +178,47 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
 
   const rounds = buildFullBracket(matches, maxParticipants)
 
+  // Определяет, можно ли начать матч
+  const canStartMatch = (match: BracketMatch): boolean => {
+    if (!tournamentId || !currentUserId) return false
+    if (tournamentStatus !== 'in_progress') return false
+    if (match.status !== 'scheduled') return false
+    if (!match.player1 || !match.player2) return false
+    if (match.player1.id !== currentUserId && match.player2.id !== currentUserId) return false
+    if (match.gameId) return false // Матч уже начат
+
+    // Проверяем окно входа (3 минуты после scheduledAt)
+    if (match.scheduledAt) {
+      const now = new Date()
+      const scheduledAt = new Date(match.scheduledAt)
+      const entryWindowEnd = new Date(scheduledAt.getTime() + 3 * 60 * 1000)
+      
+      // Матч должен был начаться (scheduledAt в прошлом) и окно входа еще открыто
+      if (now >= scheduledAt && now <= entryWindowEnd) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  const handleStartMatch = async (matchId: string) => {
+    if (!tournamentId || startingMatchId) return
+    
+    try {
+      setStartingMatchId(matchId)
+      const response = await apiClient.post(`/tournaments/${tournamentId}/matches/${matchId}/start`)
+      if (response.data.gameId) {
+        navigate(`/game/${response.data.gameId}`)
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при старте матча')
+      console.error('Failed to start match:', error)
+    } finally {
+      setStartingMatchId(null)
+    }
+  }
+
   const getRoundName = (roundIndex: number, totalRounds: number) => {
     if (roundIndex === totalRounds - 1) return 'Финал'
     if (roundIndex === totalRounds - 2) return 'Полуфинал'
@@ -195,11 +246,23 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
                   {getRoundName(roundIndex, rounds.length)}
                 </div>
                 <div className="bracket-matches">
-                  {roundMatches.map((match, matchIndex) => (
+                  {roundMatches.map((match, matchIndex) => {
+                    const canStart = canStartMatch(match)
+                    const isUserInMatch = currentUserId && (match.player1?.id === currentUserId || match.player2?.id === currentUserId)
+                    const opponent = match.player1?.id === currentUserId ? match.player2 : match.player1
+                    const showStartButton = canStart && isUserInMatch && opponent
+                    
+                    return (
                     <div key={match.id} className="bracket-match-wrapper">
                       <div 
-                        className={`bracket-match ${match.gameId ? 'clickable' : ''}`}
-                        onClick={() => match.gameId && navigate(`/game/${match.gameId}`)}
+                        className={`bracket-match ${match.gameId ? 'clickable' : canStart ? 'clickable-start' : ''}`}
+                        onClick={() => {
+                          if (match.gameId) {
+                            navigate(`/game/${match.gameId}`)
+                          } else if (canStart && !startingMatchId) {
+                            handleStartMatch(match.id)
+                          }
+                        }}
                       >
                         <div className={`bracket-player ${match.winnerId === match.player1?.id ? 'winner' : ''} ${!match.player1 ? 'empty' : ''} ${match.player1?.id === currentUserId ? 'current-user' : ''}`}>
                            {match.player1?.avatarUrl ? (
@@ -219,6 +282,11 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
                            <span className="bracket-player-name">{match.player2?.nickname || match.player2?.username || '-'}</span>
                            {match.winnerId === match.player2?.id && <Icon name="trophy" size={12} className="bracket-trophy" />}
                         </div>
+                        {showStartButton && (
+                          <div className="bracket-match-start-hint">
+                            Нажмите, чтобы начать
+                          </div>
+                        )}
                       </div>
                       
                       {!isLastRound && (
@@ -230,7 +298,8 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ matches, m
                         <div className="bracket-connector-incoming"></div>
                       )}
                     </div>
-                  ))}
+                  )
+                  })}
                 </div>
               </div>
             )
