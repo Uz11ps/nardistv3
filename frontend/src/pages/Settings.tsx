@@ -19,7 +19,7 @@ interface SettingsState {
 
 export default function Settings() {
   const navigate = useNavigate()
-  const { user, updateUser } = useAuthStore()
+  const { user } = useAuthStore()
   const [showTimezoneModal, setShowTimezoneModal] = useState(false)
   const [settings, setSettings] = useState<SettingsState>({
     vibration: true,
