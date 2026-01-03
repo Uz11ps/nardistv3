@@ -261,13 +261,14 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                     const canStart = canStartMatch(match)
                     const isUserInMatch = currentUserId && (match.player1?.id === currentUserId || match.player2?.id === currentUserId)
                     const opponent = match.player1?.id === currentUserId ? match.player2 : match.player1
-                    const showStartButton = canStart && isUserInMatch && opponent
                     
                     return (
                     <div key={match.id} className="bracket-match-wrapper">
                       <div 
-                        className={`bracket-match ${match.gameId ? 'clickable' : canStart ? 'clickable-start' : ''}`}
+                        className={`bracket-match ${match.gameId && isUserInMatch ? 'clickable' : (canStart && isUserInMatch) ? 'clickable-start' : ''}`}
                         onClick={() => {
+                          if (!isUserInMatch) return // Запрет захода в чужие матчи
+                          
                           if (match.gameId) {
                             navigate(`/game/${match.gameId}`)
                           } else if (canStart && !startingMatchId) {
@@ -281,6 +282,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                            ) : (
                              <div className="bracket-avatar-placeholder"><Icon name="user" size={12} /></div>
                            )}
+                           {match.player1?.id === currentUserId && <span className="bracket-me-indicator">•</span>}
                            <span className="bracket-player-name">{match.player1?.nickname || match.player1?.username || '-'}</span>
                            {match.winnerId === match.player1?.id && <Icon name="trophy" size={12} className="bracket-trophy" />}
                         </div>
@@ -290,14 +292,10 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                            ) : (
                              <div className="bracket-avatar-placeholder"><Icon name="user" size={12} /></div>
                            )}
+                           {match.player2?.id === currentUserId && <span className="bracket-me-indicator">•</span>}
                            <span className="bracket-player-name">{match.player2?.nickname || match.player2?.username || '-'}</span>
                            {match.winnerId === match.player2?.id && <Icon name="trophy" size={12} className="bracket-trophy" />}
                         </div>
-                        {showStartButton && (
-                          <div className="bracket-match-start-hint">
-                            Нажмите, чтобы начать
-                          </div>
-                        )}
                       </div>
                       
                       {!isLastRound && (

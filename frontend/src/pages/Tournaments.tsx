@@ -282,7 +282,14 @@ export default function Tournaments() {
               {(tournamentDetail.matches && tournamentDetail.matches.length > 0) || tournamentDetail.format === 'bracket' ? (
                 <div className="tournament-modal-section">
                   <h4 className="tournament-modal-section-title">Турнирная сетка</h4>
-                  <TournamentBracket matches={tournamentDetail.matches || []} maxParticipants={tournamentDetail.maxParticipants} />
+                  <div className="tournament-modal-bracket-container">
+                    <TournamentBracket 
+                      matches={tournamentDetail.matches || []} 
+                      maxParticipants={tournamentDetail.maxParticipants} 
+                      tournamentId={tournamentDetail.id}
+                      tournamentStatus={tournamentDetail.status}
+                    />
+                  </div>
                 </div>
               ) : null}
 

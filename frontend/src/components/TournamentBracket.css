@@ -80,24 +80,14 @@
 }
 
 .bracket-match.clickable-start {
-  border-color: #4a9eff;
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
 }
 
-.bracket-match-start-hint {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(74, 158, 255, 0.9);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  pointer-events: none;
-  z-index: 10;
+.bracket-me-indicator {
+  color: #4CAF50;
+  margin-right: 4px;
+  font-weight: bold;
 }
 
 .bracket-player {
