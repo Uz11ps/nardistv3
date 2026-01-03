@@ -752,7 +752,13 @@ export class TournamentsService {
     // Проверяем, является ли текущий раунд финальным
     if (maxFinishedRound >= finalRoundNumber) {
       // Определяем победителя турнира (победитель финального матча)
-      const finalMatch = currentRoundMatches.find(m => m.round === maxFinishedRound);
+      // Ищем завершенный финальный матч с winnerId
+      const finalMatch = currentRoundMatches.find(m => 
+        m.round === maxFinishedRound && 
+        m.status === MatchStatus.FINISHED && 
+        m.winnerId
+      );
+      
       if (finalMatch && finalMatch.winnerId) {
         this.logger.log(`Завершение турнира ${tournament.id}: победитель ${finalMatch.winnerId}`);
         tournament.status = TournamentStatus.FINISHED;
@@ -767,8 +773,9 @@ export class TournamentsService {
         if (savedTournament) {
           await this.distributePrizes(savedTournament);
         }
+        return;
       } else {
-        this.logger.warn(`Финальный матч не найден или нет победителя для турнира ${tournament.id}`);
+        this.logger.warn(`Финальный матч не найден или нет победителя для турнира ${tournament.id}. maxFinishedRound=${maxFinishedRound}, finalRoundNumber=${finalRoundNumber}, currentRoundMatches=${JSON.stringify(currentRoundMatches.map(m => ({ round: m.round, status: m.status, winnerId: m.winnerId })))}`);
       }
       return;
     }
