@@ -167,6 +167,12 @@ export class GamesController {
       player2Offset: game.p2Offset,
     });
     
+    // Если игра только что началась (оба выбрали смещение), отправляем обновленное состояние
+    if (game.status === 'in_progress') {
+      const gameState = await this.gamesService.getGameState(id);
+      this.gamesGateway.server.to(`game:${id}`).emit('game_updated', gameState);
+    }
+    
     return game;
   }
 

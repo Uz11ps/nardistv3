@@ -1911,10 +1911,35 @@ export class GamesService {
       game.currentPlayer = firstPlayer;
       game.lastMoveAt = now;
       
+      // Инициализируем gameState если его еще нет
+      if (!game.gameState) {
+        const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
+        game.gameState = engine.createInitialState();
+      }
+      
+      // Обновляем currentPlayer в gameState
+      game.gameState.currentPlayer = firstPlayer;
+      
       this.logger.log(`Game ${game.id} started after offset selection. P1: [${p1FirstRoll.join(', ')}] (sum=${sum1}), P2: [${p2FirstRoll.join(', ')}] (sum=${sum2}). First player: ${firstPlayer === 0 ? 'P1' : 'P2'}`);
     }
 
-    return this.gamesRepository.save(game);
+    const savedGame = await this.gamesRepository.save(game);
+    
+    // Если игра только что началась, делаем первый бросок кубиков для первого игрока
+    if (p1OffsetChosen && p2OffsetChosen && game.player2Id && savedGame.status === GameStatus.IN_PROGRESS && savedGame.gameState && !savedGame.gameState.dice?.length) {
+      try {
+        // Определяем ID первого игрока
+        const firstPlayerId = savedGame.currentPlayer === 0 ? savedGame.player1Id : savedGame.player2Id;
+        // Делаем бросок кубиков для первого игрока (skipPlayerCheck = true, так как это автоматический бросок)
+        await this.rollDice(gameId, firstPlayerId, true);
+        // Перезагружаем игру после броска кубиков
+        return this.findOne(gameId);
+      } catch (error) {
+        this.logger.error(`Ошибка при автоматическом броске кубиков для игры ${gameId}:`, error);
+      }
+    }
+    
+    return savedGame;
   }
 
   async setupSandboxBoard(

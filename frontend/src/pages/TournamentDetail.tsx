@@ -229,11 +229,25 @@ export default function TournamentDetail() {
                   Результаты пока отсутствуют
                 </div>
               </Card>
-            ) : (
-              <div className="tournament-results-list">
-                {tournament.matches
-                  .sort((a, b) => b.round - a.round || a.matchNumber - b.matchNumber)
-                  .map((match) => {
+            ) : (() => {
+              // Фильтруем только завершенные матчи для вкладки результатов
+              const finishedMatches = tournament.matches.filter(m => m.status === 'finished')
+              
+              if (finishedMatches.length === 0) {
+                return (
+                  <Card>
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#aaaaaa' }}>
+                      Результаты пока отсутствуют
+                    </div>
+                  </Card>
+                )
+              }
+              
+              return (
+                <div className="tournament-results-list">
+                  {finishedMatches
+                    .sort((a, b) => b.round - a.round || a.matchNumber - b.matchNumber)
+                    .map((match) => {
                     const getStatusText = (status: string) => {
                       switch (status) {
                         case 'finished': return 'Завершен'
@@ -274,8 +288,9 @@ export default function TournamentDetail() {
                       </Card>
                     )
                   })}
-              </div>
-            )}
+                </div>
+              )
+            })()}
           </div>
         )}
 

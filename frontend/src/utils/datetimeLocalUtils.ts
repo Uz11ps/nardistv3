@@ -25,9 +25,14 @@ export function utcToLocalDateTime(utcIsoString: string): string {
  */
 export function localDateTimeToUtc(localDateTimeString: string): string {
   if (!localDateTimeString) return ''
-  // datetime-local возвращает значение в локальном времени
-  // Создаем Date объект, который автоматически интерпретирует это как локальное время
-  const localDate = new Date(localDateTimeString)
+  // datetime-local возвращает значение в формате YYYY-MM-DDTHH:mm в локальном времени
+  // Явно создаем Date объект в локальном времени, используя компоненты
+  const [datePart, timePart] = localDateTimeString.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hours, minutes] = timePart.split(':').map(Number)
+  
+  // Создаем Date объект в локальном времени (индексы месяца начинаются с 0)
+  const localDate = new Date(year, month - 1, day, hours, minutes)
   // toISOString() конвертирует в UTC
   return localDate.toISOString()
 }

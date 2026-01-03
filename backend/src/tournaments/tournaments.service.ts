@@ -542,7 +542,12 @@ export class TournamentsService {
     const participants = registeredMatches.map(m => m.player1Id).filter(id => id !== null);
     const rounds = Math.ceil(Math.log2(participants.length));
 
-    // Удаляем старые матчи round 0 (они были созданы при регистрации)
+    // Удаляем ВСЕ старые матчи round 0 (они были созданы при регистрации)
+    await this.matchesRepository.delete({
+      tournamentId: tournament.id,
+      round: 0,
+    });
+
     // Создаем новые матчи первого раунда с парами участников
     const matchesInFirstRound = Math.floor(participants.length / 2);
     
@@ -550,25 +555,15 @@ export class TournamentsService {
       const player1Id = participants[matchNum * 2];
       const player2Id = participants[matchNum * 2 + 1];
       
-      // Обновляем существующий матч или создаем новый
-      const existingMatch = registeredMatches.find(m => m.matchNumber === matchNum);
-      if (existingMatch) {
-        existingMatch.player1Id = player1Id;
-        existingMatch.player2Id = player2Id;
-        existingMatch.status = MatchStatus.SCHEDULED;
-        existingMatch.scheduledAt = tournament.startDate; // Устанавливаем время начала матча
-        await this.matchesRepository.save(existingMatch);
-      } else {
-        await this.matchesRepository.save({
-          tournamentId: tournament.id,
-          round: 0,
-          matchNumber: matchNum,
-          player1Id,
-          player2Id,
-          status: MatchStatus.SCHEDULED,
-          scheduledAt: tournament.startDate, // Устанавливаем время начала матча
-        });
-      }
+      await this.matchesRepository.save({
+        tournamentId: tournament.id,
+        round: 0,
+        matchNumber: matchNum,
+        player1Id,
+        player2Id,
+        status: MatchStatus.SCHEDULED,
+        scheduledAt: tournament.startDate, // Устанавливаем время начала матча
+      });
     }
 
     // Если нечетное количество участников, последний проходит автоматически (BYE)
