@@ -8,7 +8,7 @@ export default function BottomNav() {
 
   const navItems = [
     { path: '/', icon: '/img/Vectorhome.png', label: 'Главная' },
-    { path: '/tournaments', icon: '/img/кубок.png', label: 'Турниры' },
+    { path: '/tournaments', icon: '/img/fi-rr-badge.png', label: 'Турниры' },
     { path: '/academy', icon: '/img/fi-rr-book-alt.png', label: 'Академия' },
     { path: '/shop', icon: '/img/fi-rr-shop.png', label: 'Магазин' },
     { path: '/city', icon: '/img/fi-rs-building.png', label: 'Город' },
