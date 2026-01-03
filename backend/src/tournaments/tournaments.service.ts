@@ -84,12 +84,18 @@ export class TournamentsService {
     for (const tournament of tournaments) {
       let registered = false;
       // Пересчитываем currentParticipants для каждого турнира
-      const actualParticipants = await this.matchesRepository.count({
-        where: { 
-          tournamentId: tournament.id,
-          player1Id: Not(IsNull()),
-        },
-      });
+      // Считаем только регистрационные матчи (round: 0), если турнир еще в статусе REGISTRATION
+      // Если турнир уже начат, используем currentParticipants как есть
+      let actualParticipants = tournament.currentParticipants;
+      if (tournament.status === TournamentStatus.REGISTRATION || tournament.status === TournamentStatus.UPCOMING) {
+        actualParticipants = await this.matchesRepository.count({
+          where: { 
+            tournamentId: tournament.id,
+            round: 0,
+            player1Id: Not(IsNull()),
+          },
+        });
+      }
       if (tournament.currentParticipants !== actualParticipants) {
         tournament.currentParticipants = actualParticipants;
         await this.tournamentsRepository.save(tournament);
@@ -263,9 +269,11 @@ export class TournamentsService {
   }
 
   async getRegisteredPlayers(tournamentId: string): Promise<string[]> {
+    // Получаем только регистрационные матчи (round: 0), чтобы не учитывать игроков из сетки
     const matches = await this.matchesRepository.find({
       where: {
         tournamentId,
+        round: 0,
         player1Id: Not(IsNull()),
       },
     });
@@ -434,11 +442,13 @@ export class TournamentsService {
       throw new BadRequestException('Время регистрации истекло');
     }
 
-    // Пересчитываем текущее количество участников на основе реальных матчей
+    // Пересчитываем текущее количество участников на основе РЕГИСТРАЦИОННЫХ матчей (round: 0)
+    // Важно: считаем только матчи round: 0, потому что после старта турнира создается сетка
     const actualParticipants = await this.matchesRepository.count({
       where: { 
         tournamentId,
-        player1Id: Not(IsNull()), // Только матчи с зарегистрированным первым игроком
+        round: 0, // ТОЛЬКО регистрационные матчи
+        player1Id: Not(IsNull()),
       },
     });
 
@@ -452,8 +462,8 @@ export class TournamentsService {
       throw new BadRequestException('Турнир заполнен');
     }
 
-    // Проверяем регистрацию через matches (player1Id или player2Id)
-    // Проверяем, не зарегистрирован ли игрок уже в любом матче турнира
+    // Проверяем, не зарегистрирован ли игрок уже в ЛЮБОМ матче турнира
+    // Если игрок уже есть в сетке (как player1 или player2 в любом раунде), он не может зарегистрироваться снова
     const existingMatch = await this.matchesRepository.findOne({
       where: [
         { 
@@ -495,15 +505,42 @@ export class TournamentsService {
       }
     }
 
-    // Создаем запись в matches для регистрации (пока без второго игрока)
-    await this.matchesRepository.save({
-      tournamentId,
-      player1Id: userId,
-      player2Id: null,
-      round: 0,
-      matchNumber: tournament.currentParticipants,
-      status: MatchStatus.SCHEDULED,
+    // Ищем первую свободную ячейку в сетке (матч round: 0, где player1Id или player2Id = null)
+    const allMatches = await this.matchesRepository.find({
+      where: {
+        tournamentId,
+        round: 0,
+      },
+      order: { matchNumber: 'ASC' },
     });
+
+    // Ищем матч с пустым player1Id
+    let freeSlot = allMatches.find(m => !m.player1Id);
+    
+    // Если не нашли, ищем матч с пустым player2Id
+    if (!freeSlot) {
+      freeSlot = allMatches.find(m => !m.player2Id);
+    }
+
+    if (freeSlot) {
+      // Заполняем свободную ячейку
+      if (!freeSlot.player1Id) {
+        freeSlot.player1Id = userId;
+      } else if (!freeSlot.player2Id) {
+        freeSlot.player2Id = userId;
+      }
+      await this.matchesRepository.save(freeSlot);
+    } else {
+      // Нет свободных ячеек, создаем новую
+      await this.matchesRepository.save({
+        tournamentId,
+        player1Id: userId,
+        player2Id: null,
+        round: 0,
+        matchNumber: allMatches.length,
+        status: MatchStatus.SCHEDULED,
+      });
+    }
 
     tournament.currentParticipants++;
     await this.tournamentsRepository.save(tournament);

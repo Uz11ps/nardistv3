@@ -103,50 +103,61 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
     const totalRounds = Math.log2(capacity)
     
     const rounds: Array<Array<BracketMatch>> = []
+    
+    // Если турнир в статусе registration, собираем регистрационные матчи (round: 0, без player2)
+    // Если турнир уже начат, такие матчи не должны быть - сетка уже создана
+    const isRegistrationPhase = tournamentStatus === 'registration' || tournamentStatus === 'upcoming'
     const registrationPool = new Map<number, BracketMatch>()
 
-    matches.forEach((m) => {
-      if (m.round === 0 && !m.player2 && typeof m.matchNumber === 'number') {
-        registrationPool.set(m.matchNumber, m)
-      }
-    })
+    if (isRegistrationPhase) {
+      matches.forEach((m) => {
+        if (m.round === 0 && !m.player2 && typeof m.matchNumber === 'number') {
+          registrationPool.set(m.matchNumber, m)
+        }
+      })
+    }
     
     for (let round = 0; round < totalRounds; round++) {
       const matchesInRound = capacity / Math.pow(2, round + 1)
       const roundMatches: BracketMatch[] = []
       
       for (let matchNum = 0; matchNum < matchesInRound; matchNum++) {
-        // Find existing match in data
-        const existingMatch = matches.find(m => m.round === round && m.matchNumber === matchNum)
+        // Find existing match in data (игнорируем регистрационные матчи после создания сетки)
+        const existingMatch = matches.find(m => {
+          if (m.round === round && m.matchNumber === matchNum) {
+            // Если турнир начат, игнорируем регистрационные матчи (round: 0 без player2)
+            if (!isRegistrationPhase && round === 0 && !m.player2) {
+              return false
+            }
+            return true
+          }
+          return false
+        })
         
         if (existingMatch) {
-          let player2 = existingMatch.player2
-          if (!player2 && round === 0) {
-            const partnerEntry = registrationPool.get(matchNum * 2 + 1)
-            if (partnerEntry) {
-              player2 = partnerEntry.player1
-              registrationPool.delete(matchNum * 2 + 1)
+          // Если это реальный матч (не регистрационный), используем его как есть
+          if (existingMatch.player2 || (!isRegistrationPhase && round === 0)) {
+            roundMatches.push(existingMatch)
+          } else if (isRegistrationPhase && round === 0) {
+            // В фазе регистрации можем попытаться найти партнера
+            let player2 = existingMatch.player2
+            if (!player2) {
+              const partnerEntry = registrationPool.get(matchNum * 2 + 1)
+              if (partnerEntry) {
+                player2 = partnerEntry.player1
+                registrationPool.delete(matchNum * 2 + 1)
+              }
             }
+            roundMatches.push({
+              ...existingMatch,
+              player2,
+            })
           }
-          roundMatches.push({
-            ...existingMatch,
-            player2,
-          })
         } else {
-          // Check if we have registered players for Round 0 that haven't been assigned a match ID yet
-          // In the backend, registered users are stored as matches with round=0 and sequential matchNumber
-          // BUT they are not paired yet. They are just "slots".
-          // matchNumber 0, 1, 2, 3...
-          
-          // If round is 0, we can try to fill slots with players from the "registration" matches list
-          // if the backend provides them in a flat list.
-          
-          // However, the standard `matches` array passed here usually contains valid match structures.
-          // If we are in registration phase, `matches` might be a list of user entries (round=0).
-          
+          // Создаем placeholder только в фазе регистрации
           let player1, player2;
           
-          if (round === 0) {
+          if (isRegistrationPhase && round === 0) {
              const p1Entry = registrationPool.get(matchNum * 2)
              const p2Entry = registrationPool.get(matchNum * 2 + 1)
              if (p1Entry) {
