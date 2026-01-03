@@ -169,8 +169,22 @@ export class GamesController {
     
     // Если игра только что началась (оба выбрали смещение), отправляем обновленное состояние
     if (game.status === 'in_progress') {
+      const updatedGame = await this.gamesService.findOne(id);
       const gameState = await this.gamesService.getGameState(id);
+      
+      // Отправляем обновленное состояние игры
       this.gamesGateway.server.to(`game:${id}`).emit('game_updated', gameState);
+      
+      // Если кубики уже брошены (игра началась), отправляем события dice_rolled и game_state
+      if (updatedGame.gameState?.dice?.length > 0) {
+        const eventId = `${id}_${Date.now()}_auto`;
+        this.gamesGateway.server.to(`game:${id}`).emit('dice_rolled', { 
+          dice: updatedGame.gameState.dice, 
+          playerId: updatedGame.currentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id,
+          eventId 
+        });
+        this.gamesGateway.server.to(`game:${id}`).emit('game_state', gameState);
+      }
     }
     
     return game;
