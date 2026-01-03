@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
+import { formatDateTime } from '../utils/dateUtils'
 import './Referrals.css'
 
 interface ReferralStats {
@@ -29,6 +30,7 @@ interface ReferralStats {
 export default function Referrals() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const timezone = user?.timezone || 'Europe/Moscow'
   const [stats, setStats] = useState<ReferralStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)

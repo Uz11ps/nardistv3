@@ -303,7 +303,7 @@ export default function History() {
                       <span className="mode-badge">{game.mode === 'long' ? 'Длинные' : 'Короткие'}</span>
                     </div>
                     <div className="card-subtitle">
-                      {formatDate(game.createdAt)} • {formatDuration(game.duration)}
+                      {formatRelativeTime(game.createdAt, timezone)} • {formatDuration(game.duration)}
                     </div>
                     <div className="card-subtitle" style={{ marginTop: '4px' }}>
                       Счет: {game.score.player1}:{game.score.player2} • {game.moveCount} ходов
