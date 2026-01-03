@@ -77,7 +77,8 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
     const userId = client.data.userId;
     
     const timeLimit = data.timeLimit || 60;
-    const stake = data.stake || 0;
+    // Нормализуем stake (защита от NaN, null, undefined)
+    const stake = (data.stake !== null && data.stake !== undefined && !isNaN(data.stake)) ? Math.max(0, Number(data.stake)) : 0;
     
     await this.matchmakingService.joinQueue(userId, data.mode, timeLimit, stake);
 
@@ -134,8 +135,10 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   ) {
     const userId = client.data.userId;
     try {
-      this.logger.log(`Создание стола для пользователя ${userId}, режим: ${data.mode}, ставка: ${data.stake || 0}`);
-      const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit, data.stake || 0);
+      // Нормализуем stake (защита от NaN, null, undefined)
+      const normalizedStake = (data.stake !== null && data.stake !== undefined && !isNaN(data.stake)) ? Math.max(0, Number(data.stake)) : 0;
+      this.logger.log(`Создание стола для пользователя ${userId}, режим: ${data.mode}, ставка: ${normalizedStake}`);
+      const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit, normalizedStake);
       this.logger.log(`Стол создан: ${gameId}`);
       
       // Сначала отправляем событие клиенту, чтобы он не завис

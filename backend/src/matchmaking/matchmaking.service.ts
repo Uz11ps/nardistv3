@@ -74,6 +74,9 @@ export class MatchmakingService {
     // Добавляем 100000 к рейтингу для сортировки (но используем реальный рейтинг для подбора)
     const queueScore = isPremium ? (rating || 1000) + 100000 : (rating || 1000);
     
+    // Нормализуем stake (защита от NaN, null, undefined)
+    const normalizedStake = (stake !== null && stake !== undefined && !isNaN(stake)) ? Math.max(0, Number(stake)) : 0;
+    
     const entry: QueueEntry = {
       userId,
       mode,
@@ -81,7 +84,7 @@ export class MatchmakingService {
       timestamp: Date.now(),
       isPremium,
       timeLimit: timeLimit || 60,
-      stake: stake || 0,
+      stake: normalizedStake,
     };
 
     await this.redis.zadd(`queue:${mode}`, queueScore, JSON.stringify(entry));
@@ -183,8 +186,11 @@ export class MatchmakingService {
       throw new Error('Вы уже находитесь в активной игре. Завершите текущую игру перед созданием новой.');
     }
 
+    // Проверяем и нормализуем stake (защита от NaN, null, undefined)
+    const normalizedStake = (stake !== null && stake !== undefined && !isNaN(stake)) ? Math.max(0, Number(stake)) : 0;
+    
     const moveTimeLimit = timeLimit * 1000; // Конвертируем секунды в миллисекунды
-    const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER, stake, moveTimeLimit);
+    const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER, normalizedStake, moveTimeLimit);
     
     // Проверяем, что игра создана со статусом WAITING
     if (game.status !== GameStatus.WAITING) {
@@ -195,7 +201,7 @@ export class MatchmakingService {
       hostId: userId,
       mode,
       timeLimit,
-      stake,
+      stake: normalizedStake,
       createdAt: Date.now(),
     };
     
@@ -238,13 +244,19 @@ export class MatchmakingService {
             const game = await this.gamesService.findOne(gameId);
             // Показываем стол только если игра в статусе WAITING (ожидание соперника или готовности)
             if (game && game.status === GameStatus.WAITING) {
+              // Нормализуем stake (защита от NaN, null, undefined, bigint)
+              const stakeValue = game.stake !== null && game.stake !== undefined 
+                ? (typeof game.stake === 'bigint' ? Number(game.stake) : Number(game.stake))
+                : 0;
+              const normalizedStake = (!isNaN(stakeValue) && isFinite(stakeValue)) ? Math.max(0, stakeValue) : 0;
+              
               tables.push({
                 id: gameId,
                 hostId: table.hostId,
                 mode: table.mode,
                 timeLimit: table.timeLimit,
                 createdAt: table.createdAt,
-                stake: Number(game.stake) || 0,
+                stake: normalizedStake,
                 playerCount: game.player2Id ? 2 : 1,
                 maxPlayers: 2,
                 status: 'waiting',
