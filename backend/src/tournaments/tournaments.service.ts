@@ -707,6 +707,11 @@ export class TournamentsService {
    * Продвижение брекет-турнира: создание матчей следующего раунда с победителями
    */
   private async advanceBracketTournament(tournament: Tournament): Promise<void> {
+    // Если турнир уже завершен, ничего не делаем
+    if (tournament.status === TournamentStatus.FINISHED) {
+      return;
+    }
+    
     // Получаем все завершенные матчи текущего раунда
     const finishedMatches = await this.matchesRepository.find({
       where: {
@@ -740,12 +745,16 @@ export class TournamentsService {
       return; // Еще есть незавершенные матчи в текущем раунде
     }
 
-    // Если это финальный раунд, завершаем турнир и распределяем награды
+    // Определяем финальный раунд: для N участников нужно Math.ceil(log2(N)) раундов
+    // Раунды нумеруются с 0, поэтому финал = Math.ceil(log2(N)) - 1
+    // Для 2 участников: rounds = 1, финал = 0
+    // Для 4 участников: rounds = 2, финал = 1
     const totalRounds = Math.ceil(Math.log2(tournament.currentParticipants));
-    const finalRoundNumber = totalRounds - 1;
+    const finalRoundNumber = Math.max(0, totalRounds - 1);
     
     this.logger.log(`Проверка финального раунда: maxFinishedRound=${maxFinishedRound}, totalRounds=${totalRounds}, finalRoundNumber=${finalRoundNumber}, currentParticipants=${tournament.currentParticipants}`);
     
+    // Проверяем, является ли текущий раунд финальным
     if (maxFinishedRound >= finalRoundNumber) {
       // Определяем победителя турнира (победитель финального матча)
       const finalMatch = currentRoundMatches.find(m => m.round === maxFinishedRound);
