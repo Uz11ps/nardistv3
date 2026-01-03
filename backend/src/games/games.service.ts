@@ -1926,16 +1926,19 @@ export class GamesService {
     const savedGame = await this.gamesRepository.save(game);
     
     // Если игра только что началась, делаем первый бросок кубиков для первого игрока
-    if (p1OffsetChosen && p2OffsetChosen && game.player2Id && savedGame.status === GameStatus.IN_PROGRESS && savedGame.gameState && !savedGame.gameState.dice?.length) {
+    if (p1OffsetChosen && p2OffsetChosen && savedGame.player2Id && savedGame.status === GameStatus.IN_PROGRESS && savedGame.gameState && !savedGame.gameState.dice?.length) {
       try {
         // Определяем ID первого игрока
         const firstPlayerId = savedGame.currentPlayer === 0 ? savedGame.player1Id : savedGame.player2Id;
         // Делаем бросок кубиков для первого игрока (skipPlayerCheck = true, так как это автоматический бросок)
         await this.rollDice(gameId, firstPlayerId, true);
         // Перезагружаем игру после броска кубиков
-        return this.findOne(gameId);
+        const gameWithDice = await this.findOne(gameId);
+        this.logger.log(`✅ Автоматический бросок кубиков выполнен для игры ${gameId}, первый игрок: ${firstPlayerId}`);
+        return gameWithDice;
       } catch (error) {
         this.logger.error(`Ошибка при автоматическом броске кубиков для игры ${gameId}:`, error);
+        return savedGame;
       }
     }
     
