@@ -1124,7 +1124,7 @@ export default function BackgammonBoard({
 
     let animationFrame: number
     // Увеличиваем длительность анимации для более плавного движения (особенно для бота)
-    const duration = 600 // мс (было 300)
+    const duration = 800 // мс (было 600)
 
     const animate = (time: number) => {
       const elapsed = time - animatingChecker.startTime

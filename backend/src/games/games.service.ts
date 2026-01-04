@@ -545,7 +545,7 @@ export class GamesService {
       const moveStartTime = game.lastMoveAt || game.createdAt;
       const moveTimeMs = now.getTime() - moveStartTime.getTime();
       const moveTimeSeconds = moveTimeMs / 1000;
-      const baseMoveTime = 20;
+      const baseMoveTime = 15; // 15 секунд на ход (было 20)
       const excessTime = Math.max(0, moveTimeSeconds - baseMoveTime);
       
       // Обновляем общее время игрока при завершении хода
@@ -785,8 +785,8 @@ export class GamesService {
     // Таймер считается до полного окончания хода, а не до промежуточного подтверждения
     if (turnChanged && !isBotTurn && playerId) {
       const moveTimeSeconds = moveTimeMs / 1000;
-      const baseMoveTime = 20; // 20 секунд на ход
-      const excessTime = Math.max(0, moveTimeSeconds - baseMoveTime); // Превышение 20 секунд
+      const baseMoveTime = 15; // 15 секунд на ход (было 20)
+      const excessTime = Math.max(0, moveTimeSeconds - baseMoveTime); // Превышение 15 секунд
       
       // Определяем, какой игрок завершил ход (это был предыдущий currentPlayer)
       const isPlayer1 = oldCurrentPlayer === 0;

@@ -101,17 +101,17 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       // Используем lastMoveAt, если он установлен, иначе используем createdAt для первых ходов
       const referenceTime = game.lastMoveAt || game.createdAt || now;
       const timeSinceLastMove = (now.getTime() - referenceTime.getTime()) / 1000; // в секундах
-      const baseMoveTime = 20; // 20 секунд на ход
+      const baseMoveTime = 15; // 15 секунд на ход (было 20)
       
       // Получаем общее время текущего игрока
       const currentPlayerTimeRemaining = game.currentPlayer === 0 
         ? (game.player1TimeRemaining || 60000) 
         : (game.player2TimeRemaining || 60000);
       
-      // Вычисляем превышение 20 секунд
+      // Вычисляем превышение 15 секунд
       const excessTime = Math.max(0, timeSinceLastMove - baseMoveTime);
       
-      // Оставшееся время на ход: если прошло <= 20 сек, показываем оставшиеся 20 сек, иначе показываем общее время
+      // Оставшееся время на ход: если прошло <= 15 сек, показываем оставшиеся 15 сек, иначе показываем общее время
       const moveTimeRemaining = timeSinceLastMove <= baseMoveTime 
         ? baseMoveTime - timeSinceLastMove 
         : 0;
@@ -159,17 +159,17 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             ? (game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt))
             : (game.createdAt || now);
           const timeSinceLastMove = (now.getTime() - referenceTime.getTime()) / 1000; // в секундах
-          const baseMoveTime = 20; // 20 секунд на ход
+          const baseMoveTime = 15; // 15 секунд на ход (было 20)
           
           // Получаем общее время текущего игрока
           const currentPlayerTimeRemaining = game.currentPlayer === 0 
             ? (game.player1TimeRemaining || 60000) 
             : (game.player2TimeRemaining || 60000);
           
-          // Вычисляем превышение 20 секунд
+          // Вычисляем превышение 15 секунд
           const excessTime = Math.max(0, timeSinceLastMove - baseMoveTime);
           
-          // Оставшееся время на ход: если прошло <= 20 сек, показываем оставшиеся 20 сек, иначе показываем общее время
+          // Оставшееся время на ход: если прошло <= 15 сек, показываем оставшиеся 15 сек, иначе показываем общее время
           const moveTimeRemaining = timeSinceLastMove <= baseMoveTime 
             ? baseMoveTime - timeSinceLastMove 
             : 0;
@@ -234,9 +234,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             continue; // Не ход этого игрока, пропускаем
           }
 
-          // Для игр с ботами - проверяем 20 секунд на ход
+          // Для игр с ботами - проверяем 15 секунд на ход + овертайм (общее время игрока)
           if (currentGame.type === GameType.VS_BOT && currentGame.player2Id === null) {
-            if (currentGame.currentPlayer === 0 && timeSinceLastMoveSeconds > 20) {
+            if (currentGame.currentPlayer === 0 && timeSinceLastMoveSeconds > 15) {
               this.logger.warn(`⏱️ Bot game timeout on disconnect for game ${currentGame.id}, player ${playerId} disconnected, timeSinceLastMove: ${timeSinceLastMoveSeconds.toFixed(2)}s`);
               
               await this.gamesService.resignGame(currentGame.id, playerId);
@@ -261,7 +261,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             ? (currentGame.player1TimeRemaining || 60000) 
             : (currentGame.player2TimeRemaining || 60000);
           
-          const baseMoveTime = 20;
+          const baseMoveTime = 15; // 15 секунд (было 20)
           const excessTime = Math.max(0, timeSinceLastMoveSeconds - baseMoveTime);
           const timeAfterBaseMove = Math.max(0, currentPlayerTimeRemaining - (excessTime * 1000));
           
@@ -333,21 +333,21 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         // Определяем текущего игрока
         const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
         
-        // Для игр с ботами - проверяем 20 секунд на ход + овертайм (общее время игрока)
+        // Для игр с ботами - проверяем 15 секунд на ход + овертайм (общее время игрока)
         // Таймер работает независимо от подключения игрока к WebSocket
         if (game.type === GameType.VS_BOT && game.player2Id === null) {
           if (game.currentPlayer === 0) {
             // Получаем общее время игрока (в миллисекундах)
             const player1TimeRemaining = game.player1TimeRemaining || 60000; // 60 секунд по умолчанию
-            const baseMoveTime = 20; // 20 секунд на ход
+            const baseMoveTime = 15; // 15 секунд на ход (было 20)
             
-            // Вычисляем превышение 20 секунд (овертайм)
+            // Вычисляем превышение 15 секунд (овертайм)
             const excessTime = Math.max(0, timeSinceLastMoveSeconds - baseMoveTime);
             
             // Общее время игрока после вычета превышения (в секундах)
             const totalTimeRemaining = Math.max(0, (player1TimeRemaining / 1000) - excessTime);
             
-            // Проверяем таймаут: либо прошло больше 20 секунд И общее время истекло
+            // Проверяем таймаут: либо прошло больше 15 секунд И общее время истекло
             if (timeSinceLastMoveSeconds > baseMoveTime && totalTimeRemaining <= 0) {
               this.logger.warn(`⏱️ Bot game timeout detected for game ${game.id}, player time expired. Move time: ${timeSinceLastMoveSeconds.toFixed(2)}s, total time remaining: ${totalTimeRemaining.toFixed(2)}s`);
               
@@ -370,7 +370,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
                   reason: 'timeout',
                 });
                 
-                this.logger.log(`✅ Bot game ${game.id} finished due to timeout (20s + overtime), bot won (игрок отключился или не сделал ход)`);
+                this.logger.log(`✅ Bot game ${game.id} finished due to timeout (15s + overtime), bot won (игрок отключился или не сделал ход)`);
               } catch (error) {
                 // Игнорируем ошибки, если игра уже завершена
                 if (error.message && (
@@ -388,16 +388,16 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           continue;
         }
         
-        // Для обычных игр - система контроля времени: 20 секунд на ход, избыток вычитается из общего времени
+        // Для обычных игр - система контроля времени: 15 секунд на ход, избыток вычитается из общего времени
         const currentPlayerTimeRemaining = game.currentPlayer === 0 
           ? (game.player1TimeRemaining || 60000) 
           : (game.player2TimeRemaining || 60000);
         
-        const baseMoveTime = 20; // 20 секунд на ход
+        const baseMoveTime = 15; // 15 секунд на ход (было 20)
         const excessTime = Math.max(0, timeSinceLastMoveSeconds - baseMoveTime);
         const timeAfterBaseMove = Math.max(0, currentPlayerTimeRemaining - (excessTime * 1000));
         
-        // Проверяем, закончилось ли время (если прошло больше 20 сек и общее время <= 0)
+        // Проверяем, закончилось ли время (если прошло больше 15 сек и общее время <= 0)
         const isTimeOut = timeSinceLastMoveSeconds > baseMoveTime && timeAfterBaseMove <= 0;
         
         if (isTimeOut) {
@@ -621,10 +621,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           }
         }
         
-        // Делаем ход бота с задержкой 10 секунд, чтобы игрок мог увидеть кубики и ход бота
+        // Делаем ход бота с задержкой 1 секунда, чтобы игрок мог увидеть кубики и ход бота
         try {
-          // Задержка 10 секунд после броска кубиков, чтобы игрок мог увидеть результат
-          const delay = 10000;
+          // Задержка 1 секунда после броска кубиков, чтобы игрок мог увидеть результат
+          const delay = 1000;
           this.logger.log(`🤖 Bot move delay: ${delay}ms for gameId=${gameId}`);
           await new Promise(resolve => setTimeout(resolve, delay));
           

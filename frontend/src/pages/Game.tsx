@@ -33,14 +33,14 @@ export default function Game() {
   const [opponent, setOpponent] = useState<any>(null)
   const [score, setScore] = useState({ player1: 0, player2: 0 })
   const [gameStatus, setGameStatus] = useState<string>('waiting')
-  const [player1Timer, setPlayer1Timer] = useState<number>(20)
-  const [player2Timer, setPlayer2Timer] = useState<number>(20)
-  const [moveTimer, setMoveTimer] = useState<number>(20) // Таймер на ход (20 секунд)
+  const [player1Timer, setPlayer1Timer] = useState<number>(15)
+  const [player2Timer, setPlayer2Timer] = useState<number>(15)
+  const [moveTimer, setMoveTimer] = useState<number>(15) // Таймер на ход (15 секунд)
   const [totalTimeRemaining, setTotalTimeRemaining] = useState<{ player1: number; player2: number }>({ player1: 60, player2: 60 }) // Общее время каждого игрока (60 секунд)
-  const [isInOvertime, setIsInOvertime] = useState<boolean>(false) // Овертайм (прошло больше 20 секунд)
+  const [isInOvertime, setIsInOvertime] = useState<boolean>(false) // Овертайм (прошло больше 15 секунд)
   const lastTimerUpdateRef = useRef<number>(Date.now()) // Время последнего обновления таймера с сервера
-  const player1TimerRef = useRef<number>(20)
-  const player2TimerRef = useRef<number>(20)
+  const player1TimerRef = useRef<number>(15)
+  const player2TimerRef = useRef<number>(15)
   const totalTimeRemainingRef = useRef<{ player1: number; player2: number }>({ player1: 60, player2: 60 })
   const [pipCounts, setPipCounts] = useState({ player1: 0, player2: 0 })
   const [pipDiff, setPipDiff] = useState<{ player1: number | null; player2: number | null }>({ player1: null, player2: null })
@@ -696,7 +696,7 @@ export default function Game() {
       }
       
       if (isMyTurnNow && !wasMyTurn) {
-        setMoveTimer(20)
+        setMoveTimer(15)
       }
 
       // Если это начало нашего хода и кубиков нет - бросаем их автоматически
@@ -774,14 +774,14 @@ export default function Game() {
       
       // Сбрасываем таймер при смене хода
       if (!isMyTurnNow && wasMyTurn) {
-        setMoveTimer(20)
+        setMoveTimer(15)
         setIsInOvertime(false)
       }
       
       // Если это начало нашего хода - запускаем таймер и бросаем кубики если их нет
       // НО НЕ для sandbox игр - там пользователь сам управляет всем
       if (isMyTurnNow && !wasMyTurn) {
-        setMoveTimer(20)
+        setMoveTimer(15)
         
         if (!formattedDice && data.status === 'in_progress' && data.type !== 'sandbox') {
           // Автоматически бросаем кубики для следующего игрока (как в боте)
@@ -838,14 +838,14 @@ export default function Game() {
     socket.on('timer_update', (data: any) => {
       if (data.gameId === gameId) {
         // Используем данные из сервера
-        const moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 20
+        const moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 15
         const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
         let isOvertime = data.isOvertime || false
         
-        // Если таймер на ход близок к 20 (начало хода), сбрасываем овертайм
+        // Если таймер на ход близок к 15 (начало хода), сбрасываем овертайм
         // Это предотвращает отображение овертайма при первом броске кубиков
-        if (moveTimeRemaining >= 19.5) {
+        if (moveTimeRemaining >= 14.5) {
           isOvertime = false
         }
         
@@ -861,14 +861,14 @@ export default function Game() {
           // Ход игрока 1
           setPlayer1Timer(moveTimeRemaining)
           player1TimerRef.current = moveTimeRemaining
-          setPlayer2Timer(20) // Соперник имеет полное время на ход
-          player2TimerRef.current = 20
+          setPlayer2Timer(15) // Соперник имеет полное время на ход
+          player2TimerRef.current = 15
         } else {
           // Ход игрока 2
           setPlayer2Timer(moveTimeRemaining)
           player2TimerRef.current = moveTimeRemaining
-          setPlayer1Timer(20) // Соперник имеет полное время на ход
-          player1TimerRef.current = 20
+          setPlayer1Timer(15) // Соперник имеет полное время на ход
+          player1TimerRef.current = 15
         }
       }
     })
@@ -1282,7 +1282,7 @@ export default function Game() {
                     const isOvertime = opponentTimer <= 0 || isInOvertime
                     const progress = isOvertime 
                       ? Math.max(0, Math.min(1, opponentTotalTime / 60))
-                      : Math.max(0, Math.min(1, opponentTimer / 20))
+                      : Math.max(0, Math.min(1, opponentTimer / 15))
                     return (
                       <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                         <circle
@@ -1356,7 +1356,7 @@ export default function Game() {
                     const isOvertime = opponentTimer <= 0 || isInOvertime
                     const progress = isOvertime 
                       ? Math.max(0, Math.min(1, opponentTotalTime / 60))
-                      : Math.max(0, Math.min(1, opponentTimer / 20))
+                      : Math.max(0, Math.min(1, opponentTimer / 15))
                     return (
                       <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                         <circle
@@ -1405,7 +1405,7 @@ export default function Game() {
                     const isOvertime = myTimer <= 0 || isInOvertime
                     const progress = isOvertime 
                       ? Math.max(0, Math.min(1, myTotalTime / 60))
-                      : Math.max(0, Math.min(1, myTimer / 20))
+                      : Math.max(0, Math.min(1, myTimer / 15))
                     return (
                       <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                         <circle
