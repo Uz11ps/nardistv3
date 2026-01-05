@@ -79,12 +79,79 @@ export default function BackgammonBoard({
     progress: number;
     startTime: number;
     isServerMove?: boolean; // Флаг для серверных ходов (чтобы не вызывать onMove)
+    isWhite?: boolean; // Цвет анимируемой шашки
   } | null>(null)
   
   // Очередь серверных ходов для последовательной анимации
   const [serverMoveQueue, setServerMoveQueue] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const [completedServerMoves, setCompletedServerMoves] = useState<any[]>([])
   
+  const isPlayer1 = myPlayerId === player1Id
+
+  // Виртуальное состояние доски с учетом локальных ходов (очереди) и завершенных серверных анимаций
+  const virtualGameState = useMemo(() => {
+    if (!gameState?.points) return gameState
+    
+    const points = [...gameState.points]
+    const bar = { ...(gameState.bar || { white: 0, black: 0 }) }
+    const bearOff = { ...(gameState.bearOff || { white: 0, black: 0 }) }
+    
+    const applyStep = (m: any, isWhiteMove: boolean) => {
+      // 1. Убираем шашку из исходной точки
+      if (m.from === 24) bar.white--
+      else if (m.from === 25) bar.black--
+      else if (m.from >= 0 && m.from < 24) {
+        const val = points[m.from]
+        if (val > 0) points[m.from]--
+        else if (val < 0) points[m.from]++
+      }
+      
+      // 2. Добавляем в целевую точку
+      if (m.to === -1 || m.to >= 24) {
+        if (isWhiteMove) bearOff.white++
+        else bearOff.black++
+      } else if (m.to >= 0 && m.to < 24) {
+        const unit = isWhiteMove ? 1 : -1
+        
+        // В коротких нардах можно сбить шашку
+        if (gameMode === 'short' && points[m.to] === -unit) {
+          points[m.to] = unit
+          if (unit === 1) bar.black++
+          else bar.white++
+        } else {
+          points[m.to] += unit
+        }
+      }
+    }
+
+    // Применяем локальные ходы пользователя
+    pendingMoves.forEach(move => {
+      if ((move as any).steps) {
+        (move as any).steps.forEach((s: any) => applyStep(s, isPlayer1))
+      } else {
+        applyStep(move, isPlayer1)
+      }
+    })
+
+    // Применяем уже завершенные серверные ходы из текущей очереди
+    completedServerMoves.forEach(move => {
+      // Определяем цвет шашки бота/другого игрока
+      const isWhiteMove = move.isWhite !== undefined ? move.isWhite : (isPlayer1 ? false : true)
+      if ((move as any).steps) {
+        (move as any).steps.forEach((s: any) => applyStep(s, isWhiteMove))
+      } else {
+        applyStep(move, isWhiteMove)
+      }
+    })
+    
+    return {
+      ...gameState,
+      points,
+      bar,
+      bearOff
+    }
+  }, [gameState, pendingMoves, completedServerMoves, isPlayer1, gameMode])
+
   // Добавление новых серверных ходов в очередь
   useEffect(() => {
     if (serverMoves && serverMoves.length > 0) {
@@ -158,8 +225,6 @@ export default function BackgammonBoard({
       }
     }
   }, [])
-  
-  const isPlayer1 = myPlayerId === player1Id
 
   // Определяем какие скины использовать
   // Доска: разделена на две половины - левая для player1, правая для player2
@@ -257,69 +322,6 @@ export default function BackgammonBoard({
 
   // Скины теперь используют только материалы (цвета), загрузка текстур не требуется
 
-  // Виртуальное состояние доски с учетом локальных ходов (очереди) и завершенных серверных анимаций
-  const virtualGameState = useMemo(() => {
-    if (!gameState?.points) return gameState
-    
-    const points = [...gameState.points]
-    const bar = { ...(gameState.bar || { white: 0, black: 0 }) }
-    const bearOff = { ...(gameState.bearOff || { white: 0, black: 0 }) }
-    
-    const applyStep = (m: any, isWhiteMove: boolean) => {
-      // 1. Убираем шашку из исходной точки
-      if (m.from === 24) bar.white--
-      else if (m.from === 25) bar.black--
-      else if (m.from >= 0 && m.from < 24) {
-        const val = points[m.from]
-        if (val > 0) points[m.from]--
-        else if (val < 0) points[m.from]++
-      }
-      
-      // 2. Добавляем в целевую точку
-      if (m.to === -1 || m.to >= 24) {
-        if (isWhiteMove) bearOff.white++
-        else bearOff.black++
-      } else if (m.to >= 0 && m.to < 24) {
-        const unit = isWhiteMove ? 1 : -1
-        
-        // В коротких нардах можно сбить шашку
-        if (gameMode === 'short' && points[m.to] === -unit) {
-          points[m.to] = unit
-          if (unit === 1) bar.black++
-          else bar.white++
-        } else {
-          points[m.to] += unit
-        }
-      }
-    }
-
-    // Применяем локальные ходы пользователя
-    pendingMoves.forEach(move => {
-      if ((move as any).steps) {
-        (move as any).steps.forEach((s: any) => applyStep(s, isPlayer1))
-      } else {
-        applyStep(move, isPlayer1)
-      }
-    })
-
-    // Применяем уже завершенные серверные ходы из текущей очереди
-    completedServerMoves.forEach(move => {
-      // Определяем цвет шашки бота/другого игрока
-      const isWhiteMove = move.isWhite !== undefined ? move.isWhite : (isPlayer1 ? false : true)
-      if ((move as any).steps) {
-        (move as any).steps.forEach((s: any) => applyStep(s, isWhiteMove))
-      } else {
-        applyStep(move, isWhiteMove)
-      }
-    })
-    
-    return {
-      ...gameState,
-      points,
-      bar,
-      bearOff
-    }
-  }, [gameState, pendingMoves, completedServerMoves, isPlayer1, gameMode])
 
   // Стабилизируем dice для сравнения
   const diceKey = useMemo(() => {
