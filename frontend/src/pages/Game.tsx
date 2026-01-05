@@ -821,10 +821,12 @@ export default function Game() {
       
       // Если это начало нашего хода - запускаем таймер и бросаем кубики если их нет
       // НО НЕ для sandbox игр - там пользователь сам управляет всем
+      // ВАЖНО: Если есть серверные анимации, авто-бросок произойдет в onServerMovesFinished
       if (isMyTurnNow && !wasMyTurn) {
         setMoveTimer(15)
         
-        if (!formattedDice && data.status === 'in_progress' && data.type !== 'sandbox') {
+        const hasServerMoves = data.serverMoves && data.serverMoves.length > 0;
+        if (!formattedDice && data.status === 'in_progress' && data.type !== 'sandbox' && !hasServerMoves) {
           // Автоматически бросаем кубики для следующего игрока (как в боте)
           setTimeout(() => {
             const socket = getSocket()
@@ -1626,6 +1628,16 @@ export default function Game() {
                     setGameState(pending);
                     pendingGameStateRef.current = null;
                     setServerMovesForBoard(undefined);
+
+                    // После завершения анимации хода противника, если сейчас наш ход 
+                    // и кубики еще не брошены - бросаем их автоматически
+                    const isMyTurnNow = pending.canMove;
+                    if (isMyTurnNow && !pending.dice && gameStatus === 'in_progress' && gameInfo?.type !== 'sandbox') {
+                      console.log('🤖 Auto-rolling dice after server animation finished');
+                      setTimeout(() => {
+                        handleRollDice();
+                      }, 500);
+                    }
                   }
                 }}
                 onSandboxCheckerDrop={isSandbox ? async (pointIndex: number, checkerColor: 'white' | 'black') => {
