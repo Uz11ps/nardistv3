@@ -20,7 +20,8 @@ interface MoveAnalysis {
 export interface GameAnalysis {
   gameId: string;
   totalMoves: number;
-  errors: MoveAnalysis[];
+  allMoves: MoveAnalysis[]; // Все ходы
+  errors: MoveAnalysis[]; // Только ошибки
   mistakes: number;
   blunders: number;
   inaccuracies: number;
@@ -74,14 +75,16 @@ export class AnalysisService {
 
     const engine = game.mode === 'short' ? this.backgammonEngine : this.longBackgammonEngine;
     const errors: MoveAnalysis[] = [];
+    const allMovesAnalysis: MoveAnalysis[] = [];
 
     // Анализируем каждый ход
     for (let i = 0; i < moves.length; i++) {
       const move = moves[i];
       const isUserMove = move.playerId === userId;
       
-      if (!isUserMove) continue; // Анализируем только ходы пользователя
-
+      // Даже если это не ход пользователя, мы можем захотеть его показать в общем списке, 
+      // но анализ (ошибки) делаем только для пользователя.
+      
       const gameStateBefore = move.gameStateBefore;
       const gameStateAfter = move.gameStateAfter;
 
@@ -114,27 +117,30 @@ export class AnalysisService {
       if (missedOpportunity > 50) {
         isError = true;
         errorType = 'blunder';
-        errorDescription = 'Серьезная ошибка - упущена большая возможность';
+        errorDescription = 'Грубая ошибка';
       } else if (missedOpportunity > 20) {
         isError = true;
         errorType = 'mistake';
-        errorDescription = 'Ошибка - был доступен более сильный ход';
+        errorDescription = 'Ошибка';
       } else if (missedOpportunity > 5) {
         isError = true;
         errorType = 'inaccuracy';
-        errorDescription = 'Неточность - ход не оптимален';
+        errorDescription = 'Неточность';
       }
 
-      if (isError) {
-        errors.push({
-          moveNumber: move.moveNumber,
-          move,
-          isError: true,
-          errorType,
-          errorDescription,
-          bestMove,
-          scoreChange: missedOpportunity,
-        });
+      const analysis: MoveAnalysis = {
+        moveNumber: move.moveNumber,
+        move,
+        isError,
+        errorType,
+        errorDescription,
+        bestMove,
+        scoreChange: -missedOpportunity, // Показываем как отрицательное число для визуализации упущенного
+      };
+
+      allMovesAnalysis.push(analysis);
+      if (isError && isUserMove) {
+        errors.push(analysis);
       }
     }
 
@@ -144,6 +150,7 @@ export class AnalysisService {
     return {
       gameId,
       totalMoves: moves.length,
+      allMoves: allMovesAnalysis,
       errors,
       mistakes: errors.filter((e) => e.errorType === 'mistake').length,
       blunders: errors.filter((e) => e.errorType === 'blunder').length,

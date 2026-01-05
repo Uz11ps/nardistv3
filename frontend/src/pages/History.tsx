@@ -333,54 +333,96 @@ export default function History() {
       {/* Модальное окно анализа */}
       {analysisData && (
         <div className="modal-overlay" onClick={() => setAnalysisData(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90%', maxHeight: '90vh', overflow: 'auto' }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '95%', maxHeight: '90vh', width: '800px', overflow: 'auto' }}>
             <div className="modal-title">Анализ игры</div>
-            <div className="modal-description">
-              Найдено ошибок: {analysisData.errors.length} 
-              ({analysisData.blunders} грубых, {analysisData.mistakes} ошибок, {analysisData.inaccuracies} неточностей)
-            </div>
             
-            {analysisData.errors.length > 0 && (
-              <div style={{ marginTop: '20px' }}>
-                <div className="card-title" style={{ marginBottom: '12px' }}>Ошибки:</div>
-                {analysisData.errors.slice(0, 10).map((error: any, idx: number) => (
-                  <div key={idx} className="history-error-card" style={{ marginBottom: '8px', padding: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div className="card-title" style={{ fontSize: '14px' }}>
-                          Ход {error.moveNumber}
+            <div className="analysis-stats-header">
+              <div className="analysis-stat-item">
+                <span className="analysis-stat-value" style={{ color: '#E84142' }}>{analysisData.blunders}</span>
+                <span className="analysis-stat-label">Грубых</span>
+              </div>
+              <div className="analysis-stat-item">
+                <span className="analysis-stat-value" style={{ color: '#FF9800' }}>{analysisData.mistakes}</span>
+                <span className="analysis-stat-label">Ошибок</span>
+              </div>
+              <div className="analysis-stat-item">
+                <span className="analysis-stat-value" style={{ color: '#FFD600' }}>{analysisData.inaccuracies}</span>
+                <span className="analysis-stat-label">Неточностей</span>
+              </div>
+              <div className="analysis-stat-item">
+                <span className="analysis-stat-value" style={{ color: '#E0E0E0' }}>{analysisData.totalMoves}</span>
+                <span className="analysis-stat-label">Всего ходов</span>
+              </div>
+            </div>
+
+            <div className="analysis-table-container">
+              <table className="analysis-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Кубы</th>
+                    <th>Ход</th>
+                    <th>Equity / Оценка</th>
+                    <th>Тип</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(analysisData.allMoves || analysisData.errors).map((item: any, idx: number) => (
+                    <tr key={idx} style={item.isError ? { background: 'rgba(232, 65, 66, 0.05)' } : {}}>
+                      <td className="analysis-move-number">{item.moveNumber}</td>
+                      <td className="analysis-dice">
+                        {item.move.dice?.join(', ')}
+                      </td>
+                      <td className="analysis-move-text">
+                        <div style={{ fontWeight: 500 }}>
+                          {item.move.moves?.map((m: any, i: number) => (
+                            <span key={i}>
+                              {m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}
+                              {i < item.move.moves.length - 1 ? ' ' : ''}
+                            </span>
+                          ))}
                         </div>
-                        <div className="card-subtitle" style={{ fontSize: '12px' }}>
-                          {error.errorDescription}
-                        </div>
-                        {error.scoreChange && (
-                          <div style={{ fontSize: '11px', color: '#ff3333', marginTop: '4px' }}>
-                            Упущено: {error.scoreChange} очков
+                        {item.isError && item.bestMove && (
+                          <div className="analysis-best-move">
+                            Best: {item.bestMove.map((m: any, i: number) => (
+                              <span key={i}>
+                                {m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}
+                                {i < item.bestMove.length - 1 ? ' ' : ''}
+                              </span>
+                            ))}
                           </div>
                         )}
-                      </div>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        background: error.errorType === 'blunder' ? '#ff3333' : 
-                                   error.errorType === 'mistake' ? '#ff8833' : '#ffaa33',
-                        color: '#fff'
-                      }}>
-                        {error.errorType === 'blunder' ? 'Грубая' : error.errorType === 'mistake' ? 'Ошибка' : 'Неточность'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                      </td>
+                      <td className={`analysis-equity ${item.scoreChange < 0 ? 'negative' : 'positive'}`}>
+                        {item.scoreChange > 0 ? '+' : ''}{(item.scoreChange / 100).toFixed(3)}
+                      </td>
+                      <td>
+                        {item.isError && (
+                          <span className={`analysis-error-type ${item.errorType}`}>
+                            {item.errorType === 'blunder' ? 'Blunder' : item.errorType === 'mistake' ? 'Mistake' : 'Inaccuracy'}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             
             {analysisData.recommendations && analysisData.recommendations.length > 0 && (
-              <div style={{ marginTop: '20px' }}>
-                <div className="card-title" style={{ marginBottom: '12px' }}>Рекомендации:</div>
+              <div style={{ marginTop: '24px' }}>
+                <div className="card-title" style={{ marginBottom: '12px', fontSize: '14px', color: '#888' }}>Рекомендации:</div>
                 {analysisData.recommendations.map((rec: string, idx: number) => (
-                  <div key={idx} className="history-recommendation-card" style={{ marginBottom: '8px', padding: '12px' }}>
-                    <div className="card-subtitle">• {rec}</div>
+                  <div key={idx} style={{ 
+                    padding: '12px', 
+                    background: 'rgba(255, 255, 255, 0.03)', 
+                    borderRadius: '8px', 
+                    marginBottom: '8px',
+                    fontSize: '13px',
+                    color: '#CCC',
+                    borderLeft: '3px solid #E84142'
+                  }}>
+                    {rec}
                   </div>
                 ))}
               </div>

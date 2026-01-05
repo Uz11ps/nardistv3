@@ -1652,12 +1652,22 @@ export class GamesService {
       throw new BadRequestException('Метод finishBotGameOnTimeout может использоваться только для игр с ботом');
     }
     
-    // Бот побеждает при таймауте игрока
-    game.status = GameStatus.FINISHED;
-    game.winnerId = null; // null означает победу бота
-    game.player1Score = 0;
-    game.player2Score = 1;
+    // Определяем победителя на основе того, чье время истекло
+    if (game.currentPlayer === 0) {
+      // Игрок (белые) проиграл по времени, бот победил
+      game.winnerId = null; // null означает победу бота
+      game.player1Score = 0;
+      game.player2Score = 1;
+      this.logger.log(`⏱️ Игрок (P1) проиграл боту по времени в игре ${gameId}`);
+    } else {
+      // Бот (черные) проиграл по времени, игрок победил
+      game.winnerId = game.player1Id;
+      game.player1Score = 1;
+      game.player2Score = 0;
+      this.logger.log(`⏱️ Бот (P2) проиграл игроку по времени в игре ${gameId}`);
+    }
     
+    game.status = GameStatus.FINISHED;
     const savedGame = await this.gamesRepository.save(game);
     
     // Применяем логику после завершения игры (награды, рейтинги)

@@ -1226,6 +1226,11 @@ export default function Game() {
       navigate('/game/modes')
       return
     }
+    // В sandbox режиме просто выходим без модального окна
+    if (gameInfo?.type === 'sandbox') {
+      navigate('/')
+      return
+    }
     if (gameStatus === 'in_progress' && gameId && gameInfo?.type !== 'vs_bot') {
       setShowExitModal(true)
       return

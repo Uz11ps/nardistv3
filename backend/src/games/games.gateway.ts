@@ -333,56 +333,43 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         // Определяем текущего игрока
         const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
         
-        // Для игр с ботами - проверяем 15 секунд на ход + овертайм (общее время игрока)
-        // Таймер работает независимо от подключения игрока к WebSocket
+        // Для игр с ботами - проверяем таймауты
         if (game.type === GameType.VS_BOT && game.player2Id === null) {
-          if (game.currentPlayer === 0) {
-            // Получаем общее время игрока (в миллисекундах)
-            const player1TimeRemaining = game.player1TimeRemaining || 60000; // 60 секунд по умолчанию
-            const baseMoveTime = 15; // 15 секунд на ход (было 20)
+          // Определяем текущее время (15с на ход + овертайм)
+          const baseMoveTime = 15;
+          const currentPlayer = game.currentPlayer;
+          const playerTimeRemaining = currentPlayer === 0 
+            ? (game.player1TimeRemaining || 60000) 
+            : (game.player2TimeRemaining || 60000);
+          
+          const excessTime = Math.max(0, timeSinceLastMoveSeconds - baseMoveTime);
+          const totalRemaining = Math.max(0, (playerTimeRemaining / 1000) - excessTime);
+
+          if (timeSinceLastMoveSeconds > baseMoveTime && totalRemaining <= 0) {
+            this.logger.warn(`⏱️ Bot game timeout detected for game ${game.id}, player ${currentPlayer} time expired. Move time: ${timeSinceLastMoveSeconds.toFixed(2)}s`);
             
-            // Вычисляем превышение 15 секунд (овертайм)
-            const excessTime = Math.max(0, timeSinceLastMoveSeconds - baseMoveTime);
-            
-            // Общее время игрока после вычета превышения (в секундах)
-            const totalTimeRemaining = Math.max(0, (player1TimeRemaining / 1000) - excessTime);
-            
-            // Проверяем таймаут: либо прошло больше 15 секунд И общее время истекло
-            if (timeSinceLastMoveSeconds > baseMoveTime && totalTimeRemaining <= 0) {
-              this.logger.warn(`⏱️ Bot game timeout detected for game ${game.id}, player time expired. Move time: ${timeSinceLastMoveSeconds.toFixed(2)}s, total time remaining: ${totalTimeRemaining.toFixed(2)}s`);
-              
-              try {
-                const currentGame = await this.gamesService.findOne(game.id);
-                if (currentGame.status === 'finished' || currentGame.status === 'abandoned') {
-                  continue;
-                }
-                
-                // Используем специальный метод для завершения игры с ботом при таймауте
-                const finishedGame = await this.gamesService.finishBotGameOnTimeout(game.id);
-                const gameState = await this.gamesService.getGameState(game.id);
-                
-                // Уведомляем всех участников игры (если они подключены)
-                this.server.to(`game:${game.id}`).emit('game_finished', {
-                  winnerId: finishedGame.winnerId,
-                  player1Score: finishedGame.player1Score,
-                  player2Score: finishedGame.player2Score,
-                  gameState,
-                  reason: 'timeout',
-                });
-                
-                this.logger.log(`✅ Bot game ${game.id} finished due to timeout (15s + overtime), bot won (игрок отключился или не сделал ход)`);
-              } catch (error) {
-                // Игнорируем ошибки, если игра уже завершена
-                if (error.message && (
-                  error.message.includes('уже завершена') ||
-                  error.message.includes('не в статусе IN_PROGRESS') ||
-                  error.message.includes('finished') ||
-                  error.message.includes('abandoned')
-                )) {
-                  continue;
-                }
-                this.logger.error(`❌ Error handling bot game timeout for game ${game.id}:`, error);
+            try {
+              const currentGame = await this.gamesService.findOne(game.id);
+              if (currentGame.status === 'finished' || currentGame.status === 'abandoned') {
+                continue;
               }
+              
+              // Завершаем игру. ЕслиcurrentPlayer === 0, выиграл бот. Если 1, выиграл игрок.
+              // Метод finishBotGameOnTimeout умеет это делать (он заставляет текущего игрока сдаться)
+              const finishedGame = await this.gamesService.finishBotGameOnTimeout(game.id);
+              const gameState = await this.gamesService.getGameState(game.id);
+              
+              this.server.to(`game:${game.id}`).emit('game_finished', {
+                winnerId: finishedGame.winnerId,
+                player1Score: finishedGame.player1Score,
+                player2Score: finishedGame.player2Score,
+                gameState,
+                reason: 'timeout',
+              });
+              
+              this.logger.log(`✅ Bot game ${game.id} finished due to timeout, winner: ${finishedGame.winnerId}`);
+            } catch (error) {
+              this.logger.error(`❌ Error handling bot game timeout for game ${game.id}:`, error);
             }
           }
           continue;
