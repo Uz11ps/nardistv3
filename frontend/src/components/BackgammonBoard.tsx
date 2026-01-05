@@ -51,6 +51,8 @@ export default function BackgammonBoard({
   isSandbox = false,
   onSandboxCheckerDrop,
   onSandboxCheckerRemove,
+  serverMoves,
+  onServerMovesFinished,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
