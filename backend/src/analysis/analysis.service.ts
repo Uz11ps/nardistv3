@@ -280,10 +280,6 @@ export class AnalysisService {
   /**
    * Генерация рекомендаций на основе ошибок
    */
-
-  /**
-   * Генерация рекомендаций на основе ошибок
-   */
   private generateRecommendations(errors: MoveAnalysis[], mode: string): string[] {
     const recommendations: string[] = [];
 
