@@ -110,19 +110,17 @@ export class LongBackgammonEngine {
     const player = state.currentPlayer;
     const headIndex = player === 0 ? this.WHITE_HEAD : this.BLACK_HEAD;
     
-    // If not moving from head, rule doesn't apply
+    // Если мы не ходим с головы, правило не применяется
     if (from !== headIndex) {
       return true;
     }
     
     const movedThisTurn = state.movesFromHead || 0;
     
-    // Check for the first move exception
-    // Правило Минспорта 20.3: первым ходом игры при выпадении кушей 3-3, 4-4, 6-6 можно снять 2 шашки
+    // Проверка исключения для первого хода
     if (isFirstMoveOfGame) {
-      // Пытаемся определить, был ли это дубль 3, 4 или 6
-      // Так как мы в процессе генерации ходов, смотрим на исходные кубики
       const originalDice = state.dice || [];
+      // Проверяем, является ли это дублем 3, 4 или 6
       const isDoubles = originalDice.length >= 2 && originalDice.every(d => d === originalDice[0]);
       const isSpecificDoubles = isDoubles && (originalDice[0] === 3 || originalDice[0] === 4 || originalDice[0] === 6);
       
@@ -131,7 +129,7 @@ export class LongBackgammonEngine {
       }
     }
     
-    // Normal rule: only 1 checker per turn from head
+    // Обычное правило: только 1 шашка за ход с головы
     return movedThisTurn === 0;
   }
 
@@ -504,48 +502,48 @@ export class LongBackgammonEngine {
         return;
       }
 
-      const player = currentState.currentPlayer;
+    const player = currentState.currentPlayer;
+    
+    // Находим все возможные ходы с доски
+    let foundAnyMove = false;
+    
+    const triedFromPoints = new Set<number>();
+    for (let from = 0; from < this.BOARD_SIZE; from++) {
+      const pointValue = currentState.points[from];
+      const hasMyCheckers = player === 0 ? pointValue > 0 : pointValue < 0;
       
-      // Find all possible moves from board
-      let foundAnyMove = false;
-      
-      for (let from = 0; from < this.BOARD_SIZE; from++) {
-        const pointValue = currentState.points[from];
-        const hasMyCheckers = player === 0 ? pointValue > 0 : pointValue < 0;
-        
-        if (!hasMyCheckers) continue;
+      if (!hasMyCheckers) continue;
+      if (triedFromPoints.has(from)) continue;
+      triedFromPoints.add(from);
 
-        // Для дублей используем ВСЕ кубики по порядку (не пропускаем дубликаты)
-        // Для обычных ходов можем оптимизировать
-        const isRemainingDoubles = remainingDice.length >= 2 && remainingDice.every(d => d === remainingDice[0]);
-        const triedDice = isRemainingDoubles ? null : new Set<number>();
+      const triedDice = new Set<number>();
+      for (let i = 0; i < remainingDice.length; i++) {
+        const die = remainingDice[i];
+        // Пропускаем одинаковые кубики для одного и того же состояния, 
+        // чтобы избежать комбинаторного взрыва при дублях.
+        if (triedDice.has(die)) continue;
+        triedDice.add(die);
         
-        for (let i = 0; i < remainingDice.length; i++) {
-          const die = remainingDice[i];
-          // Для дублей НЕ пропускаем дубликаты - используем каждый кубик
-          if (!isRemainingDoubles && triedDice && triedDice.has(die)) continue;
-          if (!isRemainingDoubles && triedDice) triedDice.add(die);
-          
-          // Пробуем обычный ход
-          const toPoint = this.calculateTargetPoint(player, from, die);
-          
-          // Проверяем на вынос
-          const distanceTraveled = player === 0 
-            ? (from - this.WHITE_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE
-            : (from - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
-          
-          const isBearingOffMove = (distanceTraveled + die) >= this.BOARD_SIZE;
-          const to = isBearingOffMove ? -1 : toPoint;
+        // Пробуем обычный ход
+        const toPoint = this.calculateTargetPoint(player, from, die);
+        
+        // Проверяем на вынос
+        const distanceTraveled = player === 0 
+          ? (from - this.WHITE_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE
+          : (from - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
+        
+        const isBearingOffMove = (distanceTraveled + die) >= this.BOARD_SIZE;
+        const to = isBearingOffMove ? -1 : toPoint;
 
-          if (this.validateMove(currentState, from, to, die, isFirstMoveOfGame)) {
-            foundAnyMove = true;
-            const newState = this.applyMove(currentState, from, to, die);
-            const newDice = [...remainingDice];
-            newDice.splice(i, 1);
-            generateMoves(newState, newDice, [...currentMoves, { from, to, die }]);
-          }
+        if (this.validateMove(currentState, from, to, die, isFirstMoveOfGame)) {
+          foundAnyMove = true;
+          const newState = this.applyMove(currentState, from, to, die);
+          const newDice = [...remainingDice];
+          newDice.splice(i, 1);
+          generateMoves(newState, newDice, [...currentMoves, { from, to, die }]);
         }
       }
+    }
       
       if (!foundAnyMove && currentMoves.length > 0) {
         moves.push([...currentMoves]);
