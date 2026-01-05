@@ -42,6 +42,7 @@ export interface GameAnalysis {
   blunders: number;
   inaccuracies: number;
   recommendations: string[];
+  gameResult?: 'win' | 'loss';
 }
 
 @Injectable()
@@ -106,7 +107,12 @@ export class AnalysisService {
 
       // Находим все возможные ходы для этой позиции, чтобы показать альтернативы
       const allPossibleMovesSequences = engine.getAllValidMoves(gameStateBefore, move.dice);
-      const evaluatedAlternatives = allPossibleMovesSequences.map(mSeq => {
+      const evaluatedAlternatives: Array<{
+        moves: Array<{ from: number; to: number; die: number }>;
+        equity: number;
+        isCurrent?: boolean;
+        diff?: number;
+      }> = allPossibleMovesSequences.map(mSeq => {
         let testState = { ...gameStateBefore };
         for (const m of mSeq) {
           testState = engine.applyMove(testState, m.from, m.to, m.die);

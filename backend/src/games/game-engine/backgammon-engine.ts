@@ -430,6 +430,8 @@ export class BackgammonEngine {
     }
 
     return moves;
+  }
+
   getAllValidMoves(state: BoardState, dice: number[]): Array<Array<{ from: number; to: number; die: number }>> {
     if (dice.length === 0) return [];
 
