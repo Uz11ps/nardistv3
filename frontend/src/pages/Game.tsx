@@ -237,6 +237,19 @@ export default function Game() {
   const myPlayer = isPlayer1 ? gameInfo?.player1 : gameInfo?.player2
   const opponentPlayer = isPlayer1 ? gameInfo?.player2 : gameInfo?.player1
 
+  // Функция автолуза
+  const handleAutoMove = useCallback(async () => {
+    if (!gameId) return
+
+    console.log('⏱️ Таймер истек! Оформляем техническое поражение...')
+    try {
+      await apiClient.post(`/games/${gameId}/resign`)
+      setGameStatus('finished')
+    } catch (error) {
+      console.error('❌ Ошибка при автоматической сдаче:', error)
+    }
+  }, [gameId])
+
   // Локальный таймер для плавного обновления UI
   useEffect(() => {
     if (gameStatus !== 'in_progress' || isSandbox) {
@@ -304,19 +317,6 @@ export default function Game() {
       }
     }
   }, [gameStatus, gameState?.currentPlayer, isPlayer1, isSandbox, handleAutoMove])
-
-  // Функция автолуза
-  const handleAutoMove = useCallback(async () => {
-    if (!gameId) return
-
-    console.log('⏱️ Таймер истек! Оформляем техническое поражение...')
-    try {
-      await apiClient.post(`/games/${gameId}/resign`)
-      setGameStatus('finished')
-    } catch (error) {
-      console.error('❌ Ошибка при автоматической сдаче:', error)
-    }
-  }, [gameId])
   
   const loadGame = async () => {
     try {
