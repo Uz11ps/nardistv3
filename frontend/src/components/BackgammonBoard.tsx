@@ -83,11 +83,13 @@ export default function BackgammonBoard({
   
   // Очередь серверных ходов для последовательной анимации
   const [serverMoveQueue, setServerMoveQueue] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
+  const [completedServerMoves, setCompletedServerMoves] = useState<any[]>([])
   
   // Добавление новых серверных ходов в очередь
   useEffect(() => {
     if (serverMoves && serverMoves.length > 0) {
       console.log('🤖 Received server moves for animation:', serverMoves)
+      setCompletedServerMoves([]) // Сбрасываем завершенные ходы при новой пачке
       setServerMoveQueue(prev => [...prev, ...serverMoves])
     }
   }, [serverMoves])
@@ -104,8 +106,20 @@ export default function BackgammonBoard({
       const nextMove = serverMoveQueue[0]
       console.log('🤖 Animating next server move:', nextMove)
       
+      // Определяем цвет шашки для анимации
+      let isWhite = false
+      if (nextMove.from === 24) isWhite = true
+      else if (nextMove.from === 25) isWhite = false
+      else if (nextMove.from >= 0 && nextMove.from < 24) {
+        isWhite = (virtualGameState?.points[nextMove.from] || 0) > 0
+      } else {
+        // Если from неизвестен (например, bear-off), используем логику по currentPlayer
+        isWhite = isPlayer1 ? false : true
+      }
+
       setAnimatingChecker({
         ...nextMove,
+        isWhite,
         progress: 0,
         startTime: performance.now(),
         isServerMove: true
@@ -114,7 +128,7 @@ export default function BackgammonBoard({
       // Удаляем из очереди
       setServerMoveQueue(prev => prev.slice(1))
     }
-  }, [animatingChecker, serverMoveQueue])
+  }, [animatingChecker, serverMoveQueue, virtualGameState, isPlayer1])
   
   // Защита от случайных тройных кликов
   const clickHistoryRef = useRef<Array<{ pointIndex: number; timestamp: number }>>([])
@@ -243,8 +257,7 @@ export default function BackgammonBoard({
 
   // Скины теперь используют только материалы (цвета), загрузка текстур не требуется
 
-  // Виртуальное состояние доски с учетом локальных ходов (очереди)
-  // Виртуальное состояние доски с учетом локальных ходов (очереди)
+  // Виртуальное состояние доски с учетом локальных ходов (очереди) и завершенных серверных анимаций
   const virtualGameState = useMemo(() => {
     if (!gameState?.points) return gameState
     
@@ -252,39 +265,51 @@ export default function BackgammonBoard({
     const bar = { ...(gameState.bar || { white: 0, black: 0 }) }
     const bearOff = { ...(gameState.bearOff || { white: 0, black: 0 }) }
     
-    pendingMoves.forEach(move => {
-      const applyStep = (m: any) => {
-        // 1. Убираем шашку из исходной точки
-        if (m.from === 24) bar.white--
-        else if (m.from === 25) bar.black--
-        else {
-          const val = points[m.from]
-          if (val > 0) points[m.from]--
-          else if (val < 0) points[m.from]++
-        }
+    const applyStep = (m: any, isWhiteMove: boolean) => {
+      // 1. Убираем шашку из исходной точки
+      if (m.from === 24) bar.white--
+      else if (m.from === 25) bar.black--
+      else if (m.from >= 0 && m.from < 24) {
+        const val = points[m.from]
+        if (val > 0) points[m.from]--
+        else if (val < 0) points[m.from]++
+      }
+      
+      // 2. Добавляем в целевую точку
+      if (m.to === -1 || m.to >= 24) {
+        if (isWhiteMove) bearOff.white++
+        else bearOff.black++
+      } else if (m.to >= 0 && m.to < 24) {
+        const unit = isWhiteMove ? 1 : -1
         
-        // 2. Добавляем в целевую точку
-        if (m.to === -1) {
-          if (isPlayer1) bearOff.white++
-          else bearOff.black++
-        } else if (m.to >= 0 && m.to < 24) {
-          const unit = isPlayer1 ? 1 : -1
-          
-          // В коротких нардах можно сбить шашку
-          if (gameMode === 'short' && points[m.to] === -unit) {
-            points[m.to] = unit
-            if (unit === 1) bar.black++
-            else bar.white++
-          } else {
-            points[m.to] += unit
-          }
+        // В коротких нардах можно сбить шашку
+        if (gameMode === 'short' && points[m.to] === -unit) {
+          points[m.to] = unit
+          if (unit === 1) bar.black++
+          else bar.white++
+        } else {
+          points[m.to] += unit
         }
       }
+    }
 
+    // Применяем локальные ходы пользователя
+    pendingMoves.forEach(move => {
       if ((move as any).steps) {
-        (move as any).steps.forEach((s: any) => applyStep(s))
+        (move as any).steps.forEach((s: any) => applyStep(s, isPlayer1))
       } else {
-        applyStep(move)
+        applyStep(move, isPlayer1)
+      }
+    })
+
+    // Применяем уже завершенные серверные ходы из текущей очереди
+    completedServerMoves.forEach(move => {
+      // Определяем цвет шашки бота/другого игрока
+      const isWhiteMove = move.isWhite !== undefined ? move.isWhite : (isPlayer1 ? false : true)
+      if ((move as any).steps) {
+        (move as any).steps.forEach((s: any) => applyStep(s, isWhiteMove))
+      } else {
+        applyStep(move, isWhiteMove)
       }
     })
     
@@ -294,7 +319,7 @@ export default function BackgammonBoard({
       bar,
       bearOff
     }
-  }, [gameState, pendingMoves, isPlayer1, gameMode])
+  }, [gameState, pendingMoves, completedServerMoves, isPlayer1, gameMode])
 
   // Стабилизируем dice для сравнения
   const diceKey = useMemo(() => {
@@ -936,7 +961,7 @@ export default function BackgammonBoard({
       const checkerSize = Math.min(pW * 0.85, pH * 0.15)
       
       let toX, toY, toTop;
-      if (animatingChecker.to === -1) {
+      if (animatingChecker.to === -1 || animatingChecker.to >= 24) {
         // Координаты контейнера выноса
         const leftContainerX = 0
         const rightContainerX = width - bearOffWidth
@@ -951,13 +976,17 @@ export default function BackgammonBoard({
         toTop = coords.isTopRow
       }
 
+      // Определяем цвет шашки по исходной точке
+      const isWhiteChecker = animatingChecker.isWhite !== undefined 
+        ? animatingChecker.isWhite 
+        : (animatingChecker.from === 24 ? true : (animatingChecker.from === 25 ? false : (virtualGameState.points[animatingChecker.from] > 0)))
+      const isMyChecker = (isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker)
+
       // Начальная позиция Y (с учетом стопки)
       let fromCheckerCount = 0
-      if (animatingChecker.from === 24 || animatingChecker.from === 25) {
-        fromCheckerCount = isPlayer1 ? virtualGameState.bar.white : virtualGameState.bar.black
-      } else {
-        fromCheckerCount = Math.abs(virtualGameState.points[animatingChecker.from])
-      }
+      if (animatingChecker.from === 24) fromCheckerCount = virtualGameState.bar.white
+      else if (animatingChecker.from === 25) fromCheckerCount = virtualGameState.bar.black
+      else fromCheckerCount = Math.abs(virtualGameState.points[animatingChecker.from])
       
       const fromOverlap = fromCheckerCount > 5 ? (checkerSize * 0.8) : checkerSize
       const startY = fromTop 
@@ -966,7 +995,7 @@ export default function BackgammonBoard({
 
       // Конечная позиция Y (куда приземлится)
       let endY;
-      if (animatingChecker.to === -1) {
+      if (animatingChecker.to === -1 || animatingChecker.to >= 24) {
         endY = toY
       } else {
         const toCheckerCount = Math.abs(virtualGameState.points[animatingChecker.to])
@@ -978,17 +1007,6 @@ export default function BackgammonBoard({
 
       const curX = fromX + (toX - fromX) * animatingChecker.progress
       const curY = startY + (endY - startY) * animatingChecker.progress
-
-      // Определяем цвет шашки по исходной точке
-      let fromPointValue = 0
-      if (animatingChecker.from === 24 || animatingChecker.from === 25) {
-        // Из бара - определяем по игроку
-        fromPointValue = isPlayer1 ? 1 : -1
-      } else {
-        fromPointValue = virtualGameState.points[animatingChecker.from] || 0
-      }
-      const isWhiteChecker = fromPointValue > 0
-      const isMyChecker = (isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker)
       
       drawChecker(curX, curY, checkerSize, isWhiteChecker, isMyChecker)
     }
@@ -1165,7 +1183,7 @@ export default function BackgammonBoard({
 
     let animationFrame: number
     // Увеличиваем длительность анимации для более плавного движения (особенно для бота)
-    const duration = 800 // мс (было 600)
+    const duration = 700 // мс (было 800)
 
     const animate = (time: number) => {
       const elapsed = time - animatingChecker.startTime
@@ -1180,19 +1198,31 @@ export default function BackgammonBoard({
         setAnimatingChecker(prev => prev ? { ...prev, progress } : null)
         animationFrame = requestAnimationFrame(animate)
       } else {
-        // Анимация завершена - сначала сбрасываем выбор
+        // Анимация завершена
+        const finishedChecker = animatingChecker
+        
+        // Сначала сбрасываем выбор
         setSelectedPoint(null)
         setValidTargetPoints(new Set())
         setShowBearOffButton(null)
         
-        // Вызываем onMove только если это НЕ серверный ход (т.е. локальный ход пользователя)
-        // Серверные ходы уже применены на бэкенде
-        if (!animatingChecker.isServerMove) {
-          onMove(animatingChecker.from, animatingChecker.to, animatingChecker.die, animatingChecker.steps)
-        } else if (serverMoveQueue.length === 0 && onServerMovesFinished) {
-          // Если это был последний серверный ход из очереди, уведомляем родителя
-          console.log('🤖 All server moves finished')
-          onServerMovesFinished()
+        // Если это серверный ход, добавляем его в список завершенных
+        if (finishedChecker.isServerMove) {
+          setCompletedServerMoves(prev => [...prev, finishedChecker])
+          
+          // Если это был последний серверный ход из очереди
+          if (serverMoveQueue.length === 0 && onServerMovesFinished) {
+            console.log('🤖 All server moves finished')
+            // Небольшая задержка перед финальным обновлением gameState,
+            // чтобы пользователь увидел шашку в конечной точке
+            setTimeout(() => {
+              onServerMovesFinished()
+              setCompletedServerMoves([]) // Очищаем после применения gameState
+            }, 300)
+          }
+        } else {
+          // Локальный ход пользователя
+          onMove(finishedChecker.from, finishedChecker.to, finishedChecker.die, finishedChecker.steps)
         }
         
         setAnimatingChecker(null)
