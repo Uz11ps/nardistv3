@@ -321,12 +321,13 @@ export default function BackgammonBoard({
     // Проверяем наличие кубиков
     const hasDice = diceKey !== null
     
+    // Сбрасываем текущие возможные ходы при изменении pendingMoves или dice
+    // Это предотвращает клики по старым (невалидным) ходам до получения новых от сервера
+    setPossibleMoves([])
+    setSelectedPoint(null)
+    setValidTargetPoints(new Set())
+    
     if (!gameId || !isMyTurn || !canMove || !hasDice) {
-      // Не сбрасываем подсветку если это просто обновление состояния, а не смена хода
-      if (!isMyTurn || !canMove) {
-        setPossibleMoves([])
-        // Не сбрасываем highlightedPoints, так как они не используются для автоматической подсветки
-      }
       prevPendingMovesRef.current = pendingMovesKey
       return
     }

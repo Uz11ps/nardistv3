@@ -730,6 +730,7 @@ export default function Game() {
     })
 
     socket.on('move_made', (data: any) => {
+      setIsProcessingConfirm(false)
       const diceData = data.gameState?.dice
       const isP1 = data.player1Id === user?.id
       const canMove = data.currentPlayer === (isP1 ? 0 : 1)
@@ -1024,6 +1025,12 @@ export default function Game() {
       ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2])
       : []
     
+    // Если кубиков нет, ничего не делаем (возможно, ход уже завершен или обрабатывается)
+    if (diceArray.length === 0) {
+      console.warn('⚠️ handleMove вызван, но кубики отсутствуют в gameState');
+      return;
+    }
+    
     // Проверяем, является ли это дублем (4 одинаковых кубика)
     // При дубле разрешаем все 4 хода сразу без принудительного подтверждения между ними
     const isDoubles = diceArray.length === 4 && diceArray.every(d => d === diceArray[0])
@@ -1050,7 +1057,7 @@ export default function Game() {
         const used = (currentDiceUsage.get(step.die) || 0) + steps.filter((s, idx) => s.die === step.die && steps.indexOf(s) < steps.indexOf(step)).length;
         const avail = diceArray.filter(d => d === step.die).length;
         if (used >= avail) {
-          alert(`Кубик ${step.die} из комбинации уже использован`);
+          console.warn(`⚠️ Кубик ${step.die} из комбинации уже использован. Доступно: ${avail}, Использовано: ${used}`);
           return;
         }
       }
@@ -1075,7 +1082,7 @@ export default function Game() {
         const availableCount = diceArray.filter(d => d === die).length
         
         if (usedCount >= availableCount) {
-          alert(`Кубик ${die} уже использован максимальное количество раз`)
+          console.warn(`⚠️ Кубик ${die} уже использован максимальное количество раз. Доступно: ${availableCount}, Использовано: ${usedCount}`);
           return
         }
       }
@@ -1167,8 +1174,10 @@ export default function Game() {
     }
   }
 
+  const [isProcessingConfirm, setIsProcessingConfirm] = useState(false)
+
   const handleConfirm = async () => {
-    if (!gameId) return
+    if (!gameId || isProcessingConfirm) return
 
     if (gameStatus === 'waiting' && !isBotGame && gameInfo?.type === 'vs_player') return
 
@@ -1222,17 +1231,22 @@ export default function Game() {
         alert('Ошибка подключения. Перезагрузите страницу.')
         return
       }
+      setIsProcessingConfirm(true)
       try {
-        setMoveTimer(30)
+        setMoveTimer(15)
         
         const onMoveError = (err: any) => {
           console.error('Move rejected:', err)
           // Просто откатываем ходы без показа ошибки
           setPendingMoves([])
+          setIsProcessingConfirm(false)
           socket.off('error', onMoveError)
         }
         socket.on('error', onMoveError)
-        setTimeout(() => socket.off('error', onMoveError), 3000)
+        setTimeout(() => {
+          socket.off('error', onMoveError)
+          setIsProcessingConfirm(false)
+        }, 3000)
         
         socket.emit('make_move', { gameId, moves: pendingMoves })
         // Не очищаем pendingMoves здесь - дождемся события move_made, которое обновит gameState
@@ -1240,6 +1254,7 @@ export default function Game() {
       } catch (error) {
         // Просто откатываем ходы без показа ошибки
         setPendingMoves([])
+        setIsProcessingConfirm(false)
         console.error('Ошибка отправки ходов:', error)
       }
     }
