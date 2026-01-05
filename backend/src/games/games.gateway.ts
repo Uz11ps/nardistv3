@@ -523,8 +523,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       const gameState = await this.gamesService.getGameState(data.gameId);
       this.logger.log(`✅ Emitting move_made event for gameId=${data.gameId}`);
       this.server.to(`game:${data.gameId}`).emit('move_made', gameState);
-      // Также отправляем game_state для гарантированного обновления доски
-      this.server.to(`game:${data.gameId}`).emit('game_state', gameState);
       
       // Отправляем обновление таймера сразу после хода
       await this.sendTimerUpdateForGame(data.gameId);
@@ -629,8 +627,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
               serverMoves: botMoves // Добавляем список ходов для анимации
             };
             this.server.to(`game:${gameId}`).emit('move_made', moveMadeData);
-            // Также отправляем game_state для гарантированного обновления доски
-            this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
           } else {
             this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
           }
@@ -650,9 +646,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             if (finalGame.status === 'finished') return;
             
             if (finalGame.currentPlayer === 0) {
-              this.logger.log(`👤 Player's turn after bot move, emitting game_state for gameId=${gameId}`);
-              const playerGameState = await this.gamesService.getGameState(gameId);
-              this.server.to(`game:${gameId}`).emit('game_state', playerGameState);
+              this.logger.log(`👤 Player's turn after bot move for gameId=${gameId}`);
+              // Не отправляем game_state повторно, т.к. он уже ушел в move_made
             } else {
               // Если все еще ход бота (например, в длинных нардах не все кубики использованы),
               // но ходов больше нет - makeMove уже должен был переключить ход.

@@ -151,6 +151,7 @@ export default function Game() {
   const offsetConfirmedRef = useRef<boolean>(false)
   const [serverMovesForBoard, setServerMovesForBoard] = useState<any[] | undefined>(undefined)
   const pendingGameStateRef = useRef<any>(null)
+  const isServerAnimatingRef = useRef<boolean>(false)
 
   // Синхронизируем рефы с состоянием
   useEffect(() => {
@@ -622,6 +623,13 @@ export default function Game() {
     socket.emit('join_game', { gameId })
 
     socket.on('game_state', (data: any) => {
+      // Если идет анимация серверных ходов, игнорируем входящее состояние,
+      // чтобы избежать дублирования шашек. Состояние применится в onServerMovesFinished.
+      if (isServerAnimatingRef.current) {
+        console.log('🤖 Ignoring game_state update during server animation')
+        return
+      }
+
       const diceData = data.gameState?.dice
       const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
         ? { die1: diceData[0], die2: diceData[1] } 
@@ -804,6 +812,7 @@ export default function Game() {
       // откладываем обновление gameState до завершения анимации
       if (data.serverMoves && data.serverMoves.length > 0) {
         console.log('🤖 Saving pending gameState and starting animation:', data.serverMoves);
+        isServerAnimatingRef.current = true;
         pendingGameStateRef.current = nextGameState;
         setServerMovesForBoard(data.serverMoves);
       } else {
@@ -920,6 +929,7 @@ export default function Game() {
       // Если пришли серверные ходы (последний ход игры), анимируем их
       if (data.serverMoves && data.serverMoves.length > 0) {
         console.log('🤖 Game finished with moves, starting animation');
+        isServerAnimatingRef.current = true;
         setServerMovesForBoard(data.serverMoves);
         // Запоминаем финальное состояние для применения после анимации
         pendingGameStateRef.current = {
@@ -1616,6 +1626,7 @@ export default function Game() {
                 isSandbox={isSandbox}
                 serverMoves={serverMovesForBoard}
                 onServerMovesFinished={() => {
+                  isServerAnimatingRef.current = false;
                   if (pendingGameStateRef.current) {
                     console.log('🤖 Applying pending gameState after animation');
                     const pending = pendingGameStateRef.current;

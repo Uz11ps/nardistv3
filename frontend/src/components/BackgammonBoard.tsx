@@ -1218,8 +1218,10 @@ export default function BackgammonBoard({
             // Небольшая задержка перед финальным обновлением gameState,
             // чтобы пользователь увидел шашку в конечной точке
             setTimeout(() => {
+              // Сначала очищаем локальные завершенные ходы, чтобы избежать дублирования
+              // при обновлении основного gameState из пропсов
+              setCompletedServerMoves([]) 
               onServerMovesFinished()
-              setCompletedServerMoves([]) // Очищаем после применения gameState
             }, 300)
           }
         } else {
