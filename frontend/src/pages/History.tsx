@@ -343,15 +343,13 @@ export default function History() {
                     <button className="history-action-btn history-action-btn-replay" onClick={() => handleReplay(game)}>
                       Реплей
                     </button>
-                    {hasPremium && (
-                      <button 
-                        className="history-action-btn history-action-btn-analyze"
-                        onClick={() => handleAnalyze(game.id)}
-                        disabled={loadingAnalysis}
-                      >
-                        Анализ
-                      </button>
-                    )}
+                    <button 
+                      className="history-action-btn history-action-btn-analyze"
+                      onClick={() => handleAnalyze(game.id)}
+                      disabled={loadingAnalysis}
+                    >
+                      Анализ
+                    </button>
                   </div>
                 </div>
               </div>

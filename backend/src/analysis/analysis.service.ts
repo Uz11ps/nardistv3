@@ -77,11 +77,13 @@ export class AnalysisService {
       throw new ForbiddenException('Нет доступа к этой игре');
     }
 
-    // Проверяем премиум подписку
+    // Проверяем премиум подписку (отключено для теста по запросу пользователя)
+    /*
     const hasPremium = await this.subscriptionService.hasActiveSubscription(userId);
     if (!hasPremium) {
       throw new ForbiddenException('Анализ игр доступен только для премиум пользователей');
     }
+    */
 
     // Загружаем все ходы
     const moves = await this.movesRepository.find({
