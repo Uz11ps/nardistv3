@@ -7,6 +7,14 @@ import { SubscriptionService } from '../subscription/subscription.service';
 import { BackgammonEngine } from '../games/game-engine/backgammon-engine';
 import { LongBackgammonEngine } from '../games/game-engine/long-backgammon-engine';
 
+interface WinProbabilities {
+  win: number;
+  winG: number;
+  winBG: number;
+  loseG: number;
+  loseBG: number;
+}
+
 interface MoveAnalysis {
   moveNumber: number;
   move: GameMove;
@@ -14,7 +22,15 @@ interface MoveAnalysis {
   errorType?: 'blunder' | 'mistake' | 'inaccuracy';
   errorDescription?: string;
   bestMove?: Array<{ from: number; to: number; die: number }>;
-  scoreChange?: number; // Изменение оценочной позиции
+  scoreChange: number;
+  equity?: number;
+  winProbabilities?: WinProbabilities;
+  alternatives?: Array<{
+    moves: Array<{ from: number; to: number; die: number }>;
+    equity: number;
+    isCurrent?: boolean;
+    diff?: number;
+  }>;
 }
 
 export interface GameAnalysis {
@@ -88,26 +104,62 @@ export class AnalysisService {
       const gameStateBefore = move.gameStateBefore;
       const gameStateAfter = move.gameStateAfter;
 
+      // Находим все возможные ходы для этой позиции, чтобы показать альтернативы
+      const allPossibleMovesSequences = engine.getAllValidMoves(gameStateBefore, move.dice);
+      const evaluatedAlternatives = allPossibleMovesSequences.map(mSeq => {
+        let testState = { ...gameStateBefore };
+        for (const m of mSeq) {
+          testState = engine.applyMove(testState, m.from, m.to, m.die);
+        }
+        const score = this.evaluatePosition(engine, testState, userId === game.player1Id ? 0 : 1);
+        return {
+          moves: mSeq,
+          equity: score / 100,
+        };
+      }).sort((a, b) => b.equity - a.equity).slice(0, 6);
+
       // Оцениваем позицию до и после хода
       const scoreBefore = this.evaluatePosition(engine, gameStateBefore, userId === game.player1Id ? 0 : 1);
       const scoreAfter = this.evaluatePosition(engine, gameStateAfter, userId === game.player1Id ? 0 : 1);
-
-      // Находим лучший ход из возможных
-      const bestMove = this.findBestMove(engine, gameStateBefore, move.dice);
-
-      // Вычисляем оценку лучшего хода
-      let bestScore = scoreBefore;
-      if (bestMove) {
-        // Симулируем лучший ход
-        let testState = { ...gameStateBefore };
-        for (const m of bestMove) {
-          testState = engine.applyMove(testState, m.from, m.to, m.die);
-        }
-        bestScore = this.evaluatePosition(engine, testState, userId === game.player1Id ? 0 : 1);
+      
+      const equity = scoreAfter / 100;
+      const bestAlternative = evaluatedAlternatives[0];
+      const bestScore = bestAlternative ? bestAlternative.equity * 100 : scoreBefore;
+      
+      // Добавляем текущий ход в альтернативы если его там нет (для сравнения)
+      const currentMoveInAlts = evaluatedAlternatives.find(alt => 
+        JSON.stringify(alt.moves) === JSON.stringify(move.moves)
+      );
+      
+      if (!currentMoveInAlts) {
+        evaluatedAlternatives.push({
+          moves: move.moves as any,
+          equity: equity,
+          isCurrent: true
+        });
+        evaluatedAlternatives.sort((a, b) => b.equity - a.equity);
+      } else {
+        currentMoveInAlts.isCurrent = true;
       }
 
-      const scoreChange = scoreAfter - scoreBefore;
+      // Расчитываем разницу (diff) для каждой альтернативы относительно лучшей
+      const maxEquity = evaluatedAlternatives[0]?.equity || 0;
+      evaluatedAlternatives.forEach(alt => {
+        alt.diff = alt.equity - maxEquity;
+      });
+
       const missedOpportunity = bestScore - scoreAfter;
+
+      // Рассчитываем вероятности на основе equity (упрощенно)
+      // Equity обычно от -1 до +1 (или больше при гаммонах)
+      const winProb = Math.min(0.999, Math.max(0.001, 0.5 + (equity / 2)));
+      const winProbabilities: WinProbabilities = {
+        win: winProb,
+        winG: Math.max(0, winProb * 0.2), // Примерная вероятность гаммона
+        winBG: Math.max(0, winProb * 0.01), // Примерная вероятность бэкгаммона
+        loseG: Math.max(0, (1 - winProb) * 0.15),
+        loseBG: Math.max(0, (1 - winProb) * 0.005),
+      };
 
       // Определяем тип ошибки
       let isError = false;
@@ -134,8 +186,11 @@ export class AnalysisService {
         isError,
         errorType,
         errorDescription,
-        bestMove,
-        scoreChange: -missedOpportunity, // Показываем как отрицательное число для визуализации упущенного
+        bestMove: bestAlternative?.moves,
+        scoreChange: -missedOpportunity,
+        equity,
+        winProbabilities,
+        alternatives: evaluatedAlternatives,
       };
 
       allMovesAnalysis.push(analysis);
@@ -156,6 +211,7 @@ export class AnalysisService {
       blunders: errors.filter((e) => e.errorType === 'blunder').length,
       inaccuracies: errors.filter((e) => e.errorType === 'inaccuracy').length,
       recommendations,
+      gameResult: game.winnerId === userId ? 'win' : 'loss',
     };
   }
 
@@ -216,111 +272,8 @@ export class AnalysisService {
   }
 
   /**
-   * Поиск лучшего хода (упрощенный алгоритм)
+   * Генерация рекомендаций на основе ошибок
    */
-  private findBestMove(engine: any, gameState: any, dice: number[]): Array<{ from: number; to: number; die: number }> | null {
-    // Упрощенный алгоритм: пробуем все возможные ходы и выбираем лучший
-    // В реальности нужен более сложный алгоритм (мини-макс, альфа-бета и т.д.)
-
-    const allMoves = this.generateAllPossibleMoves(engine, gameState, dice);
-    if (allMoves.length === 0) return null;
-
-    let bestMove: Array<{ from: number; to: number; die: number }> | null = null;
-    let bestScore = -Infinity;
-
-    for (const moves of allMoves) {
-      let testState = { ...gameState };
-      try {
-        for (const move of moves) {
-          if (!engine.validateMove(testState, move.from, move.to, move.die)) {
-            throw new Error('Invalid move');
-          }
-          testState = engine.applyMove(testState, move.from, move.to, move.die);
-        }
-
-        const score = this.evaluatePosition(engine, testState, gameState.currentPlayer);
-        if (score > bestScore) {
-          bestScore = score;
-          bestMove = moves;
-        }
-      } catch (e) {
-        // Пропускаем невалидные ходы
-        continue;
-      }
-    }
-
-    return bestMove;
-  }
-
-  /**
-   * Генерация всех возможных ходов (упрощенная версия)
-   */
-  private generateAllPossibleMoves(engine: any, gameState: any, dice: number[]): Array<Array<{ from: number; to: number; die: number }>> {
-    // Упрощенная генерация - в реальности нужно генерировать все валидные комбинации
-    const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
-    
-    const points = gameState.points || [];
-    const currentPlayer = gameState.currentPlayer;
-    const bar = gameState.bar || [0, 0];
-
-    // Если есть шашки на баре, сначала нужно их выводить
-    if (bar[currentPlayer] > 0) {
-      for (const die of dice) {
-        const enterPoint = currentPlayer === 0 ? (24 - die) : (die - 1);
-        if (enterPoint >= 0 && enterPoint < 24) {
-          const pointValue = points[enterPoint] || 0;
-          // Можно войти, если точка пустая или содержит только свои шашки, или содержит только 1 чужую
-          if (currentPlayer === 0) {
-            if (pointValue >= 0 || pointValue === -1) {
-              moves.push([{ from: -1, to: enterPoint, die }]); // -1 означает бар
-            }
-          } else {
-            if (pointValue <= 0 || pointValue === 1) {
-              moves.push([{ from: -1, to: enterPoint, die }]);
-            }
-          }
-        }
-      }
-      return moves; // Если есть шашки на баре, сначала только их
-    }
-
-    // Генерируем ходы с доски
-    for (let from = 0; from < points.length && from < 24; from++) {
-      const pointValue = points[from] || 0;
-      
-      let hasPlayerChecker = false;
-      if (currentPlayer === 0 && pointValue > 0) {
-        hasPlayerChecker = true;
-      } else if (currentPlayer === 1 && pointValue < 0) {
-        hasPlayerChecker = true;
-      }
-
-      if (!hasPlayerChecker) continue;
-
-      for (const die of dice) {
-        const to = currentPlayer === 0 ? from + die : from - die;
-        if (to >= 0 && to < 24) {
-          // Проверяем валидность через engine
-          try {
-            if (engine.validateMove(gameState, from, to, die)) {
-              moves.push([{ from, to, die }]);
-            }
-          } catch (e) {
-            // Пропускаем невалидные ходы
-          }
-        } else if (to >= 24 || to < 0) {
-          // Вывод шашек (bear off)
-          if (currentPlayer === 0 && from >= 18) {
-            moves.push([{ from, to: 24, die }]);
-          } else if (currentPlayer === 1 && from <= 5) {
-            moves.push([{ from, to: -1, die }]);
-          }
-        }
-      }
-    }
-
-    return moves.slice(0, 20); // Ограничиваем для производительности
-  }
 
   /**
    * Генерация рекомендаций на основе ошибок

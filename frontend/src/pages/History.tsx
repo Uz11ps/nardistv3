@@ -39,6 +39,7 @@ export default function History() {
   const [analysisData, setAnalysisData] = useState<any>(null)
   const [loadingAnalysis, setLoadingAnalysis] = useState(false)
   const [hasPremium, setHasPremium] = useState(false)
+  const [selectedAnalysisMoveIndex, setSelectedAnalysisMoveIndex] = useState<number | null>(null)
 
   useEffect(() => {
     loadHistory()
@@ -57,6 +58,9 @@ export default function History() {
   const handleAnalyze = async (gameId: string) => {
     try {
       setLoadingAnalysis(true)
+      const game = games.find(g => g.id === gameId);
+      if (game) setSelectedGame(game);
+      
       const response = await apiClient.get(`/analysis/game/${gameId}`)
       setAnalysisData(response.data)
     } catch (error: any) {
@@ -222,6 +226,32 @@ export default function History() {
   }
 
 
+  const handleExportMAT = () => {
+    if (!analysisData || !selectedGame) return;
+    
+    let mat = `"; [Site "NardGammon"]\n`;
+    mat += `; [Variation "${selectedGame.mode === 'long' ? 'LongNarde' : 'ShortNarde'}"]\n`;
+    mat += `; [Match ID "${selectedGame.id}"]\n`;
+    mat += `; [Player 1 "${user?.username || 'Player 1'}"]\n`;
+    mat += `; [Player 2 "${selectedGame.opponent.username || 'Bot'}"]\n`;
+    mat += `; [Result "${selectedGame.score.player1}-${selectedGame.score.player2}"]\n\n`;
+    
+    analysisData.allMoves.forEach((item: any, idx: number) => {
+      if (idx % 2 === 0) mat += `${Math.floor(idx / 2) + 1}) `;
+      mat += `(${item.move.dice?.join('')}) `;
+      mat += item.move.moves?.map((m: any) => `${m.from === -1 ? 'bar' : m.from}/${m.to === -1 || m.to >= 24 ? 'off' : m.to}`).join(' ') || 'no move';
+      mat += (idx % 2 === 0) ? ' ' : '\n';
+    });
+    
+    const blob = new Blob([mat], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `game_${selectedGame.id}.mat`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <PageLayout title="История игр" showBack={true}>
       <div className="history-content">
@@ -332,107 +362,137 @@ export default function History() {
 
       {/* Модальное окно анализа */}
       {analysisData && (
-        <div className="modal-overlay" onClick={() => setAnalysisData(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '95%', maxHeight: '90vh', width: '800px', overflow: 'auto' }}>
-            <div className="modal-title">Анализ игры</div>
-            
-            <div className="analysis-stats-header">
-              <div className="analysis-stat-item">
-                <span className="analysis-stat-value" style={{ color: '#E84142' }}>{analysisData.blunders}</span>
-                <span className="analysis-stat-label">Грубых</span>
-              </div>
-              <div className="analysis-stat-item">
-                <span className="analysis-stat-value" style={{ color: '#FF9800' }}>{analysisData.mistakes}</span>
-                <span className="analysis-stat-label">Ошибок</span>
-              </div>
-              <div className="analysis-stat-item">
-                <span className="analysis-stat-value" style={{ color: '#FFD600' }}>{analysisData.inaccuracies}</span>
-                <span className="analysis-stat-label">Неточностей</span>
-              </div>
-              <div className="analysis-stat-item">
-                <span className="analysis-stat-value" style={{ color: '#E0E0E0' }}>{analysisData.totalMoves}</span>
-                <span className="analysis-stat-label">Всего ходов</span>
+        <div className="modal-overlay" onClick={() => { setAnalysisData(null); setSelectedAnalysisMoveIndex(null); }}>
+          <div className="modal analysis-modal-v2" onClick={(e) => e.stopPropagation()}>
+            <div className="analysis-header-v2">
+              <div className="analysis-title-row">
+                <h2>Analysis</h2>
+                <div className="analysis-icons">
+                  <span className="analysis-icon" onClick={handleExportMAT} title="Скачать MAT">⬇️</span>
+                  <span className="analysis-icon" onClick={() => handleAnalyze(selectedGame!.id)}>🔄</span>
+                  <span className="analysis-icon">📚</span>
+                  <span className="analysis-icon balance">⚖️</span>
+                </div>
+                <div className="analysis-game-selector">
+                  Game 1 ▾
+                </div>
               </div>
             </div>
 
-            <div className="analysis-table-container">
-              <table className="analysis-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Кубы</th>
-                    <th>Ход</th>
-                    <th>Equity / Оценка</th>
-                    <th>Тип</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(analysisData.allMoves || analysisData.errors).map((item: any, idx: number) => (
-                    <tr key={idx} style={item.isError ? { background: 'rgba(232, 65, 66, 0.05)' } : {}}>
-                      <td className="analysis-move-number">{item.moveNumber}</td>
-                      <td className="analysis-dice">
-                        {item.move.dice?.join(', ')}
-                      </td>
-                      <td className="analysis-move-text">
-                        <div style={{ fontWeight: 500 }}>
-                          {item.move.moves?.map((m: any, i: number) => (
-                            <span key={i}>
-                              {m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}
-                              {i < item.move.moves.length - 1 ? ' ' : ''}
-                            </span>
+            <div className="analysis-main-content">
+              {/* История ходов в стиле MAT */}
+              <div className="analysis-moves-grid">
+                {analysisData.allMoves.map((item: any, idx: number) => {
+                  // Показываем по 2 хода в строке (как в MAT формате)
+                  if (idx % 2 !== 0) return null;
+                  const move1 = item;
+                  const move2 = analysisData.allMoves[idx + 1];
+                  
+                  return (
+                    <div key={idx} className="analysis-move-row-mat">
+                      <div className="move-num">{Math.floor(idx / 2) + 1})</div>
+                      <div 
+                        className={`move-item ${selectedAnalysisMoveIndex === idx ? 'selected' : ''} ${move1.isError ? 'error-' + move1.errorType : ''}`}
+                        onClick={() => setSelectedAnalysisMoveIndex(idx)}
+                      >
+                        <span className="move-dice">({move1.move.dice?.join('')})</span>
+                        <span className="move-text">
+                          {move1.move.moves?.map((m: any, i: number) => (
+                            <span key={i}>{m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}{i < move1.move.moves.length - 1 ? ' ' : ''}</span>
+                          )) || 'no move'}
+                        </span>
+                      </div>
+                      {move2 && (
+                        <div 
+                          className={`move-item ${selectedAnalysisMoveIndex === idx + 1 ? 'selected' : ''} ${move2.isError ? 'error-' + move2.errorType : ''}`}
+                          onClick={() => setSelectedAnalysisMoveIndex(idx + 1)}
+                        >
+                          <span className="move-dice">({move2.move.dice?.join('')})</span>
+                          <span className="move-text">
+                            {move2.move.moves?.map((m: any, i: number) => (
+                              <span key={i}>{m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}{i < move2.move.moves.length - 1 ? ' ' : ''}</span>
+                            )) || 'no move'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Детали выбранного хода */}
+              {selectedAnalysisMoveIndex !== null && (
+                <div className="analysis-move-details-v2">
+                  {(() => {
+                    const item = analysisData.allMoves[selectedAnalysisMoveIndex];
+                    const probs = item.winProbabilities || { win: 0.5, winG: 0, winBG: 0, loseG: 0, loseBG: 0 };
+                    
+                    return (
+                      <>
+                        <div className="probs-table">
+                          <div className="prob-col"><span>Win</span><strong>{probs.win.toFixed(3)}</strong></div>
+                          <div className="prob-col"><span>Win G</span><strong>{probs.winG.toFixed(3)}</strong></div>
+                          <div className="prob-col"><span>Win BG</span><strong>{probs.winBG.toFixed(3)}</strong></div>
+                          <div className="prob-col"><span>Lose G</span><strong>{probs.loseG.toFixed(3)}</strong></div>
+                          <div className="prob-col"><span>Lose BG</span><strong>{probs.loseBG.toFixed(3)}</strong></div>
+                          <div className="prob-col equity"><span>Equity</span><strong>{item.equity?.toFixed(3)}</strong></div>
+                        </div>
+
+                        <div className="analysis-actions-v2">
+                          <button className="analysis-tab-btn active">Move</button>
+                          <button className="analysis-tab-btn">Cube</button>
+                          <div className="analysis-action-icons">
+                            <span className="action-icon">🤖</span>
+                            <span className="action-icon">⭐</span>
+                          </div>
+                        </div>
+
+                        <div className="alternatives-table-v2">
+                          {item.alternatives?.map((alt: any, aIdx: number) => (
+                            <div key={aIdx} className={`alt-row ${alt.isCurrent ? 'current' : ''}`}>
+                              <div className="alt-move">
+                                <span className="alt-dice">({item.move.dice?.join('')})</span>
+                                {alt.moves?.length > 0 ? alt.moves.map((m: any, i: number) => (
+                                  <span key={i}>{m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}{i < alt.moves.length - 1 ? ' ' : ''}</span>
+                                )) : 'no move'}
+                              </div>
+                              <div className="alt-equity">
+                                {alt.equity.toFixed(3)} ({alt.diff > 0 ? '+' : ''}{alt.diff.toFixed(3)})
+                              </div>
+                            </div>
                           ))}
                         </div>
-                        {item.isError && item.bestMove && (
-                          <div className="analysis-best-move">
-                            Best: {item.bestMove.map((m: any, i: number) => (
-                              <span key={i}>
-                                {m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}
-                                {i < item.bestMove.length - 1 ? ' ' : ''}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td className={`analysis-equity ${item.scoreChange < 0 ? 'negative' : 'positive'}`}>
-                        {item.scoreChange > 0 ? '+' : ''}{(item.scoreChange / 100).toFixed(3)}
-                      </td>
-                      <td>
-                        {item.isError && (
-                          <span className={`analysis-error-type ${item.errorType}`}>
-                            {item.errorType === 'blunder' ? 'Blunder' : item.errorType === 'mistake' ? 'Mistake' : 'Inaccuracy'}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            {analysisData.recommendations && analysisData.recommendations.length > 0 && (
-              <div style={{ marginTop: '24px' }}>
-                <div className="card-title" style={{ marginBottom: '12px', fontSize: '14px', color: '#888' }}>Рекомендации:</div>
-                {analysisData.recommendations.map((rec: string, idx: number) => (
-                  <div key={idx} style={{ 
-                    padding: '12px', 
-                    background: 'rgba(255, 255, 255, 0.03)', 
-                    borderRadius: '8px', 
-                    marginBottom: '8px',
-                    fontSize: '13px',
-                    color: '#CCC',
-                    borderLeft: '3px solid #E84142'
-                  }}>
-                    {rec}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+              
+              {!selectedAnalysisMoveIndex && (
+                <div className="analysis-summary-v2">
+                  <div className="summary-title">Результат игры: {analysisData.gameResult === 'win' ? 'Победа' : 'Поражение'}</div>
+                  <div className="summary-stats">
+                    <div className="summary-stat"><span>Грубых:</span> <strong style={{ color: '#E84142' }}>{analysisData.blunders}</strong></div>
+                    <div className="summary-stat"><span>Ошибок:</span> <strong style={{ color: '#FF9800' }}>{analysisData.mistakes}</strong></div>
+                    <div className="summary-stat"><span>Неточностей:</span> <strong style={{ color: '#FFD600' }}>{analysisData.inaccuracies}</strong></div>
                   </div>
-                ))}
-              </div>
-            )}
-            
-            <div className="modal-actions" style={{ marginTop: '24px' }}>
+                  {analysisData.recommendations?.length > 0 && (
+                    <div className="summary-recommendations">
+                      <h4>Рекомендации:</h4>
+                      <ul>
+                        {analysisData.recommendations.map((r: string, i: number) => <li key={i}>{r}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions" style={{ padding: '16px' }}>
               <button 
                 className="history-modal-close-btn"
-                onClick={() => setAnalysisData(null)}
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#3a3a3a', color: '#FFF', border: 'none', cursor: 'pointer', fontFamily: '"SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: '16px', fontWeight: 600 }}
+                onClick={() => { setAnalysisData(null); setSelectedAnalysisMoveIndex(null); }}
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#3a3a3a', color: '#FFF', border: 'none', cursor: 'pointer', fontWeight: 600 }}
               >
                 Закрыть
               </button>

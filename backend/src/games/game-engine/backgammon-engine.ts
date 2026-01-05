@@ -430,6 +430,83 @@ export class BackgammonEngine {
     }
 
     return moves;
+  getAllValidMoves(state: BoardState, dice: number[]): Array<Array<{ from: number; to: number; die: number }>> {
+    if (dice.length === 0) return [];
+
+    const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
+    
+    const generateMoves = (
+      currentState: BoardState,
+      remainingDice: number[],
+      currentMoves: Array<{ from: number; to: number; die: number }>,
+    ): void => {
+      if (remainingDice.length === 0) {
+        if (currentMoves.length > 0) {
+          moves.push([...currentMoves]);
+        }
+        return;
+      }
+
+      const player = currentState.currentPlayer;
+      let foundAnyMove = false;
+
+      // Try entering from bar first
+      if (currentState.bar[player] > 0) {
+        const triedDice = new Set<number>();
+        for (let i = 0; i < remainingDice.length; i++) {
+          const die = remainingDice[i];
+          if (triedDice.has(die)) continue;
+          triedDice.add(die);
+
+          const enterPoint = player === 0 ? die - 1 : 24 - die;
+          if (this.validateMove(currentState, -1, enterPoint, die)) {
+            foundAnyMove = true;
+            const newState = this.applyMove(currentState, -1, enterPoint, die);
+            const newDice = [...remainingDice];
+            newDice.splice(i, 1);
+            generateMoves(newState, newDice, [...currentMoves, { from: -1, to: enterPoint, die }]);
+          }
+        }
+      } else {
+        // Normal board moves
+        const triedFromPoints = new Set<number>();
+        for (let from = 0; from < this.BOARD_SIZE; from++) {
+          if ((player === 0 && currentState.points[from] <= 0) || (player === 1 && currentState.points[from] >= 0)) continue;
+          if (triedFromPoints.has(from)) continue;
+          triedFromPoints.add(from);
+
+          const triedDice = new Set<number>();
+          for (let i = 0; i < remainingDice.length; i++) {
+            const die = remainingDice[i];
+            if (triedDice.has(die)) continue;
+            triedDice.add(die);
+
+            const to = this.calculateTargetPoint(player, from, die);
+            // Handle bearing off index
+            const actualTo = (player === 0 && to >= 24) ? 24 : (player === 1 && to < 0) ? -1 : to;
+
+            if (this.validateMove(currentState, from, actualTo, die)) {
+              foundAnyMove = true;
+              const newState = this.applyMove(currentState, from, actualTo, die);
+              const newDice = [...remainingDice];
+              newDice.splice(i, 1);
+              generateMoves(newState, newDice, [...currentMoves, { from, to: actualTo, die }]);
+            }
+          }
+        }
+      }
+
+      if (!foundAnyMove && currentMoves.length > 0) {
+        moves.push([...currentMoves]);
+      }
+    };
+
+    generateMoves(state, dice, []);
+    
+    if (moves.length === 0) return [[]];
+
+    const maxLength = Math.max(...moves.map((m) => m.length));
+    return moves.filter((m) => m.length === maxLength);
   }
 }
 
