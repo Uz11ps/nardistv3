@@ -27,6 +27,8 @@ interface BackgammonBoardProps {
   isSandbox?: boolean
   onSandboxCheckerDrop?: (pointIndex: number, checkerColor: 'white' | 'black') => void
   onSandboxCheckerRemove?: (pointIndex: number) => void
+  serverMoves?: Array<{ from: number; to: number; die: number; steps?: any[] }>
+  onServerMovesFinished?: () => void
 }
 
 export default function BackgammonBoard({
@@ -74,7 +76,43 @@ export default function BackgammonBoard({
     steps?: any[];
     progress: number;
     startTime: number;
+    isServerMove?: boolean; // Флаг для серверных ходов (чтобы не вызывать onMove)
   } | null>(null)
+  
+  // Очередь серверных ходов для последовательной анимации
+  const [serverMoveQueue, setServerMoveQueue] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
+  
+  // Добавление новых серверных ходов в очередь
+  useEffect(() => {
+    if (serverMoves && serverMoves.length > 0) {
+      console.log('🤖 Received server moves for animation:', serverMoves)
+      setServerMoveQueue(prev => [...prev, ...serverMoves])
+    }
+  }, [serverMoves])
+
+  // Сброс очереди при смене игры
+  useEffect(() => {
+    setServerMoveQueue([])
+    setAnimatingChecker(null)
+  }, [gameId])
+
+  // Запуск анимации из очереди
+  useEffect(() => {
+    if (!animatingChecker && serverMoveQueue.length > 0) {
+      const nextMove = serverMoveQueue[0]
+      console.log('🤖 Animating next server move:', nextMove)
+      
+      setAnimatingChecker({
+        ...nextMove,
+        progress: 0,
+        startTime: performance.now(),
+        isServerMove: true
+      })
+      
+      // Удаляем из очереди
+      setServerMoveQueue(prev => prev.slice(1))
+    }
+  }, [animatingChecker, serverMoveQueue])
   
   // Защита от случайных тройных кликов
   const clickHistoryRef = useRef<Array<{ pointIndex: number; timestamp: number }>>([])
@@ -1139,11 +1177,21 @@ export default function BackgammonBoard({
         setAnimatingChecker(prev => prev ? { ...prev, progress } : null)
         animationFrame = requestAnimationFrame(animate)
       } else {
-        // Анимация завершена - сначала сбрасываем выбор, потом вызываем onMove
+        // Анимация завершена - сначала сбрасываем выбор
         setSelectedPoint(null)
         setValidTargetPoints(new Set())
         setShowBearOffButton(null)
-        onMove(animatingChecker.from, animatingChecker.to, animatingChecker.die, animatingChecker.steps)
+        
+        // Вызываем onMove только если это НЕ серверный ход (т.е. локальный ход пользователя)
+        // Серверные ходы уже применены на бэкенде
+        if (!animatingChecker.isServerMove) {
+          onMove(animatingChecker.from, animatingChecker.to, animatingChecker.die, animatingChecker.steps)
+        } else if (serverMoveQueue.length === 0 && onServerMovesFinished) {
+          // Если это был последний серверный ход из очереди, уведомляем родителя
+          console.log('🤖 All server moves finished')
+          onServerMovesFinished()
+        }
+        
         setAnimatingChecker(null)
       }
     }

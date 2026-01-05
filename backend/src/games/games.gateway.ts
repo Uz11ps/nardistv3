@@ -632,8 +632,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           const gameStateAfterMove = await this.gamesService.getGameState(gameId);
           
           // Emit move_made event (или просто game_state если ходов не было)
+          // ВАЖНО: Передаем botMoves для анимации на фронтенде
           if (botMoves.length > 0) {
-            this.server.to(`game:${gameId}`).emit('move_made', gameStateAfterMove);
+            const moveMadeData = {
+              ...gameStateAfterMove,
+              serverMoves: botMoves // Добавляем список ходов для анимации
+            };
+            this.server.to(`game:${gameId}`).emit('move_made', moveMadeData);
             // Также отправляем game_state для гарантированного обновления доски
             this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
           } else {
@@ -647,6 +652,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
               player1Score: botMoveResult.player1Score,
               player2Score: botMoveResult.player2Score,
               gameState: gameStateAfterMove,
+              serverMoves: botMoves, // Добавляем ходы даже при завершении игры
             });
           } else {
             // After bot move, check if it's still bot's turn or player's turn

@@ -149,6 +149,8 @@ export default function Game() {
   const showOffsetModalRef = useRef<boolean>(false)
   const [offsetConfirmed, setOffsetConfirmed] = useState<boolean>(false)
   const offsetConfirmedRef = useRef<boolean>(false)
+  const [serverMovesForBoard, setServerMovesForBoard] = useState<any[] | undefined>(undefined)
+  const pendingGameStateRef = useRef<any>(null)
 
   // Синхронизируем рефы с состоянием
   useEffect(() => {
@@ -713,7 +715,18 @@ export default function Game() {
 
     socket.on('move_made', (data: any) => {
       const diceData = data.gameState?.dice
-      const canMove = data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
+      const isP1 = data.player1Id === user?.id
+      const canMove = data.currentPlayer === (isP1 ? 0 : 1)
+      
+      // ВАЖНО: Если пришли серверные ходы, передаем их доске для анимации
+      // Но только если это НЕ наш ход (наши ходы анимируются локально)
+      if (data.serverMoves && data.currentPlayer !== (isP1 ? 0 : 1)) {
+        console.log('🤖 Setting server moves for board animation:', data.serverMoves)
+        setServerMovesForBoard(data.serverMoves)
+        
+        // Сбрасываем их через небольшую задержку, чтобы prop change сработал
+        setTimeout(() => setServerMovesForBoard(undefined), 100)
+      }
       
       // ВАЖНО: Всегда очищаем pendingMoves при получении move_made,
       // т.к. ходы уже применены на сервере и приходят в обновленном gameState
@@ -758,7 +771,7 @@ export default function Game() {
         ? [...data.gameState.points] 
         : []
       
-      setGameState({
+      const nextGameState = {
         points,
         bar,
         bearOff,
@@ -768,7 +781,18 @@ export default function Game() {
         verificationSalt: data.verificationSalt,
         p1Rolls: data.p1Rolls,
         p2Rolls: data.p2Rolls,
-      })
+      };
+
+      // Если есть серверные ходы (ход бота или другого игрока), 
+      // откладываем обновление gameState до завершения анимации
+      if (data.serverMoves && data.serverMoves.length > 0) {
+        console.log('🤖 Saving pending gameState and starting animation:', data.serverMoves);
+        pendingGameStateRef.current = nextGameState;
+        setServerMovesForBoard(data.serverMoves);
+      } else {
+        setGameState(nextGameState);
+      }
+
       setGameStatus(data.status || 'in_progress')
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
       
@@ -874,8 +898,25 @@ export default function Game() {
     })
 
     socket.on('game_finished', (data: any) => {
-      setGameStatus('finished')
-      setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+      // Если пришли серверные ходы (последний ход игры), анимируем их
+      if (data.serverMoves && data.serverMoves.length > 0) {
+        console.log('🤖 Game finished with moves, starting animation');
+        setServerMovesForBoard(data.serverMoves);
+        // Запоминаем финальное состояние для применения после анимации
+        pendingGameStateRef.current = {
+          ...(data.gameState || {}),
+          status: 'finished',
+          currentPlayer: data.winnerId === (data.player1Id || gameInfo?.player1Id) ? 0 : 1,
+          canMove: false,
+          player1Score: data.player1Score,
+          player2Score: data.player2Score
+        };
+        // Устанавливаем счет сразу, чтобы он обновился в UI
+        setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 });
+      } else {
+        setGameStatus('finished')
+        setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+      }
     })
 
     const matchmakingSocket = getMatchmakingSocket()
@@ -1546,6 +1587,22 @@ export default function Game() {
                 player1Name={gameInfo?.player1?.nickname || gameInfo?.player1?.username}
                 player2Name={gameInfo?.player2?.nickname || gameInfo?.player2?.username || 'Бот'}
                 isSandbox={isSandbox}
+                serverMoves={serverMovesForBoard}
+                onServerMovesFinished={() => {
+                  if (pendingGameStateRef.current) {
+                    console.log('🤖 Applying pending gameState after animation');
+                    const pending = pendingGameStateRef.current;
+                    
+                    // Если это было финальное состояние игры (есть статус finished)
+                    if (pending.status === 'finished' || gameStatus === 'finished') {
+                      setGameStatus('finished');
+                    }
+                    
+                    setGameState(pending);
+                    pendingGameStateRef.current = null;
+                    setServerMovesForBoard(undefined);
+                  }
+                }}
                 onSandboxCheckerDrop={isSandbox ? async (pointIndex: number, checkerColor: 'white' | 'black') => {
                   if (!gameId) return
                   try {
