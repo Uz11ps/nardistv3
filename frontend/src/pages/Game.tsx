@@ -231,9 +231,15 @@ export default function Game() {
     totalTimeRemainingRef.current = totalTimeRemaining
   }, [totalTimeRemaining])
 
+  const isPlayer1 = gameInfo?.player1Id === user?.id
+  const isSandbox = gameInfo?.type === 'sandbox'
+  const isMyTurn = (gameState?.canMove || isSandbox) && gameStatus === 'in_progress'
+  const myPlayer = isPlayer1 ? gameInfo?.player1 : gameInfo?.player2
+  const opponentPlayer = isPlayer1 ? gameInfo?.player2 : gameInfo?.player1
+
   // Локальный таймер для плавного обновления UI
   useEffect(() => {
-    if (gameStatus !== 'in_progress') {
+    if (gameStatus !== 'in_progress' || isSandbox) {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current)
         timerIntervalRef.current = null
@@ -261,6 +267,11 @@ export default function Game() {
           const newTotal = Math.max(0, totalTimeRemainingRef.current.player1 - deltaSeconds)
           setTotalTimeRemaining(prev => ({ ...prev, player1: newTotal }))
           totalTimeRemainingRef.current.player1 = newTotal // Обновляем ref
+          
+          // Если мое время закончилось - оформляем поражение локально для скорости реакции
+          if (newTotal === 0 && isPlayer1 && gameStatus === 'in_progress') {
+            handleAutoMove()
+          }
         }
       } else if (gameState?.currentPlayer === 1) {
         // Ход игрока 2
@@ -277,6 +288,11 @@ export default function Game() {
           const newTotal = Math.max(0, totalTimeRemainingRef.current.player2 - deltaSeconds)
           setTotalTimeRemaining(prev => ({ ...prev, player2: newTotal }))
           totalTimeRemainingRef.current.player2 = newTotal // Обновляем ref
+          
+          // Если мое время закончилось - оформляем поражение локально для скорости реакции
+          if (newTotal === 0 && !isPlayer1 && gameStatus === 'in_progress') {
+            handleAutoMove()
+          }
         }
       }
     }, 100) // Обновляем каждые 100мс для плавности
@@ -287,10 +303,10 @@ export default function Game() {
         timerIntervalRef.current = null
       }
     }
-  }, [gameStatus, gameState?.currentPlayer])
+  }, [gameStatus, gameState?.currentPlayer, isPlayer1, isSandbox, handleAutoMove])
 
   // Функция автолуза
-  const handleAutoMove = async () => {
+  const handleAutoMove = useCallback(async () => {
     if (!gameId) return
 
     console.log('⏱️ Таймер истек! Оформляем техническое поражение...')
@@ -300,7 +316,7 @@ export default function Game() {
     } catch (error) {
       console.error('❌ Ошибка при автоматической сдаче:', error)
     }
-  }
+  }, [gameId])
   
   const loadGame = async () => {
     try {
@@ -1240,12 +1256,6 @@ export default function Game() {
       </div>
     )
   }
-
-  const isPlayer1 = gameInfo.player1Id === user?.id
-  const isSandbox = gameInfo?.type === 'sandbox'
-  const isMyTurn = (gameState?.canMove || isSandbox) && gameStatus === 'in_progress'
-  const myPlayer = isPlayer1 ? gameInfo.player1 : gameInfo.player2
-  const opponentPlayer = isPlayer1 ? gameInfo.player2 : gameInfo.player1
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)

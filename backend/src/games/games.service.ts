@@ -1556,6 +1556,16 @@ export class GamesService {
   /**
    * Сдача игры игроком
    */
+  async updatePlayerTotalTime(gameId: string, playerIndex: number, newTimeMs: number): Promise<void> {
+    const game = await this.findOne(gameId);
+    if (playerIndex === 0) {
+      game.player1TimeRemaining = newTimeMs;
+    } else {
+      game.player2TimeRemaining = newTimeMs;
+    }
+    await this.gamesRepository.save(game);
+  }
+
   async resignGame(gameId: string, playerId: string): Promise<Game> {
     const game = await this.findOne(gameId);
 
@@ -1603,15 +1613,16 @@ export class GamesService {
     // Если игра в статусе IN_PROGRESS - засчитываем поражение выходящему игроку
     if (game.status === GameStatus.IN_PROGRESS) {
       // Определяем победителя (противник сдавшегося игрока)
-      const winnerId = game.player1Id === playerId ? game.player2Id : game.player1Id;
+      let winnerId = game.player1Id === playerId ? game.player2Id : game.player1Id;
       
-      if (!winnerId) {
+      // Для игр с ботом winnerId может быть null (если игрок сдается боту)
+      if (!winnerId && game.type !== GameType.VS_BOT) {
         throw new BadRequestException('Невозможно сдать игру без противника');
       }
 
       // Завершаем игру с поражением вышедшего
       game.status = GameStatus.FINISHED;
-      game.winnerId = winnerId;
+      game.winnerId = winnerId; // В игре с ботом это будет null, что означает победу бота
       
       if (winnerId === game.player1Id) {
         game.player1Score = 1;

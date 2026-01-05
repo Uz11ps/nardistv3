@@ -271,12 +271,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             this.logger.warn(`⏱️ Time control timeout on disconnect for game ${currentGame.id}, player ${playerId} disconnected, timeSinceLastMove: ${timeSinceLastMoveSeconds.toFixed(2)}s`);
             
             // Обновляем общее время игрока
-            if (currentGame.currentPlayer === 0) {
-              currentGame.player1TimeRemaining = 0;
-            } else {
-              currentGame.player2TimeRemaining = 0;
-            }
-            await this.gamesService['gamesRepository'].save(currentGame);
+            await this.gamesService.updatePlayerTotalTime(currentGame.id, currentGame.currentPlayer, 0);
             
             await this.gamesService.resignGame(currentGame.id, playerId);
             const gameState = await this.gamesService.getGameState(currentGame.id);
@@ -398,12 +393,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             }
             
             // Обновляем общее время игрока (вычитаем превышение)
-            if (game.currentPlayer === 0) {
-              currentGame.player1TimeRemaining = 0;
-            } else {
-              currentGame.player2TimeRemaining = 0;
-            }
-            await this.gamesService['gamesRepository'].save(currentGame);
+            await this.gamesService.updatePlayerTotalTime(game.id, game.currentPlayer, 0);
             
             // Автоматически сдаем игру от имени игрока, у которого закончилось время
             await this.gamesService.resignGame(game.id, currentPlayerId);
