@@ -484,9 +484,11 @@ export default function Game() {
         }
         
         // Если игра началась и это наш ход, но кубиков нет - бросаем их
+        // НО ТОЛЬКО если оба игрока выбрали смещение
         // НО НЕ для sandbox игр - там пользователь сам управляет всем
+        const bothOffsetsChosen = game.p1OffsetChosenAt && game.p2OffsetChosenAt
         const canMoveNow = game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1
-        if (canMoveNow && !formattedDice && !isBotGame && game.type !== 'sandbox') {
+        if (canMoveNow && !formattedDice && !isBotGame && game.type !== 'sandbox' && bothOffsetsChosen) {
           setTimeout(() => {
             const socket = getSocket()
             if (socket && socket.connected) {
@@ -822,13 +824,18 @@ export default function Game() {
         setPlayer2Timer(data.player2Timer)
       }
       
-      if (isMyTurnNow && !wasMyTurn) {
+      // Проверяем, выбрали ли оба игрока смещение
+      const bothOffsetsChosen = data.p1OffsetChosenAt && data.p2OffsetChosenAt
+
+      // Таймер и броски кубиков запускаются ТОЛЬКО после выбора смещения обоими игроками
+      if (isMyTurnNow && !wasMyTurn && bothOffsetsChosen) {
         setMoveTimer(15)
       }
 
       // Если это начало нашего хода и кубиков нет - бросаем их автоматически
+      // НО ТОЛЬКО если оба игрока выбрали смещение
       // НО НЕ для sandbox игр - там пользователь сам управляет всем
-      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && gameInfo?.type !== 'sandbox') {
+      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && gameInfo?.type !== 'sandbox' && bothOffsetsChosen) {
         setTimeout(() => {
           const socket = getSocket()
           if (socket) {
@@ -941,10 +948,14 @@ export default function Game() {
         setIsInOvertime(false)
       }
       
+      // Проверяем, выбрали ли оба игрока смещение
+      const bothOffsetsChosen = data.p1OffsetChosenAt && data.p2OffsetChosenAt
+
       // Если это начало нашего хода - запускаем таймер и бросаем кубики если их нет
+      // НО ТОЛЬКО если оба игрока выбрали смещение
       // НО НЕ для sandbox игр - там пользователь сам управляет всем
       // ВАЖНО: Если есть серверные анимации, авто-бросок произойдет в onServerMovesFinished
-      if (isMyTurnNow && !wasMyTurn) {
+      if (isMyTurnNow && !wasMyTurn && bothOffsetsChosen) {
         setMoveTimer(15)
         
         const hasServerMoves = data.serverMoves && data.serverMoves.length > 0;

@@ -425,6 +425,13 @@ export class GamesService {
       throw new BadRequestException('Игра не активна');
     }
 
+    // Проверяем, что оба игрока выбрали смещение перед броском кубиков
+    // Это проверка для ВСЕХ типов игр (обычные, бот, песочница)
+    const bothOffsetsChosen = game.p1OffsetChosenAt !== null && game.p2OffsetChosenAt !== null;
+    if (!bothOffsetsChosen) {
+      throw new BadRequestException('Нельзя бросать кубики до выбора смещения обоими игроками');
+    }
+
     // Пропускаем проверку игрока только при начальном броске (skipPlayerCheck = true)
     if (!skipPlayerCheck) {
       const currentPlayerId = game.currentPlayer === 0 ? game.player1Id : game.player2Id;
@@ -586,6 +593,7 @@ export class GamesService {
     
     // Определяем, является ли это дублем
     const isDoubles = dice.length === 4 && dice.every(d => d === dice[0]);
+    const doublesValue = isDoubles ? dice[0] : null; // Значение дубля (например, 1 для 1/1)
     
     // Для дублей создаем счетчик использования кубиков (можно использовать до 4 раз один и тот же номер)
     const diceCount = new Map<number, number>();
@@ -593,6 +601,7 @@ export class GamesService {
       diceCount.set(die, (diceCount.get(die) || 0) + 1);
     }
     const diceUsageCount = new Map<number, number>(); // Сколько раз использован каждый кубик
+    let totalDiceUsed = 0; // Общее количество использованных кубиков (для дублей)
 
     // Разворачиваем комбинированные ходы (те, у которых есть steps) в последовательность обычных
     const expandedMoves = [];
@@ -616,27 +625,59 @@ export class GamesService {
       console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       console.log(`  Текущее состояние: movesFromHead=${currentState.movesFromHead || 0}, dice=[${currentState.dice?.join(', ') || 'none'}]`);
       
-      const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
-      
-      if (!isValid) {
-        console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
-        throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+      // Для дублей: если die больше 6, это комбинированный ход (например, 4 при дубле 1/1)
+      // Проверяем, что это валидный комбинированный ход для дубля
+      if (isDoubles && move.die > 6 && doublesValue) {
+        // Проверяем, что die кратно doublesValue и не превышает 4 * doublesValue
+        const expectedMaxDie = 4 * doublesValue;
+        if (move.die > expectedMaxDie) {
+          throw new BadRequestException(`При дубле ${doublesValue}/${doublesValue} нельзя использовать ход на ${move.die}. Максимум: ${expectedMaxDie}`);
+        }
+        // Проверяем, что die кратно doublesValue
+        if (move.die % doublesValue !== 0) {
+          throw new BadRequestException(`При дубле ${doublesValue}/${doublesValue} ход на ${move.die} должен быть кратен ${doublesValue}`);
+        }
+        // Вычисляем, сколько кубиков используется для этого хода
+        const diceUsedForMove = move.die / doublesValue;
+        if (totalDiceUsed + diceUsedForMove > 4) {
+          throw new BadRequestException(`При дубле ${doublesValue}/${doublesValue} нельзя использовать более 4 кубиков. Уже использовано: ${totalDiceUsed}, требуется: ${diceUsedForMove}`);
+        }
+        // Валидируем ход с использованием суммы кубиков
+        const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
+        if (!isValid) {
+          console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+          throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+        }
+        // Применяем ход и увеличиваем счетчик использованных кубиков
+        totalDiceUsed += diceUsedForMove;
+        // Для комбинированного хода применяем его как один ход на сумму
+        currentState = engine.applyMove(currentState, move.from, move.to, move.die);
+        console.log(`✅ Применяем комбинированный ход при дубле: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (использовано ${diceUsedForMove} кубиков из 4)`);
+      } else {
+        // Обычная валидация для не-комбинированных ходов
+        const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
+        
+        if (!isValid) {
+          console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+          throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+        }
+        
+        // Проверяем использование кубика: для дублей можно использовать до 4 раз, для обычных - по количеству в массиве
+        const usedCount = diceUsageCount.get(move.die) || 0;
+        const availableCount = diceCount.get(move.die) || 0;
+        
+        if (usedCount >= availableCount) {
+          console.error(`❌ Кубик ${move.die} уже использован максимальное количество раз (${usedCount}/${availableCount}). Доступные кубики:`, Array.from(diceCount.entries()));
+          throw new BadRequestException(`Кубик ${move.die} уже использован максимальное количество раз`);
+        }
+        
+        // Увеличиваем счетчик использования
+        diceUsageCount.set(move.die, usedCount + 1);
+        totalDiceUsed += 1;
+        
+        console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (использовано ${usedCount + 1}/${availableCount})`);
+        currentState = engine.applyMove(currentState, move.from, move.to, move.die);
       }
-      
-      // Проверяем использование кубика: для дублей можно использовать до 4 раз, для обычных - по количеству в массиве
-      const usedCount = diceUsageCount.get(move.die) || 0;
-      const availableCount = diceCount.get(move.die) || 0;
-      
-      if (usedCount >= availableCount) {
-        console.error(`❌ Кубик ${move.die} уже использован максимальное количество раз (${usedCount}/${availableCount}). Доступные кубики:`, Array.from(diceCount.entries()));
-        throw new BadRequestException(`Кубик ${move.die} уже использован максимальное количество раз`);
-      }
-      
-      // Увеличиваем счетчик использования
-      diceUsageCount.set(move.die, usedCount + 1);
-      
-      console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (использовано ${usedCount + 1}/${availableCount})`);
-      currentState = engine.applyMove(currentState, move.from, move.to, move.die);
     }
 
     // Для целей сохранения и истории используем нормализованные ходы
@@ -723,12 +764,22 @@ export class GamesService {
     }
 
     // Calculate remaining dice after moves based on usage count
+    // Для дублей учитываем totalDiceUsed (включая комбинированные ходы)
     const remainingDice: number[] = [];
-    for (const [die, count] of diceCount.entries()) {
-      const used = diceUsageCount.get(die) || 0;
-      const remaining = count - used;
+    if (isDoubles && doublesValue) {
+      // Для дублей используем totalDiceUsed вместо diceUsageCount
+      const remaining = 4 - totalDiceUsed;
       for (let i = 0; i < remaining; i++) {
-        remainingDice.push(die);
+        remainingDice.push(doublesValue);
+      }
+    } else {
+      // Для обычных ходов используем diceUsageCount
+      for (const [die, count] of diceCount.entries()) {
+        const used = diceUsageCount.get(die) || 0;
+        const remaining = count - used;
+        for (let i = 0; i < remaining; i++) {
+          remainingDice.push(die);
+        }
       }
     }
     
@@ -1844,35 +1895,41 @@ export class GamesService {
       // Проверка жизней для игр с ботом не требуется
 
       const rngSeed = crypto.randomBytes(32).toString('hex');
-      const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
+      const verificationSalt = crypto.randomBytes(16).toString('hex');
 
       const engine = gameMode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
       const initialState = engine.createInitialState();
 
-      // Игра с ИИ сразу начинается (IN_PROGRESS)
+      // Игра с ботом создается в WAITING, переходит в IN_PROGRESS после выбора смещения
+      // Для бота автоматически устанавливаем смещение 1 (по умолчанию)
+      const now = new Date();
       const game = this.gamesRepository.create({
         player1Id: playerId,
         player2Id: null, // Бот не имеет player2Id
         mode: gameMode,
         type: GameType.VS_BOT,
         stake: 0, // Игры с ботом без ставок
-        status: GameStatus.IN_PROGRESS, // Сразу начинаем игру
+        status: GameStatus.WAITING, // Ждем выбора смещения игроком
         gameState: initialState,
         rngSeed,
-        rngHash,
-        currentPlayer: 0, // Игрок начинает первым
+        rngHash: null, // Будет установлен после генерации бросков
+        p1Rolls: null, // Будет сгенерировано после выбора смещения
+        p2Rolls: null, // Будет сгенерировано после выбора смещения
+        verificationSalt,
+        p1Offset: 1,
+        p2Offset: 1, // Для бота смещение по умолчанию
+        p1OffsetChosenAt: null, // Игрок еще не выбрал
+        p2OffsetChosenAt: now, // Бот автоматически выбирает смещение 1
+        currentPlayer: 0,
         moveTimeLimit: 60000,
         player1TimeRemaining: 60000, // 60 секунд общего времени
         player2TimeRemaining: 60000, // 60 секунд общего времени (бот не использует, но для совместимости)
-        lastMoveAt: new Date(),
+        lastMoveAt: undefined, // Устанавливается когда игра переходит в IN_PROGRESS
       });
 
       const savedGame = await this.gamesRepository.save(game);
-
-      // Сразу бросаем кубики для игрока
-      const dice = await this.rollDice(savedGame.id, playerId);
       
-      this.logger.log(`🤖 Создана игра с ИИ: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}, dice=[${dice.join(', ')}]`);
+      this.logger.log(`🤖 Создана игра с ИИ: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}. Ожидание выбора смещения игроком.`);
 
       return savedGame;
     } catch (error) {
@@ -1889,7 +1946,7 @@ export class GamesService {
       const gameMode = mode || GameMode.LONG;
       
       const rngSeed = crypto.randomBytes(32).toString('hex');
-      const rngHash = crypto.createHash('sha256').update(rngSeed).digest('hex');
+      const verificationSalt = crypto.randomBytes(16).toString('hex');
 
       // Создаем пустое состояние доски для свободного стола
       // Все шашки находятся в bearOff (лот), откуда их можно брать для расстановки
@@ -1909,28 +1966,35 @@ export class GamesService {
         }),
       };
 
+      // Для песочницы автоматически устанавливаем смещения для обоих "игроков"
+      const now = new Date();
       const game = this.gamesRepository.create({
         player1Id: playerId,
         player2Id: null,
         mode: gameMode,
         type: GameType.SANDBOX,
         stake: 0,
-        status: GameStatus.IN_PROGRESS,
+        status: GameStatus.WAITING, // Ждем выбора смещения (хотя для песочницы это формальность)
         gameState: emptyState,
         rngSeed,
-        rngHash,
+        rngHash: null, // Будет установлен после генерации бросков
+        p1Rolls: null, // Будет сгенерировано после выбора смещения
+        p2Rolls: null, // Будет сгенерировано после выбора смещения
+        verificationSalt,
+        p1Offset: 1,
+        p2Offset: 1, // Для второго игрока в песочнице смещение по умолчанию
+        p1OffsetChosenAt: null, // Игрок еще не выбрал
+        p2OffsetChosenAt: now, // Автоматически выбираем смещение для второго игрока
         currentPlayer: 0,
         moveTimeLimit: 0, // No time limit for sandbox
         player1TimeRemaining: 3600000, // 1 hour
         player2TimeRemaining: 3600000,
-        lastMoveAt: new Date(),
+        lastMoveAt: undefined, // Устанавливается когда игра переходит в IN_PROGRESS
       });
 
       const savedGame = await this.gamesRepository.save(game);
       
-      // НЕ бросаем кубики автоматически - пользователь сам установит их через панель управления
-      
-      this.logger.log(`🎮 Свободный стол создан: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}`);
+      this.logger.log(`🎮 Свободный стол создан: gameId=${savedGame.id}, playerId=${playerId}, mode=${gameMode}. Ожидание выбора смещения.`);
 
       return savedGame;
     } catch (error) {
@@ -1958,6 +2022,8 @@ export class GamesService {
       rngHash: game.rngHash,
       p1Offset: game.p1Offset,
       p2Offset: game.p2Offset,
+      p1OffsetChosenAt: game.p1OffsetChosenAt,
+      p2OffsetChosenAt: game.p2OffsetChosenAt,
       verificationSalt: game.status === GameStatus.FINISHED ? game.verificationSalt : undefined,
       p1Rolls: game.status === GameStatus.FINISHED ? game.p1Rolls : undefined,
       p2Rolls: game.status === GameStatus.FINISHED ? game.p2Rolls : undefined,
@@ -1981,7 +2047,7 @@ export class GamesService {
     }
 
     if (offset < 1 || offset > 5) {
-      throw new BadRequestException('Смещение должно быть от 1 до 100');
+      throw new BadRequestException('Смещение должно быть от 1 до 5');
     }
 
     const now = new Date();
@@ -2001,21 +2067,31 @@ export class GamesService {
     const p2OffsetChosen = game.p2OffsetChosenAt !== null;
 
     // Если оба игрока выбрали смещение, ГЕНЕРИРУЕМ броски кубиков и переводим игру в IN_PROGRESS
-    if (p1OffsetChosen && p2OffsetChosen && game.player2Id && game.status === GameStatus.WAITING) {
-      // ГЕНЕРАЦИЯ бросков кубиков ПОСЛЕ выбора смещения обоими игроками
-      const generateRolls = () => {
+    // Это работает для ВСЕХ типов игр (обычные, бот, песочница)
+    if (p1OffsetChosen && p2OffsetChosen && game.status === GameStatus.WAITING) {
+      // ГЕНЕРАЦИЯ СЛУЧАЙНОЙ последовательности бросков кубиков
+      // Последовательность случайная и НЕ зависит от смещений
+      // Смещения определяют только СТАРТОВУЮ ПОЗИЦИЮ в этой последовательности
+      const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
+      
+      // Генерируем СЛУЧАЙНУЮ последовательность используя rngSeed игры
+      // Для каждого игрока своя случайная последовательность
+      const p1RollsSeed = `${game.rngSeed}_p1`;
+      const p2RollsSeed = `${game.rngSeed}_p2`;
+      
+      const generateRolls = (seed: string) => {
+        const rng = engine.createSeededRNG(seed);
         const rolls = [];
         for (let i = 0; i < 1000; i++) {
-          rolls.push([
-            Math.floor(Math.random() * 6) + 1,
-            Math.floor(Math.random() * 6) + 1
-          ]);
+          const die1 = Math.floor(rng() * 6) + 1;
+          const die2 = Math.floor(rng() * 6) + 1;
+          rolls.push([die1, die2]);
         }
         return rolls;
       };
 
-      const p1Rolls = generateRolls();
-      const p2Rolls = generateRolls();
+      const p1Rolls = generateRolls(p1RollsSeed);
+      const p2Rolls = generateRolls(p2RollsSeed);
 
       // Хешируем последовательности для контроля честности
       const p1Hash = crypto.createHash('sha256').update(JSON.stringify(p1Rolls) + game.verificationSalt).digest('hex');
@@ -2060,10 +2136,12 @@ export class GamesService {
     const savedGame = await this.gamesRepository.save(game);
     
     // Если игра только что началась, делаем первый бросок кубиков для первого игрока
-    if (p1OffsetChosen && p2OffsetChosen && savedGame.player2Id && savedGame.status === GameStatus.IN_PROGRESS && savedGame.gameState && !savedGame.gameState.dice?.length) {
+    // Это работает для ВСЕХ типов игр (обычные, бот, песочница)
+    if (p1OffsetChosen && p2OffsetChosen && savedGame.status === GameStatus.IN_PROGRESS && savedGame.gameState && !savedGame.gameState.dice?.length) {
       try {
         // Определяем ID первого игрока
-        const firstPlayerId = savedGame.currentPlayer === 0 ? savedGame.player1Id : savedGame.player2Id;
+        // Для игр с ботом player2Id = null, поэтому используем player1Id
+        const firstPlayerId = savedGame.currentPlayer === 0 ? savedGame.player1Id : (savedGame.player2Id || savedGame.player1Id);
         // Делаем бросок кубиков для первого игрока (skipPlayerCheck = true, так как это автоматический бросок)
         await this.rollDice(gameId, firstPlayerId, true);
         // Перезагружаем игру после броска кубиков
