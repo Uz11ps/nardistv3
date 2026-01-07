@@ -536,10 +536,41 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           gameState,
         });
       } else {
-        // Check if next player is bot and trigger bot move
-        this.logger.log(`🤖 Checking if bot turn needed for gameId=${data.gameId}`);
-        // Проверяем бота сразу без задержки
-        await this.handleBotTurnIfNeeded(data.gameId);
+        // ВАЖНО: После завершения хода нужно бросить кубики для следующего игрока
+        // Проверяем, произошла ли смена хода (dice пустые)
+        const updatedGame = await this.gamesService.findOne(data.gameId);
+        const hasNoDice = !updatedGame.gameState?.dice || (Array.isArray(updatedGame.gameState.dice) && updatedGame.gameState.dice.length === 0);
+        
+        if (hasNoDice && updatedGame.status === 'in_progress') {
+          // Ход завершен, нужно бросить кубики для следующего игрока
+          const nextPlayerId = updatedGame.currentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id;
+          const isBotTurn = updatedGame.type === 'vs_bot' && updatedGame.player2Id === null && updatedGame.currentPlayer === 1;
+          
+          this.logger.log(`🎲 Rolling dice for next player: gameId=${data.gameId}, currentPlayer=${updatedGame.currentPlayer}, isBotTurn=${isBotTurn}`);
+          
+          try {
+            // Бросаем кубики для следующего игрока
+            const dice = await this.gamesService.rollDice(data.gameId, isBotTurn ? null : nextPlayerId, isBotTurn);
+            this.logger.log(`✅ Dice rolled for next player: [${dice.join(', ')}]`);
+            
+            // Отправляем обновленное состояние игры
+            const updatedGameState = await this.gamesService.getGameState(data.gameId);
+            this.server.to(`game:${data.gameId}`).emit('game_state', updatedGameState);
+            
+            // Если это ход бота - запускаем автоматический ход бота
+            if (isBotTurn) {
+              this.logger.log(`🤖 Bot turn detected, triggering bot move`);
+              await this.handleBotTurnIfNeeded(data.gameId);
+            }
+          } catch (error) {
+            this.logger.error(`❌ Error rolling dice for next player:`, error);
+          }
+        } else {
+          // Кубики еще есть - это промежуточный ход (например, при дублях)
+          // Проверяем бота только если это его ход и кубики уже есть
+          this.logger.log(`🔄 No dice roll needed (intermediate move or dice still available)`);
+          await this.handleBotTurnIfNeeded(data.gameId);
+        }
       }
     } catch (error) {
       this.logger.error(`❌ Error in make_move:`, error);
