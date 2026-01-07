@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
@@ -1969,10 +1970,10 @@ export default function Game() {
         </div>
       )}
 
-      {/* Модальное окно выбора смещения */}
-      {showOffsetModal && gameInfo && gameInfo.type !== 'sandbox' && (
-        <div className="modal-overlay" style={{ zIndex: 10000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%', position: 'relative' }}>
+      {/* Модальное окно выбора смещения - рендерим через Portal для корректного позиционирования */}
+      {showOffsetModal && gameInfo && gameInfo.type !== 'sandbox' && createPortal(
+        <div className="modal-overlay offset-modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowOffsetModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Выбор смещения</h2>
             <p style={{ marginBottom: '20px', color: '#999' }}>
               Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 5).
@@ -2034,7 +2035,8 @@ export default function Game() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {gameStatus === 'finished' && (
