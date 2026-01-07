@@ -501,41 +501,35 @@ export default function Game() {
       setMyOffset(myCurrentOffset)
       setOpponentOffset(opponentCurrentOffset)
       
-      // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
-      // Показываем, если смещение равно значению по умолчанию (1) и еще не было подтверждено
-      // Показываем независимо от статуса игры (waiting или in_progress)
-      console.log('🔍 [loadGame] Проверка показа модального окна смещения:', {
-        status: game.status,
-        type: game.type,
-        isP1,
-        p1Offset: game.p1Offset,
-        p2Offset: game.p2Offset,
-        myCurrentOffset,
-        offsetConfirmed: offsetConfirmedRef.current,
-        showOffsetModal: showOffsetModalRef.current
-      })
-      
+      // Показываем модальное окно выбора смещения ТОЛЬКО если смещение еще не было выбрано
+      // Проверяем p1OffsetChosenAt и p2OffsetChosenAt - если они null, значит смещение еще не выбрано
       if (game.type !== 'sandbox') {
         const myCurrentOffsetValue = isP1 ? game.p1Offset : game.p2Offset
+        const myOffsetChosenAt = isP1 ? game.p1OffsetChosenAt : game.p2OffsetChosenAt
         
-        // Показываем модальное окно, если смещение равно значению по умолчанию (1)
-        // и еще не было подтверждено, независимо от статуса игры
-        if (myCurrentOffsetValue === 1 && !offsetConfirmedRef.current && !showOffsetModalRef.current) {
-          console.log('✅ [loadGame] Показываем модальное окно выбора смещения')
-          // Используем requestAnimationFrame для гарантии, что состояние обновилось
+        // ВАЖНО: Показываем модальное окно ТОЛЬКО если:
+        // 1. Смещение еще не было выбрано (myOffsetChosenAt === null)
+        // 2. Смещение равно значению по умолчанию (1)
+        // 3. Модальное окно еще не было подтверждено локально
+        // 4. Модальное окно еще не открыто
+        const shouldShowModal = myOffsetChosenAt === null && 
+                                myCurrentOffsetValue === 1 && 
+                                !offsetConfirmedRef.current && 
+                                !showOffsetModalRef.current
+        
+        if (shouldShowModal) {
+          console.log('✅ [loadGame] Показываем модальное окно выбора смещения (смещение еще не выбрано)')
           requestAnimationFrame(() => {
             setShowOffsetModal(true)
             console.log('✅ [loadGame] showOffsetModal установлен в true')
           })
-        } else {
-          console.log('❌ [loadGame] Модальное окно НЕ показываем:', {
-            myCurrentOffsetValue,
-            offsetConfirmed: offsetConfirmedRef.current,
-            reason: myCurrentOffsetValue === 1 ? 'offsetConfirmed=true' : `offset=${myCurrentOffsetValue} != 1`
-          })
+        } else if (myOffsetChosenAt !== null) {
+          // Если смещение уже выбрано - помечаем как подтвержденное локально
+          if (!offsetConfirmedRef.current) {
+            setOffsetConfirmed(true)
+            console.log('✅ [loadGame] Смещение уже выбрано на сервере, помечаем как подтвержденное')
+          }
         }
-      } else {
-        console.log('❌ [loadGame] Модальное окно НЕ показываем - sandbox игра')
       }
       
       if (game.status === 'in_progress') {
@@ -862,39 +856,35 @@ export default function Game() {
       })
       const newStatus = data.status || 'waiting'
       
-      // Показываем модальное окно выбора смещения для всех типов игр (кроме sandbox)
-      // Показываем, если смещение равно значению по умолчанию (1) и еще не было подтверждено
-      // Показываем независимо от статуса игры (waiting или in_progress)
+      // Показываем модальное окно выбора смещения ТОЛЬКО если смещение еще не было выбрано
+      // Проверяем p1OffsetChosenAt и p2OffsetChosenAt - если они null, значит смещение еще не выбрано
       if (data.type !== 'sandbox') {
         const isP1 = data.player1Id === user?.id
         const myCurrentOffset = isP1 ? data.p1Offset : data.p2Offset
+        const myOffsetChosenAt = isP1 ? data.p1OffsetChosenAt : data.p2OffsetChosenAt
         
-        console.log('🔍 [WebSocket] Проверка показа модального окна смещения:', {
-          status: newStatus,
-          type: data.type,
-          isP1,
-          p1Offset: data.p1Offset,
-          p2Offset: data.p2Offset,
-          myCurrentOffset,
-          offsetConfirmed: offsetConfirmedRef.current,
-          showOffsetModal: showOffsetModalRef.current
-        })
+        // ВАЖНО: Показываем модальное окно ТОЛЬКО если:
+        // 1. Смещение еще не было выбрано (myOffsetChosenAt === null)
+        // 2. Смещение равно значению по умолчанию (1)
+        // 3. Модальное окно еще не было подтверждено локально
+        // 4. Модальное окно еще не открыто
+        const shouldShowModal = myOffsetChosenAt === null && 
+                                myCurrentOffset === 1 && 
+                                !offsetConfirmedRef.current && 
+                                !showOffsetModalRef.current
         
-        // Показываем модальное окно, если смещение равно значению по умолчанию (1) и еще не было подтверждено
-        // Также проверяем, что модальное окно еще не открыто
-        if (myCurrentOffset === 1 && !offsetConfirmedRef.current && !showOffsetModalRef.current) {
-          console.log('✅ [WebSocket] Показываем модальное окно выбора смещения')
+        if (shouldShowModal) {
+          console.log('✅ [WebSocket] Показываем модальное окно выбора смещения (смещение еще не выбрано)')
           requestAnimationFrame(() => {
             setShowOffsetModal(true)
             console.log('✅ [WebSocket] showOffsetModal установлен в true')
           })
-        } else {
-          console.log('❌ [WebSocket] Модальное окно НЕ показываем:', {
-            myCurrentOffset,
-            offsetConfirmed: offsetConfirmedRef.current,
-            showOffsetModal: showOffsetModalRef.current,
-            reason: myCurrentOffset !== 1 ? `offset=${myCurrentOffset} != 1` : (offsetConfirmedRef.current ? 'offsetConfirmed=true' : 'showOffsetModal=true')
-          })
+        } else if (myOffsetChosenAt !== null) {
+          // Если смещение уже выбрано - помечаем как подтвержденное локально
+          if (!offsetConfirmedRef.current) {
+            setOffsetConfirmed(true)
+            console.log('✅ [WebSocket] Смещение уже выбрано на сервере, помечаем как подтвержденное')
+          }
         }
       }
       
@@ -1534,7 +1524,8 @@ export default function Game() {
         setMoveTimer(15)
         
         const onMoveError = (err: any) => {
-          console.error('Move rejected:', err)
+          console.error('❌ Move rejected:', err)
+          console.error('❌ Pending moves that were rejected:', pendingMoves)
           // Просто откатываем ходы без показа ошибки
           setPendingMoves([])
           setIsProcessingConfirm(false)
@@ -1546,6 +1537,7 @@ export default function Game() {
           setIsProcessingConfirm(false)
         }, 3000)
         
+        console.log('📤 Sending moves to server:', pendingMoves)
         socket.emit('make_move', { gameId, moves: pendingMoves })
         // pendingMoves будут очищены в обработчике move_made, чтобы избежать двойного применения в virtualGameState
       } catch (error) {

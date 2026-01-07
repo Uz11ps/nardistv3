@@ -602,10 +602,18 @@ export class GamesService {
     }
     let totalDiceUsed = 0; // Общее количество использованных кубиков (для дублей)
 
-    // Разворачиваем комбинированные ходы (те, у которых есть steps) в последовательность обычных
+    // ВАЖНО: Для дублей НЕ разворачиваем комбинированные ходы с steps
+    // Комбинированные ходы (die > 6) должны обрабатываться как один ход с steps
+    // Разворачиваем только для обычных ходов
     const expandedMoves = [];
     for (const move of moves) {
-      if ((move as any).steps && Array.isArray((move as any).steps)) {
+      // Если это комбинированный ход при дубле (die > 6 и есть steps) - НЕ разворачиваем
+      const isCombinedMove = move.die > 6 && (move as any).steps && Array.isArray((move as any).steps);
+      if (isCombinedMove) {
+        // Оставляем комбинированный ход как есть
+        expandedMoves.push(move);
+      } else if ((move as any).steps && Array.isArray((move as any).steps)) {
+        // Для обычных ходов разворачиваем steps
         expandedMoves.push(...(move as any).steps);
       } else {
         expandedMoves.push(move);
@@ -623,7 +631,7 @@ export class GamesService {
     // ПЕРЕПИСАННАЯ ЛОГИКА ДЛЯ ДУБЛЕЙ
     // При дубле разрешаем ходы с die равным: doublesValue, doublesValue*2, doublesValue*3, doublesValue*4
     // Для комбинированных ходов (die > doublesValue) разбиваем их на отдельные шаги
-    const processedMoves: Array<{ from: number; to: number; die: number }> = [];
+    const processedMoves: Array<{ from: number; to: number; die: number; steps?: any[] }> = [];
     
     for (const move of normalizedMoves) {
       console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
@@ -645,30 +653,68 @@ export class GamesService {
           throw new BadRequestException(`При дубле ${doublesValue}/${doublesValue} нельзя использовать более 4 кубиков. Уже использовано: ${totalDiceUsed}, требуется: ${diceUsedForMove}`);
         }
         
-        // Если это комбинированный ход (die > doublesValue), разбиваем его на отдельные шаги
+        // Если это комбинированный ход (die > doublesValue), применяем его по шагам
         if (move.die > doublesValue) {
-          // Вычисляем промежуточные точки для комбинированного хода
-          // Для этого нужно последовательно применять ходы по doublesValue
-          let currentFrom = move.from;
-          let currentTo = move.to;
-          const stepsCount = diceUsedForMove;
-          
-          // Для комбинированного хода нужно проверить, что весь путь валиден
-          // Сначала валидируем весь ход целиком
-          const isValidFullMove = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
-          if (!isValidFullMove) {
-            console.error(`❌ Комбинированный ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
-            throw new BadRequestException(`Недопустимый комбинированный ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+          // Если есть steps - используем их для последовательного применения
+          if ((move as any).steps && Array.isArray((move as any).steps) && (move as any).steps.length > 0) {
+            // Применяем каждый шаг последовательно
+            for (const step of (move as any).steps) {
+              const isValidStep = (engine as any).validateMove(currentState, step.from, step.to, step.die, isFirstMoveOfGame);
+              if (!isValidStep) {
+                console.error(`❌ Шаг комбинированного хода отклонен: с индекса ${step.from} на индекс ${step.to} кубиком ${step.die}`);
+                throw new BadRequestException(`Недопустимый шаг комбинированного хода: с индекса ${step.from} на индекс ${step.to} кубиком ${step.die}`);
+              }
+              currentState = engine.applyMove(currentState, step.from, step.to, step.die);
+            }
+            totalDiceUsed += diceUsedForMove;
+            // Сохраняем комбинированный ход для истории (с steps)
+            processedMoves.push({ from: move.from, to: move.to, die: move.die, steps: (move as any).steps });
+            console.log(`✅ Применяем комбинированный ход при дубле по шагам: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (${(move as any).steps.length} шагов, использовано ${diceUsedForMove} кубиков из 4)`);
+          } else {
+            // Если steps нет, но die > doublesValue - генерируем steps и применяем последовательно
+            let currentFrom = move.from;
+            const steps: Array<{ from: number; to: number; die: number }> = [];
+            
+            for (let i = 0; i < diceUsedForMove; i++) {
+              let stepTo: number;
+              const gameMode = game.mode;
+              const player = currentState.currentPlayer;
+              
+              if (gameMode === GameMode.SHORT) {
+                if (player === 0) {
+                  stepTo = currentFrom - doublesValue;
+                  if (stepTo < 0) stepTo = -1;
+                } else {
+                  stepTo = currentFrom + doublesValue;
+                  if (stepTo >= 24) stepTo = -1;
+                }
+              } else {
+                if (player === 0) {
+                  stepTo = (currentFrom - doublesValue + 24) % 24;
+                } else {
+                  stepTo = (currentFrom + doublesValue) % 24;
+                }
+              }
+              
+              const isValidStep = (engine as any).validateMove(currentState, currentFrom, stepTo, doublesValue, isFirstMoveOfGame);
+              if (!isValidStep) {
+                console.error(`❌ Шаг комбинированного хода отклонен: с индекса ${currentFrom} на индекс ${stepTo} кубиком ${doublesValue}`);
+                throw new BadRequestException(`Недопустимый шаг комбинированного хода: с индекса ${currentFrom} на индекс ${stepTo} кубиком ${doublesValue}`);
+              }
+              
+              steps.push({ from: currentFrom, to: stepTo, die: doublesValue });
+              currentState = engine.applyMove(currentState, currentFrom, stepTo, doublesValue);
+              currentFrom = stepTo;
+              
+              // Если дошли до выноса, останавливаемся
+              if (stepTo === -1 || stepTo >= 24) break;
+            }
+            
+            totalDiceUsed += diceUsedForMove;
+            // Сохраняем комбинированный ход для истории (с сгенерированными steps)
+            processedMoves.push({ from: move.from, to: move.to, die: move.die, steps: steps });
+            console.log(`✅ Применяем комбинированный ход при дубле (сгенерированные шаги): с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (${steps.length} шагов, использовано ${diceUsedForMove} кубиков из 4)`);
           }
-          
-          // Применяем ход как один комбинированный (движок должен поддерживать это)
-          currentState = engine.applyMove(currentState, move.from, move.to, move.die);
-          totalDiceUsed += diceUsedForMove;
-          
-          // Сохраняем ход для истории
-          processedMoves.push({ from: move.from, to: move.to, die: move.die });
-          
-          console.log(`✅ Применяем комбинированный ход при дубле: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (использовано ${diceUsedForMove} кубиков из 4)`);
         } else {
           // Обычный ход на одно значение кубика
           const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
