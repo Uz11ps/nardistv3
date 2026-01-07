@@ -2044,17 +2044,46 @@ export default function Game() {
                       setGameStatus('finished');
                     }
                     
+                    const wasMyTurnBefore = gameState?.canMove || false;
+                    const wasMyTurnBeforeByPlayer = gameState?.currentPlayer === (gameInfo?.player1Id === user?.id ? 0 : 1);
+                    
                     setGameState(pending);
                     pendingGameStateRef.current = null;
                     setServerMovesForBoard(undefined);
 
-                    // После завершения анимации хода противника, если сейчас наш ход 
-                    // и кубики еще не брошены - бросаем их автоматически
-                    const isMyTurnNow = pending.canMove;
-                    if (isMyTurnNow && !pending.dice && gameStatus === 'in_progress' && gameInfo?.type !== 'sandbox') {
-                      console.log('🤖 Auto-rolling dice after server animation finished');
+                    // ВАЖНО: После завершения анимации хода противника (бота или другого игрока)
+                    // проверяем, нужно ли бросить кубики для следующего игрока
+                    // НЕ используем pending.canMove, т.к. он может быть false если кубики пустые
+                    // Вместо этого проверяем currentPlayer напрямую
+                    const isMyTurnNowByPlayer = pending.currentPlayer === (gameInfo?.player1Id === user?.id ? 0 : 1);
+                    const hasNoDice = !pending.dice || (Array.isArray(pending.dice) && pending.dice.length === 0);
+                    const turnChanged = !wasMyTurnBeforeByPlayer && isMyTurnNowByPlayer;
+                    const bothOffsetsChosen = gameInfo?.p1OffsetChosenAt && gameInfo?.p2OffsetChosenAt;
+                    
+                    console.log('🎲 [onServerMovesFinished] Checking dice roll:', {
+                      wasMyTurnBeforeByPlayer,
+                      isMyTurnNowByPlayer,
+                      hasNoDice,
+                      turnChanged,
+                      bothOffsetsChosen,
+                      gameStatus,
+                      currentPlayer: pending.currentPlayer,
+                      dice: pending.dice
+                    });
+                    
+                    // Бросаем кубики если:
+                    // 1. Это наш ход (isMyTurnNowByPlayer)
+                    // 2. Кубики пустые (hasNoDice)
+                    // 3. Оба игрока выбрали смещение (bothOffsetsChosen)
+                    // 4. Игра в процессе (in_progress)
+                    // 5. Не sandbox игра
+                    if (isMyTurnNowByPlayer && hasNoDice && bothOffsetsChosen && gameStatus === 'in_progress' && gameInfo?.type !== 'sandbox') {
+                      console.log('🎲 Auto-rolling dice after server animation finished');
                       setTimeout(() => {
-                        handleRollDice();
+                        const socket = getSocket();
+                        if (socket && gameId) {
+                          socket.emit('roll_dice', { gameId });
+                        }
                       }, 500);
                     }
                   }
