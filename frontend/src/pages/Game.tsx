@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
@@ -1990,92 +1991,97 @@ export default function Game() {
       </div>
 
 
-      {/* Модальное окно выхода - всегда в DOM, управляется через display */}
-      <div 
-        className={`offset-modal-overlay ${showExitModal ? 'modal-visible' : 'modal-hidden'}`}
-        onClick={() => setShowExitModal(false)}
-      >
+      {/* Модальные окна рендерятся через Portal вне контейнера игры */}
+      {showExitModal && createPortal(
         <div 
-          className="offset-modal-content" 
-          onClick={(e) => e.stopPropagation()}
+          className="offset-modal-overlay modal-visible"
+          onClick={() => setShowExitModal(false)}
         >
-          <h2>Выход из игры</h2>
-          <p className="offset-modal-description">Вы уверены? Вам засчитается поражение!</p>
-          <div className="offset-modal-actions">
-            <Button variant="primary" onClick={handleConfirmExit} style={{ flex: 1 }}>Да, сдаться</Button>
-            <Button variant="secondary" onClick={() => setShowExitModal(false)} style={{ flex: 1 }}>Нет</Button>
+          <div 
+            className="offset-modal-content" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>Выход из игры</h2>
+            <p className="offset-modal-description">Вы уверены? Вам засчитается поражение!</p>
+            <div className="offset-modal-actions">
+              <Button variant="primary" onClick={handleConfirmExit} style={{ flex: 1 }}>Да, сдаться</Button>
+              <Button variant="secondary" onClick={() => setShowExitModal(false)} style={{ flex: 1 }}>Нет</Button>
+            </div>
           </div>
-        </div>
-      </div>
+        </div>,
+        document.body
+      )}
 
-      {/* Модальное окно выбора смещения - всегда в DOM, управляется через display */}
-      <div 
-        className={`offset-modal-overlay ${(showOffsetModal && gameInfo?.type !== 'sandbox') ? 'modal-visible' : 'modal-hidden'}`}
-        onClick={() => setShowOffsetModal(false)}
-      >
+      {(showOffsetModal && gameInfo?.type !== 'sandbox') && createPortal(
         <div 
-          className="offset-modal-content" 
-          onClick={(e) => e.stopPropagation()}
+          className="offset-modal-overlay modal-visible"
+          onClick={() => setShowOffsetModal(false)}
         >
-          <h2>Выбор смещения</h2>
-          <p className="offset-modal-description">
-            Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 5).
-          </p>
-          
-          <div className="offset-selector">
-            <label>Ваше смещение (1-5):</label>
-            <p className="offset-hint">
-              Смещение влияет на выбор начальной позиции в последовательности бросков кубиков
+          <div 
+            className="offset-modal-content" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>Выбор смещения</h2>
+            <p className="offset-modal-description">
+              Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 5).
             </p>
-            <input 
-              type="range" 
-              min="1" 
-              max="5" 
-              value={myOffset} 
-              onChange={(e) => setMyOffset(parseInt(e.target.value))}
-            />
-            <div className="offset-values">
-              <span>Вы: <strong>{myOffset}</strong></span>
-              {opponentOffset > 0 && (
-                <span>Соперник: <strong>{opponentOffset}</strong></span>
-              )}
+            
+            <div className="offset-selector">
+              <label>Ваше смещение (1-5):</label>
+              <p className="offset-hint">
+                Смещение влияет на выбор начальной позиции в последовательности бросков кубиков
+              </p>
+              <input 
+                type="range" 
+                min="1" 
+                max="5" 
+                value={myOffset} 
+                onChange={(e) => setMyOffset(parseInt(e.target.value))}
+              />
+              <div className="offset-values">
+                <span>Вы: <strong>{myOffset}</strong></span>
+                {opponentOffset > 0 && (
+                  <span>Соперник: <strong>{opponentOffset}</strong></span>
+                )}
+              </div>
             </div>
-          </div>
 
-          {gameInfo?.rngHash && (
-            <div className="hash-display">
-              <div>Хеш последовательности (SHA-256):</div>
-              <code>
-                {(() => {
-                  try {
-                    if (typeof gameInfo.rngHash === 'string') {
-                      const parsed = JSON.parse(gameInfo.rngHash)
-                      if (parsed && parsed.p1Hash) {
-                        return parsed.p1Hash.substring(0, 16) + '...'
+            {gameInfo?.rngHash && (
+              <div className="hash-display">
+                <div>Хеш последовательности (SHA-256):</div>
+                <code>
+                  {(() => {
+                    try {
+                      if (typeof gameInfo.rngHash === 'string') {
+                        const parsed = JSON.parse(gameInfo.rngHash)
+                        if (parsed && parsed.p1Hash) {
+                          return parsed.p1Hash.substring(0, 16) + '...'
+                        }
                       }
+                      return gameInfo.rngHash.substring(0, 16) + '...'
+                    } catch (e) {
+                      return typeof gameInfo.rngHash === 'string' 
+                        ? gameInfo.rngHash.substring(0, 16) + '...'
+                        : '---'
                     }
-                    return gameInfo.rngHash.substring(0, 16) + '...'
-                  } catch (e) {
-                    return typeof gameInfo.rngHash === 'string' 
-                      ? gameInfo.rngHash.substring(0, 16) + '...'
-                      : '---'
-                  }
-                })()}
-              </code>
-            </div>
-          )}
+                  })()}
+                </code>
+              </div>
+            )}
 
-          <div className="offset-modal-actions">
-            <Button 
-              variant="primary" 
-              onClick={handleConfirmOffset} 
-              style={{ flex: 1 }}
-            >
-              Подтвердить
-            </Button>
+            <div className="offset-modal-actions">
+              <Button 
+                variant="primary" 
+                onClick={handleConfirmOffset} 
+                style={{ flex: 1 }}
+              >
+                Подтвердить
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
+        </div>,
+        document.body
+      )}
 
       {gameStatus === 'finished' && (
         <div className="game-overlay">
