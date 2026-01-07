@@ -1068,21 +1068,6 @@ export default function BackgammonBoard({
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     
-    for (let i = 0; i < 24; i++) {
-      const { x, y, isTopRow, pointNumber } = getPointCoordinates(i, canvas)
-      
-      // Определяем номер точки относительно игрока
-      // Для игрока его дом всегда 1-6
-      let displayNum = pointNumber
-      
-      // Если доска инвертирована для Player 2, номера тоже должны быть инвертированы
-      // Но пользователь хочет систему "координаты ячеек": на моей стороне 1 2 3...
-      // В классических нардах у каждого игрока своя нумерация от 1 до 24
-      
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
-      const textY = isTopRow ? y + pointHeight + 15 : y - pointHeight - 15
-      ctx.fillText(displayNum.toString(), x, textY)
-    }
     if (virtualGameState.bearOff) {
       const bOff = virtualGameState.bearOff
       const whiteBearOffCount = bOff.white || 0

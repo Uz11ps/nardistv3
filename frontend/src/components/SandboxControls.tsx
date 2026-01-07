@@ -214,11 +214,11 @@ export default function SandboxControls({
                   onClick={() => handleMoveClick(idx)}
                 >
                   <span className="move-num">{idx + 1}.</span>
-                  <span className="move-dice">[{move.dice.join(',')}]</span>
+                  <span className="move-dice">[{Array.isArray(move.dice) ? move.dice.join(',') : ''}]</span>
                   <span className="move-details">
-                    {move.moves.map((m, i) => (
+                    {Array.isArray(move.moves) && move.moves.map((m, i) => (
                       <span key={i} className="move-step">
-                        {m.from === -1 ? 'B' : m.from + 1}→{m.to === -1 ? 'B' : m.to + 1}
+                        {(m as any).from === -1 ? 'B' : (m as any).from + 1}→{(m as any).to === -1 ? 'B' : (m as any).to + 1}
                       </span>
                     ))}
                   </span>

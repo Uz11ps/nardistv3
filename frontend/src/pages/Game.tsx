@@ -2071,7 +2071,7 @@ export default function Game() {
                 player2Skins={playerSkins.player2}
                 mySkins={playerSkins.mySkins}
                 gameState={historyGameState || gameState}
-                currentPlayer={(historyGameState || gameState).currentPlayer}
+                currentPlayer={(historyGameState || gameState)?.currentPlayer || 0}
                 dice={(() => {
                   const d = (historyGameState || gameState)?.dice;
                   if (!d) return null;
@@ -2080,7 +2080,7 @@ export default function Game() {
                 })()}
                 onMove={handleMove}
                 onRollDice={handleRollDice}
-                canMove={historyGameState ? false : gameState.canMove}
+                canMove={historyGameState ? false : (gameState?.canMove || false)}
                 isMyTurn={historyGameState ? false : isMyTurn}
                 gameId={gameId}
                 gameMode={gameInfo?.mode || 'long'}
