@@ -1075,6 +1075,22 @@ export default function Game() {
         setServerMovesForBoard(data.serverMoves);
       } else {
         setGameState(nextGameState);
+        
+        // ВАЖНО: После завершения хода обоих игроков нужно бросить кубики для следующего игрока
+        // Проверяем, что кубики пустые и ход переключился на другого игрока
+        const bothOffsetsChosen = data.p1OffsetChosenAt && data.p2OffsetChosenAt;
+        const hasNoDice = !formattedDice || (Array.isArray(formattedDice) && formattedDice.length === 0);
+        const turnChanged = !wasMyTurn && isMyTurnNow;
+        
+        if (hasNoDice && turnChanged && bothOffsetsChosen && data.status === 'in_progress' && data.type !== 'sandbox') {
+          console.log('🎲 Auto-rolling dice after turn change in move_made:', { wasMyTurn, isMyTurnNow, hasNoDice, bothOffsetsChosen });
+          setTimeout(() => {
+            const socket = getSocket();
+            if (socket && gameId) {
+              socket.emit('roll_dice', { gameId });
+            }
+          }, 500);
+        }
       }
 
       setGameStatus(data.status || 'in_progress')
@@ -1475,6 +1491,12 @@ export default function Game() {
       await apiClient.post(`/games/${gameId}/offset`, { offset: myOffset })
       setOffsetConfirmed(true)
       setShowOffsetModal(false)
+      
+      // ВАЖНО: Перезагружаем игру после выбора смещения, чтобы получить обновленное состояние
+      // Это нужно для загрузки доски после выбора смещения обоими игроками
+      setTimeout(() => {
+        loadGame()
+      }, 500)
       
       // Для игр с ботом автоматически начинаем игру после выбора смещения
       if (isBotGame || gameInfo?.type === 'vs_bot') {

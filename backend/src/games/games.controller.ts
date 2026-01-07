@@ -161,6 +161,19 @@ export class GamesController {
   ) {
     const game = await this.gamesService.setOffset(id, user.id, body.offset);
     
+    // ВАЖНО: Отправляем обновленное состояние игры через WebSocket
+    // Это нужно для обновления доски после выбора смещения
+    const gameState = await this.gamesService.getGameState(id);
+    this.gamesGateway.server.to(`game:${id}`).emit('game_state', gameState);
+    
+    // Также отправляем событие offset_updated для обновления смещений
+    this.gamesGateway.server.to(`game:${id}`).emit('offset_updated', {
+      player1Offset: game.p1Offset,
+      player2Offset: game.p2Offset,
+      p1OffsetChosenAt: game.p1OffsetChosenAt,
+      p2OffsetChosenAt: game.p2OffsetChosenAt,
+    });
+    
     // Оповещаем второго игрока об изменении смещения через WebSocket
     this.gamesGateway.server.to(`game:${id}`).emit('offset_updated', {
       player1Offset: game.p1Offset,
