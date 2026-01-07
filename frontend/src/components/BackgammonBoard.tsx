@@ -178,7 +178,8 @@ export default function BackgammonBoard({
       if (nextMove.from === 24) isWhite = true
       else if (nextMove.from === 25) isWhite = false
       else if (nextMove.from >= 0 && nextMove.from < 24) {
-        isWhite = (virtualGameState?.points[nextMove.from] || 0) > 0
+        const points = virtualGameState?.points || []
+        isWhite = (points[nextMove.from] || 0) > 0
       } else {
         // Если from неизвестен (например, bear-off), используем логику по currentPlayer
         isWhite = isPlayer1 ? false : true

@@ -1307,6 +1307,49 @@ export default function Game() {
       }
     })
 
+    socket.on('sandbox_board_updated', (data: any) => {
+      console.log('🏗️ Sandbox board updated:', data)
+      if (data.gameState) {
+        const barRaw = data.gameState.bar || [0, 0]
+        const bar = Array.isArray(barRaw) 
+          ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+          : barRaw
+          
+        const bearOffRaw = data.gameState.bearOff || data.gameState.borneOff || [0, 0]
+        const bearOff = Array.isArray(bearOffRaw)
+          ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+          : bearOffRaw
+        
+        const points = Array.isArray(data.gameState.points) 
+          ? [...data.gameState.points] 
+          : []
+        
+        setGameState(prev => ({
+          ...prev,
+          ...data.gameState,
+          points,
+          bar,
+          bearOff,
+          currentPlayer: data.currentPlayer !== undefined ? data.currentPlayer : prev?.currentPlayer,
+          canMove: true
+        }))
+      }
+    })
+
+    socket.on('sandbox_dice_updated', (data: any) => {
+      console.log('🎲 Sandbox dice updated:', data)
+      setGameState(prev => ({
+        ...prev,
+        dice: data.dice,
+        currentPlayer: data.currentPlayer !== undefined ? data.currentPlayer : prev?.currentPlayer,
+        canMove: true
+      }))
+      
+      // Запускаем анимацию кубиков
+      setDiceAnimating(true)
+      setTimeout(() => setDiceAnimating(false), 1500)
+    })
+
     const matchmakingSocket = getMatchmakingSocket()
     if (matchmakingSocket && gameId && !isBotGame) {
       matchmakingSocket.on('ready_status', (data: any) => {
@@ -2001,7 +2044,7 @@ export default function Game() {
           )}
 
           {/* Доска */}
-          {(gameStatus === 'in_progress' || gameStatus === 'finished') && (
+          {(gameStatus === 'in_progress' || gameStatus === 'finished' || isSandbox) && (
             <div className="board-wrapper">
               {/* Кнопки подтверждения и отмены в нижней части бара (ландшафт) */}
               {isLandscape && gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
