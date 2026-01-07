@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import apiClient from '../api/client'
 import './SkillPointsModal.css'
 
@@ -29,7 +30,47 @@ export default function SkillPointsModal({
     setLocalPoints(skillPoints)
   }, [skillPoints])
 
+  useEffect(() => {
+    if (isOpen) {
+      const scrollY = window.scrollY
+      document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      document.body.style.height = '100%'
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        document.body.style.height = ''
+        window.scrollTo(0, scrollY)
+      }
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
+
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: '0px',
+    left: '0px',
+    right: '0px',
+    bottom: '0px',
+    width: '100vw',
+    height: '100vh',
+    background: 'rgba(0, 0, 0, 0.95)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2147483647,
+    padding: '20px',
+    margin: '0',
+    touchAction: 'none',
+    overflow: 'hidden',
+    overscrollBehavior: 'contain',
+  }
 
   const handleDistribute = async (type: 'economy' | 'energy' | 'lives' | 'power', amount: number) => {
     if (localPoints.free < amount || distributing) return
@@ -77,8 +118,8 @@ export default function SkillPointsModal({
     },
   ]
 
-  return (
-    <div className="skill-points-modal-overlay" onClick={onClose}>
+  return createPortal(
+    <div className="skill-points-modal-overlay" onClick={onClose} style={overlayStyle}>
       <div className="skill-points-modal" onClick={(e) => e.stopPropagation()}>
         <div className="skill-points-modal-header">
           <h3>Распределение Skill Points</h3>
@@ -133,7 +174,8 @@ export default function SkillPointsModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

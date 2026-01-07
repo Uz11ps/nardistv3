@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { apiClient, getImageUrl } from '../api/client'
 import Card from './Card'
 import Button from './Button'
@@ -25,6 +26,26 @@ export default function SkinSelectModal({
   useEffect(() => {
     if (isOpen) {
       loadSkins()
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen) {
+      const scrollY = window.scrollY
+      document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      document.body.style.height = '100%'
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        document.body.style.height = ''
+        window.scrollTo(0, scrollY)
+      }
     }
   }, [isOpen])
 
@@ -60,8 +81,28 @@ export default function SkinSelectModal({
 
   if (!isOpen) return null
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: '0px',
+    left: '0px',
+    right: '0px',
+    bottom: '0px',
+    width: '100vw',
+    height: '100vh',
+    background: 'rgba(0, 0, 0, 0.95)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2147483647,
+    padding: '20px',
+    margin: '0',
+    touchAction: 'none',
+    overflow: 'hidden',
+    overscrollBehavior: 'contain',
+  }
+
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose} style={overlayStyle}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90%', maxHeight: '90vh', overflow: 'auto' }}>
         <div className="modal-title">Выберите скин</div>
         <div className="modal-description">Выберите дизайн доски для игры</div>
@@ -157,7 +198,8 @@ export default function SkinSelectModal({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

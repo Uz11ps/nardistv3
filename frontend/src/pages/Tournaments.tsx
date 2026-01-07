@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
@@ -180,8 +181,30 @@ export default function Tournaments() {
       </div>
 
       {/* Модальное окно с деталями турнира */}
-      {selectedTournament && tournamentDetail && (
-        <div className="tournament-modal-overlay" onClick={() => { setSelectedTournament(null); setTournamentDetail(null) }}>
+      {selectedTournament && tournamentDetail && createPortal(
+        <div 
+          className="tournament-modal-overlay" 
+          onClick={() => { setSelectedTournament(null); setTournamentDetail(null) }}
+          style={{
+            position: 'fixed',
+            top: '0px',
+            left: '0px',
+            right: '0px',
+            bottom: '0px',
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: '20px',
+            margin: '0',
+            touchAction: 'none',
+            overflow: 'hidden',
+            overscrollBehavior: 'contain',
+          }}
+        >
           <div className="tournament-modal" onClick={(e) => e.stopPropagation()}>
             <div className="tournament-modal-header">
               <h3 className="tournament-modal-title">{tournamentDetail.name}</h3>
@@ -316,7 +339,8 @@ export default function Tournaments() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </PageLayout>
   )

@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import BackgammonBoard from '../components/BackgammonBoard'
@@ -359,8 +360,30 @@ export default function History() {
       </div>
 
       {/* Модальное окно анализа */}
-      {analysisData && (
-        <div className="modal-overlay" onClick={() => { setAnalysisData(null); setSelectedAnalysisMoveIndex(null); }}>
+      {analysisData && createPortal(
+        <div 
+          className="modal-overlay" 
+          onClick={() => { setAnalysisData(null); setSelectedAnalysisMoveIndex(null); }}
+          style={{
+            position: 'fixed',
+            top: '0px',
+            left: '0px',
+            right: '0px',
+            bottom: '0px',
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: '20px',
+            margin: '0',
+            touchAction: 'none',
+            overflow: 'hidden',
+            overscrollBehavior: 'contain',
+          }}
+        >
           <div className="modal analysis-modal-v2" onClick={(e) => e.stopPropagation()}>
             <div className="analysis-header-v2">
               <div className="analysis-title-row">
@@ -488,12 +511,35 @@ export default function History() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Модальное окно реплея */}
-      {selectedGame && isReplaying && (
-        <div className="replay-overlay" onClick={() => setIsReplaying(false)}>
+      {selectedGame && isReplaying && createPortal(
+        <div 
+          className="replay-overlay" 
+          onClick={() => setIsReplaying(false)}
+          style={{
+            position: 'fixed',
+            top: '0px',
+            left: '0px',
+            right: '0px',
+            bottom: '0px',
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: '20px',
+            margin: '0',
+            touchAction: 'none',
+            overflow: 'hidden',
+            overscrollBehavior: 'contain',
+          }}
+        >
           <div className="replay-modal" onClick={(e) => e.stopPropagation()}>
             <div className="replay-header">
               <h3>Реплей игры</h3>
@@ -654,7 +700,8 @@ export default function History() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </PageLayout>
   )

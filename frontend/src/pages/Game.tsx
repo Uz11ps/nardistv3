@@ -49,6 +49,8 @@ export default function Game() {
   const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight)
   const animationFrameRef = useRef<number | null>(null)
   const timerIntervalRef = useRef<number | null>(null)
+  const [preparationCountdown, setPreparationCountdown] = useState<number | null>(null) // Отсчет подготовки (10 секунд)
+  const preparationCountdownRef = useRef<number | null>(null)
 
   // Отключаем вертикальный свайп в Telegram Web App при монтировании компонента игры
   useEffect(() => {
@@ -78,6 +80,93 @@ export default function Game() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Отсчет подготовки к игре (10 секунд после выбора смещения)
+  const loadGameRef = useRef<(() => Promise<void>) | null>(null)
+  
+  useEffect(() => {
+    // Сохраняем ссылку на функцию loadGame
+    const loadGameFunc = async () => {
+      if (!gameId) return
+      try {
+        const response = await apiClient.get(`/games/${gameId}`)
+        const game = response.data
+        setGameInfo(game)
+        setOpponent(game.player1Id === user?.id ? game.player2 : game.player1)
+        const winsScore = game.matchesToWin > 1 
+          ? { player1: game.player1Wins || 0, player2: game.player2Wins || 0 }
+          : { player1: game.player1Score || 0, player2: game.player2Score || 0 }
+        setScore(winsScore)
+        setGameStatus(game.status)
+        
+        const isP1 = game.player1Id === user?.id
+        const myCurrentOffset = isP1 ? (game.p1Offset || 1) : (game.p2Offset || 1)
+        const opponentCurrentOffset = isP1 ? (game.p2Offset || 1) : (game.p1Offset || 1)
+        setMyOffset(myCurrentOffset)
+        setOpponentOffset(opponentCurrentOffset)
+        
+        if (game.gameState) {
+          const barRaw = game.gameState.bar || [0, 0]
+          const bar = Array.isArray(barRaw) 
+            ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+            : barRaw
+            
+          const bearOffRaw = game.gameState.bearOff || game.gameState.borneOff || [0, 0]
+          const bearOff = Array.isArray(bearOffRaw)
+            ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+            : bearOffRaw
+          
+          const points = Array.isArray(game.gameState.points) 
+            ? [...game.gameState.points] 
+            : []
+          
+          const formattedDice = game.gameState.dice 
+            ? (Array.isArray(game.gameState.dice) ? game.gameState.dice : [game.gameState.dice.die1, game.gameState.dice.die2])
+            : null
+          
+          const isP1Now = game.player1Id === user?.id
+          const canMove = game.currentPlayer === (isP1Now ? 0 : 1)
+          
+          setGameState({
+            points,
+            bar,
+            bearOff,
+            currentPlayer: game.currentPlayer || 0,
+            dice: formattedDice,
+            canMove: canMove,
+            verificationSalt: game.verificationSalt,
+            p1Rolls: game.p1Rolls,
+            p2Rolls: game.p2Rolls,
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load game:', error)
+      }
+    }
+    loadGameRef.current = loadGameFunc
+  }, [gameId, user?.id])
+
+  useEffect(() => {
+    if (preparationCountdown !== null && preparationCountdown > 0) {
+      const interval = setInterval(() => {
+        setPreparationCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            preparationCountdownRef.current = null
+            // После завершения отсчета загружаем игру
+            if (loadGameRef.current) {
+              loadGameRef.current()
+            }
+            return null
+          }
+          const newValue = prev - 1
+          preparationCountdownRef.current = newValue
+          return newValue
+        })
+      }, 1000)
+
+      return () => clearInterval(interval)
+    }
+  }, [preparationCountdown])
 
   // Расчет Pip Count (очков до финиша)
   const calculatePipCount = useCallback((points: number[], bar: any, bearOff: any, player: number, mode: string) => {
@@ -826,6 +915,12 @@ export default function Game() {
       
       // Проверяем, выбрали ли оба игрока смещение
       const bothOffsetsChosen = data.p1OffsetChosenAt && data.p2OffsetChosenAt
+
+      // Если оба игрока выбрали смещение, но игра еще в WAITING - запускаем отсчет подготовки
+      if (bothOffsetsChosen && newStatus === 'waiting' && preparationCountdown === null) {
+        setPreparationCountdown(10)
+        preparationCountdownRef.current = 10
+      }
 
       // Таймер и броски кубиков запускаются ТОЛЬКО после выбора смещения обоими игроками
       if (isMyTurnNow && !wasMyTurn && bothOffsetsChosen) {
@@ -1708,6 +1803,17 @@ export default function Game() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Экран подготовки к игре (отсчет 10 секунд после выбора смещения) */}
+          {preparationCountdown !== null && preparationCountdown > 0 && gameStatus === 'waiting' && (
+            <div className="game-preparation-screen">
+              <div className="preparation-content">
+                <div className="preparation-title">Подготовка к игре</div>
+                <div className="preparation-countdown">{preparationCountdown}</div>
+                <div className="preparation-message">Генерация ходов...</div>
+              </div>
             </div>
           )}
 

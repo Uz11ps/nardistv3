@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import './EnhancementDetailModal.css'
 
 interface EnhancementDetailModalProps {
@@ -18,10 +19,50 @@ export default function EnhancementDetailModal({
   onClose,
   enhancement
 }: EnhancementDetailModalProps) {
+  useEffect(() => {
+    if (isOpen) {
+      const scrollY = window.scrollY
+      document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      document.body.style.height = '100%'
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        document.body.style.height = ''
+        window.scrollTo(0, scrollY)
+      }
+    }
+  }, [isOpen])
+
   if (!isOpen || !enhancement) return null
 
-  return (
-    <div className="enhancement-detail-modal-overlay" onClick={onClose}>
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: '0px',
+    left: '0px',
+    right: '0px',
+    bottom: '0px',
+    width: '100vw',
+    height: '100vh',
+    background: 'rgba(0, 0, 0, 0.95)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2147483647,
+    padding: '20px',
+    margin: '0',
+    touchAction: 'none',
+    overflow: 'hidden',
+    overscrollBehavior: 'contain',
+  }
+
+  return createPortal(
+    <div className="enhancement-detail-modal-overlay" onClick={onClose} style={overlayStyle}>
       <div className="enhancement-detail-modal" onClick={(e) => e.stopPropagation()}>
         <div className="enhancement-detail-header">
           <div className="enhancement-detail-icon">{enhancement.icon}</div>
@@ -43,7 +84,8 @@ export default function EnhancementDetailModal({
           <button className="enhancement-detail-btn" onClick={onClose}>Понятно</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

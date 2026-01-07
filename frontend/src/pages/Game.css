@@ -450,6 +450,71 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.game-preparation-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.preparation-content {
+  text-align: center;
+  color: #fff;
+}
+
+.preparation-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  color: #FFD700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.preparation-countdown {
+  font-size: 72px;
+  font-weight: bold;
+  color: #4CAF50;
+  margin-bottom: 24px;
+  font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.preparation-message {
+  font-size: 18px;
+  color: #aaa;
+  margin-top: 16px;
+}
+
 .fair-play-setup {
   width: 100%;
   max-width: 320px;

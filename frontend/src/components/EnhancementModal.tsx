@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import apiClient from '../api/client'
 import './EnhancementModal.css'
 
@@ -95,7 +96,8 @@ export default function EnhancementModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

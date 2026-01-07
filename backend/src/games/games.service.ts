@@ -593,14 +593,13 @@ export class GamesService {
     
     // Определяем, является ли это дублем
     const isDoubles = dice.length === 4 && dice.every(d => d === dice[0]);
-    const doublesValue = isDoubles ? dice[0] : null; // Значение дубля (например, 1 для 1/1)
+    const doublesValue = isDoubles ? dice[0] : null; // Значение дубля (например, 3 для 3/3)
     
     // Для дублей создаем счетчик использования кубиков (можно использовать до 4 раз один и тот же номер)
     const diceCount = new Map<number, number>();
     for (const die of dice) {
       diceCount.set(die, (diceCount.get(die) || 0) + 1);
     }
-    const diceUsageCount = new Map<number, number>(); // Сколько раз использован каждый кубик
     let totalDiceUsed = 0; // Общее количество использованных кубиков (для дублей)
 
     // Разворачиваем комбинированные ходы (те, у которых есть steps) в последовательность обычных
@@ -621,40 +620,77 @@ export class GamesService {
       return move;
     });
 
+    // ПЕРЕПИСАННАЯ ЛОГИКА ДЛЯ ДУБЛЕЙ
+    // При дубле разрешаем ходы с die равным: doublesValue, doublesValue*2, doublesValue*3, doublesValue*4
+    // Для комбинированных ходов (die > doublesValue) разбиваем их на отдельные шаги
+    const processedMoves: Array<{ from: number; to: number; die: number }> = [];
+    
     for (const move of normalizedMoves) {
       console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       console.log(`  Текущее состояние: movesFromHead=${currentState.movesFromHead || 0}, dice=[${currentState.dice?.join(', ') || 'none'}]`);
       
-      // Для дублей: если die больше 6, это комбинированный ход (например, 4 при дубле 1/1)
-      // Проверяем, что это валидный комбинированный ход для дубля
-      if (isDoubles && move.die > 6 && doublesValue) {
-        // Проверяем, что die кратно doublesValue и не превышает 4 * doublesValue
-        const expectedMaxDie = 4 * doublesValue;
-        if (move.die > expectedMaxDie) {
-          throw new BadRequestException(`При дубле ${doublesValue}/${doublesValue} нельзя использовать ход на ${move.die}. Максимум: ${expectedMaxDie}`);
+      if (isDoubles && doublesValue) {
+        // Для дублей проверяем, что die кратно doublesValue и не превышает 4 * doublesValue
+        const allowedValues = [doublesValue, doublesValue * 2, doublesValue * 3, doublesValue * 4];
+        
+        if (!allowedValues.includes(move.die)) {
+          throw new BadRequestException(`При дубле ${doublesValue}/${doublesValue} можно использовать только ходы на ${allowedValues.join(', ')}. Получен: ${move.die}`);
         }
-        // Проверяем, что die кратно doublesValue
-        if (move.die % doublesValue !== 0) {
-          throw new BadRequestException(`При дубле ${doublesValue}/${doublesValue} ход на ${move.die} должен быть кратен ${doublesValue}`);
-        }
+        
         // Вычисляем, сколько кубиков используется для этого хода
         const diceUsedForMove = move.die / doublesValue;
+        
+        // Проверяем, что не превышаем лимит в 4 кубика
         if (totalDiceUsed + diceUsedForMove > 4) {
           throw new BadRequestException(`При дубле ${doublesValue}/${doublesValue} нельзя использовать более 4 кубиков. Уже использовано: ${totalDiceUsed}, требуется: ${diceUsedForMove}`);
         }
-        // Валидируем ход с использованием суммы кубиков
-        const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
-        if (!isValid) {
-          console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
-          throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+        
+        // Если это комбинированный ход (die > doublesValue), разбиваем его на отдельные шаги
+        if (move.die > doublesValue) {
+          // Вычисляем промежуточные точки для комбинированного хода
+          // Для этого нужно последовательно применять ходы по doublesValue
+          let currentFrom = move.from;
+          let currentTo = move.to;
+          const stepsCount = diceUsedForMove;
+          
+          // Для комбинированного хода нужно проверить, что весь путь валиден
+          // Сначала валидируем весь ход целиком
+          const isValidFullMove = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
+          if (!isValidFullMove) {
+            console.error(`❌ Комбинированный ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+            throw new BadRequestException(`Недопустимый комбинированный ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+          }
+          
+          // Применяем ход как один комбинированный (движок должен поддерживать это)
+          currentState = engine.applyMove(currentState, move.from, move.to, move.die);
+          totalDiceUsed += diceUsedForMove;
+          
+          // Сохраняем ход для истории
+          processedMoves.push({ from: move.from, to: move.to, die: move.die });
+          
+          console.log(`✅ Применяем комбинированный ход при дубле: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (использовано ${diceUsedForMove} кубиков из 4)`);
+        } else {
+          // Обычный ход на одно значение кубика
+          const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
+          
+          if (!isValid) {
+            console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+            throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+          }
+          
+          // Проверяем, что не превышаем лимит в 4 кубика
+          if (totalDiceUsed >= 4) {
+            throw new BadRequestException(`При дубле ${doublesValue}/${doublesValue} нельзя использовать более 4 кубиков`);
+          }
+          
+          currentState = engine.applyMove(currentState, move.from, move.to, move.die);
+          totalDiceUsed += 1;
+          processedMoves.push({ from: move.from, to: move.to, die: move.die });
+          
+          console.log(`✅ Применяем ход при дубле: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (использовано ${totalDiceUsed}/4)`);
         }
-        // Применяем ход и увеличиваем счетчик использованных кубиков
-        totalDiceUsed += diceUsedForMove;
-        // Для комбинированного хода применяем его как один ход на сумму
-        currentState = engine.applyMove(currentState, move.from, move.to, move.die);
-        console.log(`✅ Применяем комбинированный ход при дубле: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (использовано ${diceUsedForMove} кубиков из 4)`);
       } else {
-        // Обычная валидация для не-комбинированных ходов
+        // Обычная логика для не-дублей
         const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
         
         if (!isValid) {
@@ -662,26 +698,29 @@ export class GamesService {
           throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
         }
         
-        // Проверяем использование кубика: для дублей можно использовать до 4 раз, для обычных - по количеству в массиве
+        // Для обычных ходов проверяем использование кубика
+        const diceUsageCount = new Map<number, number>();
+        for (const pm of processedMoves) {
+          diceUsageCount.set(pm.die, (diceUsageCount.get(pm.die) || 0) + 1);
+        }
+        
         const usedCount = diceUsageCount.get(move.die) || 0;
         const availableCount = diceCount.get(move.die) || 0;
         
         if (usedCount >= availableCount) {
-          console.error(`❌ Кубик ${move.die} уже использован максимальное количество раз (${usedCount}/${availableCount}). Доступные кубики:`, Array.from(diceCount.entries()));
+          console.error(`❌ Кубик ${move.die} уже использован максимальное количество раз (${usedCount}/${availableCount})`);
           throw new BadRequestException(`Кубик ${move.die} уже использован максимальное количество раз`);
         }
         
-        // Увеличиваем счетчик использования
-        diceUsageCount.set(move.die, usedCount + 1);
-        totalDiceUsed += 1;
-        
-        console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (использовано ${usedCount + 1}/${availableCount})`);
         currentState = engine.applyMove(currentState, move.from, move.to, move.die);
+        processedMoves.push({ from: move.from, to: move.to, die: move.die });
+        
+        console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       }
     }
 
-    // Для целей сохранения и истории используем нормализованные ходы
-    const finalMovesToSave = normalizedMoves;
+    // Для целей сохранения и истории используем обработанные ходы
+    const finalMovesToSave = processedMoves;
 
     // Проверяем обязательность использования всех кубиков, если это возможно
     // getAllValidMoves доступен только для BackgammonEngine
@@ -690,12 +729,22 @@ export class GamesService {
       allValidMoves = engine.getAllValidMoves(game.gameState, dice);
     }
     
-    // Финальная проверка использования кубиков (используем уже созданные счетчики)
-    // diceUsageCount уже содержит правильное количество использований после всех ходов
-    for (const [die, used] of diceUsageCount.entries()) {
-      const available = diceCount.get(die) || 0;
-      if (used > available) {
-        throw new BadRequestException(`Кубик ${die} использован ${used} раз(а), но доступно только ${available}`);
+    // Финальная проверка использования кубиков для дублей
+    if (isDoubles && doublesValue) {
+      if (totalDiceUsed > 4) {
+        throw new BadRequestException(`При дубле использовано ${totalDiceUsed} кубиков, но доступно только 4`);
+      }
+    } else {
+      // Для обычных ходов проверяем использование каждого кубика
+      const diceUsageCount = new Map<number, number>();
+      for (const move of processedMoves) {
+        diceUsageCount.set(move.die, (diceUsageCount.get(move.die) || 0) + 1);
+      }
+      for (const [die, used] of diceUsageCount.entries()) {
+        const available = diceCount.get(die) || 0;
+        if (used > available) {
+          throw new BadRequestException(`Кубик ${die} использован ${used} раз(а), но доступно только ${available}`);
+        }
       }
     }
     
@@ -773,9 +822,13 @@ export class GamesService {
         remainingDice.push(doublesValue);
       }
     } else {
-      // Для обычных ходов используем diceUsageCount
+      // Для обычных ходов считаем использование кубиков из processedMoves
+      const diceUsageCountForRemaining = new Map<number, number>();
+      for (const move of processedMoves) {
+        diceUsageCountForRemaining.set(move.die, (diceUsageCountForRemaining.get(move.die) || 0) + 1);
+      }
       for (const [die, count] of diceCount.entries()) {
-        const used = diceUsageCount.get(die) || 0;
+        const used = diceUsageCountForRemaining.get(die) || 0;
         const remaining = count - used;
         for (let i = 0; i < remaining; i++) {
           remainingDice.push(die);
