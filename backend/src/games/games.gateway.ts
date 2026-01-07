@@ -613,21 +613,25 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           // Roll dice for bot
           this.logger.log(`🎲 Rolling dice for bot`);
           const botDice = await this.gamesService.rollDice(gameId, botPlayerId);
+          
+          // Применяем износ к кубикам бота после броска (Equipment Spec v2.0 - PER_ROLL)
+          // Бот-игры обычно не тратят износ, но для консистентности можно оставить
+          // TODO: Решить, нужно ли применять износ для бот-игр
+          
+          const gameStateAfterDice = await this.gamesService.getGameState(gameId);
+          
+          // Emit dice rolled event с уникальным ID для предотвращения дублирования
+          const eventId = `${gameId}_${Date.now()}_bot`;
+          this.server.to(`game:${gameId}`).emit('dice_rolled', { 
+            dice: botDice, 
+            playerId: null,
+            eventId
+          });
+          this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
+        }
         
-        // Применяем износ к кубикам бота после броска (Equipment Spec v2.0 - PER_ROLL)
-        // Бот-игры обычно не тратят износ, но для консистентности можно оставить
-        // TODO: Решить, нужно ли применять износ для бот-игр
-        
+        // Получаем актуальное состояние игры (с кубиками)
         const gameStateAfterDice = await this.gamesService.getGameState(gameId);
-        
-        // Emit dice rolled event с уникальным ID для предотвращения дублирования
-        const eventId = `${gameId}_${Date.now()}_bot`;
-        this.server.to(`game:${gameId}`).emit('dice_rolled', { 
-          dice: botDice, 
-          playerId: null,
-          eventId
-        });
-        this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
         
         // Проверяем наличие валидных ходов после броска (как и для обычных игроков)
         const possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
