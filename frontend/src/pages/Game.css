@@ -696,6 +696,231 @@
   padding: 20px;
 }
 
+/* Модальные окна - всегда в DOM, управляются через display */
+.offset-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  min-width: 100vw;
+  min-height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2147483647;
+  padding: 16px;
+  margin: 0;
+  border: none;
+  outline: none;
+  touch-action: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  animation: none;
+  transition: none;
+  transform: none;
+  will-change: auto;
+}
+
+.offset-modal-overlay.modal-hidden {
+  display: none;
+}
+
+.offset-modal-overlay.modal-visible {
+  display: flex;
+}
+
+.offset-modal-content {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  padding: 20px;
+  border-radius: 16px;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+  position: relative;
+  margin: 0;
+  transform: none;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  animation: none;
+  transition: none;
+}
+
+.offset-modal-content h2 {
+  font-size: 24px;
+  margin: 0 0 16px 0;
+  color: #FFF;
+  font-weight: 600;
+}
+
+.offset-modal-description {
+  font-size: 14px;
+  color: #B6B6B6;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.offset-selector {
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.offset-selector label {
+  display: block;
+  font-size: 16px;
+  color: #FFF;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.offset-hint {
+  font-size: 12px;
+  color: #999;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+}
+
+.offset-selector input[type="range"] {
+  width: 100%;
+  margin-bottom: 12px;
+  height: 6px;
+  border-radius: 3px;
+  background: #333;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.offset-selector input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #E84142;
+  cursor: pointer;
+}
+
+.offset-selector input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #E84142;
+  cursor: pointer;
+  border: none;
+}
+
+.offset-values {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #B6B6B6;
+}
+
+.offset-values strong {
+  color: #FFF;
+  font-weight: 600;
+}
+
+.hash-display {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.hash-display div {
+  color: #aaa;
+  margin-bottom: 8px;
+}
+
+.hash-display code {
+  color: #fff;
+  word-break: break-all;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.offset-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Мобильная адаптация и Telegram Mini App */
+@media (max-width: 480px), (max-height: 700px) {
+  .offset-modal-overlay {
+    padding: 12px;
+  }
+
+  .offset-modal-content {
+    padding: 16px;
+    max-height: calc(100vh - 24px);
+    max-width: calc(100vw - 24px);
+    width: calc(100vw - 24px);
+  }
+
+  .offset-modal-content h2 {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+
+  .offset-modal-description {
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+
+  .offset-selector {
+    margin-bottom: 16px;
+  }
+
+  .hash-display {
+    padding: 8px;
+    margin-bottom: 16px;
+    font-size: 11px;
+  }
+}
+
+/* Для очень маленьких экранов */
+@media (max-height: 600px) {
+  .offset-modal-content {
+    padding: 12px;
+    max-height: calc(100vh - 16px);
+  }
+
+  .offset-modal-content h2 {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .offset-modal-description {
+    font-size: 11px;
+    margin-bottom: 12px;
+  }
+
+  .hash-display {
+    padding: 8px;
+    margin-bottom: 12px;
+    font-size: 10px;
+  }
+
+  .offset-selector {
+    margin-bottom: 12px;
+  }
+}
+
 .modal-content {
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
   padding: 32px;

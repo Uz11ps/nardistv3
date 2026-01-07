@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageHeader from '../components/PageHeader'
@@ -8,7 +7,6 @@ import SandboxControls from '../components/SandboxControls'
 import Dice from '../components/Dice'
 import Icon from '../components/Icon'
 import Button from '../components/Button'
-import OffsetModal from '../components/OffsetModal'
 import { apiClient } from '../api/client'
 import { getSocket, getMatchmakingSocket, connectWebSocket } from '../api/websocket'
 import './Game.css'
@@ -159,6 +157,28 @@ export default function Game() {
   useEffect(() => {
     showOffsetModalRef.current = showOffsetModal
   }, [showOffsetModal])
+
+  // Блокируем скролл body когда модальные окна открыты
+  useEffect(() => {
+    const isAnyModalOpen = showOffsetModal || showExitModal
+    if (isAnyModalOpen) {
+      const scrollY = window.scrollY
+      document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      document.body.style.height = '100%'
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        document.body.style.height = ''
+        window.scrollTo(0, scrollY)
+      }
+    }
+  }, [showOffsetModal, showExitModal])
 
   useEffect(() => {
     offsetConfirmedRef.current = offsetConfirmed
@@ -849,7 +869,12 @@ export default function Game() {
       
       // Если это дубль и остались кубики, и это еще мой ход - НЕ очищаем pendingMoves
       // Пользователь может продолжить делать ходы с оставшимися кубиками
-      if (!(isDoubles && remainingDice.length > 0 && isMyTurnStill)) {
+      // НО только если не все 4 хода уже сделаны
+      if (isDoubles && remainingDice.length > 0 && isMyTurnStill && pendingMoves.length < 4) {
+        // Для дублей оставляем pendingMoves, чтобы можно было продолжить
+        console.log('🎲 Doubles: keeping pendingMoves for remaining dice:', remainingDice, 'pendingMoves:', pendingMoves.length)
+      } else {
+        // Для обычных ходов или если все ходы сделаны - очищаем
         setPendingMoves([])
       }
       
@@ -1173,7 +1198,7 @@ export default function Game() {
 
     // Для обычного хода (die <= 6 и нет steps)
     if (die <= 6 && (!steps || steps.length === 0)) {
-      // Для дублей не проверяем максимальное использование кубика
+      // Для дублей НЕ проверяем использование кубика - можно использовать все 4 сразу
       if (!isDoubles) {
         const currentDiceUsage = new Map<number, number>();
         pendingMoves.forEach(m => {
@@ -1192,6 +1217,7 @@ export default function Game() {
           return
         }
       }
+      // Для дублей просто добавляем ход без проверок
     } else if (die > 6) {
       // Для хода > 6 (комбинированный) должен быть steps
       if (!steps || steps.length === 0) {
@@ -1354,19 +1380,8 @@ export default function Game() {
           setIsProcessingConfirm(false)
         }, 3000)
         
-        // Проверяем, является ли это дублем - если да, не очищаем pendingMoves сразу
-        // Это позволит сделать все 4 хода подряд без промежуточных подтверждений
-        const currentDice = Array.isArray(gameState.dice) ? gameState.dice : gameState.dice ? [gameState.dice.die1, gameState.dice.die2] : []
-        const isDoubles = currentDice.length === 4 && currentDice.every(d => d === currentDice[0])
-        
         socket.emit('make_move', { gameId, moves: pendingMoves })
-        
-        // Для дублей НЕ очищаем pendingMoves сразу, если остались кубики
-        // Это позволит продолжить делать ходы без промежуточного подтверждения
-        if (!isDoubles || pendingMoves.length >= 4) {
-          // Для обычных ходов или если все 4 хода при дубле уже сделаны - очищаем
-          // pendingMoves будут очищены в обработчике move_made, чтобы избежать двойного применения в virtualGameState
-        }
+        // pendingMoves будут очищены в обработчике move_made, чтобы избежать двойного применения в virtualGameState
       } catch (error) {
         // Просто откатываем ходы без показа ошибки
         setPendingMoves([])
@@ -1975,62 +1990,92 @@ export default function Game() {
       </div>
 
 
-      {showExitModal && createPortal(
+      {/* Модальное окно выхода - всегда в DOM, управляется через display */}
+      <div 
+        className={`offset-modal-overlay ${showExitModal ? 'modal-visible' : 'modal-hidden'}`}
+        onClick={() => setShowExitModal(false)}
+      >
         <div 
-          className="offset-modal-overlay" 
-          onClick={() => setShowExitModal(false)}
-          style={{
-            position: 'fixed',
-            top: '0px',
-            left: '0px',
-            right: '0px',
-            bottom: '0px',
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(0, 0, 0, 0.95)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2147483647,
-            padding: window.innerWidth <= 480 ? '12px' : '16px',
-            margin: 0,
-            touchAction: 'none',
-            overflow: 'hidden',
-          }}
+          className="offset-modal-content" 
+          onClick={(e) => e.stopPropagation()}
         >
-          <div 
-            className="offset-modal-content" 
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'relative',
-              margin: 0,
-              maxWidth: window.innerWidth <= 480 ? `calc(100vw - 24px)` : '400px',
-              width: '100%',
-              transform: 'none',
-              animation: 'none',
-              transition: 'none',
-            }}
-          >
-            <h2>Выход из игры</h2>
-            <p className="offset-modal-description">Вы уверены? Вам засчитается поражение!</p>
-            <div className="offset-modal-actions">
-              <Button variant="primary" onClick={handleConfirmExit} style={{ flex: 1 }}>Да, сдаться</Button>
-              <Button variant="secondary" onClick={() => setShowExitModal(false)} style={{ flex: 1 }}>Нет</Button>
+          <h2>Выход из игры</h2>
+          <p className="offset-modal-description">Вы уверены? Вам засчитается поражение!</p>
+          <div className="offset-modal-actions">
+            <Button variant="primary" onClick={handleConfirmExit} style={{ flex: 1 }}>Да, сдаться</Button>
+            <Button variant="secondary" onClick={() => setShowExitModal(false)} style={{ flex: 1 }}>Нет</Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Модальное окно выбора смещения - всегда в DOM, управляется через display */}
+      <div 
+        className={`offset-modal-overlay ${(showOffsetModal && gameInfo?.type !== 'sandbox') ? 'modal-visible' : 'modal-hidden'}`}
+        onClick={() => setShowOffsetModal(false)}
+      >
+        <div 
+          className="offset-modal-content" 
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2>Выбор смещения</h2>
+          <p className="offset-modal-description">
+            Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 5).
+          </p>
+          
+          <div className="offset-selector">
+            <label>Ваше смещение (1-5):</label>
+            <p className="offset-hint">
+              Смещение влияет на выбор начальной позиции в последовательности бросков кубиков
+            </p>
+            <input 
+              type="range" 
+              min="1" 
+              max="5" 
+              value={myOffset} 
+              onChange={(e) => setMyOffset(parseInt(e.target.value))}
+            />
+            <div className="offset-values">
+              <span>Вы: <strong>{myOffset}</strong></span>
+              {opponentOffset > 0 && (
+                <span>Соперник: <strong>{opponentOffset}</strong></span>
+              )}
             </div>
           </div>
-        </div>,
-        document.body
-      )}
 
-      <OffsetModal
-        isOpen={showOffsetModal && gameInfo?.type !== 'sandbox'}
-        onClose={() => setShowOffsetModal(false)}
-        onConfirm={handleConfirmOffset}
-        myOffset={myOffset}
-        opponentOffset={opponentOffset}
-        onOffsetChange={(value) => setMyOffset(value)}
-        rngHash={gameInfo?.rngHash}
-      />
+          {gameInfo?.rngHash && (
+            <div className="hash-display">
+              <div>Хеш последовательности (SHA-256):</div>
+              <code>
+                {(() => {
+                  try {
+                    if (typeof gameInfo.rngHash === 'string') {
+                      const parsed = JSON.parse(gameInfo.rngHash)
+                      if (parsed && parsed.p1Hash) {
+                        return parsed.p1Hash.substring(0, 16) + '...'
+                      }
+                    }
+                    return gameInfo.rngHash.substring(0, 16) + '...'
+                  } catch (e) {
+                    return typeof gameInfo.rngHash === 'string' 
+                      ? gameInfo.rngHash.substring(0, 16) + '...'
+                      : '---'
+                  }
+                })()}
+              </code>
+            </div>
+          )}
+
+          <div className="offset-modal-actions">
+            <Button 
+              variant="primary" 
+              onClick={handleConfirmOffset} 
+              style={{ flex: 1 }}
+            >
+              Подтвердить
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {gameStatus === 'finished' && (
         <div className="game-overlay">

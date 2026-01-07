@@ -165,25 +165,11 @@ export class GamesService {
     const rngSeed = crypto.randomBytes(32).toString('hex');
     const verificationSalt = crypto.randomBytes(16).toString('hex');
     
-    // Генерация последовательностей бросков (по 1000 для каждого)
-    const generateRolls = () => {
-      const rolls = [];
-      for (let i = 0; i < 1000; i++) {
-        rolls.push([
-          Math.floor(Math.random() * 6) + 1,
-          Math.floor(Math.random() * 6) + 1
-        ]);
-      }
-      return rolls;
-    };
-
-    const p1Rolls = generateRolls();
-    const p2Rolls = generateRolls();
-
-    // Хешируем последовательности для контроля честности
-    const p1Hash = crypto.createHash('sha256').update(JSON.stringify(p1Rolls) + verificationSalt).digest('hex');
-    const p2Hash = crypto.createHash('sha256').update(JSON.stringify(p2Rolls) + verificationSalt).digest('hex');
-    const rngHash = JSON.stringify({ p1Hash, p2Hash });
+    // НЕ генерируем броски здесь - они будут сгенерированы ПОСЛЕ выбора смещения обоими игроками
+    // Это гарантирует, что броски зависят от выбранных смещений
+    const p1Rolls = null;
+    const p2Rolls = null;
+    const rngHash = null; // Будет установлен после генерации бросков
 
     const engine = mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     const initialState = engine.createInitialState();
@@ -672,10 +658,12 @@ export class GamesService {
       }
     }
     
-    // В обоих режимах можно делать ходы по одному, если это валидно
-    // Обработка ходов одинаковая, различаются только правила игры
-    if (allValidMoves.length > 0) {
-      // Проверяем, есть ли ходы, которые используют все кубики
+    // Для дублей разрешаем делать ходы по частям без принудительного использования всех кубиков сразу
+    // Пользователь может сделать все 4 хода подряд или по частям
+    const isDoublesMove = dice.length === 4 && dice.every(d => d === dice[0]);
+    
+    if (!isDoublesMove && allValidMoves.length > 0) {
+      // Для обычных ходов проверяем, есть ли ходы, которые используют все кубики
       const fullMoves = allValidMoves.filter((moveSeq) => moveSeq.length === dice.length);
       
       // Разрешаем делать один ход за раз, если он валиден
@@ -2012,18 +2000,39 @@ export class GamesService {
     const p1OffsetChosen = game.p1OffsetChosenAt !== null;
     const p2OffsetChosen = game.p2OffsetChosenAt !== null;
 
-    // Если оба игрока выбрали смещение, переводим игру в IN_PROGRESS и определяем первого ходящего
+    // Если оба игрока выбрали смещение, ГЕНЕРИРУЕМ броски кубиков и переводим игру в IN_PROGRESS
     if (p1OffsetChosen && p2OffsetChosen && game.player2Id && game.status === GameStatus.WAITING) {
+      // ГЕНЕРАЦИЯ бросков кубиков ПОСЛЕ выбора смещения обоими игроками
+      const generateRolls = () => {
+        const rolls = [];
+        for (let i = 0; i < 1000; i++) {
+          rolls.push([
+            Math.floor(Math.random() * 6) + 1,
+            Math.floor(Math.random() * 6) + 1
+          ]);
+        }
+        return rolls;
+      };
+
+      const p1Rolls = generateRolls();
+      const p2Rolls = generateRolls();
+
+      // Хешируем последовательности для контроля честности
+      const p1Hash = crypto.createHash('sha256').update(JSON.stringify(p1Rolls) + game.verificationSalt).digest('hex');
+      const p2Hash = crypto.createHash('sha256').update(JSON.stringify(p2Rolls) + game.verificationSalt).digest('hex');
+      const rngHash = JSON.stringify({ p1Hash, p2Hash });
+
+      // Сохраняем сгенерированные броски и хеш
+      game.p1Rolls = p1Rolls;
+      game.p2Rolls = p2Rolls;
+      game.rngHash = rngHash;
+
       // Определяем первого ходящего через начальный бросок кубиков
-      const p1StartIdx = ((game.p1Offset - 1) * 2 + game.p2Offset) % (game.p1Rolls?.length || 1000);
-      const p2StartIdx = ((game.p2Offset - 1) * 2 + game.p1Offset) % (game.p2Rolls?.length || 1000);
+      const p1StartIdx = ((game.p1Offset - 1) * 2 + game.p2Offset) % p1Rolls.length;
+      const p2StartIdx = ((game.p2Offset - 1) * 2 + game.p1Offset) % p2Rolls.length;
       
-      const p1FirstRoll = game.p1Rolls && game.p1Rolls.length > p1StartIdx 
-        ? game.p1Rolls[p1StartIdx] 
-        : [Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1];
-      const p2FirstRoll = game.p2Rolls && game.p2Rolls.length > p2StartIdx 
-        ? game.p2Rolls[p2StartIdx] 
-        : [Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1];
+      const p1FirstRoll = p1Rolls[p1StartIdx];
+      const p2FirstRoll = p2Rolls[p2StartIdx];
       
       // Определяем кто ходит первым по сумме кубиков
       const sum1 = p1FirstRoll[0] + p1FirstRoll[1];
