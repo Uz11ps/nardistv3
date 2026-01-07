@@ -123,7 +123,7 @@ export default function Game() {
           
           const formattedDice = game.gameState.dice 
             ? (Array.isArray(game.gameState.dice) ? game.gameState.dice : [game.gameState.dice.die1, game.gameState.dice.die2])
-            : null
+            : null as any
           
           const isP1Now = game.player1Id === user?.id
           const canMove = game.currentPlayer === (isP1Now ? 0 : 1)
@@ -1392,9 +1392,12 @@ export default function Game() {
       }
     }
 
-    const diceArray = gameState.dice 
-      ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2])
-      : []
+    const diceArray = (() => {
+      const d = gameState.dice;
+      if (!d) return [];
+      if (Array.isArray(d)) return d;
+      return [d.die1, d.die2];
+    })();
     
     // Если кубиков нет, ничего не делаем (возможно, ход уже завершен или обрабатывается)
     if (diceArray.length === 0) {
@@ -1516,9 +1519,12 @@ export default function Game() {
 
   const handleSwapDice = () => {
     if (!gameState?.dice) return
-    const diceArray = Array.isArray(gameState.dice) 
-      ? gameState.dice 
-      : [gameState.dice.die1, gameState.dice.die2]
+    const diceArray = (() => {
+      const d = gameState.dice;
+      if (!d) return [];
+      if (Array.isArray(d)) return d;
+      return [d.die1, d.die2];
+    })();
     
     if (diceArray.length < 2) return
     const newDice = [...diceArray].reverse()
@@ -2023,7 +2029,12 @@ export default function Game() {
                 mySkins={playerSkins.mySkins}
                 gameState={historyGameState || gameState}
                 currentPlayer={(historyGameState || gameState).currentPlayer}
-                dice={(historyGameState || gameState).dice ? (Array.isArray((historyGameState || gameState).dice) ? (historyGameState || gameState).dice : [(historyGameState || gameState).dice.die1, (historyGameState || gameState).dice.die2]) : null}
+                dice={(() => {
+                  const d = (historyGameState || gameState)?.dice;
+                  if (!d) return null;
+                  if (Array.isArray(d)) return d;
+                  return [d.die1, d.die2];
+                })()}
                 onMove={handleMove}
                 onRollDice={handleRollDice}
                 canMove={historyGameState ? false : gameState.canMove}
