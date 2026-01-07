@@ -32,7 +32,8 @@ export default function SandboxControls({
   gameState, 
   currentPlayer, 
   onBoardUpdate,
-  onHistoryPreview 
+  onHistoryPreview,
+  onModeChange 
 }: SandboxControlsProps) {
   const [mode, setMode] = useState<'setup' | 'play'>('setup')
   const [showPanel, setShowPanel] = useState(false)
