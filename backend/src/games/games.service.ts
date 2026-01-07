@@ -467,55 +467,103 @@ export class GamesService {
     
     // ВАЖНО: Считаем количество БРОСКОВ кубиков для этого игрока
     // Бросок происходит каждый раз, когда игрок начинает свой ход (когда dice пустые)
-    // Это можно определить по количеству раз, когда currentPlayer менялся на этого игрока
+    // 
+    // ЛОГИКА:
+    // 1. При определении первого игрока используются p1Rolls[startIdx] и p2Rolls[startIdx] для обоих игроков
+    // 2. Если player1 был выбран первым, то его первый реальный бросок использует startIdx + 1 (т.к. startIdx уже использован)
+    // 3. Если player2 не был выбран первым, то его первый реальный бросок использует startIdx + 0 (т.к. startIdx еще не использован для него)
+    // 4. Каждый последующий бросок игрока увеличивает rollCount на 1
+    
+    const playerNumber = isPlayer1 ? 0 : 1;
     let rollCount = 0;
+    
+    // Проверяем, был ли этот игрок выбран первым при определении первого игрока
+    // Это определяется по тому, был ли startIdx использован для этого игрока при определении первого игрока
+    // Если game.currentPlayer === playerNumber и нет ходов, значит этот игрок был выбран первым
+    const wasFirstPlayer = game.currentPlayer === playerNumber;
+    
     if (game.moves && game.moves.length > 0) {
-      // Проходим по всем ходам и считаем смены хода для этого игрока
+      // Считаем количество раз, когда этот игрок начинал свой ход (бросал кубики)
+      // Каждая смена игрока означает новый бросок для нового игрока
       let previousPlayer: number | null = null;
+      let playerRollCount = 0; // Количество раз, когда этот игрок начинал свой ход
+      
       for (const move of game.moves) {
         const movePlayerId = move.playerId;
         const moveIsPlayer1 = movePlayerId === game.player1Id;
         const movePlayer = moveIsPlayer1 ? 0 : 1;
         
-        // Если сменился игрок - предыдущий игрок завершил ход, новый игрок начинает
+        // Если сменился игрок - предыдущий игрок завершил ход, новый игрок начинает (бросает кубики)
         if (previousPlayer !== null && previousPlayer !== movePlayer) {
           // Сменился игрок - новый игрок начинает свой ход (бросает кубики)
-          if ((moveIsPlayer1 && isPlayer1) || (!moveIsPlayer1 && !isPlayer1)) {
-            rollCount++;
+          if (movePlayer === playerNumber) {
+            playerRollCount++;
           }
         } else if (previousPlayer === null) {
           // Первый ход в игре - это первый бросок для первого игрока
-          if ((moveIsPlayer1 && isPlayer1) || (!moveIsPlayer1 && !isPlayer1)) {
-            rollCount++;
+          if (movePlayer === playerNumber) {
+            playerRollCount++;
           }
         }
         
         previousPlayer = movePlayer;
       }
       
-      // Если текущий игрок еще не делал ходов, но это его первый бросок
-      const hasMovesForThisPlayer = game.moves.some(m => {
-        const mIsPlayer1 = m.playerId === game.player1Id;
-        return (mIsPlayer1 && isPlayer1) || (!mIsPlayer1 && !isPlayer1);
-      });
-      
-      if (!hasMovesForThisPlayer) {
-        // Это первый бросок для этого игрока
-        rollCount = 0; // Начинаем с 0, так как startIdx уже учитывает начальную позицию
+      // ВАЖНО: Если игрок был выбран первым, то startIdx уже был использован для определения первого игрока
+      // Поэтому его первый реальный бросок должен использовать startIdx + 1, а не startIdx + 0
+      // Если игрок уже делал ходы, то playerRollCount уже учитывает все его броски
+      // Но нужно добавить 1, если он был первым игроком (потому что startIdx уже был использован)
+      if (wasFirstPlayer) {
+        // Этот игрок был выбран первым, значит startIdx уже был использован для определения первого игрока
+        // Его первый реальный бросок использовал startIdx + 1, второй - startIdx + 2, и т.д.
+        rollCount = playerRollCount + 1; // +1 потому что startIdx уже использован
+      } else {
+        // Этот игрок не был выбран первым, значит startIdx еще не был использован для него
+        // Его первый реальный бросок использует startIdx + 0, второй - startIdx + 1, и т.д.
+        rollCount = playerRollCount;
       }
     } else {
-      // Нет ходов - это первый бросок в игре
-      rollCount = 0; // Начинаем с 0, так как startIdx уже учитывает начальную позицию
+      // Нет ходов - это первый бросок в игре (для определения первого игрока)
+      // Но если currentPlayer уже установлен, значит первый бросок уже был использован
+      if (wasFirstPlayer) {
+        // Этот игрок был первым, значит startIdx уже был использован для определения первого игрока
+        // Его первый реальный бросок должен использовать startIdx + 1
+        rollCount = 1;
+      } else {
+        // Этот игрок не был первым, значит startIdx еще не был использован для него
+        // Его первый реальный бросок должен использовать startIdx + 0
+        rollCount = 0;
+      }
     }
     
     // Текущий индекс в последовательности бросков
     const currentRollIdx = (startIdx + rollCount) % (playerRolls?.length || 1000);
     
-    const diceRoll = playerRolls ? playerRolls[currentRollIdx] : engine.rollDice(game.rngSeed + (game.moves?.length || 0));
+    // ВАЖНО: Проверяем, что playerRolls существует и содержит данные
+    if (!playerRolls || !Array.isArray(playerRolls) || playerRolls.length === 0) {
+      this.logger.error(`❌ CRITICAL: playerRolls is empty or invalid! player=${isPlayer1 ? 'P1' : 'P2'}, gameId=${gameId}`);
+      throw new BadRequestException('Последовательность бросков не была сгенерирована. Пожалуйста, выберите смещение.');
+    }
+    
+    // Проверяем, что индекс в пределах массива
+    if (currentRollIdx < 0 || currentRollIdx >= playerRolls.length) {
+      this.logger.error(`❌ CRITICAL: currentRollIdx out of bounds! player=${isPlayer1 ? 'P1' : 'P2'}, currentRollIdx=${currentRollIdx}, playerRolls.length=${playerRolls.length}, startIdx=${startIdx}, rollCount=${rollCount}`);
+      throw new BadRequestException(`Индекс броска вне допустимых пределов: ${currentRollIdx}`);
+    }
+    
+    const diceRoll = playerRolls[currentRollIdx];
+    
+    // Логируем детальную информацию для отладки
+    this.logger.log(`🎲 Provably Fair Dice: player=${isPlayer1 ? 'P1' : 'P2'}, gameId=${gameId}`);
+    this.logger.log(`🎲   myOffset=${myOffset}, opponentOffset=${opponentOffset}`);
+    this.logger.log(`🎲   startIdx=${startIdx}, rollCount=${rollCount}, currentRollIdx=${currentRollIdx}`);
+    this.logger.log(`🎲   playerRolls.length=${playerRolls.length}`);
+    this.logger.log(`🎲   wasFirstPlayer=${wasFirstPlayer}, moves.length=${game.moves?.length || 0}`);
+    this.logger.log(`🎲   roll=[${diceRoll.join(', ')}]`);
+    this.logger.log(`🎲   Previous 3 rolls: [${playerRolls[Math.max(0, currentRollIdx - 3)]?.join(', ')}, ${playerRolls[Math.max(0, currentRollIdx - 2)]?.join(', ')}, ${playerRolls[Math.max(0, currentRollIdx - 1)]?.join(', ')}]`);
+    this.logger.log(`🎲   Next 3 rolls: [${playerRolls[(currentRollIdx + 1) % playerRolls.length]?.join(', ')}, ${playerRolls[(currentRollIdx + 2) % playerRolls.length]?.join(', ')}, ${playerRolls[(currentRollIdx + 3) % playerRolls.length]?.join(', ')}]`);
     
     console.log(`🎲 Provably Fair Dice: player=${isPlayer1 ? 'P1' : 'P2'}, myOffset=${myOffset}, opponentOffset=${opponentOffset}, startIdx=${startIdx}, rollCount=${rollCount}, rollIdx=${currentRollIdx}, roll=[${diceRoll.join(', ')}]`);
-    
-    console.log(`🎲 Provably Fair Dice: player=${isPlayer1 ? 'P1' : 'P2'}, startIdx=${startIdx}, rollIdx=${currentRollIdx}, roll=[${diceRoll.join(', ')}]`);
     
     console.log(`🎲 rollDice called: gameId=${gameId}, mode=${game.mode}, diceRoll=[${diceRoll.join(', ')}]`);
     
