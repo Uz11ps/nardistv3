@@ -2544,6 +2544,13 @@ export class GamesService {
     return savedGame;
   }
 
+  async getMoves(gameId: string): Promise<GameMove[]> {
+    return this.movesRepository.find({
+      where: { gameId },
+      order: { moveNumber: 'ASC' },
+    });
+  }
+
   async setSandboxDice(gameId: string, playerId: string, dice: number[], player?: number): Promise<Game> {
     const game = await this.findOne(gameId);
     

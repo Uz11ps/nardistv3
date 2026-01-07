@@ -1060,10 +1060,10 @@ export default function Game() {
       // ВАЖНО: Правильно вычисляем canMove с учетом оставшихся кубиков
       // Если остались кубики и это еще наш ход - canMove должен быть true
       const remainingDice = Array.isArray(diceData) ? diceData : []
-      const isMyTurn = data.currentPlayer === (isP1 ? 0 : 1)
+      const isP1Turn = data.currentPlayer === (isP1 ? 0 : 1)
       const hasRemainingDice = remainingDice.length > 0
-      // canMove = это наш ход И есть кубики для хода
-      const canMove = isMyTurn && hasRemainingDice
+      // canMove = это наш ход И есть кубики для хода (в sandbox можно ходить всегда если есть кубики)
+      const canMove = isSandbox ? hasRemainingDice : (isP1Turn && hasRemainingDice)
       
       console.log('🎯 [move_made] canMove calculation:', {
         isMyTurn,
@@ -1668,7 +1668,7 @@ export default function Game() {
       return
     }
 
-    if (gameStatus === 'in_progress' && gameState?.canMove && pendingMoves.length > 0) {
+    if ((gameStatus === 'in_progress' || isSandbox) && (gameState?.canMove || isSandbox) && pendingMoves.length > 0) {
       // Проверка на бар для коротких нард перед отправкой ходов
       if (gameInfo?.mode === 'short') {
         const bar = gameState.bar || { white: 0, black: 0 }

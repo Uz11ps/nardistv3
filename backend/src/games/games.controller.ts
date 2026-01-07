@@ -117,6 +117,12 @@ export class GamesController {
     }
   }
 
+  @Get(':id/moves')
+  @UseGuards(JwtAuthGuard)
+  async getGameMoves(@Param('id') id: string) {
+    return this.gamesService.getMoves(id);
+  }
+
   @Post(':id/possible-moves')
   @UseGuards(JwtAuthGuard)
   async getPossibleMoves(
