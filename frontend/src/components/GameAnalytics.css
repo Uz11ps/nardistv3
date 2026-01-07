@@ -98,6 +98,7 @@
   padding: 4px 6px;
   cursor: pointer;
   border-radius: 4px;
+  position: relative;
   display: flex;
   gap: 6px;
   transition: background 0.1s;
@@ -124,6 +125,37 @@
 .move-item.error-blunder .move-text { color: #E84142; font-weight: bold; }
 .move-item.error-mistake .move-text { color: #FF9800; }
 .move-item.error-inaccuracy .move-text { color: #888; }
+
+.move-item.best-move {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  border: 2px solid #FFD700;
+}
+
+.move-item.best-move .move-text {
+  color: #000;
+  font-weight: bold;
+}
+
+.move-item.best-move .move-dice {
+  color: #000;
+  font-weight: bold;
+}
+
+.best-move-badge {
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 14px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
 
 .analysis-move-details-v2 {
   border-top: 2px solid #ccc;

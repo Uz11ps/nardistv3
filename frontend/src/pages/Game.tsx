@@ -184,6 +184,42 @@ export default function Game() {
       loadGame()
       connectToGame()
       createdBotGameRef.current = false
+
+      // Обрабатываем переподключение WebSocket после разрыва соединения
+      const socket = getSocket()
+      if (socket) {
+        const handleReconnect = () => {
+          console.log('🔄 WebSocket переподключен, переподключаемся к игре')
+          if (gameId) {
+            setupSocketHandlers(socket)
+            socket.emit('join_game', { gameId })
+          }
+        }
+        socket.on('connect', handleReconnect)
+
+        return () => {
+          socket.off('connect', handleReconnect)
+          if (timerRef.current) {
+            clearInterval(timerRef.current)
+          }
+          socket.off('game_state')
+          socket.off('move_made')
+          socket.off('dice_rolled')
+          socket.off('game_finished')
+          const matchmakingSocket = getMatchmakingSocket()
+          if (matchmakingSocket) {
+            matchmakingSocket.off('ready_status')
+            matchmakingSocket.off('game_started')
+            matchmakingSocket.off('opponent_joined')
+          }
+        }
+      } else {
+        return () => {
+          if (timerRef.current) {
+            clearInterval(timerRef.current)
+          }
+        }
+      }
     } else if (isBotGame && !createdBotGameRef.current) {
       createdBotGameRef.current = true
       createBotGame()
@@ -194,19 +230,6 @@ export default function Game() {
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current)
-      }
-      const socket = getSocket()
-      if (socket) {
-        socket.off('game_state')
-        socket.off('move_made')
-        socket.off('dice_rolled')
-        socket.off('game_finished')
-      }
-      const matchmakingSocket = getMatchmakingSocket()
-      if (matchmakingSocket) {
-        matchmakingSocket.off('ready_status')
-        matchmakingSocket.off('game_started')
-        matchmakingSocket.off('opponent_joined')
       }
     }
   }, [gameId, isBotGame])
@@ -400,9 +423,38 @@ export default function Game() {
       }
       
       if (game.status === 'in_progress') {
-        const timeLimitSeconds = game.moveTimeLimit ? Math.floor(game.moveTimeLimit / 1000) : 60
-        setPlayer1Timer(timeLimitSeconds)
-        setPlayer2Timer(timeLimitSeconds)
+        const timeLimitSeconds = game.moveTimeLimit ? Math.floor(game.moveTimeLimit / 1000) : 15
+        
+        // Запрашиваем актуальное состояние таймеров с сервера через WebSocket
+        // Если WebSocket подключен, таймеры придут в событии timer_update
+        // Иначе устанавливаем начальные значения
+        const socket = getSocket()
+        if (socket && socket.connected) {
+          // Таймеры обновятся через событие timer_update от сервера
+          // Устанавливаем временные значения для отображения
+          setPlayer1Timer(timeLimitSeconds)
+          setPlayer2Timer(timeLimitSeconds)
+          setTotalTimeRemaining({ 
+            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
+          })
+          totalTimeRemainingRef.current = {
+            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
+          }
+        } else {
+          // Если WebSocket не подключен, используем значения из БД если есть
+          setPlayer1Timer(timeLimitSeconds)
+          setPlayer2Timer(timeLimitSeconds)
+          setTotalTimeRemaining({ 
+            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
+          })
+          totalTimeRemainingRef.current = {
+            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
+          }
+        }
         
         // Если игра началась и это наш ход, но кубиков нет - бросаем их
         // НО НЕ для sandbox игр - там пользователь сам управляет всем
@@ -410,7 +462,7 @@ export default function Game() {
         if (canMoveNow && !formattedDice && !isBotGame && game.type !== 'sandbox') {
           setTimeout(() => {
             const socket = getSocket()
-            if (socket) {
+            if (socket && socket.connected) {
               socket.emit('roll_dice', { gameId })
             }
           }, 500)
@@ -519,20 +571,28 @@ export default function Game() {
   }
 
   const connectToGame = () => {
+    if (!gameId) return
+
     const socket = getSocket()
-    if (!socket || !gameId) {
+    if (!socket) {
       const { token } = useAuthStore.getState()
       if (token) {
         connectWebSocket(token)
-        setTimeout(() => {
-          const newSocket = getSocket()
-          if (newSocket && gameId) {
-            newSocket.emit('join_game', { gameId })
-          }
-        }, 1000)
       }
+      // Подключение будет обработано через useEffect, который следит за gameId
       return
     }
+
+    // Если сокет подключен, сразу подключаемся к игре
+    if (socket.connected) {
+      setupSocketHandlers(socket)
+      socket.emit('join_game', { gameId })
+    }
+    // Если не подключен, подождем события connect в useEffect
+  }
+
+  const setupSocketHandlers = (socket: any) => {
+    if (!gameId) return
 
     // Обработчик dice_rolled - объявляем ДО регистрации, чтобы можно было удалить
     const handleDiceRolled = (data: any) => {
@@ -620,8 +680,7 @@ export default function Game() {
     socket.off('offset_updated')
     socket.off('timer_update')
 
-    socket.emit('join_game', { gameId })
-
+    // Регистрируем обработчики событий
     socket.on('game_state', (data: any) => {
       // Если идет анимация серверных ходов, игнорируем входящее состояние,
       // чтобы избежать дублирования шашек. Состояние применится в onServerMovesFinished.
@@ -1055,22 +1114,25 @@ export default function Game() {
     
     // Если есть steps, значит это комбинированный ход
     if (steps && steps.length > 0) {
-      // Проверяем доступность всех кубиков в комбинации
-      const currentDiceUsage = new Map<number, number>();
-      pendingMoves.forEach(m => {
-        if (m.steps) {
-          m.steps.forEach((s: any) => currentDiceUsage.set(s.die, (currentDiceUsage.get(s.die) || 0) + 1));
-        } else {
-          currentDiceUsage.set(m.die, (currentDiceUsage.get(m.die) || 0) + 1);
-        }
-      });
+      // Для дублей разрешаем использовать все 4 кубика, поэтому пропускаем проверку
+      if (!isDoubles) {
+        // Проверяем доступность всех кубиков в комбинации (только для не-дублей)
+        const currentDiceUsage = new Map<number, number>();
+        pendingMoves.forEach(m => {
+          if (m.steps) {
+            m.steps.forEach((s: any) => currentDiceUsage.set(s.die, (currentDiceUsage.get(s.die) || 0) + 1));
+          } else {
+            currentDiceUsage.set(m.die, (currentDiceUsage.get(m.die) || 0) + 1);
+          }
+        });
 
-      for (const step of steps) {
-        const used = (currentDiceUsage.get(step.die) || 0) + steps.filter((s, idx) => s.die === step.die && steps.indexOf(s) < steps.indexOf(step)).length;
-        const avail = diceArray.filter(d => d === step.die).length;
-        if (used >= avail) {
-          console.warn(`⚠️ Кубик ${step.die} из комбинации уже использован. Доступно: ${avail}, Использовано: ${used}`);
-          return;
+        for (const step of steps) {
+          const used = (currentDiceUsage.get(step.die) || 0) + steps.filter((s, idx) => s.die === step.die && steps.indexOf(s) < steps.indexOf(step)).length;
+          const avail = diceArray.filter(d => d === step.die).length;
+          if (used >= avail) {
+            console.warn(`⚠️ Кубик ${step.die} из комбинации уже использован. Доступно: ${avail}, Использовано: ${used}`);
+            return;
+          }
         }
       }
       setPendingMoves(prev => [...prev, { from, to, die, steps }])
@@ -1149,7 +1211,7 @@ export default function Game() {
 
   const handleOffsetChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10)
-    if (isNaN(val) || val < 1 || val > 100) return
+    if (isNaN(val) || val < 1 || val > 5) return
     // Обновляем локально только свой offset
     setMyOffset(val)
     // Сохраняем отправленное значение, чтобы игнорировать его в offset_updated
@@ -1554,12 +1616,12 @@ export default function Game() {
                   </div>
                   
                   <div className="offset-selector">
-                    <label>Ваше смещение (1-100):</label>
+                    <label>Ваше смещение (1-5):</label>
                     <p className="offset-hint">Каждый игрок выбирает свое смещение независимо</p>
                     <input 
                       type="range" 
                       min="1" 
-                      max="100" 
+                      max="5" 
                       value={myOffset} 
                       onChange={handleOffsetChange}
                       disabled={myReady}
@@ -1886,22 +1948,22 @@ export default function Game() {
 
       {/* Модальное окно выбора смещения */}
       {showOffsetModal && gameInfo && gameInfo.type !== 'sandbox' && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%' }}>
+        <div className="modal-overlay" style={{ zIndex: 10000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%', position: 'relative' }}>
             <h2>Выбор смещения</h2>
             <p style={{ marginBottom: '20px', color: '#999' }}>
-              Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 100).
+              Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 5).
             </p>
             
             <div className="offset-selector">
-              <label>Ваше смещение (1-100):</label>
+              <label>Ваше смещение (1-5):</label>
               <p className="offset-hint" style={{ fontSize: '12px', color: '#999', marginBottom: '12px' }}>
                 Смещение влияет на выбор начальной позиции в последовательности бросков кубиков
               </p>
               <input 
                 type="range" 
                 min="1" 
-                max="100" 
+                max="5" 
                 value={myOffset} 
                 onChange={handleOffsetChange}
               />
@@ -1967,10 +2029,6 @@ export default function Game() {
               <div className="verification-item">
                 <span>Смещение соперника:</span>
                 <strong>{opponentOffset}</strong>
-              </div>
-              <div className="verification-item">
-                <span>Итоговый индекс:</span>
-                <strong>{((myOffset - 1) * 2 + opponentOffset)}</strong>
               </div>
               {gameState?.verificationSalt && (
                 <div className="verification-details">

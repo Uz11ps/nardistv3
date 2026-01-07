@@ -586,7 +586,16 @@ export class GamesService {
     let currentState = JSON.parse(JSON.stringify(game.gameState));
     // ВАЖНО: Синхронизируем currentPlayer из game в currentState перед применением ходов
     currentState.currentPlayer = game.currentPlayer;
-    const diceCopy = [...dice];
+    
+    // Определяем, является ли это дублем
+    const isDoubles = dice.length === 4 && dice.every(d => d === dice[0]);
+    
+    // Для дублей создаем счетчик использования кубиков (можно использовать до 4 раз один и тот же номер)
+    const diceCount = new Map<number, number>();
+    for (const die of dice) {
+      diceCount.set(die, (diceCount.get(die) || 0) + 1);
+    }
+    const diceUsageCount = new Map<number, number>(); // Сколько раз использован каждый кубик
 
     // Разворачиваем комбинированные ходы (те, у которых есть steps) в последовательность обычных
     const expandedMoves = [];
@@ -617,15 +626,19 @@ export class GamesService {
         throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       }
       
-      // Удаляем использованный кубик
-      const dieIndex = diceCopy.indexOf(move.die);
-      if (dieIndex === -1) {
-        console.error(`❌ Кубик ${move.die} уже использован или недоступен. Доступные кубики:`, diceCopy);
-        throw new BadRequestException(`Кубик ${move.die} уже использован или недоступен`);
-      }
-      diceCopy.splice(dieIndex, 1);
+      // Проверяем использование кубика: для дублей можно использовать до 4 раз, для обычных - по количеству в массиве
+      const usedCount = diceUsageCount.get(move.die) || 0;
+      const availableCount = diceCount.get(move.die) || 0;
       
-      console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+      if (usedCount >= availableCount) {
+        console.error(`❌ Кубик ${move.die} уже использован максимальное количество раз (${usedCount}/${availableCount}). Доступные кубики:`, Array.from(diceCount.entries()));
+        throw new BadRequestException(`Кубик ${move.die} уже использован максимальное количество раз`);
+      }
+      
+      // Увеличиваем счетчик использования
+      diceUsageCount.set(move.die, usedCount + 1);
+      
+      console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (использовано ${usedCount + 1}/${availableCount})`);
       currentState = engine.applyMove(currentState, move.from, move.to, move.die);
     }
 
@@ -639,19 +652,9 @@ export class GamesService {
       allValidMoves = engine.getAllValidMoves(game.gameState, dice);
     }
     
-    // Проверяем, что использованы правильные кубики (правильное количество каждого)
-    const diceCount = new Map<number, number>();
-    for (const die of dice) {
-      diceCount.set(die, (diceCount.get(die) || 0) + 1);
-    }
-
-    const usedCount = new Map<number, number>();
-    for (const move of finalMovesToSave) {
-      usedCount.set(move.die, (usedCount.get(move.die) || 0) + 1);
-    }
-
-    // Проверяем, не превышено ли использование кубиков
-    for (const [die, used] of usedCount.entries()) {
+    // Финальная проверка использования кубиков (используем уже созданные счетчики)
+    // diceUsageCount уже содержит правильное количество использований после всех ходов
+    for (const [die, used] of diceUsageCount.entries()) {
       const available = diceCount.get(die) || 0;
       if (used > available) {
         throw new BadRequestException(`Кубик ${die} использован ${used} раз(а), но доступно только ${available}`);
@@ -1902,7 +1905,7 @@ export class GamesService {
       throw new BadRequestException('Нельзя изменить смещение после начала совершения ходов');
     }
 
-    if (offset < 1 || offset > 100) {
+    if (offset < 1 || offset > 5) {
       throw new BadRequestException('Смещение должно быть от 1 до 100');
     }
 

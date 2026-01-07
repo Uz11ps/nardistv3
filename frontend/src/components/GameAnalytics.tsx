@@ -91,9 +91,11 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
               <div key={idx} className="analysis-move-row-mat">
                 <span className="move-num">{idx + 1}.</span>
                 <div 
-                  className={`move-item ${selectedMoveIndex === idx * 2 ? 'selected' : ''} ${move1.isError ? 'error-' + move1.errorType : ''}`}
+                  className={`move-item ${selectedMoveIndex === idx * 2 ? 'selected' : ''} ${move1.isError ? 'error-' + move1.errorType : ''} ${move1.isBestMove ? 'best-move' : ''}`}
                   onClick={() => setSelectedMoveIndex(idx * 2)}
+                  title={move1.isBestMove ? 'Лучший ход!' : (move1.isError ? move1.errorDescription : '')}
                 >
+                  {move1.isBestMove && <span className="best-move-badge">⭐</span>}
                   <span className="move-dice">({move1.move.dice?.join('')})</span>
                   <span className="move-text">
                     {move1.move.moves?.map((m: any, i: number) => (
@@ -103,9 +105,11 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                 </div>
                 {move2 && (
                   <div 
-                    className={`move-item ${selectedMoveIndex === idx * 2 + 1 ? 'selected' : ''} ${move2.isError ? 'error-' + move2.errorType : ''}`}
+                    className={`move-item ${selectedMoveIndex === idx * 2 + 1 ? 'selected' : ''} ${move2.isError ? 'error-' + move2.errorType : ''} ${move2.isBestMove ? 'best-move' : ''}`}
                     onClick={() => setSelectedMoveIndex(idx * 2 + 1)}
+                    title={move2.isBestMove ? 'Лучший ход!' : (move2.isError ? move2.errorDescription : '')}
                   >
+                    {move2.isBestMove && <span className="best-move-badge">⭐</span>}
                     <span className="move-dice">({move2.move.dice?.join('')})</span>
                     <span className="move-text">
                       {move2.move.moves?.map((m: any, i: number) => (
@@ -174,14 +178,6 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
               <div className="summary-stat"><span>Ошибок:</span> <strong style={{ color: '#FF9800' }}>{analysisData.mistakes}</strong></div>
               <div className="summary-stat"><span>Неточностей:</span> <strong style={{ color: '#FFD600' }}>{analysisData.inaccuracies}</strong></div>
             </div>
-            {analysisData.recommendations?.length > 0 && (
-              <div className="summary-recommendations">
-                <h4>Рекомендации:</h4>
-                <ul>
-                  {analysisData.recommendations.map((r: string, i: number) => <li key={i}>{r}</li>)}
-                </ul>
-              </div>
-            )}
           </div>
         )}
       </div>
