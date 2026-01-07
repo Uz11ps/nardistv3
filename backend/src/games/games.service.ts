@@ -734,8 +734,15 @@ export class GamesService {
       throw error;
     }
 
-    // Calculate remaining dice after moves
-    const remainingDice = diceCopy;
+    // Calculate remaining dice after moves based on usage count
+    const remainingDice: number[] = [];
+    for (const [die, count] of diceCount.entries()) {
+      const used = diceUsageCount.get(die) || 0;
+      const remaining = count - used;
+      for (let i = 0; i < remaining; i++) {
+        remainingDice.push(die);
+      }
+    }
     
     if (remainingDice.length === 0) {
       // Все кубики использованы - смена хода
