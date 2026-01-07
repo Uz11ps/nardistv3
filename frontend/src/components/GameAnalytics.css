@@ -316,19 +316,6 @@
   margin-right: 4px;
 }
 
-.summary-recommendations h4 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #333;
-}
-
-.summary-recommendations ul {
-  margin: 0;
-  padding-left: 20px;
-  font-size: 13px;
-  color: #555;
-  line-height: 1.4;
-}
 
 .game-analytics-loading-v2,
 .game-analytics-error-v2 {

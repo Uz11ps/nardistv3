@@ -474,14 +474,6 @@ export default function History() {
                     <div className="summary-stat"><span>Ошибок:</span> <strong style={{ color: '#FF9800' }}>{analysisData.mistakes}</strong></div>
                     <div className="summary-stat"><span>Неточностей:</span> <strong style={{ color: '#FFD600' }}>{analysisData.inaccuracies}</strong></div>
                   </div>
-                  {analysisData.recommendations?.length > 0 && (
-                    <div className="summary-recommendations">
-                      <h4>Рекомендации:</h4>
-                      <ul>
-                        {analysisData.recommendations.map((r: string, i: number) => <li key={i}>{r}</li>)}
-                      </ul>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

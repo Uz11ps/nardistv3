@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Button from './Button'
 import './OffsetModal.css'
@@ -22,26 +22,41 @@ export default function OffsetModal({
   onOffsetChange,
   rngHash,
 }: OffsetModalProps) {
+  const [windowSize, setWindowSize] = useState({ width: typeof window !== 'undefined' ? window.innerWidth : 480, height: typeof window !== 'undefined' ? window.innerHeight : 800 })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const updateSize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight })
+    }
+
+    window.addEventListener('resize', updateSize)
+    updateSize()
+
+    return () => window.removeEventListener('resize', updateSize)
+  }, [])
+
   // Блокируем скролл body когда модальное окно открыто
   useEffect(() => {
     if (isOpen) {
+      const scrollY = window.scrollY
       document.body.style.overflow = 'hidden'
       document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
       document.body.style.width = '100%'
-    } else {
-      document.body.style.overflow = ''
-      document.body.style.position = ''
-      document.body.style.width = ''
-    }
-    
-    return () => {
-      document.body.style.overflow = ''
-      document.body.style.position = ''
-      document.body.style.width = ''
+      document.body.style.height = '100%'
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        document.body.style.height = ''
+        window.scrollTo(0, scrollY)
+      }
     }
   }, [isOpen])
-
-  if (!isOpen) return null
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -49,9 +64,68 @@ export default function OffsetModal({
     }
   }
 
+  if (!isOpen) return null
+
+  // Inline стили для мгновенного позиционирования (до применения CSS)
+  const isMobile = windowSize.width <= 480
+  const isSmallHeight = windowSize.height <= 600
+
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: '0px',
+    left: '0px',
+    right: '0px',
+    bottom: '0px',
+    width: '100vw',
+    height: '100vh',
+    minWidth: '100vw',
+    minHeight: '100vh',
+    maxWidth: '100vw',
+    maxHeight: '100vh',
+    background: 'rgba(0, 0, 0, 0.95)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2147483647, // Максимальный z-index
+    padding: isMobile ? '12px' : '16px',
+    margin: '0',
+    border: 'none',
+    outline: 'none',
+    touchAction: 'none',
+    overflow: 'hidden',
+    overscrollBehavior: 'contain',
+    WebkitOverflowScrolling: 'touch',
+  }
+
+  const contentStyle: React.CSSProperties = {
+    position: 'relative',
+    margin: '0',
+    background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+    padding: isSmallHeight ? '12px' : isMobile ? '16px' : '20px',
+    borderRadius: '16px',
+    textAlign: 'center',
+    maxWidth: isMobile ? `calc(100vw - 24px)` : '400px',
+    width: '100%',
+    maxHeight: `calc(100vh - ${isMobile ? '24px' : '32px'})`,
+    overflowY: 'auto',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+    transform: 'none',
+    animation: 'none',
+    transition: 'none',
+  }
+
   return createPortal(
-    <div className="offset-modal-overlay" onClick={handleOverlayClick}>
-      <div className="offset-modal-content" onClick={(e) => e.stopPropagation()}>
+    <div 
+      className="offset-modal-overlay" 
+      onClick={handleOverlayClick}
+      style={overlayStyle}
+    >
+      <div 
+        className="offset-modal-content" 
+        onClick={(e) => e.stopPropagation()}
+        style={contentStyle}
+      >
         <h2>Выбор смещения</h2>
         <p className="offset-modal-description">
           Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 5).
@@ -114,4 +188,3 @@ export default function OffsetModal({
     document.body
   )
 }
-

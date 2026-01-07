@@ -1959,8 +1959,41 @@ export default function Game() {
 
 
       {showExitModal && createPortal(
-        <div className="offset-modal-overlay" onClick={() => setShowExitModal(false)}>
-          <div className="offset-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="offset-modal-overlay" 
+          onClick={() => setShowExitModal(false)}
+          style={{
+            position: 'fixed',
+            top: '0px',
+            left: '0px',
+            right: '0px',
+            bottom: '0px',
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: window.innerWidth <= 480 ? '12px' : '16px',
+            margin: 0,
+            touchAction: 'none',
+            overflow: 'hidden',
+          }}
+        >
+          <div 
+            className="offset-modal-content" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              margin: 0,
+              maxWidth: window.innerWidth <= 480 ? `calc(100vw - 24px)` : '400px',
+              width: '100%',
+              transform: 'none',
+              animation: 'none',
+              transition: 'none',
+            }}
+          >
             <h2>Выход из игры</h2>
             <p className="offset-modal-description">Вы уверены? Вам засчитается поражение!</p>
             <div className="offset-modal-actions">
