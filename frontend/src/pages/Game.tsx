@@ -8,6 +8,7 @@ import SandboxControls from '../components/SandboxControls'
 import Dice from '../components/Dice'
 import Icon from '../components/Icon'
 import Button from '../components/Button'
+import OffsetModal from '../components/OffsetModal'
 import { apiClient } from '../api/client'
 import { getSocket, getMatchmakingSocket, connectWebSocket } from '../api/websocket'
 import './Game.css'
@@ -1957,87 +1958,29 @@ export default function Game() {
       </div>
 
 
-      {showExitModal && (
-        <div className="modal-overlay" onClick={() => setShowExitModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      {showExitModal && createPortal(
+        <div className="offset-modal-overlay" onClick={() => setShowExitModal(false)}>
+          <div className="offset-modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Выход из игры</h2>
-            <p>Вы уверены? Вам засчитается поражение!</p>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+            <p className="offset-modal-description">Вы уверены? Вам засчитается поражение!</p>
+            <div className="offset-modal-actions">
               <Button variant="primary" onClick={handleConfirmExit} style={{ flex: 1 }}>Да, сдаться</Button>
               <Button variant="secondary" onClick={() => setShowExitModal(false)} style={{ flex: 1 }}>Нет</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Модальное окно выбора смещения - рендерим через Portal для корректного позиционирования */}
-      {showOffsetModal && gameInfo && gameInfo.type !== 'sandbox' && createPortal(
-        <div className="modal-overlay offset-modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowOffsetModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Выбор смещения</h2>
-            <p style={{ marginBottom: '20px', color: '#999' }}>
-              Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 5).
-            </p>
-            
-            <div className="offset-selector">
-              <label>Ваше смещение (1-5):</label>
-              <p className="offset-hint" style={{ fontSize: '12px', color: '#999', marginBottom: '12px' }}>
-                Смещение влияет на выбор начальной позиции в последовательности бросков кубиков
-              </p>
-              <input 
-                type="range" 
-                min="1" 
-                max="5" 
-                value={myOffset} 
-                onChange={handleOffsetChange}
-              />
-              <div className="offset-values">
-                <span>Вы: <strong>{myOffset}</strong></span>
-                {opponentOffset > 0 && (
-                  <span>Соперник: <strong>{opponentOffset}</strong></span>
-                )}
-              </div>
-            </div>
-
-            {gameInfo.rngHash && (
-              <div className="hash-display" style={{ marginBottom: '20px', fontSize: '12px' }}>
-                <div style={{ marginBottom: '8px' }}>Хеш последовательности (SHA-256):</div>
-                <code style={{ fontSize: '11px', wordBreak: 'break-all' }}>
-                  {(() => {
-                    try {
-                      if (typeof gameInfo.rngHash === 'string') {
-                        // Пытаемся распарсить как JSON
-                        const parsed = JSON.parse(gameInfo.rngHash)
-                        if (parsed && parsed.p1Hash) {
-                          return parsed.p1Hash.substring(0, 16) + '...'
-                        }
-                      }
-                      // Если это не JSON или не объект с p1Hash, показываем первые 16 символов строки
-                      return gameInfo.rngHash.substring(0, 16) + '...'
-                    } catch (e) {
-                      // Если не удалось распарсить, показываем первые 16 символов
-                      return typeof gameInfo.rngHash === 'string' 
-                        ? gameInfo.rngHash.substring(0, 16) + '...'
-                        : '---'
-                    }
-                  })()}
-                </code>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-              <Button 
-                variant="primary" 
-                onClick={handleConfirmOffset} 
-                style={{ flex: 1 }}
-              >
-                Подтвердить
-              </Button>
             </div>
           </div>
         </div>,
         document.body
       )}
+
+      <OffsetModal
+        isOpen={showOffsetModal && gameInfo?.type !== 'sandbox'}
+        onClose={() => setShowOffsetModal(false)}
+        onConfirm={handleConfirmOffset}
+        myOffset={myOffset}
+        opponentOffset={opponentOffset}
+        onOffsetChange={(value) => setMyOffset(value)}
+        rngHash={gameInfo?.rngHash}
+      />
 
       {gameStatus === 'finished' && (
         <div className="game-overlay">
