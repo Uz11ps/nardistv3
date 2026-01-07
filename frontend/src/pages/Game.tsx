@@ -1303,10 +1303,45 @@ export default function Game() {
       return
     }
 
-    // Для обычного хода (die <= 6 и нет steps)
-    if (die <= 6 && (!steps || steps.length === 0)) {
-      // Для дублей НЕ проверяем использование кубика - можно использовать все 4 сразу
-      if (!isDoubles) {
+    // ПЕРЕПИСАННАЯ ЛОГИКА ДЛЯ ДУБЛЕЙ
+    // При дубле разрешаем ходы с die равным: doublesValue, doublesValue*2, doublesValue*3, doublesValue*4
+    if (isDoubles) {
+      const doublesValue = diceArray[0];
+      const allowedValues = [doublesValue, doublesValue * 2, doublesValue * 3, doublesValue * 4];
+      
+      // Проверяем, что die является допустимым значением для дубля
+      if (!allowedValues.includes(die)) {
+        console.warn(`⚠️ При дубле ${doublesValue}/${doublesValue} можно использовать только ходы на ${allowedValues.join(', ')}. Получен: ${die}`);
+        return;
+      }
+      
+      // Подсчитываем общее количество использованных кубиков
+      let totalUsed = 0;
+      for (const move of pendingMoves) {
+        if (move.die && isDoubles) {
+          const moveDoublesValue = diceArray[0];
+          if (move.die % moveDoublesValue === 0) {
+            totalUsed += move.die / moveDoublesValue;
+          } else {
+            totalUsed += 1; // Если не кратно, считаем как 1 кубик
+          }
+        } else {
+          totalUsed += 1;
+        }
+      }
+      
+      // Проверяем, сколько кубиков потребуется для нового хода
+      const diceNeededForMove = die / doublesValue;
+      
+      if (totalUsed + diceNeededForMove > 4) {
+        console.warn(`⚠️ При дубле нельзя использовать более 4 кубиков. Уже использовано: ${totalUsed}, требуется: ${diceNeededForMove}`);
+        return;
+      }
+      
+      // Для дублей добавляем ход без дополнительных проверок
+    } else {
+      // Обычная логика для не-дублей
+      if (die <= 6 && (!steps || steps.length === 0)) {
         const currentDiceUsage = new Map<number, number>();
         pendingMoves.forEach(m => {
           if (m.steps) {
@@ -1323,15 +1358,13 @@ export default function Game() {
           console.warn(`⚠️ Кубик ${die} уже использован максимальное количество раз. Доступно: ${availableCount}, Использовано: ${usedCount}`);
           return
         }
+      } else if (die > 6) {
+        // Для хода > 6 (комбинированный) должен быть steps
+        if (!steps || steps.length === 0) {
+          console.warn(`Move with die=${die} but no steps provided`);
+          return; // Не добавляем такой ход
+        }
       }
-      // Для дублей просто добавляем ход без проверок
-    } else if (die > 6) {
-      // Для хода > 6 (комбинированный) должен быть steps
-      if (!steps || steps.length === 0) {
-        console.warn(`Move with die=${die} but no steps provided`);
-        return; // Не добавляем такой ход
-      }
-      // Проверка комбинированных ходов уже выполнена выше (строки 806-826)
     }
 
     setPendingMoves(prev => [...prev, { from, to, die, steps }])
