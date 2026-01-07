@@ -813,11 +813,27 @@ export default function Game() {
       }
 
       const diceData = data.gameState?.dice
-      const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
-        ? { die1: diceData[0], die2: diceData[1] } 
-        : (Array.isArray(diceData) && diceData.length === 0) || !diceData
-        ? null
-        : diceData
+      // ВАЖНО: Правильно форматируем кубики для отображения
+      // Если это массив из 4 элементов (дубль) - сохраняем как массив
+      // Если это массив из 2 элементов - преобразуем в { die1, die2 }
+      // Если пустой массив или null - null
+      let formattedDice: { die1: number; die2: number } | number[] | null = null
+      if (Array.isArray(diceData)) {
+        if (diceData.length === 4) {
+          // Дубль - сохраняем как массив из 4 элементов
+          formattedDice = diceData
+        } else if (diceData.length === 2) {
+          // Обычный бросок - преобразуем в объект
+          formattedDice = { die1: diceData[0], die2: diceData[1] }
+        } else if (diceData.length === 0) {
+          formattedDice = null
+        }
+      } else if (diceData) {
+        // Если это не массив, но есть данные - используем как есть
+        formattedDice = diceData
+      }
+      
+      console.log('📊 game_state received:', { diceData, formattedDice, currentPlayer: data.currentPlayer })
       
       // Проверяем, изменились ли кубики (для запуска анимации)
       // НЕ запускаем анимацию здесь, т.к. она уже запускается в dice_rolled событии
@@ -843,16 +859,27 @@ export default function Game() {
         ? [...data.gameState.points] 
         : []
       
-      setGameState({
-        points,
-        bar,
-        bearOff,
-        currentPlayer: data.currentPlayer || 0,
-        dice: formattedDice,
-        canMove: canMove,
-        verificationSalt: data.verificationSalt,
-        p1Rolls: data.p1Rolls,
-        p2Rolls: data.p2Rolls,
+      // ВАЖНО: Обновляем состояние игры, включая кубики
+      // Если кубики есть в game_state - обновляем их (даже если dice_rolled еще не пришло)
+      setGameState((prev) => {
+        const newState = {
+          points,
+          bar,
+          bearOff,
+          currentPlayer: data.currentPlayer || 0,
+          dice: formattedDice, // ВАЖНО: Всегда обновляем кубики из game_state
+          canMove: canMove,
+          verificationSalt: data.verificationSalt,
+          p1Rolls: data.p1Rolls,
+          p2Rolls: data.p2Rolls,
+        }
+        console.log('📊 Updating gameState:', { 
+          dice: formattedDice, 
+          previousDice: prev?.dice,
+          currentPlayer: data.currentPlayer,
+          canMove 
+        })
+        return newState
       })
       const newStatus = data.status || 'waiting'
       

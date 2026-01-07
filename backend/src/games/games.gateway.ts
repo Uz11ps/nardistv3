@@ -537,21 +537,30 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         });
       } else {
         // ВАЖНО: После завершения хода нужно бросить кубики для следующего игрока
-        // Проверяем, произошла ли смена хода (dice пустые)
-        const updatedGame = await this.gamesService.findOne(data.gameId);
-        const hasNoDice = !updatedGame.gameState?.dice || (Array.isArray(updatedGame.gameState.dice) && updatedGame.gameState.dice.length === 0);
+        // Проверяем состояние dice из gameState (который уже обновлен после makeMove)
+        const hasNoDice = !gameState.gameState?.dice || (Array.isArray(gameState.gameState.dice) && gameState.gameState.dice.length === 0);
         
-        if (hasNoDice && updatedGame.status === 'in_progress') {
+        this.logger.log(`🔍 Checking if dice roll needed: hasNoDice=${hasNoDice}, status=${game.status}, dice=${JSON.stringify(gameState.gameState?.dice)}`);
+        
+        if (hasNoDice && game.status === 'in_progress') {
           // Ход завершен, нужно бросить кубики для следующего игрока
-          const nextPlayerId = updatedGame.currentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id;
-          const isBotTurn = updatedGame.type === 'vs_bot' && updatedGame.player2Id === null && updatedGame.currentPlayer === 1;
+          const nextPlayerId = gameState.currentPlayer === 0 ? gameState.player1Id : gameState.player2Id;
+          const isBotTurn = gameState.type === 'vs_bot' && gameState.player2Id === null && gameState.currentPlayer === 1;
           
-          this.logger.log(`🎲 Rolling dice for next player: gameId=${data.gameId}, currentPlayer=${updatedGame.currentPlayer}, isBotTurn=${isBotTurn}`);
+          this.logger.log(`🎲 Rolling dice for next player: gameId=${data.gameId}, currentPlayer=${gameState.currentPlayer}, nextPlayerId=${nextPlayerId}, isBotTurn=${isBotTurn}`);
           
           try {
             // Бросаем кубики для следующего игрока
             const dice = await this.gamesService.rollDice(data.gameId, isBotTurn ? null : nextPlayerId, isBotTurn);
             this.logger.log(`✅ Dice rolled for next player: [${dice.join(', ')}]`);
+            
+            // Отправляем событие dice_rolled для анимации
+            const eventId = `${data.gameId}_${Date.now()}_auto`;
+            this.server.to(`game:${data.gameId}`).emit('dice_rolled', { 
+              dice: dice, 
+              playerId: isBotTurn ? null : nextPlayerId,
+              eventId
+            });
             
             // Отправляем обновленное состояние игры
             const updatedGameState = await this.gamesService.getGameState(data.gameId);
@@ -560,7 +569,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             // Если это ход бота - запускаем автоматический ход бота
             if (isBotTurn) {
               this.logger.log(`🤖 Bot turn detected, triggering bot move`);
-              await this.handleBotTurnIfNeeded(data.gameId);
+              // Не вызываем handleBotTurnIfNeeded здесь, т.к. кубики уже брошены
+              // Просто делаем ход бота
+              setTimeout(async () => {
+                await this.handleBotTurnIfNeeded(data.gameId);
+              }, 1000);
             }
           } catch (error) {
             this.logger.error(`❌ Error rolling dice for next player:`, error);
@@ -568,7 +581,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         } else {
           // Кубики еще есть - это промежуточный ход (например, при дублях)
           // Проверяем бота только если это его ход и кубики уже есть
-          this.logger.log(`🔄 No dice roll needed (intermediate move or dice still available)`);
+          this.logger.log(`🔄 No dice roll needed (intermediate move or dice still available), dice=${JSON.stringify(gameState.gameState?.dice)}`);
           await this.handleBotTurnIfNeeded(data.gameId);
         }
       }
@@ -590,8 +603,16 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       if (game.type === 'vs_bot' && game.player2Id === null && game.currentPlayer === 1 && game.status === 'in_progress') {
         const botPlayerId = null; // Use null for bot
         
-        // Roll dice for bot
-        const botDice = await this.gamesService.rollDice(gameId, botPlayerId);
+        // ВАЖНО: Проверяем, есть ли уже кубики для бота
+        // Если кубики уже есть - не бросаем повторно
+        const hasDice = game.gameState?.dice && Array.isArray(game.gameState.dice) && game.gameState.dice.length > 0;
+        
+        if (hasDice) {
+          this.logger.log(`🤖 Bot already has dice: [${game.gameState.dice.join(', ')}], proceeding with move`);
+        } else {
+          // Roll dice for bot
+          this.logger.log(`🎲 Rolling dice for bot`);
+          const botDice = await this.gamesService.rollDice(gameId, botPlayerId);
         
         // Применяем износ к кубикам бота после броска (Equipment Spec v2.0 - PER_ROLL)
         // Бот-игры обычно не тратят износ, но для консистентности можно оставить

@@ -448,19 +448,72 @@ export class GamesService {
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     
     // Контроль честности: выбираем бросок из последовательности
-    const isPlayer1 = playerId === game.player1Id;
+    // ВАЖНО: Для бота playerId может быть null, определяем игрока по currentPlayer
+    let isPlayer1: boolean;
+    if (playerId === null) {
+      // Это бот - определяем по currentPlayer
+      isPlayer1 = game.currentPlayer === 1; // Если currentPlayer === 1, значит это бот (player2)
+    } else {
+      isPlayer1 = playerId === game.player1Id;
+    }
+    
     const playerRolls = isPlayer1 ? game.p1Rolls : game.p2Rolls;
     const myOffset = isPlayer1 ? game.p1Offset : game.p2Offset;
     const opponentOffset = isPlayer1 ? game.p2Offset : game.p1Offset;
     
-    // Формула: (Смещение игрока - 1) * 2 + Смещение соперника
+    // Формула смещения: (Смещение игрока - 1) * 2 + Смещение соперника
+    // Это определяет начальную позицию в последовательности бросков
     const startIdx = ((myOffset || 1) - 1) * 2 + (opponentOffset || 1);
     
-    // Номер текущего броска для этого игрока
-    const playerMovesCount = (game.moves || []).filter(m => m.playerId === playerId).length;
-    const currentRollIdx = (startIdx + playerMovesCount) % (playerRolls?.length || 1000);
+    // ВАЖНО: Считаем количество БРОСКОВ кубиков для этого игрока
+    // Бросок происходит каждый раз, когда игрок начинает свой ход (когда dice пустые)
+    // Это можно определить по количеству раз, когда currentPlayer менялся на этого игрока
+    let rollCount = 0;
+    if (game.moves && game.moves.length > 0) {
+      // Проходим по всем ходам и считаем смены хода для этого игрока
+      let previousPlayer: number | null = null;
+      for (const move of game.moves) {
+        const movePlayerId = move.playerId;
+        const moveIsPlayer1 = movePlayerId === game.player1Id;
+        const movePlayer = moveIsPlayer1 ? 0 : 1;
+        
+        // Если сменился игрок - предыдущий игрок завершил ход, новый игрок начинает
+        if (previousPlayer !== null && previousPlayer !== movePlayer) {
+          // Сменился игрок - новый игрок начинает свой ход (бросает кубики)
+          if ((moveIsPlayer1 && isPlayer1) || (!moveIsPlayer1 && !isPlayer1)) {
+            rollCount++;
+          }
+        } else if (previousPlayer === null) {
+          // Первый ход в игре - это первый бросок для первого игрока
+          if ((moveIsPlayer1 && isPlayer1) || (!moveIsPlayer1 && !isPlayer1)) {
+            rollCount++;
+          }
+        }
+        
+        previousPlayer = movePlayer;
+      }
+      
+      // Если текущий игрок еще не делал ходов, но это его первый бросок
+      const hasMovesForThisPlayer = game.moves.some(m => {
+        const mIsPlayer1 = m.playerId === game.player1Id;
+        return (mIsPlayer1 && isPlayer1) || (!mIsPlayer1 && !isPlayer1);
+      });
+      
+      if (!hasMovesForThisPlayer) {
+        // Это первый бросок для этого игрока
+        rollCount = 0; // Начинаем с 0, так как startIdx уже учитывает начальную позицию
+      }
+    } else {
+      // Нет ходов - это первый бросок в игре
+      rollCount = 0; // Начинаем с 0, так как startIdx уже учитывает начальную позицию
+    }
+    
+    // Текущий индекс в последовательности бросков
+    const currentRollIdx = (startIdx + rollCount) % (playerRolls?.length || 1000);
     
     const diceRoll = playerRolls ? playerRolls[currentRollIdx] : engine.rollDice(game.rngSeed + (game.moves?.length || 0));
+    
+    console.log(`🎲 Provably Fair Dice: player=${isPlayer1 ? 'P1' : 'P2'}, myOffset=${myOffset}, opponentOffset=${opponentOffset}, startIdx=${startIdx}, rollCount=${rollCount}, rollIdx=${currentRollIdx}, roll=[${diceRoll.join(', ')}]`);
     
     console.log(`🎲 Provably Fair Dice: player=${isPlayer1 ? 'P1' : 'P2'}, startIdx=${startIdx}, rollIdx=${currentRollIdx}, roll=[${diceRoll.join(', ')}]`);
     
