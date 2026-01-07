@@ -1125,6 +1125,11 @@ export class GamesService {
     const availableDice = diceForMoves;
     const diceCounts = new Map<number, number>();
     availableDice.forEach(d => diceCounts.set(d, (diceCounts.get(d) || 0) + 1));
+    
+    // ВАЖНО: Для дублей добавляем комбинированные ходы (одна шашка на все 4 кубика)
+    // Например, при дубле 3/3: можно походить на 3, 6, 9, 12 одной шашкой
+    const isDoublesForCombined = availableDice.length === 4 && availableDice.every(d => d === availableDice[0]);
+    const doublesValue = isDoublesForCombined ? availableDice[0] : null;
 
     for (const seq of allMoves) {
       if (seq.length === 0) continue;
@@ -1233,6 +1238,103 @@ export class GamesService {
             steps: [...steps]
           });
           seen.add(key);
+        }
+      }
+    }
+    
+    // ВАЖНО: Для дублей добавляем комбинированные ходы (одна шашка на все 4 кубика)
+    // Например, при дубле 3/3: можно походить на 3, 6, 9, 12 одной шашкой
+    if (isDoublesForCombined && doublesValue) {
+      // Получаем все уникальные точки, с которых можно ходить
+      const fromPoints = new Set<number>();
+      for (const move of flatMoves) {
+        fromPoints.add(move.from);
+      }
+      
+      // Для каждой точки генерируем комбинированные ходы: doublesValue, doublesValue*2, doublesValue*3, doublesValue*4
+      for (const fromPoint of fromPoints) {
+        // Проверяем все возможные комбинированные ходы для этой точки
+        for (let multiplier = 2; multiplier <= 4; multiplier++) {
+          const combinedDie = doublesValue * multiplier;
+          
+          // Вычисляем целевую точку для комбинированного хода
+          const player = state.currentPlayer;
+          let toPoint: number;
+          
+          const gameMode = game.mode;
+          if (gameMode === GameMode.SHORT) {
+            // Для коротких нард
+            if (player === 0) {
+              // Белые идут от 23 к 0
+              toPoint = fromPoint - combinedDie;
+              if (toPoint < 0) {
+                // Вынос
+                toPoint = -1;
+              }
+            } else {
+              // Черные идут от 0 к 23
+              toPoint = fromPoint + combinedDie;
+              if (toPoint >= 24) {
+                // Вынос
+                toPoint = -1;
+              }
+            }
+          } else {
+            // Для длинных нард
+            if (player === 0) {
+              // Белые идут по часовой стрелке
+              toPoint = (fromPoint - combinedDie + 24) % 24;
+            } else {
+              // Черные идут против часовой стрелки
+              toPoint = (fromPoint + combinedDie) % 24;
+            }
+          }
+          
+          // Проверяем валидность комбинированного хода
+          const isValid = (engine as any).validateMove(state, fromPoint, toPoint, combinedDie, isFirstMoveOfGame);
+          
+          if (isValid) {
+            // Генерируем steps для комбинированного хода
+            const steps: Array<{ from: number; to: number; die: number }> = [];
+            let currentFrom = fromPoint;
+            
+            for (let i = 0; i < multiplier; i++) {
+              let stepTo: number;
+              
+              if (gameMode === GameMode.SHORT) {
+                if (player === 0) {
+                  stepTo = currentFrom - doublesValue;
+                  if (stepTo < 0) stepTo = -1;
+                } else {
+                  stepTo = currentFrom + doublesValue;
+                  if (stepTo >= 24) stepTo = -1;
+                }
+              } else {
+                if (player === 0) {
+                  stepTo = (currentFrom - doublesValue + 24) % 24;
+                } else {
+                  stepTo = (currentFrom + doublesValue) % 24;
+                }
+              }
+              
+              steps.push({ from: currentFrom, to: stepTo, die: doublesValue });
+              currentFrom = stepTo;
+              
+              // Если дошли до выноса, останавливаемся
+              if (stepTo === -1 || stepTo >= 24) break;
+            }
+            
+            const key = `${fromPoint}-${toPoint}-${combinedDie}`;
+            if (!seen.has(key)) {
+              flatMoves.push({
+                from: fromPoint,
+                to: toPoint,
+                die: combinedDie,
+                steps: steps
+              });
+              seen.add(key);
+            }
+          }
         }
       }
     }
