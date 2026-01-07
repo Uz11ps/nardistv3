@@ -405,7 +405,8 @@ export default function Game() {
 
   const isPlayer1 = gameInfo?.player1Id === user?.id
   const isSandbox = gameInfo?.type === 'sandbox'
-  const isMyTurn = (gameState?.canMove || isSandbox) && gameStatus === 'in_progress'
+  const [sandboxMode, setSandboxMode] = useState<'setup' | 'play'>('setup')
+  const isMyTurn = (gameState?.canMove || isSandbox) && (gameStatus === 'in_progress' || isSandbox)
   const myPlayer = isPlayer1 ? gameInfo?.player1 : gameInfo?.player2
   const opponentPlayer = isPlayer1 ? gameInfo?.player2 : gameInfo?.player1
 
@@ -2092,6 +2093,7 @@ export default function Game() {
                 player1Name={gameInfo?.player1?.nickname || gameInfo?.player1?.username}
                 player2Name={gameInfo?.player2?.nickname || gameInfo?.player2?.username || 'Бот'}
                 isSandbox={isSandbox}
+                sandboxMode={sandboxMode}
                 serverMoves={serverMovesForBoard}
                 onServerMovesFinished={() => {
                   isServerAnimatingRef.current = false;
@@ -2267,6 +2269,7 @@ export default function Game() {
                     gameId={gameId || ''}
                     gameState={gameState}
                     currentPlayer={gameState?.currentPlayer || 0}
+                    onModeChange={(mode) => setSandboxMode(mode)}
                     onBoardUpdate={() => {
                       // Перезагружаем состояние игры
                       if (gameId) {

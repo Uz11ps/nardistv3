@@ -8,6 +8,7 @@ interface SandboxControlsProps {
   currentPlayer: number
   onBoardUpdate: () => void
   onHistoryPreview?: (gameState: any | null) => void
+  onModeChange?: (mode: 'setup' | 'play') => void
 }
 
 interface SandboxChapter {
@@ -42,6 +43,7 @@ export default function SandboxControls({
   // Manual dice state
   const [dice1, setDice1] = useState(1)
   const [dice2, setDice2] = useState(1)
+  const [diceTargetPlayer, setDiceTargetPlayer] = useState<number | null>(null)
   const [showDiceModal, setShowDiceModal] = useState(false)
   const [diceQueue, setDiceQueue] = useState<number[][]>([])
 
@@ -54,6 +56,7 @@ export default function SandboxControls({
         setDiceQueue(prev => prev.slice(1))
         applyDice(nextDice[0], nextDice[1])
       } else {
+        setDiceTargetPlayer(null)
         setShowDiceModal(true)
       }
     }
@@ -127,11 +130,11 @@ export default function SandboxControls({
     }
   }
 
-  const applyDice = async (d1: number, d2: number) => {
+  const applyDice = async (d1: number, d2: number, playerIndex?: number | null) => {
     try {
       await apiClient.post(`/games/${gameId}/sandbox/set-dice`, {
         dice: [d1, d2],
-        player: currentPlayer,
+        player: playerIndex !== null && playerIndex !== undefined ? playerIndex : currentPlayer,
       })
       setShowDiceModal(false)
       onBoardUpdate()
@@ -142,11 +145,12 @@ export default function SandboxControls({
   }
 
   const handleSetDice = () => {
-    applyDice(dice1, dice2)
+    applyDice(dice1, dice2, diceTargetPlayer)
   }
 
   const handleAddToQueue = () => {
     setDiceQueue(prev => [...prev, [dice1, dice2]])
+    setShowDiceModal(false)
   }
 
   const handleMoveClick = (index: number) => {
@@ -166,6 +170,7 @@ export default function SandboxControls({
           className={`mode-btn ${mode === 'setup' ? 'active' : ''}`}
           onClick={() => {
             setMode('setup')
+            onModeChange?.('setup')
             onHistoryPreview?.(null)
             setSelectedMoveIndex(null)
           }}
@@ -174,7 +179,10 @@ export default function SandboxControls({
         </button>
         <button 
           className={`mode-btn ${mode === 'play' ? 'active' : ''}`}
-          onClick={() => setMode('play')}
+          onClick={() => {
+            setMode('play')
+            onModeChange?.('play')
+          }}
         >
           <span>▶️</span> Интерактив
         </button>
@@ -256,6 +264,30 @@ export default function SandboxControls({
         <div className="dice-modal-overlay">
           <div className="dice-modal">
             <h3>Укажите значения кубиков</h3>
+            
+            <div className="modal-section-label">Чей ход:</div>
+            <div className="player-selector">
+              <button 
+                className={diceTargetPlayer === 0 ? 'active' : ''} 
+                onClick={() => setDiceTargetPlayer(0)}
+              >
+                Белые
+              </button>
+              <button 
+                className={diceTargetPlayer === 1 ? 'active' : ''} 
+                onClick={() => setDiceTargetPlayer(1)}
+              >
+                Черные
+              </button>
+              <button 
+                className={diceTargetPlayer === null ? 'active' : ''} 
+                onClick={() => setDiceTargetPlayer(null)}
+              >
+                Текущий
+              </button>
+            </div>
+
+            <div className="modal-section-label">Значения:</div>
             <div className="dice-inputs">
               {[1, 2, 3, 4, 5, 6].map(val => (
                 <button 

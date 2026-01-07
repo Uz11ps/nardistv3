@@ -234,6 +234,35 @@
   color: white;
 }
 
+.modal-section-label {
+  font-size: 13px;
+  color: #bdc3c7;
+  margin-bottom: -10px;
+}
+
+.player-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.player-selector button {
+  flex: 1;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #bdc3c7;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.player-selector button.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
 .dice-inputs {
   display: flex;
   justify-content: space-between;
