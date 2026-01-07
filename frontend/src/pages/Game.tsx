@@ -913,11 +913,15 @@ export default function Game() {
         setPlayer2Timer(data.player2Timer)
       }
       
-      // Проверяем, выбрали ли оба игрока смещение
+      // Проверяем, выбрали ли оба игрока смещение (для всех типов игр, включая ботов)
       const bothOffsetsChosen = data.p1OffsetChosenAt && data.p2OffsetChosenAt
 
       // Если оба игрока выбрали смещение, но игра еще в WAITING - запускаем отсчет подготовки
-      if (bothOffsetsChosen && newStatus === 'waiting' && preparationCountdown === null) {
+      // Это работает для ВСЕХ типов игр: vs_player, vs_bot, tournament
+      // Проверяем также, что игра еще не началась (нет кубиков)
+      const hasNoDice = !data.gameState?.dice || (Array.isArray(data.gameState.dice) && data.gameState.dice.length === 0)
+      if (bothOffsetsChosen && (newStatus === 'waiting' || (newStatus === 'in_progress' && hasNoDice)) && preparationCountdown === null) {
+        console.log('⏱️ Запускаем отсчет подготовки к игре (10 секунд) для типа:', data.type)
         setPreparationCountdown(10)
         preparationCountdownRef.current = 10
       }
@@ -944,7 +948,6 @@ export default function Game() {
       setIsProcessingConfirm(false)
       const diceData = data.gameState?.dice
       const isP1 = data.player1Id === user?.id
-      const canMove = data.currentPlayer === (isP1 ? 0 : 1)
       
       // ВАЖНО: Если пришли серверные ходы, передаем их доске для анимации
       // Но только если это НЕ наш ход (наши ходы анимируются локально)
@@ -964,21 +967,44 @@ export default function Game() {
           : diceData // Для дублей (4 элемента) или других случаев сохраняем массив
         : null
       
-      // ВАЖНО: Для дублей НЕ очищаем pendingMoves сразу, если остались кубики и это еще мой ход
-      // Это позволяет сделать все 4 хода подряд без промежуточных подтверждений
+      // ВАЖНО: Правильно вычисляем canMove с учетом оставшихся кубиков
+      // Если остались кубики и это еще наш ход - canMove должен быть true
       const remainingDice = Array.isArray(diceData) ? diceData : []
-      const isDoubles = remainingDice.length === 4 && remainingDice.every((d: number) => d === remainingDice[0])
-      const isMyTurnStill = canMove
+      const isMyTurn = data.currentPlayer === (isP1 ? 0 : 1)
+      const hasRemainingDice = remainingDice.length > 0
+      // canMove = это наш ход И есть кубики для хода
+      const canMove = isMyTurn && hasRemainingDice
       
-      // Если это дубль и остались кубики, и это еще мой ход - НЕ очищаем pendingMoves
-      // Пользователь может продолжить делать ходы с оставшимися кубиками
-      // НО только если не все 4 хода уже сделаны
-      if (isDoubles && remainingDice.length > 0 && isMyTurnStill && pendingMoves.length < 4) {
-        // Для дублей оставляем pendingMoves, чтобы можно было продолжить
-        console.log('🎲 Doubles: keeping pendingMoves for remaining dice:', remainingDice, 'pendingMoves:', pendingMoves.length)
-      } else {
-        // Для обычных ходов или если все ходы сделаны - очищаем
+      console.log('🎯 [move_made] canMove calculation:', {
+        isMyTurn,
+        hasRemainingDice,
+        remainingDice,
+        canMove,
+        currentPlayer: data.currentPlayer,
+        isP1,
+        diceData
+      })
+      
+      // ВАЖНО: Очищаем pendingMoves только если ход был успешно применен
+      // Проверяем, был ли это наш ход (мы отправили ходы)
+      const wasMyMove = data.playerId === user?.id
+      
+      // Если это был ход противника (бота или другого игрока) - всегда очищаем
+      if (!wasMyMove) {
         setPendingMoves([])
+      } else {
+        // Если это был наш ход - проверяем, остались ли кубики для продолжения
+        const isDoubles = remainingDice.length === 4 && remainingDice.every((d: number) => d === remainingDice[0])
+        
+        // Если это дубль, остались кубики, и это еще наш ход - НЕ очищаем pendingMoves
+        // Это позволяет сделать все 4 хода подряд без промежуточных подтверждений
+        if (isDoubles && hasRemainingDice && isMyTurn) {
+          // Для дублей оставляем pendingMoves, чтобы можно было продолжить
+          console.log('🎲 Doubles: keeping pendingMoves for remaining dice:', remainingDice, 'pendingMoves:', pendingMoves.length, 'canMove:', canMove)
+        } else {
+          // Для обычных ходов или если все кубики использованы - очищаем
+          setPendingMoves([])
+        }
       }
       
       // НЕ запускаем анимацию здесь, т.к. она уже запускается в dice_rolled событии
