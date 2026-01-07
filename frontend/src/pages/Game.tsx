@@ -833,11 +833,6 @@ export default function Game() {
         setTimeout(() => setServerMovesForBoard(undefined), 100)
       }
       
-      // ВАЖНО: Всегда очищаем pendingMoves при получении move_made,
-      // т.к. ходы уже применены на сервере и приходят в обновленном gameState
-      // Если остались кубики и это еще мой ход, можно продолжить ходить, но с новыми pendingMoves
-      setPendingMoves([])
-      
       // Для дублей может быть массив из 4 элементов, для обычных - из 2
       // Сохраняем весь массив, если он есть
       const formattedDice = Array.isArray(diceData) && diceData.length > 0
@@ -845,6 +840,18 @@ export default function Game() {
           ? { die1: diceData[0], die2: diceData[1] }
           : diceData // Для дублей (4 элемента) или других случаев сохраняем массив
         : null
+      
+      // ВАЖНО: Для дублей НЕ очищаем pendingMoves сразу, если остались кубики и это еще мой ход
+      // Это позволяет сделать все 4 хода подряд без промежуточных подтверждений
+      const remainingDice = Array.isArray(diceData) ? diceData : []
+      const isDoubles = remainingDice.length === 4 && remainingDice.every((d: number) => d === remainingDice[0])
+      const isMyTurnStill = canMove
+      
+      // Если это дубль и остались кубики, и это еще мой ход - НЕ очищаем pendingMoves
+      // Пользователь может продолжить делать ходы с оставшимися кубиками
+      if (!(isDoubles && remainingDice.length > 0 && isMyTurnStill)) {
+        setPendingMoves([])
+      }
       
       // НЕ запускаем анимацию здесь, т.к. она уже запускается в dice_rolled событии
       // Это предотвращает дублирование анимации
@@ -1347,9 +1354,19 @@ export default function Game() {
           setIsProcessingConfirm(false)
         }, 3000)
         
+        // Проверяем, является ли это дублем - если да, не очищаем pendingMoves сразу
+        // Это позволит сделать все 4 хода подряд без промежуточных подтверждений
+        const currentDice = Array.isArray(gameState.dice) ? gameState.dice : gameState.dice ? [gameState.dice.die1, gameState.dice.die2] : []
+        const isDoubles = currentDice.length === 4 && currentDice.every(d => d === currentDice[0])
+        
         socket.emit('make_move', { gameId, moves: pendingMoves })
-        // Не очищаем pendingMoves здесь - дождемся события move_made, которое обновит gameState
-        // pendingMoves будут очищены в обработчике move_made, чтобы избежать двойного применения в virtualGameState
+        
+        // Для дублей НЕ очищаем pendingMoves сразу, если остались кубики
+        // Это позволит продолжить делать ходы без промежуточного подтверждения
+        if (!isDoubles || pendingMoves.length >= 4) {
+          // Для обычных ходов или если все 4 хода при дубле уже сделаны - очищаем
+          // pendingMoves будут очищены в обработчике move_made, чтобы избежать двойного применения в virtualGameState
+        }
       } catch (error) {
         // Просто откатываем ходы без показа ошибки
         setPendingMoves([])
