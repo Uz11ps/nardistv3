@@ -374,7 +374,11 @@ export default function Game() {
         p2Rolls: game.p2Rolls,
       })
       setOpponent(game.player1Id === user?.id ? game.player2 : game.player1)
-      setScore({ player1: game.player1Score || 0, player2: game.player2Score || 0 })
+      // Используем счет побед из серии матчей (player1Wins/player2Wins), если есть серия
+      const winsScore = game.matchesToWin > 1 
+        ? { player1: game.player1Wins || 0, player2: game.player2Wins || 0 }
+        : { player1: game.player1Score || 0, player2: game.player2Score || 0 }
+      setScore(winsScore)
       setGameStatus(game.status)
       
       // Загружаем смещения игроков
@@ -681,6 +685,17 @@ export default function Game() {
     socket.off('timer_update')
 
     // Регистрируем обработчики событий
+    socket.on('next_game_created', (data: any) => {
+      // Автоматически переходим к следующей игре в серии
+      if (data.gameId && data.matchSeriesId) {
+        console.log(`🎮 Следующая игра в серии создана: ${data.gameId}, счет: ${data.player1Wins}:${data.player2Wins} (до ${data.matchesToWin})`)
+        // Небольшая задержка перед переходом, чтобы пользователь видел результат
+        setTimeout(() => {
+          navigate(`/game/${data.gameId}`, { replace: true })
+        }, 2000)
+      }
+    })
+
     socket.on('game_state', (data: any) => {
       // Если идет анимация серверных ходов, игнорируем входящее состояние,
       // чтобы избежать дублирования шашек. Состояние применится в onServerMovesFinished.
@@ -770,7 +785,11 @@ export default function Game() {
       }
       
       setGameStatus(newStatus)
-      setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+      // Используем счет побед из серии матчей, если есть серия
+      const winsScore = data.matchesToWin > 1
+        ? { player1: data.player1Wins || 0, player2: data.player2Wins || 0 }
+        : { player1: data.player1Score || 0, player2: data.player2Score || 0 }
+      setScore(winsScore)
       
       // Обновляем таймеры из данных сервера, если они есть
       if (data.player1Timer !== undefined) {
@@ -1000,7 +1019,11 @@ export default function Game() {
           player2Score: data.player2Score
         };
         // Устанавливаем счет сразу, чтобы он обновился в UI
-        setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 });
+        // Используем счет побед из серии матчей, если есть серия
+        const winsScore = data.game?.matchesToWin > 1
+          ? { player1: data.game?.player1Wins || 0, player2: data.game?.player2Wins || 0 }
+          : { player1: data.player1Score || 0, player2: data.player2Score || 0 }
+        setScore(winsScore);
       } else {
         setGameStatus('finished')
         setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
@@ -1459,7 +1482,7 @@ export default function Game() {
               </div>
             
             <div className="game-score-side">
-              <div className="game-score-label">до 3</div>
+              <div className="game-score-label">до {gameInfo?.matchesToWin || 1}</div>
               <div className="game-score">{score.player1}:{score.player2}</div>
             </div>
           </div>
@@ -1533,7 +1556,7 @@ export default function Game() {
               </div>
               {/* Счет в центре */}
               <div className="game-score-section">
-                <div className="game-score-label">до 3</div>
+                <div className="game-score-label">до {gameInfo?.matchesToWin || 1}</div>
                 <div className="game-score">{score.player1}:{score.player2}</div>
               </div>
               {/* Я справа */}

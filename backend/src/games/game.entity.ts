@@ -135,6 +135,18 @@ export class Game {
   @Column({ type: 'integer', nullable: true })
   player2XP: number; // Начисленный XP для игрока 2
 
+  @Column({ type: 'integer', default: 1 })
+  matchesToWin: number; // До скольких побед идет матч (1, 2, 3, 5 и т.д.)
+
+  @Column({ type: 'uuid', nullable: true })
+  matchSeriesId: string; // ID серии матчей (для связи игр в одном матче)
+
+  @Column({ type: 'integer', default: 0 })
+  player1Wins: number; // Количество побед игрока 1 в этой серии
+
+  @Column({ type: 'integer', default: 0 })
+  player2Wins: number; // Количество побед игрока 2 в этой серии
+
   @OneToMany(() => GameMove, (move) => move.game)
   moves: GameMove[];
 

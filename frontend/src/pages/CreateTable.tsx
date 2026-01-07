@@ -10,6 +10,8 @@ export default function CreateTable() {
   const [stake, setStake] = useState<number>(50)
   const [mode, setMode] = useState<'long' | 'short'>('short')
   const stakeOptions = [50, 100, 250, 500, 750, 1000, 1500, 3000, 5000]
+  const [matchesToWin, setMatchesToWin] = useState<number>(1)
+  const matchesToWinOptions = [1, 2, 3, 5]
   const [access, setAccess] = useState<'open' | 'private'>('open')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -74,6 +76,7 @@ export default function CreateTable() {
       socket.emit('create_table', {
         mode,
         stake: stake,
+        matchesToWin: matchesToWin,
       })
     } catch (error: any) {
       if (timeoutRef.current) {
@@ -124,6 +127,22 @@ export default function CreateTable() {
             </div>
           </div>
 
+          {/* До побед */}
+          <div className="create-table-field-v2">
+            <div className="create-table-label-v2">Матч до:</div>
+            <div className="create-table-stake-grid">
+              {matchesToWinOptions.map((value) => (
+                <button
+                  key={value}
+                  className={`create-table-stake-btn ${matchesToWin === value ? 'selected' : ''}`}
+                  onClick={() => setMatchesToWin(value)}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Доступ */}
           <div className="create-table-field-v2">
             <div className="create-table-label-v2">Доступ:</div>
@@ -164,7 +183,7 @@ export default function CreateTable() {
           <div className="create-table-info-v2">
             Время на игру: 30 мин<br/>
             Куб удвоения: да<br/>
-            Матч до: 10 побед
+            Матч до: {matchesToWin} {matchesToWin === 1 ? 'победы' : matchesToWin < 5 ? 'побед' : 'побед'}
           </div>
 
           <button

@@ -73,14 +73,15 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   }
 
   @SubscribeMessage('find_match')
-  async handleFindMatch(@ConnectedSocket() client: Socket, @MessageBody() data: { mode: GameMode; timeLimit?: number; stake?: number }) {
+  async handleFindMatch(@ConnectedSocket() client: Socket, @MessageBody() data: { mode: GameMode; timeLimit?: number; stake?: number; matchesToWin?: number }) {
     const userId = client.data.userId;
     
     const timeLimit = data.timeLimit || 60;
     // Нормализуем stake (защита от NaN, null, undefined)
     const stake = (data.stake !== null && data.stake !== undefined && !isNaN(data.stake)) ? Math.max(0, Number(data.stake)) : 0;
+    const matchesToWin = (data.matchesToWin !== null && data.matchesToWin !== undefined && !isNaN(data.matchesToWin)) ? Math.max(1, Number(data.matchesToWin)) : 1;
     
-    await this.matchmakingService.joinQueue(userId, data.mode, timeLimit, stake);
+    await this.matchmakingService.joinQueue(userId, data.mode, timeLimit, stake, matchesToWin);
 
     const interval = setInterval(async () => {
       const matchResult = await this.matchmakingService.findMatch(userId, data.mode);
@@ -89,7 +90,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
         this.matchmakingIntervals.delete(userId);
         
         const moveTimeLimit = (matchResult.timeLimit || 60) * 1000; // Конвертируем секунды в миллисекунды
-        const game = await this.gamesService.create(userId, matchResult.opponentId, data.mode, 'vs_player' as any, matchResult.stake, moveTimeLimit);
+        const game = await this.gamesService.create(userId, matchResult.opponentId, data.mode, 'vs_player' as any, matchResult.stake, moveTimeLimit, matchResult.matchesToWin || 1);
         
         // Отправляем события обоим игрокам
         client.emit('match_found', { gameId: game.id, opponentId: matchResult.opponentId });
@@ -131,14 +132,15 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   @SubscribeMessage('create_table')
   async handleCreateTable(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { mode: GameMode; timeLimit: number; stake?: number },
+    @MessageBody() data: { mode: GameMode; timeLimit: number; stake?: number; matchesToWin?: number },
   ) {
     const userId = client.data.userId;
     try {
       // Нормализуем stake (защита от NaN, null, undefined)
       const normalizedStake = (data.stake !== null && data.stake !== undefined && !isNaN(data.stake)) ? Math.max(0, Number(data.stake)) : 0;
-      this.logger.log(`Создание стола для пользователя ${userId}, режим: ${data.mode}, ставка: ${normalizedStake}`);
-      const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit, normalizedStake);
+      const matchesToWin = (data.matchesToWin !== null && data.matchesToWin !== undefined && !isNaN(data.matchesToWin)) ? Math.max(1, Number(data.matchesToWin)) : 1;
+      this.logger.log(`Создание стола для пользователя ${userId}, режим: ${data.mode}, ставка: ${normalizedStake}, до побед: ${matchesToWin}`);
+      const gameId = await this.matchmakingService.createOpenTable(userId, data.mode, data.timeLimit, normalizedStake, matchesToWin);
       this.logger.log(`Стол создан: ${gameId}`);
       
       // Сначала отправляем событие клиенту, чтобы он не завис

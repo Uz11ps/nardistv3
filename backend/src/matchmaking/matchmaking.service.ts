@@ -16,6 +16,7 @@ interface QueueEntry {
   isPremium?: boolean; // Приоритет для премиум
   timeLimit?: number;
   stake?: number;
+  matchesToWin?: number;
 }
 
 @Injectable()
@@ -113,7 +114,7 @@ export class MatchmakingService {
     return { isInGame: false };
   }
 
-  async joinQueue(userId: string, mode: GameMode, timeLimit?: number, stake?: number): Promise<void> {
+  async joinQueue(userId: string, mode: GameMode, timeLimit?: number, stake?: number, matchesToWin?: number): Promise<void> {
     // Проверяем, не находится ли игрок уже в активной игре
     const activeGameCheck = await this.isUserInActiveGame(userId);
     if (activeGameCheck.isInGame) {
@@ -138,6 +139,7 @@ export class MatchmakingService {
       isPremium,
       timeLimit: timeLimit || 60,
       stake: normalizedStake,
+      matchesToWin: matchesToWin || 1,
     };
 
     await this.redis.zadd(`queue:${mode}`, queueScore, JSON.stringify(entry));
@@ -171,7 +173,7 @@ export class MatchmakingService {
     }
   }
 
-  async findMatch(userId: string, mode: GameMode): Promise<{ opponentId: string; timeLimit: number; stake: number } | null> {
+  async findMatch(userId: string, mode: GameMode): Promise<{ opponentId: string; timeLimit: number; stake: number; matchesToWin: number } | null> {
     const userEntryStr = await this.redis.get(`queue:user:${userId}`);
     if (!userEntryStr) {
       return null;
@@ -198,7 +200,8 @@ export class MatchmakingService {
             candidate.rating >= minRating && 
             candidate.rating <= maxRating &&
             candidate.timeLimit === userEntry.timeLimit &&
-            candidate.stake === userEntry.stake) {
+            candidate.stake === userEntry.stake &&
+            (candidate.matchesToWin || 1) === (userEntry.matchesToWin || 1)) {
           candidatesInRange.push(candidate);
         }
       } catch (error) {
@@ -220,6 +223,7 @@ export class MatchmakingService {
           opponentId: candidate.userId,
           timeLimit: candidate.timeLimit || 60,
           stake: candidate.stake || 0,
+          matchesToWin: candidate.matchesToWin || 1,
         };
       }
     }
@@ -232,6 +236,7 @@ export class MatchmakingService {
     mode: GameMode,
     timeLimit: number,
     stake: number = 0,
+    matchesToWin: number = 1,
   ): Promise<string> {
     // Проверяем, не находится ли игрок уже в активной игре
     const activeGameCheck = await this.isUserInActiveGame(userId);
@@ -243,7 +248,7 @@ export class MatchmakingService {
     const normalizedStake = (stake !== null && stake !== undefined && !isNaN(stake)) ? Math.max(0, Number(stake)) : 0;
     
     const moveTimeLimit = timeLimit * 1000; // Конвертируем секунды в миллисекунды
-    const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER, normalizedStake, moveTimeLimit);
+    const game = await this.gamesService.create(userId, null, mode, GameType.VS_PLAYER, normalizedStake, moveTimeLimit, matchesToWin);
     
     // Проверяем, что игра создана со статусом WAITING
     if (game.status !== GameStatus.WAITING) {

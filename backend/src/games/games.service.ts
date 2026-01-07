@@ -64,6 +64,10 @@ export class GamesService {
     type: GameType,
     stake: number = 0,
     moveTimeLimit: number = 60000,
+    matchesToWin: number = 1,
+    matchSeriesId: string | null = null,
+    player1Wins: number = 0,
+    player2Wins: number = 0,
   ): Promise<Game> {
     // Нормализуем stake (защита от NaN, null, undefined, bigint)
     const normalizedStake = (stake !== null && stake !== undefined && !isNaN(stake) && isFinite(stake)) 
@@ -205,6 +209,9 @@ export class GamesService {
       };
     }
 
+    // Если это первая игра в серии, создаем новый matchSeriesId
+    const finalMatchSeriesId = matchSeriesId || (matchesToWin > 1 ? crypto.randomBytes(16).toString('hex') : null);
+
     const game = this.gamesRepository.create({
       player1Id,
       player2Id,
@@ -228,6 +235,10 @@ export class GamesService {
       player2TimeRemaining: 60000, // 60 секунд общего времени
       lastMoveAt: undefined, // Устанавливается когда игра переходит в IN_PROGRESS
       skinData,
+      matchesToWin,
+      matchSeriesId: finalMatchSeriesId,
+      player1Wins,
+      player2Wins,
     });
 
     // Сохраняем игру в БД
@@ -1550,6 +1561,75 @@ export class GamesService {
         }
       } catch (error) {
         this.logger.error(`❌ Ошибка при завершении турнирного матча: ${error.message}`);
+      }
+    }
+
+    // Проверка и создание следующей игры в серии матчей
+    if (game.matchesToWin > 1 && game.matchSeriesId && game.winnerId && loserId && game.type === GameType.VS_PLAYER) {
+      try {
+        // Обновляем счет побед в текущей игре
+        const player1Won = game.winnerId === game.player1Id;
+        const newPlayer1Wins = game.player1Wins + (player1Won ? 1 : 0);
+        const newPlayer2Wins = game.player2Wins + (player1Won ? 0 : 1);
+
+        // Обновляем счет в текущей игре
+        game.player1Wins = newPlayer1Wins;
+        game.player2Wins = newPlayer2Wins;
+        await this.gamesRepository.save(game);
+
+        // Проверяем, достиг ли кто-то нужного количества побед
+        const winnerReachedTarget = player1Won 
+          ? newPlayer1Wins >= game.matchesToWin 
+          : newPlayer2Wins >= game.matchesToWin;
+
+        if (!winnerReachedTarget) {
+          // Создаем следующую игру в серии (без списания ставки - она уже списана)
+          this.logger.log(`🎮 Создание следующей игры в серии ${game.matchSeriesId}. Счет: ${newPlayer1Wins}:${newPlayer2Wins} (до ${game.matchesToWin})`);
+          
+          const nextGame = await this.create(
+            game.player1Id,
+            game.player2Id,
+            game.mode,
+            game.type,
+            game.stake, // Передаем ставку, но не будем списывать повторно
+            0, // moveTimeLimit - используем стандартный
+            game.matchesToWin,
+            game.matchSeriesId, // Используем тот же matchSeriesId
+            newPlayer1Wins,
+            newPlayer2Wins,
+          );
+
+          // НЕ списываем ставку повторно - она уже была списана при создании первой игры
+          // Убираем списание ставки из созданной игры (возвращаем балансы)
+          if (game.stake > 0 && nextGame.id) {
+            const player1 = await this.usersService.findOne(game.player1Id);
+            const player2 = await this.usersService.findOne(game.player2Id);
+            
+            // Возвращаем списанные ставки (они были списаны в create)
+            const player1Balance = Number(player1.narCoin);
+            const player2Balance = Number(player2.narCoin);
+            
+            await this.usersService.update(game.player1Id, { narCoin: player1Balance + game.stake });
+            await this.usersService.update(game.player2Id, { narCoin: player2Balance + game.stake });
+            
+            this.logger.log(`💰 Ставки возвращены для следующей игры в серии (игроки: ${game.player1Id}, ${game.player2Id}, сумма: ${game.stake})`);
+          }
+
+          // Уведомляем игроков через WebSocket
+          this.gamesGateway.server?.to(`game:${game.id}`).emit('next_game_created', {
+            gameId: nextGame.id,
+            matchSeriesId: game.matchSeriesId,
+            player1Wins: newPlayer1Wins,
+            player2Wins: newPlayer2Wins,
+            matchesToWin: game.matchesToWin,
+          });
+          
+          this.logger.log(`✅ Следующая игра в серии создана: ${nextGame.id}`);
+        } else {
+          this.logger.log(`🏆 Серия матчей ${game.matchSeriesId} завершена. Победитель: ${game.winnerId} (${newPlayer1Wins}:${newPlayer2Wins})`);
+        }
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при создании следующей игры в серии: ${error.message}`, error.stack);
       }
     }
     

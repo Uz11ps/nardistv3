@@ -13,6 +13,8 @@ export default function GameSearch() {
   const [mode, setMode] = useState<'long' | 'short'>('long')
   const [stake, setStake] = useState<number>(0)
   const stakeOptions = [0, 50, 100, 250, 500, 750, 1000, 1500, 3000, 5000]
+  const [matchesToWin, setMatchesToWin] = useState<number>(1)
+  const matchesToWinOptions = [1, 2, 3, 5]
 
   useEffect(() => {
     const socket = getMatchmakingSocket()
@@ -49,6 +51,7 @@ export default function GameSearch() {
     socket.emit('find_match', {
       mode,
       stake,
+      matchesToWin,
     })
   }
 
@@ -99,10 +102,26 @@ export default function GameSearch() {
             </div>
           </div>
 
+          {/* До побед */}
+          <div className="game-search-field-v2">
+            <div className="game-search-label-v2">Матч до:</div>
+            <div className="stake-grid-v2">
+              {matchesToWinOptions.map((value) => (
+                <button
+                  key={value}
+                  className={`stake-btn-v2 ${matchesToWin === value ? 'selected' : ''}`}
+                  onClick={() => setMatchesToWin(value)}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="game-search-info-v2">
             Время на игру: 60 сек<br/>
             Время на ход: 15 сек<br/>
-            Матч до: 1 победы<br/>
+            Матч до: {matchesToWin} {matchesToWin === 1 ? 'победы' : matchesToWin < 5 ? 'побед' : 'побед'}<br/>
             Куб удвоения: Да
           </div>
 
