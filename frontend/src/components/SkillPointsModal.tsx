@@ -60,16 +60,21 @@ export default function SkillPointsModal({
     bottom: '0px',
     width: '100vw',
     height: '100vh',
-    background: 'rgba(0, 0, 0, 0.95)',
+    minWidth: '100vw',
+    minHeight: '100vh',
+    background: 'rgba(0, 0, 0, 0.7)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2147483647,
-    padding: '20px',
+    padding: '12px',
     margin: '0',
+    border: 'none',
+    outline: 'none',
     touchAction: 'none',
     overflow: 'hidden',
     overscrollBehavior: 'contain',
+    WebkitOverflowScrolling: 'touch',
   }
 
   const handleDistribute = async (type: 'economy' | 'energy' | 'lives' | 'power', amount: number) => {
@@ -120,7 +125,16 @@ export default function SkillPointsModal({
 
   return createPortal(
     <div className="skill-points-modal-overlay" onClick={onClose} style={overlayStyle}>
-      <div className="skill-points-modal" onClick={(e) => e.stopPropagation()}>
+      <div 
+        className="skill-points-modal" 
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative', margin: '0', background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+          padding: '0', borderRadius: '16px', textAlign: 'center', maxWidth: '90vw',
+          width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
+        }}
+      >
         <div className="skill-points-modal-header">
           <h3>Распределение Skill Points</h3>
           <button className="skill-points-modal-close" onClick={onClose}>×</button>

@@ -448,7 +448,16 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     }
 
     client.join(`game:${data.gameId}`);
-    client.emit('game_state', await this.gamesService.getGameState(data.gameId));
+    
+    // ВАЖНО: Отправляем полное состояние игры с сервера при подключении
+    // Это гарантирует, что клиент получит актуальное состояние из БД
+    const gameState = await this.gamesService.getGameState(data.gameId);
+    client.emit('game_state', gameState);
+    
+    // Также отправляем обновление таймеров для синхронизации времени
+    await this.sendTimerUpdateForGame(data.gameId);
+    
+    this.logger.log(`✅ Player ${userId} joined game ${data.gameId}, sent full game state`);
   }
 
   @SubscribeMessage('roll_dice')

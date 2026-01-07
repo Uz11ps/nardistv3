@@ -68,7 +68,7 @@ export default function EnhancementModal({
       style={{
         position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
         width: '100vw', height: '100vh', minWidth: '100vw', minHeight: '100vh',
-        background: 'rgba(0, 0, 0, 0.95)', display: 'flex', alignItems: 'center',
+        background: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center',
         justifyContent: 'center', zIndex: 2147483647, padding: '12px', margin: '0',
         border: 'none', outline: 'none', touchAction: 'none', overflow: 'hidden',
         overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',

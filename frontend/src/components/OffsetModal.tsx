@@ -82,7 +82,7 @@ export default function OffsetModal({
     minHeight: '100vh',
     maxWidth: '100vw',
     maxHeight: '100vh',
-    background: 'rgba(0, 0, 0, 0.95)',
+    background: 'rgba(0, 0, 0, 0.7)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',

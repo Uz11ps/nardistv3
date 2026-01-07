@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
@@ -207,9 +208,29 @@ export default function ClanTreasury() {
       </div>
 
       {/* Модальное окно всех транзакций */}
-      {showAllTransactionsModal && (
-        <div className="clan-treasury-modal-overlay" onClick={() => setShowAllTransactionsModal(false)}>
-          <div className="clan-treasury-modal" onClick={(e) => e.stopPropagation()}>
+      {showAllTransactionsModal && createPortal(
+        <div 
+          className="clan-treasury-modal-overlay" 
+          onClick={() => setShowAllTransactionsModal(false)}
+          style={{
+            position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
+            width: '100vw', height: '100vh', minWidth: '100vw', minHeight: '100vh',
+            background: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 2147483647, padding: '12px', margin: '0',
+            border: 'none', outline: 'none', touchAction: 'none', overflow: 'hidden',
+            overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <div 
+            className="clan-treasury-modal" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative', margin: '0', background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              padding: '0', borderRadius: '16px', textAlign: 'center', maxWidth: '90vw',
+              width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
+            }}
+          >
             <div className="clan-treasury-modal-header">
               <h2 className="clan-treasury-modal-title">Все операции</h2>
               <button 
@@ -251,11 +272,12 @@ export default function ClanTreasury() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Модальное окно вложения */}
-      {showContributeModal && (
+      {showContributeModal && createPortal(
         <div className="clan-treasury-modal-overlay" onClick={() => setShowContributeModal(false)}>
           <div className="clan-treasury-modal" onClick={(e) => e.stopPropagation()}>
             <div className="clan-treasury-modal-header">
@@ -325,7 +347,8 @@ export default function ClanTreasury() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </PageLayout>
   )

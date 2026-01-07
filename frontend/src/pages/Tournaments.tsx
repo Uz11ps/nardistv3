@@ -193,7 +193,7 @@ export default function Tournaments() {
             bottom: '0px',
             width: '100vw',
             height: '100vh',
-            background: 'rgba(0, 0, 0, 0.95)',
+            background: 'rgba(0, 0, 0, 0.7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

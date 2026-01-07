@@ -2293,6 +2293,8 @@ export class GamesService {
 
   async getGameState(gameId: string): Promise<any> {
     const game = await this.findOne(gameId);
+    
+    // ВАЖНО: Включаем все данные для восстановления сессии с сервера
     return {
       id: game.id,
       mode: game.mode,
@@ -2306,6 +2308,9 @@ export class GamesService {
       player2: game.player2,
       player1Score: game.player1Score,
       player2Score: game.player2Score,
+      player1Wins: game.player1Wins || 0,
+      player2Wins: game.player2Wins || 0,
+      matchesToWin: game.matchesToWin || 1,
       winnerId: game.winnerId,
       rngHash: game.rngHash,
       p1Offset: game.p1Offset,
@@ -2317,6 +2322,10 @@ export class GamesService {
       p2Rolls: game.status === GameStatus.FINISHED ? game.p2Rolls : undefined,
       player1XP: game.player1XP || null,
       player2XP: game.player2XP || null,
+      player1TimeRemaining: game.player1TimeRemaining || 60000,
+      player2TimeRemaining: game.player2TimeRemaining || 60000,
+      lastMoveAt: game.lastMoveAt,
+      moveTimeLimit: game.moveTimeLimit || 60000,
       createdAt: game.createdAt,
       updatedAt: game.updatedAt,
     };
