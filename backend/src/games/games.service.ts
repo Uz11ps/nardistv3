@@ -602,18 +602,19 @@ export class GamesService {
     }
     let totalDiceUsed = 0; // Общее количество использованных кубиков (для дублей)
 
-    // ВАЖНО: Для дублей НЕ разворачиваем комбинированные ходы с steps
-    // Комбинированные ходы (die > 6) должны обрабатываться как один ход с steps
-    // Разворачиваем только для обычных ходов
+    // ВАЖНО: Комбинированные ходы (die > 6) с steps НЕ разворачиваем
+    // Они должны обрабатываться как один ход с steps (и для дублей, и для обычных комбинированных, например 1+6=7)
+    // Разворачиваем только steps для обычных ходов, которые не являются комбинированными (die <= 6)
     const expandedMoves = [];
     for (const move of moves) {
-      // Если это комбинированный ход при дубле (die > 6 и есть steps) - НЕ разворачиваем
+      // Если это комбинированный ход (die > 6 и есть steps) - НЕ разворачиваем
+      // Это работает и для дублей, и для обычных комбинированных ходов (например, 1+6=7)
       const isCombinedMove = move.die > 6 && (move as any).steps && Array.isArray((move as any).steps);
       if (isCombinedMove) {
-        // Оставляем комбинированный ход как есть
+        // Оставляем комбинированный ход как есть (будет обработан по шагам)
         expandedMoves.push(move);
       } else if ((move as any).steps && Array.isArray((move as any).steps)) {
-        // Для обычных ходов разворачиваем steps
+        // Для обычных ходов с steps (die <= 6) разворачиваем steps
         expandedMoves.push(...(move as any).steps);
       } else {
         expandedMoves.push(move);
@@ -737,31 +738,64 @@ export class GamesService {
         }
       } else {
         // Обычная логика для не-дублей
-        const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
-        
-        if (!isValid) {
-          console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
-          throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+        // Если это комбинированный ход (die > 6) с steps - применяем по шагам
+        if (move.die > 6 && (move as any).steps && Array.isArray((move as any).steps) && (move as any).steps.length > 0) {
+          console.log(`🔍 Processing combined move (non-doubles): die=${move.die}, steps=${(move as any).steps.length}`)
+          // Применяем каждый шаг последовательно
+          for (const step of (move as any).steps) {
+            // Проверяем использование кубика для каждого шага
+            const diceUsageCount = new Map<number, number>();
+            for (const pm of processedMoves) {
+              diceUsageCount.set(pm.die, (diceUsageCount.get(pm.die) || 0) + 1);
+            }
+            
+            const usedCount = diceUsageCount.get(step.die) || 0;
+            const availableCount = diceCount.get(step.die) || 0;
+            
+            if (usedCount >= availableCount) {
+              console.error(`❌ Кубик ${step.die} уже использован максимальное количество раз (${usedCount}/${availableCount})`);
+              throw new BadRequestException(`Кубик ${step.die} уже использован максимальное количество раз`);
+            }
+            
+            const isValidStep = (engine as any).validateMove(currentState, step.from, step.to, step.die, isFirstMoveOfGame);
+            if (!isValidStep) {
+              console.error(`❌ Шаг комбинированного хода отклонен: с индекса ${step.from} на индекс ${step.to} кубиком ${step.die}`);
+              throw new BadRequestException(`Недопустимый шаг комбинированного хода: с индекса ${step.from} на индекс ${step.to} кубиком ${step.die}`);
+            }
+            
+            currentState = engine.applyMove(currentState, step.from, step.to, step.die);
+            processedMoves.push({ from: step.from, to: step.to, die: step.die });
+          }
+          // Сохраняем комбинированный ход для истории (с steps)
+          console.log(`✅ Применяем комбинированный ход (не дубль): с индекса ${move.from} на индекс ${move.to} кубиком ${move.die} (${(move as any).steps.length} шагов)`);
+        } else {
+          // Обычный одиночный ход
+          const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
+          
+          if (!isValid) {
+            console.error(`❌ Ход отклонен движком: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+            throw new BadRequestException(`Недопустимый ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
+          }
+          
+          // Для обычных ходов проверяем использование кубика
+          const diceUsageCount = new Map<number, number>();
+          for (const pm of processedMoves) {
+            diceUsageCount.set(pm.die, (diceUsageCount.get(pm.die) || 0) + 1);
+          }
+          
+          const usedCount = diceUsageCount.get(move.die) || 0;
+          const availableCount = diceCount.get(move.die) || 0;
+          
+          if (usedCount >= availableCount) {
+            console.error(`❌ Кубик ${move.die} уже использован максимальное количество раз (${usedCount}/${availableCount})`);
+            throw new BadRequestException(`Кубик ${move.die} уже использован максимальное количество раз`);
+          }
+          
+          currentState = engine.applyMove(currentState, move.from, move.to, move.die);
+          processedMoves.push({ from: move.from, to: move.to, die: move.die });
+          
+          console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
         }
-        
-        // Для обычных ходов проверяем использование кубика
-        const diceUsageCount = new Map<number, number>();
-        for (const pm of processedMoves) {
-          diceUsageCount.set(pm.die, (diceUsageCount.get(pm.die) || 0) + 1);
-        }
-        
-        const usedCount = diceUsageCount.get(move.die) || 0;
-        const availableCount = diceCount.get(move.die) || 0;
-        
-        if (usedCount >= availableCount) {
-          console.error(`❌ Кубик ${move.die} уже использован максимальное количество раз (${usedCount}/${availableCount})`);
-          throw new BadRequestException(`Кубик ${move.die} уже использован максимальное количество раз`);
-        }
-        
-        currentState = engine.applyMove(currentState, move.from, move.to, move.die);
-        processedMoves.push({ from: move.from, to: move.to, die: move.die });
-        
-        console.log(`✅ Применяем ход: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
       }
     }
 
