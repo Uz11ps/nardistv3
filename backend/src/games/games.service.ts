@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { Game, GameMode, GameStatus, GameType } from './game.entity';
 import { GameMove } from './game-move.entity';
+import { SandboxChapter } from './sandbox-chapter.entity';
 import { PlayerMatchHistory } from './player-match-history.entity';
 import { BackgammonEngine } from './game-engine/backgammon-engine';
 import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
@@ -32,6 +33,8 @@ export class GamesService {
     private movesRepository: Repository<GameMove>,
     @InjectRepository(PlayerMatchHistory)
     private matchHistoryRepository: Repository<PlayerMatchHistory>,
+    @InjectRepository(SandboxChapter)
+    private sandboxChapterRepository: Repository<SandboxChapter>,
     private backgammonEngine: BackgammonEngine,
     private longBackgammonEngine: LongBackgammonEngine,
     @Inject(forwardRef(() => ProgressService))
@@ -2602,6 +2605,45 @@ export class GamesService {
     });
 
     return savedGame;
+  }
+
+  /**
+   * Sandbox Chapters management
+   */
+  async getSandboxChapters(userId: string): Promise<SandboxChapter[]> {
+    return this.sandboxChapterRepository.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async createSandboxChapter(userId: string, name: string, gameState: any): Promise<SandboxChapter> {
+    const chapter = this.sandboxChapterRepository.create({
+      userId,
+      name,
+      gameState,
+    });
+    return this.sandboxChapterRepository.save(chapter);
+  }
+
+  async updateSandboxChapter(chapterId: string, userId: string, update: { name?: string; gameState?: any }): Promise<SandboxChapter> {
+    const chapter = await this.sandboxChapterRepository.findOne({ where: { id: chapterId, userId } });
+    if (!chapter) {
+      throw new BadRequestException('Chapter not found or access denied');
+    }
+    
+    if (update.name) chapter.name = update.name;
+    if (update.gameState) chapter.gameState = update.gameState;
+    
+    return this.sandboxChapterRepository.save(chapter);
+  }
+
+  async deleteSandboxChapter(chapterId: string, userId: string): Promise<void> {
+    const chapter = await this.sandboxChapterRepository.findOne({ where: { id: chapterId, userId } });
+    if (!chapter) {
+      throw new BadRequestException('Chapter not found or access denied');
+    }
+    await this.sandboxChapterRepository.remove(chapter);
   }
 
   async getGameAnalytics(gameId: string): Promise<any> {

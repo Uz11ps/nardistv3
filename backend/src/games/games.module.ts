@@ -10,6 +10,7 @@ import { GamesOffsetTimeoutService } from './games-offset-timeout.service';
 import { Game } from './game.entity';
 import { GameMove } from './game-move.entity';
 import { PlayerMatchHistory } from './player-match-history.entity';
+import { SandboxChapter } from './sandbox-chapter.entity';
 import { BackgammonEngine } from './game-engine/backgammon-engine';
 import { LongBackgammonEngine } from './game-engine/long-backgammon-engine';
 import { ProgressModule } from '../progress/progress.module';
@@ -25,7 +26,7 @@ import { TournamentsModule } from '../tournaments/tournaments.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    TypeOrmModule.forFeature([Game, GameMove, PlayerMatchHistory]),
+    TypeOrmModule.forFeature([Game, GameMove, PlayerMatchHistory, SandboxChapter]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

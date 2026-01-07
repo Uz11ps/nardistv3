@@ -30,6 +30,7 @@ export default function Game() {
   const [searchParams] = useSearchParams()
   const { user } = useAuthStore()
   const [gameState, setGameState] = useState<GameState | null>(null)
+  const [historyGameState, setHistoryGameState] = useState<GameState | null>(null)
   const [gameInfo, setGameInfo] = useState<any>(null)
   const [opponent, setOpponent] = useState<any>(null)
   const [score, setScore] = useState({ player1: 0, player2: 0 })
@@ -1094,6 +1095,11 @@ export default function Game() {
           setPendingMoves([])
         }
       }
+
+      // Уведомляем SandboxControls об обновлении истории
+      if (data.type === 'sandbox' || gameInfo?.type === 'sandbox') {
+        window.dispatchEvent(new CustomEvent('sandbox-history-updated'))
+      }
       
       // НЕ запускаем анимацию здесь, т.к. она уже запускается в dice_rolled событии
       // Это предотвращает дублирование анимации
@@ -2015,16 +2021,16 @@ export default function Game() {
                 player1Skins={playerSkins.player1}
                 player2Skins={playerSkins.player2}
                 mySkins={playerSkins.mySkins}
-                gameState={gameState}
-                currentPlayer={gameState.currentPlayer}
-                dice={gameState.dice ? (Array.isArray(gameState.dice) ? gameState.dice : [gameState.dice.die1, gameState.dice.die2]) : null}
+                gameState={historyGameState || gameState}
+                currentPlayer={(historyGameState || gameState).currentPlayer}
+                dice={(historyGameState || gameState).dice ? (Array.isArray((historyGameState || gameState).dice) ? (historyGameState || gameState).dice : [(historyGameState || gameState).dice.die1, (historyGameState || gameState).dice.die2]) : null}
                 onMove={handleMove}
                 onRollDice={handleRollDice}
-                canMove={gameState.canMove}
-                isMyTurn={isMyTurn}
+                canMove={historyGameState ? false : gameState.canMove}
+                isMyTurn={historyGameState ? false : isMyTurn}
                 gameId={gameId}
                 gameMode={gameInfo?.mode || 'long'}
-                pendingMoves={pendingMoves}
+                pendingMoves={historyGameState ? [] : pendingMoves}
                 diceAnimating={diceAnimating}
                 myPlayerId={user?.id}
                 player1Id={gameInfo?.player1Id}
@@ -2236,6 +2242,23 @@ export default function Game() {
                             canMove: true,
                           })
                         }).catch(console.error)
+                      }
+                    }}
+                    onHistoryPreview={(previewState) => {
+                      if (previewState) {
+                        // Форматируем кубики для previewState если нужно
+                        const diceData = previewState.dice
+                        const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
+                          ? { die1: diceData[0], die2: diceData[1] } 
+                          : null
+                        
+                        setHistoryGameState({
+                          ...previewState,
+                          dice: formattedDice,
+                          canMove: false
+                        })
+                      } else {
+                        setHistoryGameState(null)
                       }
                     }}
                   />

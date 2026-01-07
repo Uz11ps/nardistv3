@@ -223,4 +223,38 @@ export class GamesController {
   ) {
     return this.gamesService.setSandboxDice(id, user.id, body.dice, body.player);
   }
+
+  @Get('sandbox/chapters')
+  @UseGuards(JwtAuthGuard)
+  async getSandboxChapters(@CurrentUser() user: any) {
+    return this.gamesService.getSandboxChapters(user.id);
+  }
+
+  @Post('sandbox/chapters')
+  @UseGuards(JwtAuthGuard)
+  async createSandboxChapter(
+    @CurrentUser() user: any,
+    @Body() body: { name: string; gameState: any },
+  ) {
+    return this.gamesService.createSandboxChapter(user.id, body.name, body.gameState);
+  }
+
+  @Patch('sandbox/chapters/:id')
+  @UseGuards(JwtAuthGuard)
+  async updateSandboxChapter(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { name?: string; gameState?: any },
+  ) {
+    return this.gamesService.updateSandboxChapter(id, user.id, body);
+  }
+
+  @Delete('sandbox/chapters/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteSandboxChapter(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+  ) {
+    return this.gamesService.deleteSandboxChapter(id, user.id);
+  }
 }

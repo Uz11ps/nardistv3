@@ -1127,8 +1127,8 @@ export default function BackgammonBoard({
       }
     }
 
-    // В САМОМ КОНЦЕ: Отрисовка "мусорки" в sandbox режиме
-    // Это гарантирует, что она будет поверх всех элементов
+    // В САМОМ КОНЦЕ: Отрисовка "мусорки" в sandbox режиме (ОТКЛЮЧЕНО по просьбе пользователя)
+    /*
     if (isSandbox) {
       const trashSize = 120
       const trashX = 0
@@ -1166,6 +1166,7 @@ export default function BackgammonBoard({
       ctx.fillText('УДАЛИТЬ', trashX + trashSize / 2, trashY + trashSize - 20)
       ctx.restore()
     }
+    */
   }, [virtualGameState, selectedPoint, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, animatingChecker, currentPlayer, getPointCoordinates, boardSkinPlayer1, boardSkinPlayer2, checkerSkinPlayer1, checkerSkinPlayer2, opponentBoardColors, myBoardColors, checkerColorsPlayer1, checkerColorsPlayer2, isSandbox])
   
   // Перерисовка при изменении состояния
