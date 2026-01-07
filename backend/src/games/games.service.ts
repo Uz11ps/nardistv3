@@ -2434,6 +2434,11 @@ export class GamesService {
         await this.rollDice(gameId, firstPlayerId, true);
         // Перезагружаем игру после броска кубиков
         const gameWithDice = await this.findOne(gameId);
+        
+        // ВАЖНО: Отправляем обновленное состояние игры через WebSocket после броска кубиков
+        const gameStateAfterDice = await this.getGameState(gameId);
+        this.gamesGateway.server?.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
+        
         this.logger.log(`✅ Автоматический бросок кубиков выполнен для игры ${gameId}, первый игрок: ${firstPlayerId}`);
         return gameWithDice;
       } catch (error) {

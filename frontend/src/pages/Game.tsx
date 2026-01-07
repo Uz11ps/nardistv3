@@ -290,9 +290,41 @@ export default function Game() {
 
   useEffect(() => {
     if (gameId) {
-      // Сбрасываем флаг подтверждения смещения при загрузке новой игры
+      // ВАЖНО: Полный сброс всех состояний при переходе к новой игре
+      // Это критично для серий матчей, чтобы не сохранялись данные из предыдущей игры
       setOffsetConfirmed(false)
+      offsetConfirmedRef.current = false
       setShowOffsetModal(false)
+      showOffsetModalRef.current = false
+      setPendingMoves([])
+      setServerMovesForBoard(undefined)
+      pendingGameStateRef.current = null
+      isServerAnimatingRef.current = false
+      setIsProcessingConfirm(false)
+      setGameState({
+        points: [],
+        bar: { white: 0, black: 0 },
+        bearOff: { white: 0, black: 0 },
+        currentPlayer: 0,
+        dice: null,
+        canMove: false,
+      })
+      setGameStatus('waiting')
+      setScore({ player1: 0, player2: 0 })
+      setPlayer1Timer(15)
+      setPlayer2Timer(15)
+      setTotalTimeRemaining({ player1: 60, player2: 60 })
+      setIsInOvertime(false)
+      setMoveTimer(15)
+      setPreparationCountdown(null)
+      preparationCountdownRef.current = null
+      
+      // Очищаем таймеры
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+      
       loadGame()
       connectToGame()
       createdBotGameRef.current = false
@@ -797,6 +829,42 @@ export default function Game() {
       // Автоматически переходим к следующей игре в серии
       if (data.gameId && data.matchSeriesId) {
         console.log(`🎮 Следующая игра в серии создана: ${data.gameId}, счет: ${data.player1Wins}:${data.player2Wins} (до ${data.matchesToWin})`)
+        
+        // ВАЖНО: Полный сброс всех состояний перед переходом к новой игре
+        // Это предотвращает сохранение данных из предыдущей игры
+        setPendingMoves([])
+        setServerMovesForBoard(undefined)
+        pendingGameStateRef.current = null
+        isServerAnimatingRef.current = false
+        setOffsetConfirmed(false)
+        offsetConfirmedRef.current = false
+        setShowOffsetModal(false)
+        showOffsetModalRef.current = false
+        setIsProcessingConfirm(false)
+        setGameState({
+          points: [],
+          bar: { white: 0, black: 0 },
+          bearOff: { white: 0, black: 0 },
+          currentPlayer: 0,
+          dice: null,
+          canMove: false,
+        })
+        setGameStatus('waiting')
+        setScore({ player1: 0, player2: 0 })
+        setPlayer1Timer(15)
+        setPlayer2Timer(15)
+        setTotalTimeRemaining({ player1: 60, player2: 60 })
+        setIsInOvertime(false)
+        setMoveTimer(15)
+        setPreparationCountdown(null)
+        preparationCountdownRef.current = null
+        
+        // Очищаем таймеры
+        if (timerRef.current) {
+          clearInterval(timerRef.current)
+          timerRef.current = null
+        }
+        
         // Небольшая задержка перед переходом, чтобы пользователь видел результат
         setTimeout(() => {
           navigate(`/game/${data.gameId}`, { replace: true })
@@ -2213,10 +2281,24 @@ export default function Game() {
         <div 
           className="offset-modal-overlay modal-visible"
           onClick={() => setShowExitModal(false)}
+          style={{
+            position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
+            width: '100vw', height: '100vh', minWidth: '100vw', minHeight: '100vh',
+            background: 'rgba(0, 0, 0, 0.95)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 2147483647, padding: '12px', margin: '0',
+            border: 'none', outline: 'none', touchAction: 'none', overflow: 'hidden',
+            overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
+          }}
         >
           <div 
             className="offset-modal-content" 
             onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative', margin: '0', background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              padding: '20px', borderRadius: '16px', textAlign: 'center', maxWidth: '90vw',
+              width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
+            }}
           >
             <h2>Выход из игры</h2>
             <p className="offset-modal-description">Вы уверены? Вам засчитается поражение!</p>
@@ -2233,10 +2315,24 @@ export default function Game() {
         <div 
           className="offset-modal-overlay modal-visible"
           onClick={() => setShowOffsetModal(false)}
+          style={{
+            position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
+            width: '100vw', height: '100vh', minWidth: '100vw', minHeight: '100vh',
+            background: 'rgba(0, 0, 0, 0.95)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 2147483647, padding: '12px', margin: '0',
+            border: 'none', outline: 'none', touchAction: 'none', overflow: 'hidden',
+            overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
+          }}
         >
           <div 
             className="offset-modal-content" 
             onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative', margin: '0', background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              padding: '20px', borderRadius: '16px', textAlign: 'center', maxWidth: '90vw',
+              width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
+            }}
           >
             <h2>Выбор смещения</h2>
             <p className="offset-modal-description">

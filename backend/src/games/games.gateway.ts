@@ -538,11 +538,23 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       } else {
         // ВАЖНО: После завершения хода нужно бросить кубики для следующего игрока
         // Проверяем состояние dice из gameState (который уже обновлен после makeMove)
-        const hasNoDice = !gameState.gameState?.dice || (Array.isArray(gameState.gameState.dice) && gameState.gameState.dice.length === 0);
+        // Также проверяем состояние из самой игры для надежности
+        const updatedGameAfterMove = await this.gamesService.findOne(data.gameId);
+        const diceFromGameState = gameState.gameState?.dice;
+        const diceFromGame = updatedGameAfterMove.gameState?.dice;
+        const hasNoDiceInState = !diceFromGameState || (Array.isArray(diceFromGameState) && diceFromGameState.length === 0);
+        const hasNoDiceInGame = !diceFromGame || (Array.isArray(diceFromGame) && diceFromGame.length === 0);
+        const hasNoDice = hasNoDiceInState || hasNoDiceInGame;
         
-        this.logger.log(`🔍 Checking if dice roll needed: hasNoDice=${hasNoDice}, status=${game.status}, dice=${JSON.stringify(gameState.gameState?.dice)}`);
+        this.logger.log(`🔍 Checking if dice roll needed: hasNoDice=${hasNoDice}, hasNoDiceInState=${hasNoDiceInState}, hasNoDiceInGame=${hasNoDiceInGame}, status=${game.status}, diceFromState=${JSON.stringify(diceFromGameState)}, diceFromGame=${JSON.stringify(diceFromGame)}`);
         
-        if (hasNoDice && game.status === 'in_progress') {
+        // ВАЖНО: Бросаем кубики если:
+        // 1. Кубики пустые (ход завершен)
+        // 2. Игра в процессе
+        // 3. Оба игрока выбрали смещение (для всех типов игр)
+        const bothOffsetsChosen = updatedGameAfterMove.p1OffsetChosenAt !== null && updatedGameAfterMove.p2OffsetChosenAt !== null;
+        
+        if (hasNoDice && game.status === 'in_progress' && bothOffsetsChosen) {
           // Ход завершен, нужно бросить кубики для следующего игрока
           const nextPlayerId = gameState.currentPlayer === 0 ? gameState.player1Id : gameState.player2Id;
           const isBotTurn = gameState.type === 'vs_bot' && gameState.player2Id === null && gameState.currentPlayer === 1;
@@ -581,7 +593,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         } else {
           // Кубики еще есть - это промежуточный ход (например, при дублях)
           // Проверяем бота только если это его ход и кубики уже есть
-          this.logger.log(`🔄 No dice roll needed (intermediate move or dice still available), dice=${JSON.stringify(gameState.gameState?.dice)}`);
+          this.logger.log(`🔄 No dice roll needed (intermediate move or dice still available), diceFromState=${JSON.stringify(diceFromGameState)}, diceFromGame=${JSON.stringify(diceFromGame)}, bothOffsetsChosen=${bothOffsetsChosen}`);
           await this.handleBotTurnIfNeeded(data.gameId);
         }
       }
