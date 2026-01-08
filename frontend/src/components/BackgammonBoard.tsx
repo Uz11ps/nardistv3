@@ -357,7 +357,8 @@ export default function BackgammonBoard({
     setSelectedPoint(null)
     setValidTargetPoints(new Set())
     
-    if (!gameId || !isMyTurn || !canMove || !hasDice) {
+    // В Sandbox разрешаем получение ходов всегда, если есть кубики
+    if (!gameId || (!isSandbox && (!isMyTurn || !canMove)) || !hasDice) {
       prevPendingMovesRef.current = pendingMovesKey
       return
     }
@@ -1417,11 +1418,13 @@ export default function BackgammonBoard({
           }
         }
 
-        const activePlayer = isPlayer1 ? 0 : 1
-        const isMyChecker = activePlayer === 0 ? pointValue > 0 : pointValue < 0
-        const isMyBar = (pointIndex === 24 && activePlayer === 0 && pointValue > 0) || (pointIndex === 25 && activePlayer === 1 && pointValue < 0)
+        const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
+        const isMyChecker = isSandbox ? pointValue !== 0 : (activePlayer === 0 ? pointValue > 0 : pointValue < 0)
+        const isMyBar = isSandbox 
+          ? (pointIndex === 24 ? (virtualGameState?.bar?.white || 0) > 0 : (pointIndex === 25 ? (virtualGameState?.bar?.black || 0) > 0 : false))
+          : ((pointIndex === 24 && activePlayer === 0 && pointValue > 0) || (pointIndex === 25 && activePlayer === 1 && pointValue < 0))
         
-        if (isMyChecker || isMyBar || isSandbox) {
+        if (isMyChecker || isMyBar) {
 
           const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
           const { x: pointX, y: pointY } = getPointCoordinates(pointIndex, canvas)
@@ -2147,11 +2150,19 @@ export default function BackgammonBoard({
       return
     }
 
+    const points = virtualGameState?.points || []
+    const bar = virtualGameState?.bar || { white: 0, black: 0 }
+    let pointValue = 0
+    if (pointIndex === 24) pointValue = bar.white
+    else if (pointIndex === 25) pointValue = -bar.black
+    else pointValue = points[pointIndex] || 0
+
     // Проверяем, есть ли ходы из этой точки
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
     
     if (selectedPoint === null) {
       // Если ничего не выбрано, выбираем текущую точку (если из неё есть ходы)
+      // В Sandbox разрешаем клик по любой шашке, если для нее есть ходы
       if (pointMoves.length > 0) {
         setSelectedPoint(pointIndex)
         const targets = new Set<number>()

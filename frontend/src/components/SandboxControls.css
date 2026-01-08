@@ -95,6 +95,55 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
   padding: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.move-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  color: #eee;
+}
+
+.move-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.move-item.active {
+  background: rgba(74, 144, 226, 0.3);
+  border-left: 3px solid #4a90e2;
+}
+
+.move-num {
+  color: #888;
+  font-weight: bold;
+  min-width: 20px;
+}
+
+.move-dice {
+  color: #f1c40f;
+  font-family: monospace;
+}
+
+.move-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+
+.move-step {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 11px;
 }
 
 .chapter-item {

@@ -517,7 +517,7 @@ export default function Game() {
         bearOff,
         currentPlayer: game.currentPlayer || 0,
         dice: formattedDice,
-        canMove: game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1,
+        canMove: game.type === 'sandbox' ? !!formattedDice : (game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1),
         verificationSalt: game.verificationSalt,
         p1Rolls: game.p1Rolls,
         p2Rolls: game.p2Rolls,
@@ -913,7 +913,7 @@ export default function Game() {
       // Это предотвращает дублирование анимации
       
       const isSandbox = data.type === 'sandbox'
-      const canMove = isSandbox ? true : data.currentPlayer === (data.player1Id === user?.id ? 0 : 1)
+      const canMove = isSandbox ? (Array.isArray(diceData) && diceData.length > 0) : (data.currentPlayer === (data.player1Id === user?.id ? 0 : 1))
       const isMyTurnNow = canMove
       const wasMyTurn = gameState?.canMove || false
       
@@ -1063,7 +1063,7 @@ export default function Game() {
       const isP1Turn = data.currentPlayer === (isP1 ? 0 : 1)
       const hasRemainingDice = remainingDice.length > 0
       // canMove = это наш ход И есть кубики для хода (в sandbox можно ходить всегда если есть кубики)
-      const canMove = isSandbox ? hasRemainingDice : (isP1Turn && hasRemainingDice)
+      const canMove = isSandbox ? (remainingDice.length > 0) : (isP1Turn && hasRemainingDice)
       
       console.log('🎯 [move_made] canMove calculation:', {
         isMyTurn,
@@ -1325,6 +1325,8 @@ export default function Game() {
           ? [...data.gameState.points] 
           : []
         
+        const hasDice = Array.isArray(data.gameState.dice) && data.gameState.dice.length > 0
+        
         setGameState(prev => ({
           ...prev,
           ...data.gameState,
@@ -1332,18 +1334,19 @@ export default function Game() {
           bar,
           bearOff,
           currentPlayer: data.currentPlayer !== undefined ? data.currentPlayer : prev?.currentPlayer,
-          canMove: true
+          canMove: hasDice
         }))
       }
     })
 
     socket.on('sandbox_dice_updated', (data: any) => {
       console.log('🎲 Sandbox dice updated:', data)
+      const hasDice = Array.isArray(data.dice) && data.dice.length > 0
       setGameState(prev => ({
-        ...prev,
+        ...prev!,
         dice: data.dice,
         currentPlayer: data.currentPlayer !== undefined ? data.currentPlayer : prev?.currentPlayer,
-        canMove: true
+        canMove: hasDice
       }))
       
       // Запускаем анимацию кубиков

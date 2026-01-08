@@ -960,39 +960,22 @@ export class GamesService {
     
     this.logger.log(`Saving move: gameId=${finalGameId}, playerId=${playerId}, moveNumber=${moveNumber}, moves count=${finalMovesToSave.length}`);
     
-    // Используем raw SQL через queryRunner чтобы полностью избежать проблем с relations
+    // Используем репозиторий вместо raw SQL для надежности
     try {
-      const queryRunner = this.movesRepository.manager.connection.createQueryRunner();
-      await queryRunner.connect();
-      
-      const moveId = await queryRunner.manager.query(
-        `INSERT INTO game_moves ("gameId", "playerId", "moveNumber", dice, moves, "gameStateBefore", "gameStateAfter")
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id`,
-        [
-          finalGameId,
-          playerId,
-          moveNumber,
-          JSON.stringify(dice),
-          JSON.stringify(finalMovesToSave),
-          JSON.stringify(game.gameState),
-          JSON.stringify(currentState),
-        ]
-      );
-      
-      await queryRunner.release();
-      
-      const savedMoveId = moveId[0].id;
-      this.logger.log(`Move saved successfully: moveId=${savedMoveId}, gameId=${finalGameId}`);
-    } catch (error) {
-      this.logger.error(`Failed to save move:`, error);
-      this.logger.error(`Move record data before insert:`, {
+      const newMove = this.movesRepository.create({
         gameId: finalGameId,
         playerId: playerId,
         moveNumber: moveNumber,
         dice: dice,
-        movesCount: finalMovesToSave.length
+        moves: finalMovesToSave,
+        gameStateBefore: game.gameState,
+        gameStateAfter: currentState,
+        moveTimeMs: moveTimeMs,
       });
+      await this.movesRepository.save(newMove);
+      this.logger.log(`Move saved successfully: gameId=${finalGameId}`);
+    } catch (error) {
+      this.logger.error(`Failed to save move:`, error);
       throw error;
     }
 
