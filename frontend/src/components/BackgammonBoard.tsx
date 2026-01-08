@@ -527,14 +527,14 @@ export default function BackgammonBoard({
       // Player1 (белые) ходит - кубики внизу справа (рядом с белыми шашками, позиция 1)
       // Позиция 1 имеет pointIndex = 23 (нижний ряд, правая сторона)
       const point1Coords = getPointCoordinates(23, tempCanvas)
-      xPos = point1Coords.x + diceWidth / 2 + 5 // Справа от позиции 1 (уменьшенный отступ)
-      yPos = point1Coords.y - diceHeight / 2 - 5 // Выше позиции 1 (уменьшенный отступ)
+      xPos = point1Coords.x + diceWidth / 2 + 40 // Справа от позиции 1 (увеличенный отступ для видимости)
+      yPos = point1Coords.y - diceHeight / 2 - 40 // Выше позиции 1 (увеличенный отступ для видимости)
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (дом черных)
       // Позиция 13 имеет pointIndex = 11 (верхний ряд, левая сторона)
       const point13Coords = getPointCoordinates(11, tempCanvas)
-      xPos = point13Coords.x - diceWidth / 2 - 5 // Слева от позиции 13 (уменьшенный отступ)
-      yPos = point13Coords.y + diceHeight / 2 + 5 // Ниже позиции 13 (уменьшенный отступ)
+      xPos = point13Coords.x - diceWidth / 2 - 40 // Слева от позиции 13 (увеличенный отступ для видимости)
+      yPos = point13Coords.y + diceHeight / 2 + 40 // Ниже позиции 13 (увеличенный отступ для видимости)
     }
 
     setDice3DPosition({
