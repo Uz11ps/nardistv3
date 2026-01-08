@@ -129,6 +129,12 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
     client.emit('open_tables', tables);
   }
 
+  @SubscribeMessage('get_queue_stats')
+  async handleGetQueueStats(@ConnectedSocket() client: Socket) {
+    const stats = await this.matchmakingService.getQueueStats();
+    client.emit('queue_stats', stats);
+  }
+
   @SubscribeMessage('create_table')
   async handleCreateTable(
     @ConnectedSocket() client: Socket,

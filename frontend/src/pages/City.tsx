@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
-import DiceNumber from '../components/DiceNumber'
 import { apiClient, getImageUrl } from '../api/client'
 import Button from '../components/Button'
 import './City.css'
-import '../components/DiceNumber.css'
 
 interface Building {
   id: string
@@ -202,10 +200,7 @@ export default function City() {
               <div className="city-modal-stats">
                 <div className="city-modal-stat">
                   <span className="label">Прибыль:</span>
-                  <span className="value">
-                    <DiceNumber value={showBuildingModal.baseIncomePerHour || 0} size="small" maxDice={4} />
-                    <span style={{ marginLeft: '8px', fontSize: '14px' }}>NAR/час</span>
-                  </span>
+                  <span className="value">{showBuildingModal.baseIncomePerHour} NAR/час</span>
                 </div>
               </div>
               
@@ -219,11 +214,7 @@ export default function City() {
                   if (userBuilding) {
                     return userBuilding.level < showBuildingModal.maxLevel ? (
                       <Button variant="primary" fullWidth onClick={() => handleUpgradeBuilding(userBuilding.id)} disabled={purchasing === userBuilding.id || (user?.narCoin || 0) < upgradePrice}>
-                        {purchasing === userBuilding.id ? '...' : (
-                          <>
-                            Улучшить (<DiceNumber value={upgradePrice} size="small" maxDice={4} /> NAR)
-                          </>
-                        )}
+                        {purchasing === userBuilding.id ? '...' : `Улучшить (${upgradePrice} NAR)`}
                       </Button>
                     ) : (
                       <div className="city-max-lvl">МАКС. УРОВЕНЬ</div>
@@ -231,11 +222,7 @@ export default function City() {
                   }
                   return (
                     <Button variant="primary" fullWidth onClick={() => handlePurchaseBuilding(showBuildingModal.id)} disabled={purchasing === showBuildingModal.id || (user?.narCoin || 0) < showBuildingModal.basePrice}>
-                      {purchasing === showBuildingModal.id ? '...' : (
-                        <>
-                          Купить (<DiceNumber value={showBuildingModal.basePrice} size="small" maxDice={4} /> NAR)
-                        </>
-                      )}
+                      {purchasing === showBuildingModal.id ? '...' : `Купить (${showBuildingModal.basePrice} NAR)`}
                     </Button>
                   )
                 })()}

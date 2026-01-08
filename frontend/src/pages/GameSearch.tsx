@@ -15,6 +15,7 @@ export default function GameSearch() {
   const stakeOptions = [0, 50, 100, 250, 500, 750, 1000, 1500, 3000, 5000]
   const [matchesToWin, setMatchesToWin] = useState<number>(1)
   const matchesToWinOptions = [1, 2, 3, 5]
+  const [queueStats, setQueueStats] = useState<{ longQueue: number; shortQueue: number; activeGames: number } | null>(null)
 
   useEffect(() => {
     const socket = getMatchmakingSocket()
@@ -33,10 +34,22 @@ export default function GameSearch() {
       setSearching(false)
     })
 
+    socket.on('queue_stats', (stats: { longQueue: number; shortQueue: number; activeGames: number }) => {
+      setQueueStats(stats)
+    })
+
+    // Запрашиваем статистику при подключении и периодически обновляем
+    socket.emit('get_queue_stats')
+    const statsInterval = setInterval(() => {
+      socket.emit('get_queue_stats')
+    }, 5000) // Обновляем каждые 5 секунд
+
     return () => {
       socket.off('match_found')
       socket.off('searching')
       socket.off('search_cancelled')
+      socket.off('queue_stats')
+      clearInterval(statsInterval)
     }
   }, [navigate])
 
@@ -75,13 +88,13 @@ export default function GameSearch() {
                 className={`mode-toggle-btn-v2 ${mode === 'long' ? 'active' : ''}`}
                 onClick={() => setMode('long')}
               >
-                Длинные
+                Длинные {queueStats && <span className="queue-count">({queueStats.longQueue})</span>}
               </button>
               <button
                 className={`mode-toggle-btn-v2 ${mode === 'short' ? 'active' : ''}`}
                 onClick={() => setMode('short')}
               >
-                Короткие
+                Короткие {queueStats && <span className="queue-count">({queueStats.shortQueue})</span>}
               </button>
             </div>
           </div>
@@ -121,8 +134,7 @@ export default function GameSearch() {
           <div className="game-search-info-v2">
             Время на игру: 60 сек<br/>
             Время на ход: 15 сек<br/>
-            Матч до: {matchesToWin} {matchesToWin === 1 ? 'победы' : matchesToWin < 5 ? 'побед' : 'побед'}<br/>
-            Куб удвоения: Да
+            Матч до: {matchesToWin} {matchesToWin === 1 ? 'победы' : matchesToWin < 5 ? 'побед' : 'побед'}
           </div>
 
           {!searching ? (
@@ -131,7 +143,14 @@ export default function GameSearch() {
             </button>
           ) : (
             <div className="game-search-searching-v2">
-              <div className="searching-text-v2">Подбираем противника по рейтингу и ставке...</div>
+              <div className="searching-text-v2">
+                Подбираем противника по рейтингу и ставке...
+                {queueStats && (
+                  <div style={{ marginTop: '8px', fontSize: '0.9em', opacity: 0.8 }}>
+                    Ищут игру: {mode === 'long' ? queueStats.longQueue : queueStats.shortQueue} | В игре: {queueStats.activeGames}
+                  </div>
+                )}
+              </div>
               <button className="game-search-cancel-btn-v2" onClick={handleCancelSearch}>
                 Отменить поиск
               </button>

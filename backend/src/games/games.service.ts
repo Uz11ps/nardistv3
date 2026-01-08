@@ -824,10 +824,25 @@ export class GamesService {
           }
         } else {
           // Обычный ход (не дубль)
-          const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
-          if (!isValid) throw new BadRequestException(`Недопустимый ход`);
-          currentState = engine.applyMove(currentState, move.from, move.to, move.die);
-          processedMoves.push({ from: move.from, to: move.to, die: move.die });
+          // Проверяем, является ли это ходом с суммой кубиков (die > 6)
+          if (move.die > 6 && (move as any).steps && Array.isArray((move as any).steps) && (move as any).steps.length > 0) {
+            // Ход с суммой кубиков (например, 3+4=7) - обрабатываем по шагам
+            for (const step of (move as any).steps) {
+              const isValidStep = (engine as any).validateMove(currentState, step.from, step.to, step.die, isFirstMoveOfGame);
+              if (!isValidStep) throw new BadRequestException(`Недопустимый шаг хода`);
+              currentState = engine.applyMove(currentState, step.from, step.to, step.die);
+            }
+            // Используем оба кубика для суммы
+            totalDiceUsed += 2;
+            processedMoves.push({ from: move.from, to: move.to, die: move.die, steps: (move as any).steps });
+          } else {
+            // Обычный одиночный ход
+            const isValid = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
+            if (!isValid) throw new BadRequestException(`Недопустимый ход`);
+            currentState = engine.applyMove(currentState, move.from, move.to, move.die);
+            totalDiceUsed += 1;
+            processedMoves.push({ from: move.from, to: move.to, die: move.die });
+          }
         }
       }
     }

@@ -173,6 +173,50 @@ export class MatchmakingService {
     }
   }
 
+  /**
+   * Получить статистику очереди и активных игр
+   */
+  async getQueueStats(): Promise<{
+    longQueue: number;
+    shortQueue: number;
+    activeGames: number;
+  }> {
+    // Подсчитываем количество игроков в очереди для каждого режима
+    const longQueueEntries = await this.redis.zrange(`queue:${GameMode.LONG}`, 0, -1);
+    const shortQueueEntries = await this.redis.zrange(`queue:${GameMode.SHORT}`, 0, -1);
+    
+    // Подсчитываем уникальных игроков (на случай дубликатов)
+    const longQueueSet = new Set<string>();
+    const shortQueueSet = new Set<string>();
+    
+    for (const entryStr of longQueueEntries) {
+      try {
+        const entry: QueueEntry = JSON.parse(entryStr);
+        longQueueSet.add(entry.userId);
+      } catch (error) {
+        continue;
+      }
+    }
+    
+    for (const entryStr of shortQueueEntries) {
+      try {
+        const entry: QueueEntry = JSON.parse(entryStr);
+        shortQueueSet.add(entry.userId);
+      } catch (error) {
+        continue;
+      }
+    }
+    
+    // Подсчитываем активные игры
+    const activeGames = await this.gamesService.countActiveGames();
+    
+    return {
+      longQueue: longQueueSet.size,
+      shortQueue: shortQueueSet.size,
+      activeGames,
+    };
+  }
+
   async findMatch(userId: string, mode: GameMode): Promise<{ opponentId: string; timeLimit: number; stake: number; matchesToWin: number } | null> {
     const userEntryStr = await this.redis.get(`queue:user:${userId}`);
     if (!userEntryStr) {

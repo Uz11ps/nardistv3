@@ -353,7 +353,7 @@ export default function BackgammonBoard({
     
     // Сбрасываем текущие возможные ходы при изменении pendingMoves или dice
     // Это предотвращает клики по старым (невалидным) ходам до получения новых от сервера
-    setPossibleMoves([])
+        setPossibleMoves([])
     setSelectedPoint(null)
     setValidTargetPoints(new Set())
     
@@ -457,12 +457,15 @@ export default function BackgammonBoard({
     let xPos: number
     let yPos: number
     
+    // Определяем, какой игрок сейчас ходит и где должны быть его кубики
+    // Белые шашки (player1) находятся внизу, черные (player2) - вверху
+    // Кубики должны быть в противоположном углу от шашек соперника
     if (currentPlayer === 0) {
-      // Player1 - внизу справа, но с отступом от края, сдвигаем левее на 10px
+      // Player1 (белые) ходит - кубики внизу справа (рядом с белыми шашками)
       xPos = Math.min(width * 0.85, width - diceWidth / 2 - 10) - 10
       yPos = Math.min(height * 0.85, height - diceHeight / 2 - 10)
     } else {
-      // Player2 - вверху слева, но с отступом от края, сдвигаем левее на 10px
+      // Player2 (черные) ходит - кубики вверху слева (рядом с черными шашками, противоположный угол от белых)
       xPos = Math.max(width * 0.15, diceWidth / 2 + 10) - 10
       yPos = Math.max(height * 0.15, diceHeight / 2 + 10)
     }
@@ -1349,10 +1352,10 @@ export default function BackgammonBoard({
             checkerColor 
           })
           setDragPosition({ x, y })
-          return
+            return
+          }
         }
-      }
-
+        
       const pointIndex = getPointAtPosition(x, y, canvas)
       if (pointIndex !== null) {
         const points = virtualGameState?.points || []
@@ -1485,7 +1488,7 @@ export default function BackgammonBoard({
     
     // Сохраняем исходную точку перетаскивания
     const fromPoint = dragging.pointIndex
-
+    
     // У TouchEnd нет координат в e.touches, используем последнюю позицию dragPosition
     if (dragPosition) {
       const x = dragPosition.x
@@ -1582,7 +1585,7 @@ export default function BackgammonBoard({
           return
         }
       }
-
+      
       // Критически важно: проверяем, что целевая точка не является исходной точкой перетаскивания
       // и что ход действительно существует для ИСХОДНОЙ точки (fromPoint)
       if (targetPoint !== null && targetPoint !== fromPoint) {
@@ -1928,10 +1931,10 @@ export default function BackgammonBoard({
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-
+    
     // Сохраняем исходную точку перетаскивания
     const fromPoint = dragging.pointIndex
-    const targetPoint = getPointAtPosition(x, y, canvas)
+        const targetPoint = getPointAtPosition(x, y, canvas)
     
     // В sandbox режиме обрабатываем специальные действия
     if (isSandbox) {
@@ -1952,7 +1955,7 @@ export default function BackgammonBoard({
           const points = virtualGameState?.points || []
           const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
           const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
-          const currentPoints = [...points]
+            const currentPoints = [...points]
           
           let isWhite = false
           let hasChecker = false
@@ -1990,9 +1993,9 @@ export default function BackgammonBoard({
               currentBar.black++
             } else if (targetPoint >= 0 && targetPoint < 24) {
               if (isWhite) {
-                currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
+              currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
               } else {
-                currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) - 1
+              currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) - 1
               }
             }
             
