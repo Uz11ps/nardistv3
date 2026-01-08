@@ -541,15 +541,19 @@ export default function BackgammonBoard({
       
       console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos })
     } else {
-      // Player2 (черные, соперник) - Вверху Слева
-      xPos = 150
+      // Player2 (черные, соперник)
+      // Пользователь просит "на другой доске".
+      // Было: Вверху Слева.
+      // Станет: Вверху Справа (симметрично по вертикали, но на правой половине)
+      
+      xPos = width - 150
       yPos = 80
       
       // Ограничения
-      xPos = Math.max(xPos, 60)
+      xPos = Math.min(xPos, width - 60)
       yPos = Math.min(yPos, 150)
       
-      console.log('🎲 Player2 dice position (TOP-LEFT):', { xPos, yPos })
+      console.log('🎲 Player2 dice position (TOP-RIGHT):', { xPos, yPos })
     }
 
     console.log('🎲 Dice position updated:', { xPos, yPos, size: diceSize, currentPlayer, width, height })
