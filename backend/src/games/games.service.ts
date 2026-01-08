@@ -1144,6 +1144,18 @@ export class GamesService {
   }
 
   /**
+   * Подсчитать количество активных игр
+   */
+  async countActiveGames(): Promise<number> {
+    return await this.gamesRepository.count({
+      where: [
+        { status: GameStatus.IN_PROGRESS },
+        { status: GameStatus.WAITING },
+      ],
+    });
+  }
+
+  /**
    * Получить все возможные ходы для текущей позиции
    */
   async getPossibleMoves(
