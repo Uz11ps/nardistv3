@@ -526,16 +526,20 @@ export default function BackgammonBoard({
     // Белые шашки (player1) находятся внизу, черные (player2) - вверху
     // Кубики должны быть в противоположном углу от шашек соперника
     if (currentPlayer === 0) {
-      // Player1 (белые) ходит - кубики внизу справа (рядом с белыми шашками, позиция 1)
-      // Позиция 1 имеет pointIndex = 23 (нижний ряд, правая сторона)
-      const point1Coords = getPointCoordinates(23, tempCanvas)
-      // Смещаем ВЛЕВО от позиции 1, чтобы кубики были на игровом поле
-      xPos = point1Coords.x - diceWidth / 2 - 20 
-      yPos = point1Coords.y - diceHeight / 2 - 40 // Выше позиции 1
+      // Player1 (белые) ходит
+      // ЭКСПЕРИМЕНТ: Перемещаем кубики ВЛЕВО ВНИЗ, так как пользователь жалуется, что "ничего не меняется" (возможно он видит Player 1)
       
-      // Ограничиваем позицию границами контейнера
-      xPos = Math.max(xPos, diceWidth / 2 + 10)
-      yPos = Math.max(yPos, diceHeight / 2 + 10)
+      // Используем ту же логику "прижатия к левому краю"
+      // xPos (центр) = 15px + половина ширины контейнера
+      xPos = 15 + (diceSize + 10)
+      
+      // Позиция по Y - внизу
+      yPos = height - 150
+      
+      // Мягкое ограничение
+      yPos = Math.max(yPos, height / 2 + 50)
+      
+      console.log('🎲 Player1 dice position (MOVED TO LEFT-BOTTOM):', { xPos, yPos })
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (верхний левый угол)
       // ВАЖНО: Размещаем кубики в верхнем левом углу
