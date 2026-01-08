@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="app-version" content="BUILD_TIMESTAMP" />
     <title>Нарды</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
@@ -17,6 +18,42 @@
           });
         };
       }
+      
+      // Принудительное обновление кеша для Telegram Mini App
+      // Проверяем версию приложения и обновляем кеш если нужно
+      (function() {
+        const currentVersion = document.querySelector('meta[name="app-version"]')?.getAttribute('content');
+        const storedVersion = sessionStorage.getItem('app-version');
+        const reloadFlag = sessionStorage.getItem('app-reload-flag');
+        
+        // Если это первая загрузка или версия изменилась
+        if (currentVersion && (!storedVersion || storedVersion !== currentVersion)) {
+          if (!reloadFlag) {
+            // Устанавливаем флаг, чтобы избежать бесконечного цикла
+            sessionStorage.setItem('app-reload-flag', '1');
+            sessionStorage.setItem('app-version', currentVersion);
+            
+            // Очищаем кеш service worker если есть
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                  registration.unregister();
+                }
+              });
+            }
+            
+            // Перезагружаем страницу с параметром для обхода кеша
+            console.log('App version changed, reloading to clear cache...');
+            window.location.href = window.location.href.split('?')[0] + '?v=' + currentVersion + '&_=' + Date.now();
+            return;
+          } else {
+            // Уже перезагрузились, очищаем флаг
+            sessionStorage.removeItem('app-reload-flag');
+          }
+        } else if (currentVersion) {
+          sessionStorage.setItem('app-version', currentVersion);
+        }
+      })();
     </script>
   </head>
   <body>

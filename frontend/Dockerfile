@@ -18,6 +18,10 @@ ENV VITE_TELEGRAM_BOT_NAME=$VITE_TELEGRAM_BOT_NAME
 
 RUN npm run build
 
+# Заменяем BUILD_TIMESTAMP на реальную временную метку в index.html
+RUN BUILD_TIME=$(date +%s) && \
+    sed -i "s/BUILD_TIMESTAMP/${BUILD_TIME}/g" /app/dist/index.html
+
 FROM nginx:alpine
 
 # Копируем собранные файлы в временную директорию
