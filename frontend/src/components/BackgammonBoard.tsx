@@ -574,18 +574,8 @@ export default function BackgammonBoard({
     const actualX = x
     const actualY = y
     
-    // 0. ПРИОРИТЕТ: Проверка мусорки в sandbox режиме
-    // Проверяем ПЕРВЫМ делом, чтобы точки не перекрывали зону удаления
-    if (isSandbox) {
-      // Мусорка в левом нижнем углу
-      const trashSize = 120
-      const trashX = 0
-      const trashY = height - trashSize
-      if (actualX >= trashX && actualX <= trashX + trashSize && actualY >= trashY && actualY <= height) {
-        console.log('🎯 Попадание в зону мусорки (-3)')
-        return -3 // Код для мусорки
-      }
-    }
+    // 0. ПРИОРИТЕТ: Проверка специальных зон в sandbox режиме
+    // (Мусорка отключена по просьбе пользователя)
     
     // Параметры области выноса (Контейнеры)
     const bearOffWidth = width * 0.06
@@ -604,43 +594,17 @@ export default function BackgammonBoard({
     // Проверяем все точки
     const points = gameState?.points || []
     
-    for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
-      // Для player2 используем визуальный индекс для вычисления координат (как в getPointCoordinates)
-      const visualPointIndex = isPlayer1 ? pointIndex : ((pointIndex + 12) % 24)
-      const isTopRow = visualPointIndex < 12
-      let columnXStart: number
-      let columnXEnd: number
+    // Прямой расчет попадания в точку на основе логики getPointCoordinates
+    for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
+      const { x: pX, y: pY, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       
-      if (isTopRow) {
-        const isRightSide = visualPointIndex < 6
-        if (isRightSide) {
-          const pointInHalf = visualPointIndex
-          columnXEnd = boardEndX - pointInHalf * pointWidth
-          columnXStart = boardEndX - (pointInHalf + 1) * pointWidth
-        } else {
-          const pointInHalf = visualPointIndex - 6
-          columnXEnd = barX - pointInHalf * pointWidth
-          columnXStart = barX - (pointInHalf + 1) * pointWidth
-        }
-      } else {
-        const isLeftSide = visualPointIndex < 18
-        if (isLeftSide) {
-          const pointInHalf = visualPointIndex - 12
-          columnXStart = boardStartX + pointInHalf * pointWidth
-          columnXEnd = boardStartX + (pointInHalf + 1) * pointWidth
-        } else {
-          const pointInHalf = visualPointIndex - 18
-          columnXStart = barX + barWidth + pointInHalf * pointWidth
-          columnXEnd = barX + barWidth + (pointInHalf + 1) * pointWidth
-        }
-      }
+      const xStart = pX - pW / 2
+      const xEnd = pX + pW / 2
+      const yStart = isTopRow ? 0 : height / 2
+      const yEnd = isTopRow ? height / 2 : height
       
-      if (actualX >= Math.min(columnXStart, columnXEnd) && actualX <= Math.max(columnXStart, columnXEnd)) {
-        if (isTopRow) {
-          if (actualY <= height / 2) return pointIndex // Возвращаем реальный индекс
-        } else {
-          if (actualY > height / 2) return pointIndex // Возвращаем реальный индекс
-        }
+      if (actualX >= xStart && actualX <= xEnd && actualY >= yStart && actualY <= yEnd) {
+        return pointIndex
       }
     }
     
@@ -842,7 +806,8 @@ export default function BackgammonBoard({
       const checkerCount = Math.abs(pointValue)
       // Цвета остаются изначальными: положительные = белые, отрицательные = черные
       const isWhiteChecker = pointValue > 0
-      const isMyPoint = (isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker)
+      // В Sandbox всегда используем цвета первого игрока (свои), чтобы не было "перекрашивания"
+      const isMyPoint = isSandbox ? true : ((isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker))
       
       const checkerSize = Math.min(pW * 0.85, pH * 0.15) 
       const checkerBaseY = isTopRow 
@@ -986,7 +951,8 @@ export default function BackgammonBoard({
       const isWhiteChecker = animatingChecker.isWhite !== undefined 
         ? animatingChecker.isWhite 
         : (animatingChecker.from === 24 ? true : (animatingChecker.from === 25 ? false : (virtualGameState.points[animatingChecker.from] > 0)))
-      const isMyChecker = (isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker)
+      // В Sandbox всегда используем основной набор цветов для обоих сторон
+      const isMyChecker = isSandbox ? true : ((isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker))
 
       // Начальная позиция Y (с учетом стопки)
       let fromCheckerCount = 0
@@ -1030,7 +996,7 @@ export default function BackgammonBoard({
         const isAnimatingFromWhiteBar = animatingChecker && animatingChecker.from === 24
         const countToDraw = isAnimatingFromWhiteBar ? whiteBarCount - 1 : whiteBarCount
         const barStartY = height - pointHeight * 0.3
-        const isMyBar = isPlayer1
+        const isMyBar = isSandbox ? true : isPlayer1
         const overlap = countToDraw > 5 ? (checkerSize * 0.8) : checkerSize
         for (let i = 0; i < countToDraw; i++) {
           const barY = barStartY - (i * overlap)
@@ -1043,7 +1009,7 @@ export default function BackgammonBoard({
         const isAnimatingFromBlackBar = animatingChecker && animatingChecker.from === 25
         const countToDraw = isAnimatingFromBlackBar ? blackBarCount - 1 : blackBarCount
         const barStartY = pointHeight * 0.3
-        const isMyBar = !isPlayer1
+        const isMyBar = isSandbox ? true : !isPlayer1
         const overlap = countToDraw > 5 ? (checkerSize * 0.8) : checkerSize
         for (let i = 0; i < countToDraw; i++) {
           const barY = barStartY + (i * overlap)
@@ -1954,19 +1920,9 @@ export default function BackgammonBoard({
     const fromPoint = dragging.pointIndex
     const targetPoint = getPointAtPosition(x, y, canvas)
     
-    // В sandbox режиме обрабатываем drop в мусорку или другие специальные действия
+    // В sandbox режиме обрабатываем специальные действия
     if (isSandbox) {
-      // 1. Drop в мусорку (из любой точки)
-      if (targetPoint === -3) {
-        if (handleRemoveChecker(fromPoint, dragging.checkerColor)) {
-          setDragging(null)
-          setDragPosition(null)
-          setHoveredPoint(null)
-          return
-        }
-      }
-
-      // 2. Drop из bearOff в обычную точку
+      // 1. Drop из bearOff в обычную точку (для расстановки)
       if (fromPoint === -1 && dragging.checkerColor && onSandboxCheckerDrop) {
         if (targetPoint !== null && targetPoint !== 24 && targetPoint !== 25 && targetPoint !== -1) {
           onSandboxCheckerDrop(targetPoint, dragging.checkerColor)

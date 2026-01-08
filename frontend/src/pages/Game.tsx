@@ -121,8 +121,8 @@ export default function Game() {
             ? [...game.gameState.points] 
             : []
           
-          const formattedDice = game.gameState.dice 
-            ? (Array.isArray(game.gameState.dice) ? game.gameState.dice : [game.gameState.dice.die1, game.gameState.dice.die2])
+          const formattedDice = game.gameState.dice && Array.isArray(game.gameState.dice) && game.gameState.dice.length > 0
+            ? game.gameState.dice 
             : null as any
           
           const isP1Now = game.player1Id === user?.id
@@ -497,8 +497,8 @@ export default function Game() {
       const game = response.data
       setGameInfo(game)
       const diceData = game.gameState?.dice
-      const formattedDice = Array.isArray(diceData) && diceData.length >= 2
-        ? { die1: diceData[0], die2: diceData[1] }
+      const formattedDice = Array.isArray(diceData) && diceData.length > 0
+        ? diceData
         : diceData || null
       
       const barRaw = game.gameState?.bar || [0, 0]
@@ -887,23 +887,19 @@ export default function Game() {
 
       const diceData = data.gameState?.dice
       // ВАЖНО: Правильно форматируем кубики для отображения
-      // Если это массив из 4 элементов (дубль) - сохраняем как массив
-      // Если это массив из 2 элементов - преобразуем в { die1, die2 }
-      // Если пустой массив или null - null
-      let formattedDice: { die1: number; die2: number } | number[] | null = null
+      // В Sandbox всегда используем массив для надежности
+      let formattedDice: number[] | null = null
       if (Array.isArray(diceData)) {
-        if (diceData.length === 4) {
-          // Дубль - сохраняем как массив из 4 элементов
+        if (diceData.length > 0) {
           formattedDice = diceData
-        } else if (diceData.length === 2) {
-          // Обычный бросок - преобразуем в объект
-          formattedDice = { die1: diceData[0], die2: diceData[1] }
-        } else if (diceData.length === 0) {
+        } else {
           formattedDice = null
         }
       } else if (diceData) {
-        // Если это не массив, но есть данные - используем как есть
-        formattedDice = diceData
+        // Если это объект {die1, die2}, превращаем в массив
+        if ((diceData as any).die1 !== undefined) {
+          formattedDice = [(diceData as any).die1, (diceData as any).die2]
+        }
       }
       
       console.log('📊 game_state received:', { diceData, formattedDice, currentPlayer: data.currentPlayer })
@@ -1049,12 +1045,9 @@ export default function Game() {
         setTimeout(() => setServerMovesForBoard(undefined), 100)
       }
       
-      // Для дублей может быть массив из 4 элементов, для обычных - из 2
-      // Сохраняем весь массив, если он есть
+      // ВАЖНО: Всегда сохраняем кубики как массив для корректной работы
       const formattedDice = Array.isArray(diceData) && diceData.length > 0
-        ? diceData.length === 2
-          ? { die1: diceData[0], die2: diceData[1] }
-          : diceData // Для дублей (4 элемента) или других случаев сохраняем массив
+        ? diceData
         : null
       
       // ВАЖНО: Правильно вычисляем canMove с учетом оставшихся кубиков
@@ -1340,14 +1333,21 @@ export default function Game() {
     })
 
     socket.on('sandbox_dice_updated', (data: any) => {
-      console.log('🎲 Sandbox dice updated:', data)
-      const hasDice = Array.isArray(data.dice) && data.dice.length > 0
+      console.log('🎲 [WebSocket] sandbox_dice_updated:', data)
+      const dice = data.dice
+      const hasDice = Array.isArray(dice) && dice.length > 0
+      
+      // В Sandbox гарантируем, что dice всегда массив
+      const finalDice = Array.isArray(dice) ? dice : (dice ? [dice.die1, dice.die2] : [])
+      
       setGameState(prev => ({
         ...prev!,
-        dice: data.dice,
+        dice: finalDice,
         currentPlayer: data.currentPlayer !== undefined ? data.currentPlayer : prev?.currentPlayer,
         canMove: hasDice
       }))
+      
+      console.log('🎲 [Sandbox] Applied dice:', finalDice, 'for player:', data.currentPlayer)
       
       // Запускаем анимацию кубиков
       setDiceAnimating(true)
@@ -2279,8 +2279,8 @@ export default function Game() {
                         apiClient.get(`/games/${gameId}`).then((response) => {
                           const data = response.data
                           const diceData = data.gameState?.dice
-                          const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
-                            ? { die1: diceData[0], die2: diceData[1] } 
+                          const formattedDice = Array.isArray(diceData) && diceData.length > 0 
+                            ? diceData 
                             : null
                           const barRaw = data.gameState?.bar || [0, 0]
                           const bar = Array.isArray(barRaw) 
@@ -2307,9 +2307,8 @@ export default function Game() {
                     onHistoryPreview={(previewState) => {
                       if (previewState) {
                         // Форматируем кубики для previewState если нужно
-                        const diceData = previewState.dice
-                        const formattedDice = Array.isArray(diceData) && diceData.length >= 2 
-                          ? { die1: diceData[0], die2: diceData[1] } 
+                        const formattedDice = Array.isArray(previewState.dice) && previewState.dice.length > 0
+                          ? previewState.dice 
                           : null
                         
                         setHistoryGameState({
