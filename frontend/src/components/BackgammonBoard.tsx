@@ -539,24 +539,22 @@ export default function BackgammonBoard({
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (верхний левый угол)
       // ВАЖНО: Размещаем кубики в верхнем левом углу
-      // Пользователь сообщил, что уменьшение координаты X сдвигает кубики ВПРАВО
-      // Это означает инвертированную ось X для кубиков этого игрока
-      // Поэтому для сдвига ВЛЕВО нужно УВЕЛИЧИВАТЬ координату X
+      // Возвращаемся к стандартной логике (0 = лево), так как width - ... привело к правому краю
       
       const bearOffWidth = width * 0.06
       
-      // Вычисляем "левую" позицию как "правую" зеркально
-      // width - bearOffWidth - (ширина кубиков / 2) - отступ
-      xPos = width - bearOffWidth - 80 
+      // ЖЕСТКАЯ ПРИВЯЗКА К ЛЕВОМУ КРАЮ:
+      // bearOffWidth (начало доски) + минимальный отступ (20px)
+      xPos = bearOffWidth + 20
       
       // Позиция по Y - фиксированный отступ сверху
       yPos = 80 
       
       // Мягкое ограничение
-      xPos = Math.min(xPos, width - 60)
+      xPos = Math.max(xPos, 40)
       yPos = Math.min(yPos, 150)
       
-      console.log('🎲 Player2 dice position (INVERTED LOGIC):', { 
+      console.log('🎲 Player2 dice position (FIXED LEFT V3):', { 
         bearOffWidth,
         xPos, 
         yPos,
