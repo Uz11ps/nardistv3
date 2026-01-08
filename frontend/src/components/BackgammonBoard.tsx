@@ -537,8 +537,8 @@ export default function BackgammonBoard({
       xPos = Math.max(xPos, diceWidth / 2 + 10)
       yPos = Math.max(yPos, diceHeight / 2 + 10)
     } else {
-      // Player2 (черные) ходит - кубики рядом с позицией 13 (дом черных)
-      // Позиция 13 имеет pointIndex = 11 (верхний ряд, левая сторона)
+      // Player2 (черные) ходит - кубики рядом с позицией 13 (верхний левый угол)
+      // ВАЖНО: Размещаем кубики в верхнем левом углу, рядом с точкой 13
       
       // Вычисляем координаты позиции 13 напрямую
       const bearOffWidth = width * 0.06
@@ -550,26 +550,24 @@ export default function BackgammonBoard({
       const pointWidth = halfBoardWidth / 6
       
       // Позиция 13 находится в верхнем ряду, левая сторона (pointIndex 11)
-      const point13Index = 11
-      const pointInHalf = point13Index - 6 // 11 - 6 = 5
-      const point13X = barX - (pointInHalf * pointWidth + pointWidth / 2)
-      const point13Y = 0 // Верхний ряд
+      // Центр точки 13
+      const point13X = barX - (5 * pointWidth + pointWidth / 2)
+      const point13Y = 0 // Верхний край
       
-      // Позиционируем кубики ВПРАВО от позиции 13, чтобы они были на игровом поле
-      xPos = point13X + diceWidth / 2 + 20
-      yPos = point13Y + diceHeight / 2 + 40 // Ниже позиции 13
+      // Позиционируем кубики прямо НАД/РЯДОМ с позицией 13
+      // Смещаем немного вправо и вниз от самого угла, чтобы быть на поле
+      xPos = point13X + 40 // Чуть правее центра точки 13
+      yPos = point13Y + 80 // Ниже верхнего края
       
-      // Ограничиваем позицию границами контейнера
-      xPos = Math.min(xPos, width - diceWidth / 2 - 10)
-      yPos = Math.min(yPos, height - diceHeight / 2 - 10)
+      // Убираем жесткое ограничение diceWidth/2, которое выталкивало кубики на середину
+      xPos = Math.max(xPos, 60) 
+      yPos = Math.min(yPos, 150)
       
       console.log('🎲 Player2 dice position:', { 
         point13X, 
         point13Y,
         xPos, 
-        yPos, 
-        diceWidth, 
-        diceHeight, 
+        yPos,
         width, 
         height
       })
