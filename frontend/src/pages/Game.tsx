@@ -1070,15 +1070,21 @@ export default function Game() {
       // В обычной игре - это наш ход И есть кубики
       const canMove = isSandbox ? (remainingDice.length > 0) : (isP1Turn && hasRemainingDice)
       
+      // В Sandbox режиме: если кубики пустые после хода, это означает смену хода
+      // Нужно убедиться, что currentPlayer обновлен правильно
+      const isSandboxMove = data.type === 'sandbox' || gameInfo?.type === 'sandbox'
+      const turnChangedInSandbox = isSandboxMove && gameState?.currentPlayer !== data.currentPlayer && remainingDice.length === 0
+      
       console.log('🎯 [move_made] canMove calculation:', {
-        isSandbox: data.type === 'sandbox' || gameInfo?.type === 'sandbox',
+        isSandbox: isSandboxMove,
         hasRemainingDice,
         remainingDice,
         canMove,
         currentPlayer: data.currentPlayer,
+        previousCurrentPlayer: gameState?.currentPlayer,
+        turnChangedInSandbox,
         isP1,
-        diceData,
-        previousCurrentPlayer: gameState?.currentPlayer
+        diceData
       })
       
       // ВАЖНО: Очищаем pendingMoves только если ход был успешно применен
@@ -1151,7 +1157,6 @@ export default function Game() {
       };
       
       // Логирование для отладки Sandbox режима
-      const isSandboxMove = data.type === 'sandbox' || gameInfo?.type === 'sandbox';
       if (isSandboxMove) {
         console.log('🎮 [Sandbox move_made]', {
           currentPlayer: data.currentPlayer,
@@ -1161,8 +1166,20 @@ export default function Game() {
           remainingDice: Array.isArray(diceData) ? diceData : [],
           wasMyTurn,
           isMyTurnNow: canMove,
-          turnChanged: gameState?.currentPlayer !== data.currentPlayer
+          turnChanged: gameState?.currentPlayer !== data.currentPlayer,
+          turnChangedInSandbox
         });
+        
+        // Если произошла смена хода в Sandbox и кубики пустые - триггерим событие для показа модалки
+        if (turnChangedInSandbox) {
+          console.log('🔄 [Sandbox] Turn changed, triggering dice modal check');
+          // Небольшая задержка, чтобы состояние успело обновиться
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('sandbox-turn-changed', { 
+              detail: { currentPlayer: data.currentPlayer } 
+            }));
+          }, 100);
+        }
       }
 
       // Если есть серверные ходы (ход бота или другого игрока), 

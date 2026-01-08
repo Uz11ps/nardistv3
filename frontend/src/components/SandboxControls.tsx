@@ -82,6 +82,38 @@ export default function SandboxControls({
     }
   }, [mode, gameState?.dice, diceQueue, showDiceModal, currentPlayer, selectedMoveIndex])
 
+  // Listen for turn change events to trigger dice modal check
+  useEffect(() => {
+    const handleTurnChange = (event: CustomEvent) => {
+      console.log('🔄 [SandboxControls] Turn changed event received:', event.detail);
+      // Если мы в режиме игры - принудительно проверяем состояние кубиков
+      // Это гарантирует, что модалка покажется даже если основной useEffect не сработал
+      if (mode === 'play' && selectedMoveIndex === null) {
+        // Небольшая задержка, чтобы состояние успело обновиться после move_made
+        setTimeout(() => {
+          const currentDice = gameState?.dice;
+          const hasDice = !!currentDice && (Array.isArray(currentDice) ? currentDice.length > 0 : (currentDice.die1 !== undefined && currentDice.die1 !== null));
+          
+          if (!hasDice && !showDiceModal) {
+            console.log('🎲 [SandboxControls] Turn changed, no dice - showing modal for player:', event.detail?.currentPlayer ?? currentPlayer);
+            if (diceQueue.length > 0) {
+              const nextDice = diceQueue[0]
+              setDiceQueue(prev => prev.slice(1))
+              applyDice(nextDice[0], nextDice[1], event.detail?.currentPlayer ?? null)
+            } else {
+              // Устанавливаем таргет на игрока из события, если он указан
+              setDiceTargetPlayer(event.detail?.currentPlayer !== undefined ? event.detail.currentPlayer : null)
+              setShowDiceModal(true)
+            }
+          }
+        }, 400);
+      }
+    };
+    
+    window.addEventListener('sandbox-turn-changed', handleTurnChange as EventListener);
+    return () => window.removeEventListener('sandbox-turn-changed', handleTurnChange as EventListener);
+  }, [mode, selectedMoveIndex, gameState?.dice, showDiceModal, diceQueue, currentPlayer])
+
   // Chapters logic
   useEffect(() => {
     loadChapters()
