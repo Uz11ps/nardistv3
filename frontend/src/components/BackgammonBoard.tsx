@@ -506,18 +506,6 @@ export default function BackgammonBoard({
       window.removeEventListener('resize', handleResize)
     }
   }, [currentPlayer, updateDicePosition])
-
-  // ВАЖНО: Обновляем позицию кубиков когда анимация завершается
-  // Это гарантирует, что кубики перемещаются в правильный угол после анимации
-  useEffect(() => {
-    if (!diceAnimating && diceArray && diceArray.length > 0 && dice3DPosition) {
-      // Небольшая задержка для плавного перехода после завершения анимации
-      const timeoutId = setTimeout(() => {
-        updateDicePosition()
-      }, 100)
-      return () => clearTimeout(timeoutId)
-    }
-  }, [diceAnimating, diceArray, updateDicePosition, dice3DPosition])
   
   // Вспомогательная функция для получения координат точки
   const getPointCoordinates = useCallback((pointIndex: number, canvas: HTMLCanvasElement) => {
