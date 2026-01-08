@@ -1058,24 +1058,24 @@ export default function BackgammonBoard({
       const checkerH = Math.min(height / 16, 15)
       const checkerW = bearOffWidth * 0.8
       
-      // Белые выброшенные шашки (снизу вверх, справа для player1, слева для player2 после инверсии)
+      // Белые выброшенные шашки (сверху вниз, справа для player1, слева для player2 после инверсии)
       const whiteX = isPlayer1 ? rightContainerX : leftContainerX
       for (let i = 0; i < whiteBearOffCount; i++) {
         ctx.fillStyle = '#F0F0F0'
-        ctx.fillRect(whiteX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
+        ctx.fillRect(whiteX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
         ctx.strokeStyle = '#000'
         ctx.lineWidth = 1
-        ctx.strokeRect(whiteX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
+        ctx.strokeRect(whiteX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
       }
       
-      // Черные выброшенные шашки (сверху вниз, слева для player1, справа для player2 после инверсии)
+      // Черные выброшенные шашки (снизу вверх, слева для player1, справа для player2 после инверсии)
       const blackX = isPlayer1 ? leftContainerX : rightContainerX
       for (let i = 0; i < blackBearOffCount; i++) {
         ctx.fillStyle = '#333333'
-        ctx.fillRect(blackX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
+        ctx.fillRect(blackX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
         ctx.strokeStyle = '#000'
         ctx.lineWidth = 1
-        ctx.strokeRect(blackX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
+        ctx.strokeRect(blackX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
       }
     }
 
@@ -1625,15 +1625,15 @@ export default function BackgammonBoard({
     
     const bearOff = virtualGameState?.bearOff || { white: 0, black: 0 }
     
-    // Белые шашки в bearOff (справа снизу для player1)
+    // Белые шашки в bearOff (справа сверху для player1)
     const whiteX = isPlayer1 ? rightContainerX : leftContainerX
-    if (x >= whiteX && x <= whiteX + bearOffWidth && y >= height - 300 && y <= height) {
+    if (x >= whiteX && x <= whiteX + bearOffWidth && y >= 0 && y <= 300) {
       if (bearOff.white > 0) return 'white'
     }
     
-    // Черные шашки в bearOff (слева сверху для player1)
+    // Черные шашки в bearOff (слева снизу для player1)
     const blackX = isPlayer1 ? leftContainerX : rightContainerX
-    if (x >= blackX && x <= blackX + bearOffWidth && y >= 0 && y <= 300) {
+    if (x >= blackX && x <= blackX + bearOffWidth && y >= height - 300 && y <= height) {
       if (bearOff.black > 0) return 'black'
     }
   }, [isSandbox, isPlayer1, virtualGameState])
