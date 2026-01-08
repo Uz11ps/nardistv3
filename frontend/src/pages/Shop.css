@@ -9,8 +9,8 @@
 /* Tabs are handled by PageLayout */
 
 .shop-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
@@ -21,7 +21,7 @@
 
 @media (max-width: 480px) {
   .shop-list {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 10px;
   }
   
@@ -33,21 +33,25 @@
     padding: 12px;
   }
   
+  .shop-nar-coin-content {
+    gap: 12px;
+  }
+  
   .shop-nar-coin-icon {
-    width: 50px;
-    height: 50px;
+    width: 80px;
+    height: 80px;
   }
   
   .shop-nar-coin-amount {
-    font-size: 16px;
+    font-size: 20px;
   }
   
   .shop-nar-coin-price {
-    font-size: 11px;
+    font-size: 12px;
   }
   
   .shop-buy-btn {
-    padding: 8px 12px;
+    padding: 8px 16px;
     font-size: 13px;
   }
 }
@@ -88,16 +92,14 @@
   padding: 40px 20px;
 }
 
-/* NAR-coin карточки - квадратные блоки */
+/* NAR-coin карточки - горизонтальный layout с монетой справа */
 .shop-nar-coin-card {
-  aspect-ratio: 1;
   padding: 16px;
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
   border-radius: 12px;
   box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
   transition: transform 0.2s, box-shadow 0.2s;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: space-between;
   min-height: 0;
@@ -110,28 +112,23 @@
 
 .shop-nar-coin-content {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
-  height: 100%;
   min-height: 0;
 }
 
 .shop-nar-coin-info {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
+  gap: 12px;
   flex: 1;
-  justify-content: center;
 }
 
 .shop-nar-coin-icon {
-  width: 60px;
-  height: 60px;
+  width: 120px;
+  height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -149,24 +146,24 @@
 .shop-nar-coin-amount {
   color: #FFF;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 600;
   line-height: 1.2;
-  text-align: center;
+  text-align: left;
   word-break: break-word;
 }
 
 .shop-nar-coin-price {
   color: #B6B6B6;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
-  text-align: center;
+  text-align: left;
   line-height: 1.3;
 }
 
 .shop-buy-btn {
-  padding: 10px 16px;
+  padding: 10px 20px;
   border-radius: 8px;
   background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
   box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
@@ -177,8 +174,8 @@
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  width: 100%;
-  align-self: flex-end;
+  width: auto;
+  align-self: flex-start;
 }
 
 .shop-buy-btn:hover:not(:disabled) {
