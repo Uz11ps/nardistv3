@@ -537,19 +537,25 @@ export default function BackgammonBoard({
       yPos = Math.max(yPos, diceHeight / 2 + 10)
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (дом черных)
-      // Позиция 13 имеет pointIndex = 11 (верхний ряд, левая сторона)
-      // pointIndex 11 соответствует pointNumber 13 (24 - 11 = 13)
+      // ВАЖНО: Для player2 координаты инвертируются в getPointCoordinates
+      // Позиция 13 для player2 визуально находится в верхнем левом углу доски
+      // pointIndex 11 соответствует pointNumber 13 (24 - 11 = 13) для верхнего ряда
+      // Но для player2 после инверсии это будет в верхнем левом углу
+      
+      // Используем pointIndex 11, но учитываем что для player2 координаты уже инвертированы
+      // Для player2 позиция 13 находится в верхнем левом углу (с их точки зрения)
       const point13Coords = getPointCoordinates(11, tempCanvas)
       
-      // Позиционируем кубики справа от позиции 13 (а не слева), чтобы они были видны
-      xPos = point13Coords.x + diceWidth / 2 + 20 // Справа от позиции 13
-      yPos = point13Coords.y + diceHeight / 2 + 20 // Ниже позиции 13
+      // Позиционируем кубики в верхнем левом углу, рядом с позицией 13
+      // Для player2 после инверсии координат позиция 13 находится в верхнем левом углу
+      xPos = point13Coords.x - diceWidth / 2 - 20 // Слева от позиции 13
+      yPos = point13Coords.y - diceHeight / 2 - 20 // Выше позиции 13
       
       // Ограничиваем позицию границами контейнера
-      xPos = Math.min(xPos, width - diceWidth / 2 - 10)
       xPos = Math.max(xPos, diceWidth / 2 + 10)
-      yPos = Math.min(yPos, height - diceHeight / 2 - 10)
+      xPos = Math.min(xPos, width - diceWidth / 2 - 10)
       yPos = Math.max(yPos, diceHeight / 2 + 10)
+      yPos = Math.min(yPos, height - diceHeight / 2 - 10)
       
       console.log('🎲 Player2 dice position:', { 
         point13Coords, 
@@ -558,7 +564,8 @@ export default function BackgammonBoard({
         diceWidth, 
         diceHeight, 
         width, 
-        height 
+        height,
+        pointNumber: point13Coords.pointNumber
       })
     }
 
