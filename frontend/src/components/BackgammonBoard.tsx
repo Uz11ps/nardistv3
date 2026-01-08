@@ -2392,6 +2392,12 @@ export default function BackgammonBoard({
             // Добавляем визуальные эффекты для лучшей видимости
             filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))',
             opacity: 1, // Явно устанавливаем непрозрачность
+            // Добавляем видимый фон для отладки (можно убрать позже)
+            backgroundColor: 'transparent',
+            // Убеждаемся, что элемент виден
+            visibility: 'visible',
+            // Убеждаемся, что элемент не скрыт
+            display: diceArray && diceArray.length > 0 ? 'flex' : 'none',
           }}
         >
           {/* Показываем гифку, если она доступна для данного состояния кубиков */}
