@@ -545,6 +545,50 @@ export class LongBackgammonEngine {
           generateMoves(newState, newDice, [...currentMoves, { from, to, die }]);
         }
       }
+      
+      // ВАЖНО: Для длинных нард также пробуем использовать сумму двух разных кубиков
+      // Это позволяет использовать сумму кубиков (например, 4+6=10) для одного хода
+      // Особенно важно для ходов с головы
+      if (remainingDice.length >= 2 && !isDoubles) {
+        const triedSums = new Set<number>();
+        for (let i = 0; i < remainingDice.length; i++) {
+          for (let j = i + 1; j < remainingDice.length; j++) {
+            const die1 = remainingDice[i];
+            const die2 = remainingDice[j];
+            const sumDie = die1 + die2;
+            
+            // Пропускаем если уже пробовали эту сумму
+            if (triedSums.has(sumDie)) continue;
+            triedSums.add(sumDie);
+            
+            // Пробуем ход с суммой кубиков
+            const toPoint = this.calculateTargetPoint(player, from, sumDie);
+            
+            // Проверяем на вынос
+            const distanceTraveled = player === 0 
+              ? (from - this.WHITE_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE
+              : (from - this.BLACK_HEAD + this.BOARD_SIZE) % this.BOARD_SIZE;
+            
+            const isBearingOffMove = (distanceTraveled + sumDie) >= this.BOARD_SIZE;
+            const to = isBearingOffMove ? -1 : toPoint;
+            
+            // ВАЖНО: При использовании суммы кубиков для хода с головы правило головы должно разрешать это
+            // Проверяем валидность хода с суммой
+            if (this.validateMove(currentState, from, to, sumDie, isFirstMoveOfGame)) {
+              foundAnyMove = true;
+              // Применяем ход с суммой кубиков
+              const newState = this.applyMove(currentState, from, to, sumDie);
+              const newDice = [...remainingDice];
+              // Удаляем оба использованных кубика
+              const index1 = newDice.indexOf(die1);
+              if (index1 !== -1) newDice.splice(index1, 1);
+              const index2 = newDice.indexOf(die2);
+              if (index2 !== -1) newDice.splice(index2, 1);
+              generateMoves(newState, newDice, [...currentMoves, { from, to, die: sumDie }]);
+            }
+          }
+        }
+      }
     }
       
       if (!foundAnyMove && currentMoves.length > 0) {
