@@ -1372,7 +1372,7 @@ export class GamesService {
     // ВАЖНО: Для длинных нард добавляем возможность использовать сумму двух разных кубиков
     // Например, при выпадении 4 и 6 можно использовать сумму 10 для одного хода
     // Это особенно важно для ходов с головы
-    if (gameMode === GameMode.LONG && availableDice.length >= 2 && !isDoublesForCombined) {
+    if (game.mode === GameMode.LONG && availableDice.length >= 2 && !isDoublesForCombined) {
       // Генерируем все возможные суммы двух разных кубиков
       const uniqueDice = Array.from(new Set(availableDice));
       for (let i = 0; i < uniqueDice.length; i++) {
