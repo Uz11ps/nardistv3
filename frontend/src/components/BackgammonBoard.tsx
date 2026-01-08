@@ -2348,7 +2348,7 @@ export default function BackgammonBoard({
       )}
       
       {/* Кубики - показываем на стороне игрока, у которого ход, закрепляем после анимации внутри доски */}
-      {diceArray && diceArray.length > 0 && usedDiceIndices.size < diceArray.length && (
+      {diceArray && diceArray.length > 0 && (
         <div
           style={{
             position: 'absolute',
@@ -2372,11 +2372,14 @@ export default function BackgammonBoard({
             gap: '8px',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000,
+            zIndex: 10000, // Очень высокий z-index чтобы кубики были поверх всего
             transition: diceAnimating ? 'none' : 'all 0.5s ease-out',
             // Гарантируем, что кубики не выходят за границы доски
             maxWidth: '100%',
             maxHeight: '100%',
+            // Добавляем визуальные эффекты для лучшей видимости
+            filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))',
+            opacity: 1, // Явно устанавливаем непрозрачность
           }}
         >
           {/* Показываем гифку, если она доступна для данного состояния кубиков */}
