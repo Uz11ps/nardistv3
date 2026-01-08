@@ -2328,21 +2328,22 @@ export default function BackgammonBoard({
         <div
           style={{
             position: 'absolute',
-            // Если идет анимация гифки, показываем её на стороне игрока с ходом (внизу для player1, вверху для player2)
-            // После анимации показываем 3D кубики на той же стороне (закрепленные внутри доски)
+            // Если идет анимация гифки, показываем её на стороне игрока с ходом
+            // Player1 (белые) - внизу справа, Player2 (черные) - вверху слева
+            // ВАЖНО: даже во время анимации кубики должны быть в правильном углу, а не в центре
             left: diceAnimating 
-              ? '50%'
+              ? (currentPlayer === 0 
+                  ? '85%'  // Player1 - внизу справа во время анимации
+                  : '15%') // Player2 - вверху слева во время анимации
               : `${dice3DPosition.x}px`,
             top: diceAnimating 
-              ? currentPlayer === 0
-                ? '75%'  // Player1 - внизу доски
-                : '25%'  // Player2 - вверху доски
+              ? (currentPlayer === 0
+                  ? '85%'  // Player1 - внизу доски во время анимации
+                  : '15%') // Player2 - вверху доски во время анимации
               : `${dice3DPosition.y}px`,
             width: `${dice3DPosition.size * 7.5}px`,
             height: `${dice3DPosition.size * 4.5}px`,
-            transform: diceAnimating 
-              ? 'translate(-50%, -50%)'
-              : 'translate(-50%, -50%)', // Центрируем кубики относительно их позиции
+            transform: 'translate(-50%, -50%)', // Центрируем кубики относительно их позиции
             pointerEvents: 'none',
             display: 'flex',
             gap: '8px',
