@@ -455,7 +455,11 @@ export class GamesService {
     let isPlayer1: boolean;
     if (playerId === null) {
       // Это бот - определяем по currentPlayer
-      isPlayer1 = game.currentPlayer === 1; // Если currentPlayer === 1, значит это бот (player2)
+      // В играх с ботом: player1Id - это человек, player2Id = null (бот)
+      // currentPlayer === 0 означает player1 (человек), currentPlayer === 1 означает player2 (бот)
+      // Но если это бросок для бота, то currentPlayer должен быть 1 (бот)
+      // Поэтому если playerId === null, это всегда бот, который является player2
+      isPlayer1 = false; // Бот всегда player2
     } else {
       isPlayer1 = playerId === game.player1Id;
     }
@@ -464,8 +468,11 @@ export class GamesService {
     const myOffset = isPlayer1 ? game.p1Offset : game.p2Offset;
     const opponentOffset = isPlayer1 ? game.p2Offset : game.p1Offset;
     
-    // Формула смещения: (Смещение игрока - 1) * 2 + Смещение соперника
+    // Формула смещения должна совпадать с формулой при определении первого игрока:
+    // Для player1: (p1Offset - 1) * 2 + p2Offset
+    // Для player2: (p2Offset - 1) * 2 + p1Offset
     // Это определяет начальную позицию в последовательности бросков
+    // ВАЖНО: Формула одинаковая для обоих игроков, но используются разные смещения
     const startIdx = ((myOffset || 1) - 1) * 2 + (opponentOffset || 1);
     
     // ВАЖНО: Считаем количество БРОСКОВ кубиков для этого игрока
@@ -2388,6 +2395,9 @@ export class GamesService {
       game.rngHash = rngHash;
 
       // Определяем первого ходящего через начальный бросок кубиков
+      // Формула смещения: для каждого игрока своя формула с учетом его смещения и смещения соперника
+      // Для player1: (p1Offset - 1) * 2 + p2Offset
+      // Для player2: (p2Offset - 1) * 2 + p1Offset
       const p1StartIdx = ((game.p1Offset - 1) * 2 + game.p2Offset) % p1Rolls.length;
       const p2StartIdx = ((game.p2Offset - 1) * 2 + game.p1Offset) % p2Rolls.length;
       
