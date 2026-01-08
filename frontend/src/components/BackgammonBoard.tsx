@@ -529,18 +529,16 @@ export default function BackgammonBoard({
       // Player1 (белые) ходит - кубики внизу справа (рядом с белыми шашками, позиция 1)
       // Позиция 1 имеет pointIndex = 23 (нижний ряд, правая сторона)
       const point1Coords = getPointCoordinates(23, tempCanvas)
-      xPos = point1Coords.x + diceWidth / 2 + 40 // Справа от позиции 1
+      // Смещаем ВЛЕВО от позиции 1, чтобы кубики были на игровом поле
+      xPos = point1Coords.x - diceWidth / 2 - 20 
       yPos = point1Coords.y - diceHeight / 2 - 40 // Выше позиции 1
       
       // Ограничиваем позицию границами контейнера
-      xPos = Math.min(xPos, width - diceWidth / 2 - 10)
+      xPos = Math.max(xPos, diceWidth / 2 + 10)
       yPos = Math.max(yPos, diceHeight / 2 + 10)
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (дом черных)
       // Позиция 13 имеет pointIndex = 11 (верхний ряд, левая сторона)
-      // pointIndex 11 соответствует pointNumber 13 (24 - 11 = 13)
-      // ВАЖНО: Вычисляем координаты напрямую, без использования getPointCoordinates
-      // чтобы избежать инверсии координат для player2
       
       // Вычисляем координаты позиции 13 напрямую
       const bearOffWidth = width * 0.06
@@ -552,20 +550,17 @@ export default function BackgammonBoard({
       const pointWidth = halfBoardWidth / 6
       
       // Позиция 13 находится в верхнем ряду, левая сторона (pointIndex 11)
-      // pointIndex 11: isTopRow = true, isRightSide = false (11 >= 6)
       const point13Index = 11
       const pointInHalf = point13Index - 6 // 11 - 6 = 5
       const point13X = barX - (pointInHalf * pointWidth + pointWidth / 2)
-      const point13Y = 0 // Верхний ряд, y = 0
+      const point13Y = 0 // Верхний ряд
       
-      // Позиционируем кубики в верхнем левом углу, рядом с позицией 13
-      xPos = point13X - diceWidth / 2 - 20 // Слева от позиции 13
-      yPos = point13Y + diceHeight / 2 + 20 // Ниже позиции 13 (от верхнего края)
+      // Позиционируем кубики ВПРАВО от позиции 13, чтобы они были на игровом поле
+      xPos = point13X + diceWidth / 2 + 20
+      yPos = point13Y + diceHeight / 2 + 40 // Ниже позиции 13
       
       // Ограничиваем позицию границами контейнера
-      xPos = Math.max(xPos, diceWidth / 2 + 10)
       xPos = Math.min(xPos, width - diceWidth / 2 - 10)
-      yPos = Math.max(yPos, diceHeight / 2 + 10)
       yPos = Math.min(yPos, height - diceHeight / 2 - 10)
       
       console.log('🎲 Player2 dice position:', { 
