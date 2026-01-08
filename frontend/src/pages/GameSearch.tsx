@@ -11,8 +11,8 @@ export default function GameSearch() {
   const { user } = useAuthStore()
   const [searching, setSearching] = useState(false)
   const [mode, setMode] = useState<'long' | 'short'>('long')
-  const [stake, setStake] = useState<number>(0)
-  const stakeOptions = [0, 50, 100, 250, 500, 750, 1000, 1500, 3000, 5000]
+  const [stake, setStake] = useState<number>(50)
+  const stakeOptions = [50, 100, 250, 500, 750, 1000, 1500, 3000, 5000]
   const [matchesToWin, setMatchesToWin] = useState<number>(1)
   const matchesToWinOptions = [1, 2, 3, 5]
   const [queueStats, setQueueStats] = useState<{ longQueue: number; shortQueue: number; activeGames: number } | null>(null)
