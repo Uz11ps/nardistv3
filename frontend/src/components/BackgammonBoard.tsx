@@ -543,7 +543,7 @@ export default function BackgammonBoard({
       console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos })
     } else {
       // Player2 (черные, соперник) - Вверху Слева (Дом черных, пункт 13)
-      // Размещаем точно над пунктом 13 в "доске для черных" (левая верхняя четверть)
+      // Центрируем кубики относительно центра пункта 13
       
       const bearOffWidth = width * 0.06
       const boardWidth = width - (bearOffWidth * 2)
@@ -551,9 +551,12 @@ export default function BackgammonBoard({
       const halfBoardWidth = (boardWidth - barWidth) / 2
       const pointWidth = halfBoardWidth / 6
       
-      // Центр пункта 13 находится сразу после зоны выброса (bearOffWidth) + половина ширины пункта
-      // Добавляем небольшой отступ, чтобы кубики были по центру колонки
-      xPos = bearOffWidth + (pointWidth / 2) + 15
+      // Центр пункта 13
+      const point13Center = bearOffWidth + (pointWidth / 2)
+      
+      // Устанавливаем позицию ровно по центру пункта 13
+      // Ранее было +15, что сдвигало вправо. Теперь ровно центр или чуть левее (-5) для компенсации визуального веса
+      xPos = point13Center - 5
       
       yPos = 80 // Верхний край
       
@@ -561,7 +564,7 @@ export default function BackgammonBoard({
       xPos = Math.max(xPos, 40)
       yPos = Math.min(yPos, 150)
       
-      console.log('🎲 Player2 dice position (TOP-LEFT POINT 13):', { xPos, yPos, pointWidth })
+      console.log('🎲 Player2 dice position (CENTERED ON POINT 13):', { xPos, yPos, point13Center })
     }
 
     console.log('🎲 Dice position updated:', { xPos, yPos, size: diceSize, currentPlayer, width, height })
