@@ -173,6 +173,19 @@ export default function SandboxControls({
     setShowDiceModal(false)
   }
 
+  const handleSkipTurn = async () => {
+    try {
+      const nextPlayer = currentPlayer === 0 ? 1 : 0
+      await apiClient.post(`/games/${gameId}/sandbox/set-dice`, {
+        dice: [],
+        player: nextPlayer,
+      })
+      onBoardUpdate()
+    } catch (e) {
+      alert('Ошибка при смене хода')
+    }
+  }
+
   const handleMoveClick = (index: number) => {
     if (selectedMoveIndex === index) {
       setSelectedMoveIndex(null)
@@ -274,6 +287,9 @@ export default function SandboxControls({
               )}
               <div className="turn-info">
                 Сейчас ход: <strong>{currentPlayer === 0 ? 'Белых' : 'Черных'}</strong>
+                <button className="skip-turn-btn" onClick={handleSkipTurn} title="Передать ход другому игроку">
+                  <span>🔄</span>
+                </button>
               </div>
             </div>
           )}
@@ -290,26 +306,29 @@ export default function SandboxControls({
             }</h3>
             
             <div className="modal-section-label">Выбрать игрока:</div>
-            <div className="player-selector">
-              <button 
-                className={diceTargetPlayer === 0 ? 'active' : ''} 
-                onClick={() => setDiceTargetPlayer(0)}
-              >
-                Белые
-              </button>
-              <button 
-                className={diceTargetPlayer === 1 ? 'active' : ''} 
-                onClick={() => setDiceTargetPlayer(1)}
-              >
-                Черные
-              </button>
-              <button 
-                className={diceTargetPlayer === null ? 'active' : ''} 
-                onClick={() => setDiceTargetPlayer(null)}
-              >
-                Текущий
-              </button>
-            </div>
+          <div className="player-selector">
+            <button 
+              className={diceTargetPlayer === 0 ? 'active' : ''} 
+              onClick={(e) => { e.stopPropagation(); setDiceTargetPlayer(0); }}
+              type="button"
+            >
+              Белые
+            </button>
+            <button 
+              className={diceTargetPlayer === 1 ? 'active' : ''} 
+              onClick={(e) => { e.stopPropagation(); setDiceTargetPlayer(1); }}
+              type="button"
+            >
+              Черные
+            </button>
+            <button 
+              className={diceTargetPlayer === null ? 'active' : ''} 
+              onClick={(e) => { e.stopPropagation(); setDiceTargetPlayer(null); }}
+              type="button"
+            >
+              Текущий
+            </button>
+          </div>
 
             <div className="modal-section-label">Значения:</div>
             <div className="dice-inputs">

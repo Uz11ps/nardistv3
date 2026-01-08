@@ -595,13 +595,15 @@ export default function BackgammonBoard({
     const points = gameState?.points || []
     
     // Прямой расчет попадания в точку на основе логики getPointCoordinates
+    // Добавляем небольшой отступ (padding) для более легкого попадания
+    const padding = 5;
     for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
       const { x: pX, y: pY, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       
-      const xStart = pX - pW / 2
-      const xEnd = pX + pW / 2
-      const yStart = isTopRow ? 0 : height / 2
-      const yEnd = isTopRow ? height / 2 : height
+      const xStart = pX - pW / 2 - padding;
+      const xEnd = pX + pW / 2 + padding;
+      const yStart = (isTopRow ? 0 : height / 2) - padding;
+      const yEnd = (isTopRow ? height / 2 : height) + padding;
       
       if (actualX >= xStart && actualX <= xEnd && actualY >= yStart && actualY <= yEnd) {
         return pointIndex
@@ -2354,7 +2356,23 @@ export default function BackgammonBoard({
               {(() => {
                 const isDoubles = diceArray.length > 2;
                 if (isDoubles) {
-                  // Для дублей показываем один кубик с множителем
+                  // В Sandbox всегда показываем все кубики по отдельности, чтобы не путать пользователя
+                  if (isSandbox) {
+                    return diceArray.map((dieValue, index) => {
+                      if (usedDiceIndices.has(index)) return null;
+                      return (
+                        <div key={index} style={{ position: 'relative' }}>
+                          <Dice3D
+                            values={[dieValue]}
+                            animating={false}
+                            diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                          />
+                        </div>
+                      );
+                    });
+                  }
+
+                  // Для обычных дублей показываем один кубик с множителем
                   const dieValue = diceArray[0];
                   return (
                     <div style={{ position: 'relative' }}>

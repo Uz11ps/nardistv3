@@ -1718,7 +1718,13 @@ export default function Game() {
         
         console.log('📤 Sending moves to server:', pendingMoves)
         socket.emit('make_move', { gameId, moves: pendingMoves })
-        // pendingMoves будут очищены в обработчике move_made, чтобы избежать двойного применения в virtualGameState
+        
+        // В Sandbox режиме принудительно очищаем pendingMoves сразу
+        if (isSandbox) {
+          setPendingMoves([])
+          setTimeout(() => setIsProcessingConfirm(false), 300)
+        }
+        // pendingMoves будут очищены в обработчике move_made для обычных игр
       } catch (error) {
         // Просто откатываем ходы без показа ошибки
         setPendingMoves([])
