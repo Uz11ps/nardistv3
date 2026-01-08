@@ -544,17 +544,18 @@ export default function BackgammonBoard({
       
       // ЖЕСТКАЯ ПРИВЯЗКА: Слева от начала игрового поля (сразу после bear-off зоны)
       // bearOffWidth - это левая граница игрового поля
-      // Добавляем половину ширины кубиков (так как xPos - это центр) + минимальный отступ
-      xPos = bearOffWidth + diceWidth / 2 + 5
+      // Используем фиксированный отступ, чтобы не зависеть от ширины контейнера кубиков
+      // Ранее diceWidth/2 сдвигало слишком сильно вправо
+      xPos = bearOffWidth + 35 
       
       // Позиция по Y - фиксированный отступ сверху
       yPos = 80 
       
       // Мягкое ограничение
-      xPos = Math.max(xPos, 40)
+      xPos = Math.max(xPos, 30)
       yPos = Math.min(yPos, 150)
       
-      console.log('🎲 Player2 dice position (FIXED LEFT):', { 
+      console.log('🎲 Player2 dice position (FIXED LEFT V2):', { 
         bearOffWidth,
         xPos, 
         yPos,
