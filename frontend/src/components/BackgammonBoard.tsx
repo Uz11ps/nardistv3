@@ -525,34 +525,31 @@ export default function BackgammonBoard({
     // Определяем, какой игрок сейчас ходит и где должны быть его кубики
     // Белые шашки (player1) находятся внизу, черные (player2) - вверху
     // Кубики должны быть в противоположном углу от шашек соперника
-    // ЛОГИКА С УЧЕТОМ ПОВОРОТА НА 180 ГРАДУСОВ (или инверсии)
-    // Пользователь сообщает, что x=15px отображается СПРАВА.
-    // Значит:
-    // Контейнер 0px (Left) -> Визуально ПРАВО
-    // Контейнер Width (Right) -> Визуально ЛЕВО
-    // Контейнер 0px (Top) -> Визуально НИЗ
-    // Контейнер Height (Bottom) -> Визуально ВЕРХ
-    
-    // Мы хотим, чтобы кубики ВСЕГДА были Визуально СЛЕВА.
-    // Значит xPos должен быть ~Width.
-    const leftVisualX = width - (diceSize + 40); 
+    // СТАНДАРТНАЯ ЛОГИКА (0 = Лево, Width = Право)
+    // Эксперимент с инверсией провалился (width улетел вправо).
+    // Возвращаем Player 1 вниз-вправо, Player 2 вверх-влево.
+    // Используем безопасный отступ 150px от краев, чтобы точно попасть на поле.
 
     if (currentPlayer === 0) {
-      // Player1 (белые)
-      // Визуально: Внизу Слева
-      // Контейнер: Вверху Справа
-      xPos = leftVisualX
-      yPos = 80 // Контейнер Верх -> Визуально Низ
+      // Player1 (белые) - Внизу Справа
+      xPos = width - 150
+      yPos = height - 150
       
-      console.log('🎲 Player1 dice position (ROTATED LOGIC):', { xPos, yPos })
+      // Ограничения
+      xPos = Math.min(xPos, width - 60)
+      yPos = Math.min(yPos, height - 60)
+      
+      console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos })
     } else {
-      // Player2 (черные, соперник)
-      // Визуально: Вверху Слева
-      // Контейнер: Внизу Справа
-      xPos = leftVisualX
-      yPos = height - 120 // Контейнер Низ -> Визуально Верх
+      // Player2 (черные, соперник) - Вверху Слева
+      xPos = 150
+      yPos = 80
       
-      console.log('🎲 Player2 dice position (ROTATED LOGIC):', { xPos, yPos })
+      // Ограничения
+      xPos = Math.max(xPos, 60)
+      yPos = Math.min(yPos, 150)
+      
+      console.log('🎲 Player2 dice position (TOP-LEFT):', { xPos, yPos })
     }
 
     console.log('🎲 Dice position updated:', { xPos, yPos, size: diceSize, currentPlayer, width, height })
