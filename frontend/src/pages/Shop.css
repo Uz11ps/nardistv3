@@ -64,6 +64,22 @@
   }
 }
 
+/* Скрываем кубики на странице магазина */
+.shop-nar-coin-card .dice,
+.shop-nar-coin-card .dice-small,
+.shop-nar-coin-card .dice-medium,
+.shop-nar-coin-card .dice-large,
+.shop-skin-card .dice,
+.shop-skin-card .dice-small,
+.shop-skin-card .dice-medium,
+.shop-skin-card .dice-large,
+.shop-subscription-card .dice,
+.shop-subscription-card .dice-small,
+.shop-subscription-card .dice-medium,
+.shop-subscription-card .dice-large {
+  display: none !important;
+}
+
 .shop-empty {
   text-align: center;
   color: #B6B6B6;

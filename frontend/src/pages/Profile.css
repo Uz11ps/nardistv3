@@ -1035,3 +1035,15 @@
     margin: 0 auto;
   }
 }
+
+/* Скрываем кубики на странице профиля */
+.profile-enhancement-item .dice,
+.profile-enhancement-item .dice-small,
+.profile-enhancement-item .dice-medium,
+.profile-enhancement-item .dice-large,
+.profile-enhancement-upgrade-btn .dice,
+.profile-enhancement-upgrade-btn .dice-small,
+.profile-enhancement-upgrade-btn .dice-medium,
+.profile-enhancement-upgrade-btn .dice-large {
+  display: none !important;
+}

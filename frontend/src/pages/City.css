@@ -88,6 +88,22 @@
   }
 }
 
+/* Скрываем кубики на странице бизнеса */
+.city-modal .dice,
+.city-modal .dice-small,
+.city-modal .dice-medium,
+.city-modal .dice-large,
+.city-card-v3 .dice,
+.city-card-v3 .dice-small,
+.city-card-v3 .dice-medium,
+.city-card-v3 .dice-large,
+.city-modal-footer .dice,
+.city-modal-footer .dice-small,
+.city-modal-footer .dice-medium,
+.city-modal-footer .dice-large {
+  display: none !important;
+}
+
 .city-card-v3.locked {
   opacity: 0.5;
   filter: grayscale(1);
