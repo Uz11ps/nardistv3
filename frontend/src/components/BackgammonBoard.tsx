@@ -515,12 +515,9 @@ export default function BackgammonBoard({
     const diceHeight = diceSize * 4.5
     
     // Создаем временный canvas для вычисления координат точек
-    // ВАЖНО: Используем canvasRef если он доступен, иначе создаем временный
-    const tempCanvas = canvasRef.current || document.createElement('canvas')
-    if (!canvasRef.current) {
-      tempCanvas.width = width
-      tempCanvas.height = height
-    }
+    const tempCanvas = document.createElement('canvas')
+    tempCanvas.width = width
+    tempCanvas.height = height
     
     let xPos: number
     let yPos: number
@@ -540,19 +537,30 @@ export default function BackgammonBoard({
       yPos = Math.max(yPos, diceHeight / 2 + 10)
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (дом черных)
-      // ВАЖНО: Для player2 координаты инвертируются в getPointCoordinates
-      // Позиция 13 для player2 визуально находится в верхнем левом углу доски
-      // pointIndex 11 соответствует pointNumber 13 (24 - 11 = 13) для верхнего ряда
-      // Но для player2 после инверсии это будет в верхнем левом углу
+      // Позиция 13 имеет pointIndex = 11 (верхний ряд, левая сторона)
+      // pointIndex 11 соответствует pointNumber 13 (24 - 11 = 13)
+      // ВАЖНО: Вычисляем координаты напрямую, без использования getPointCoordinates
+      // чтобы избежать инверсии координат для player2
       
-      // Используем pointIndex 11, но учитываем что для player2 координаты уже инвертированы
-      // Для player2 позиция 13 находится в верхнем левом углу (с их точки зрения)
-      const point13Coords = getPointCoordinates(11, tempCanvas)
+      // Вычисляем координаты позиции 13 напрямую
+      const bearOffWidth = width * 0.06
+      const boardWidth = width - (bearOffWidth * 2)
+      const boardStartX = bearOffWidth
+      const barWidth = boardWidth * 0.08
+      const barX = boardStartX + (boardWidth - barWidth) / 2
+      const halfBoardWidth = (boardWidth - barWidth) / 2
+      const pointWidth = halfBoardWidth / 6
+      
+      // Позиция 13 находится в верхнем ряду, левая сторона (pointIndex 11)
+      // pointIndex 11: isTopRow = true, isRightSide = false (11 >= 6)
+      const point13Index = 11
+      const pointInHalf = point13Index - 6 // 11 - 6 = 5
+      const point13X = barX - (pointInHalf * pointWidth + pointWidth / 2)
+      const point13Y = 0 // Верхний ряд, y = 0
       
       // Позиционируем кубики в верхнем левом углу, рядом с позицией 13
-      // Для player2 после инверсии координат позиция 13 находится в верхнем левом углу
-      xPos = point13Coords.x - diceWidth / 2 - 20 // Слева от позиции 13
-      yPos = point13Coords.y - diceHeight / 2 - 20 // Выше позиции 13
+      xPos = point13X - diceWidth / 2 - 20 // Слева от позиции 13
+      yPos = point13Y + diceHeight / 2 + 20 // Ниже позиции 13 (от верхнего края)
       
       // Ограничиваем позицию границами контейнера
       xPos = Math.max(xPos, diceWidth / 2 + 10)
@@ -561,14 +569,14 @@ export default function BackgammonBoard({
       yPos = Math.min(yPos, height - diceHeight / 2 - 10)
       
       console.log('🎲 Player2 dice position:', { 
-        point13Coords, 
+        point13X, 
+        point13Y,
         xPos, 
         yPos, 
         diceWidth, 
         diceHeight, 
         width, 
-        height,
-        pointNumber: point13Coords.pointNumber
+        height
       })
     }
 
