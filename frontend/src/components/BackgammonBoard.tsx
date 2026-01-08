@@ -466,9 +466,10 @@ export default function BackgammonBoard({
       yPos = Math.min(height * 0.85, height - diceHeight / 2 - 10)
     } else {
       // Player2 (черные) ходит - кубики вверху слева (рядом с черными шашками, противоположный угол от белых)
-      // Используем более точные значения для верхнего левого угла
-      xPos = Math.max(width * 0.1, diceWidth / 2 + 10)
-      yPos = Math.max(height * 0.1, diceHeight / 2 + 10)
+      // Используем фиксированные проценты для верхнего левого угла
+      // Учитываем размер кубиков, чтобы они не выходили за границы
+      xPos = width * 0.1 + diceWidth / 2
+      yPos = height * 0.1 + diceHeight / 2
     }
 
     setDice3DPosition({
