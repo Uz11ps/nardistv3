@@ -161,6 +161,23 @@
   color: #FFF;
 }
 
+/* Стили для кубиков в модальном окне */
+.city-modal-stat .value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.city-modal-footer button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  white-space: normal;
+}
+
 .city-modal-stat .label {
   color: #888;
 }
