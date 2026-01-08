@@ -433,6 +433,69 @@ export default function BackgammonBoard({
     }
   }, [gameId, isMyTurn, canMove, diceKey, pendingMovesKey, pendingMoves, gameState, gameMode, isPlayer1, isSandbox, currentPlayer]) // pendingMoves нужен для использования в fetchPossibleMoves
   
+  // Вспомогательная функция для получения координат точки
+  const getPointCoordinates = useCallback((pointIndex: number, canvas: HTMLCanvasElement) => {
+    const width = canvas.width
+    const height = canvas.height
+    
+    // Параметры области выноса (Контейнеры)
+    const bearOffWidth = width * 0.06
+    const boardWidth = width - (bearOffWidth * 2)
+    const boardStartX = bearOffWidth
+    const boardEndX = width - bearOffWidth
+    
+    // Центральная полоса (бар)
+    const barWidth = boardWidth * 0.08
+    const barX = boardStartX + (boardWidth - barWidth) / 2
+    
+    // Параметры для точек
+    const halfBoardWidth = (boardWidth - barWidth) / 2
+    const pointWidth = halfBoardWidth / 6
+    const pointHeight = height * 0.45
+    
+    const isTopRow = pointIndex < 12
+    
+    let x = 0
+    let pointNumber = 0
+    
+    if (isTopRow) {
+      pointNumber = 24 - pointIndex
+      const isRightSide = pointIndex < 6
+      
+      if (isRightSide) {
+        const pointInHalf = pointIndex
+        x = boardEndX - (pointInHalf * pointWidth + pointWidth / 2)
+      } else {
+        const pointInHalf = pointIndex - 6
+        x = barX - (pointInHalf * pointWidth + pointWidth / 2)
+      }
+    } else {
+      pointNumber = 12 - (pointIndex - 12)
+      const isLeftSide = pointIndex < 18
+      
+      if (isLeftSide) {
+        const pointInHalf = pointIndex - 12
+        x = boardStartX + (pointInHalf * pointWidth + pointWidth / 2)
+      } else {
+        const pointInHalf = pointIndex - 18
+        x = barX + barWidth + (pointInHalf * pointWidth + pointWidth / 2)
+      }
+    }
+    
+    let y = isTopRow ? 0 : height
+    
+    // Для player2 инвертируем координаты точек, так как доска инвертирована на 180 градусов
+    let finalIsTopRow = isTopRow
+    if (!isPlayer1) {
+      x = width - x
+      y = height - y
+      // Инвертируем isTopRow для player2, так как координаты инвертированы
+      finalIsTopRow = !isTopRow
+    }
+    
+    return { x, y, isTopRow: finalIsTopRow, pointWidth, pointHeight, pointNumber }
+  }, [isPlayer1])
+
   // Определение позиции для кубиков
   // Кубики показываются на стороне игрока, у которого сейчас ход
   // Позиция адаптируется к размеру экрана и обновляется при изменении размера
@@ -449,10 +512,10 @@ export default function BackgammonBoard({
     const diceWidth = diceSize * 7.5
     const diceHeight = diceSize * 4.5
     
-    // Player1 (белые, currentPlayer === 0): кубики внизу справа
-    // Player2 (черные, currentPlayer === 1): кубики вверху слева
-    // Показываем кубики на стороне игрока, у которого сейчас ход
-    // Учитываем размер кубиков, чтобы они не выходили за границы доски
+    // Создаем временный canvas для вычисления координат точек
+    const tempCanvas = document.createElement('canvas')
+    tempCanvas.width = width
+    tempCanvas.height = height
     
     let xPos: number
     let yPos: number
@@ -461,15 +524,17 @@ export default function BackgammonBoard({
     // Белые шашки (player1) находятся внизу, черные (player2) - вверху
     // Кубики должны быть в противоположном углу от шашек соперника
     if (currentPlayer === 0) {
-      // Player1 (белые) ходит - кубики внизу справа (рядом с белыми шашками)
-      xPos = Math.min(width * 0.85, width - diceWidth / 2 - 10) - 10
-      yPos = Math.min(height * 0.85, height - diceHeight / 2 - 10)
+      // Player1 (белые) ходит - кубики внизу справа (рядом с белыми шашками, позиция 1)
+      // Позиция 1 имеет pointIndex = 23 (нижний ряд, правая сторона)
+      const point1Coords = getPointCoordinates(23, tempCanvas)
+      xPos = point1Coords.x + diceWidth / 2 + 20 // Справа от позиции 1
+      yPos = point1Coords.y - diceHeight / 2 - 20 // Выше позиции 1
     } else {
-      // Player2 (черные) ходит - кубики вверху слева (рядом с черными шашками, противоположный угол от белых)
-      // Используем фиксированные проценты для верхнего левого угла
-      // Учитываем размер кубиков, чтобы они не выходили за границы
-      xPos = width * 0.1 + diceWidth / 2
-      yPos = height * 0.1 + diceHeight / 2
+      // Player2 (черные) ходит - кубики рядом с позицией 13 (дом черных)
+      // Позиция 13 имеет pointIndex = 11 (верхний ряд, левая сторона)
+      const point13Coords = getPointCoordinates(11, tempCanvas)
+      xPos = point13Coords.x - diceWidth / 2 - 20 // Слева от позиции 13
+      yPos = point13Coords.y + diceHeight / 2 + 20 // Ниже позиции 13
     }
 
     setDice3DPosition({
@@ -477,7 +542,7 @@ export default function BackgammonBoard({
       y: yPos,
       size: diceSize,
     })
-  }, [currentPlayer])
+  }, [currentPlayer, getPointCoordinates])
 
   useEffect(() => {
     updateDicePosition()
