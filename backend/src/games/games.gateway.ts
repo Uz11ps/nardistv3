@@ -701,17 +701,22 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           const botMoveResult = await this.gamesService.makeMove(gameId, botPlayerId, botMoves);
           const gameStateAfterMove = await this.gamesService.getGameState(gameId);
           
+          // Если у бота не было ходов (botMoves.length === 0), makeMove уже переключил ход на игрока
+          // В этом случае не нужно проверять рекурсивно, просто отправляем состояние и выходим
+          if (botMoves.length === 0) {
+            this.logger.log(`🔄 Bot had no valid moves, turn switched to player for gameId=${gameId}`);
+            this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
+            await this.sendTimerUpdateForGame(gameId);
+            return; // Выходим, т.к. ход переключен на игрока
+          }
+          
           // Emit move_made event (или просто game_state если ходов не было)
           // ВАЖНО: Передаем botMoves для анимации на фронтенде
-          if (botMoves.length > 0) {
-            const moveMadeData = {
-              ...gameStateAfterMove,
-              serverMoves: botMoves // Добавляем список ходов для анимации
-            };
-            this.server.to(`game:${gameId}`).emit('move_made', moveMadeData);
-          } else {
-            this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
-          }
+          const moveMadeData = {
+            ...gameStateAfterMove,
+            serverMoves: botMoves // Добавляем список ходов для анимации
+          };
+          this.server.to(`game:${gameId}`).emit('move_made', moveMadeData);
           
           // Check if game finished
           if (botMoveResult.status === 'finished') {
