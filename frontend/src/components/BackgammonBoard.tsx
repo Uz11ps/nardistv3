@@ -515,9 +515,12 @@ export default function BackgammonBoard({
     const diceHeight = diceSize * 4.5
     
     // Создаем временный canvas для вычисления координат точек
-    const tempCanvas = document.createElement('canvas')
-    tempCanvas.width = width
-    tempCanvas.height = height
+    // ВАЖНО: Используем canvasRef если он доступен, иначе создаем временный
+    const tempCanvas = canvasRef.current || document.createElement('canvas')
+    if (!canvasRef.current) {
+      tempCanvas.width = width
+      tempCanvas.height = height
+    }
     
     let xPos: number
     let yPos: number
