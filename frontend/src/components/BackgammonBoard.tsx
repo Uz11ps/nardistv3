@@ -507,6 +507,8 @@ export default function BackgammonBoard({
     const width = rect.width
     const height = rect.height
     
+    if (width === 0 || height === 0) return // Не вычисляем позицию если контейнер еще не отрисован
+    
     // Размер кубиков адаптируется к размеру доски
     const diceSize = Math.min(width, height) * 0.08
     const diceWidth = diceSize * 7.5
@@ -527,15 +529,25 @@ export default function BackgammonBoard({
       // Player1 (белые) ходит - кубики внизу справа (рядом с белыми шашками, позиция 1)
       // Позиция 1 имеет pointIndex = 23 (нижний ряд, правая сторона)
       const point1Coords = getPointCoordinates(23, tempCanvas)
-      xPos = point1Coords.x + diceWidth / 2 + 40 // Справа от позиции 1 (увеличенный отступ для видимости)
-      yPos = point1Coords.y - diceHeight / 2 - 40 // Выше позиции 1 (увеличенный отступ для видимости)
+      xPos = point1Coords.x + diceWidth / 2 + 40 // Справа от позиции 1
+      yPos = point1Coords.y - diceHeight / 2 - 40 // Выше позиции 1
+      
+      // Ограничиваем позицию границами контейнера
+      xPos = Math.min(xPos, width - diceWidth / 2 - 10)
+      yPos = Math.max(yPos, diceHeight / 2 + 10)
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (дом черных)
       // Позиция 13 имеет pointIndex = 11 (верхний ряд, левая сторона)
       const point13Coords = getPointCoordinates(11, tempCanvas)
-      xPos = point13Coords.x - diceWidth / 2 - 40 // Слева от позиции 13 (увеличенный отступ для видимости)
-      yPos = point13Coords.y + diceHeight / 2 + 40 // Ниже позиции 13 (увеличенный отступ для видимости)
+      xPos = point13Coords.x - diceWidth / 2 - 40 // Слева от позиции 13
+      yPos = point13Coords.y + diceHeight / 2 + 40 // Ниже позиции 13
+      
+      // Ограничиваем позицию границами контейнера
+      xPos = Math.max(xPos, diceWidth / 2 + 10)
+      yPos = Math.min(yPos, height - diceHeight / 2 - 10)
     }
+
+    console.log('🎲 Dice position updated:', { xPos, yPos, size: diceSize, currentPlayer, width, height })
 
     setDice3DPosition({
       x: xPos,
