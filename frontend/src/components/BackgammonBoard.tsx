@@ -2196,6 +2196,18 @@ export default function BackgammonBoard({
     ? (Array.isArray(dice) ? dice : ('die1' in dice && 'die2' in dice ? [dice.die1, dice.die2] : null))
     : null
 
+  // ВАЖНО: Обновляем позицию кубиков когда анимация завершается
+  // Это гарантирует, что кубики перемещаются в правильный угол после анимации
+  useEffect(() => {
+    if (!diceAnimating && diceArray && diceArray.length > 0 && dice3DPosition) {
+      // Небольшая задержка для плавного перехода после завершения анимации
+      const timeoutId = setTimeout(() => {
+        updateDicePosition()
+      }, 100)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [diceAnimating, diceArray, updateDicePosition, dice3DPosition])
+  
   // Определяем использованные кубики из pendingMoves
   // Используем Set для отслеживания индексов использованных кубиков (для дублей)
   const usedDiceIndices = useMemo(() => {
