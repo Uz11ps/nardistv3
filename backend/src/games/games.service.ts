@@ -826,12 +826,14 @@ export class GamesService {
           // Обычный ход (не дубль)
           // Проверяем, является ли это ходом с суммой кубиков (die > 6)
           if (move.die > 6 && (move as any).steps && Array.isArray((move as any).steps) && (move as any).steps.length > 0) {
-            // Ход с суммой кубиков (например, 3+4=7) - обрабатываем по шагам
-            for (const step of (move as any).steps) {
-              const isValidStep = (engine as any).validateMove(currentState, step.from, step.to, step.die, isFirstMoveOfGame);
-              if (!isValidStep) throw new BadRequestException(`Недопустимый шаг хода`);
-              currentState = engine.applyMove(currentState, step.from, step.to, step.die);
-            }
+            // Ход с суммой кубиков (например, 6+2=8) - это один логический ход
+            // ВАЖНО: Для хода с суммой кубиков правило головы проверяется один раз для всего хода (move.from, move.to, move.die)
+            // а не для каждого шага отдельно
+            const isValidCombinedMove = (engine as any).validateMove(currentState, move.from, move.to, move.die, isFirstMoveOfGame);
+            if (!isValidCombinedMove) throw new BadRequestException(`Недопустимый ход с суммой кубиков`);
+            
+            // Применяем ход с суммой кубиков как один логический ход
+            currentState = engine.applyMove(currentState, move.from, move.to, move.die);
             // Используем оба кубика для суммы
             totalDiceUsed += 2;
             processedMoves.push({ from: move.from, to: move.to, die: move.die, steps: (move as any).steps });

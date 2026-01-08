@@ -538,13 +538,28 @@ export default function BackgammonBoard({
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (дом черных)
       // Позиция 13 имеет pointIndex = 11 (верхний ряд, левая сторона)
+      // pointIndex 11 соответствует pointNumber 13 (24 - 11 = 13)
       const point13Coords = getPointCoordinates(11, tempCanvas)
-      xPos = point13Coords.x - diceWidth / 2 - 40 // Слева от позиции 13
-      yPos = point13Coords.y + diceHeight / 2 + 40 // Ниже позиции 13
+      
+      // Позиционируем кубики справа от позиции 13 (а не слева), чтобы они были видны
+      xPos = point13Coords.x + diceWidth / 2 + 20 // Справа от позиции 13
+      yPos = point13Coords.y + diceHeight / 2 + 20 // Ниже позиции 13
       
       // Ограничиваем позицию границами контейнера
+      xPos = Math.min(xPos, width - diceWidth / 2 - 10)
       xPos = Math.max(xPos, diceWidth / 2 + 10)
       yPos = Math.min(yPos, height - diceHeight / 2 - 10)
+      yPos = Math.max(yPos, diceHeight / 2 + 10)
+      
+      console.log('🎲 Player2 dice position:', { 
+        point13Coords, 
+        xPos, 
+        yPos, 
+        diceWidth, 
+        diceHeight, 
+        width, 
+        height 
+      })
     }
 
     console.log('🎲 Dice position updated:', { xPos, yPos, size: diceSize, currentPlayer, width, height })
