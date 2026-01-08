@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import DiceNumber from '../components/DiceNumber'
+import '../components/DiceNumber.css'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
@@ -501,8 +503,15 @@ export default function Shop() {
                 <Card key={pkg.amount} className="shop-nar-coin-card">
                   <div className="shop-nar-coin-content">
                     <div className="shop-nar-coin-info">
-                      <div className="shop-nar-coin-amount">{pkg.amount.toLocaleString('ru-RU')} NAR</div>
-                      <div className="shop-nar-coin-price">Цена: {pkg.price} {pkg.currency}</div>
+                      <div className="shop-nar-coin-amount">
+                        <DiceNumber value={pkg.amount} size="small" maxDice={4} />
+                        <span className="shop-nar-coin-amount-text">NAR</span>
+                      </div>
+                      <div className="shop-nar-coin-price">
+                        <span className="shop-nar-coin-price-label">Цена: </span>
+                        <DiceNumber value={pkg.price || 0} size="small" maxDice={3} />
+                        <span className="shop-nar-coin-price-currency"> {pkg.currency}</span>
+                      </div>
                       <Button 
                         variant="primary" 
                         className="shop-buy-btn"

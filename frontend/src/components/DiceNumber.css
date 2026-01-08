@@ -1,0 +1,55 @@
+.dice-number-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.dice-number-die {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+/* Ограничение размера на больших экранах - кубики остаются маленькими и красивыми */
+@media (min-width: 768px) {
+  .dice-number-container {
+    gap: 6px;
+  }
+  
+  /* Кубики остаются маленькими даже на больших экранах */
+  .dice-number-container .dice-small {
+    width: 32px !important;
+    height: 32px !important;
+    max-width: 32px !important;
+    max-height: 32px !important;
+  }
+  
+  .dice-number-container .dice-medium {
+    width: 40px !important;
+    height: 40px !important;
+    max-width: 40px !important;
+    max-height: 40px !important;
+  }
+  
+  .dice-number-container .dice-large {
+    width: 48px !important;
+    height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
+  }
+}
+
+/* Для кубиков в районах и бизнесах - фиксированный маленький размер */
+.city-modal-stat .dice-number-container,
+.business-card .dice-number-container {
+  gap: 4px;
+}
+
+.city-modal-stat .dice-number-container .dice-small,
+.business-card .dice-number-container .dice-small {
+  width: 28px !important;
+  height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+}
+

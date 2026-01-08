@@ -5,8 +5,10 @@ import PageLayout from '../components/PageLayout'
 import SkillPointsModal from '../components/SkillPointsModal'
 import EnhancementDetailModal from '../components/EnhancementDetailModal'
 import GameAnalytics from '../components/GameAnalytics'
+import DiceNumber from '../components/DiceNumber'
 import { apiClient } from '../api/client'
 import './Profile.css'
+import '../components/DiceNumber.css'
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -390,7 +392,7 @@ export default function Profile() {
               const canUpgrade = skillPoints.free > 0 && currentSp < maxSp && !upgrading
               
               return (
-                <div key={enh.id} className="profile-enhancement-item">
+                <div key={enh.id} className="profile-enhancement-item profile-enhancement-dice-item">
                   <div className="profile-enhancement-left">
                     <div className="profile-enhancement-icon">{enh.icon}</div>
                     <div className="profile-enhancement-info">
@@ -407,7 +409,9 @@ export default function Profile() {
                         </button>
                       </div>
                       <div className="profile-enhancement-progress">
-                        {currentSp}/{maxSp}
+                        <DiceNumber value={currentSp} size="small" maxDice={2} />
+                        <span className="profile-enhancement-progress-separator">/</span>
+                        <DiceNumber value={maxSp} size="small" maxDice={2} />
                       </div>
                     </div>
                   </div>
