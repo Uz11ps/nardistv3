@@ -538,34 +538,24 @@ export default function BackgammonBoard({
       yPos = Math.max(yPos, diceHeight / 2 + 10)
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (верхний левый угол)
-      // ВАЖНО: Размещаем кубики в верхнем левом углу, рядом с точкой 13
+      // ВАЖНО: Размещаем кубики в верхнем левом углу, максимально прижимая к левому краю игрового поля
       
-      // Вычисляем координаты позиции 13 напрямую
       const bearOffWidth = width * 0.06
-      const boardWidth = width - (bearOffWidth * 2)
-      const boardStartX = bearOffWidth
-      const barWidth = boardWidth * 0.08
-      const barX = boardStartX + (boardWidth - barWidth) / 2
-      const halfBoardWidth = (boardWidth - barWidth) / 2
-      const pointWidth = halfBoardWidth / 6
       
-      // Позиция 13 находится в верхнем ряду, левая сторона (pointIndex 11)
-      // Центр точки 13
-      const point13X = barX - (5 * pointWidth + pointWidth / 2)
-      const point13Y = 0 // Верхний край
+      // ЖЕСТКАЯ ПРИВЯЗКА: Слева от начала игрового поля (сразу после bear-off зоны)
+      // bearOffWidth - это левая граница игрового поля
+      // Добавляем половину ширины кубиков (так как xPos - это центр) + минимальный отступ
+      xPos = bearOffWidth + diceWidth / 2 + 5
       
-      // Позиционируем кубики прямо НАД/РЯДОМ с позицией 13
-      // Смещаем немного вправо и вниз от самого угла, чтобы быть на поле
-      xPos = point13X + 5 // Центр точки 13 (смещено еще на 20px влево)
-      yPos = point13Y + 80 // Ниже верхнего края
+      // Позиция по Y - фиксированный отступ сверху
+      yPos = 80 
       
-      // Убираем жесткое ограничение diceWidth/2, которое выталкивало кубики на середину
-      xPos = Math.max(xPos, 60) 
+      // Мягкое ограничение
+      xPos = Math.max(xPos, 40)
       yPos = Math.min(yPos, 150)
       
-      console.log('🎲 Player2 dice position:', { 
-        point13X, 
-        point13Y,
+      console.log('🎲 Player2 dice position (FIXED LEFT):', { 
+        bearOffWidth,
         xPos, 
         yPos,
         width, 
