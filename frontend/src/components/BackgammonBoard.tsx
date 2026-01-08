@@ -2376,7 +2376,7 @@ export default function BackgammonBoard({
             dice={diceArray}
             usedDiceIndices={usedDiceIndices}
             animating={diceAnimating}
-            size={dice3DPosition.size}
+            size={dice3DPosition?.size || 50}
           />
 
           {/* Если гифка не показывается (например, анимация закончилась), 
