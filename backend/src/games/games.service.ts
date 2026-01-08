@@ -868,7 +868,14 @@ export class GamesService {
       // Для обычных ходов проверяем использование каждого кубика
       const diceUsageCount = new Map<number, number>();
       for (const move of processedMoves) {
-        diceUsageCount.set(move.die, (diceUsageCount.get(move.die) || 0) + 1);
+        // Если есть steps (комбинированный ход), считаем каждый шаг отдельно
+        if ((move as any).steps && Array.isArray((move as any).steps)) {
+          (move as any).steps.forEach((step: any) => {
+            diceUsageCount.set(step.die, (diceUsageCount.get(step.die) || 0) + 1);
+          });
+        } else {
+          diceUsageCount.set(move.die, (diceUsageCount.get(move.die) || 0) + 1);
+        }
       }
       for (const [die, used] of diceUsageCount.entries()) {
         const available = diceCount.get(die) || 0;
