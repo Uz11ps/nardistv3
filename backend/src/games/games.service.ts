@@ -772,9 +772,13 @@ export class GamesService {
         currentState = engine.applyMove(currentState, move.from, move.to, move.die);
         processedMoves.push(move);
         
-        // Для дублей считаем использование кубиков
+        // Считаем использование кубиков для всех типов ходов
         if (isDoubles && doublesValue) {
+          // Для дублей считаем количество использованных кубиков
           totalDiceUsed += Math.ceil(move.die / doublesValue);
+        } else {
+          // Для обычных ходов считаем использование каждого кубика
+          totalDiceUsed += 1;
         }
       }
     } else {
@@ -915,7 +919,14 @@ export class GamesService {
       // Для обычных ходов считаем использование кубиков из processedMoves
       const diceUsageCountForRemaining = new Map<number, number>();
       for (const move of processedMoves) {
-        diceUsageCountForRemaining.set(move.die, (diceUsageCountForRemaining.get(move.die) || 0) + 1);
+        // Если есть steps, считаем каждый шаг отдельно
+        if ((move as any).steps && Array.isArray((move as any).steps)) {
+          (move as any).steps.forEach((step: any) => {
+            diceUsageCountForRemaining.set(step.die, (diceUsageCountForRemaining.get(step.die) || 0) + 1);
+          });
+        } else {
+          diceUsageCountForRemaining.set(move.die, (diceUsageCountForRemaining.get(move.die) || 0) + 1);
+        }
       }
       for (const [die, count] of diceCount.entries()) {
         const used = diceUsageCountForRemaining.get(die) || 0;
@@ -927,12 +938,12 @@ export class GamesService {
     }
     
     if (remainingDice.length === 0) {
-      // Все кубики использованы - смена хода
+      // Все кубики использованы - смена хода (для всех режимов, включая Sandbox)
       currentState.dice = [];
       currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
       currentState.movesFromHead = 0;
       currentState.movesFromPoint = {};
-      this.logger.log(`🔄 Turn switched: all dice used. New player: ${currentState.currentPlayer}`);
+      this.logger.log(`🔄 Turn switched: all dice used. New player: ${currentState.currentPlayer} (Sandbox: ${isSandbox})`);
     } else {
       // В Sandbox режиме, если кубики еще остались, НЕ переключаем ход
       if (isSandbox) {

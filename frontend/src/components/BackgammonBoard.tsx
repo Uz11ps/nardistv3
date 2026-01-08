@@ -633,6 +633,17 @@ export default function BackgammonBoard({
       if (isMySide) return -1
     }
     
+    // В Sandbox режиме проверяем зону "удаления" (мусорка) в левом нижнем углу
+    // Визуально она не отображается, но хитбокс работает для перетаскивания шашек
+    if (isSandbox) {
+      const trashSize = 120
+      const trashX = 0
+      const trashY = height - trashSize
+      if (actualX >= trashX && actualX <= trashX + trashSize && actualY >= trashY && actualY <= height) {
+        return -3 // Код для мусорки (удаления)
+      }
+    }
+    
     return null
   }, [gameState, isPlayer1, gameMode, isSandbox])
   
@@ -2358,18 +2369,19 @@ export default function BackgammonBoard({
                 if (isDoubles) {
                   // В Sandbox всегда показываем все кубики по отдельности, чтобы не путать пользователя
                   if (isSandbox) {
-                    return diceArray.map((dieValue, index) => {
-                      if (usedDiceIndices.has(index)) return null;
-                      return (
-                        <div key={index} style={{ position: 'relative' }}>
-                          <Dice3D
-                            values={[dieValue]}
-                            animating={false}
-                            diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
-                          />
-                        </div>
-                      );
-                    });
+                    // Фильтруем только неиспользованные кубики
+                    const unusedDice = diceArray.filter((_, index) => !usedDiceIndices.has(index));
+                    if (unusedDice.length === 0) return null; // Все кубики использованы
+                    
+                    return unusedDice.map((dieValue, idx) => (
+                      <div key={idx} style={{ position: 'relative' }}>
+                        <Dice3D
+                          values={[dieValue]}
+                          animating={false}
+                          diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                        />
+                      </div>
+                    ));
                   }
 
                   // Для обычных дублей показываем один кубик с множителем
