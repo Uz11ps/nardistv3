@@ -406,7 +406,11 @@ export default function Game() {
   const isPlayer1 = gameInfo?.player1Id === user?.id
   const isSandbox = gameInfo?.type === 'sandbox'
   const [sandboxMode, setSandboxMode] = useState<'setup' | 'play'>('setup')
-  const isMyTurn = (gameState?.canMove || isSandbox) && (gameStatus === 'in_progress' || isSandbox)
+  // В Sandbox режиме isMyTurn определяется по наличию кубиков (в Sandbox можно ходить за обе стороны)
+  // В обычной игре - по canMove и статусу игры
+  const isMyTurn = isSandbox 
+    ? (gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length > 0)
+    : ((gameState?.canMove || false) && (gameStatus === 'in_progress'))
   const myPlayer = isPlayer1 ? gameInfo?.player1 : gameInfo?.player2
   const opponentPlayer = isPlayer1 ? gameInfo?.player2 : gameInfo?.player1
 
@@ -902,13 +906,20 @@ export default function Game() {
         }
       }
       
-      console.log('📊 game_state received:', { diceData, formattedDice, currentPlayer: data.currentPlayer })
+      const isSandbox = data.type === 'sandbox'
+      
+      console.log('📊 game_state received:', { 
+        diceData, 
+        formattedDice, 
+        currentPlayer: data.currentPlayer,
+        isSandbox,
+        type: data.type
+      })
       
       // Проверяем, изменились ли кубики (для запуска анимации)
       // НЕ запускаем анимацию здесь, т.к. она уже запускается в dice_rolled событии
       // Это предотвращает дублирование анимации
       
-      const isSandbox = data.type === 'sandbox'
       const canMove = isSandbox ? (Array.isArray(diceData) && diceData.length > 0) : (data.currentPlayer === (data.player1Id === user?.id ? 0 : 1))
       const isMyTurnNow = canMove
       const wasMyTurn = gameState?.canMove || false
@@ -1136,6 +1147,18 @@ export default function Game() {
         p1Rolls: data.p1Rolls,
         p2Rolls: data.p2Rolls,
       };
+      
+      // Логирование для отладки Sandbox режима
+      if (isSandbox) {
+        console.log('🎮 [Sandbox move_made]', {
+          currentPlayer: data.currentPlayer,
+          dice: formattedDice,
+          canMove,
+          remainingDice: Array.isArray(diceData) ? diceData : [],
+          wasMyTurn,
+          isMyTurnNow: canMove
+        });
+      }
 
       // Если есть серверные ходы (ход бота или другого игрока), 
       // откладываем обновление gameState до завершения анимации
@@ -1869,7 +1892,7 @@ export default function Game() {
           {!isLandscape && (
             <div className="game-players-section">
               {/* Кнопки подтверждения и отмены в портретном режиме */}
-              {gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
+              {((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0) && (
                 <>
                   <button 
                     className="game-action-btn-header game-action-btn-cancel"
@@ -2057,7 +2080,7 @@ export default function Game() {
           {(gameStatus === 'in_progress' || gameStatus === 'finished' || isSandbox) && (
             <div className="board-wrapper">
               {/* Кнопки подтверждения и отмены в нижней части бара (ландшафт) */}
-              {isLandscape && gameStatus === 'in_progress' && isMyTurn && gameState?.dice && pendingMoves.length > 0 && (
+              {isLandscape && ((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0) && (
                 <>
                   <button 
                     className="game-bar-btn game-bar-btn-cancel"
