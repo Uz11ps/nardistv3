@@ -530,7 +530,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       const game = await this.gamesService.makeMove(data.gameId, userId, data.moves);
       this.logger.log(`✅ Move completed successfully, getting game state for gameId=${data.gameId}`);
       const gameState = await this.gamesService.getGameState(data.gameId);
-      this.logger.log(`✅ Emitting move_made event for gameId=${data.gameId}`);
+      this.logger.log(`✅ Emitting move_made event for gameId=${data.gameId}`, {
+        currentPlayer: gameState.currentPlayer,
+        dice: gameState.gameState?.dice,
+        type: gameState.type,
+        status: gameState.status
+      });
       this.server.to(`game:${data.gameId}`).emit('move_made', gameState);
       
       // Отправляем обновление таймера сразу после хода

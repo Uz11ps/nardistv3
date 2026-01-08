@@ -909,9 +909,13 @@ export class GamesService {
     // Calculate remaining dice after moves based on usage count
     // Для дублей учитываем totalDiceUsed (включая комбинированные ходы)
     const remainingDice: number[] = [];
+    
+    this.logger.log(`🎲 [Sandbox: ${isSandbox}] Calculating remaining dice. Initial dice: [${dice.join(', ')}], processedMoves: ${processedMoves.length}, totalDiceUsed: ${totalDiceUsed}`);
+    
     if (isDoubles && doublesValue) {
       // Для дублей используем totalDiceUsed вместо diceUsageCount
       const remaining = 4 - totalDiceUsed;
+      this.logger.log(`🎲 Doubles: remaining = 4 - ${totalDiceUsed} = ${remaining}`);
       for (let i = 0; i < remaining; i++) {
         remainingDice.push(doublesValue);
       }
@@ -928,27 +932,35 @@ export class GamesService {
           diceUsageCountForRemaining.set(move.die, (diceUsageCountForRemaining.get(move.die) || 0) + 1);
         }
       }
+      
+      this.logger.log(`🎲 Dice usage count:`, Array.from(diceUsageCountForRemaining.entries()).map(([die, count]) => `${die}: ${count}`).join(', '));
+      this.logger.log(`🎲 Available dice:`, Array.from(diceCount.entries()).map(([die, count]) => `${die}: ${count}`).join(', '));
+      
       for (const [die, count] of diceCount.entries()) {
         const used = diceUsageCountForRemaining.get(die) || 0;
         const remaining = count - used;
+        this.logger.log(`🎲 Die ${die}: used ${used}, available ${count}, remaining ${remaining}`);
         for (let i = 0; i < remaining; i++) {
           remainingDice.push(die);
         }
       }
     }
     
+    this.logger.log(`🎲 Final remaining dice: [${remainingDice.join(', ')}]`);
+    
     if (remainingDice.length === 0) {
       // Все кубики использованы - смена хода (для всех режимов, включая Sandbox)
+      const oldPlayer = currentState.currentPlayer;
       currentState.dice = [];
       currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
       currentState.movesFromHead = 0;
       currentState.movesFromPoint = {};
-      this.logger.log(`🔄 Turn switched: all dice used. New player: ${currentState.currentPlayer} (Sandbox: ${isSandbox})`);
+      this.logger.log(`🔄 Turn switched: all dice used. Old player: ${oldPlayer}, New player: ${currentState.currentPlayer} (Sandbox: ${isSandbox})`);
     } else {
       // В Sandbox режиме, если кубики еще остались, НЕ переключаем ход
       if (isSandbox) {
         currentState.dice = remainingDice;
-        this.logger.log(`🟡 Sandbox: keeping same player because dice remain [${remainingDice.join(', ')}]`);
+        this.logger.log(`🟡 Sandbox: keeping same player ${currentState.currentPlayer} because dice remain [${remainingDice.join(', ')}]`);
       } else {
         // ОБЯЗАТЕЛЬНАЯ проверка: есть ли валидные ходы с оставшимися кубиками после применения всех ходов
         let hasValidMoves = false;

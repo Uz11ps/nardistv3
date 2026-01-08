@@ -1066,17 +1066,19 @@ export default function Game() {
       const remainingDice = Array.isArray(diceData) ? diceData : []
       const isP1Turn = data.currentPlayer === (isP1 ? 0 : 1)
       const hasRemainingDice = remainingDice.length > 0
-      // canMove = это наш ход И есть кубики для хода (в sandbox можно ходить всегда если есть кубики)
+      // В Sandbox режиме canMove определяется только наличием кубиков (можно ходить за обе стороны)
+      // В обычной игре - это наш ход И есть кубики
       const canMove = isSandbox ? (remainingDice.length > 0) : (isP1Turn && hasRemainingDice)
       
       console.log('🎯 [move_made] canMove calculation:', {
-        isMyTurn,
+        isSandbox: data.type === 'sandbox' || gameInfo?.type === 'sandbox',
         hasRemainingDice,
         remainingDice,
         canMove,
         currentPlayer: data.currentPlayer,
         isP1,
-        diceData
+        diceData,
+        previousCurrentPlayer: gameState?.currentPlayer
       })
       
       // ВАЖНО: Очищаем pendingMoves только если ход был успешно применен
@@ -1149,14 +1151,17 @@ export default function Game() {
       };
       
       // Логирование для отладки Sandbox режима
-      if (isSandbox) {
+      const isSandboxMove = data.type === 'sandbox' || gameInfo?.type === 'sandbox';
+      if (isSandboxMove) {
         console.log('🎮 [Sandbox move_made]', {
           currentPlayer: data.currentPlayer,
+          previousCurrentPlayer: gameState?.currentPlayer,
           dice: formattedDice,
           canMove,
           remainingDice: Array.isArray(diceData) ? diceData : [],
           wasMyTurn,
-          isMyTurnNow: canMove
+          isMyTurnNow: canMove,
+          turnChanged: gameState?.currentPlayer !== data.currentPlayer
         });
       }
 
