@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { apiClient } from '../api/client'
 import './SandboxControls.css'
 
@@ -115,16 +115,54 @@ export default function SandboxControls({
   }, [mode, selectedMoveIndex, gameState?.dice, showDiceModal, diceQueue, currentPlayer])
 
   // Chapters logic
+  const [initialChapterCreated, setInitialChapterCreated] = useState(false)
+  const initialChapterCreatedRef = useRef(false)
+  
   useEffect(() => {
     loadChapters()
     loadMoves()
     
     // Listen for history updates
-    const handleHistoryUpdate = () => {
-      loadMoves()
+    const handleHistoryUpdate = async () => {
+      const moves = await loadMoves()
+      
+      // Автоматически создаем начальную главу при первом ходе
+      if (!initialChapterCreatedRef.current && mode === 'play' && moves && moves.length > 0) {
+        try {
+          console.log('📖 [SandboxControls] Auto-creating initial chapter after first move');
+          
+          // Создаем начальную главу с текущим состоянием доски
+          const initialGameState = {
+            points: gameState?.points || Array(24).fill(0),
+            bar: gameState?.bar || { white: 0, black: 0 },
+            bearOff: gameState?.bearOff || { white: 0, black: 0 },
+            currentPlayer: gameState?.currentPlayer || 0,
+            dice: null,
+            canMove: false
+          };
+          
+          await apiClient.post('/games/sandbox/chapters', {
+            name: 'Начальная позиция',
+            gameState: initialGameState
+          });
+          
+          initialChapterCreatedRef.current = true;
+          setInitialChapterCreated(true);
+          loadChapters();
+          console.log('✅ [SandboxControls] Initial chapter created');
+        } catch (e) {
+          console.error('Failed to auto-create initial chapter', e);
+        }
+      }
     }
     window.addEventListener('sandbox-history-updated', handleHistoryUpdate)
     return () => window.removeEventListener('sandbox-history-updated', handleHistoryUpdate)
+  }, [gameId, mode])
+  
+  // Сбрасываем флаг при смене игры
+  useEffect(() => {
+    initialChapterCreatedRef.current = false
+    setInitialChapterCreated(false)
   }, [gameId])
 
   const loadChapters = async () => {
@@ -137,12 +175,14 @@ export default function SandboxControls({
   }
 
   const loadMoves = async () => {
-    if (!gameId) return
+    if (!gameId) return null
     try {
       const res = await apiClient.get(`/games/${gameId}/moves`)
       setMoves(res.data)
+      return res.data
     } catch (e) {
       console.error('Failed to load moves', e)
+      return null
     }
   }
 

@@ -1364,6 +1364,8 @@ export default function Game() {
           : []
         
         const hasDice = Array.isArray(data.gameState.dice) && data.gameState.dice.length > 0
+        const previousPlayer = gameState?.currentPlayer
+        const newPlayer = data.currentPlayer !== undefined ? data.currentPlayer : gameState?.currentPlayer
         
         setGameState(prev => ({
           ...prev,
@@ -1371,9 +1373,19 @@ export default function Game() {
           points,
           bar,
           bearOff,
-          currentPlayer: data.currentPlayer !== undefined ? data.currentPlayer : prev?.currentPlayer,
+          currentPlayer: newPlayer,
           canMove: hasDice
         }))
+        
+        // Если произошла смена хода и кубиков нет - триггерим событие для показа модалки
+        if (previousPlayer !== undefined && newPlayer !== undefined && previousPlayer !== newPlayer && !hasDice) {
+          console.log('🔄 [Sandbox] Turn changed in sandbox_board_updated, triggering dice modal check');
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('sandbox-turn-changed', { 
+              detail: { currentPlayer: newPlayer } 
+            }));
+          }, 200);
+        }
       }
     })
 

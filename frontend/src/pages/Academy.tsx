@@ -61,6 +61,14 @@ interface MaterialDetail extends Course {
   quizPassedAt?: string | null
 }
 
+interface SandboxChapter {
+  id: string
+  name: string
+  gameState: any
+  createdAt: string
+  updatedAt: string
+}
+
 export default function Academy() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -83,9 +91,51 @@ export default function Academy() {
   const [publishing, setPublishing] = useState(false)
   const [materialDetail, setMaterialDetail] = useState<MaterialDetail | null>(null)
   const [hidePurchased, setHidePurchased] = useState(false)
+  const [sandboxChapters, setSandboxChapters] = useState<SandboxChapter[]>([])
   
   const isPublishPage = location.pathname === '/academy/publish'
   const isMaterialPage = !!materialId
+  
+  // Загружаем главы свободного стола
+  useEffect(() => {
+    if (activeTab === 'free-table') {
+      loadSandboxChapters()
+    }
+  }, [activeTab])
+  
+  const loadSandboxChapters = async () => {
+    try {
+      const res = await apiClient.get('/games/sandbox/chapters')
+      setSandboxChapters(res.data || [])
+    } catch (e) {
+      console.error('Failed to load sandbox chapters', e)
+    }
+  }
+  
+  const handleLoadChapter = async (chapter: SandboxChapter) => {
+    try {
+      const response = await apiClient.post('/games/create-sandbox', { 
+        mode: chapter.gameState?.mode || 'long' 
+      })
+      const gameId = response.data.id
+      
+      // Загружаем состояние главы в созданный стол
+      await apiClient.post(`/games/${gameId}/sandbox/setup-board`, chapter.gameState)
+      navigate(`/game/${gameId}`)
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка при загрузке главы')
+    }
+  }
+  
+  const handleDeleteChapter = async (id: string) => {
+    if (!confirm('Удалить эту главу?')) return
+    try {
+      await apiClient.delete(`/games/sandbox/chapters/${id}`)
+      loadSandboxChapters()
+    } catch (e) {
+      alert('Ошибка при удалении')
+    }
+  }
 
   useEffect(() => {
     if (isMaterialPage && materialId) {
@@ -520,6 +570,45 @@ export default function Academy() {
                 </div>
               </div>
             </div>
+            
+            {sandboxChapters.length > 0 && (
+              <div className="academy-card sandbox-chapters-card">
+                <div className="academy-card-content">
+                  <h3 className="academy-card-title">Сохраненные главы</h3>
+                  <div className="sandbox-chapters-list">
+                    {sandboxChapters.map(chapter => (
+                      <div key={chapter.id} className="sandbox-chapter-item">
+                        <div className="sandbox-chapter-info">
+                          <div className="sandbox-chapter-name">{chapter.name}</div>
+                          <div className="sandbox-chapter-date">
+                            {new Date(chapter.createdAt).toLocaleDateString('ru-RU', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </div>
+                        </div>
+                        <div className="sandbox-chapter-actions">
+                          <button 
+                            className="academy-card-button academy-card-button-primary"
+                            onClick={() => handleLoadChapter(chapter)}
+                          >
+                            Загрузить
+                          </button>
+                          <button 
+                            className="sandbox-chapter-delete"
+                            onClick={() => handleDeleteChapter(chapter.id)}
+                            title="Удалить"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
