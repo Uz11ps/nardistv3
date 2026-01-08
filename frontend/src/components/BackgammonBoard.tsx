@@ -531,7 +531,8 @@ export default function BackgammonBoard({
     // Используем безопасный отступ 150px от краев, чтобы точно попасть на поле.
 
     if (currentPlayer === 0) {
-      // Player1 (белые) - Внизу Справа
+      // Player1 (белые) - Внизу Справа (Дом белых, пункты 1-6)
+      // Возвращаем стандартную позицию для белых
       xPos = width - 150
       yPos = height - 150
       
@@ -541,19 +542,26 @@ export default function BackgammonBoard({
       
       console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos })
     } else {
-      // Player2 (черные, соперник)
-      // Пользователь просит "на другой доске".
-      // Было: Вверху Слева.
-      // Станет: Вверху Справа (симметрично по вертикали, но на правой половине)
+      // Player2 (черные, соперник) - Вверху Слева (Дом черных, пункт 13)
+      // Размещаем точно над пунктом 13 в "доске для черных" (левая верхняя четверть)
       
-      xPos = width - 150
-      yPos = 80
+      const bearOffWidth = width * 0.06
+      const boardWidth = width - (bearOffWidth * 2)
+      const barWidth = boardWidth * 0.08
+      const halfBoardWidth = (boardWidth - barWidth) / 2
+      const pointWidth = halfBoardWidth / 6
+      
+      // Центр пункта 13 находится сразу после зоны выброса (bearOffWidth) + половина ширины пункта
+      // Добавляем небольшой отступ, чтобы кубики были по центру колонки
+      xPos = bearOffWidth + (pointWidth / 2) + 15
+      
+      yPos = 80 // Верхний край
       
       // Ограничения
-      xPos = Math.min(xPos, width - 60)
+      xPos = Math.max(xPos, 40)
       yPos = Math.min(yPos, 150)
       
-      console.log('🎲 Player2 dice position (TOP-RIGHT):', { xPos, yPos })
+      console.log('🎲 Player2 dice position (TOP-LEFT POINT 13):', { xPos, yPos, pointWidth })
     }
 
     console.log('🎲 Dice position updated:', { xPos, yPos, size: diceSize, currentPlayer, width, height })
