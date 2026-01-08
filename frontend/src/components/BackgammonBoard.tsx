@@ -539,27 +539,29 @@ export default function BackgammonBoard({
     } else {
       // Player2 (черные) ходит - кубики рядом с позицией 13 (верхний левый угол)
       // ВАЖНО: Размещаем кубики в верхнем левом углу
-      // Уменьшаем отступ до минимума, чтобы максимально прижать к левому краю (зоне выброса)
+      // Учитываем, что контейнер центрируется (translate -50%), поэтому добавляем половину ширины
       
       const bearOffWidth = width * 0.06
       
-      // ЖЕСТКАЯ ПРИВЯЗКА К ЛЕВОМУ КРАЮ:
-      // bearOffWidth (начало доски) + 5px
-      xPos = bearOffWidth + 5
+      // Ширина контейнера кубиков = diceSize * 2 + 20
+      // Нам нужно, чтобы левый край был у bearOffWidth + 5px
+      // xPos (центр) = bearOffWidth + 5px + половина ширины контейнера
+      xPos = bearOffWidth + 5 + (diceSize + 10)
       
       // Позиция по Y - фиксированный отступ сверху
       yPos = 80 
       
       // Мягкое ограничение
-      xPos = Math.max(xPos, 20)
+      xPos = Math.max(xPos, diceSize + 30) // Минимальный отступ слева чтобы не уехать за экран
       yPos = Math.min(yPos, 150)
       
-      console.log('🎲 Player2 dice position (FIXED LEFT V4):', { 
+      console.log('🎲 Player2 dice position (FIXED LEFT V5 - CENTERED):', { 
         bearOffWidth,
         xPos, 
         yPos,
         width, 
-        height
+        height,
+        diceSize
       })
     }
 
