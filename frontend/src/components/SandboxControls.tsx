@@ -51,22 +51,34 @@ export default function SandboxControls({
   // Auto-show dice modal in play mode if no dice
   useEffect(() => {
     // В Sandbox режиме, если мы в режиме "play" и кубиков нет - показываем окно выбора
-    const hasDice = gameState?.dice && (Array.isArray(gameState.dice) ? gameState.dice.length > 0 : (gameState.dice.die1 !== undefined));
+    const dice = gameState?.dice;
+    const hasDice = !!dice && (Array.isArray(dice) ? dice.length > 0 : (dice.die1 !== undefined && dice.die1 !== null));
     
     // Показываем модалку только если мы в режиме игры, нет кубиков, модалка еще не открыта 
     // и мы НЕ просматриваем историю (selectedMoveIndex === null)
     if (mode === 'play' && !hasDice && !showDiceModal && selectedMoveIndex === null) {
       console.log('🎲 [SandboxControls] Auto-showing dice modal, current player:', currentPlayer);
-      if (diceQueue.length > 0) {
-        // Use next dice from queue
-        const nextDice = diceQueue[0]
-        setDiceQueue(prev => prev.slice(1))
-        applyDice(nextDice[0], nextDice[1])
-      } else {
-        // При автоматическом открытии модалки устанавливаем таргет на текущего игрока
-        setDiceTargetPlayer(null)
-        setShowDiceModal(true)
-      }
+      
+      const timer = setTimeout(() => {
+        // Повторная проверка через 100мс, чтобы избежать мерцания при быстрой смене состояния
+        const currentDice = gameState?.dice;
+        const stillNoDice = !currentDice || (Array.isArray(currentDice) ? currentDice.length === 0 : (currentDice.die1 === undefined || currentDice.die1 === null));
+        
+        if (stillNoDice) {
+          if (diceQueue.length > 0) {
+            // Use next dice from queue
+            const nextDice = diceQueue[0]
+            setDiceQueue(prev => prev.slice(1))
+            applyDice(nextDice[0], nextDice[1])
+          } else {
+            // При автоматическом открытии модалки устанавливаем таргет на текущего игрока
+            setDiceTargetPlayer(null)
+            setShowDiceModal(true)
+          }
+        }
+      }, 150)
+      
+      return () => clearTimeout(timer)
     }
   }, [mode, gameState?.dice, diceQueue, showDiceModal, currentPlayer, selectedMoveIndex])
 

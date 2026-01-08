@@ -631,6 +631,13 @@ export class GamesService {
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     const dice = game.gameState.dice;
     
+    // В Sandbox режиме расслабляем некоторые правила для удобства тестирования
+    const isSandbox = game.type === GameType.SANDBOX;
+    if (isSandbox) {
+      game.gameState.movesFromHead = 0;
+      game.gameState.movesFromPoint = {};
+    }
+
     // Определяем, является ли этот ход первым в игре для этого режима (Long)
     // Правило Минспорта 20.3: только второй игрок (черные) при первом ходе с дублями 3:3, 4:4 или 6:6 может снять 2 шашки с головы
     const isFirstMoveOfGame = game.mode === GameMode.LONG && (game.moves || []).length < 2;
@@ -1203,6 +1210,12 @@ export class GamesService {
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     let state = game.gameState;
     
+    // В Sandbox режиме расслабляем некоторые правила
+    const isSandbox = game.type === GameType.SANDBOX;
+    if (isSandbox && state) {
+      state = { ...state, movesFromHead: 0, movesFromPoint: {} };
+    }
+
     // ВАЖНО: Синхронизируем currentPlayer из сущности Game в gameState
     // Это критично для корректной работы движка в sandbox режиме
     if (state && state.currentPlayer !== game.currentPlayer) {
