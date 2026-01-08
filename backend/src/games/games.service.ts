@@ -2545,8 +2545,18 @@ export class GamesService {
       const sum1 = p1FirstRoll[0] + p1FirstRoll[1];
       const sum2 = p2FirstRoll[0] + p2FirstRoll[1];
       
-      // Если суммы равны, выбираем player1
-      const firstPlayer = sum1 >= sum2 ? 0 : 1;
+      // ВАЖНО: В играх с ботом игрок всегда играет за белых (player1) и ходит первым
+      // Для обычных игр определяем первого ходящего по сумме кубиков
+      let firstPlayer: number;
+      if (game.type === GameType.VS_BOT && game.player2Id === null) {
+        // Игра с ботом - игрок всегда ходит первым
+        firstPlayer = 0;
+        this.logger.log(`🤖 Bot game: игрок всегда ходит первым (белые)`);
+      } else {
+        // Обычная игра - определяем по сумме кубиков
+        // Если суммы равны, выбираем player1
+        firstPlayer = sum1 >= sum2 ? 0 : 1;
+      }
       
       game.status = GameStatus.IN_PROGRESS;
       game.currentPlayer = firstPlayer;
@@ -2583,6 +2593,10 @@ export class GamesService {
         this.gamesGateway.server?.to(`game:${gameId}`).emit('game_state', gameStateAfterDice);
         
         this.logger.log(`✅ Автоматический бросок кубиков выполнен для игры ${gameId}, первый игрок: ${firstPlayerId}`);
+        
+        // ВАЖНО: В играх с ботом первый ход всегда у игрока (белые), поэтому не нужно запускать ход бота
+        // Бот будет ходить автоматически после хода игрока через handleBotTurnIfNeeded в gateway
+        
         return gameWithDice;
       } catch (error) {
         this.logger.error(`Ошибка при автоматическом броске кубиков для игры ${gameId}:`, error);
