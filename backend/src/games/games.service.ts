@@ -1369,6 +1369,107 @@ export class GamesService {
       }
     }
     
+    // ВАЖНО: Для длинных нард добавляем возможность использовать сумму двух разных кубиков
+    // Например, при выпадении 4 и 6 можно использовать сумму 10 для одного хода
+    // Это особенно важно для ходов с головы
+    if (gameMode === GameMode.LONG && availableDice.length >= 2 && !isDoublesForCombined) {
+      // Генерируем все возможные суммы двух разных кубиков
+      const uniqueDice = Array.from(new Set(availableDice));
+      for (let i = 0; i < uniqueDice.length; i++) {
+        for (let j = i + 1; j < uniqueDice.length; j++) {
+          const die1 = uniqueDice[i];
+          const die2 = uniqueDice[j];
+          const sumDie = die1 + die2;
+          
+          // Получаем все точки, с которых можно ходить
+          const fromPoints = new Set<number>();
+          for (const move of flatMoves) {
+            fromPoints.add(move.from);
+          }
+          
+          // Также проверяем все точки на доске для этого игрока
+          const player = state.currentPlayer;
+          for (let from = 0; from < 24; from++) {
+            const pointValue = state.points[from];
+            const hasMyCheckers = player === 0 ? pointValue > 0 : pointValue < 0;
+            if (hasMyCheckers) {
+              fromPoints.add(from);
+            }
+          }
+          
+          // Для каждой точки проверяем возможность хода на сумму кубиков
+          for (const fromPoint of fromPoints) {
+            // Вычисляем целевую точку для суммы кубиков
+            let toPoint: number;
+            if (player === 0) {
+              // Белые идут по часовой стрелке (увеличивая индекс)
+              const distanceTraveled = (fromPoint - 0 + 24) % 24;
+              if (distanceTraveled + sumDie >= 24) {
+                // Вынос
+                toPoint = -1;
+              } else {
+                toPoint = (fromPoint + sumDie) % 24;
+              }
+            } else {
+              // Черные идут по часовой стрелке (увеличивая индекс)
+              const distanceTraveled = (fromPoint - 12 + 24) % 24;
+              if (distanceTraveled + sumDie >= 24) {
+                // Вынос
+                toPoint = -1;
+              } else {
+                toPoint = (fromPoint + sumDie) % 24;
+              }
+            }
+            
+            // Проверяем валидность хода с суммой кубиков
+            const isValid = (engine as any).validateMove(state, fromPoint, toPoint, sumDie, isFirstMoveOfGame);
+            
+            if (isValid) {
+              // Генерируем steps для комбинированного хода
+              const steps: Array<{ from: number; to: number; die: number }> = [];
+              let currentFrom = fromPoint;
+              
+              // Первый шаг на die1
+              let stepTo1: number;
+              if (player === 0) {
+                const dist1 = (currentFrom - 0 + 24) % 24;
+                stepTo1 = (dist1 + die1) >= 24 ? -1 : (currentFrom + die1) % 24;
+              } else {
+                const dist1 = (currentFrom - 12 + 24) % 24;
+                stepTo1 = (dist1 + die1) >= 24 ? -1 : (currentFrom + die1) % 24;
+              }
+              steps.push({ from: currentFrom, to: stepTo1, die: die1 });
+              
+              // Второй шаг на die2 (если первый шаг не был выносом)
+              if (stepTo1 !== -1 && stepTo1 < 24) {
+                currentFrom = stepTo1;
+                let stepTo2: number;
+                if (player === 0) {
+                  const dist2 = (currentFrom - 0 + 24) % 24;
+                  stepTo2 = (dist2 + die2) >= 24 ? -1 : (currentFrom + die2) % 24;
+                } else {
+                  const dist2 = (currentFrom - 12 + 24) % 24;
+                  stepTo2 = (dist2 + die2) >= 24 ? -1 : (currentFrom + die2) % 24;
+                }
+                steps.push({ from: currentFrom, to: stepTo2, die: die2 });
+              }
+              
+              const key = `${fromPoint}-${toPoint}-${sumDie}`;
+              if (!seen.has(key)) {
+                flatMoves.push({
+                  from: fromPoint,
+                  to: toPoint,
+                  die: sumDie,
+                  steps: steps
+                });
+                seen.add(key);
+              }
+            }
+          }
+        }
+      }
+    }
+    
     // ВАЖНО: Для дублей добавляем комбинированные ходы (одна шашка на все 4 кубика)
     // Например, при дубле 3/3: можно походить на 3, 6, 9, 12 одной шашкой
     if (isDoublesForCombined && doublesValue) {
