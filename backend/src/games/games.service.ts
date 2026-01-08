@@ -960,6 +960,11 @@ export class GamesService {
     
     this.logger.log(`Saving move: gameId=${finalGameId}, playerId=${playerId}, moveNumber=${moveNumber}, moves count=${finalMovesToSave.length}`);
     
+    // Вычисляем время хода для сохранения в историю
+    const now = new Date();
+    const moveStartTime = game.lastMoveAt || game.createdAt;
+    const moveTimeMs = now.getTime() - moveStartTime.getTime();
+
     // Используем репозиторий вместо raw SQL для надежности
     try {
       const newMove = this.movesRepository.create({
@@ -1052,11 +1057,6 @@ export class GamesService {
     // Используем глубокую копию, чтобы избежать проблем с ссылками
     updatedGame.gameState = JSON.parse(JSON.stringify(currentState));
     updatedGame.currentPlayer = currentState.currentPlayer;
-    
-    // Вычисляем время, затраченное на ход (ДО обновления lastMoveAt)
-    const now = new Date();
-    const moveStartTime = game.lastMoveAt || game.createdAt;
-    const moveTimeMs = now.getTime() - moveStartTime.getTime();
     
     // Проверяем, произошла ли смена хода
     const turnChanged = oldCurrentPlayer !== currentState.currentPlayer;
