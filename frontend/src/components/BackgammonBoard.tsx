@@ -2340,7 +2340,7 @@ export default function BackgammonBoard({
       )}
       
       {/* Кубики - показываем на стороне игрока, у которого ход, закрепляем после анимации внутри доски */}
-      {diceArray && diceArray.length > 0 && dice3DPosition && usedDiceIndices.size < diceArray.length && (
+      {diceArray && diceArray.length > 0 && usedDiceIndices.size < diceArray.length && (
         <div
           style={{
             position: 'absolute',
@@ -2348,12 +2348,16 @@ export default function BackgammonBoard({
             // После анимации переносим кубики в угол (внизу справа для player1, вверху слева для player2)
             left: diceAnimating 
               ? '50%'  // Во время анимации - в центре
-              : `${dice3DPosition.x}px`, // После анимации - в углу
+              : dice3DPosition 
+                ? `${dice3DPosition.x}px` // После анимации - в углу
+                : '50%', // Fallback на центр, если позиция еще не вычислена
             top: diceAnimating 
               ? '50%'  // Во время анимации - в центре
-              : `${dice3DPosition.y}px`, // После анимации - в углу
-            width: `${dice3DPosition.size * 7.5}px`,
-            height: `${dice3DPosition.size * 4.5}px`,
+              : dice3DPosition 
+                ? `${dice3DPosition.y}px` // После анимации - в углу
+                : '50%', // Fallback на центр, если позиция еще не вычислена
+            width: dice3DPosition ? `${dice3DPosition.size * 7.5}px` : '200px',
+            height: dice3DPosition ? `${dice3DPosition.size * 4.5}px` : '120px',
             transform: 'translate(-50%, -50%)', // Центрируем кубики относительно их позиции
             pointerEvents: 'none',
             display: 'flex',
