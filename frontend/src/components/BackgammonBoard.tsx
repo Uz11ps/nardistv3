@@ -2396,8 +2396,6 @@ export default function BackgammonBoard({
             backgroundColor: 'transparent',
             // Убеждаемся, что элемент виден
             visibility: 'visible',
-            // Убеждаемся, что элемент не скрыт
-            display: diceArray && diceArray.length > 0 ? 'flex' : 'none',
           }}
         >
           {/* Показываем гифку, если она доступна для данного состояния кубиков */}
