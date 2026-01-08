@@ -525,46 +525,34 @@ export default function BackgammonBoard({
     // Определяем, какой игрок сейчас ходит и где должны быть его кубики
     // Белые шашки (player1) находятся внизу, черные (player2) - вверху
     // Кубики должны быть в противоположном углу от шашек соперника
+    // ЛОГИКА С УЧЕТОМ ПОВОРОТА НА 180 ГРАДУСОВ (или инверсии)
+    // Пользователь сообщает, что x=15px отображается СПРАВА.
+    // Значит:
+    // Контейнер 0px (Left) -> Визуально ПРАВО
+    // Контейнер Width (Right) -> Визуально ЛЕВО
+    // Контейнер 0px (Top) -> Визуально НИЗ
+    // Контейнер Height (Bottom) -> Визуально ВЕРХ
+    
+    // Мы хотим, чтобы кубики ВСЕГДА были Визуально СЛЕВА.
+    // Значит xPos должен быть ~Width.
+    const leftVisualX = width - (diceSize + 40); 
+
     if (currentPlayer === 0) {
-      // Player1 (белые) ходит
-      // ЭКСПЕРИМЕНТ: Перемещаем кубики ВЛЕВО ВНИЗ, так как пользователь жалуется, что "ничего не меняется" (возможно он видит Player 1)
+      // Player1 (белые)
+      // Визуально: Внизу Слева
+      // Контейнер: Вверху Справа
+      xPos = leftVisualX
+      yPos = 80 // Контейнер Верх -> Визуально Низ
       
-      // Используем ту же логику "прижатия к левому краю"
-      // xPos (центр) = 15px + половина ширины контейнера
-      xPos = 15 + (diceSize + 10)
-      
-      // Позиция по Y - внизу
-      yPos = height - 150
-      
-      // Мягкое ограничение
-      yPos = Math.max(yPos, height / 2 + 50)
-      
-      console.log('🎲 Player1 dice position (MOVED TO LEFT-BOTTOM):', { xPos, yPos })
+      console.log('🎲 Player1 dice position (ROTATED LOGIC):', { xPos, yPos })
     } else {
-      // Player2 (черные) ходит - кубики рядом с позицией 13 (верхний левый угол)
-      // ВАЖНО: Размещаем кубики в верхнем левом углу
-      // Игнорируем bearOffWidth и ставим жестко от левого края экрана
+      // Player2 (черные, соперник)
+      // Визуально: Вверху Слева
+      // Контейнер: Внизу Справа
+      xPos = leftVisualX
+      yPos = height - 120 // Контейнер Низ -> Визуально Верх
       
-      // Нам нужно, чтобы левый край контейнера был в 15px от края экрана
-      // xPos (центр) = 15px + половина ширины контейнера
-      // Ширина контейнера = diceSize * 2 + 20
-      // Половина ширины = diceSize + 10
-      
-      xPos = 15 + (diceSize + 10)
-      
-      // Позиция по Y - фиксированный отступ сверху
-      yPos = 80 
-      
-      // Мягкое ограничение
-      yPos = Math.min(yPos, 150)
-      
-      console.log('🎲 Player2 dice position (HARD LEFT 15px):', { 
-        xPos, 
-        yPos,
-        width, 
-        height,
-        diceSize
-      })
+      console.log('🎲 Player2 dice position (ROTATED LOGIC):', { xPos, yPos })
     }
 
     console.log('🎲 Dice position updated:', { xPos, yPos, size: diceSize, currentPlayer, width, height })
