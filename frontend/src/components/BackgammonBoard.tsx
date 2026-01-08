@@ -572,69 +572,6 @@ export default function BackgammonBoard({
     }
   }, [currentPlayer, updateDicePosition])
   
-  // Вспомогательная функция для получения координат точки
-  const getPointCoordinates = useCallback((pointIndex: number, canvas: HTMLCanvasElement) => {
-    const width = canvas.width
-    const height = canvas.height
-    
-    // Параметры области выноса (Контейнеры)
-    const bearOffWidth = width * 0.06
-    const boardWidth = width - (bearOffWidth * 2)
-    const boardStartX = bearOffWidth
-    const boardEndX = width - bearOffWidth
-    
-    // Центральная полоса (бар)
-    const barWidth = boardWidth * 0.08
-    const barX = boardStartX + (boardWidth - barWidth) / 2
-    
-    // Параметры для точек
-    const halfBoardWidth = (boardWidth - barWidth) / 2
-    const pointWidth = halfBoardWidth / 6
-    const pointHeight = height * 0.45
-    
-    const isTopRow = pointIndex < 12
-    
-    let x = 0
-    let pointNumber = 0
-    
-    if (isTopRow) {
-      pointNumber = 24 - pointIndex
-      const isRightSide = pointIndex < 6
-      
-      if (isRightSide) {
-        const pointInHalf = pointIndex
-        x = boardEndX - (pointInHalf * pointWidth + pointWidth / 2)
-      } else {
-        const pointInHalf = pointIndex - 6
-        x = barX - (pointInHalf * pointWidth + pointWidth / 2)
-      }
-    } else {
-      pointNumber = 12 - (pointIndex - 12)
-      const isLeftSide = pointIndex < 18
-      
-      if (isLeftSide) {
-        const pointInHalf = pointIndex - 12
-        x = boardStartX + (pointInHalf * pointWidth + pointWidth / 2)
-      } else {
-        const pointInHalf = pointIndex - 18
-        x = barX + barWidth + (pointInHalf * pointWidth + pointWidth / 2)
-      }
-    }
-    
-    let y = isTopRow ? 0 : height
-    
-    // Для player2 инвертируем координаты точек, так как доска инвертирована на 180 градусов
-    let finalIsTopRow = isTopRow
-    if (!isPlayer1) {
-      x = width - x
-      y = height - y
-      // Инвертируем isTopRow для player2, так как координаты инвертированы
-      finalIsTopRow = !isTopRow
-    }
-    
-    return { x, y, isTopRow: finalIsTopRow, pointWidth, pointHeight, pointNumber }
-  }, [isPlayer1])
-  
   // Функция для определения точки по координатам
   const getPointAtPosition = useCallback((x: number, y: number, canvas: HTMLCanvasElement): number | null => {
     const width = canvas.width
