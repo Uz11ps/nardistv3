@@ -775,97 +775,96 @@
   filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
 }
 
-@media (max-width: 400px) {
+/* Адаптация под размер экрана */
+@media (max-width: 480px) {
   .home-header-v3 {
-    padding: 40px 16px 10px;
+    padding: calc(40px + env(safe-area-inset-top)) 16px 10px;
   }
   
   .home-avatar-v3 {
-    width: 56px;
-    height: 56px;
+    width: clamp(48px, 12vw, 64px);
+    height: clamp(48px, 12vw, 64px);
   }
   
   .home-username-v3 {
-    font-size: 20px;
+    font-size: clamp(18px, 5vw, 24px);
   }
   
   .home-central-logo-circle-v3 {
-    width: 220px;
-    height: 220px;
+    width: clamp(180px, 50vw, 260px);
+    height: clamp(180px, 50vw, 260px);
   }
   
   .home-central-logo-v3 {
-    width: 160px;
+    width: clamp(140px, 40vw, 200px);
   }
   
   .home-stats-grid-v3 {
-    padding: 16px;
-    gap: 6px;
+    padding: clamp(12px, 3vw, 20px);
+    gap: clamp(4px, 1vw, 8px);
   }
   
   .home-stat-card-v3 {
-    padding: 10px 4px;
+    padding: clamp(8px, 2vw, 12px) clamp(4px, 1vw, 8px);
   }
   
   .home-stat-value-v3 {
-    font-size: 14px;
-  }
-}
-
-/* Улучшенная адаптация для всех размеров экранов */
-@media (max-width: 768px) {
-  .home-stats-grid-v3 {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    padding: 12px;
-  }
-  
-  .home-stat-card-v3 {
-    padding: 12px 8px;
+    font-size: clamp(12px, 3vw, 16px);
   }
   
   .home-stat-label-v3 {
-    font-size: 12px;
+    font-size: clamp(10px, 2.5vw, 12px);
   }
-  
-  .home-stat-value-v3 {
-    font-size: 16px;
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .home-header-v3 {
+    padding: calc(50px + env(safe-area-inset-top)) 20px 10px;
   }
   
   .home-central-logo-circle-v3 {
-    width: 240px;
-    height: 240px;
+    width: clamp(240px, 35vw, 260px);
+    height: clamp(240px, 35vw, 260px);
   }
   
   .home-central-logo-v3 {
-    width: 180px;
+    width: clamp(180px, 28vw, 200px);
   }
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
-  .home-stats-grid-v3 {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+@media (min-width: 769px) {
+  .home-container-v3 {
+    max-width: 600px;
+    margin: 0 auto;
   }
   
-  .home-stat-card-v3 {
-    padding: 14px 10px;
+  .home-header-v3 {
+    padding: calc(50px + env(safe-area-inset-top)) 20px 10px;
+    max-width: 600px;
+    margin: 0 auto;
   }
-}
-
-@media (min-width: 1025px) {
-  .home-container-v3 {
-    max-width: 1200px;
+  
+  .home-content-v3 {
+    max-width: 600px;
     margin: 0 auto;
   }
   
   .home-stats-grid-v3 {
-    max-width: 800px;
+    max-width: 600px;
     margin: 0 auto;
   }
   
   .home-central-logo-container-v3 {
-    max-width: 400px;
+    max-width: 600px;
     margin: 0 auto;
+  }
+  
+  .home-central-logo-circle-v3 {
+    width: 260px;
+    height: 260px;
+  }
+  
+  .home-central-logo-v3 {
+    width: 200px;
   }
 }

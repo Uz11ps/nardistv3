@@ -54,6 +54,8 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 .city-card-v3 {
@@ -66,6 +68,24 @@
   padding: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  max-width: 100%;
+}
+
+@media (min-width: 768px) {
+  .city-grid-v3 {
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .city-grid-v3 {
+    max-width: 100%;
+    gap: 10px;
+  }
+  
+  .city-card-v3 {
+    padding: 10px;
+  }
 }
 
 .city-card-v3.locked {
@@ -159,23 +179,6 @@
   display: flex;
   justify-content: space-between;
   color: #FFF;
-}
-
-/* Стили для кубиков в модальном окне */
-.city-modal-stat .value {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.city-modal-footer button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  white-space: normal;
 }
 
 .city-modal-stat .label {

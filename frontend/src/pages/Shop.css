@@ -9,9 +9,59 @@
 /* Tabs are handled by PageLayout */
 
 .shop-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
+}
+
+/* Для подписки используем обычный layout */
+.shop-subscription-card {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 480px) {
+  .shop-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .shop-list:has(.shop-subscription-card) {
+    display: flex;
+  }
+  
+  .shop-nar-coin-card {
+    padding: 12px;
+  }
+  
+  .shop-nar-coin-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .shop-nar-coin-amount {
+    font-size: 16px;
+  }
+  
+  .shop-nar-coin-price {
+    font-size: 11px;
+  }
+  
+  .shop-buy-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 769px) {
+  .shop-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .shop-list {
+    max-width: 800px;
+    margin: 0 auto;
+  }
 }
 
 .shop-empty {
@@ -22,13 +72,19 @@
   padding: 40px 20px;
 }
 
-/* NAR-coin карточки */
+/* NAR-coin карточки - квадратные блоки */
 .shop-nar-coin-card {
+  aspect-ratio: 1;
   padding: 16px;
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
   border-radius: 12px;
   box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
   transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 0;
 }
 
 .shop-nar-coin-card:hover {
@@ -38,78 +94,63 @@
 
 .shop-nar-coin-content {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
 .shop-nar-coin-info {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex: 1;
+  justify-content: center;
+}
+
+.shop-nar-coin-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
 }
 
 .shop-nar-coin-icon-img {
-  width: 80px;
-  height: 80px;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
 }
 
 .shop-nar-coin-amount {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  line-height: 1.2;
-}
-
-.shop-nar-coin-amount-text {
   color: #FFF;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  word-break: break-word;
 }
 
 .shop-nar-coin-price {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-
-.shop-nar-coin-price-label {
   color: #B6B6B6;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 400;
-}
-
-.shop-nar-coin-price-currency {
-  color: #B6B6B6;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.shop-nar-coin-icon {
-  flex-shrink: 0;
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.shop-nar-coin-icon img {
-  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
+  text-align: center;
+  line-height: 1.3;
 }
 
 .shop-buy-btn {
-  padding: 10px 20px;
+  padding: 10px 16px;
   border-radius: 8px;
   background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
   box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
@@ -120,8 +161,8 @@
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  width: auto;
-  align-self: flex-start;
+  width: 100%;
+  align-self: flex-end;
 }
 
 .shop-buy-btn:hover:not(:disabled) {
@@ -877,30 +918,6 @@
   box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
 }
 
-/* Адаптация для мобильных устройств */
-@media (max-width: 768px) {
-  .shop-nar-coin-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .shop-nar-coin-info {
-    width: 100%;
-  }
-  
-  .shop-nar-coin-icon {
-    align-self: center;
-  }
-  
-  .shop-nar-coin-amount {
-    flex-wrap: wrap;
-  }
-  
-  .shop-nar-coin-price {
-    flex-wrap: wrap;
-  }
-}
-
 @media (max-width: 480px) {
   .shop-content {
     padding: var(--spacing-4);
@@ -913,15 +930,6 @@
 
   .shop-nar-coin-amount {
     font-size: var(--font-size-lg);
-  }
-  
-  .shop-nar-coin-amount-text {
-    font-size: 18px;
-  }
-  
-  .shop-nar-coin-price-label,
-  .shop-nar-coin-price-currency {
-    font-size: 12px;
   }
 
   .shop-subscription-icon {

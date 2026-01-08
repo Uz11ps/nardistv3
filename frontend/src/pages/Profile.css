@@ -220,33 +220,46 @@
 }
 
 .profile-enhancements-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 
 .profile-enhancement-item {
+  aspect-ratio: 1;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  min-height: 0;
+}
+
+.profile-enhancement-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .profile-enhancement-left {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
+  width: 100%;
+  justify-content: center;
 }
 
 .profile-enhancement-icon {
-  font-size: 24px;
-  width: 32px;
-  height: 32px;
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -256,18 +269,21 @@
 .profile-enhancement-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 1;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
 }
 
 .profile-enhancement-name {
   color: #FFF;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  text-align: center;
+  justify-content: center;
 }
 
 .profile-enhancement-info-btn {
@@ -294,30 +310,22 @@
 }
 
 .profile-enhancement-progress {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.profile-enhancement-progress-separator {
   color: #B6B6B6;
-  font-size: 14px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
   font-weight: 400;
-  margin: 0 2px;
-}
-
-.profile-enhancement-dice-item .profile-enhancement-progress {
-  margin-top: 4px;
+  text-align: center;
 }
 
 .profile-enhancement-upgrade-btn {
-  padding: 8px 16px;
+  padding: 10px 16px;
   border-radius: 8px;
   border: none;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  width: 100%;
+  align-self: flex-end;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
@@ -985,48 +993,45 @@
   line-height: 1.4;
 }
 
-/* Адаптация для мобильных устройств */
-@media (max-width: 768px) {
-  .profile-enhancement-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  
-  .profile-enhancement-left {
-    width: 100%;
-  }
-  
-  .profile-enhancement-upgrade-btn {
-    width: 100%;
-    text-align: center;
-  }
-  
-  .profile-enhancement-progress {
-    margin-top: 8px;
-  }
-  
+/* Адаптация под размер экрана */
+@media (max-width: 480px) {
   .profile-enhancements-list {
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
   
   .profile-enhancement-item {
-    padding: 10px;
-  }
-}
-
-@media (max-width: 480px) {
-  .profile-enhancement-name {
-    font-size: 14px;
+    padding: 12px;
   }
   
   .profile-enhancement-icon {
-    width: 28px;
-    height: 28px;
-    font-size: 20px;
+    font-size: 28px;
+    width: 40px;
+    height: 40px;
+  }
+  
+  .profile-enhancement-name {
+    font-size: 13px;
   }
   
   .profile-enhancement-progress {
-    gap: 3px;
+    font-size: 12px;
+  }
+  
+  .profile-enhancement-upgrade-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 769px) {
+  .profile-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .profile-enhancements-list {
+    max-width: 800px;
+    margin: 0 auto;
   }
 }
