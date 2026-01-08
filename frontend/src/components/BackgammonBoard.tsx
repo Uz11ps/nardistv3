@@ -635,7 +635,7 @@ export default function BackgammonBoard({
         }
       }
       
-      if (actualX >= columnXStart && actualX <= columnXEnd) {
+      if (actualX >= Math.min(columnXStart, columnXEnd) && actualX <= Math.max(columnXStart, columnXEnd)) {
         if (isTopRow) {
           if (actualY <= height / 2) return pointIndex // Возвращаем реальный индекс
         } else {

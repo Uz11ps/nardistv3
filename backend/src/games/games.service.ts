@@ -702,6 +702,29 @@ export class GamesService {
     // ВАЖНО: Синхронизируем currentPlayer из game в currentState перед применением ходов
     currentState.currentPlayer = game.currentPlayer;
     
+    // В Sandbox режиме проверяем, не пытаемся ли мы ходить чужой шашкой
+    // Если игрок делает ход, а currentState.currentPlayer не соответствует цвету шашки,
+    // в Sandbox мы разрешаем этот ход, но ПРИНУДИТЕЛЬНО ставим правильного currentPlayer
+    if (isSandbox && moves.length > 0) {
+      const firstMove = moves[0];
+      const fromIdx = firstMove.from === 24 || firstMove.from === 25 ? -1 : firstMove.from;
+      let moveColor: number | null = null;
+      
+      if (fromIdx === -1) {
+        moveColor = firstMove.from === 24 ? 0 : 1;
+      } else {
+        const val = currentState.points[fromIdx];
+        if (val > 0) moveColor = 0;
+        else if (val < 0) moveColor = 1;
+      }
+      
+      if (moveColor !== null && moveColor !== currentState.currentPlayer) {
+        this.logger.log(`🔄 Sandbox: automatically switching currentPlayer to ${moveColor} to match checker color`);
+        currentState.currentPlayer = moveColor;
+        game.currentPlayer = moveColor;
+      }
+    }
+    
     // Определяем, является ли это дублем
     const isDoubles = dice.length === 4 && dice.every(d => d === dice[0]);
     const doublesValue = isDoubles ? dice[0] : null; // Значение дубля (например, 3 для 3/3)
@@ -1023,36 +1046,42 @@ export class GamesService {
       currentState.movesFromPoint = {};
       this.logger.log(`🔄 Turn switched: all dice used. New player: ${currentState.currentPlayer}`);
     } else {
-      // ОБЯЗАТЕЛЬНАЯ проверка: есть ли валидные ходы с оставшимися кубиками после применения всех ходов
-      let hasValidMoves = false;
-      
-      // ВСЕГДА проверяем валидные ходы для всех режимов (и длинных, и коротких нард)
-      if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
-        // Проверяем валидность ходов с текущим состоянием после применения всех ходов
-        const remainingMoves = engine.getAllValidMoves(currentState, remainingDice, isFirstMoveOfGame);
-        // getAllValidMoves возвращает последовательности. Если есть хотя бы одна непустая - ходы есть.
-        hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
-        this.logger.log(`🔍 Checking remaining moves after ${finalMovesToSave.length} moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}, movesFound=${remainingMoves.length}`);
+      // В Sandbox режиме, если кубики еще остались, НЕ переключаем ход
+      if (isSandbox) {
+        currentState.dice = remainingDice;
+        this.logger.log(`🟡 Sandbox: keeping same player because dice remain [${remainingDice.join(', ')}]`);
+      } else {
+        // ОБЯЗАТЕЛЬНАЯ проверка: есть ли валидные ходы с оставшимися кубиками после применения всех ходов
+        let hasValidMoves = false;
         
-        if (hasValidMoves) {
-          // Есть еще ходы - оставляем того же игрока
-          currentState.dice = remainingDice;
-          this.logger.log(`🟡 Keeping same player: valid moves remain with dice [${remainingDice.join(', ')}]`);
+        // ВСЕГДА проверяем валидные ходы для всех режимов (и длинных, и коротких нард)
+        if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
+          // Проверяем валидность ходов с текущим состоянием после применения всех ходов
+          const remainingMoves = engine.getAllValidMoves(currentState, remainingDice, isFirstMoveOfGame);
+          // getAllValidMoves возвращает последовательности. Если есть хотя бы одна непустая - ходы есть.
+          hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
+          this.logger.log(`🔍 Checking remaining moves after ${finalMovesToSave.length} moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}, movesFound=${remainingMoves.length}`);
+          
+          if (hasValidMoves) {
+            // Есть еще ходы - оставляем того же игрока
+            currentState.dice = remainingDice;
+            this.logger.log(`🟡 Keeping same player: valid moves remain with dice [${remainingDice.join(', ')}]`);
+          } else {
+            // Ходов больше нет - ПРИНУДИТЕЛЬНАЯ смена хода
+            currentState.dice = [];
+            currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
+            currentState.movesFromHead = 0;
+            currentState.movesFromPoint = {};
+            this.logger.log(`🔄 Turn switched: no valid moves remain with [${remainingDice.join(', ')}]. New player: ${currentState.currentPlayer}`);
+          }
         } else {
-          // Ходов больше нет - ПРИНУДИТЕЛЬНАЯ смена хода
+          // Если нет метода getAllValidMoves, НЕ оставляем кубики - переключаем ход (безопаснее)
           currentState.dice = [];
           currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
           currentState.movesFromHead = 0;
           currentState.movesFromPoint = {};
-          this.logger.log(`🔄 Turn switched: no valid moves remain with [${remainingDice.join(', ')}]. New player: ${currentState.currentPlayer}`);
+          this.logger.log(`🔄 Turn switched: no getAllValidMoves method available, switching turn for safety`);
         }
-      } else {
-        // Если нет метода getAllValidMoves, НЕ оставляем кубики - переключаем ход (безопаснее)
-        currentState.dice = [];
-        currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
-        currentState.movesFromHead = 0;
-        currentState.movesFromPoint = {};
-        this.logger.log(`🔄 Turn switched: no getAllValidMoves method available, switching turn for safety`);
       }
     }
     
