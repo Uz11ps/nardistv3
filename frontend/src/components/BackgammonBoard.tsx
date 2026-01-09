@@ -65,6 +65,42 @@ export default function BackgammonBoard({
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
+
+  // Ref for loaded images
+  const imagesRef = useRef<Record<string, HTMLImageElement>>({})
+  // State to force re-render when images load
+  const [imagesLoaded, setImagesLoaded] = useState(false)
+
+  useEffect(() => {
+    const sources = {
+      white: '/img/checker-white.png',
+      red: '/img/checker-red.png',
+      whiteSide: '/img/checker-side-white.png',
+      redSide: '/img/checker-side-red.png',
+      skin: '/img/skin1.png'
+    }
+
+    let loadedCount = 0
+    const totalCount = Object.keys(sources).length
+    let isMounted = true
+
+    Object.entries(sources).forEach(([key, src]) => {
+      const img = new Image()
+      img.src = src
+      img.onload = () => {
+        if (!isMounted) return
+        imagesRef.current[key] = img
+        loadedCount++
+        if (loadedCount === totalCount) {
+          setImagesLoaded(true)
+        }
+      }
+      // Cache even if not loaded yet (will be updated on load)
+      imagesRef.current[key] = img
+    })
+    
+    return () => { isMounted = false }
+  }, [])
   const [dragging, setDragging] = useState<{ pointIndex: number; offsetX: number; offsetY: number; checkerColor?: 'white' | 'black'; freeMove?: boolean } | null>(null)
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
@@ -801,39 +837,54 @@ export default function BackgammonBoard({
       ctx.save()
       ctx.globalAlpha = alpha
       
-      const radius = size / 2
-      
-      // Используем цвета из checkersConfig
-      const checkerColors = isMy ? checkerColorsPlayer1 : checkerColorsPlayer2
-      const color = isWhite ? checkerColors.whiteColor : checkerColors.blackColor
-      
-      // Тень для объема
-      ctx.shadowBlur = size * 0.2
-      ctx.shadowColor = 'rgba(0,0,0,0.4)'
-      ctx.shadowOffsetY = 2
-      
-      ctx.fillStyle = color
-      ctx.beginPath()
-      ctx.arc(cX, cY, radius, 0, Math.PI * 2)
-      ctx.fill()
-      
-      // Внутренний декор шашки
-      ctx.beginPath()
-      ctx.arc(cX, cY, size * 0.35, 0, Math.PI * 2)
-      const strokeColor = isMy ? (isWhite ? '#DDD' : '#555') : (isWhite ? '#AAA' : '#222')
-      ctx.strokeStyle = strokeColor
-      ctx.lineWidth = 1
-      ctx.stroke()
-      
-      // Обводка шашки
-      ctx.strokeStyle = isMy ? '#999' : '#000'
-      ctx.lineWidth = 1.5
-      ctx.beginPath()
-      ctx.arc(cX, cY, radius, 0, Math.PI * 2)
-      ctx.stroke()
+      const imgKey = isWhite ? 'white' : 'red'
+      const img = imagesRef.current[imgKey]
+
+      if (img && img.complete) {
+          // Тень для объема
+          ctx.shadowBlur = size * 0.2
+          ctx.shadowColor = 'rgba(0,0,0,0.4)'
+          ctx.shadowOffsetY = 2
+          
+          ctx.drawImage(img, cX - size/2, cY - size/2, size, size)
+      } else {
+          const radius = size / 2
+          
+          // Используем цвета из checkersConfig
+          const checkerColors = isMy ? checkerColorsPlayer1 : checkerColorsPlayer2
+          const color = isWhite ? checkerColors.whiteColor : checkerColors.blackColor
+          
+          // Тень для объема
+          ctx.shadowBlur = size * 0.2
+          ctx.shadowColor = 'rgba(0,0,0,0.4)'
+          ctx.shadowOffsetY = 2
+          
+          ctx.fillStyle = color
+          ctx.beginPath()
+          ctx.arc(cX, cY, radius, 0, Math.PI * 2)
+          ctx.fill()
+          
+          // Внутренний декор шашки
+          ctx.beginPath()
+          ctx.arc(cX, cY, size * 0.35, 0, Math.PI * 2)
+          const strokeColor = isMy ? (isWhite ? '#DDD' : '#555') : (isWhite ? '#AAA' : '#222')
+          ctx.strokeStyle = strokeColor
+          ctx.lineWidth = 1
+          ctx.stroke()
+          
+          // Обводка шашки
+          ctx.strokeStyle = isMy ? '#999' : '#000'
+          ctx.lineWidth = 1.5
+          ctx.beginPath()
+          ctx.arc(cX, cY, radius, 0, Math.PI * 2)
+          ctx.stroke()
+      }
       
       ctx.restore()
     }
+    
+    // ... остальной код ...
+
 
     
 
@@ -1055,67 +1106,85 @@ export default function BackgammonBoard({
       }
     }
     
-    // Отрисовка области выноса (Контейнеры)
-    const leftContainerX = 0
-    const rightContainerX = width - bearOffWidth
-    
-    // Рисуем контейнеры
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
-    ctx.fillRect(leftContainerX, 0, bearOffWidth, height)
-    ctx.fillRect(rightContainerX, 0, bearOffWidth, height)
-    
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
-    ctx.lineWidth = 1
-    ctx.strokeRect(leftContainerX, 0, bearOffWidth, height)
-    ctx.strokeRect(rightContainerX, 0, bearOffWidth, height)
+    // Отрисовка области выноса (Теперь СНИЗУ, используем изображения сбоку)
+    const bearOffAreaY = height - bearOffHeight
 
-    // Отрисовка номеров точек
-    ctx.font = 'bold 12px Arial'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    
     if (virtualGameState.bearOff) {
       const bOff = virtualGameState.bearOff
       const whiteBearOffCount = bOff.white || 0
       const blackBearOffCount = bOff.black || 0
       
-      const checkerH = Math.min(height / 16, 15)
-      const checkerW = bearOffWidth * 0.8
+      // Изображения сбоку
+      const whiteSideImg = imagesRef.current['whiteSide']
+      const redSideImg = imagesRef.current['redSide']
       
-      // Белые выброшенные шашки (сверху вниз, справа для player1, слева для player2 после инверсии)
-      const whiteX = isPlayer1 ? rightContainerX : leftContainerX
-      for (let i = 0; i < whiteBearOffCount; i++) {
-        ctx.fillStyle = '#F0F0F0'
-        ctx.fillRect(whiteX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
-        ctx.strokeStyle = '#000'
-        ctx.lineWidth = 1
-        ctx.strokeRect(whiteX + (bearOffWidth - checkerW) / 2, 10 + (i * (checkerH + 2)), checkerW, checkerH)
+      // Параметры для отрисовки сбоку (стоячие шашки)
+      // Высота шашки сбоку = диаметру (примерно)
+      const checkerSideHeight = bearOffHeight * 0.85
+      
+      // Вычисляем ширину по пропорциям изображения
+      const getSideWidth = (img: HTMLImageElement | undefined) => {
+          if (img && img.complete && img.height > 0) {
+              return checkerSideHeight * (img.width / img.height)
+          }
+          return checkerSideHeight * 0.25 // Default thickness fallback
       }
       
-      // Черные выброшенные шашки (снизу вверх, слева для player1, справа для player2 после инверсии)
-      const blackX = isPlayer1 ? leftContainerX : rightContainerX
+      const whiteW = getSideWidth(whiteSideImg)
+      const redW = getSideWidth(redSideImg)
+      
+      const yPos = bearOffAreaY + (bearOffHeight - checkerSideHeight) / 2
+      
+      // Белые шашки - Справа налево (Дом белых обычно справа)
+      // Размещаем их в правой части лотка
+      const startXWhite = width - sideMargin - whiteW
+      
+      for (let i = 0; i < whiteBearOffCount; i++) {
+        // Плотная стопка со смещением
+        const step = whiteW * 0.25
+        const x = startXWhite - (i * step)
+        
+        if (whiteSideImg && whiteSideImg.complete) {
+           ctx.drawImage(whiteSideImg, x, yPos, whiteW, checkerSideHeight)
+        } else {
+           ctx.fillStyle = '#F0F0F0'
+           ctx.fillRect(x, yPos, whiteW, checkerSideHeight)
+           ctx.strokeStyle = '#999'
+           ctx.strokeRect(x, yPos, whiteW, checkerSideHeight)
+        }
+      }
+      
+      // Черные шашки - Слева направо (Дом черных обычно слева)
+      // Размещаем их в левой части лотка
+      const startXBlack = sideMargin
+      
       for (let i = 0; i < blackBearOffCount; i++) {
-        ctx.fillStyle = '#333333'
-        ctx.fillRect(blackX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
-        ctx.strokeStyle = '#000'
-        ctx.lineWidth = 1
-        ctx.strokeRect(blackX + (bearOffWidth - checkerW) / 2, height - 10 - (i * (checkerH + 2)), checkerW, checkerH)
+        const step = redW * 0.25
+        const x = startXBlack + (i * step)
+        
+        if (redSideImg && redSideImg.complete) {
+           ctx.drawImage(redSideImg, x, yPos, redW, checkerSideHeight)
+        } else {
+           ctx.fillStyle = '#333333'
+           ctx.fillRect(x, yPos, redW, checkerSideHeight)
+           ctx.strokeStyle = '#000'
+           ctx.strokeRect(x, yPos, redW, checkerSideHeight)
+        }
       }
     }
 
-    // Подсветка при перетаскивании в зону выноса
+    // Подсветка при перетаскивании в зону выноса (ВЕСЬ НИЗ)
     if ((dragging || selectedPoint !== null) && validTargetPoints.has(-1)) {
-      const targetX = isPlayer1 ? rightContainerX : (gameMode === 'long' ? leftContainerX : rightContainerX)
-        
-      ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'
-      ctx.fillRect(targetX, 0, bearOffWidth, height)
-      ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)'
-      ctx.lineWidth = 3
-      ctx.strokeRect(targetX, 0, bearOffWidth, height)
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
+      ctx.fillRect(0, bearOffAreaY, width, bearOffHeight)
+      
+      ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
+      ctx.lineWidth = 2
+      ctx.strokeRect(0, bearOffAreaY, width, bearOffHeight)
       
       if (hoveredPoint === -1) {
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'
-        ctx.fillRect(targetX, 0, bearOffWidth, height)
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'
+        ctx.fillRect(0, bearOffAreaY, width, bearOffHeight)
       }
     }
 
