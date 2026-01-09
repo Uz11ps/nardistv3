@@ -250,6 +250,7 @@ export default function BackgammonBoard({
         triangleColor2: '#8B4513',
         borderColor: '#5c3a21',
         outlineColor: '#654321',
+        imageUrl: undefined, // Add image URL support
       }
     }
     
@@ -270,6 +271,7 @@ export default function BackgammonBoard({
       triangleColor2: config.triangleColor2 || '#8B4513',
       borderColor: config.borderColor || '#5c3a21',
       outlineColor: config.outlineColor || '#654321',
+      imageUrl: boardSkin.imageUrl || boardSkin.boardTextureUrl, // Use skin image if available
     }
   }
 
@@ -720,17 +722,66 @@ export default function BackgammonBoard({
     const rightHalfStartX = barX + barWidth
     const rightHalfWidth = (boardWidth - barWidth) / 2
     
+    // Функция для отрисовки изображения с сохранением пропорций (cover)
+    const drawImageCover = (img: HTMLImageElement, x: number, y: number, w: number, h: number) => {
+        const imgRatio = img.width / img.height;
+        const targetRatio = w / h;
+        let sx, sy, sw, sh;
+
+        if (targetRatio > imgRatio) {
+            sw = img.width;
+            sh = img.width / targetRatio;
+            sx = 0;
+            sy = (img.height - sh) / 2;
+        } else {
+            sh = img.height;
+            sw = img.height * targetRatio;
+            sy = 0;
+            sx = (img.width - sw) / 2;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+    };
+
     // Левая половина доски (скины противника) - используем цвета из boardConfig
-    ctx.fillStyle = opponentBoardColors.backgroundColor
-    ctx.fillRect(boardStartX, 0, leftHalfWidth, height)
+    // Проверяем наличие фонового изображения для противника
+    if (opponentBoardColors.imageUrl) {
+        const img = new Image();
+        img.src = opponentBoardColors.imageUrl;
+        // Если изображение уже загружено (в кэше), рисуем сразу
+        if (img.complete) {
+             drawImageCover(img, boardStartX, 0, leftHalfWidth, height);
+        } else {
+            // Иначе используем цвет, пока грузится (перерисовка случится позже при обновлении)
+            // Можно добавить onload handler и forceUpdate, но для простоты пока оставим цвет
+            img.onload = () => drawBoard(); // Trigger redraw when loaded
+            ctx.fillStyle = opponentBoardColors.backgroundColor
+            ctx.fillRect(boardStartX, 0, leftHalfWidth, height)
+        }
+    } else {
+        ctx.fillStyle = opponentBoardColors.backgroundColor
+        ctx.fillRect(boardStartX, 0, leftHalfWidth, height)
+    }
     
     // Центральная полоса (бар) - используем outlineColor из конфигурации
     ctx.fillStyle = myBoardColors.outlineColor || '#654321'
     ctx.fillRect(barX, 0, barWidth, height)
     
     // Правая половина доски (свои скины) - используем цвета из boardConfig
-    ctx.fillStyle = myBoardColors.backgroundColor
-    ctx.fillRect(rightHalfStartX, 0, rightHalfWidth, height)
+    // Проверяем наличие фонового изображения для себя
+    if (myBoardColors.imageUrl) {
+        const img = new Image();
+        img.src = myBoardColors.imageUrl;
+        if (img.complete) {
+             drawImageCover(img, rightHalfStartX, 0, rightHalfWidth, height);
+        } else {
+            img.onload = () => drawBoard();
+            ctx.fillStyle = myBoardColors.backgroundColor
+            ctx.fillRect(rightHalfStartX, 0, rightHalfWidth, height)
+        }
+    } else {
+        ctx.fillStyle = myBoardColors.backgroundColor
+        ctx.fillRect(rightHalfStartX, 0, rightHalfWidth, height)
+    }
     
     // Параметры для точек
     const halfBoardWidth = (boardWidth - barWidth) / 2
