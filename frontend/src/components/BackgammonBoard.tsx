@@ -846,7 +846,12 @@ export default function BackgammonBoard({
           ctx.shadowColor = 'rgba(0,0,0,0.4)'
           ctx.shadowOffsetY = 2
           
-          ctx.drawImage(img, cX - size/2, cY - size/2, size, size)
+          // Увеличиваем размер изображения на 20%, чтобы компенсировать возможные отступы в PNG
+          // и визуально соответствовать размеру программно нарисованных шашек
+          const scale = 1.2 
+          const drawSize = size * scale
+          
+          ctx.drawImage(img, cX - drawSize/2, cY - drawSize/2, drawSize, drawSize)
       } else {
           const radius = size / 2
           
