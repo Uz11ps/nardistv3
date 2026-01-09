@@ -908,37 +908,31 @@ export default function BackgammonBoard({
     for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
       const { x, y, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       
+      // Ограничиваем подсветку высотой треугольника (pH) и позиционируем строго по треугольнику
+      const hX = x - pW / 2
+      const hY = isTopRow ? y : (y - pH)
+      const hH = pH
+
       // 1. Подсветка точки под курсором
       if (hoveredPoint === pointIndex) {
         ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
-        if (isTopRow) {
-          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
-        } else {
-          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
-        }
+        ctx.fillRect(hX, hY, pW, hH)
       }
 
       // 2. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
       if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
         ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
-        if (isTopRow) {
-          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
-        } else {
-          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
-        }
+        ctx.fillRect(hX, hY, pW, hH)
+        
         ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
         ctx.lineWidth = 2
-        ctx.strokeRect(x - pW / 2 + 2, isTopRow ? 2 : height / 2 + 2, pW - 4, height / 2 - 4)
+        ctx.strokeRect(hX + 2, hY + 2, pW - 4, hH - 4)
       }
       
       // 3. Подсветка выбранной точки
       if (selectedPoint === pointIndex) {
         ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
-        if (isTopRow) {
-          ctx.fillRect(x - pW / 2, 0, pW, height / 2)
-        } else {
-          ctx.fillRect(x - pW / 2, height / 2, pW, height / 2)
-        }
+        ctx.fillRect(hX, hY, pW, hH)
       }
     }
     
