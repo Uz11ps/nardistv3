@@ -160,25 +160,6 @@ export default function City() {
             </div>
           ))}
         </div>
-
-        {/* Сетка строений */}
-        <div className="city-grid-v3">
-          {currentDistrict?.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map(({ config, userBuilding }) => (
-            <div 
-              key={config.id} 
-              className={`city-card-v3 ${!currentDistrict.isUnlocked ? 'locked' : ''}`}
-              onClick={() => currentDistrict.isUnlocked && setShowBuildingModal(config)}
-            >
-              <div className="city-card-v3-icon">
-                <img
-                  src={getImageUrl(config.icon) || config.icon || '/img/building_placeholder.png'}
-                  alt={config.name}
-                  onError={(e) => { e.currentTarget.src = '/img/building_placeholder.png' }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {showBuildingModal && createPortal(

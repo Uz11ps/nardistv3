@@ -13,6 +13,9 @@
   overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: none;
+  max-width: 400px;
+  margin: 0 auto;
+  justify-content: center; /* Центрируем вкладки */
 }
 
 .city-tabs-v3::-webkit-scrollbar {
