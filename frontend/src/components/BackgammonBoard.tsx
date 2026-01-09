@@ -516,7 +516,6 @@ export default function BackgammonBoard({
         // Значит индексы 0-5 (24..19) -> Справа.
         // Индексы 6-11 (18..13) -> Слева.
         
-        const pointInHalf = pointIndex - 6
         // Слева: sideMargin + отступ
         // Но порядок рисования: 18, 17... 13. (Слева направо или Справа налево?)
         // 13 - крайний левый? или 18?
@@ -552,74 +551,14 @@ export default function BackgammonBoard({
     
     let y = isTopRow ? topMargin : (height - bearOffHeight - 5) // -5 небольшой отступ от лотка
     
-    // Для player2 инвертируем координаты точек
-    let finalIsTopRow = isTopRow
+    // Для Nardi (и скина с лотком внизу) не инвертируем координаты для второго игрока.
+    // Оба игрока видят доску одинаково (статика).
+    /*
     if (!isPlayer1) {
       x = width - x
       y = height - y 
-      // При инверсии Y, верх становится низом.
-      // Но у нас "bearOffHeight" снизу.
-      // Если мы просто инвертируем Y, то "верхний отступ" станет "нижним отступом".
-      // А "нижний отступ (лоток)" станет "верхним".
-      // Если лоток только внизу, то для Player 2 (черных) доска перевернута?
-      // Визуально скин не переворачивается.
-      // Значит нам нужно мапить логические точки на визуальные места.
-      
-      // Если мы играем за черных, мы хотим видеть свои шашки (движение 24->1) так же?
-      // Обычно доска не вращается визуально (картинка), а меняется нумерация.
-      // Но текущая логика: x = width - x, y = height - y.
-      // Это поворот на 180.
-      
-      // Если скин имеет лоток СНИЗУ, то при повороте на 180 лоток уйдет ВВЕРХ.
-      // Это проблема, если на картинке лоток нарисован снизу.
-      
-      // РЕШЕНИЕ: Не инвертировать Y для координат, если мы хотим сохранить визуальный низ.
-      // Но тогда "верхний ряд" станет "нижним"?
-      // Если мы не инвертируем Y, то TopRow остается TopRow.
-      // Но для черных "дом" (1-6) обычно вверху слева? Или они идут в 1-6 (внизу)?
-      // В Long Backgammon:
-      // White: Head at 24 (Top Right), moves to 1 (Bottom Right). (Or Top Left -> Bottom Right).
-      // Let's assume standard setup.
-      
-      // Если мы хотим оставить картинку "как есть" (лоток снизу), то нельзя делать `y = height - y`.
-      // Нужно просто пересчитать соответствие точек.
-      
-      // Если Player 2:
-      // Мы хотим, чтобы его "1" была там, где у белых "24"?
-      // Или просто развернуть нумерацию?
-      
-      // Давайте пока оставим инверсию X, но Y адаптируем к лотку.
-      // Если для P1 Y = topMargin, то для P2 Y должен быть (height - topMargin)?
-      // Нет, если скин статичен.
-      
-      // Если мы просто инвертируем X:
-      // x = width - x.
-      // То право становится лево.
-      // Y оставляем как есть?
-      // Тогда TopRow (индексы 0-11) останутся вверху.
-      // Но для черных это точки 1..12? Или 24..13?
-      
-      // Давайте сделаем `finalIsTopRow` зависимым от инверсии.
-      // Если мы не инвертируем Y, то `y` остается прежним.
-      
-      // Попробуем отключить инверсию Y для P2, чтобы лоток остался снизу.
-      y = isTopRow ? topMargin : (height - bearOffHeight - 5)
-      // x инвертируем, чтобы поменять стороны (дом слева/справа)
-      x = width - x
-      
-      // Но! isTopRow для P2 означает другие точки.
-      // P2 points: 0->24.
-      // Если P1 points: 0->24 (TopRight -> BottomRight).
-      // То P2 (сидя напротив): TopLeft -> BottomLeft.
-      
-      // В текущей логике `isTopRow` зависит от индекса (0-11).
-      // Если мы просто инвертируем X, то:
-      // 0-5 (были справа) станут слева.
-      // 6-11 (были слева) станут справа.
-      // Это похоже на поворот доски.
-      
-      // Оставим только инверсию X.
     }
+    */
     
     return { x, y, isTopRow, pointWidth, pointHeight, pointNumber }
   }, [isPlayer1])
@@ -660,39 +599,20 @@ export default function BackgammonBoard({
 
     if (currentPlayer === 0) {
       // Player1 (белые) - Внизу Справа (Дом белых, пункты 1-6)
-      // Возвращаем стандартную позицию для белых
-      xPos = width - 150
-      yPos = height - 150
-      
-      // Ограничения
-      xPos = Math.min(xPos, width - 60)
-      yPos = Math.min(yPos, height - 60)
+      // Размещаем в центре правой половины доски (дом белых)
+      // width * 0.75 - примерный центр правой части
+      xPos = width * 0.75
+      yPos = height * 0.65
       
       console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos })
     } else {
       // Player2 (черные, соперник) - Вверху Слева (Дом черных, пункт 13)
-      // Центрируем кубики относительно центра пункта 13
+      // Размещаем в центре левой половины доски (дом черных)
+      // width * 0.25 - примерный центр левой части
+      xPos = width * 0.25
+      yPos = height * 0.35
       
-      const bearOffWidth = width * 0.06
-      const boardWidth = width - (bearOffWidth * 2)
-      const barWidth = boardWidth * 0.08
-      const halfBoardWidth = (boardWidth - barWidth) / 2
-      const pointWidth = halfBoardWidth / 6
-      
-      // Центр пункта 13
-      const point13Center = bearOffWidth + (pointWidth / 2)
-      
-      // Устанавливаем позицию ровно по центру пункта 13
-      // Ранее было +15, что сдвигало вправо. Теперь ровно центр или чуть левее (-5) для компенсации визуального веса
-      xPos = point13Center - 5
-      
-      yPos = 80 // Верхний край
-      
-      // Ограничения
-      xPos = Math.max(xPos, 40)
-      yPos = Math.min(yPos, 150)
-      
-      console.log('🎲 Player2 dice position (CENTERED ON POINT 13):', { xPos, yPos, point13Center })
+      console.log('🎲 Player2 dice position (TOP-LEFT):', { xPos, yPos })
     }
 
     console.log('🎲 Dice position updated:', { xPos, yPos, size: diceSize, currentPlayer, width, height })
@@ -825,6 +745,12 @@ export default function BackgammonBoard({
     const topMargin = height * 0.06
     const sideMargin = width * 0.046
     
+    // Определяем параметры доски
+    const bearOffWidth = width * 0.06
+    const boardWidth = width - (bearOffWidth * 2)
+    const barWidth = width * 0.088
+    const barX = (width - barWidth) / 2
+    
     // Рисуем фоновую картинку (Скин) на всю доску
     const globalSkinUrl = '/img/skin1.png'
     
@@ -909,75 +835,7 @@ export default function BackgammonBoard({
       ctx.restore()
     }
 
-    // Получаем points из virtualGameState, если его нет - создаем массив из 24 нулей
-    const points = virtualGameState?.points && virtualGameState.points.length === 24 
-      ? virtualGameState.points 
-      : Array(24).fill(0)
     
-    // Функция для отрисовки треугольной точки с цветами из boardConfig
-    const drawTrianglePoint = (x: number, y: number, w: number, h: number, isTop: boolean, colors: typeof myBoardColors, isLight: boolean) => {
-      ctx.beginPath()
-      if (isTop) {
-        // Верхний треугольник: основание вверху (y), острие вниз (y + h)
-        ctx.moveTo(x - w / 2, y)       // Левый верхний угол (основание)
-        ctx.lineTo(x + w / 2, y)       // Правый верхний угол (основание)
-        ctx.lineTo(x, y + h)           // Острие внизу
-      } else {
-        // Нижний треугольник: основание внизу (y), острие вверх (y - h)
-        ctx.moveTo(x - w / 2, y)       // Левый нижний угол (основание)
-        ctx.lineTo(x + w / 2, y)       // Правый нижний угол (основание)
-        ctx.lineTo(x, y - h)           // Острие вверху
-      }
-      ctx.closePath()
-      // Используем triangleColor1 для светлых, triangleColor2 для темных
-      ctx.fillStyle = isLight ? colors.triangleColor1 : colors.triangleColor2
-      ctx.fill()
-      // Используем borderColor для обводки
-      ctx.strokeStyle = colors.borderColor
-      ctx.lineWidth = 1
-      ctx.stroke()
-    }
-    
-    // Рисуем треугольники с цветами из boardConfig
-    for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
-      const { x, y, isTopRow, pointWidth: pW, pointHeight: pH, pointNumber } = getPointCoordinates(pointIndex, canvas)
-      
-      // Определяем, на какой половине доски находится точка
-      const isLeftHalf = x < barX
-      const boardColors = isLeftHalf ? opponentBoardColors : myBoardColors
-      
-      const triangleWidth = pW * 0.95
-      const triangleHeight = pH * 0.95
-      
-      // Определяем цвет треугольника (чередование светлый/темный)
-      const pointInRow = isTopRow ? pointIndex : pointIndex - 12
-      const isLight = pointInRow % 2 === 0
-      
-      // Рисуем сам треугольник с цветами из конфигурации
-      drawTrianglePoint(x, y, triangleWidth, triangleHeight, isTopRow, boardColors, isLight)
-      
-      // Отрисовка нумерации точек (1-24)
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
-      ctx.font = 'bold 12px Arial'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      
-      const getCoordinateText = (num: number) => {
-        if (coordinateSystem === '1-24') return num.toString();
-        const quarter = Math.floor((num - 1) / 6);
-        const offset = (num - 1) % 6 + 1;
-        const letters = ['A', 'B', 'C', 'D'];
-        return `${letters[quarter]}${offset}`;
-      }
-
-      const coordText = getCoordinateText(pointNumber);
-      
-      if (isTopRow) {
-        ctx.fillText(coordText, x, y + 15)
-      } else {
-        ctx.fillText(coordText, x, y - 15)
-      }
-    }
 
     // Вторым проходом рисуем все шашки (чтобы они были поверх всех треугольников)
     // Используем points из virtualGameState если есть, иначе пустой массив
@@ -996,8 +854,8 @@ export default function BackgammonBoard({
       
       const checkerSize = Math.min(pW * 0.85, pH * 0.15) 
       const checkerBaseY = isTopRow 
-        ? y + checkerSize/2 + 5 
-        : y - checkerSize/2 - 5 
+        ? y + checkerSize/2 + 2 
+        : y - checkerSize/2 - 2 
       
       const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
       const isAnimatingFromThisPoint = animatingChecker && animatingChecker.from === pointIndex
@@ -1147,8 +1005,8 @@ export default function BackgammonBoard({
       
       const fromOverlap = fromCheckerCount > 5 ? (checkerSize * 0.8) : checkerSize
       const startY = fromTop 
-        ? fromY + checkerSize/2 + 5 + (fromCheckerCount - 1) * fromOverlap
-        : fromY - checkerSize/2 - 5 - (fromCheckerCount - 1) * fromOverlap
+        ? fromY + checkerSize/2 + 2 + (fromCheckerCount - 1) * fromOverlap
+        : fromY - checkerSize/2 - 2 - (fromCheckerCount - 1) * fromOverlap
 
       // Конечная позиция Y (куда приземлится)
       let endY;
@@ -1158,8 +1016,8 @@ export default function BackgammonBoard({
         const toCheckerCount = Math.abs(virtualGameState.points[animatingChecker.to])
         const toOverlap = (toCheckerCount + 1) > 5 ? (checkerSize * 0.8) : checkerSize
         endY = toTop
-          ? toY + checkerSize/2 + 5 + toCheckerCount * toOverlap
-          : toY - checkerSize/2 - 5 - toCheckerCount * toOverlap
+          ? toY + checkerSize/2 + 2 + toCheckerCount * toOverlap
+          : toY - checkerSize/2 - 2 - toCheckerCount * toOverlap
       }
 
       const curX = fromX + (toX - fromX) * animatingChecker.progress
