@@ -480,13 +480,14 @@ export default function BackgammonBoard({
     // Лот для скида снизу -> bearOffHeight
     const bearOffHeight = height * 0.13
     const topMargin = height * 0.06
-    const sideMargin = width * 0.046
+    // Уменьшаем отступы сбоку и ширину бара, чтобы треугольники стали шире
+    const sideMargin = width * 0.03 // было 0.046
     
     // Рабочая область доски (без лотка и рамки)
     const playAreaHeight = height - bearOffHeight - topMargin
     
     // Центральная полоса (бар)
-    const barWidth = width * 0.088
+    const barWidth = width * 0.06 // было 0.088
     // Ширина одной половины игрового поля
     const halfBoardWidth = (width - (sideMargin * 2) - barWidth) / 2
     
@@ -779,12 +780,12 @@ export default function BackgammonBoard({
     // ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ (дублируем логику из getPointCoordinates)
     const bearOffHeight = height * 0.13
     const topMargin = height * 0.06
-    const sideMargin = width * 0.046
+    const sideMargin = width * 0.03
     
     // Определяем параметры доски
     const bearOffWidth = width * 0.06
     const boardWidth = width - (bearOffWidth * 2)
-    const barWidth = width * 0.088
+    const barWidth = width * 0.06
     const barX = (width - barWidth) / 2
     
     // Рисуем фоновую картинку (Скин) на всю доску
@@ -846,9 +847,8 @@ export default function BackgammonBoard({
           ctx.shadowColor = 'rgba(0,0,0,0.4)'
           ctx.shadowOffsetY = 2
           
-          // Увеличиваем размер изображения на 20%, чтобы компенсировать возможные отступы в PNG
-          // и визуально соответствовать размеру программно нарисованных шашек
-          const scale = 1.2 
+          // Увеличиваем размер изображения, но не слишком сильно, так как базовый размер уже увеличен
+          const scale = 1.1 
           const drawSize = size * scale
           
           ctx.drawImage(img, cX - drawSize/2, cY - drawSize/2, drawSize, drawSize)
@@ -908,10 +908,11 @@ export default function BackgammonBoard({
       // В Sandbox всегда используем цвета первого игрока (свои), чтобы не было "перекрашивания"
       const isMyPoint = isSandbox ? true : ((isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker))
       
-      const checkerSize = Math.min(pW * 0.85, pH * 0.15) 
+      // Увеличиваем размер шашки относительно ширины треугольника
+      const checkerSize = Math.min(pW * 0.95, pH * 0.16) 
       const checkerBaseY = isTopRow 
         ? y + checkerSize/2 + 2 
-        : y - checkerSize/2 - 2 
+        : y - checkerSize/2 - 2  
       
       const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
       const isAnimatingFromThisPoint = animatingChecker && animatingChecker.from === pointIndex
