@@ -646,8 +646,20 @@ export class GamesService {
     }
 
     // Определяем, является ли этот ход первым в игре для этого режима (Long)
-    // Правило Минспорта 20.3: только второй игрок (черные) при первом ходе с дублями 3:3, 4:4 или 6:6 может снять 2 шашки с головы
-    const isFirstMoveOfGame = game.mode === GameMode.LONG && (game.moves || []).length < 2;
+    // Правило Минспорта 20.3: исключение для первого хода (дубли 3:3, 4:4, 6:6)
+    // Разрешает снять 2 шашки с головы
+    let switchCount = 0;
+    const allMoves = game.moves || [];
+    if (allMoves.length > 0) {
+      let lastPlayerId = allMoves[0].playerId;
+      for (let i = 1; i < allMoves.length; i++) {
+        if (allMoves[i].playerId !== lastPlayerId) {
+          switchCount++;
+          lastPlayerId = allMoves[i].playerId;
+        }
+      }
+    }
+    const isFirstMoveOfGame = game.mode === GameMode.LONG && switchCount < 2;
 
     // Если moves пустой, это пропуск хода - переключаем игрока
     if (moves.length === 0) {

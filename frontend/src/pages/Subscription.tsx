@@ -25,27 +25,27 @@ const subscriptionFeatures = [
   {
     title: 'История игр',
     description: 'Полный список твоих матчей',
-    icon: 'history',
+    icon: '📜',
   },
   {
     title: 'Анализ',
     description: 'Разбор ошибок и лучших ходов',
-    icon: 'analysis',
+    icon: '🧠',
   },
   {
     title: 'Тренажёр',
     description: 'Разбирай позиции и стратегии',
-    icon: 'trainer',
+    icon: '🎯',
   },
   {
     title: 'Приоритет',
     description: 'Попадай к соперникам быстрее',
-    icon: 'priority',
+    icon: '⚡',
   },
   {
     title: 'Премиум-значок',
     description: 'Отметь свой статус в таблице',
-    icon: 'crown',
+    icon: '👑',
   },
 ]
 
@@ -247,8 +247,8 @@ export default function Subscription() {
           {subscriptionFeatures.map((feature, index) => (
             <Card key={index} className="subscription-feature-card">
               <div className="subscription-feature-content">
-                <div className="subscription-feature-icon">
-                  <Icon name={feature.icon} size={32} style={{ color: 'var(--color-gold)' }} />
+                <div className="subscription-feature-icon" style={{ fontSize: '24px' }}>
+                  {feature.icon}
                 </div>
                 <div className="subscription-feature-info">
                   <div className="subscription-feature-title">{feature.title}</div>

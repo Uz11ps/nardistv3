@@ -160,44 +160,33 @@ export default function City() {
             </div>
           ))}
         </div>
-      </div>
 
-      {showBuildingModal && createPortal(
-        <div 
-          className="city-modal-overlay" 
-          onClick={() => setShowBuildingModal(null)}
-          style={{
-            position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
-            width: '100vw', height: '100vh', minWidth: '100vw', minHeight: '100vh',
-            background: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', zIndex: 2147483647, padding: '12px', margin: '0',
-            border: 'none', outline: 'none', touchAction: 'none', overflow: 'hidden',
-            overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
-          }}
-        >
+        {/* Детали строения (показываются ПОД блоком районов) */}
+        {showBuildingModal && (
           <div 
-            className="city-modal" 
-            onClick={e => e.stopPropagation()}
+            className="city-building-details"
             style={{
-              position: 'relative', margin: '0', background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
-              padding: '0', borderRadius: '16px', textAlign: 'center', maxWidth: '400px',
-              width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '16px',
+              marginTop: '16px',
+              animation: 'fadeIn 0.3s ease-out'
             }}
           >
-            <div className="city-modal-header">
+            <div className="city-modal-header" style={{ padding: '0 0 16px 0' }}>
               <h3>{showBuildingModal.name}</h3>
               <button onClick={() => setShowBuildingModal(null)}>×</button>
             </div>
-            <div className="city-modal-content">
-              <div className="city-modal-image-container">
+            <div className="city-modal-content" style={{ padding: '0' }}>
+              <div className="city-modal-image-container" style={{ marginBottom: '16px' }}>
                 <img 
                   src={getImageUrl(showBuildingModal.image || showBuildingModal.icon) || showBuildingModal.image || showBuildingModal.icon || '/img/building_placeholder.png'} 
                   alt={showBuildingModal.name} 
                   className="city-modal-image" 
                 />
               </div>
-              <div className="city-modal-stats">
+              <div className="city-modal-stats" style={{ marginBottom: '16px' }}>
                 <div className="city-modal-stat">
                   <span className="label">Прибыль:</span>
                   <span className="value">{showBuildingModal.baseIncomePerHour} NAR/час</span>
@@ -229,9 +218,8 @@ export default function City() {
               </div>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
+        )}
+      </div>
     </PageLayout>
   )
 }
