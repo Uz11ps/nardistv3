@@ -250,7 +250,7 @@ export default function BackgammonBoard({
         triangleColor2: '#8B4513',
         borderColor: '#5c3a21',
         outlineColor: '#654321',
-        imageUrl: undefined, // Add image URL support
+        imageUrl: '/img/skin1.png', // Default skin image
       }
     }
     
@@ -271,7 +271,7 @@ export default function BackgammonBoard({
       triangleColor2: config.triangleColor2 || '#8B4513',
       borderColor: config.borderColor || '#5c3a21',
       outlineColor: config.outlineColor || '#654321',
-      imageUrl: boardSkin.imageUrl || boardSkin.boardTextureUrl, // Use skin image if available
+      imageUrl: boardSkin.imageUrl || boardSkin.boardTextureUrl || '/img/skin1.png', // Use skin image if available, else default
     }
   }
 
