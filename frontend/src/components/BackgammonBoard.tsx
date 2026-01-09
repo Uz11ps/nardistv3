@@ -440,20 +440,22 @@ export default function BackgammonBoard({
     const width = canvas.width
     const height = canvas.height
     
-    // Параметры области выноса (Контейнеры)
-    const bearOffWidth = width * 0.06
-    const boardWidth = width - (bearOffWidth * 2)
-    const boardStartX = bearOffWidth
-    const boardEndX = width - bearOffWidth
+    // ПАРАМЕТРЫ ПОДГОНКИ ПОД СКИН (skin1.png)
+    // Лот для скида снизу -> bearOffHeight
+    const bearOffHeight = height * 0.13
+    const topMargin = height * 0.06
+    const sideMargin = width * 0.046
+    
+    // Рабочая область доски (без лотка и рамки)
+    const playAreaHeight = height - bearOffHeight - topMargin
     
     // Центральная полоса (бар)
-    const barWidth = boardWidth * 0.08
-    const barX = boardStartX + (boardWidth - barWidth) / 2
+    const barWidth = width * 0.088
+    // Ширина одной половины игрового поля
+    const halfBoardWidth = (width - (sideMargin * 2) - barWidth) / 2
     
-    // Параметры для точек
-    const halfBoardWidth = (boardWidth - barWidth) / 2
     const pointWidth = halfBoardWidth / 6
-    const pointHeight = height * 0.45
+    const pointHeight = playAreaHeight * 0.42 // Высота треугольников
     
     const isTopRow = pointIndex < 12
     
@@ -466,36 +468,160 @@ export default function BackgammonBoard({
       
       if (isRightSide) {
         const pointInHalf = pointIndex
-        x = boardEndX - (pointInHalf * pointWidth + pointWidth / 2)
+        // Справа: отступ справа (sideMargin)
+        x = (width - sideMargin) - (pointInHalf * pointWidth + pointWidth / 2)
       } else {
         const pointInHalf = pointIndex - 6
-        x = barX - (pointInHalf * pointWidth + pointWidth / 2)
+        // Слева: отступ слева (sideMargin) + пол-доски + бар - (позиция)
+        // Но треугольники 7-12 находятся слева от бара.
+        // Индексы 6-11 (точки 13-18) - это левая верхняя часть?
+        // Нет:
+        // isTopRow (0-11) -> точки 24..13.
+        //   0-5 -> 24..19 (Левый верх? или Правый верх?)
+        //   В стандартной расстановке:
+        //   Top Right: 19-24 (Black Home) -> indices 0-5 ? No.
+        //   Let's check standard logic:
+        //   pointIndex 0 -> point 24. 
+        //   If White moves 24 -> 1. 24 is Opponent Home.
+        //   Standard: 13-24 is Top. 1-12 is Bottom.
+        //   24 is Top Left? Or Top Right?
+        //   Usually Top Right is 19-24 (White's perspective opponent home).
+        //   Let's stick to current logic:
+        //     isRightSide = pointIndex < 6. -> Points 24, 23, 22, 21, 20, 19.
+        //     If isRightSide is drawn on RIGHT, then 19-24 are on Right.
+        
+        // Корректировка под скин:
+        // Точки 19-24 (индексы 0-5) - Слева или Справа?
+        // Обычно 1-6 (Дом белых) внизу справа.
+        // Значит 19-24 (Дом черных) вверху слева.
+        // Значит индексы 0-5 (24..19) должны быть СЛЕВА.
+        // А индексы 6-11 (18..13) должны быть СПРАВА.
+        
+        // ПРОВЕРКА ТЕКУЩЕЙ ЛОГИКИ (ДО ИЗМЕНЕНИЙ):
+        // if (isRightSide) { x = boardEndX ... } -> Рисует справа.
+        // Значит индексы 0-5 были Справа. То есть 24..19 Справа.
+        // Это значит 1-6 Внизу Справа? (isTopRow = false).
+        // else { ... } -> 12..1 (indices 12-23).
+        // isLeftSide = pointIndex < 18 (indices 12-17 -> points 12..7).
+        //   Drawn at boardStartX (Left).
+        // indices 18-23 -> points 6..1. Drawn at Right.
+        
+        // ИТОГ: 
+        // 1-6 (Дом белых) - Внизу Справа.
+        // 19-24 (Дом черных) - Вверху Справа?
+        // Нет, 1-6 и 19-24 находятся друг над другом.
+        // Значит 24 над 1.
+        // Если 1-6 Внизу Справа, то 24-19 Вверху Справа.
+        
+        // Значит индексы 0-5 (24..19) -> Справа.
+        // Индексы 6-11 (18..13) -> Слева.
+        
+        const pointInHalf = pointIndex - 6
+        // Слева: sideMargin + отступ
+        // Но порядок рисования: 18, 17... 13. (Слева направо или Справа налево?)
+        // 13 - крайний левый? или 18?
+        // Стандарт: 12 слева внизу. 13 слева вверху.
+        // Значит 13 (index 11) - крайний левый.
+        // 18 (index 6) - ближе к бару.
+        
+        // Расчет x для левой верхней четверти:
+        // x = (sideMargin + halfBoardWidth) - (pointInHalf * pointWidth + pointWidth/2)
+        // Если pointInHalf = 0 (index 6, point 18), x должен быть у бара.
+        // Если pointInHalf = 5 (index 11, point 13), x должен быть у левого края.
+        
+        x = (sideMargin + halfBoardWidth) - (pointInHalf * pointWidth + pointWidth / 2)
       }
     } else {
       pointNumber = 12 - (pointIndex - 12)
-      const isLeftSide = pointIndex < 18
+      const isLeftSide = pointIndex < 18 // 12-17 -> points 12..7
       
       if (isLeftSide) {
+        // Левый низ (12..7)
+        // 12 - крайний левый. 7 - у бара.
+        // index 12 -> point 12. index 17 -> point 7.
         const pointInHalf = pointIndex - 12
-        x = boardStartX + (pointInHalf * pointWidth + pointWidth / 2)
+        x = sideMargin + (pointInHalf * pointWidth + pointWidth / 2)
       } else {
+        // Правый низ (6..1)
+        // 6 - у бара. 1 - крайний правый.
+        // index 18 -> point 6. index 23 -> point 1.
         const pointInHalf = pointIndex - 18
-        x = barX + barWidth + (pointInHalf * pointWidth + pointWidth / 2)
+        x = (sideMargin + halfBoardWidth + barWidth) + (pointInHalf * pointWidth + pointWidth / 2)
       }
     }
     
-    let y = isTopRow ? 0 : height
+    let y = isTopRow ? topMargin : (height - bearOffHeight - 5) // -5 небольшой отступ от лотка
     
-    // Для player2 инвертируем координаты точек, так как доска инвертирована на 180 градусов
+    // Для player2 инвертируем координаты точек
     let finalIsTopRow = isTopRow
     if (!isPlayer1) {
       x = width - x
-      y = height - y
-      // Инвертируем isTopRow для player2, так как координаты инвертированы
-      finalIsTopRow = !isTopRow
+      y = height - y 
+      // При инверсии Y, верх становится низом.
+      // Но у нас "bearOffHeight" снизу.
+      // Если мы просто инвертируем Y, то "верхний отступ" станет "нижним отступом".
+      // А "нижний отступ (лоток)" станет "верхним".
+      // Если лоток только внизу, то для Player 2 (черных) доска перевернута?
+      // Визуально скин не переворачивается.
+      // Значит нам нужно мапить логические точки на визуальные места.
+      
+      // Если мы играем за черных, мы хотим видеть свои шашки (движение 24->1) так же?
+      // Обычно доска не вращается визуально (картинка), а меняется нумерация.
+      // Но текущая логика: x = width - x, y = height - y.
+      // Это поворот на 180.
+      
+      // Если скин имеет лоток СНИЗУ, то при повороте на 180 лоток уйдет ВВЕРХ.
+      // Это проблема, если на картинке лоток нарисован снизу.
+      
+      // РЕШЕНИЕ: Не инвертировать Y для координат, если мы хотим сохранить визуальный низ.
+      // Но тогда "верхний ряд" станет "нижним"?
+      // Если мы не инвертируем Y, то TopRow остается TopRow.
+      // Но для черных "дом" (1-6) обычно вверху слева? Или они идут в 1-6 (внизу)?
+      // В Long Backgammon:
+      // White: Head at 24 (Top Right), moves to 1 (Bottom Right). (Or Top Left -> Bottom Right).
+      // Let's assume standard setup.
+      
+      // Если мы хотим оставить картинку "как есть" (лоток снизу), то нельзя делать `y = height - y`.
+      // Нужно просто пересчитать соответствие точек.
+      
+      // Если Player 2:
+      // Мы хотим, чтобы его "1" была там, где у белых "24"?
+      // Или просто развернуть нумерацию?
+      
+      // Давайте пока оставим инверсию X, но Y адаптируем к лотку.
+      // Если для P1 Y = topMargin, то для P2 Y должен быть (height - topMargin)?
+      // Нет, если скин статичен.
+      
+      // Если мы просто инвертируем X:
+      // x = width - x.
+      // То право становится лево.
+      // Y оставляем как есть?
+      // Тогда TopRow (индексы 0-11) останутся вверху.
+      // Но для черных это точки 1..12? Или 24..13?
+      
+      // Давайте сделаем `finalIsTopRow` зависимым от инверсии.
+      // Если мы не инвертируем Y, то `y` остается прежним.
+      
+      // Попробуем отключить инверсию Y для P2, чтобы лоток остался снизу.
+      y = isTopRow ? topMargin : (height - bearOffHeight - 5)
+      // x инвертируем, чтобы поменять стороны (дом слева/справа)
+      x = width - x
+      
+      // Но! isTopRow для P2 означает другие точки.
+      // P2 points: 0->24.
+      // Если P1 points: 0->24 (TopRight -> BottomRight).
+      // То P2 (сидя напротив): TopLeft -> BottomLeft.
+      
+      // В текущей логике `isTopRow` зависит от индекса (0-11).
+      // Если мы просто инвертируем X, то:
+      // 0-5 (были справа) станут слева.
+      // 6-11 (были слева) станут справа.
+      // Это похоже на поворот доски.
+      
+      // Оставим только инверсию X.
     }
     
-    return { x, y, isTopRow: finalIsTopRow, pointWidth, pointHeight, pointNumber }
+    return { x, y, isTopRow, pointWidth, pointHeight, pointNumber }
   }, [isPlayer1])
 
   // Определение позиции для кубиков
@@ -615,26 +741,10 @@ export default function BackgammonBoard({
     const actualX = x
     const actualY = y
     
-    // 0. ПРИОРИТЕТ: Проверка специальных зон в sandbox режиме
-    // (Мусорка отключена по просьбе пользователя)
-    
-    // Параметры области выноса (Контейнеры)
-    const bearOffWidth = width * 0.06
-    const boardWidth = width - (bearOffWidth * 2)
-    const boardStartX = bearOffWidth
-    const boardEndX = width - bearOffWidth
-    
-    // Центральная полоса (бар)
-    const barWidth = boardWidth * 0.08
-    const barX = boardStartX + (boardWidth - barWidth) / 2
-    
-    // Параметры для точек
-    const halfBoardWidth = (boardWidth - barWidth) / 2
-    const pointWidth = halfBoardWidth / 6
+    // ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ (дублируем логику из getPointCoordinates)
+    const bearOffHeight = height * 0.13
     
     // Проверяем все точки
-    const points = gameState?.points || []
-    
     // Прямой расчет попадания в точку на основе логики getPointCoordinates
     // Добавляем небольшой отступ (padding) для более легкого попадания
     const padding = 5;
@@ -643,50 +753,58 @@ export default function BackgammonBoard({
       
       const xStart = pX - pW / 2 - padding;
       const xEnd = pX + pW / 2 + padding;
-      const yStart = (isTopRow ? 0 : height / 2) - padding;
-      const yEnd = (isTopRow ? height / 2 : height) + padding;
+      
+      // Hitbox по вертикали:
+      // Если isTopRow: от y=topMargin до y=topMargin+pH
+      // Если !isTopRow: от y=(height-bearOffHeight-pH) до y=(height-bearOffHeight)
+      // getPointCoordinates возвращает y основания.
+      // TopRow: y = topMargin. Hitbox: y..y+pH.
+      // BottomRow: y = height-bearOffHeight. Hitbox: y-pH..y.
+      
+      let yStart, yEnd;
+      if (isTopRow) {
+          yStart = pY - padding;
+          yEnd = pY + pH + padding;
+      } else {
+          yStart = pY - pH - padding;
+          yEnd = pY + padding;
+      }
       
       if (actualX >= xStart && actualX <= xEnd && actualY >= yStart && actualY <= yEnd) {
         return pointIndex
       }
     }
     
-    // Проверяем бар (для коротких нард - более широкая область)
+    // Проверяем бар (упрощенно - центр экрана)
+    const barWidth = width * 0.088
+    const barX = (width - barWidth) / 2
     if (actualX >= barX && actualX <= barX + barWidth) {
-      // Для коротких нард разрешаем клик в более широкой области бара
-      const barYMin = gameMode === 'short' ? height * 0.1 : height * 0.25
-      const barYMax = gameMode === 'short' ? height * 0.9 : height * 0.75
-      if (actualY >= barYMin && actualY <= barYMax) {
-        return isPlayer1 ? 24 : 25
+      if (actualY >= height * 0.2 && actualY <= height * 0.8) {
+         return isPlayer1 ? 24 : 25
       }
     }
     
-    // Проверяем контейнеры
-    const leftContainerX = 0
-    const rightContainerX = width - bearOffWidth
-    const isLeftTarget = actualX >= leftContainerX && actualX <= leftContainerX + bearOffWidth
-    const isRightTarget = actualX >= rightContainerX && actualX <= rightContainerX + bearOffWidth
-    
-    if (isLeftTarget || isRightTarget) {
-      // Для Белых (P1) дом всегда в правой нижней четверти (пункты 1-6)
-      // Для Черных (P2) дом либо в правой верхней (короткие), либо в левой верхней (длинные)
-      const isMySide = isPlayer1 ? isRightTarget : (gameMode === 'long' ? isLeftTarget : isRightTarget)
-      if (isMySide) return -1
+    // Проверяем контейнеры (bearOff) - теперь СНИЗУ
+    // Высота bearOffHeight
+    if (actualY >= height - bearOffHeight) {
+      // Весь низ - это bearOff? Или только определенные зоны?
+      // Для простоты - весь низ.
+      return -1
     }
     
     // В Sandbox режиме проверяем зону "удаления" (мусорка) в левом нижнем углу
-    // Визуально она не отображается, но хитбокс работает для перетаскивания шашек
+    // Но bearOff теперь снизу. Мусорку можно положить в угол, поверх лотка.
     if (isSandbox) {
-      const trashSize = 120
+      const trashSize = 60
       const trashX = 0
       const trashY = height - trashSize
       if (actualX >= trashX && actualX <= trashX + trashSize && actualY >= trashY && actualY <= height) {
-        return -3 // Код для мусорки (удаления)
+        return -3 // Код для мусорки
       }
     }
     
     return null
-  }, [gameState, isPlayer1, gameMode, isSandbox])
+  }, [gameState, isPlayer1, gameMode, isSandbox, getPointCoordinates])
   
   // Отрисовка доски
   const drawBoard = useCallback(() => {
