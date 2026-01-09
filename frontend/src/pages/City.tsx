@@ -180,7 +180,7 @@ export default function City() {
             onClick={e => e.stopPropagation()}
             style={{
               position: 'relative', margin: '0', background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
-              padding: '0', borderRadius: '16px', textAlign: 'center', maxWidth: '90vw',
+              padding: '0', borderRadius: '16px', textAlign: 'center', maxWidth: '400px',
               width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
             }}

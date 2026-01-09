@@ -1,49 +1,51 @@
 .subscription-content {
   padding: 16px;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .subscription-subtitle {
-  font-size: 14px;
-  color: var(--color-text-secondary);
+  font-size: 13px;
+  color: #888;
   text-align: center;
   margin-bottom: 24px;
+  margin-top: -8px;
 }
 
 /* Преимущества подписки */
 .subscription-features {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 32px;
 }
 
 .subscription-feature-card {
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  transition: all var(--transition-base);
-}
-
-.subscription-feature-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  background: #1C1C1E; /* Dark grey similar to iOS settings or modern dark apps */
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: none;
+  display: flex;
+  align-items: center;
 }
 
 .subscription-feature-content {
   display: flex;
   align-items: center;
   gap: 16px;
+  width: 100%;
 }
 
 .subscription-feature-icon {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 215, 0, 0.1);
-  border-radius: var(--radius-md);
+  background: rgba(255, 215, 0, 0.1); /* Gold tint */
+  border-radius: 10px;
+  color: #FFD700;
 }
 
 .subscription-feature-info {
@@ -51,16 +53,26 @@
 }
 
 .subscription-feature-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: 4px;
+  color: #FFF;
+  margin-bottom: 2px;
 }
 
 .subscription-feature-description {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  line-height: 1.4;
+  font-size: 12px;
+  color: #888;
+  line-height: 1.3;
+}
+
+/* Переключатель методов оплаты */
+.subscription-payment-methods {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: #1C1C1E;
+  padding: 4px;
+  border-radius: 12px;
 }
 
 /* Варианты подписки */
@@ -68,93 +80,85 @@
   display: flex;
   gap: 12px;
   margin-bottom: 24px;
-  overflow-x: auto;
-  padding: 4px 0;
-  -webkit-overflow-scrolling: touch;
 }
 
 .subscription-plan-card {
-  min-width: 120px;
   flex: 1;
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
+  background: #1C1C1E;
+  border-radius: 16px;
   padding: 16px;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all 0.2s;
   border: 2px solid transparent;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 120px;
 }
 
 .subscription-plan-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  background: #252528;
 }
 
 .subscription-plan-card.selected {
-  border-color: var(--color-gold);
-  background: rgba(255, 215, 0, 0.05);
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+  border-color: #FF3B30; /* Red selection border */
+  background: #252528;
 }
 
 .subscription-plan-card.popular {
-  border-color: var(--color-primary);
+  /* Special style for popular item if needed, but 'selected' usually overrides */
 }
 
 .subscription-plan-header {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 12px;
 }
 
 .subscription-plan-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: #FFF;
 }
 
 .subscription-plan-badge {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  padding: 4px 8px;
-  background: var(--color-background);
-  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 700;
+  color: #FFF;
+  padding: 2px 6px;
+  background: #FF3B30; /* Red badge */
+  border-radius: 4px;
   align-self: flex-start;
-}
-
-.subscription-plan-badge.popular-badge {
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
+  text-transform: uppercase;
 }
 
 .subscription-plan-price {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-
-.subscription-plan-price-icon {
-  font-size: 16px;
-  color: var(--color-primary);
-  line-height: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #FFF;
+  margin-top: 8px;
 }
 
 /* Кнопка оформления */
 .subscription-submit-btn {
-  max-width: 100%;
+  background: #FF3B30 !important; /* Red button */
+  color: #FFF !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  height: 50px !important;
+  border-radius: 12px !important;
+  margin-bottom: 32px;
 }
 
 /* Автобилд города */
 .subscription-autobuild-card {
   margin-top: 24px;
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: var(--radius-lg);
+  background: #1C1C1E;
+  border-radius: 16px;
   padding: 20px;
-  border: 2px solid rgba(255, 215, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.2);
 }
 
 .subscription-autobuild-header {
@@ -165,7 +169,7 @@
 }
 
 .subscription-autobuild-icon {
-  font-size: 40px;
+  font-size: 32px;
   flex-shrink: 0;
 }
 
@@ -174,64 +178,59 @@
 }
 
 .subscription-autobuild-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: #FFF;
   margin-bottom: 4px;
 }
 
 .subscription-autobuild-description {
-  font-size: 14px;
-  color: var(--color-text-secondary);
+  font-size: 13px;
+  color: #888;
   line-height: 1.4;
-}
-
-.subscription-autobuild-activated {
-  padding: 12px;
-  background: rgba(76, 175, 80, 0.1);
-  border-radius: var(--radius-md);
-  color: #4CAF50;
-  font-weight: 600;
-  text-align: center;
-  font-size: 16px;
-}
-
-.subscription-autobuild-purchase {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .subscription-autobuild-payment-methods {
   display: flex;
   gap: 8px;
+  margin-bottom: 16px;
 }
 
 .subscription-autobuild-payment-btn {
   flex: 1;
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
-  border: 2px solid var(--color-background);
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
-  font-size: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #252528;
+  color: #FFF;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all 0.2s;
 }
 
 .subscription-autobuild-payment-btn:hover {
-  border-color: var(--color-gold);
-  background: rgba(255, 215, 0, 0.05);
+  background: #333;
 }
 
 .subscription-autobuild-payment-btn.active {
-  border-color: var(--color-gold);
-  background: rgba(255, 215, 0, 0.1);
-  color: var(--color-gold);
+  border-color: #FFD700;
+  color: #FFD700;
+  background: rgba(255, 215, 0, 0.05);
 }
 
 .subscription-autobuild-buy-btn {
-  max-width: 100%;
+  background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%) !important;
+  color: #000 !important;
+  font-weight: 600 !important;
 }
 
+.subscription-autobuild-activated {
+  padding: 12px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 12px;
+  color: #4CAF50;
+  font-weight: 600;
+  text-align: center;
+  font-size: 14px;
+}

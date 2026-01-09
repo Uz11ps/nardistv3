@@ -302,25 +302,46 @@ export default function Inventory() {
         {activeTab === 'other' ? (
           /* ... existing other tab content ... */
           <div className="inventory-other-list">
-            <Card className="inventory-other-item">
-              <div className="inventory-other-header">
-                <div className="inventory-other-icon">⭐</div>
-                <div className="inventory-other-info">
-                  <div className="inventory-other-title">Премиум подписка</div>
+            <Card className="inventory-other-item" style={{ background: 'linear-gradient(180deg, #2A2B2F 0%, #1A1B1F 100%)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <div className="inventory-other-header" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '4px 0' }}>
+                <div className="inventory-other-icon" style={{ 
+                  fontSize: '24px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  width: '48px', 
+                  height: '48px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  borderRadius: '12px',
+                  color: '#FFD700'
+                }}>⭐</div>
+                <div className="inventory-other-info" style={{ flex: 1 }}>
+                  <div className="inventory-other-title" style={{ fontSize: '16px', fontWeight: '600', color: '#FFF', marginBottom: '4px' }}>Премиум подписка</div>
                   <div className="inventory-other-status">
                     {hasPremium ? (
-                      <span style={{ color: '#4CAF50' }}>Активна</span>
+                      <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>Активна</span>
                     ) : (
-                      <span style={{ color: '#B6B6B6' }}>Неактивна</span>
+                      <span style={{ color: '#888', fontSize: '14px' }}>Неактивна</span>
                     )}
                   </div>
                 </div>
               </div>
               {!hasPremium && (
                 <button
-                  className="inventory-item-button wear"
+                  className="inventory-item-button"
                   onClick={() => navigate('/subscription')}
-                  style={{ marginTop: '12px' }}
+                  style={{ 
+                    marginTop: '16px',
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: 'var(--color-primary)',
+                    color: 'var(--color-text-on-primary)',
+                    border: 'none',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
                 >
                   Купить подписку
                 </button>
