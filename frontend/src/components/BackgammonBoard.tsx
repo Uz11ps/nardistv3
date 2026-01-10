@@ -66,18 +66,6 @@ export default function BackgammonBoard({
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
 
-  // --- DEBUG / ADJUSTMENT MODE ---
-  const [debugMode, setDebugMode] = useState(false)
-  const [debugConfig, setDebugConfig] = useState({
-    sideMarginPct: 0.03,
-    barWidthPct: 0.06,
-    topMarginPct: 0.06,
-    bearOffHeightPct: 0.13,
-    checkerWidthRatio: 0.95,
-    checkerHeightRatio: 0.16,
-    checkerDrawScale: 1.1,
-  })
-
   // Ref for loaded images
   const imagesRef = useRef<Record<string, HTMLImageElement>>({})
   // State to force re-render when images load
@@ -489,17 +477,18 @@ export default function BackgammonBoard({
     const height = canvas.height
     
     // ПАРАМЕТРЫ ПОДГОНКИ ПОД СКИН (skin1.png)
+    // Хардкодим значения от пользователя
     // Лот для скида снизу -> bearOffHeight
-    const bearOffHeight = height * debugConfig.bearOffHeightPct
-    const topMargin = height * debugConfig.topMarginPct
+    const bearOffHeight = height * 0.036
+    const topMargin = height * 0.06
     // Уменьшаем отступы сбоку и ширину бара, чтобы треугольники стали шире
-    const sideMargin = width * debugConfig.sideMarginPct
+    const sideMargin = width * 0.040 // Чуть меньше 0.048, чтобы "прижать к бортам" (user request)
     
     // Рабочая область доски (без лотка и рамки)
     const playAreaHeight = height - bearOffHeight - topMargin
     
     // Центральная полоса (бар)
-    const barWidth = width * debugConfig.barWidthPct
+    const barWidth = width * 0.043
     // Ширина одной половины игрового поля
     const halfBoardWidth = (width - (sideMargin * 2) - barWidth) / 2
     
@@ -790,14 +779,14 @@ export default function BackgammonBoard({
     ctx.clearRect(0, 0, width, height)
     
     // ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ (дублируем логику из getPointCoordinates)
-    const bearOffHeight = height * debugConfig.bearOffHeightPct
-    const topMargin = height * debugConfig.topMarginPct
-    const sideMargin = width * debugConfig.sideMarginPct
+    const bearOffHeight = height * 0.036
+    const topMargin = height * 0.06
+    const sideMargin = width * 0.040 // Adjusted
     
     // Определяем параметры доски
     const bearOffWidth = width * 0.06
     const boardWidth = width - (bearOffWidth * 2)
-    const barWidth = width * debugConfig.barWidthPct
+    const barWidth = width * 0.043
     const barX = (width - barWidth) / 2
     
     // Рисуем фоновую картинку (Скин) на всю доску
@@ -860,7 +849,7 @@ export default function BackgammonBoard({
           ctx.shadowOffsetY = 2
           
           // Увеличиваем размер изображения, но не слишком сильно, так как базовый размер уже увеличен
-          const scale = debugConfig.checkerDrawScale 
+          const scale = 1.23
           const drawSize = size * scale
           
           ctx.drawImage(img, cX - drawSize/2, cY - drawSize/2, drawSize, drawSize)
@@ -921,10 +910,10 @@ export default function BackgammonBoard({
       const isMyPoint = isSandbox ? true : ((isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker))
       
       // Увеличиваем размер шашки относительно ширины треугольника
-      const checkerSize = Math.min(pW * debugConfig.checkerWidthRatio, pH * debugConfig.checkerHeightRatio) 
+      const checkerSize = Math.min(pW * 1.5, pH * 0.216) 
       const checkerBaseY = isTopRow 
-        ? y + checkerSize/2 + 2 
-        : y - checkerSize/2 - 2  
+        ? y + checkerSize/2 // Removed extra +2 gap
+        : y - checkerSize/2 // Removed extra -2 gap  
       
       const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
       const isAnimatingFromThisPoint = animatingChecker && animatingChecker.from === pointIndex
@@ -2382,96 +2371,9 @@ export default function BackgammonBoard({
     const usedCount = usedDiceIndices.size
     return totalDice - usedCount
   }, [diceArray, usedDiceIndices])
-
-  // --- DEBUG UI COMPONENT ---
-  const DebugUI = () => {
-    if (!debugMode) return (
-      <button 
-        onClick={() => setDebugMode(true)}
-        style={{
-          position: 'absolute',
-          bottom: '10px',
-          left: '10px',
-          zIndex: 100000,
-          background: 'rgba(0,0,0,0.5)',
-          color: 'white',
-          border: 'none',
-          padding: '5px',
-          borderRadius: '5px',
-          cursor: 'pointer',
-          fontSize: '14px'
-        }}
-      >
-        ⚙️
-      </button>
-    )
-
-    const handleChange = (key: keyof typeof debugConfig, value: number) => {
-      setDebugConfig(prev => ({ ...prev, [key]: value }))
-    }
-
-    return (
-      <div style={{
-        position: 'absolute',
-        top: '10px',
-        left: '10px',
-        zIndex: 100000,
-        background: 'rgba(0,0,0,0.85)',
-        color: 'white',
-        padding: '15px',
-        borderRadius: '10px',
-        fontSize: '12px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        border: '1px solid #444',
-        boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-        width: '300px'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <h3 style={{ margin: 0 }}>Debug Geometry</h3>
-          <button onClick={() => setDebugMode(false)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer' }}>✕</button>
-        </div>
-        
-        {[
-          { key: 'sideMarginPct', label: 'Side Margin', min: 0, max: 0.1, step: 0.001 },
-          { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 0.2, step: 0.001 },
-          { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 0.2, step: 0.001 },
-          { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 0.3, step: 0.001 },
-          { key: 'checkerWidthRatio', label: 'Checker Width Ratio', min: 0.5, max: 1.5, step: 0.01 },
-          { key: 'checkerHeightRatio', label: 'Checker Height Ratio', min: 0.05, max: 0.3, step: 0.001 },
-          { key: 'checkerDrawScale', label: 'Checker Draw Scale', min: 0.5, max: 1.5, step: 0.01 },
-        ].map(item => (
-          <div key={item.key} style={{ marginBottom: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <label>{item.label}</label>
-              <span>{debugConfig[item.key as keyof typeof debugConfig].toFixed(3)}</span>
-            </div>
-            <input
-              type="range"
-              min={item.min}
-              max={item.max}
-              step={item.step}
-              value={debugConfig[item.key as keyof typeof debugConfig]}
-              onChange={(e) => handleChange(item.key as keyof typeof debugConfig, parseFloat(e.target.value))}
-              style={{ width: '100%' }}
-            />
-          </div>
-        ))}
-        
-        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #444' }}>
-           <textarea 
-             readOnly 
-             value={JSON.stringify(debugConfig, null, 2)}
-             style={{ width: '100%', height: '150px', fontSize: '10px', background: '#222', color: '#ddd', border: '1px solid #555' }}
-           />
-        </div>
-      </div>
-    )
-  }
   
   return (
     <div ref={containerRef} className="backgammon-board-container">
-      <DebugUI />
       <canvas
         ref={canvasRef}
         className="backgammon-board-canvas"
