@@ -599,7 +599,7 @@ export default function BackgammonBoard({
     */
     
     return { x, y, isTopRow, pointWidth, pointHeight, pointNumber }
-  }, [isPlayer1, debugConfig]) // Add debugConfig to dependency array
+  }, [isPlayer1])
 
   // Определение позиции для кубиков
   // Кубики показываются на стороне игрока, у которого сейчас ход
