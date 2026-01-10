@@ -33,8 +33,11 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Вве�
 
   const saveSelection = () => {
     const sel = window.getSelection()
-    if (sel && sel.rangeCount > 0) {
-      selectionRef.current = sel.getRangeAt(0)
+    if (sel && sel.rangeCount > 0 && editorRef.current) {
+      const range = sel.getRangeAt(0)
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        selectionRef.current = range
+      }
     }
   }
 
@@ -45,6 +48,8 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Вве�
         sel.removeAllRanges()
         sel.addRange(selectionRef.current)
       }
+    } else {
+      editorRef.current?.focus()
     }
   }
 
@@ -58,9 +63,6 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Вве�
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    // Сохраняем позицию курсора перед началом загрузки
-    saveSelection()
 
     if (file.size > 5 * 1024 * 1024) {
       alert('Размер файла не должен превышать 5MB')
