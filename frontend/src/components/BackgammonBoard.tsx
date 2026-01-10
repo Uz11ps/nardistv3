@@ -66,27 +66,82 @@ export default function BackgammonBoard({
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
 
-  // --- DEBUG / ADJUSTMENT MODE ---
-  const [debugMode, setDebugMode] = useState(false)
-  const [debugConfig, setDebugConfig] = useState({
-    sideMarginPct: 0.040,
-    barWidthPct: 0.043,
-    topMarginPct: 0.06,
-    bearOffHeightPct: 0.036,
+  // --- CONFIGURATIONS ---
+  // Large Screen (Desktop) - Optimized
+  const DESKTOP_CONFIG = {
+    sideMarginPct: 0.049,
+    barWidthPct: 0.056,
+    topMarginPct: 0.073,
+    bearOffHeightPct: 0.131,
+    checkerWidthRatio: 1.5,
+    checkerHeightRatio: 0.216,
+    checkerDrawScale: 1.2,
+    diceP1X: 0.66,
+    diceP1Y: 0.85,
+    diceP2X: 0.90,
+    diceP2Y: 0.38,
+    checkerTopOffset: -25,
+    checkerBottomOffset: -44,
+    textTopOffset: -15,
+    textBottomOffset: 15,
+  }
+
+  // Small Screen (Mobile) - Optimized
+  const MOBILE_CONFIG = {
+    sideMarginPct: 0.041,
+    barWidthPct: 0.025,
+    topMarginPct: 0.079,
+    bearOffHeightPct: 0.139,
     checkerWidthRatio: 1.5,
     checkerHeightRatio: 0.216,
     checkerDrawScale: 1.23,
-    // New parameters for fine-tuning
-    diceP1X: 0.75, // Player 1 dice X position (0-1)
-    diceP1Y: 0.65, // Player 1 dice Y position (0-1)
-    diceP2X: 0.25, // Player 2 dice X position (0-1)
-    diceP2Y: 0.35, // Player 2 dice Y position (0-1)
-    checkerTopOffset: -33, // Default from user
-    checkerBottomOffset: -16, // Default from user
-    textTopOffset: -15, // Offset for top numbers
-    textBottomOffset: 15, // Offset for bottom numbers
-  })
-  
+    diceP1X: 0.75,
+    diceP1Y: 0.65,
+    diceP2X: 0.09,
+    diceP2Y: 0.38, // Assumed similar to desktop logic but on left
+    checkerTopOffset: -25, // Using safe defaults
+    checkerBottomOffset: -44, // Using safe defaults
+    textTopOffset: -15,
+    textBottomOffset: 15,
+  }
+
+  // --- DEBUG / ADJUSTMENT MODE ---
+  const [debugMode, setDebugMode] = useState(false)
+  const [debugConfig, setDebugConfig] = useState(DESKTOP_CONFIG) // Initial state
+
+  // Responsive Config Switcher
+  useEffect(() => {
+    const handleResize = () => {
+        if (containerRef.current) {
+            const width = containerRef.current.offsetWidth
+            // Determine if mobile (e.g. < 768px or aspect ratio check)
+            // A common mobile width is < 768px.
+            // But user might be rotating screen.
+            // Let's use 768px as breakpoint.
+            if (width < 768) {
+                // Apply Mobile Config if not already applied (and if not manually debugging)
+                // Note: If user is actively debugging, we might overwrite their manual changes.
+                // But for production, this is what we want.
+                // We will only update if not in debug mode OR if we want to reset.
+                // For now, let's just update setDebugConfig so the board uses it.
+                if (!debugMode) {
+                     setDebugConfig(MOBILE_CONFIG)
+                }
+            } else {
+                if (!debugMode) {
+                     setDebugConfig(DESKTOP_CONFIG)
+                }
+            }
+        }
+    }
+
+    // Call on mount
+    handleResize()
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [debugMode])
+
   // Test dice for debug mode
   const [debugDice, setDebugDice] = useState<number[] | null>(null)
 
@@ -2431,6 +2486,9 @@ export default function BackgammonBoard({
     const handleChange = (key: keyof typeof debugConfig, value: number) => {
       setDebugConfig(prev => ({ ...prev, [key]: value }))
     }
+    
+    // Determine which config is currently active for display label
+    const isMobile = containerRef.current && containerRef.current.offsetWidth < 768;
 
     return (
       <div style={{
@@ -2450,8 +2508,12 @@ export default function BackgammonBoard({
         width: '300px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <h3 style={{ margin: 0 }}>Debug Geometry</h3>
+          <h3 style={{ margin: 0 }}>Debug Geometry ({isMobile ? 'Mobile' : 'Desktop'})</h3>
           <button onClick={() => setDebugMode(false)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer' }}>✕</button>
+        </div>
+        
+        <div style={{ marginBottom: '10px', fontSize: '10px', color: '#aaa' }}>
+            Current Width: {containerRef.current?.offsetWidth}px
         </div>
         
         {[
