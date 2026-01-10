@@ -95,12 +95,12 @@ export default function BackgammonBoard({
     checkerWidthRatio: 1.5,
     checkerHeightRatio: 0.216,
     checkerDrawScale: 1.23,
-    diceP1X: 0.75,
+    diceP1X: 0.55, // Moved closer to center (was 0.75)
     diceP1Y: 0.65,
     diceP2X: 0.09,
-    diceP2Y: 0.38, // Assumed similar to desktop logic but on left
-    checkerTopOffset: -25, // Using safe defaults
-    checkerBottomOffset: -44, // Using safe defaults
+    diceP2Y: 0.38, 
+    checkerTopOffset: -25, 
+    checkerBottomOffset: 33, // Updated from user screenshot (was -44)
     textTopOffset: -15,
     textBottomOffset: 15,
   }
