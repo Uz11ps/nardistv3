@@ -81,14 +81,29 @@ export default function BackgammonBoard({
     diceP1Y: 0.65, // Player 1 dice Y position (0-1)
     diceP2X: 0.25, // Player 2 dice X position (0-1)
     diceP2Y: 0.35, // Player 2 dice Y position (0-1)
-    checkerTopOffset: 0, // Pixel offset for top checkers (positive moves down)
-    checkerBottomOffset: 0, // Pixel offset for bottom checkers (negative moves up)
+    checkerTopOffset: -33, // Default from user
+    checkerBottomOffset: -16, // Default from user
+    textTopOffset: -15, // Offset for top numbers
+    textBottomOffset: 15, // Offset for bottom numbers
   })
+  
+  // Test dice for debug mode
+  const [debugDice, setDebugDice] = useState<number[] | null>(null)
 
   // Ref for loaded images
   const imagesRef = useRef<Record<string, HTMLImageElement>>({})
   // State to force re-render when images load
   const [imagesLoaded, setImagesLoaded] = useState(false)
+
+  // Add debug effect to update dice when config changes
+  useEffect(() => {
+    // Force dice update when debug config changes
+    if (debugMode) {
+        // Force re-render/re-calculate
+        const event = new Event('resize');
+        window.dispatchEvent(event);
+    }
+  }, [debugConfig, debugMode])
 
   useEffect(() => {
     const sources = {
@@ -841,9 +856,9 @@ export default function BackgammonBoard({
         }
         const coordText = getCoordinateText(pointNumber);
         if (isTopRow) {
-            ctx.fillText(coordText, x, y - 15)
+            ctx.fillText(coordText, x, y + debugConfig.textTopOffset)
         } else {
-            ctx.fillText(coordText, x, y + 15)
+            ctx.fillText(coordText, x, y + debugConfig.textBottomOffset)
         }
     }
     
@@ -2453,6 +2468,8 @@ export default function BackgammonBoard({
           { key: 'diceP2Y', label: 'Dice P2 Y (0-1)', min: 0, max: 1, step: 0.01 },
           { key: 'checkerTopOffset', label: 'Top Checker Offset (px)', min: -50, max: 50, step: 1 },
           { key: 'checkerBottomOffset', label: 'Bottom Checker Offset (px)', min: -50, max: 50, step: 1 },
+          { key: 'textTopOffset', label: 'Top Text Offset (px)', min: -50, max: 50, step: 1 },
+          { key: 'textBottomOffset', label: 'Bottom Text Offset (px)', min: -50, max: 50, step: 1 },
         ].map(item => (
           <div key={item.key} style={{ marginBottom: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -2472,6 +2489,37 @@ export default function BackgammonBoard({
         ))}
         
         <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #444' }}>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ display: 'flex', alignItems: 'center' }}>
+              <input 
+                type="checkbox" 
+                checked={!!debugDice}
+                onChange={(e) => setDebugDice(e.target.checked ? [3, 4] : null)}
+              />
+              <span style={{ marginLeft: '5px' }}>Show Test Dice</span>
+            </label>
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ display: 'flex', alignItems: 'center' }}>
+              <input 
+                type="checkbox" 
+                checked={debugConfig.textTopOffset !== -15} // Dummy check
+                onChange={() => {}} // Read-only for now, sliders above control it
+                disabled
+              />
+              <span style={{ marginLeft: '5px' }}>Top Text Offset: {debugConfig.textTopOffset}</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center' }}>
+              <input 
+                type="checkbox" 
+                checked={debugConfig.textBottomOffset !== 15} // Dummy check
+                onChange={() => {}} 
+                disabled
+              />
+              <span style={{ marginLeft: '5px' }}>Bottom Text Offset: {debugConfig.textBottomOffset}</span>
+            </label>
+          </div>
+
            <textarea 
              readOnly 
              value={JSON.stringify(debugConfig, null, 2)}
@@ -2481,6 +2529,9 @@ export default function BackgammonBoard({
       </div>
     )
   }
+  
+  // Use real dice or debug dice
+  const effectiveDice = debugMode && debugDice ? debugDice : diceArray;
   
   return (
     <div ref={containerRef} className="backgammon-board-container">
@@ -2552,7 +2603,7 @@ export default function BackgammonBoard({
       )}
       
       {/* Кубики - показываем на стороне игрока, у которого ход, закрепляем после анимации внутри доски */}
-      {diceArray && diceArray.length > 0 && (
+      {effectiveDice && effectiveDice.length > 0 && (
         <div
           style={{
             position: 'absolute',
@@ -2585,14 +2636,14 @@ export default function BackgammonBoard({
             filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))',
             opacity: 1, // Явно устанавливаем непрозрачность
             // Добавляем видимый фон для отладки (можно убрать позже)
-            backgroundColor: 'transparent',
+            backgroundColor: debugMode ? 'rgba(255, 0, 0, 0.3)' : 'transparent', // Red bg in debug mode
             // Убеждаемся, что элемент виден
             visibility: 'visible',
           }}
         >
           {/* Показываем гифку, если она доступна для данного состояния кубиков */}
           <DiceGif 
-            dice={diceArray}
+            dice={effectiveDice}
             usedDiceIndices={usedDiceIndices}
             animating={diceAnimating}
             size={dice3DPosition?.size || 50}
@@ -2603,12 +2654,12 @@ export default function BackgammonBoard({
           {!diceAnimating && (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {(() => {
-                const isDoubles = diceArray.length > 2;
+                const isDoubles = effectiveDice.length > 2;
                 if (isDoubles) {
                   // В Sandbox всегда показываем все кубики по отдельности, чтобы не путать пользователя
                   if (isSandbox) {
                     // Фильтруем только неиспользованные кубики
-                    const unusedDice = diceArray.filter((_, index) => !usedDiceIndices.has(index));
+                    const unusedDice = effectiveDice.filter((_, index) => !usedDiceIndices.has(index));
                     if (unusedDice.length === 0) return null; // Все кубики использованы
                     
                     return unusedDice.map((dieValue, idx) => (
@@ -2623,7 +2674,7 @@ export default function BackgammonBoard({
                   }
 
                   // Для обычных дублей показываем один кубик с множителем
-                  const dieValue = diceArray[0];
+                  const dieValue = effectiveDice[0];
                   return (
                     <div style={{ position: 'relative' }}>
                       <Dice3D
@@ -2656,7 +2707,7 @@ export default function BackgammonBoard({
                   );
                 } else {
                   // Для обычного броска показываем оставшиеся кубики
-                  return diceArray.map((dieValue, index) => {
+                  return effectiveDice.map((dieValue, index) => {
                     if (usedDiceIndices.has(index)) return null;
                     return (
                       <div key={index} style={{ position: 'relative' }}>
