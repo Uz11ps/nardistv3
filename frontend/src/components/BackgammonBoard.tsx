@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, mem
 import { apiClient } from '../api/client'
 import Dice3D from './Dice3D'
 import DiceGif from './DiceGif'
-import './BackgammonBoard.css'
+import { DebugPanel } from './DebugPanel'
 
 interface BackgammonBoardProps {
   gameState: any
@@ -2844,7 +2844,38 @@ export default function BackgammonBoard({
   
   return (
     <div ref={containerRef} className="backgammon-board-container">
-      <DebugUI />
+      {debugMode ? (
+        <DebugPanel
+          debugConfig={debugConfig}
+          setDebugConfig={setDebugConfig}
+          setDebugMode={setDebugMode}
+          debugDice={debugDice}
+          setDebugDice={setDebugDice}
+          containerWidth={containerRef.current?.offsetWidth || 0}
+          isMobile={containerRef.current ? containerRef.current.offsetWidth < 768 : false}
+          MOBILE_CONFIG={MOBILE_CONFIG}
+          DESKTOP_CONFIG={DESKTOP_CONFIG}
+        />
+      ) : (
+        <button 
+          onClick={() => setDebugMode(true)}
+          style={{
+            position: 'absolute',
+            bottom: '10px',
+            left: '10px',
+            zIndex: 100000,
+            background: 'rgba(0,0,0,0.5)',
+            color: 'white',
+            border: 'none',
+            padding: '5px',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          ⚙️
+        </button>
+      )}
       <canvas
         ref={canvasRef}
         className="backgammon-board-canvas"
