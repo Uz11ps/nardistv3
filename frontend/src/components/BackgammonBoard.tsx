@@ -187,6 +187,8 @@ export default function BackgammonBoard({
 
   // Ref for loaded images
   const imagesRef = useRef<Record<string, HTMLImageElement>>({})
+  const boardSkinRef = useRef<HTMLImageElement | null>(null)
+  const boardSkinLoadTimeRef = useRef<number>(0)
   // State to force re-render when images load
   const [imagesLoaded, setImagesLoaded] = useState(false)
 
@@ -215,10 +217,26 @@ export default function BackgammonBoard({
 
     Object.entries(sources).forEach(([key, src]) => {
       const img = new Image()
+      // Для skin НЕ загружаем здесь - он загружается напрямую в drawBoard с cache busting
+      if (key === 'skin') {
+        // Пропускаем загрузку skin в useEffect, он будет загружаться динамически
+        loadedCount++
+        if (loadedCount === totalCount) {
+          setImagesLoaded(true)
+        }
+        return
+      }
       img.src = src
       img.onload = () => {
         if (!isMounted) return
         imagesRef.current[key] = img
+        loadedCount++
+        if (loadedCount === totalCount) {
+          setImagesLoaded(true)
+        }
+      }
+      img.onerror = () => {
+        if (!isMounted) return
         loadedCount++
         if (loadedCount === totalCount) {
           setImagesLoaded(true)
@@ -928,18 +946,40 @@ export default function BackgammonBoard({
     const barX = (width - barWidth) / 2
     
     // Рисуем фоновую картинку (Скин) на всю доску
+    // Загружаем напрямую с cache busting чтобы всегда использовать актуальный файл
     const globalSkinUrl = '/img/skin1.png'
     
-    const img = new Image()
-    img.src = globalSkinUrl
-    
-    // Рисуем фон
-    if (img.complete) {
-        ctx.drawImage(img, 0, 0, width, height)
+    // Используем закешированное изображение для быстрой отрисовки, если оно есть и загружено
+    const cachedSkinImg = boardSkinRef.current
+    if (cachedSkinImg && cachedSkinImg.complete && cachedSkinImg.naturalWidth > 0) {
+        ctx.drawImage(cachedSkinImg, 0, 0, width, height)
     } else {
-        img.onload = () => drawBoard()
+        // Пока изображение загружается, показываем фон
         ctx.fillStyle = '#8B4513'
         ctx.fillRect(0, 0, width, height)
+    }
+    
+    // Всегда загружаем новое изображение с cache busting для принудительного обновления
+    // Это гарантирует что при замене файла на диске будет использоваться новая версия
+    const currentTime = Date.now()
+    // Перезагружаем изображение если прошло больше 100мс с последней загрузки
+    // Это предотвращает множественные запросы при частых перерисовках
+    if (currentTime - boardSkinLoadTimeRef.current > 100) {
+        boardSkinLoadTimeRef.current = currentTime
+        const img = new Image()
+        // Добавляем timestamp для обхода кеша браузера и сервера
+        img.src = `${globalSkinUrl}?t=${currentTime}`
+        
+        img.onload = () => {
+            // Обновляем ref только после успешной загрузки
+            boardSkinRef.current = img
+            // Перерисовываем доску с новым изображением
+            drawBoard()
+        }
+        img.onerror = () => {
+            // Если не удалось загрузить, оставляем фон
+            console.warn('Failed to load board skin image')
+        }
     }
     
     // Треугольники НЕ РИСУЕМ (они есть на скине)
