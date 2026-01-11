@@ -2540,6 +2540,20 @@ export default function BackgammonBoard({
   // --- DEBUG UI COMPONENT ---
   const DebugUI = () => {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
+    const scrollPositionRef = useRef<number>(0)
+    
+    // Сохраняем позицию скролла при каждом изменении
+    useEffect(() => {
+      const container = scrollContainerRef.current
+      if (!container) return
+      
+      const handleScroll = () => {
+        scrollPositionRef.current = container.scrollTop
+      }
+      
+      container.addEventListener('scroll', handleScroll)
+      return () => container.removeEventListener('scroll', handleScroll)
+    }, [])
 
     if (!debugMode) return (
       <button 
@@ -2563,17 +2577,47 @@ export default function BackgammonBoard({
     )
 
     const handleChange = (key: keyof typeof debugConfig, value: number) => {
-      // Сохраняем позицию скролла перед изменением
-      const scrollTop = scrollContainerRef.current?.scrollTop || 0
-      
       setDebugConfig(prev => ({ ...prev, [key]: value }))
-      
       // Восстанавливаем позицию скролла после изменения
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = scrollTop
+          scrollContainerRef.current.scrollTop = scrollPositionRef.current
         }
-      }, 0)
+      })
+    }
+    
+    const handleIncrement = (key: keyof typeof debugConfig, delta: number) => {
+      const currentValue = debugConfig[key as keyof typeof debugConfig]
+      const item = [
+        { key: 'sideMarginPct', label: 'Side Margin', min: 0, max: 2, step: 0.001 },
+        { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 2, step: 0.001 },
+        { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 2, step: 0.001 },
+        { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 2, step: 0.001 },
+        { key: 'checkerWidthRatio', label: 'Checker Width Ratio', min: 0.01, max: 20, step: 0.01 },
+        { key: 'checkerHeightRatio', label: 'Checker Height Ratio', min: 0.001, max: 5, step: 0.001 },
+        { key: 'checkerDrawScale', label: 'Checker Draw Scale', min: 0.01, max: 20, step: 0.01 },
+        { key: 'diceP1X', label: 'Dice P1 X (0-1)', min: -2, max: 3, step: 0.01 },
+        { key: 'diceP1Y', label: 'Dice P1 Y (0-1)', min: -2, max: 3, step: 0.01 },
+        { key: 'diceP2X', label: 'Dice P2 X (0-1)', min: -2, max: 3, step: 0.01 },
+        { key: 'diceP2Y', label: 'Dice P2 Y (0-1)', min: -2, max: 3, step: 0.01 },
+        { key: 'checkerTopOffset', label: 'Top Checker Offset (px)', min: -1000, max: 1000, step: 1 },
+        { key: 'checkerBottomOffset', label: 'Bottom Checker Offset (px)', min: -1000, max: 1000, step: 1 },
+        { key: 'highlightWidthScale', label: 'Highlight Width Scale', min: 0.01, max: 20, step: 0.01 },
+        { key: 'highlightHeightScale', label: 'Highlight Height Scale', min: 0.01, max: 20, step: 0.01 },
+        { key: 'highlightXOffset', label: 'Highlight X Offset (px)', min: -1000, max: 1000, step: 1 },
+        { key: 'highlightYOffset', label: 'Highlight Y Offset (px)', min: -1000, max: 1000, step: 1 },
+        { key: 'textTopLeftY', label: 'Text Top Left Y', min: -1000, max: 1000, step: 1 },
+        { key: 'textTopRightY', label: 'Text Top Right Y', min: -1000, max: 1000, step: 1 },
+        { key: 'textBottomLeftY', label: 'Text Bottom Left Y', min: -1000, max: 1000, step: 1 },
+        { key: 'textBottomRightY', label: 'Text Bottom Right Y', min: -1000, max: 1000, step: 1 },
+      ].find(i => i.key === key)
+      
+      if (item) {
+        // Для точной настройки используем step, но можно умножить на 10 для больших шагов
+        const step = item.step
+        const newValue = Math.max(item.min, Math.min(item.max, currentValue + (delta * step)))
+        handleChange(key, newValue)
+      }
     }
     
     // Determine which config is currently active for display label
@@ -2683,9 +2727,25 @@ export default function BackgammonBoard({
           { key: 'textBottomRightY', label: 'Text Bottom Right Y', min: -1000, max: 1000, step: 1 },
         ].map(item => (
           <div key={item.key} style={{ marginBottom: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <label>{item.label}</label>
-              <span>{debugConfig[item.key as keyof typeof debugConfig].toFixed(3)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+              <label style={{ flex: 1 }}>{item.label}</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <button
+                  onClick={() => handleIncrement(item.key as keyof typeof debugConfig, -1)}
+                  style={{ fontSize: '14px', padding: '2px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
+                  title={`Уменьшить на ${item.step}`}
+                >
+                  −
+                </button>
+                <span style={{ minWidth: '80px', textAlign: 'center' }}>{debugConfig[item.key as keyof typeof debugConfig].toFixed(3)}</span>
+                <button
+                  onClick={() => handleIncrement(item.key as keyof typeof debugConfig, 1)}
+                  style={{ fontSize: '14px', padding: '2px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
+                  title={`Увеличить на ${item.step}`}
+                >
+                  +
+                </button>
+              </div>
             </div>
             <input
               type="range"
@@ -2693,7 +2753,11 @@ export default function BackgammonBoard({
               max={item.max}
               step={item.step}
               value={debugConfig[item.key as keyof typeof debugConfig]}
-              onChange={(e) => handleChange(item.key as keyof typeof debugConfig, parseFloat(e.target.value))}
+              onChange={(e) => {
+                // Сохраняем позицию скролла перед изменением
+                scrollPositionRef.current = scrollContainerRef.current?.scrollTop || 0
+                handleChange(item.key as keyof typeof debugConfig, parseFloat(e.target.value))
+              }}
               style={{ width: '100%' }}
             />
           </div>
