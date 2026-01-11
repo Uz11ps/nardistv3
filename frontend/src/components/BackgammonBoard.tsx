@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { apiClient } from '../api/client'
 import Dice3D from './Dice3D'
 import DiceGif from './DiceGif'
@@ -2549,36 +2549,6 @@ export default function BackgammonBoard({
   // --- DEBUG UI COMPONENT ---
   const DebugUI = () => {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
-    const scrollPositionRef = useRef<number>(0)
-    const shouldRestoreScrollRef = useRef<boolean>(false)
-    
-    // Сохраняем позицию скролла при каждом изменении
-    useEffect(() => {
-      const container = scrollContainerRef.current
-      if (!container) return
-      
-      const handleScroll = () => {
-        scrollPositionRef.current = container.scrollTop
-      }
-      
-      container.addEventListener('scroll', handleScroll)
-      return () => container.removeEventListener('scroll', handleScroll)
-    }, [])
-    
-    // Восстанавливаем позицию скролла после обновления debugConfig
-    useEffect(() => {
-      if (shouldRestoreScrollRef.current && scrollContainerRef.current) {
-        // Используем двойной requestAnimationFrame чтобы гарантировать что DOM обновлен
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (scrollContainerRef.current) {
-              scrollContainerRef.current.scrollTop = scrollPositionRef.current
-              shouldRestoreScrollRef.current = false
-            }
-          })
-        })
-      }
-    }, [debugConfig])
 
     if (!debugMode) return (
       <button 
@@ -2602,11 +2572,7 @@ export default function BackgammonBoard({
     )
 
     const handleChange = (key: keyof typeof debugConfig, value: number) => {
-      // Сохраняем текущую позицию скролла перед изменением
-      if (scrollContainerRef.current) {
-        scrollPositionRef.current = scrollContainerRef.current.scrollTop
-        shouldRestoreScrollRef.current = true
-      }
+      // Просто изменяем состояние - контейнер скролла не пересоздается благодаря стабильному key
       setDebugConfig(prev => ({ ...prev, [key]: value }))
     }
     
@@ -2660,6 +2626,7 @@ export default function BackgammonBoard({
     return (
       <div 
         ref={scrollContainerRef}
+        key="debug-panel-scroll-container" // Стабильный key чтобы контейнер не пересоздавался
         style={{
           position: 'absolute',
           top: '10px',
