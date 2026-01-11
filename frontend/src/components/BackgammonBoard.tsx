@@ -2541,6 +2541,12 @@ export default function BackgammonBoard({
 
     // Custom touch handling for scrolling
     const handleTouchStart = (e: React.TouchEvent) => {
+      // Allow slider interaction if starting on an input
+      const isInput = (e.target as HTMLElement).tagName === 'INPUT';
+      // If it's an input, we might still want to scroll if the drag is vertical,
+      // but for now let's just capture everything for scrolling unless it's clearly horizontal later?
+      // Simpler: Always capture start.
+      
       e.stopPropagation()
       touchStartRef.current = e.touches[0].clientY
       if (scrollContainerRef.current) {
@@ -2550,15 +2556,29 @@ export default function BackgammonBoard({
 
     const handleTouchMove = (e: React.TouchEvent) => {
       e.stopPropagation()
+      // Critical: prevent default to stop Telegram/Browser interference
+      if (e.cancelable) e.preventDefault(); 
+      
       if (touchStartRef.current === null || !scrollContainerRef.current) return
       
       const deltaY = touchStartRef.current - e.touches[0].clientY
+      
+      // Basic hysteresis to allow horizontal slider movement if deltaY is small?
+      // But for now, let's just prioritize vertical scroll for the panel.
       scrollContainerRef.current.scrollTop = scrollStartRef.current + deltaY
     }
 
     const handleTouchEnd = (e: React.TouchEvent) => {
       e.stopPropagation()
       touchStartRef.current = null
+    }
+
+    // Manual scroll buttons handlers
+    const scrollUp = () => {
+      if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ top: -50, behavior: 'smooth' })
+    }
+    const scrollDown = () => {
+      if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ top: 50, behavior: 'smooth' })
     }
 
     return (
@@ -2574,8 +2594,8 @@ export default function BackgammonBoard({
           padding: '15px',
           borderRadius: '10px',
           fontSize: '12px',
-          maxHeight: '80vh', // Reduced height to avoid bottom bar issues on mobile
-          overflowY: 'auto',
+          maxHeight: '60vh', // Further reduced height
+          overflowY: 'hidden', // Hide native scrollbar, use manual
           border: '1px solid #444',
           boxShadow: '0 0 10px rgba(0,0,0,0.5)',
           width: '300px',
@@ -2593,12 +2613,15 @@ export default function BackgammonBoard({
         onTouchEnd={handleTouchEnd}
         
         onClick={(e) => e.stopPropagation()}
-        // Add wheel stop propagation for desktop mice over the panel
         onWheel={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <h3 style={{ margin: 0 }}>Debug Geometry ({isMobile ? 'Mobile' : 'Desktop'})</h3>
-          <button onClick={() => setDebugMode(false)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer' }}>✕</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10, paddingBottom: '5px' }}>
+          <h3 style={{ margin: 0 }}>Debug ({isMobile ? 'Mobile' : 'Desktop'})</h3>
+          <div style={{ display: 'flex', gap: '10px' }}>
+             <button onClick={scrollUp} style={{ fontSize: '16px', padding: '5px' }}>⬆️</button>
+             <button onClick={scrollDown} style={{ fontSize: '16px', padding: '5px' }}>⬇️</button>
+             <button onClick={() => setDebugMode(false)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+          </div>
         </div>
         
         <div style={{ marginBottom: '10px', fontSize: '10px', color: '#aaa' }}>
