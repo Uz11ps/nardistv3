@@ -2536,23 +2536,34 @@ export default function BackgammonBoard({
     const isMobile = containerRef.current && containerRef.current.offsetWidth < 768;
 
     return (
-      <div style={{
-        position: 'absolute',
-        top: '10px',
-        left: '10px',
-        zIndex: 100000,
-        background: 'rgba(0,0,0,0.85)',
-        color: 'white',
-        padding: '15px',
-        borderRadius: '10px',
-        fontSize: '12px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        border: '1px solid #444',
-        boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-        width: '300px',
-        touchAction: 'pan-y' // Explicitly enable vertical scrolling
-      }}>
+      <div 
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          zIndex: 100000,
+          background: 'rgba(0,0,0,0.85)',
+          color: 'white',
+          padding: '15px',
+          borderRadius: '10px',
+          fontSize: '12px',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          border: '1px solid #444',
+          boxShadow: '0 0 10px rgba(0,0,0,0.5)',
+          width: '300px',
+          touchAction: 'pan-y', // Explicitly enable vertical scrolling
+          pointerEvents: 'auto'
+        }}
+        // Stop propagation of all pointer events so they don't reach the board
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseMove={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
           <h3 style={{ margin: 0 }}>Debug Geometry ({isMobile ? 'Mobile' : 'Desktop'})</h3>
           <button onClick={() => setDebugMode(false)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer' }}>✕</button>
