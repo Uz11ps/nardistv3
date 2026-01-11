@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, memo } from 'react'
 import { apiClient } from '../api/client'
 import Dice3D from './Dice3D'
 import DiceGif from './DiceGif'
@@ -90,6 +90,15 @@ export default function BackgammonBoard({
     highlightHeightScale: 1.0,
     highlightXOffset: 0,
     highlightYOffset: 0,
+    // Valid moves highlight parameters
+    validHighlightWidthScale: 1.0,
+    validHighlightHeightScale: 1.0,
+    validHighlightXOffset: 0,
+    validHighlightYOffset: 0,
+    // Dragging checker parameters
+    dragCheckerSizeScale: 1.0,
+    dragCheckerXOffset: 0,
+    dragCheckerYOffset: 0,
     // Advanced text offsets (quadrants)
     textTopRightY: -15, // Points 19-24 (Indices 0-5)
     textTopLeftY: -15,  // Points 13-18 (Indices 6-11)
@@ -120,6 +129,15 @@ export default function BackgammonBoard({
     highlightHeightScale: 1.0,
     highlightXOffset: 0,
     highlightYOffset: 0,
+    // Valid moves highlight parameters
+    validHighlightWidthScale: 1.0,
+    validHighlightHeightScale: 1.0,
+    validHighlightXOffset: 0,
+    validHighlightYOffset: 0,
+    // Dragging checker parameters
+    dragCheckerSizeScale: 1.0,
+    dragCheckerXOffset: 0,
+    dragCheckerYOffset: 0,
     // Advanced text offsets (quadrants)
     textTopRightY: -15,
     textTopLeftY: -15, 
@@ -1153,12 +1171,18 @@ export default function BackgammonBoard({
 
       // 2. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
       if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
+        // Применяем параметры из debugConfig для размера и смещения подсветки
+        const validHW = pW * debugConfig.validHighlightWidthScale
+        const validHH = hH * debugConfig.validHighlightHeightScale
+        const validHX = hX + (pW - validHW) / 2 + debugConfig.validHighlightXOffset
+        const validHY = hY + (hH - validHH) / 2 + debugConfig.validHighlightYOffset
+        
         ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
-        ctx.fillRect(hX, hY, pW, hH)
+        ctx.fillRect(validHX, validHY, validHW, validHH)
         
         ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
         ctx.lineWidth = 2
-        ctx.strokeRect(hX + 2, hY + 2, pW - 4, hH - 4)
+        ctx.strokeRect(validHX + 2, validHY + 2, validHW - 4, validHH - 4)
       }
       
       // 3. Подсветка выбранной точки
@@ -1174,9 +1198,12 @@ export default function BackgammonBoard({
       const coords = getPointCoordinates(dragging.pointIndex === -1 ? 0 : dragging.pointIndex, canvas)
       const pW = coords.pointWidth
       const pH = coords.pointHeight
-      const checkerSize = Math.min(pW * 0.85, pH * 0.15)
-      const dragX = dragPosition.x - dragging.offsetX
-      const dragY = dragPosition.y - dragging.offsetY
+      const baseCheckerSize = Math.min(pW * 0.85, pH * 0.15)
+      // Применяем масштаб из debugConfig
+      const checkerSize = baseCheckerSize * debugConfig.dragCheckerSizeScale
+      // Применяем смещения из debugConfig
+      const dragX = dragPosition.x - dragging.offsetX + debugConfig.dragCheckerXOffset
+      const dragY = dragPosition.y - dragging.offsetY + debugConfig.dragCheckerYOffset
       
       // Определяем цвет шашки для отрисовки при перетаскивании
       let isWhite = isPlayer1
@@ -1356,16 +1383,22 @@ export default function BackgammonBoard({
 
     // Подсветка при перетаскивании в зону выноса (ВЕСЬ НИЗ)
     if ((dragging || selectedPoint !== null) && validTargetPoints.has(-1)) {
+      // Применяем параметры из debugConfig для размера и смещения подсветки bear-off
+      const bearOffValidHW = width * debugConfig.validHighlightWidthScale
+      const bearOffValidHH = bearOffHeight * debugConfig.validHighlightHeightScale
+      const bearOffValidHX = (width - bearOffValidHW) / 2 + debugConfig.validHighlightXOffset
+      const bearOffValidHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + debugConfig.validHighlightYOffset
+      
       ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
-      ctx.fillRect(0, bearOffAreaY, width, bearOffHeight)
+      ctx.fillRect(bearOffValidHX, bearOffValidHY, bearOffValidHW, bearOffValidHH)
       
       ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
       ctx.lineWidth = 2
-      ctx.strokeRect(0, bearOffAreaY, width, bearOffHeight)
+      ctx.strokeRect(bearOffValidHX + 2, bearOffValidHY + 2, bearOffValidHW - 4, bearOffValidHH - 4)
       
       if (hoveredPoint === -1) {
         ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'
-        ctx.fillRect(0, bearOffAreaY, width, bearOffHeight)
+        ctx.fillRect(bearOffValidHX, bearOffValidHY, bearOffValidHW, bearOffValidHH)
       }
     }
 
@@ -2549,6 +2582,31 @@ export default function BackgammonBoard({
   // --- DEBUG UI COMPONENT ---
   const DebugUI = () => {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
+    const scrollPositionRef = useRef<number>(0)
+    const isScrollingRef = useRef<boolean>(false)
+    
+    // Сохраняем позицию скролла при каждом скролле
+    useEffect(() => {
+      const container = scrollContainerRef.current
+      if (!container) return
+      
+      const handleScroll = () => {
+        if (!isScrollingRef.current) {
+          scrollPositionRef.current = container.scrollTop
+        }
+      }
+      
+      container.addEventListener('scroll', handleScroll, { passive: true })
+      return () => container.removeEventListener('scroll', handleScroll)
+    }, [])
+    
+    // Восстанавливаем позицию скролла СИНХРОННО при КАЖДОМ рендере
+    // Это предотвращает сброс скролла при изменении debugConfig
+    useLayoutEffect(() => {
+      if (scrollContainerRef.current && scrollPositionRef.current > 0) {
+        scrollContainerRef.current.scrollTop = scrollPositionRef.current
+      }
+    })
 
     if (!debugMode) return (
       <button 
@@ -2712,6 +2770,13 @@ export default function BackgammonBoard({
           { key: 'highlightHeightScale', label: 'Highlight Height Scale', min: 0.01, max: 20, step: 0.01 },
           { key: 'highlightXOffset', label: 'Highlight X Offset (px)', min: -1000, max: 1000, step: 1 },
           { key: 'highlightYOffset', label: 'Highlight Y Offset (px)', min: -1000, max: 1000, step: 1 },
+          { key: 'validHighlightWidthScale', label: 'Valid Highlight Width Scale', min: 0.01, max: 20, step: 0.01 },
+          { key: 'validHighlightHeightScale', label: 'Valid Highlight Height Scale', min: 0.01, max: 20, step: 0.01 },
+          { key: 'validHighlightXOffset', label: 'Valid Highlight X Offset (px)', min: -1000, max: 1000, step: 1 },
+          { key: 'validHighlightYOffset', label: 'Valid Highlight Y Offset (px)', min: -1000, max: 1000, step: 1 },
+          { key: 'dragCheckerSizeScale', label: 'Drag Checker Size Scale', min: 0.01, max: 20, step: 0.01 },
+          { key: 'dragCheckerXOffset', label: 'Drag Checker X Offset (px)', min: -1000, max: 1000, step: 1 },
+          { key: 'dragCheckerYOffset', label: 'Drag Checker Y Offset (px)', min: -1000, max: 1000, step: 1 },
           { key: 'textTopLeftY', label: 'Text Top Left Y', min: -1000, max: 1000, step: 1 },
           { key: 'textTopRightY', label: 'Text Top Right Y', min: -1000, max: 1000, step: 1 },
           { key: 'textBottomLeftY', label: 'Text Bottom Left Y', min: -1000, max: 1000, step: 1 },
