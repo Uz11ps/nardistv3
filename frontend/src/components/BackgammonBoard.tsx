@@ -129,30 +129,48 @@ export default function BackgammonBoard({
 
   // --- DEBUG / ADJUSTMENT MODE ---
   const [debugMode, setDebugMode] = useState(false)
-  const [debugConfig, setDebugConfig] = useState(DESKTOP_CONFIG) // Initial state
-
-  // Responsive Config Switcher
+  
+  // Загружаем конфиг из localStorage или используем дефолтный
+  const loadDebugConfig = useCallback(() => {
+    try {
+      const saved = localStorage.getItem('backgammon-debug-config')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        // Мержим с дефолтным конфигом чтобы добавить новые параметры если они появились
+        return { ...DESKTOP_CONFIG, ...parsed }
+      }
+    } catch (e) {
+      console.warn('Failed to load debug config from localStorage:', e)
+    }
+    return DESKTOP_CONFIG
+  }, [])
+  
+  const [debugConfig, setDebugConfig] = useState(loadDebugConfig)
+  
+  // Сохраняем конфиг в localStorage при каждом изменении
   useEffect(() => {
+    if (debugMode) {
+      try {
+        localStorage.setItem('backgammon-debug-config', JSON.stringify(debugConfig))
+      } catch (e) {
+        console.warn('Failed to save debug config to localStorage:', e)
+      }
+    }
+  }, [debugConfig, debugMode])
+
+  // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
+  useEffect(() => {
+    // Если есть сохраненный конфиг - не переключаем автоматически
+    const hasSavedConfig = localStorage.getItem('backgammon-debug-config')
+    if (hasSavedConfig || debugMode) return
+    
     const handleResize = () => {
         if (containerRef.current) {
             const width = containerRef.current.offsetWidth
-            // Determine if mobile (e.g. < 768px or aspect ratio check)
-            // A common mobile width is < 768px.
-            // But user might be rotating screen.
-            // Let's use 768px as breakpoint.
             if (width < 768) {
-                // Apply Mobile Config if not already applied (and if not manually debugging)
-                // Note: If user is actively debugging, we might overwrite their manual changes.
-                // But for production, this is what we want.
-                // We will only update if not in debug mode OR if we want to reset.
-                // For now, let's just update setDebugConfig so the board uses it.
-                if (!debugMode) {
-                     setDebugConfig(MOBILE_CONFIG)
-                }
+                setDebugConfig(MOBILE_CONFIG)
             } else {
-                if (!debugMode) {
-                     setDebugConfig(DESKTOP_CONFIG)
-                }
+                setDebugConfig(DESKTOP_CONFIG)
             }
         }
     }
@@ -684,7 +702,9 @@ export default function BackgammonBoard({
         x = (sideMargin + halfBoardWidth) - (pointInHalf * pointWidth + pointWidth / 2)
       }
     } else {
-      pointNumber = 12 - (pointIndex - 12)
+      // Для нижнего ряда: pointIndex 12-23 соответствуют точкам 12-1
+      // Формула: pointNumber = 24 - pointIndex (та же что и для верхнего ряда)
+      pointNumber = 24 - pointIndex
       const isLeftSide = pointIndex < 18 // 12-17 -> points 12..7
       
       if (isLeftSide) {
@@ -940,6 +960,8 @@ export default function BackgammonBoard({
             return `${letters[quarter]}${offset}`;
         }
         const coordText = getCoordinateText(pointNumber);
+        // В дебаг режиме показываем также индекс для проверки соответствия
+        const debugText = debugMode ? `${coordText}[${pointIndex}]` : coordText;
         
         let yOffset = 0;
         
@@ -954,7 +976,7 @@ export default function BackgammonBoard({
                 // Top Left
                 yOffset = debugConfig.textTopLeftY
             }
-            ctx.fillText(coordText, x, y + yOffset)
+            ctx.fillText(debugText, x, y + yOffset)
         } else {
             // Bottom Row (1-12) -> Indices 12-23
             // Left Side: Indices 12-17 (Points 12-7)
@@ -966,7 +988,7 @@ export default function BackgammonBoard({
                 // Bottom Right
                 yOffset = debugConfig.textBottomRightY
             }
-            ctx.fillText(coordText, x, y + yOffset)
+            ctx.fillText(debugText, x, y + yOffset)
         }
     }
     
@@ -2541,7 +2563,17 @@ export default function BackgammonBoard({
     )
 
     const handleChange = (key: keyof typeof debugConfig, value: number) => {
+      // Сохраняем позицию скролла перед изменением
+      const scrollTop = scrollContainerRef.current?.scrollTop || 0
+      
       setDebugConfig(prev => ({ ...prev, [key]: value }))
+      
+      // Восстанавливаем позицию скролла после изменения
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollTop
+        }
+      }, 0)
     }
     
     // Determine which config is currently active for display label
@@ -2605,7 +2637,18 @@ export default function BackgammonBoard({
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10, paddingBottom: '5px' }}>
           <h3 style={{ margin: 0 }}>Debug ({isMobile ? 'Mobile' : 'Desktop'})</h3>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+             <button 
+               onClick={() => {
+                 const defaultConfig = isMobile ? MOBILE_CONFIG : DESKTOP_CONFIG
+                 setDebugConfig(defaultConfig)
+                 localStorage.removeItem('backgammon-debug-config')
+               }} 
+               style={{ fontSize: '12px', padding: '3px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
+               title="Сбросить на дефолт"
+             >
+               Reset
+             </button>
              <button onClick={scrollUp} style={{ fontSize: '16px', padding: '5px' }}>⬆️</button>
              <button onClick={scrollDown} style={{ fontSize: '16px', padding: '5px' }}>⬇️</button>
              <button onClick={() => setDebugMode(false)} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '16px' }}>✕</button>
@@ -2617,27 +2660,27 @@ export default function BackgammonBoard({
         </div>
         
         {[
-          { key: 'sideMarginPct', label: 'Side Margin', min: 0, max: 0.1, step: 0.001 },
-          { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 0.2, step: 0.001 },
-          { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 0.2, step: 0.001 },
-          { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 0.3, step: 0.001 },
-          { key: 'checkerWidthRatio', label: 'Checker Width Ratio', min: 0.5, max: 1.5, step: 0.01 },
-          { key: 'checkerHeightRatio', label: 'Checker Height Ratio', min: 0.05, max: 0.3, step: 0.001 },
-          { key: 'checkerDrawScale', label: 'Checker Draw Scale', min: 0.5, max: 1.5, step: 0.01 },
-          { key: 'diceP1X', label: 'Dice P1 X (0-1)', min: 0, max: 1, step: 0.01 },
-          { key: 'diceP1Y', label: 'Dice P1 Y (0-1)', min: 0, max: 1, step: 0.01 },
-          { key: 'diceP2X', label: 'Dice P2 X (0-1)', min: 0, max: 1, step: 0.01 },
-          { key: 'diceP2Y', label: 'Dice P2 Y (0-1)', min: 0, max: 1, step: 0.01 },
-          { key: 'checkerTopOffset', label: 'Top Checker Offset (px)', min: -50, max: 50, step: 1 },
-          { key: 'checkerBottomOffset', label: 'Bottom Checker Offset (px)', min: -50, max: 50, step: 1 },
-          { key: 'highlightWidthScale', label: 'Highlight Width Scale', min: 0.5, max: 1.5, step: 0.01 },
-          { key: 'highlightHeightScale', label: 'Highlight Height Scale', min: 0.5, max: 1.5, step: 0.01 },
-          { key: 'highlightXOffset', label: 'Highlight X Offset (px)', min: -50, max: 50, step: 1 },
-          { key: 'highlightYOffset', label: 'Highlight Y Offset (px)', min: -50, max: 50, step: 1 },
-          { key: 'textTopLeftY', label: 'Text Top Left Y', min: -50, max: 50, step: 1 },
-          { key: 'textTopRightY', label: 'Text Top Right Y', min: -50, max: 50, step: 1 },
-          { key: 'textBottomLeftY', label: 'Text Bottom Left Y', min: -50, max: 50, step: 1 },
-          { key: 'textBottomRightY', label: 'Text Bottom Right Y', min: -50, max: 50, step: 1 },
+          { key: 'sideMarginPct', label: 'Side Margin', min: 0, max: 2, step: 0.001 },
+          { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 2, step: 0.001 },
+          { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 2, step: 0.001 },
+          { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 2, step: 0.001 },
+          { key: 'checkerWidthRatio', label: 'Checker Width Ratio', min: 0.01, max: 20, step: 0.01 },
+          { key: 'checkerHeightRatio', label: 'Checker Height Ratio', min: 0.001, max: 5, step: 0.001 },
+          { key: 'checkerDrawScale', label: 'Checker Draw Scale', min: 0.01, max: 20, step: 0.01 },
+          { key: 'diceP1X', label: 'Dice P1 X (0-1)', min: -2, max: 3, step: 0.01 },
+          { key: 'diceP1Y', label: 'Dice P1 Y (0-1)', min: -2, max: 3, step: 0.01 },
+          { key: 'diceP2X', label: 'Dice P2 X (0-1)', min: -2, max: 3, step: 0.01 },
+          { key: 'diceP2Y', label: 'Dice P2 Y (0-1)', min: -2, max: 3, step: 0.01 },
+          { key: 'checkerTopOffset', label: 'Top Checker Offset (px)', min: -1000, max: 1000, step: 1 },
+          { key: 'checkerBottomOffset', label: 'Bottom Checker Offset (px)', min: -1000, max: 1000, step: 1 },
+          { key: 'highlightWidthScale', label: 'Highlight Width Scale', min: 0.01, max: 20, step: 0.01 },
+          { key: 'highlightHeightScale', label: 'Highlight Height Scale', min: 0.01, max: 20, step: 0.01 },
+          { key: 'highlightXOffset', label: 'Highlight X Offset (px)', min: -1000, max: 1000, step: 1 },
+          { key: 'highlightYOffset', label: 'Highlight Y Offset (px)', min: -1000, max: 1000, step: 1 },
+          { key: 'textTopLeftY', label: 'Text Top Left Y', min: -1000, max: 1000, step: 1 },
+          { key: 'textTopRightY', label: 'Text Top Right Y', min: -1000, max: 1000, step: 1 },
+          { key: 'textBottomLeftY', label: 'Text Bottom Left Y', min: -1000, max: 1000, step: 1 },
+          { key: 'textBottomRightY', label: 'Text Bottom Right Y', min: -1000, max: 1000, step: 1 },
         ].map(item => (
           <div key={item.key} style={{ marginBottom: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
