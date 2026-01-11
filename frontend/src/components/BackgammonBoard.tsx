@@ -2518,8 +2518,6 @@ export default function BackgammonBoard({
   // --- DEBUG UI COMPONENT ---
   const DebugUI = () => {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
-    const touchStartRef = useRef<number | null>(null)
-    const scrollStartRef = useRef<number>(0)
 
     if (!debugMode) return (
       <button 
@@ -2549,39 +2547,7 @@ export default function BackgammonBoard({
     // Determine which config is currently active for display label
     const isMobile = containerRef.current && containerRef.current.offsetWidth < 768;
 
-    // Custom touch handling for scrolling
-    const handleTouchStart = (e: React.TouchEvent) => {
-      // Allow slider interaction if starting on an input
-      const isInput = (e.target as HTMLElement).tagName === 'INPUT';
-      // If it's an input, we might still want to scroll if the drag is vertical,
-      // but for now let's just capture everything for scrolling unless it's clearly horizontal later?
-      // Simpler: Always capture start.
-      
-      e.stopPropagation()
-      touchStartRef.current = e.touches[0].clientY
-      if (scrollContainerRef.current) {
-        scrollStartRef.current = scrollContainerRef.current.scrollTop
-      }
-    }
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-      e.stopPropagation()
-      // Critical: prevent default to stop Telegram/Browser interference
-      if (e.cancelable) e.preventDefault(); 
-      
-      if (touchStartRef.current === null || !scrollContainerRef.current) return
-      
-      const deltaY = touchStartRef.current - e.touches[0].clientY
-      
-      // Basic hysteresis to allow horizontal slider movement if deltaY is small?
-      // But for now, let's just prioritize vertical scroll for the panel.
-      scrollContainerRef.current.scrollTop = scrollStartRef.current + deltaY
-    }
-
-    const handleTouchEnd = (e: React.TouchEvent) => {
-      e.stopPropagation()
-      touchStartRef.current = null
-    }
+    // Убрали кастомные обработчики touch - используем стандартный скролл
 
     // Manual scroll buttons handlers
     const scrollUp = () => {
@@ -2605,12 +2571,15 @@ export default function BackgammonBoard({
           borderRadius: '10px',
           fontSize: '12px',
           maxHeight: '80vh',
+          height: '80vh', // Фиксированная высота для скролла
           overflowY: 'auto', // Включаем скролл
           overflowX: 'hidden',
           border: '1px solid #444',
           boxShadow: '0 0 10px rgba(0,0,0,0.5)',
           width: '300px',
           pointerEvents: 'auto',
+          WebkitOverflowScrolling: 'touch', // Плавный скролл на iOS
+          overscrollBehavior: 'contain', // Предотвращаем скролл фона
         }}
         // Stop propagation of all pointer events so they don't reach the board
         onMouseDown={(e) => e.stopPropagation()}
@@ -2618,8 +2587,20 @@ export default function BackgammonBoard({
         onMouseUp={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => {
+          // Разрешаем стандартный скролл колесиком мыши
           e.stopPropagation()
-          // Разрешаем стандартный скролл
+        }}
+        onTouchStart={(e) => {
+          // Останавливаем только для того чтобы не передавать на canvas
+          e.stopPropagation()
+        }}
+        onTouchMove={(e) => {
+          // Разрешаем стандартный скролл на touch устройствах
+          e.stopPropagation()
+          // НЕ preventDefault - это блокирует скролл!
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation()
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10, paddingBottom: '5px' }}>
