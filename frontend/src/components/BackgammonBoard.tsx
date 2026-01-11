@@ -2507,6 +2507,10 @@ export default function BackgammonBoard({
 
   // --- DEBUG UI COMPONENT ---
   const DebugUI = () => {
+    const scrollContainerRef = useRef<HTMLDivElement>(null)
+    const touchStartRef = useRef<number | null>(null)
+    const scrollStartRef = useRef<number>(0)
+
     if (!debugMode) return (
       <button 
         onClick={() => setDebugMode(true)}
@@ -2535,8 +2539,31 @@ export default function BackgammonBoard({
     // Determine which config is currently active for display label
     const isMobile = containerRef.current && containerRef.current.offsetWidth < 768;
 
+    // Custom touch handling for scrolling
+    const handleTouchStart = (e: React.TouchEvent) => {
+      e.stopPropagation()
+      touchStartRef.current = e.touches[0].clientY
+      if (scrollContainerRef.current) {
+        scrollStartRef.current = scrollContainerRef.current.scrollTop
+      }
+    }
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+      e.stopPropagation()
+      if (touchStartRef.current === null || !scrollContainerRef.current) return
+      
+      const deltaY = touchStartRef.current - e.touches[0].clientY
+      scrollContainerRef.current.scrollTop = scrollStartRef.current + deltaY
+    }
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+      e.stopPropagation()
+      touchStartRef.current = null
+    }
+
     return (
       <div 
+        ref={scrollContainerRef}
         style={{
           position: 'absolute',
           top: '10px',
@@ -2552,23 +2579,19 @@ export default function BackgammonBoard({
           border: '1px solid #444',
           boxShadow: '0 0 10px rgba(0,0,0,0.5)',
           width: '300px',
-          touchAction: 'pan-y', // Explicitly enable vertical scrolling
+          touchAction: 'none', // We handle scrolling manually
           pointerEvents: 'auto',
-          overscrollBehavior: 'contain' // Prevent scroll chaining
         }}
         // Stop propagation of all pointer events so they don't reach the board
         onMouseDown={(e) => e.stopPropagation()}
         onMouseMove={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        // We do NOT stop propagation on touchmove if we want it to scroll the container
-        // BUT if the parent has preventDefault, we need to stop it?
-        // Actually, if we stop propagation, the event never reaches the parent, so parent can't preventDefault.
-        // So keeping stopPropagation is correct IF the browser handles scrolling before custom handlers.
-        // However, some mobile browsers need the event to NOT be stopped if they handle scroll via document listeners? 
-        // No, native scroll usually happens if event is not prevented.
-        onTouchMove={(e) => e.stopPropagation()} 
-        onTouchEnd={(e) => e.stopPropagation()}
+        
+        // Custom scrolling handlers
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove} 
+        onTouchEnd={handleTouchEnd}
+        
         onClick={(e) => e.stopPropagation()}
         // Add wheel stop propagation for desktop mice over the panel
         onWheel={(e) => e.stopPropagation()}
