@@ -2547,22 +2547,31 @@ export default function BackgammonBoard({
           padding: '15px',
           borderRadius: '10px',
           fontSize: '12px',
-          maxHeight: '90vh',
+          maxHeight: '80vh', // Reduced height to avoid bottom bar issues on mobile
           overflowY: 'auto',
           border: '1px solid #444',
           boxShadow: '0 0 10px rgba(0,0,0,0.5)',
           width: '300px',
           touchAction: 'pan-y', // Explicitly enable vertical scrolling
-          pointerEvents: 'auto'
+          pointerEvents: 'auto',
+          overscrollBehavior: 'contain' // Prevent scroll chaining
         }}
         // Stop propagation of all pointer events so they don't reach the board
         onMouseDown={(e) => e.stopPropagation()}
         onMouseMove={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
-        onTouchMove={(e) => e.stopPropagation()}
+        // We do NOT stop propagation on touchmove if we want it to scroll the container
+        // BUT if the parent has preventDefault, we need to stop it?
+        // Actually, if we stop propagation, the event never reaches the parent, so parent can't preventDefault.
+        // So keeping stopPropagation is correct IF the browser handles scrolling before custom handlers.
+        // However, some mobile browsers need the event to NOT be stopped if they handle scroll via document listeners? 
+        // No, native scroll usually happens if event is not prevented.
+        onTouchMove={(e) => e.stopPropagation()} 
         onTouchEnd={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
+        // Add wheel stop propagation for desktop mice over the panel
+        onWheel={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
           <h3 style={{ margin: 0 }}>Debug Geometry ({isMobile ? 'Mobile' : 'Desktop'})</h3>
