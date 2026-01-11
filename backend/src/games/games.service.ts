@@ -1014,7 +1014,7 @@ export class GamesService {
           const remainingMoves = engine.getAllValidMoves(currentState, remainingDice, isFirstMoveOfGame);
           // getAllValidMoves возвращает последовательности. Если есть хотя бы одна непустая - ходы есть.
           hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
-          this.logger.log(`🔍 Checking remaining moves after ${finalMovesToSave.length} moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}, movesFound=${remainingMoves.length}`);
+          this.logger.log(`🔍 Checking remaining moves after ${finalMovesToSave.length} moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}, movesFound=${remainingMoves.length}, sequences=${remainingMoves.map(s => s.length).join(',')}`);
           
           if (hasValidMoves) {
             // Есть еще ходы - оставляем того же игрока
@@ -1022,6 +1022,7 @@ export class GamesService {
             this.logger.log(`🟡 Keeping same player: valid moves remain with dice [${remainingDice.join(', ')}]`);
           } else {
             // Ходов больше нет - ПРИНУДИТЕЛЬНАЯ смена хода
+            // ВАЖНО: Даже если кубики остались, но нет валидных ходов - переключаем ход
             currentState.dice = [];
             currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
             currentState.movesFromHead = 0;

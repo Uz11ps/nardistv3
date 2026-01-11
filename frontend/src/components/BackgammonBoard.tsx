@@ -528,6 +528,11 @@ export default function BackgammonBoard({
         
         let flatMoves = response.data?.movesFromPoint || []
         
+        // Логирование для отладки индексации точек
+        if (flatMoves.length > 0) {
+          console.log('🎯 Valid moves received:', flatMoves.map(m => ({ from: m.from, to: m.to, die: m.die })))
+        }
+        
         // Для коротких нард: преобразуем from: -1 в 24 (белые) или 25 (черные) для бара
         if (gameMode === 'short') {
           const bar = gameState?.bar || { white: 0, black: 0 }
@@ -697,7 +702,11 @@ export default function BackgammonBoard({
       }
     }
     
-    let y = isTopRow ? topMargin : (height - bearOffHeight - 5) // -5 небольшой отступ от лотка
+    // Для верхнего ряда: y - это координата НИЗА треугольника (треугольники направлены вниз)
+    // Для нижнего ряда: y - это координата ВЕРХА треугольника (треугольники направлены вверх)
+    let y = isTopRow 
+      ? topMargin + pointHeight  // Верхний ряд: низ треугольника
+      : (height - bearOffHeight - pointHeight) // Нижний ряд: верх треугольника
     
     // Для Nardi (и скина с лотком внизу) не инвертируем координаты для второго игрока.
     // Оба игрока видят доску одинаково (статика).
@@ -747,21 +756,24 @@ export default function BackgammonBoard({
 
     if (currentPlayer === 0) {
       // Player1 (белые) - Внизу Справа (Дом белых, пункты 1-6)
-      // Размещаем в центре правой половины доски (дом белых)
-      // width * 0.75 - примерный центр правой части
-      xPos = width * 0.75
-      yPos = height * 0.65
+      // Размещаем в правой части доски, но внутри границ
+      // Используем безопасные отступы от краев
+      xPos = width * 0.82
+      yPos = height * 0.75
       
       console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos })
     } else {
       // Player2 (черные, соперник) - Вверху Слева (Дом черных, пункт 13)
-      // Размещаем в центре левой половины доски (дом черных)
-      // width * 0.25 - примерный центр левой части
-      xPos = width * 0.25
-      yPos = height * 0.35
+      // Размещаем в левой части доски, но внутри границ
+      xPos = width * 0.18
+      yPos = height * 0.25
       
       console.log('🎲 Player2 dice position (TOP-LEFT):', { xPos, yPos })
     }
+    
+    // Ограничиваем позицию кубиков границами доски с учетом размера кубиков
+    xPos = Math.max(diceWidth / 2, Math.min(width - diceWidth / 2, xPos))
+    yPos = Math.max(diceHeight / 2, Math.min(height - diceHeight / 2, yPos))
 
     console.log('🎲 Dice position updated:', { xPos, yPos, size: diceSize, currentPlayer, width, height })
 
@@ -823,19 +835,15 @@ export default function BackgammonBoard({
       const xEnd = pX + pW / 2 + padding;
       
       // Hitbox по вертикали:
-      // Если isTopRow: от y=topMargin до y=topMargin+pH
-      // Если !isTopRow: от y=(height-bearOffHeight-pH) до y=(height-bearOffHeight)
-      // getPointCoordinates возвращает y основания.
-      // TopRow: y = topMargin. Hitbox: y..y+pH.
-      // BottomRow: y = height-bearOffHeight. Hitbox: y-pH..y.
-      
+      // Для верхнего ряда: y - это низ треугольника, hitbox идет от (y - pH) до y
+      // Для нижнего ряда: y - это верх треугольника, hitbox идет от y до (y + pH)
       let yStart, yEnd;
       if (isTopRow) {
-          yStart = pY - padding;
-          yEnd = pY + pH + padding;
-      } else {
           yStart = pY - pH - padding;
           yEnd = pY + padding;
+      } else {
+          yStart = pY - padding;
+          yEnd = pY + pH + padding;
       }
       
       if (actualX >= xStart && actualX <= xEnd && actualY >= yStart && actualY <= yEnd) {
@@ -1100,8 +1108,10 @@ export default function BackgammonBoard({
       const { x, y, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       
       // Ограничиваем подсветку высотой треугольника (pH) и позиционируем строго по треугольнику
+      // Для верхнего ряда: y - это низ треугольника, подсветка идет вверх
+      // Для нижнего ряда: y - это верх треугольника, подсветка идет вниз
       const hX = x - pW / 2
-      const hY = isTopRow ? y : (y - pH)
+      const hY = isTopRow ? (y - pH) : y
       const hH = pH
 
       // 1. Подсветка точки под курсором
@@ -2594,26 +2604,23 @@ export default function BackgammonBoard({
           padding: '15px',
           borderRadius: '10px',
           fontSize: '12px',
-          maxHeight: '60vh', // Further reduced height
-          overflowY: 'hidden', // Hide native scrollbar, use manual
+          maxHeight: '80vh',
+          overflowY: 'auto', // Включаем скролл
+          overflowX: 'hidden',
           border: '1px solid #444',
           boxShadow: '0 0 10px rgba(0,0,0,0.5)',
           width: '300px',
-          touchAction: 'none', // We handle scrolling manually
           pointerEvents: 'auto',
         }}
         // Stop propagation of all pointer events so they don't reach the board
         onMouseDown={(e) => e.stopPropagation()}
         onMouseMove={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
-        
-        // Custom scrolling handlers
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove} 
-        onTouchEnd={handleTouchEnd}
-        
         onClick={(e) => e.stopPropagation()}
-        onWheel={(e) => e.stopPropagation()}
+        onWheel={(e) => {
+          e.stopPropagation()
+          // Разрешаем стандартный скролл
+        }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10, paddingBottom: '5px' }}>
           <h3 style={{ margin: 0 }}>Debug ({isMobile ? 'Mobile' : 'Desktop'})</h3>
