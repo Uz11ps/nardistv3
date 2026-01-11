@@ -2550,7 +2550,8 @@ export default function BackgammonBoard({
         overflowY: 'auto',
         border: '1px solid #444',
         boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-        width: '300px'
+        width: '300px',
+        touchAction: 'pan-y' // Explicitly enable vertical scrolling
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
           <h3 style={{ margin: 0 }}>Debug Geometry ({isMobile ? 'Mobile' : 'Desktop'})</h3>
