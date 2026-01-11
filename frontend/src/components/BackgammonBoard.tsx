@@ -82,8 +82,19 @@ export default function BackgammonBoard({
     diceP2Y: 0.38,
     checkerTopOffset: -25,
     checkerBottomOffset: -44,
+    // Legacy text offsets (for fallback)
     textTopOffset: -15,
     textBottomOffset: 15,
+    // New parameters for advanced highlight and text control
+    highlightWidthScale: 1.0,
+    highlightHeightScale: 1.0,
+    highlightXOffset: 0,
+    highlightYOffset: 0,
+    // Advanced text offsets (quadrants)
+    textTopRightY: -15, // Points 19-24 (Indices 0-5)
+    textTopLeftY: -15,  // Points 13-18 (Indices 6-11)
+    textBottomLeftY: 15, // Points 7-12 (Indices 12-17)
+    textBottomRightY: 15, // Points 1-6 (Indices 18-23)
   }
 
   // Small Screen (Mobile) - Optimized
@@ -101,8 +112,19 @@ export default function BackgammonBoard({
     diceP2Y: 0.38, 
     checkerTopOffset: -25, 
     checkerBottomOffset: 33, // Updated from user screenshot (was -44)
+    // Legacy text offsets
     textTopOffset: -15,
     textBottomOffset: 15,
+    // New parameters for advanced highlight and text control
+    highlightWidthScale: 1.0,
+    highlightHeightScale: 1.0,
+    highlightXOffset: 0,
+    highlightYOffset: 0,
+    // Advanced text offsets (quadrants)
+    textTopRightY: -15,
+    textTopLeftY: -15, 
+    textBottomLeftY: 15, 
+    textBottomRightY: 15,
   }
 
   // --- DEBUG / ADJUSTMENT MODE ---
@@ -910,10 +932,33 @@ export default function BackgammonBoard({
             return `${letters[quarter]}${offset}`;
         }
         const coordText = getCoordinateText(pointNumber);
+        
+        let yOffset = 0;
+        
         if (isTopRow) {
-            ctx.fillText(coordText, x, y + debugConfig.textTopOffset)
+            // Top Row (13-24) -> Indices 0-11
+            // Right Side: Indices 0-5 (Points 24-19)
+            // Left Side: Indices 6-11 (Points 18-13)
+            if (pointIndex < 6) {
+                // Top Right
+                yOffset = debugConfig.textTopRightY
+            } else {
+                // Top Left
+                yOffset = debugConfig.textTopLeftY
+            }
+            ctx.fillText(coordText, x, y + yOffset)
         } else {
-            ctx.fillText(coordText, x, y + debugConfig.textBottomOffset)
+            // Bottom Row (1-12) -> Indices 12-23
+            // Left Side: Indices 12-17 (Points 12-7)
+            // Right Side: Indices 18-23 (Points 6-1)
+            if (pointIndex < 18) {
+                // Bottom Left
+                yOffset = debugConfig.textBottomLeftY
+            } else {
+                // Bottom Right
+                yOffset = debugConfig.textBottomRightY
+            }
+            ctx.fillText(coordText, x, y + yOffset)
         }
     }
     
@@ -2530,8 +2575,14 @@ export default function BackgammonBoard({
           { key: 'diceP2Y', label: 'Dice P2 Y (0-1)', min: 0, max: 1, step: 0.01 },
           { key: 'checkerTopOffset', label: 'Top Checker Offset (px)', min: -50, max: 50, step: 1 },
           { key: 'checkerBottomOffset', label: 'Bottom Checker Offset (px)', min: -50, max: 50, step: 1 },
-          { key: 'textTopOffset', label: 'Top Text Offset (px)', min: -50, max: 50, step: 1 },
-          { key: 'textBottomOffset', label: 'Bottom Text Offset (px)', min: -50, max: 50, step: 1 },
+          { key: 'highlightWidthScale', label: 'Highlight Width Scale', min: 0.5, max: 1.5, step: 0.01 },
+          { key: 'highlightHeightScale', label: 'Highlight Height Scale', min: 0.5, max: 1.5, step: 0.01 },
+          { key: 'highlightXOffset', label: 'Highlight X Offset (px)', min: -50, max: 50, step: 1 },
+          { key: 'highlightYOffset', label: 'Highlight Y Offset (px)', min: -50, max: 50, step: 1 },
+          { key: 'textTopLeftY', label: 'Text Top Left Y', min: -50, max: 50, step: 1 },
+          { key: 'textTopRightY', label: 'Text Top Right Y', min: -50, max: 50, step: 1 },
+          { key: 'textBottomLeftY', label: 'Text Bottom Left Y', min: -50, max: 50, step: 1 },
+          { key: 'textBottomRightY', label: 'Text Bottom Right Y', min: -50, max: 50, step: 1 },
         ].map(item => (
           <div key={item.key} style={{ marginBottom: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -2559,26 +2610,6 @@ export default function BackgammonBoard({
                 onChange={(e) => setDebugDice(e.target.checked ? [3, 4] : null)}
               />
               <span style={{ marginLeft: '5px' }}>Show Test Dice</span>
-            </label>
-          </div>
-          <div style={{ marginBottom: '10px' }}>
-            <label style={{ display: 'flex', alignItems: 'center' }}>
-              <input 
-                type="checkbox" 
-                checked={debugConfig.textTopOffset !== -15} // Dummy check
-                onChange={() => {}} // Read-only for now, sliders above control it
-                disabled
-              />
-              <span style={{ marginLeft: '5px' }}>Top Text Offset: {debugConfig.textTopOffset}</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center' }}>
-              <input 
-                type="checkbox" 
-                checked={debugConfig.textBottomOffset !== 15} // Dummy check
-                onChange={() => {}} 
-                disabled
-              />
-              <span style={{ marginLeft: '5px' }}>Bottom Text Offset: {debugConfig.textBottomOffset}</span>
             </label>
           </div>
 
