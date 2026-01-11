@@ -187,8 +187,6 @@ export default function BackgammonBoard({
 
   // Ref for loaded images
   const imagesRef = useRef<Record<string, HTMLImageElement>>({})
-  const boardSkinRef = useRef<HTMLImageElement | null>(null)
-  const boardSkinLoadTimeRef = useRef<number>(0)
   // State to force re-render when images load
   const [imagesLoaded, setImagesLoaded] = useState(false)
 
@@ -217,15 +215,8 @@ export default function BackgammonBoard({
 
     Object.entries(sources).forEach(([key, src]) => {
       const img = new Image()
-      // Для skin НЕ загружаем здесь - он загружается напрямую в drawBoard с cache busting
-      if (key === 'skin') {
-        // Пропускаем загрузку skin в useEffect, он будет загружаться динамически
-        loadedCount++
-        if (loadedCount === totalCount) {
-          setImagesLoaded(true)
-        }
-        return
-      }
+      // Загружаем все изображения включая skin один раз при монтировании
+      // Браузер будет кешировать изображение автоматически
       img.src = src
       img.onload = () => {
         if (!isMounted) return
@@ -946,40 +937,18 @@ export default function BackgammonBoard({
     const barX = (width - barWidth) / 2
     
     // Рисуем фоновую картинку (Скин) на всю доску
-    // Загружаем напрямую с cache busting чтобы всегда использовать актуальный файл
-    const globalSkinUrl = '/img/skin1.png'
+    // Используем imageUrl из конфигурации скина, а не жестко закодированный путь
+    const globalSkinUrl = myBoardColors.imageUrl || '/img/skin1.png'
     
-    // Используем закешированное изображение для быстрой отрисовки, если оно есть и загружено
-    const cachedSkinImg = boardSkinRef.current
+    // Используем закешированное изображение из imagesRef (загружается один раз при монтировании)
+    // Браузер автоматически кеширует изображение, поэтому оно не будет перезагружаться каждую игру
+    const cachedSkinImg = imagesRef.current['skin']
     if (cachedSkinImg && cachedSkinImg.complete && cachedSkinImg.naturalWidth > 0) {
         ctx.drawImage(cachedSkinImg, 0, 0, width, height)
     } else {
         // Пока изображение загружается, показываем фон
         ctx.fillStyle = '#8B4513'
         ctx.fillRect(0, 0, width, height)
-    }
-    
-    // Всегда загружаем новое изображение с cache busting для принудительного обновления
-    // Это гарантирует что при замене файла на диске будет использоваться новая версия
-    const currentTime = Date.now()
-    // Перезагружаем изображение если прошло больше 100мс с последней загрузки
-    // Это предотвращает множественные запросы при частых перерисовках
-    if (currentTime - boardSkinLoadTimeRef.current > 100) {
-        boardSkinLoadTimeRef.current = currentTime
-        const img = new Image()
-        // Добавляем timestamp для обхода кеша браузера и сервера
-        img.src = `${globalSkinUrl}?t=${currentTime}`
-        
-        img.onload = () => {
-            // Обновляем ref только после успешной загрузки
-            boardSkinRef.current = img
-            // Перерисовываем доску с новым изображением
-            drawBoard()
-        }
-        img.onerror = () => {
-            // Если не удалось загрузить, оставляем фон
-            console.warn('Failed to load board skin image')
-        }
     }
     
     // Треугольники НЕ РИСУЕМ (они есть на скине)
@@ -1000,8 +969,8 @@ export default function BackgammonBoard({
             return `${letters[quarter]}${offset}`;
         }
         const coordText = getCoordinateText(pointNumber);
-        // В дебаг режиме показываем также индекс для проверки соответствия
-        const debugText = debugMode ? `${coordText}[${pointIndex}]` : coordText;
+        // Используем координаты без индексов
+        const debugText = coordText;
         
         let yOffset = 0;
         
@@ -2581,6 +2550,7 @@ export default function BackgammonBoard({
   const DebugUI = () => {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const scrollPositionRef = useRef<number>(0)
+    const shouldRestoreScrollRef = useRef<boolean>(false)
     
     // Сохраняем позицию скролла при каждом изменении
     useEffect(() => {
@@ -2594,6 +2564,21 @@ export default function BackgammonBoard({
       container.addEventListener('scroll', handleScroll)
       return () => container.removeEventListener('scroll', handleScroll)
     }, [])
+    
+    // Восстанавливаем позицию скролла после обновления debugConfig
+    useEffect(() => {
+      if (shouldRestoreScrollRef.current && scrollContainerRef.current) {
+        // Используем двойной requestAnimationFrame чтобы гарантировать что DOM обновлен
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (scrollContainerRef.current) {
+              scrollContainerRef.current.scrollTop = scrollPositionRef.current
+              shouldRestoreScrollRef.current = false
+            }
+          })
+        })
+      }
+    }, [debugConfig])
 
     if (!debugMode) return (
       <button 
@@ -2617,13 +2602,12 @@ export default function BackgammonBoard({
     )
 
     const handleChange = (key: keyof typeof debugConfig, value: number) => {
+      // Сохраняем текущую позицию скролла перед изменением
+      if (scrollContainerRef.current) {
+        scrollPositionRef.current = scrollContainerRef.current.scrollTop
+        shouldRestoreScrollRef.current = true
+      }
       setDebugConfig(prev => ({ ...prev, [key]: value }))
-      // Восстанавливаем позицию скролла после изменения
-      requestAnimationFrame(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = scrollPositionRef.current
-        }
-      })
     }
     
     const handleIncrement = (key: keyof typeof debugConfig, delta: number) => {
@@ -2794,8 +2778,6 @@ export default function BackgammonBoard({
               step={item.step}
               value={debugConfig[item.key as keyof typeof debugConfig]}
               onChange={(e) => {
-                // Сохраняем позицию скролла перед изменением
-                scrollPositionRef.current = scrollContainerRef.current?.scrollTop || 0
                 handleChange(item.key as keyof typeof debugConfig, parseFloat(e.target.value))
               }}
               style={{ width: '100%' }}
