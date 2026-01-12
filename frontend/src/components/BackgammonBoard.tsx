@@ -157,7 +157,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v4')
+      const saved = localStorage.getItem('backgammon-debug-config-v5')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -180,7 +180,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v4', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v5', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -190,7 +190,7 @@ export default function BackgammonBoard({
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
   useEffect(() => {
     // Если есть сохраненный конфиг - не переключаем автоматически
-    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v4')
+    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v5')
     if (hasSavedConfig || debugMode) return
     
     const handleResize = () => {
@@ -923,6 +923,31 @@ export default function BackgammonBoard({
     
     const width = canvas.width
     const height = canvas.height
+
+    // --- ADAPTIVE SCALING LOGIC ---
+    // Reference dimensions for mobile (iPhone 14/15 Pro Max)
+    // The MOBILE_CONFIG values are tuned for this resolution.
+    const REFERENCE_MOBILE_WIDTH = 430;
+    const REFERENCE_MOBILE_HEIGHT = 932;
+    const isMobile = width < 768;
+
+    // Helper functions to scale fixed pixel offsets based on screen size
+    const scaleY = (val: number) => {
+        if (!isMobile) return val;
+        // Avoid division by zero
+        if (REFERENCE_MOBILE_HEIGHT === 0) return val;
+        // Calculate scale factor
+        const factor = height / REFERENCE_MOBILE_HEIGHT;
+        return val * factor;
+    }
+
+    const scaleX = (val: number) => {
+        if (!isMobile) return val;
+        if (REFERENCE_MOBILE_WIDTH === 0) return val;
+        const factor = width / REFERENCE_MOBILE_WIDTH;
+        return val * factor;
+    }
+    // ------------------------------
     
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, width, height)
@@ -982,10 +1007,10 @@ export default function BackgammonBoard({
             // Left Side: Indices 6-11 (Points 18-13)
             if (pointIndex < 6) {
                 // Top Right
-                yOffset = debugConfig.textTopRightY
+                yOffset = scaleY(debugConfig.textTopRightY)
             } else {
                 // Top Left
-                yOffset = debugConfig.textTopLeftY
+                yOffset = scaleY(debugConfig.textTopLeftY)
             }
             ctx.fillText(debugText, x, y + yOffset)
         } else {
@@ -994,10 +1019,10 @@ export default function BackgammonBoard({
             // Right Side: Indices 18-23 (Points 6-1)
             if (pointIndex < 18) {
                 // Bottom Left
-                yOffset = debugConfig.textBottomLeftY
+                yOffset = scaleY(debugConfig.textBottomLeftY)
             } else {
                 // Bottom Right
-                yOffset = debugConfig.textBottomRightY
+                yOffset = scaleY(debugConfig.textBottomRightY)
             }
             ctx.fillText(debugText, x, y + yOffset)
         }
@@ -1086,8 +1111,8 @@ export default function BackgammonBoard({
       // Увеличиваем размер шашки относительно ширины треугольника
       const checkerSize = Math.min(pW * debugConfig.checkerWidthRatio, pH * debugConfig.checkerHeightRatio) 
       const checkerBaseY = isTopRow 
-        ? y + checkerSize/2 + debugConfig.checkerTopOffset
-        : y - checkerSize/2 + debugConfig.checkerBottomOffset  
+        ? y + checkerSize/2 + scaleY(debugConfig.checkerTopOffset)
+        : y - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset)  
       
       const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
       const isAnimatingFromThisPoint = animatingChecker && animatingChecker.from === pointIndex
@@ -1158,8 +1183,8 @@ export default function BackgammonBoard({
         // Применяем параметры из debugConfig для размера и смещения подсветки
         const validHW = pW * debugConfig.validHighlightWidthScale
         const validHH = hH * debugConfig.validHighlightHeightScale
-        const validHX = hX + (pW - validHW) / 2 + debugConfig.validHighlightXOffset
-        const validHY = hY + (hH - validHH) / 2 + debugConfig.validHighlightYOffset
+        const validHX = hX + (pW - validHW) / 2 + scaleX(debugConfig.validHighlightXOffset)
+        const validHY = hY + (hH - validHH) / 2 + scaleY(debugConfig.validHighlightYOffset)
         
         ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
         ctx.fillRect(validHX, validHY, validHW, validHH)
@@ -1186,8 +1211,8 @@ export default function BackgammonBoard({
       // Применяем масштаб из debugConfig
       const checkerSize = baseCheckerSize * debugConfig.dragCheckerSizeScale
       // Применяем смещения из debugConfig
-      const dragX = dragPosition.x - dragging.offsetX + debugConfig.dragCheckerXOffset
-      const dragY = dragPosition.y - dragging.offsetY + debugConfig.dragCheckerYOffset
+      const dragX = dragPosition.x - dragging.offsetX + scaleX(debugConfig.dragCheckerXOffset)
+      const dragY = dragPosition.y - dragging.offsetY + scaleY(debugConfig.dragCheckerYOffset)
       
       // Определяем цвет шашки для отрисовки при перетаскивании
       let isWhite = isPlayer1
