@@ -69,10 +69,10 @@ export default function BackgammonBoard({
   // --- CONFIGURATIONS ---
   // Large Screen (Desktop) - Optimized
   const DESKTOP_CONFIG = {
-    sideMarginLeftPct: 0.049,
-    sideMarginRightPct: 0.049,
-    barMarginLeftPct: 0,
-    barMarginRightPct: 0,
+    sideMarginLeftPct: 0.032,
+    sideMarginRightPct: 0.047,
+    barMarginLeftPct: 0.018,
+    barMarginRightPct: 0.003,
     barWidthPct: 0.056,
     topMarginPct: 0.073,
     bearOffHeightPct: 0.131,
@@ -111,10 +111,10 @@ export default function BackgammonBoard({
 
   // Small Screen (Mobile) - Optimized
   const MOBILE_CONFIG = {
-    sideMarginLeftPct: 0.041,
-    sideMarginRightPct: 0.041,
-    barMarginLeftPct: 0,
-    barMarginRightPct: 0,
+    sideMarginLeftPct: 0.032,
+    sideMarginRightPct: 0.047,
+    barMarginLeftPct: 0.018,
+    barMarginRightPct: 0.003,
     barWidthPct: 0.025,
     topMarginPct: 0.079,
     bearOffHeightPct: 0.139,
