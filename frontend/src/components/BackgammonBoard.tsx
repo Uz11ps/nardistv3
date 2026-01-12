@@ -69,7 +69,8 @@ export default function BackgammonBoard({
   // --- CONFIGURATIONS ---
   // Large Screen (Desktop) - Optimized
   const DESKTOP_CONFIG = {
-    sideMarginPct: 0.049,
+    sideMarginLeftPct: 0.049,
+    sideMarginRightPct: 0.049,
     barWidthPct: 0.056,
     topMarginPct: 0.073,
     bearOffHeightPct: 0.131,
@@ -108,7 +109,8 @@ export default function BackgammonBoard({
 
   // Small Screen (Mobile) - Optimized
   const MOBILE_CONFIG = {
-    sideMarginPct: 0.041,
+    sideMarginLeftPct: 0.041,
+    sideMarginRightPct: 0.041,
     barWidthPct: 0.025,
     topMarginPct: 0.079,
     bearOffHeightPct: 0.139,
@@ -641,111 +643,80 @@ export default function BackgammonBoard({
     // Лот для скида снизу -> bearOffHeight
     const bearOffHeight = height * debugConfig.bearOffHeightPct
     const topMargin = height * debugConfig.topMarginPct
+    
     // Уменьшаем отступы сбоку и ширину бара, чтобы треугольники стали шире
-    const sideMargin = width * debugConfig.sideMarginPct
+    const sideMarginLeft = width * (debugConfig.sideMarginLeftPct ?? debugConfig.sideMarginPct ?? 0.049)
+    const sideMarginRight = width * (debugConfig.sideMarginRightPct ?? debugConfig.sideMarginPct ?? 0.049)
     
     // Рабочая область доски (без лотка и рамки)
     const playAreaHeight = height - bearOffHeight - topMargin
     
     // Центральная полоса (бар)
     const barWidth = width * debugConfig.barWidthPct
-    // Ширина одной половины игрового поля
-    const halfBoardWidth = (width - (sideMargin * 2) - barWidth) / 2
     
-    const pointWidth = halfBoardWidth / 6
+    // Вычисляем ширину половин доски отдельно
+    const boardCenter = width / 2
+    const barHalf = barWidth / 2
+    
+    const leftBoardWidth = (boardCenter - barHalf) - sideMarginLeft
+    const rightBoardWidth = (width - sideMarginRight) - (boardCenter + barHalf)
+    
+    // Ширина треугольника может отличаться слева и справа
+    const pointWidthLeft = leftBoardWidth / 6
+    const pointWidthRight = rightBoardWidth / 6
+    
     const pointHeight = playAreaHeight * 0.42 // Высота треугольников
     
     const isTopRow = pointIndex < 12
     
     let x = 0
     let pointNumber = 0
-    
+    let pointWidth = 0 // Will be set based on side
+
     if (isTopRow) {
       pointNumber = 24 - pointIndex
       const isRightSide = pointIndex < 6
       
       if (isRightSide) {
+        // СПРАВА ВВЕРХУ (24-19)
+        pointWidth = pointWidthRight
         const pointInHalf = pointIndex
-        // Справа: отступ справа (sideMargin)
-        x = (width - sideMargin) - (pointInHalf * pointWidth + pointWidth / 2)
+        // Справа: отступ справа (sideMarginRight)
+        x = (width - sideMarginRight) - (pointInHalf * pointWidth + pointWidth / 2)
       } else {
+        // СЛЕВА ВВЕРХУ (18-13)
+        pointWidth = pointWidthLeft
         const pointInHalf = pointIndex - 6
-        // Слева: отступ слева (sideMargin) + пол-доски + бар - (позиция)
-        // Но треугольники 7-12 находятся слева от бара.
-        // Индексы 6-11 (точки 13-18) - это левая верхняя часть?
-        // Нет:
-        // isTopRow (0-11) -> точки 24..13.
-        //   0-5 -> 24..19 (Левый верх? или Правый верх?)
-        //   В стандартной расстановке:
-        //   Top Right: 19-24 (Black Home) -> indices 0-5 ? No.
-        //   Let's check standard logic:
-        //   pointIndex 0 -> point 24. 
-        //   If White moves 24 -> 1. 24 is Opponent Home.
-        //   Standard: 13-24 is Top. 1-12 is Bottom.
-        //   24 is Top Left? Or Top Right?
-        //   Usually Top Right is 19-24 (White's perspective opponent home).
-        //   Let's stick to current logic:
-        //     isRightSide = pointIndex < 6. -> Points 24, 23, 22, 21, 20, 19.
-        //     If isRightSide is drawn on RIGHT, then 19-24 are on Right.
+        // x = (boardCenter - barHalf) - (pointInHalf * pointWidth + pointWidth / 2)
+        // pointInHalf=0 (Point 18) -> near bar.
+        // pointInHalf=5 (Point 13) -> near margin.
         
-        // Корректировка под скин:
-        // Точки 19-24 (индексы 0-5) - Слева или Справа?
-        // Обычно 1-6 (Дом белых) внизу справа.
-        // Значит 19-24 (Дом черных) вверху слева.
-        // Значит индексы 0-5 (24..19) должны быть СЛЕВА.
-        // А индексы 6-11 (18..13) должны быть СПРАВА.
+        // ВАЖНО: Текущая логика была: 
+        // x = (sideMargin + halfBoardWidth) - (pointInHalf * pointWidth + pointWidth / 2)
+        // Это эквивалентно отсчету от БАРА влево? 
+        // Если sideMargin + halfBoardWidth == Start of Bar.
+        // То (Start of Bar) - offset.
+        // Да, (boardCenter - barHalf) это левый край бара.
         
-        // ПРОВЕРКА ТЕКУЩЕЙ ЛОГИКИ (ДО ИЗМЕНЕНИЙ):
-        // if (isRightSide) { x = boardEndX ... } -> Рисует справа.
-        // Значит индексы 0-5 были Справа. То есть 24..19 Справа.
-        // Это значит 1-6 Внизу Справа? (isTopRow = false).
-        // else { ... } -> 12..1 (indices 12-23).
-        // isLeftSide = pointIndex < 18 (indices 12-17 -> points 12..7).
-        //   Drawn at boardStartX (Left).
-        // indices 18-23 -> points 6..1. Drawn at Right.
-        
-        // ИТОГ: 
-        // 1-6 (Дом белых) - Внизу Справа.
-        // 19-24 (Дом черных) - Вверху Справа?
-        // Нет, 1-6 и 19-24 находятся друг над другом.
-        // Значит 24 над 1.
-        // Если 1-6 Внизу Справа, то 24-19 Вверху Справа.
-        
-        // Значит индексы 0-5 (24..19) -> Справа.
-        // Индексы 6-11 (18..13) -> Слева.
-        
-        // Слева: sideMargin + отступ
-        // Но порядок рисования: 18, 17... 13. (Слева направо или Справа налево?)
-        // 13 - крайний левый? или 18?
-        // Стандарт: 12 слева внизу. 13 слева вверху.
-        // Значит 13 (index 11) - крайний левый.
-        // 18 (index 6) - ближе к бару.
-        
-        // Расчет x для левой верхней четверти:
-        // x = (sideMargin + halfBoardWidth) - (pointInHalf * pointWidth + pointWidth/2)
-        // Если pointInHalf = 0 (index 6, point 18), x должен быть у бара.
-        // Если pointInHalf = 5 (index 11, point 13), x должен быть у левого края.
-        
-        x = (sideMargin + halfBoardWidth) - (pointInHalf * pointWidth + pointWidth / 2)
+        x = (boardCenter - barHalf) - (pointInHalf * pointWidth + pointWidth / 2)
       }
     } else {
       // Для нижнего ряда: pointIndex 12-23 соответствуют точкам 12-1
-      // Формула: pointNumber = 24 - pointIndex (та же что и для верхнего ряда)
       pointNumber = 24 - pointIndex
       const isLeftSide = pointIndex < 18 // 12-17 -> points 12..7
       
       if (isLeftSide) {
-        // Левый низ (12..7)
-        // 12 - крайний левый. 7 - у бара.
-        // index 12 -> point 12. index 17 -> point 7.
+        // СЛЕВА ВНИЗУ (12-7)
+        pointWidth = pointWidthLeft
         const pointInHalf = pointIndex - 12
-        x = sideMargin + (pointInHalf * pointWidth + pointWidth / 2)
+        // x = sideMarginLeft + (pointInHalf * pointWidth + pointWidth / 2)
+        x = sideMarginLeft + (pointInHalf * pointWidth + pointWidth / 2)
       } else {
-        // Правый низ (6..1)
-        // 6 - у бара. 1 - крайний правый.
-        // index 18 -> point 6. index 23 -> point 1.
+        // СПРАВА ВНИЗУ (6-1)
+        pointWidth = pointWidthRight
         const pointInHalf = pointIndex - 18
-        x = (sideMargin + halfBoardWidth + barWidth) + (pointInHalf * pointWidth + pointWidth / 2)
+        // x = (boardCenter + barHalf) + (pointInHalf * pointWidth + pointWidth / 2)
+        x = (boardCenter + barHalf) + (pointInHalf * pointWidth + pointWidth / 2)
       }
     }
     

@@ -57,7 +57,8 @@ export const DebugPanel = memo(({
   const handleIncrement = (key: string, delta: number) => {
     const currentValue = debugConfig[key]
     const item = [
-      { key: 'sideMarginPct', label: 'Side Margin', min: 0, max: 2, step: 0.001 },
+      { key: 'sideMarginLeftPct', label: 'Side Margin Left', min: 0, max: 2, step: 0.001 },
+      { key: 'sideMarginRightPct', label: 'Side Margin Right', min: 0, max: 2, step: 0.001 },
       { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 2, step: 0.001 },
       { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 2, step: 0.001 },
       { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 2, step: 0.001 },
@@ -160,7 +161,8 @@ export const DebugPanel = memo(({
       </div>
       
       {[
-        { key: 'sideMarginPct', label: 'Side Margin', min: 0, max: 2, step: 0.001 },
+        { key: 'sideMarginLeftPct', label: 'Side Margin Left', min: 0, max: 2, step: 0.001 },
+        { key: 'sideMarginRightPct', label: 'Side Margin Right', min: 0, max: 2, step: 0.001 },
         { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 2, step: 0.001 },
         { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 2, step: 0.001 },
         { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 2, step: 0.001 },
@@ -234,6 +236,18 @@ export const DebugPanel = memo(({
             />
             <span style={{ marginLeft: '5px' }}>Show Test Dice</span>
           </label>
+        </div>
+
+        <div style={{ marginBottom: '5px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+             onClick={() => {
+               navigator.clipboard.writeText(JSON.stringify(debugConfig, null, 2))
+               alert('Config copied to clipboard!')
+             }}
+             style={{ fontSize: '12px', padding: '3px 8px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
+          >
+            Copy Config
+          </button>
         </div>
 
          <textarea 
