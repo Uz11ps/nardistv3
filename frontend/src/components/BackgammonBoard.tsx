@@ -157,7 +157,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config')
+      const saved = localStorage.getItem('backgammon-debug-config-v2')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -180,7 +180,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v2', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -190,7 +190,7 @@ export default function BackgammonBoard({
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
   useEffect(() => {
     // Если есть сохраненный конфиг - не переключаем автоматически
-    const hasSavedConfig = localStorage.getItem('backgammon-debug-config')
+    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v2')
     if (hasSavedConfig || debugMode) return
     
     const handleResize = () => {
