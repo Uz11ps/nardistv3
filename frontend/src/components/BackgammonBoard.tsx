@@ -2537,39 +2537,65 @@ export default function BackgammonBoard({
     }
     
     const usedIndices = new Set<number>()
-    const diceCopy = [...diceArray]
+    // Создаем массив доступных индексов для каждого значения кубика
+    const availableIndicesByValue = new Map<number, number[]>()
+    diceArray.forEach((die, idx) => {
+      if (!availableIndicesByValue.has(die)) {
+        availableIndicesByValue.set(die, [])
+      }
+      availableIndicesByValue.get(die)!.push(idx)
+    })
     
     pendingMoves.forEach(move => {
-      // Если есть steps, используем их
+      // Если есть steps, используем их (для комбинированных ходов)
       if ((move as any).steps && Array.isArray((move as any).steps)) {
         (move as any).steps.forEach((step: any) => {
-          const idx = diceCopy.findIndex((d, i) => d === step.die && !usedIndices.has(i))
-          if (idx !== -1) {
+          const availableIndices = availableIndicesByValue.get(step.die) || []
+          // Берем первый доступный индекс для этого значения кубика
+          const idx = availableIndices.find(i => !usedIndices.has(i))
+          if (idx !== undefined) {
             usedIndices.add(idx)
-            diceCopy[idx] = -1 // Помечаем как использованный
+            // Удаляем использованный индекс из доступных
+            const indexInArray = availableIndices.indexOf(idx)
+            if (indexInArray !== -1) {
+              availableIndices.splice(indexInArray, 1)
+            }
           }
         })
       } else {
-        // Ищем кубик по значению
-        const idx = diceCopy.findIndex((d, i) => d === move.die && !usedIndices.has(i))
-        if (idx !== -1) {
+        // Ищем кубик по значению (для одиночных ходов)
+        const availableIndices = availableIndicesByValue.get(move.die) || []
+        const idx = availableIndices.find(i => !usedIndices.has(i))
+        if (idx !== undefined) {
           usedIndices.add(idx)
-          diceCopy[idx] = -1
+          // Удаляем использованный индекс из доступных
+          const indexInArray = availableIndices.indexOf(idx)
+          if (indexInArray !== -1) {
+            availableIndices.splice(indexInArray, 1)
+          }
         } else if (gameMode === 'long') {
-          // Для длинных нард пробуем найти сумму
-          for (let i = 0; i < diceCopy.length; i++) {
-            if (usedIndices.has(i)) continue
-            for (let j = i + 1; j < diceCopy.length; j++) {
-              if (usedIndices.has(j)) continue
-              if (diceCopy[i] + diceCopy[j] === move.die) {
-                usedIndices.add(i)
-                usedIndices.add(j)
-                diceCopy[i] = -1
-                diceCopy[j] = -1
-                break
-              }
+          // Для длинных нард пробуем найти сумму двух кубиков
+          const sumValue = move.die
+          // Ищем два кубика, сумма которых равна move.die
+          for (const [dieValue1, indices1] of availableIndicesByValue.entries()) {
+            const available1 = indices1.filter(i => !usedIndices.has(i))
+            if (available1.length === 0) continue
+            
+            const dieValue2 = sumValue - dieValue1
+            const indices2 = availableIndicesByValue.get(dieValue2) || []
+            const available2 = indices2.filter(i => !usedIndices.has(i) && i !== available1[0])
+            
+            if (available2.length > 0) {
+              // Нашли пару кубиков для суммы
+              usedIndices.add(available1[0])
+              usedIndices.add(available2[0])
+              // Удаляем использованные индексы из доступных
+              const idx1InArray = indices1.indexOf(available1[0])
+              if (idx1InArray !== -1) indices1.splice(idx1InArray, 1)
+              const idx2InArray = indices2.indexOf(available2[0])
+              if (idx2InArray !== -1) indices2.splice(idx2InArray, 1)
+              break
             }
-            if (usedIndices.has(i)) break
           }
         }
       }

@@ -431,12 +431,9 @@ export default function Game() {
 
   // Локальный таймер для плавного обновления UI
   useEffect(() => {
-    // ВАЖНО: Таймер запускается только если игра идет И это наш ход (canMove) И кубики брошены
-    // Это предотвращает тиканье таймера до того, как игроку разрешено ходить
-    const hasDice = gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length > 0
-    const shouldRunTimer = gameStatus === 'in_progress' && !isSandbox && gameState?.canMove && hasDice
-    
-    if (!shouldRunTimer) {
+    // ВАЖНО: Таймер запускается всегда, когда игра идет (не только для нашего хода)
+    // Таймер должен отображаться для обоих игроков, но тикать только для текущего
+    if (gameStatus !== 'in_progress' || isSandbox) {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current)
         timerIntervalRef.current = null
@@ -449,9 +446,8 @@ export default function Game() {
     lastTimerUpdateRef.current = Date.now()
 
     timerIntervalRef.current = window.setInterval(() => {
-      // Дополнительная проверка: если canMove стал false или кубики исчезли, останавливаем таймер
-      const hasDiceNow = gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length > 0
-      if (!gameState?.canMove || gameStatus !== 'in_progress' || !hasDiceNow) {
+      // Проверяем, что игра все еще идет
+      if (gameStatus !== 'in_progress') {
         return
       }
       
@@ -1294,24 +1290,8 @@ export default function Game() {
 
     socket.on('timer_update', (data: any) => {
       if (data.gameId === gameId) {
-        // ВАЖНО: Обновляем таймер только если это действительно наш ход И кубики уже брошены
-        // Это предотвращает запуск таймера до того, как игроку разрешено ходить
-        const isMyTurnNow = data.currentPlayer === (isPlayer1 ? 0 : 1)
-        const canMoveNow = gameState?.canMove || false
-        const hasDice = gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length > 0
-        
-        // Если это не наш ход, или canMove еще false, или кубики еще не брошены - 
-        // только обновляем общее время, но не таймер хода
-        if (!isMyTurnNow || !canMoveNow || !hasDice) {
-          const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
-          const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
-          const newTotalTime = { player1: totalTime1, player2: totalTime2 }
-          setTotalTimeRemaining(newTotalTime)
-          totalTimeRemainingRef.current = newTotalTime
-          return
-        }
-        
-        // Используем данные из сервера
+        // ВАЖНО: Таймер обновляется всегда от сервера, независимо от наличия кубиков
+        // Сервер сам решает, когда начинать отсчет времени
         const moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 15
         const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
@@ -1777,11 +1757,56 @@ export default function Game() {
           })
           
           if (hasNonBarMove) {
-            alert('Сначала выведите шашки с бара')
+            // Невалидный ход - откатываем локально без отправки на сервер
             setPendingMoves([])
             return
           }
         }
+      }
+      
+      // ВАЖНО: Валидация ходов перед отправкой на сервер
+      // Если ходы невалидны - откатываем локально без отправки
+      try {
+        const validationResponse = await apiClient.post(`/games/${gameId}/possible-moves`, {
+          pendingMoves: pendingMoves
+        })
+        
+        const validMoves = validationResponse.data.movesFromPoint || []
+        const allMoves = validationResponse.data.allMoves || []
+        
+        // Проверяем, что все ходы из pendingMoves присутствуют в валидных ходах
+        const isValid = pendingMoves.every(pendingMove => {
+          // Ищем соответствующий валидный ход
+          const foundInFlat = validMoves.some(validMove => 
+            validMove.from === pendingMove.from && 
+            validMove.to === pendingMove.to && 
+            validMove.die === pendingMove.die
+          )
+          
+          // Если не нашли в плоском списке, проверяем в последовательностях
+          if (!foundInFlat) {
+            return allMoves.some(sequence => 
+              sequence.some(step => 
+                step.from === pendingMove.from && 
+                step.to === pendingMove.to && 
+                step.die === pendingMove.die
+              )
+            )
+          }
+          
+          return foundInFlat
+        })
+        
+        if (!isValid) {
+          // Ходы невалидны - откатываем локально без отправки на сервер
+          console.warn('⚠️ Invalid moves detected, rolling back locally:', pendingMoves)
+          setPendingMoves([])
+          return
+        }
+      } catch (validationError) {
+        // Если валидация не удалась (например, сервер недоступен), пропускаем проверку
+        // но логируем ошибку
+        console.warn('⚠️ Could not validate moves, proceeding anyway:', validationError)
       }
       
       const socket = getSocket()
