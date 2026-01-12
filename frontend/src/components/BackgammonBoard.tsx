@@ -125,8 +125,8 @@ export default function BackgammonBoard({
     diceP1Y: 0.65,
     diceP2X: 0.09,
     diceP2Y: 0.38, 
-    checkerTopOffset: -295, 
-    checkerBottomOffset: 295,
+    checkerTopOffset: -315, 
+    checkerBottomOffset: 315,
     // Legacy text offsets
     textTopOffset: -15,
     textBottomOffset: 15,
@@ -145,10 +145,10 @@ export default function BackgammonBoard({
     dragCheckerXOffset: 0,
     dragCheckerYOffset: -150,
     // Advanced text offsets (quadrants)
-    textTopRightY: -281,
-    textTopLeftY: -281, 
-    textBottomLeftY: 281, 
-    textBottomRightY: 281,
+    textTopRightY: -301,
+    textTopLeftY: -301, 
+    textBottomLeftY: 301, 
+    textBottomRightY: 301,
   }
 
   // --- DEBUG / ADJUSTMENT MODE ---
@@ -157,7 +157,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v7')
+      const saved = localStorage.getItem('backgammon-debug-config-v8')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -180,7 +180,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v7', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v8', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -190,7 +190,7 @@ export default function BackgammonBoard({
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
   useEffect(() => {
     // Если есть сохраненный конфиг - не переключаем автоматически
-    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v7')
+    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v8')
     if (hasSavedConfig || debugMode) return
     
     const handleResize = () => {
