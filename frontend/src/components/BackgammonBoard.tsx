@@ -111,22 +111,22 @@ export default function BackgammonBoard({
 
   // Small Screen (Mobile) - Optimized
   const MOBILE_CONFIG = {
-    sideMarginLeftPct: 0.032,
-    sideMarginRightPct: 0.047,
-    barMarginLeftPct: 0.018,
-    barMarginRightPct: 0.003,
+    sideMarginLeftPct: 0.031,
+    sideMarginRightPct: 0.050,
+    barMarginLeftPct: 0.030,
+    barMarginRightPct: 0.012,
     barWidthPct: 0.025,
     topMarginPct: 0.079,
     bearOffHeightPct: 0.139,
     checkerWidthRatio: 1.5,
     checkerHeightRatio: 0.216,
     checkerDrawScale: 1.23,
-    diceP1X: 0.55, // Moved closer to center (was 0.75)
+    diceP1X: 0.55,
     diceP1Y: 0.65,
     diceP2X: 0.09,
     diceP2Y: 0.38, 
-    checkerTopOffset: -25, 
-    checkerBottomOffset: 33, // Updated from user screenshot (was -44)
+    checkerTopOffset: -275, 
+    checkerBottomOffset: 275,
     // Legacy text offsets
     textTopOffset: -15,
     textBottomOffset: 15,
@@ -143,12 +143,12 @@ export default function BackgammonBoard({
     // Dragging checker parameters
     dragCheckerSizeScale: 1.0,
     dragCheckerXOffset: 0,
-    dragCheckerYOffset: 0,
+    dragCheckerYOffset: -150,
     // Advanced text offsets (quadrants)
-    textTopRightY: -15,
-    textTopLeftY: -15, 
-    textBottomLeftY: 15, 
-    textBottomRightY: 15,
+    textTopRightY: -261,
+    textTopLeftY: -261, 
+    textBottomLeftY: 261, 
+    textBottomRightY: 261,
   }
 
   // --- DEBUG / ADJUSTMENT MODE ---
