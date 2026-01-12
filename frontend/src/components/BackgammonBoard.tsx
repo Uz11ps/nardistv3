@@ -160,8 +160,13 @@ export default function BackgammonBoard({
       const saved = localStorage.getItem('backgammon-debug-config')
       if (saved) {
         const parsed = JSON.parse(saved)
-        // Мержим с дефолтным конфигом чтобы добавить новые параметры если они появились
-        return { ...DESKTOP_CONFIG, ...parsed }
+        // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
+        if (parsed.sideMarginLeftPct !== undefined) {
+             // Мержим с дефолтным конфигом чтобы добавить новые параметры если они появились
+             return { ...DESKTOP_CONFIG, ...parsed }
+        } else {
+             console.log('Detected legacy config in localStorage, ignoring to enforce new defaults.')
+        }
       }
     } catch (e) {
       console.warn('Failed to load debug config from localStorage:', e)
