@@ -1264,8 +1264,8 @@ export default function BackgammonBoard({
       
       const fromOverlap = fromCheckerCount > 5 ? (checkerSize * 0.8) : checkerSize
       const startY = fromTop 
-        ? fromY + checkerSize/2 + 2 + (fromCheckerCount - 1) * fromOverlap
-        : fromY - checkerSize/2 - 2 - (fromCheckerCount - 1) * fromOverlap
+        ? fromY + checkerSize/2 + scaleY(debugConfig.checkerTopOffset) + (fromCheckerCount - 1) * fromOverlap
+        : fromY - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset) - (fromCheckerCount - 1) * fromOverlap
 
       // Конечная позиция Y (куда приземлится)
       let endY;
@@ -1275,8 +1275,8 @@ export default function BackgammonBoard({
         const toCheckerCount = Math.abs(virtualGameState.points[animatingChecker.to])
         const toOverlap = (toCheckerCount + 1) > 5 ? (checkerSize * 0.8) : checkerSize
         endY = toTop
-          ? toY + checkerSize/2 + 2 + toCheckerCount * toOverlap
-          : toY - checkerSize/2 - 2 - toCheckerCount * toOverlap
+          ? toY + checkerSize/2 + scaleY(debugConfig.checkerTopOffset) + toCheckerCount * toOverlap
+          : toY - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset) - toCheckerCount * toOverlap
       }
 
       const curX = fromX + (toX - fromX) * animatingChecker.progress
