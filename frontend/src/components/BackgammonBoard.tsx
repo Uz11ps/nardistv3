@@ -157,7 +157,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v2')
+      const saved = localStorage.getItem('backgammon-debug-config-v3')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -180,7 +180,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v2', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v3', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -190,7 +190,7 @@ export default function BackgammonBoard({
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
   useEffect(() => {
     // Если есть сохраненный конфиг - не переключаем автоматически
-    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v2')
+    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v3')
     if (hasSavedConfig || debugMode) return
     
     const handleResize = () => {
@@ -658,8 +658,8 @@ export default function BackgammonBoard({
     const barMarginRight = width * (debugConfig.barMarginRightPct ?? 0)
 
     // Уменьшаем отступы сбоку и ширину бара, чтобы треугольники стали шире
-    const sideMarginLeft = width * (debugConfig.sideMarginLeftPct ?? debugConfig.sideMarginPct ?? 0.049)
-    const sideMarginRight = width * (debugConfig.sideMarginRightPct ?? debugConfig.sideMarginPct ?? 0.049)
+    const sideMarginLeft = width * (debugConfig.sideMarginLeftPct ?? debugConfig.sideMarginPct ?? 0.032)
+    const sideMarginRight = width * (debugConfig.sideMarginRightPct ?? debugConfig.sideMarginPct ?? 0.047)
     
     // Рабочая область доски (без лотка и рамки)
     const playAreaHeight = height - bearOffHeight - topMargin
