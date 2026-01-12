@@ -119,7 +119,7 @@ export default function BackgammonBoard({
     topMarginPct: 0.079,
     bearOffHeightPct: 0.139,
     checkerWidthRatio: 1.5,
-    checkerHeightRatio: 0.216,
+    checkerHeightRatio: 0.252,
     checkerDrawScale: 1.23,
     diceP1X: 0.55,
     diceP1Y: 0.65,
@@ -139,7 +139,7 @@ export default function BackgammonBoard({
     validHighlightWidthScale: 1.0,
     validHighlightHeightScale: 1.0,
     validHighlightXOffset: 0,
-    validHighlightYOffset: 0,
+    validHighlightYOffset: -22,
     // Dragging checker parameters
     dragCheckerSizeScale: 1.0,
     dragCheckerXOffset: 0,
@@ -157,7 +157,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v3')
+      const saved = localStorage.getItem('backgammon-debug-config-v4')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -180,7 +180,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v3', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v4', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -190,7 +190,7 @@ export default function BackgammonBoard({
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
   useEffect(() => {
     // Если есть сохраненный конфиг - не переключаем автоматически
-    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v3')
+    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v4')
     if (hasSavedConfig || debugMode) return
     
     const handleResize = () => {
