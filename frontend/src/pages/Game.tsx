@@ -44,6 +44,8 @@ export default function Game() {
   const player1TimerRef = useRef<number>(15)
   const player2TimerRef = useRef<number>(15)
   const totalTimeRemainingRef = useRef<{ player1: number; player2: number }>({ player1: 60, player2: 60 })
+  const pageLoadTimeRef = useRef<number>(Date.now()) // Время загрузки страницы для защиты от немедленного автолуза
+  const lastTotalTimeRef = useRef<{ player1: number; player2: number }>({ player1: 60, player2: 60 }) // Предыдущее значение общего времени
   const [pipCounts, setPipCounts] = useState({ player1: 0, player2: 0 })
   const [pipDiff, setPipDiff] = useState<{ player1: number | null; player2: number | null }>({ player1: null, player2: null })
   const lastPipCounts = useRef({ player1: 0, player2: 0 })
@@ -429,7 +431,12 @@ export default function Game() {
 
   // Локальный таймер для плавного обновления UI
   useEffect(() => {
-    if (gameStatus !== 'in_progress' || isSandbox) {
+    // ВАЖНО: Таймер запускается только если игра идет И это наш ход (canMove) И кубики брошены
+    // Это предотвращает тиканье таймера до того, как игроку разрешено ходить
+    const hasDice = gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length > 0
+    const shouldRunTimer = gameStatus === 'in_progress' && !isSandbox && gameState?.canMove && hasDice
+    
+    if (!shouldRunTimer) {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current)
         timerIntervalRef.current = null
@@ -442,6 +449,12 @@ export default function Game() {
     lastTimerUpdateRef.current = Date.now()
 
     timerIntervalRef.current = window.setInterval(() => {
+      // Дополнительная проверка: если canMove стал false или кубики исчезли, останавливаем таймер
+      const hasDiceNow = gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length > 0
+      if (!gameState?.canMove || gameStatus !== 'in_progress' || !hasDiceNow) {
+        return
+      }
+      
       const now = Date.now()
       const deltaSeconds = (now - lastTimerUpdateRef.current) / 1000
       lastTimerUpdateRef.current = now
@@ -458,14 +471,12 @@ export default function Game() {
           }
         } else {
           // Овертайм - уменьшаем общее время
+          // ВАЖНО: Автолуз обрабатывается на сервере через checkMoveTimeouts()
+          // Клиент только отображает таймер, не вызывает автолуз
           const newTotal = Math.max(0, totalTimeRemainingRef.current.player1 - deltaSeconds)
           setTotalTimeRemaining(prev => ({ ...prev, player1: newTotal }))
           totalTimeRemainingRef.current.player1 = newTotal // Обновляем ref
-          
-          // Если мое время закончилось - оформляем поражение локально для скорости реакции
-          if (newTotal === 0 && isPlayer1 && gameStatus === 'in_progress') {
-            handleAutoMove()
-          }
+          lastTotalTimeRef.current.player1 = newTotal
         }
       } else if (gameState?.currentPlayer === 1) {
         // Ход игрока 2
@@ -479,14 +490,12 @@ export default function Game() {
           }
         } else {
           // Овертайм - уменьшаем общее время
+          // ВАЖНО: Автолуз обрабатывается на сервере через checkMoveTimeouts()
+          // Клиент только отображает таймер, не вызывает автолуз
           const newTotal = Math.max(0, totalTimeRemainingRef.current.player2 - deltaSeconds)
           setTotalTimeRemaining(prev => ({ ...prev, player2: newTotal }))
           totalTimeRemainingRef.current.player2 = newTotal // Обновляем ref
-          
-          // Если мое время закончилось - оформляем поражение локально для скорости реакции
-          if (newTotal === 0 && !isPlayer1 && gameStatus === 'in_progress') {
-            handleAutoMove()
-          }
+          lastTotalTimeRef.current.player2 = newTotal
         }
       }
     }, 100) // Обновляем каждые 100мс для плавности
@@ -497,7 +506,7 @@ export default function Game() {
         timerIntervalRef.current = null
       }
     }
-  }, [gameStatus, gameState?.currentPlayer, isPlayer1, isSandbox, isBotGame, gameInfo?.type, handleAutoMove])
+  }, [gameStatus, gameState?.currentPlayer, gameState?.canMove, isPlayer1, isSandbox, isBotGame, gameInfo?.type, handleAutoMove])
   
   const loadGame = async () => {
     try {
@@ -584,31 +593,29 @@ export default function Game() {
         // Если WebSocket подключен, таймеры придут в событии timer_update
         // Иначе устанавливаем начальные значения
         const socket = getSocket()
+        // ВАЖНО: Инициализируем таймеры с защитой от отрицательных значений
+        const initialTotalTime = {
+          player1: game.player1TimeRemaining ? Math.max(0, game.player1TimeRemaining / 1000) : 60,
+          player2: game.player2TimeRemaining ? Math.max(0, game.player2TimeRemaining / 1000) : 60
+        }
+        
         if (socket && socket.connected) {
           // Таймеры обновятся через событие timer_update от сервера
           // Устанавливаем временные значения для отображения
           setPlayer1Timer(timeLimitSeconds)
           setPlayer2Timer(timeLimitSeconds)
-          setTotalTimeRemaining({ 
-            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
-            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
-          })
-          totalTimeRemainingRef.current = {
-            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
-            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
-          }
+          setTotalTimeRemaining(initialTotalTime)
+          totalTimeRemainingRef.current = initialTotalTime
+          lastTotalTimeRef.current = { ...initialTotalTime } // Сохраняем начальное значение для проверки
+          pageLoadTimeRef.current = Date.now() // Обновляем время загрузки при загрузке игры
         } else {
           // Если WebSocket не подключен, используем значения из БД если есть
           setPlayer1Timer(timeLimitSeconds)
           setPlayer2Timer(timeLimitSeconds)
-          setTotalTimeRemaining({ 
-            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
-            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
-          })
-          totalTimeRemainingRef.current = {
-            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
-            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
-          }
+          setTotalTimeRemaining(initialTotalTime)
+          totalTimeRemainingRef.current = initialTotalTime
+          lastTotalTimeRef.current = { ...initialTotalTime } // Сохраняем начальное значение для проверки
+          pageLoadTimeRef.current = Date.now() // Обновляем время загрузки при загрузке игры
         }
         
         // Если игра началась и это наш ход, но кубиков нет - бросаем их
@@ -1287,6 +1294,23 @@ export default function Game() {
 
     socket.on('timer_update', (data: any) => {
       if (data.gameId === gameId) {
+        // ВАЖНО: Обновляем таймер только если это действительно наш ход И кубики уже брошены
+        // Это предотвращает запуск таймера до того, как игроку разрешено ходить
+        const isMyTurnNow = data.currentPlayer === (isPlayer1 ? 0 : 1)
+        const canMoveNow = gameState?.canMove || false
+        const hasDice = gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length > 0
+        
+        // Если это не наш ход, или canMove еще false, или кубики еще не брошены - 
+        // только обновляем общее время, но не таймер хода
+        if (!isMyTurnNow || !canMoveNow || !hasDice) {
+          const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
+          const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
+          const newTotalTime = { player1: totalTime1, player2: totalTime2 }
+          setTotalTimeRemaining(newTotalTime)
+          totalTimeRemainingRef.current = newTotalTime
+          return
+        }
+        
         // Используем данные из сервера
         const moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 15
         const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
@@ -1305,6 +1329,12 @@ export default function Game() {
         const newTotalTime = { player1: totalTime1, player2: totalTime2 }
         setTotalTimeRemaining(newTotalTime)
         totalTimeRemainingRef.current = newTotalTime
+        // ВАЖНО: Обновляем lastTotalTimeRef только если это первое обновление после загрузки
+        // или если значение изменилось (не было установлено ранее)
+        if (lastTotalTimeRef.current.player1 === 60 && lastTotalTimeRef.current.player2 === 60 && 
+            (totalTime1 !== 60 || totalTime2 !== 60)) {
+          lastTotalTimeRef.current = { ...newTotalTime }
+        }
         setIsInOvertime(isOvertime)
         
         if (data.currentPlayer === 0) {
