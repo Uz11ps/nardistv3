@@ -745,6 +745,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           }
         } catch (error) {
           this.logger.error(`Bot move error: ${error.message}`, error.stack);
+          
           // Fallback: если бот упал с ошибкой, пытаемся сделать любой валидный ход или пропустить ход
           try {
             this.logger.warn(`⚠️ Attempting fallback move for bot in game ${gameId}`);
