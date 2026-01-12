@@ -417,8 +417,6 @@ export default function Game() {
   // Функция автолуза
   const handleAutoMove = useCallback(async () => {
     if (!gameId) return
-    // Отключаем автолуз для игр с ботом
-    if (isBotGame || gameInfo?.type === 'vs_bot') return
 
     console.log('⏱️ Таймер истек! Оформляем техническое поражение...')
     try {
@@ -431,8 +429,7 @@ export default function Game() {
 
   // Локальный таймер для плавного обновления UI
   useEffect(() => {
-    // Отключаем таймеры для игр с ботом
-    if (gameStatus !== 'in_progress' || isSandbox || isBotGame || gameInfo?.type === 'vs_bot') {
+    if (gameStatus !== 'in_progress' || isSandbox) {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current)
         timerIntervalRef.current = null
@@ -582,34 +579,31 @@ export default function Game() {
         // Запрашиваем актуальное состояние таймеров с сервера через WebSocket
         // Если WebSocket подключен, таймеры придут в событии timer_update
         // Иначе устанавливаем начальные значения
-        // Для игр с ботом не обновляем таймеры (логика отключена)
-        if (!isBotGame && game.type !== 'vs_bot') {
-          const socket = getSocket()
-          if (socket && socket.connected) {
-            // Таймеры обновятся через событие timer_update от сервера
-            // Устанавливаем временные значения для отображения
-            setPlayer1Timer(timeLimitSeconds)
-            setPlayer2Timer(timeLimitSeconds)
-            setTotalTimeRemaining({ 
-              player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
-              player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
-            })
-            totalTimeRemainingRef.current = {
-              player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
-              player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
-            }
-          } else {
-            // Если WebSocket не подключен, используем значения из БД если есть
-            setPlayer1Timer(timeLimitSeconds)
-            setPlayer2Timer(timeLimitSeconds)
-            setTotalTimeRemaining({ 
-              player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
-              player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
-            })
-            totalTimeRemainingRef.current = {
-              player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
-              player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
-            }
+        const socket = getSocket()
+        if (socket && socket.connected) {
+          // Таймеры обновятся через событие timer_update от сервера
+          // Устанавливаем временные значения для отображения
+          setPlayer1Timer(timeLimitSeconds)
+          setPlayer2Timer(timeLimitSeconds)
+          setTotalTimeRemaining({ 
+            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
+          })
+          totalTimeRemainingRef.current = {
+            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
+          }
+        } else {
+          // Если WebSocket не подключен, используем значения из БД если есть
+          setPlayer1Timer(timeLimitSeconds)
+          setPlayer2Timer(timeLimitSeconds)
+          setTotalTimeRemaining({ 
+            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
+          })
+          totalTimeRemainingRef.current = {
+            player1: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+            player2: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60
           }
         }
         
@@ -618,7 +612,7 @@ export default function Game() {
         // НО НЕ для sandbox игр - там пользователь сам управляет всем
         const bothOffsetsChosen = game.p1OffsetChosenAt && game.p2OffsetChosenAt
         const canMoveNow = game.player1Id === user?.id ? game.currentPlayer === 0 : game.currentPlayer === 1
-        if (canMoveNow && !formattedDice && !isBotGame && game.type !== 'sandbox' && bothOffsetsChosen) {
+        if (canMoveNow && !formattedDice && game.type !== 'sandbox' && bothOffsetsChosen) {
           setTimeout(() => {
             const socket = getSocket()
             if (socket && socket.connected) {
@@ -631,7 +625,7 @@ export default function Game() {
         setPlayer2Timer(0)
       }
       
-      if (game.status === 'waiting' && game.type === 'vs_player' && !isBotGame) {
+      if (game.status === 'waiting' && game.type === 'vs_player') {
         setPlayer1Ready(false)
         setPlayer2Ready(false)
         setMyReady(false)
@@ -1126,16 +1120,13 @@ export default function Game() {
       const isMyTurnNow = canMove
       const wasMyTurn = gameState?.canMove || false
       
-      // Не обновляем таймеры для игр с ботом
-      if (!isBotGame && gameInfo?.type !== 'vs_bot') {
-        const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 60
-        if (data.currentPlayer === 0) {
-          setPlayer1Timer(timeLimitSeconds)
-          setPlayer2Timer(timeLimitSeconds)
-        } else {
-          setPlayer2Timer(timeLimitSeconds)
-          setPlayer1Timer(timeLimitSeconds)
-        }
+      const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 60
+      if (data.currentPlayer === 0) {
+        setPlayer1Timer(timeLimitSeconds)
+        setPlayer2Timer(timeLimitSeconds)
+      } else {
+        setPlayer2Timer(timeLimitSeconds)
+        setPlayer1Timer(timeLimitSeconds)
       }
       
       const barRaw = data.gameState?.bar || [0, 0]
@@ -1291,9 +1282,6 @@ export default function Game() {
     })
 
     socket.on('timer_update', (data: any) => {
-      // Отключаем обновление таймеров для игр с ботом
-      if (isBotGame || gameInfo?.type === 'vs_bot') return
-      
       if (data.gameId === gameId) {
         // Используем данные из сервера
         const moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 15
