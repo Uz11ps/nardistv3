@@ -934,8 +934,6 @@ export default function BackgammonBoard({
     // Helper functions to scale fixed pixel offsets based on screen size
     const scaleY = (val: number) => {
         if (!isMobile) return val;
-        // Avoid division by zero
-        if (REFERENCE_MOBILE_HEIGHT === 0) return val;
         // Calculate scale factor
         const factor = height / REFERENCE_MOBILE_HEIGHT;
         return val * factor;
@@ -943,7 +941,6 @@ export default function BackgammonBoard({
 
     const scaleX = (val: number) => {
         if (!isMobile) return val;
-        if (REFERENCE_MOBILE_WIDTH === 0) return val;
         const factor = width / REFERENCE_MOBILE_WIDTH;
         return val * factor;
     }
