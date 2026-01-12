@@ -59,6 +59,8 @@ export const DebugPanel = memo(({
     const item = [
       { key: 'sideMarginLeftPct', label: 'Side Margin Left', min: 0, max: 2, step: 0.001 },
       { key: 'sideMarginRightPct', label: 'Side Margin Right', min: 0, max: 2, step: 0.001 },
+      { key: 'barMarginLeftPct', label: 'Bar Margin Left (Offset)', min: 0, max: 2, step: 0.001 },
+      { key: 'barMarginRightPct', label: 'Bar Margin Right (Offset)', min: 0, max: 2, step: 0.001 },
       { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 2, step: 0.001 },
       { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 2, step: 0.001 },
       { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 2, step: 0.001 },
@@ -163,6 +165,8 @@ export const DebugPanel = memo(({
       {[
         { key: 'sideMarginLeftPct', label: 'Side Margin Left', min: 0, max: 2, step: 0.001 },
         { key: 'sideMarginRightPct', label: 'Side Margin Right', min: 0, max: 2, step: 0.001 },
+        { key: 'barMarginLeftPct', label: 'Bar Margin Left (Offset)', min: 0, max: 2, step: 0.001 },
+        { key: 'barMarginRightPct', label: 'Bar Margin Right (Offset)', min: 0, max: 2, step: 0.001 },
         { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 2, step: 0.001 },
         { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 2, step: 0.001 },
         { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 2, step: 0.001 },

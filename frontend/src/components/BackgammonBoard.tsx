@@ -71,6 +71,8 @@ export default function BackgammonBoard({
   const DESKTOP_CONFIG = {
     sideMarginLeftPct: 0.049,
     sideMarginRightPct: 0.049,
+    barMarginLeftPct: 0,
+    barMarginRightPct: 0,
     barWidthPct: 0.056,
     topMarginPct: 0.073,
     bearOffHeightPct: 0.131,
@@ -111,6 +113,8 @@ export default function BackgammonBoard({
   const MOBILE_CONFIG = {
     sideMarginLeftPct: 0.041,
     sideMarginRightPct: 0.041,
+    barMarginLeftPct: 0,
+    barMarginRightPct: 0,
     barWidthPct: 0.025,
     topMarginPct: 0.079,
     bearOffHeightPct: 0.139,
@@ -644,6 +648,10 @@ export default function BackgammonBoard({
     const bearOffHeight = height * debugConfig.bearOffHeightPct
     const topMargin = height * debugConfig.topMarginPct
     
+    // Отступы от центральной линии (бара) для левой и правой части
+    const barMarginLeft = width * (debugConfig.barMarginLeftPct ?? 0)
+    const barMarginRight = width * (debugConfig.barMarginRightPct ?? 0)
+
     // Уменьшаем отступы сбоку и ширину бара, чтобы треугольники стали шире
     const sideMarginLeft = width * (debugConfig.sideMarginLeftPct ?? debugConfig.sideMarginPct ?? 0.049)
     const sideMarginRight = width * (debugConfig.sideMarginRightPct ?? debugConfig.sideMarginPct ?? 0.049)
@@ -658,8 +666,8 @@ export default function BackgammonBoard({
     const boardCenter = width / 2
     const barHalf = barWidth / 2
     
-    const leftBoardWidth = (boardCenter - barHalf) - sideMarginLeft
-    const rightBoardWidth = (width - sideMarginRight) - (boardCenter + barHalf)
+    const leftBoardWidth = (boardCenter - barHalf - barMarginLeft) - sideMarginLeft
+    const rightBoardWidth = (width - sideMarginRight) - (boardCenter + barHalf + barMarginRight)
     
     // Ширина треугольника может отличаться слева и справа
     const pointWidthLeft = leftBoardWidth / 6
@@ -698,7 +706,7 @@ export default function BackgammonBoard({
         // То (Start of Bar) - offset.
         // Да, (boardCenter - barHalf) это левый край бара.
         
-        x = (boardCenter - barHalf) - (pointInHalf * pointWidth + pointWidth / 2)
+        x = (boardCenter - barHalf - barMarginLeft) - (pointInHalf * pointWidth + pointWidth / 2)
       }
     } else {
       // Для нижнего ряда: pointIndex 12-23 соответствуют точкам 12-1
@@ -716,7 +724,7 @@ export default function BackgammonBoard({
         pointWidth = pointWidthRight
         const pointInHalf = pointIndex - 18
         // x = (boardCenter + barHalf) + (pointInHalf * pointWidth + pointWidth / 2)
-        x = (boardCenter + barHalf) + (pointInHalf * pointWidth + pointWidth / 2)
+        x = (boardCenter + barHalf + barMarginRight) + (pointInHalf * pointWidth + pointWidth / 2)
       }
     }
     
