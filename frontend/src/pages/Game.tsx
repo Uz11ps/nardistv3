@@ -437,6 +437,10 @@ export default function Game() {
       return
     }
 
+    // ВАЖНО: Обновляем метку времени при запуске таймера, 
+    // чтобы не было скачка из-за времени, прошедшего в WAITING
+    lastTimerUpdateRef.current = Date.now()
+
     timerIntervalRef.current = window.setInterval(() => {
       const now = Date.now()
       const deltaSeconds = (now - lastTimerUpdateRef.current) / 1000
@@ -618,7 +622,7 @@ export default function Game() {
             if (socket && socket.connected) {
               socket.emit('roll_dice', { gameId })
             }
-          }, 500)
+          }, 50)
         }
       } else {
         setPlayer1Timer(0)
@@ -1205,7 +1209,7 @@ export default function Game() {
             if (socket && gameId) {
               socket.emit('roll_dice', { gameId });
             }
-          }, 500);
+          }, 50);
         }
       }
 
@@ -1236,7 +1240,7 @@ export default function Game() {
             if (socket) {
               socket.emit('roll_dice', { gameId })
             }
-          }, 500)
+          }, 50)
         }
       }
     })
@@ -1683,7 +1687,7 @@ export default function Game() {
       // Это нужно для загрузки доски после выбора смещения обоими игроками
       setTimeout(() => {
         loadGame()
-      }, 500)
+      }, 50)
       
       // Для игр с ботом автоматически начинаем игру после выбора смещения
       if (isBotGame || gameInfo?.type === 'vs_bot') {

@@ -627,7 +627,8 @@ export default function BackgammonBoard({
     
     // Если ход был только что выполнен, добавляем задержку для завершения анимации
     // Длительность анимации - 300мс, добавляем еще 100мс для надежности
-    const animationDelay = wasMoveJustCompleted ? 400 : 300
+    // Для промежуточных ходов (выбор второй шашки) задержка должна быть минимальной!
+    const animationDelay = 0
     
     // Обновляем предыдущее состояние
     prevPendingMovesRef.current = pendingMovesKey

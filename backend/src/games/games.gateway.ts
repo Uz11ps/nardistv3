@@ -744,7 +744,59 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             }
           }
         } catch (error) {
-          console.error(`Bot move error: ${error.message}`, error.stack);
+          this.logger.error(`Bot move error: ${error.message}`, error.stack);
+          // Fallback: если бот упал с ошибкой, пытаемся сделать любой валидный ход или пропустить ход
+          try {
+            this.logger.warn(`⚠️ Attempting fallback move for bot in game ${gameId}`);
+            
+            // Получаем возможные ходы заново
+            const possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
+            
+            let movesToMake: any[] = [];
+            if (possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0)) {
+               // Берем первую последовательность ходов (она обычно самая длинная или первая валидная)
+               // Ищем первую непустую последовательность
+               movesToMake = possibleMoves.allMoves.find(seq => seq.length > 0) || [];
+            }
+            
+            this.logger.log(`🤖 Fallback bot moves: ${movesToMake.length}, calling makeMove`);
+            
+            // Если ходов нет, makeMove должен переключить ход
+            // Если ходы есть, применяем их
+            const moveResult = await this.gamesService.makeMove(gameId, botPlayerId, movesToMake);
+            const gameStateAfterMove = await this.gamesService.getGameState(gameId);
+            
+            // Отправляем обновление состояния (так как нормальный флоу прервался ошибкой)
+            this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
+            await this.sendTimerUpdateForGame(gameId);
+            
+            // Если игра завершена
+            if (moveResult.status === 'finished') {
+               this.server.to(`game:${gameId}`).emit('game_finished', {
+                 winnerId: moveResult.winnerId,
+                 player1Score: moveResult.player1Score,
+                 player2Score: moveResult.player2Score,
+                 gameState: gameStateAfterMove,
+               });
+               return;
+            }
+
+            // Если ход все еще у бота (и игра не завершена)
+            if (gameStateAfterMove.currentPlayer === 1) {
+               // Если мы сделали ходы, но ход не перешел (например, неполный ход, но больше некуда)
+               // makeMove должен был переключить ход, если больше некуда.
+               // Если ход остался, значит можно ходить еще?
+               // Рекурсивно вызываем handleBotTurnIfNeeded
+               await this.handleBotTurnIfNeeded(gameId);
+            }
+          } catch (fallbackError) {
+            this.logger.error(`❌ Bot fallback move failed: ${fallbackError.message}`, fallbackError.stack);
+            
+            // Последняя попытка: принудительно переключить ход, если ничего не помогает
+            // Но мы не можем просто изменить currentPlayer без логики движка.
+            // Если движок считает, что ходы есть, мы застряли.
+            // Но это крайний случай.
+          }
         }
       }
     } catch (error) {
