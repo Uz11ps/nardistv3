@@ -139,13 +139,13 @@ export const DebugPanel = memo(({
       onTouchEnd={(e) => e.stopPropagation()}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10, paddingBottom: '5px' }}>
-        <h3 style={{ margin: 0 }}>Debug v6 ({isMobile ? 'Mobile' : 'Desktop'})</h3>
+        <h3 style={{ margin: 0 }}>Debug v7 ({isMobile ? 'Mobile' : 'Desktop'})</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
            <button 
              onClick={() => {
                const defaultConfig = isMobile ? MOBILE_CONFIG : DESKTOP_CONFIG
                setDebugConfig(defaultConfig)
-               localStorage.removeItem('backgammon-debug-config-v6')
+               localStorage.removeItem('backgammon-debug-config-v7')
              }}  
              style={{ fontSize: '12px', padding: '3px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
              title="Сбросить на дефолт"
