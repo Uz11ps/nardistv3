@@ -1765,37 +1765,87 @@ export default function Game() {
       }
       
       // ВАЖНО: Валидация ходов перед отправкой на сервер
-      // Если ходы невалидны - откатываем локально без отправки
+      // Проверяем, что ходы из pendingMoves были валидными ДО их применения
+      // Для этого вызываем API БЕЗ pendingMoves и проверяем наличие ходов в исходном списке
       try {
         const validationResponse = await apiClient.post(`/games/${gameId}/possible-moves`, {
-          pendingMoves: pendingMoves
+          pendingMoves: [] // Вызываем БЕЗ pendingMoves для получения исходного списка валидных ходов
         })
         
-        const validMoves = validationResponse.data.movesFromPoint || []
         const allMoves = validationResponse.data.allMoves || []
+        const movesFromPoint = validationResponse.data.movesFromPoint || []
         
-        // Проверяем, что все ходы из pendingMoves присутствуют в валидных ходах
-        const isValid = pendingMoves.every(pendingMove => {
-          // Ищем соответствующий валидный ход
-          const foundInFlat = validMoves.some(validMove => 
-            validMove.from === pendingMove.from && 
-            validMove.to === pendingMove.to && 
-            validMove.die === pendingMove.die
-          )
-          
-          // Если не нашли в плоском списке, проверяем в последовательностях
-          if (!foundInFlat) {
-            return allMoves.some(sequence => 
-              sequence.some(step => 
-                step.from === pendingMove.from && 
-                step.to === pendingMove.to && 
-                step.die === pendingMove.die
-              )
-            )
+        // Собираем все валидные ходы (из последовательностей и плоского списка)
+        const allValidMoves = new Set<string>()
+        
+        // Добавляем ходы из плоского списка
+        for (const move of movesFromPoint) {
+          allValidMoves.add(`${move.from}-${move.to}-${move.die}`)
+        }
+        
+        // Добавляем ходы из последовательностей
+        for (const sequence of allMoves) {
+          for (const move of sequence) {
+            allValidMoves.add(`${move.from}-${move.to}-${move.die}`)
+          }
+        }
+        
+        // Проверяем каждый ход из pendingMoves
+        const diceArray = (() => {
+          const d = gameState.dice;
+          if (!d) return [];
+          if (Array.isArray(d)) return d;
+          return [d.die1, d.die2];
+        })();
+        const usedDice = new Map<number, number>()
+        let isValid = true
+        
+        for (const pendingMove of pendingMoves) {
+          // Если есть steps, проверяем каждый шаг
+          if ((pendingMove as any).steps && Array.isArray((pendingMove as any).steps)) {
+            for (const step of (pendingMove as any).steps) {
+              const stepKey = `${step.from}-${step.to}-${step.die}`
+              
+              // Проверяем наличие шага в валидных ходах
+              if (!allValidMoves.has(stepKey)) {
+                isValid = false
+                break
+              }
+              
+              // Проверяем доступность кубика
+              const dieCount = diceArray.filter(d => d === step.die).length
+              const usedCount = usedDice.get(step.die) || 0
+              
+              if (usedCount >= dieCount) {
+                isValid = false
+                break
+              }
+              
+              usedDice.set(step.die, usedCount + 1)
+            }
+          } else {
+            // Обычный ход - проверяем его наличие в валидных ходах
+            const moveKey = `${pendingMove.from}-${pendingMove.to}-${pendingMove.die}`
+            
+            if (!allValidMoves.has(moveKey)) {
+              isValid = false
+              break
+            }
+            
+            // Проверяем доступность кубика
+            const dieCount = diceArray.filter(d => d === pendingMove.die).length
+            const usedCount = usedDice.get(pendingMove.die) || 0
+            
+            if (usedCount >= dieCount) {
+              isValid = false
+              break
+            }
+            
+            usedDice.set(pendingMove.die, usedCount + 1)
           }
           
-          return foundInFlat
-        })
+          if (!isValid) break
+        }
         
         if (!isValid) {
           // Ходы невалидны - откатываем локально без отправки на сервер
