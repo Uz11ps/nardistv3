@@ -633,10 +633,14 @@ export default function BackgammonBoard({
     // Обновляем предыдущее состояние
     prevPendingMovesRef.current = pendingMovesKey
     
-    // Debounce для предотвращения частых запросов (увеличиваем для уменьшения лагов)
-    timeoutId = window.setTimeout(() => {
+    // Debounce для предотвращения частых запросов
+    if (animationDelay === 0) {
       fetchPossibleMoves()
-    }, animationDelay)
+    } else {
+      timeoutId = window.setTimeout(() => {
+        fetchPossibleMoves()
+      }, animationDelay)
+    }
     
     return () => {
       cancelled = true

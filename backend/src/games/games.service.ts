@@ -1330,6 +1330,8 @@ export class GamesService {
       // 2. Добавляем комбинированные ходы (одна шашка идет по цепочке)
       // Мы берем цепочки шагов одной и той же шашки
       // Это позволяет использовать все кубики из дубля одной шашкой (например, 3/3 = 4 кубика по 3, можно походить на 12)
+      // ВКЛЮЧЕНО: Это безопасное объединение, так как оно базируется на уже валидированных цепочках (seq)
+      {
       let currentFrom = seq[0].from;
       let totalDie = seq[0].die;
       let steps = [seq[0]];
@@ -1421,7 +1423,8 @@ export class GamesService {
     // ВАЖНО: Для длинных нард добавляем возможность использовать сумму двух разных кубиков
     // Например, при выпадении 4 и 6 можно использовать сумму 10 для одного хода
     // Это особенно важно для ходов с головы
-    if (game.mode === GameMode.LONG && availableDice.length >= 2 && !isDoublesForCombined) {
+    // ОТКЛЮЧЕНО: Пользователь требует поэтапные ходы
+    if (false && game.mode === GameMode.LONG && availableDice.length >= 2 && !isDoublesForCombined) {
       // Генерируем все возможные суммы двух разных кубиков
       const uniqueDice = Array.from(new Set(availableDice));
       for (let i = 0; i < uniqueDice.length; i++) {
@@ -1521,7 +1524,8 @@ export class GamesService {
     
     // ВАЖНО: Для дублей добавляем комбинированные ходы (одна шашка на все 4 кубика)
     // Например, при дубле 3/3: можно походить на 3, 6, 9, 12 одной шашкой
-    if (isDoublesForCombined && doublesValue) {
+    // ОТКЛЮЧЕНО: Пользователь требует поэтапные ходы
+    if (false && isDoublesForCombined && doublesValue) {
       // Получаем все уникальные точки, с которых можно ходить
       const fromPoints = new Set<number>();
       for (const move of flatMoves) {

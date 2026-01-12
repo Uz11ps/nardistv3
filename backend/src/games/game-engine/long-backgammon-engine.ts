@@ -549,6 +549,8 @@ export class LongBackgammonEngine {
       // ВАЖНО: Для длинных нард также пробуем использовать сумму двух разных кубиков
       // Это позволяет использовать сумму кубиков (например, 4+6=10) для одного хода
       // Особенно важно для ходов с головы
+      /* ОТКЛЮЧЕНО: Пользователь жалуется на некорректную работу сумм (перепрыгивание через блоки)
+         В длинных нардах ходы должны быть строго поэтапными.
       if (remainingDice.length >= 2 && !isDoubles) {
         const triedSums = new Set<number>();
         for (let i = 0; i < remainingDice.length; i++) {
@@ -589,6 +591,7 @@ export class LongBackgammonEngine {
           }
         }
       }
+      */
     }
       
       if (!foundAnyMove && currentMoves.length > 0) {
