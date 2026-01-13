@@ -143,7 +143,7 @@ export default function BackgammonBoard({
     // Dragging checker parameters
     dragCheckerSizeScale: 1.0,
     dragCheckerXOffset: 0,
-    dragCheckerYOffset: -150,
+    dragCheckerYOffset: 0,
     // Advanced text offsets (quadrants)
     textTopRightY: -316,
     textTopLeftY: -316, 
@@ -1254,7 +1254,7 @@ export default function BackgammonBoard({
       const coords = getPointCoordinates(dragging.pointIndex === -1 ? 0 : dragging.pointIndex, canvas)
       const pW = coords.pointWidth
       const pH = coords.pointHeight
-      const baseCheckerSize = Math.min(pW * 0.85, pH * 0.15)
+      const baseCheckerSize = Math.min(pW * debugConfig.checkerWidthRatio, pH * debugConfig.checkerHeightRatio)
       // Применяем масштаб из debugConfig
       const checkerSize = baseCheckerSize * debugConfig.dragCheckerSizeScale
       // Применяем смещения из debugConfig
@@ -1281,7 +1281,7 @@ export default function BackgammonBoard({
     // Отрисовка анимируемой шашки
     if (animatingChecker) {
       const { x: fromX, y: fromY, isTopRow: fromTop, pointWidth: pW, pointHeight: pH } = getPointCoordinates(animatingChecker.from, canvas)
-      const checkerSize = Math.min(pW * 0.85, pH * 0.15)
+      const checkerSize = Math.min(pW * debugConfig.checkerWidthRatio, pH * debugConfig.checkerHeightRatio)
       
       let toX, toY, toTop;
       if (animatingChecker.to === -1 || animatingChecker.to >= 24) {
