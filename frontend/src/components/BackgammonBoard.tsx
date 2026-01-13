@@ -1125,8 +1125,8 @@ export default function BackgammonBoard({
       const checkersToDraw = Math.min(checkersToDrawTotal, 5)
       
       for (let i = 0; i < checkersToDraw; i++) {
-        // Уменьшаем расстояние между шашками на 5 пикселей (накладываем их друг на друга)
-        const overlap = checkerSize - 5
+        // Уменьшаем расстояние между шашками на 8 пикселей (накладываем их друг на друга)
+        const overlap = checkerSize - 8
         const yOffset = i * overlap
         const checkerY = isTopRow 
           ? checkerBaseY + yOffset 
@@ -1138,7 +1138,7 @@ export default function BackgammonBoard({
       
       // Если шашек больше 5, показываем число на последней шашке (как в голове)
       if (checkerCount > 5 && !isDraggingFromThisPoint && !isAnimatingFromThisPoint) {
-        const overlap = checkerSize - 5
+        const overlap = checkerSize - 8
         const lastCheckerY = isTopRow 
           ? checkerBaseY + ((checkersToDraw - 1) * overlap)
           : checkerBaseY - ((checkersToDraw - 1) * overlap)
