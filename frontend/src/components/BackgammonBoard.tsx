@@ -139,7 +139,7 @@ export default function BackgammonBoard({
     validHighlightWidthScale: 1.0,
     validHighlightHeightScale: 1.0,
     validHighlightXOffset: 0,
-    validHighlightYOffset: -22,
+    validHighlightYOffset: -36,
     // Dragging checker parameters
     dragCheckerSizeScale: 1.0,
     dragCheckerXOffset: 0,
@@ -157,7 +157,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v9')
+      const saved = localStorage.getItem('backgammon-debug-config-v10')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -180,7 +180,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v9', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v10', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -190,7 +190,7 @@ export default function BackgammonBoard({
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
   useEffect(() => {
     // Если есть сохраненный конфиг - не переключаем автоматически
-    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v9')
+    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v10')
     if (hasSavedConfig || debugMode) return
     
     const handleResize = () => {
@@ -1186,7 +1186,7 @@ export default function BackgammonBoard({
         const validHW = pW * debugConfig.validHighlightWidthScale
         const validHH = hH * debugConfig.validHighlightHeightScale
         const validHX = hX + (pW - validHW) / 2 + scaleX(debugConfig.validHighlightXOffset)
-        const validHY = hY + (hH - validHH) / 2 + scaleY(debugConfig.validHighlightYOffset)
+        const validHY = hY + (hH - validHH) / 2 + debugConfig.validHighlightYOffset
         
         ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
         ctx.fillRect(validHX, validHY, validHW, validHH)
