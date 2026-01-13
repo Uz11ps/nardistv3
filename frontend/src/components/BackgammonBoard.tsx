@@ -139,7 +139,7 @@ export default function BackgammonBoard({
     validHighlightWidthScale: 1.0,
     validHighlightHeightScale: 1.0,
     validHighlightXOffset: 0,
-    validHighlightYOffset: -36,
+    validHighlightYOffset: -31,
     // Dragging checker parameters
     dragCheckerSizeScale: 1.0,
     dragCheckerXOffset: 0,
