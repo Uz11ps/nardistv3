@@ -1121,12 +1121,12 @@ export default function BackgammonBoard({
       const isHead = gameMode === 'long' && (pointIndex === 0 || pointIndex === 12);
       
       const checkersToDrawTotal = (isDraggingFromThisPoint || isAnimatingFromThisPoint) ? checkerCount - 1 : checkerCount
-      // В голове рисуем максимум 5 шашек визуально, даже если их 15
-      const checkersToDraw = isHead ? Math.min(checkersToDrawTotal, 5) : checkersToDrawTotal
+      // Везде рисуем максимум 5 шашек визуально
+      const checkersToDraw = Math.min(checkersToDrawTotal, 5)
       
       for (let i = 0; i < checkersToDraw; i++) {
-        // Если шашек много (больше 5), начинаем их накладывать друг на друга плотнее
-        const overlap = checkerCount > 5 ? (checkerSize * 0.8) : checkerSize
+        // Уменьшаем расстояние между шашками на 5 пикселей (накладываем их друг на друга)
+        const overlap = checkerSize - 5
         const yOffset = i * overlap
         const checkerY = isTopRow 
           ? checkerBaseY + yOffset 
@@ -1134,31 +1134,22 @@ export default function BackgammonBoard({
         
         // Используем текстуры шашек если есть
         drawChecker(x, checkerY, checkerSize, isWhiteChecker, isMyPoint)
-
-        // Если это первая шашка в голове (индекс i === 0), рисуем на ней количество всех шашек в этой точке
-        if (isHead && i === 0 && checkerCount > 1) {
-          ctx.save()
-          ctx.fillStyle = isWhiteChecker ? '#000' : '#FFF'
-          ctx.font = 'bold 14px Arial'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(checkerCount.toString(), x, checkerY)
-          ctx.restore()
-        }
       }
       
-      // Если шашек больше 5 (и это не голова), показываем число на последней шашке
-      if (!isHead && checkerCount > 5 && !isDraggingFromThisPoint && !isAnimatingFromThisPoint) {
-        const overlap = checkerSize * 0.8
+      // Если шашек больше 5, показываем число на последней шашке (как в голове)
+      if (checkerCount > 5 && !isDraggingFromThisPoint && !isAnimatingFromThisPoint) {
+        const overlap = checkerSize - 5
         const lastCheckerY = isTopRow 
-          ? checkerBaseY + ((checkerCount - 1) * overlap)
-          : checkerBaseY - ((checkerCount - 1) * overlap)
+          ? checkerBaseY + ((checkersToDraw - 1) * overlap)
+          : checkerBaseY - ((checkersToDraw - 1) * overlap)
         
+        ctx.save()
         ctx.fillStyle = isWhiteChecker ? '#000' : '#FFF'
-        ctx.font = 'bold 11px Arial'
+        ctx.font = 'bold 14px Arial'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(checkerCount.toString(), x, lastCheckerY)
+        ctx.restore()
       }
     })
     
