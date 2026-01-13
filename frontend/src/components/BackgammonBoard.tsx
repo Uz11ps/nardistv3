@@ -1240,12 +1240,10 @@ export default function BackgammonBoard({
       
       let toX, toY, toTop;
       if (animatingChecker.to === -1 || animatingChecker.to >= 24) {
-        // Координаты контейнера выноса
-        const leftContainerX = 0
-        const rightContainerX = width - bearOffWidth
-        const myX = isPlayer1 ? rightContainerX : (gameMode === 'long' ? leftContainerX : rightContainerX)
-        toX = myX + bearOffWidth / 2
-        toY = height / 2
+        // Координаты контейнера выноса (СНИЗУ)
+        // Целимся в центр нижней панели
+        toX = width / 2
+        toY = height - bearOffHeight / 2
         toTop = false
       } else {
         const coords = getPointCoordinates(animatingChecker.to, canvas)
@@ -2367,8 +2365,7 @@ export default function BackgammonBoard({
   // Обработка клика с защитой от двойных кликов
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (dragging) return
-    // Блокируем ходы во время анимации хода
-    if (animatingChecker) return
+    // REMOVED: if (animatingChecker) return - blocking interaction caused "crazy lag" feeling for users
     
     if (!canMove || !isMyTurn || !canvasRef.current) return
     
