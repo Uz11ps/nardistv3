@@ -324,7 +324,15 @@ export default function BackgammonBoard({
           if (unit === 1) bar.black++
           else bar.white++
         } else {
-          points[m.to] += unit
+          // Стандартная логика добавления
+          // Если там уже есть шашки того же цвета, просто увеличиваем/уменьшаем
+          // Если пусто - ставим
+          if (points[m.to] * unit >= 0) {
+              points[m.to] += unit
+          } else {
+              // Этого не должно происходить в корректной игре, кроме сбивания
+              points[m.to] += unit
+          }
         }
       }
     }
@@ -349,13 +357,59 @@ export default function BackgammonBoard({
       }
     })
     
+    // ВАЖНО: Анимируемая шашка должна быть ВРЕМЕННО удалена из точки 'from', 
+    // чтобы не дублироваться (одна стоит, вторая летит).
+    // Но 'applyStep' выше уже мог изменить состояние, если ход завершен?
+    // Нет, animatingChecker - это визуальное представление.
+    // Если мы анимируем ход, который ЕЩЕ НЕ применен в pendingMoves/completedServerMoves (например, серверный ход в процессе),
+    // то шашка все еще стоит на месте в virtualGameState.
+    // Нам нужно "визуально" убрать одну шашку с source точки.
+    
+    if (animatingChecker && !animatingChecker.isServerMove) {
+        // Для локальных ходов (которые уже в pendingMoves) ничего делать не надо, 
+        // так как pendingMoves уже применились к virtualGameState.
+        // Но если animatingChecker есть, а хода в pendingMoves нет (например, только начали drag/anim)?
+        // Обычно startMoveAnimation вызывается ДО добавления в pendingMoves? 
+        // Нет, обычно мы анимируем, а потом по завершении вызываем onMove -> добавление в pendingMoves.
+        // Значит, пока идет анимация, в virtualGameState шашка еще на старом месте.
+        // Нам нужно её скрыть.
+        
+        // НО! В текущей реализации onMove вызывается ПОСЛЕ завершения анимации.
+        // Значит, в virtualGameState шашка все еще на 'from'.
+        // Мы должны уменьшить count на 'from'.
+        
+        const m = animatingChecker
+        if (m.from === 24) bar.white--
+        else if (m.from === 25) bar.black--
+        else if (m.from >= 0 && m.from < 24) {
+            const val = points[m.from]
+            if (val > 0) points[m.from]--
+            else if (val < 0) points[m.from]++
+        }
+    } else if (animatingChecker && animatingChecker.isServerMove) {
+        // Для серверных ходов: они еще НЕ в completedServerMoves (туда попадают после анимации).
+        // Значит, шашка еще на 'from'. Скрываем её.
+        const m = animatingChecker
+        // Определяем цвет хода (для корректного уменьшения модуля числа)
+        const isWhite = m.isWhite !== undefined ? m.isWhite : (isPlayer1 ? false : true)
+        
+        if (m.from === 24) bar.white--
+        else if (m.from === 25) bar.black--
+        else if (m.from >= 0 && m.from < 24) {
+            const val = points[m.from]
+            // Уменьшаем количество по модулю, сохраняя знак
+            if (val > 0) points[m.from]--
+            else if (val < 0) points[m.from]++
+        }
+    }
+
     return {
       ...gameState,
       points,
       bar,
       bearOff
     }
-  }, [gameState, pendingMoves, completedServerMoves, isPlayer1, gameMode])
+  }, [gameState, pendingMoves, completedServerMoves, isPlayer1, gameMode, animatingChecker])
 
   // Добавление новых серверных ходов в очередь
   useEffect(() => {
@@ -2157,7 +2211,21 @@ export default function BackgammonBoard({
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
     const { x: pX, y: pY } = getPointCoordinates(pointIndex, canvas)
     
-    setDragging({ pointIndex, offsetX: x - pX, offsetY: y - pY })
+    // ВАЖНО: При клике мы хотим, чтобы шашка "прилипала" центром к курсору
+    // Поэтому offsetX/Y должны быть 0, если мы хотим центрировать
+    // ИЛИ мы должны учитывать смещение от центра шашки, если хотим "взять за край"
+    // Но пользователь жалуется, что шашка "где-то справа или слева".
+    // Если мы хотим центрировать шашку под курсором:
+    setDragging({ pointIndex, offsetX: 0, offsetY: 0 })
+    
+    // Если мы хотим сохранить относительное смещение (чтобы шашка не прыгала):
+    // setDragging({ pointIndex, offsetX: x - pX, offsetY: y - pY })
+    // Но pX, pY - это центр точки (треугольника). Шашка может быть смещена по вертикали в стопке.
+    // Нам нужно найти визуальный центр конкретной шашки, по которой кликнули.
+    // Но getPointAtPosition возвращает только индекс точки.
+    // Поэтому самое надежное для UX - центрировать шашку под курсором (offsetX: 0, offsetY: 0).
+    // Это стандартное поведение drag-n-drop в играх.
+    
     setDragPosition({ x, y })
     setSelectedPoint(pointIndex)
     
