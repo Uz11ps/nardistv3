@@ -1316,10 +1316,15 @@ export default function BackgammonBoard({
       else if (animatingChecker.from === 25) fromCheckerCount = virtualGameState.bar.black
       else fromCheckerCount = Math.abs(virtualGameState.points[animatingChecker.from])
       
-      const fromOverlap = fromCheckerCount > 5 ? (checkerSize * 0.8) : checkerSize
+      // Восстанавливаем оригинальное количество (до начала хода), так как virtualGameState уже обновлен
+      const originalFromCount = fromCheckerCount + 1
+      const fromOverlap = originalFromCount > 5 ? (checkerSize - 8) : checkerSize
+      // Clamp index to 4 (max 5 checkers visually)
+      const fromVisualIndex = Math.min(originalFromCount, 5) - 1
+      
       const startY = fromTop 
-        ? fromY + checkerSize/2 + scaleY(debugConfig.checkerTopOffset) + (fromCheckerCount - 1) * fromOverlap
-        : fromY - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset) - (fromCheckerCount - 1) * fromOverlap
+        ? fromY + checkerSize/2 + scaleY(debugConfig.checkerTopOffset) + fromVisualIndex * fromOverlap
+        : fromY - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset) - fromVisualIndex * fromOverlap
 
       // Конечная позиция Y (куда приземлится)
       let endY;
@@ -1327,10 +1332,14 @@ export default function BackgammonBoard({
         endY = toY
       } else {
         const toCheckerCount = Math.abs(virtualGameState.points[animatingChecker.to])
-        const toOverlap = (toCheckerCount + 1) > 5 ? (checkerSize * 0.8) : checkerSize
+        const finalToCount = toCheckerCount + 1
+        const toOverlap = finalToCount > 5 ? (checkerSize - 8) : checkerSize
+        // Clamp index to 4 (max 5 checkers visually)
+        const toVisualIndex = Math.min(toCheckerCount, 4)
+        
         endY = toTop
-          ? toY + checkerSize/2 + scaleY(debugConfig.checkerTopOffset) + toCheckerCount * toOverlap
-          : toY - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset) - toCheckerCount * toOverlap
+          ? toY + checkerSize/2 + scaleY(debugConfig.checkerTopOffset) + toVisualIndex * toOverlap
+          : toY - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset) - toVisualIndex * toOverlap
       }
 
       const curX = fromX + (toX - fromX) * animatingChecker.progress
