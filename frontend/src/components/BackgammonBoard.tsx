@@ -920,6 +920,19 @@ export default function BackgammonBoard({
     const width = canvas.width
     const height = canvas.height
     
+    // --- ADAPTIVE SCALING LOGIC FOR HITBOXES ---
+    // Reference dimensions for mobile (iPhone 14/15 Pro Max)
+    const REFERENCE_MOBILE_WIDTH = 430;
+    const REFERENCE_MOBILE_HEIGHT = 932;
+    const isMobile = width < 768;
+
+    const scaleY = (val: number) => {
+        if (!isMobile) return val;
+        const factor = height / REFERENCE_MOBILE_HEIGHT;
+        return val * factor;
+    }
+    // ------------------------------------------
+
     // Координаты клика
     const actualX = x
     const actualY = y
@@ -931,6 +944,11 @@ export default function BackgammonBoard({
     // Прямой расчет попадания в точку на основе логики getPointCoordinates
     // Добавляем небольшой отступ (padding) для более легкого попадания
     const padding = 5;
+    // Определяем размер шашки для расширения хитбокса
+    // Берем приблизительный размер на основе ширины точки
+    const pW_approx = (width / 2) / 6; 
+    const checkerSize_approx = pW_approx * debugConfig.checkerWidthRatio;
+
     for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
       const { x: pX, y: pY, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       
@@ -938,15 +956,43 @@ export default function BackgammonBoard({
       const xEnd = pX + pW / 2 + padding;
       
       // Hitbox по вертикали:
-      // Для верхнего ряда: y - это низ треугольника, hitbox идет от (y - pH) до y
-      // Для нижнего ряда: y - это верх треугольника, hitbox идет от y до (y + pH)
+      // Расширяем хитбокс чтобы он покрывал визуальное положение шашек
+      // которые могут быть смещены через checkerTopOffset/checkerBottomOffset
       let yStart, yEnd;
+      
       if (isTopRow) {
-          yStart = pY - pH - padding;
-          yEnd = pY + padding;
+          // Top Row: Triangle goes from (pY - pH) down to pY (tip)
+          // Visual checkers start at: pY + scaleY(debugConfig.checkerTopOffset)
+          // And go downwards.
+          // Hitbox should cover from Min(TriangleBase, VisualBase) to Max(TriangleTip, VisualEnd)
+          
+          const triangleBase = pY - pH;
+          const triangleTip = pY;
+          const visualBase = pY + scaleY(debugConfig.checkerTopOffset);
+          // Visual stack extends down by ~5 checkers
+          const visualEnd = visualBase + (5 * checkerSize_approx);
+          
+          yStart = Math.min(triangleBase, visualBase) - padding;
+          yEnd = Math.max(triangleTip, visualEnd) + padding;
       } else {
-          yStart = pY - padding;
-          yEnd = pY + pH + padding;
+          // Bottom Row: Triangle goes from pY (tip) down to (pY + pH)
+          // Visual checkers start at: pY + scaleY(debugConfig.checkerBottomOffset)
+          // And go upwards (decreasing Y) from the base? 
+          // Wait, drawBoard logic:
+          // checkerBaseY = y - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset)
+          // checkerY = checkerBaseY - yOffset (goes UP)
+          // So visual checkers start near bottom edge and go UP.
+          
+          const triangleTip = pY;
+          const triangleBase = pY + pH;
+          
+          // checkerBaseY is roughly where the first checker is (bottom-most)
+          const visualBase = pY + scaleY(debugConfig.checkerBottomOffset);
+          // Visual stack extends UP by ~5 checkers
+          const visualTop = visualBase - (5 * checkerSize_approx);
+          
+          yStart = Math.min(triangleTip, visualTop) - padding;
+          yEnd = Math.max(triangleBase, visualBase) + padding;
       }
       
       if (actualX >= xStart && actualX <= xEnd && actualY >= yStart && actualY <= yEnd) {
