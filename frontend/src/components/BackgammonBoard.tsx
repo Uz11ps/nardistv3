@@ -1450,12 +1450,37 @@ export default function BackgammonBoard({
       }
     }
 
-    // Подсветка при перетаскивании в зону выноса (ВЕСЬ НИЗ)
+    // Подсветка при перетаскивании в зону выноса (ВЕСЬ НИЗ - теперь разделен на 2 части)
     if ((dragging || selectedPoint !== null) && validTargetPoints.has(-1)) {
+      // Determine which side to highlight based on checker color
+      let isRightSide = true; // Default to Right (White)
+      
+      if (dragging && dragging.checkerColor) {
+        isRightSide = dragging.checkerColor === 'white';
+      } else if (selectedPoint !== null) {
+        // Try to determine from selected point
+        if (selectedPoint === 24) isRightSide = true; // White bar
+        else if (selectedPoint === 25) isRightSide = false; // Black bar
+        else if (virtualGameState?.points) {
+           const val = virtualGameState.points[selectedPoint] || 0;
+           // White checkers are positive, Black are negative
+           if (val !== 0) isRightSide = val > 0;
+           else isRightSide = isPlayer1; 
+        } else {
+           isRightSide = isPlayer1;
+        }
+      }
+
       // Применяем параметры из debugConfig для размера и смещения подсветки bear-off
-      const bearOffValidHW = width * debugConfig.validHighlightWidthScale
+      // Используем половину ширины доски как базу
+      const halfWidth = width / 2;
+      const bearOffValidHW = halfWidth * debugConfig.validHighlightWidthScale
       const bearOffValidHH = bearOffHeight * debugConfig.validHighlightHeightScale
-      const bearOffValidHX = (width - bearOffValidHW) / 2 + debugConfig.validHighlightXOffset
+      
+      // Вычисляем центр нужной половины
+      const centerX = isRightSide ? (width * 0.75) : (width * 0.25);
+      
+      const bearOffValidHX = centerX - (bearOffValidHW / 2) + scaleX(debugConfig.validHighlightXOffset)
       const bearOffValidHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + debugConfig.validHighlightYOffset
       
       ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
