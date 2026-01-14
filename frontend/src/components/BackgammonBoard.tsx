@@ -134,7 +134,7 @@ export default function BackgammonBoard({
     highlightWidthScale: 1.0,
     highlightHeightScale: 1.0,
     highlightXOffset: 0,
-    highlightYOffset: 0,
+    highlightYOffset: -31,
     // Valid moves highlight parameters
     validHighlightWidthScale: 1.0,
     validHighlightHeightScale: 1.0,
@@ -157,7 +157,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v11')
+      const saved = localStorage.getItem('backgammon-debug-config-v12')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -180,7 +180,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v11', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v12', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -190,7 +190,7 @@ export default function BackgammonBoard({
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
   useEffect(() => {
     // Если есть сохраненный конфиг - не переключаем автоматически
-    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v11')
+    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v12')
     if (hasSavedConfig || debugMode) return
     
     const handleResize = () => {
@@ -1221,8 +1221,14 @@ export default function BackgammonBoard({
 
       // 1. Подсветка точки под курсором
       if (hoveredPoint === pointIndex) {
+        // Применяем параметры для highlight
+        const highlightHW = pW * debugConfig.highlightWidthScale
+        const highlightHH = hH * debugConfig.highlightHeightScale
+        const highlightHX = hX + (pW - highlightHW) / 2 + scaleX(debugConfig.highlightXOffset)
+        const highlightHY = hY + (hH - highlightHH) / 2 + debugConfig.highlightYOffset
+
         ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
-        ctx.fillRect(hX, hY, pW, hH)
+        ctx.fillRect(highlightHX, highlightHY, highlightHW, highlightHH)
       }
 
       // 2. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
