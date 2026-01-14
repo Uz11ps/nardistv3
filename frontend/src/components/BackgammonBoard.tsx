@@ -1584,13 +1584,31 @@ export default function BackgammonBoard({
 
   // Вспомогательная функция для запуска анимации
   const startMoveAnimation = (from: number, to: number, die: number, steps?: any[]) => {
+    // Determine checker color at the start of animation to avoid "color flip" when stack becomes empty
+    let isWhite = true;
+    if (from === 24) isWhite = true;
+    else if (from === 25) isWhite = false;
+    else if (from >= 0 && from < 24 && virtualGameState?.points) {
+         const val = virtualGameState.points[from] || 0;
+         if (val !== 0) {
+             isWhite = val > 0;
+         } else {
+             // Fallback if point is somehow empty (should not happen in valid move)
+             // Default to current player's color for local moves
+             isWhite = isPlayer1;
+         }
+    } else {
+         isWhite = isPlayer1; 
+    }
+
     setAnimatingChecker({
       from,
       to,
       die,
       steps,
       progress: 0,
-      startTime: performance.now()
+      startTime: performance.now(),
+      isWhite // Store the color explicitly
     })
     // Сбрасываем состояния взаимодействия
     setSelectedPoint(null)
