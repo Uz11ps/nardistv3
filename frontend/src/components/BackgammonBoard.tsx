@@ -1174,7 +1174,7 @@ export default function BackgammonBoard({
       const isAnimatingFromThisPoint = animatingChecker && animatingChecker.from === pointIndex
       const isHead = gameMode === 'long' && (pointIndex === 0 || pointIndex === 12);
       
-      const checkersToDrawTotal = (isDraggingFromThisPoint || isAnimatingFromThisPoint) ? checkerCount - 1 : checkerCount
+      const checkersToDrawTotal = isDraggingFromThisPoint ? checkerCount - 1 : checkerCount
       // Везде рисуем максимум 5 шашек визуально
       const checkersToDraw = Math.min(checkersToDrawTotal, 5)
       
