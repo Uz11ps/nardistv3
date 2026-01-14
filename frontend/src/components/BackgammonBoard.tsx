@@ -30,6 +30,7 @@ interface BackgammonBoardProps {
   onSandboxCheckerRemove?: (pointIndex: number) => void
   serverMoves?: Array<{ from: number; to: number; die: number; steps?: any[] }>
   onServerMovesFinished?: () => void
+  onNoMoves?: () => void
 }
 
 export default function BackgammonBoard({
@@ -55,6 +56,7 @@ export default function BackgammonBoard({
   onSandboxCheckerRemove,
   serverMoves,
   onServerMovesFinished,
+  onNoMoves,
 }: BackgammonBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -667,6 +669,17 @@ export default function BackgammonBoard({
         // Не подсвечиваем все возможные точки автоматически
         // Подсветка будет только для выбранной точки (selectedPoint)
         setPossibleMoves(flatMoves)
+
+        // Если ходов нет, и это наш ход, и мы еще ничего не сделали - сообщаем об этом
+        // Это нужно для автоматического пропуска хода
+        if (flatMoves.length === 0 && hasDice && isMyTurn && pendingMoves.length === 0 && onNoMoves) {
+          console.log('🚫 No possible moves detected, triggering onNoMoves');
+          // Небольшая задержка, чтобы пользователь успел увидеть кубики
+          setTimeout(() => {
+            if (onNoMoves) onNoMoves();
+          }, 1500);
+        }
+
         // highlightedPoints будет заполняться только при выборе точки
       } catch (error) {
         if (cancelled) return

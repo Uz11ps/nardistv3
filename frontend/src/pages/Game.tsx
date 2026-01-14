@@ -1627,6 +1627,19 @@ export default function Game() {
     setPendingMoves(prev => [...prev, { from, to, die, steps }])
   }
 
+  const handleNoMoves = async () => {
+    // Автоматический пропуск хода если нет доступных ходов
+    if (!gameId || !gameState?.canMove || pendingMoves.length > 0) return;
+    
+    try {
+      console.log('🚫 Auto-passing turn due to no moves');
+      // Отправляем пустой массив ходов для пропуска
+      await apiClient.post(`/games/${gameId}/move`, { moves: [] });
+    } catch (error) {
+      console.error('Failed to auto-pass:', error);
+    }
+  }
+
   const handleUndo = () => {
     if (pendingMoves.length > 0) {
       setPendingMoves(prev => prev.slice(0, -1))
@@ -2437,6 +2450,7 @@ export default function Game() {
                     alert(error.response?.data?.message || 'Ошибка обновления доски')
                   }
                 } : undefined}
+                onNoMoves={handleNoMoves}
               />
               {isSandbox && (
                 <>
