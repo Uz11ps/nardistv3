@@ -69,47 +69,51 @@ export default function BackgammonBoard({
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
 
   // --- CONFIGURATIONS ---
-  // Large Screen (Desktop) - Optimized
-  const DESKTOP_CONFIG = {
-    sideMarginLeftPct: 0.032,
-    sideMarginRightPct: 0.047,
-    barMarginLeftPct: 0.018,
-    barMarginRightPct: 0.003,
-    barWidthPct: 0.056,
-    topMarginPct: 0.073,
-    bearOffHeightPct: 0.131,
-    checkerWidthRatio: 1.5,
-    checkerHeightRatio: 0.216,
-    checkerDrawScale: 1.2,
-    diceP1X: 0.66,
-    diceP1Y: 0.85,
-    diceP2X: 0.90,
-    diceP2Y: 0.38,
-    checkerTopOffset: -25,
-    checkerBottomOffset: -44,
-    // Legacy text offsets (for fallback)
-    textTopOffset: -15,
-    textBottomOffset: 15,
-    // New parameters for advanced highlight and text control
-    highlightWidthScale: 1.0,
-    highlightHeightScale: 1.0,
-    highlightXOffset: 0,
-    highlightYOffset: 0,
-    // Valid moves highlight parameters
-    validHighlightWidthScale: 1.0,
-    validHighlightHeightScale: 1.0,
-    validHighlightXOffset: 0,
-    validHighlightYOffset: 0,
-    // Dragging checker parameters
-    dragCheckerSizeScale: 1.0,
-    dragCheckerXOffset: 0,
-    dragCheckerYOffset: 0,
-    // Advanced text offsets (quadrants)
-    textTopRightY: -15, // Points 19-24 (Indices 0-5)
-    textTopLeftY: -15,  // Points 13-18 (Indices 6-11)
-    textBottomLeftY: 15, // Points 7-12 (Indices 12-17)
-    textBottomRightY: 15, // Points 1-6 (Indices 18-23)
-  }
+    // Large Screen (Desktop) - Optimized
+    const DESKTOP_CONFIG = {
+      sideMarginLeftPct: 0.032,
+      sideMarginRightPct: 0.047,
+      barMarginLeftPct: 0.018,
+      barMarginRightPct: 0.003,
+      barWidthPct: 0.056,
+      topMarginPct: 0.073,
+      bearOffHeightPct: 0.131,
+      checkerWidthRatio: 1.5,
+      checkerHeightRatio: 0.216,
+      checkerDrawScale: 1.2,
+      diceP1X: 0.66,
+      diceP1Y: 0.85,
+      diceP2X: 0.90,
+      diceP2Y: 0.38,
+      checkerTopOffset: -25,
+      checkerBottomOffset: -44,
+      // Legacy text offsets (for fallback)
+      textTopOffset: -15,
+      textBottomOffset: 15,
+      // New parameters for advanced highlight and text control
+      highlightWidthScale: 1.0,
+      highlightHeightScale: 1.0,
+      highlightXOffset: 0,
+      highlightYOffset: 0,
+      // Valid moves highlight parameters
+      validHighlightWidthScale: 1.0,
+      validHighlightHeightScale: 1.0,
+      validHighlightXOffset: 0,
+      validHighlightYOffset: 0,
+      // Bottom row specific highlight offset (if needed separately, otherwise shared)
+      highlightBottomYOffset: 0,
+      validHighlightBottomYOffset: 0,
+
+      // Dragging checker parameters
+      dragCheckerSizeScale: 1.0,
+      dragCheckerXOffset: 0,
+      dragCheckerYOffset: 0,
+      // Advanced text offsets (quadrants)
+      textTopRightY: -15, // Points 19-24 (Indices 0-5)
+      textTopLeftY: -15,  // Points 13-18 (Indices 6-11)
+      textBottomLeftY: 15, // Points 7-12 (Indices 12-17)
+      textBottomRightY: 15, // Points 1-6 (Indices 18-23)
+    }
 
   // Small Screen (Mobile) - Optimized
   const MOBILE_CONFIG = {
@@ -142,6 +146,10 @@ export default function BackgammonBoard({
     validHighlightHeightScale: 1.0,
     validHighlightXOffset: 0,
     validHighlightYOffset: -31,
+    // Bottom row specific highlight offset (if needed separately, otherwise shared)
+    highlightBottomYOffset: 31,
+    validHighlightBottomYOffset: 31,
+
     // Dragging checker parameters
     dragCheckerSizeScale: 1.0,
     dragCheckerXOffset: 0,
@@ -1284,7 +1292,30 @@ export default function BackgammonBoard({
         const highlightHW = pW * debugConfig.highlightWidthScale
         const highlightHH = hH * debugConfig.highlightHeightScale
         const highlightHX = hX + (pW - highlightHW) / 2 + scaleX(debugConfig.highlightXOffset)
-        const highlightHY = hY + (hH - highlightHH) / 2 + debugConfig.highlightYOffset
+        
+        // Use different Y offset for bottom row if specified, or fall back to standard logic
+        // Standard logic: if top row, y is bottom, so offset moves up (-). 
+        // If bottom row, y is top, offset moves down (+).
+        // BUT current code uses same 'debugConfig.highlightYOffset' for both?
+        // Let's see: 
+        // const hY = isTopRow ? (y - pH) : y
+        // highlightYOffset = -31. 
+        // Top: (y-pH) + -31 -> moves UP. Correct.
+        // Bottom: y + -31 -> moves UP. Incorrect? Should move DOWN.
+        
+        let highlightHY;
+        if (isTopRow) {
+            highlightHY = (y - pH) + (hH - highlightHH) / 2 + debugConfig.highlightYOffset;
+        } else {
+            // Use specific bottom offset if available, otherwise invert the standard offset?
+            // The user asked to fix bottom row "12 to 1".
+            // If validHighlightBottomYOffset is defined (31), use it.
+            const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
+                ? (debugConfig as any).highlightBottomYOffset 
+                : -debugConfig.highlightYOffset; // Invert by default if not specified? Or just use same?
+            
+            highlightHY = y + (hH - highlightHH) / 2 + bottomOffset;
+        }
 
         ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
         ctx.fillRect(highlightHX, highlightHY, highlightHW, highlightHH)
@@ -1296,7 +1327,17 @@ export default function BackgammonBoard({
         const validHW = pW * debugConfig.validHighlightWidthScale
         const validHH = hH * debugConfig.validHighlightHeightScale
         const validHX = hX + (pW - validHW) / 2 + scaleX(debugConfig.validHighlightXOffset)
-        const validHY = hY + (hH - validHH) / 2 + debugConfig.validHighlightYOffset
+        
+        let validHY;
+        if (isTopRow) {
+             validHY = (y - pH) + (hH - validHH) / 2 + debugConfig.validHighlightYOffset;
+        } else {
+             const bottomOffset = (debugConfig as any).validHighlightBottomYOffset !== undefined 
+                ? (debugConfig as any).validHighlightBottomYOffset 
+                : -debugConfig.validHighlightYOffset;
+             
+             validHY = y + (hH - validHH) / 2 + bottomOffset;
+        }
         
         ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
         ctx.fillRect(validHX, validHY, validHW, validHH)
@@ -1312,7 +1353,17 @@ export default function BackgammonBoard({
         const selectedHW = pW * debugConfig.highlightWidthScale
         const selectedHH = hH * debugConfig.highlightHeightScale
         const selectedHX = hX + (pW - selectedHW) / 2 + scaleX(debugConfig.highlightXOffset)
-        const selectedHY = hY + (hH - selectedHH) / 2 + debugConfig.highlightYOffset
+        
+        let selectedHY;
+        if (isTopRow) {
+            selectedHY = (y - pH) + (hH - selectedHH) / 2 + debugConfig.highlightYOffset;
+        } else {
+            const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
+                ? (debugConfig as any).highlightBottomYOffset 
+                : -debugConfig.highlightYOffset;
+            
+            selectedHY = y + (hH - selectedHH) / 2 + bottomOffset;
+        }
 
         ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
         ctx.fillRect(selectedHX, selectedHY, selectedHW, selectedHH)
