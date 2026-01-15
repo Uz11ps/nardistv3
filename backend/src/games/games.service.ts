@@ -476,83 +476,69 @@ export class GamesService {
     const startIdx = ((myOffset || 1) - 1) * 2 + (opponentOffset || 1);
     
     // ВАЖНО: Считаем количество БРОСКОВ кубиков для этого игрока
-    // Бросок происходит каждый раз, когда игрок начинает свой ход (когда dice пустые)
+    // Бросок происходит КАЖДЫЙ РАЗ, когда вызывается rollDice
     // 
-    // ЛОГИКА:
+    // ЛОГИКА (как в настоящих нардах):
     // 1. При определении первого игрока используются p1Rolls[startIdx] и p2Rolls[startIdx] для обоих игроков
     // 2. Если player1 был выбран первым, то его первый реальный бросок использует startIdx + 1 (т.к. startIdx уже использован)
     // 3. Если player2 не был выбран первым, то его первый реальный бросок использует startIdx + 0 (т.к. startIdx еще не использован для него)
-    // 4. Каждый последующий бросок игрока увеличивает rollCount на 1
-    // 5. ВАЖНО: Пропуск хода (moves с пустым массивом) также считается как завершение хода и требует нового броска
+    // 4. КАЖДЫЙ вызов rollDice увеличивает rollCount на 1 для этого игрока
+    // 5. Это означает, что при каждом новом броске (даже если предыдущий ход был незавершен) используются НОВЫЕ кубики
     
     const playerNumber = isPlayer1 ? 0 : 1;
     let rollCount = 0;
     
     // Проверяем, был ли этот игрок выбран первым при определении первого игрока
-    // Это определяется по тому, был ли startIdx использован для этого игрока при определении первого игрока
-    // Если game.currentPlayer === playerNumber и нет ходов, значит этот игрок был выбран первым
     const wasFirstPlayer = game.currentPlayer === playerNumber;
     
+    // ВАЖНО: Считаем количество раз, когда этот игрок БРОСАЛ кубики
+    // Каждый вызов rollDice для этого игрока = один бросок
+    // Это включает:
+    // - Броски при начале нового хода (когда dice пустые)
+    // - Броски после незавершенного хода (когда остались кубики, но игрок делает новый ход)
+    // - Броски после пропуска хода
+    
     if (game.moves && game.moves.length > 0) {
-      // Считаем количество раз, когда этот игрок начинал свой ход (бросал кубики)
-      // Каждая смена игрока означает новый бросок для нового игрока
-      // ВАЖНО: Пропуск хода (moves с пустым массивом) также считается как завершение хода
-      let previousPlayer: number | null = null;
-      let playerRollCount = 0; // Количество раз, когда этот игрок начинал свой ход
+      // ВАЖНО: Считаем КАЖДЫЙ ход этого игрока как отдельный бросок кубиков
+      // В настоящих нардах каждый раз, когда игрок делает ход (даже если предыдущий был незавершен),
+      // кубики бросаются заново
+      let playerRollCount = 0;
       
       for (const move of game.moves) {
         const movePlayerId = move.playerId;
         const moveIsPlayer1 = movePlayerId === game.player1Id;
         const movePlayer = moveIsPlayer1 ? 0 : 1;
         
-        // Если сменился игрок - предыдущий игрок завершил ход, новый игрок начинает (бросает кубики)
-        if (previousPlayer !== null && previousPlayer !== movePlayer) {
-          // Сменился игрок - новый игрок начинает свой ход (бросает кубики)
-          if (movePlayer === playerNumber) {
-            playerRollCount++;
-          }
-        } else if (previousPlayer === null) {
-          // Первый ход в игре - это первый бросок для первого игрока
-          if (movePlayer === playerNumber) {
-            playerRollCount++;
-          }
+        // Каждый ход этого игрока = один бросок кубиков
+        if (movePlayer === playerNumber) {
+          playerRollCount++;
         }
-        
-        previousPlayer = movePlayer;
       }
       
-      // ВАЖНО: После всех ходов проверяем, нужно ли увеличить rollCount для текущего игрока
-      // Если текущий игрок не совпадает с последним игроком в moves, значит был пропуск хода
-      // и текущий игрок должен сделать новый бросок
-      if (previousPlayer !== null && previousPlayer !== playerNumber && game.currentPlayer === playerNumber) {
+      // ВАЖНО: Если текущий игрок не совпадает с последним игроком в moves, значит был пропуск хода
+      // или ход переключился - текущий игрок должен сделать новый бросок
+      const lastMove = game.moves[game.moves.length - 1];
+      const lastMovePlayerId = lastMove?.playerId;
+      const lastMoveIsPlayer1 = lastMovePlayerId === game.player1Id;
+      const lastMovePlayer = lastMoveIsPlayer1 ? 0 : 1;
+      
+      if (lastMovePlayer !== playerNumber && game.currentPlayer === playerNumber) {
         // Последний ход был сделан другим игроком, а сейчас ход текущего игрока
         // Это означает, что был пропуск хода или ход переключился, и текущий игрок должен сделать новый бросок
         playerRollCount++;
       }
       
-      // ВАЖНО: Если игрок был выбран первым, то startIdx уже был использован для определения первого игрока
-      // Поэтому его первый реальный бросок должен использовать startIdx + 1, а не startIdx + 0
-      // Если игрок уже делал ходы, то playerRollCount уже учитывает все его броски
-      // Но нужно добавить 1, если он был первым игроком (потому что startIdx уже был использован)
+      // Учитываем startIdx для первого игрока
       if (wasFirstPlayer) {
-        // Этот игрок был выбран первым, значит startIdx уже был использован для определения первого игрока
-        // Его первый реальный бросок использовал startIdx + 1, второй - startIdx + 2, и т.д.
         rollCount = playerRollCount + 1; // +1 потому что startIdx уже использован
       } else {
-        // Этот игрок не был выбран первым, значит startIdx еще не был использован для него
-        // Его первый реальный бросок использует startIdx + 0, второй - startIdx + 1, и т.д.
         rollCount = playerRollCount;
       }
     } else {
-      // Нет ходов - это первый бросок в игре (для определения первого игрока)
-      // Но если currentPlayer уже установлен, значит первый бросок уже был использован
+      // Нет ходов - это первый бросок в игре
       if (wasFirstPlayer) {
-        // Этот игрок был первым, значит startIdx уже был использован для определения первого игрока
-        // Его первый реальный бросок должен использовать startIdx + 1
         rollCount = 1;
       } else {
-        // Этот игрок не был первым, значит startIdx еще не был использован для него
-        // Его первый реальный бросок должен использовать startIdx + 0
         rollCount = 0;
       }
     }
@@ -684,6 +670,19 @@ export class GamesService {
       const updatedGame = await this.findOne(gameId);
       updatedGame.gameState = currentState;
       updatedGame.currentPlayer = currentState.currentPlayer;
+      
+      // ВАЖНО: Добавляем запись о пропуске хода в game.moves для правильного подсчета rollCount
+      // Это необходимо, чтобы при следующем броске кубиков rollCount увеличивался правильно
+      if (!updatedGame.moves) {
+        updatedGame.moves = [];
+      }
+      const skipMove = {
+        playerId: playerId || (oldCurrentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id),
+        moves: [],
+        dice: currentState.dice || [],
+        timestamp: new Date(),
+      };
+      updatedGame.moves.push(skipMove);
       
       // Вычисляем время хода и обновляем lastMoveAt (ход завершен - произошла смена игрока)
       const now = new Date();

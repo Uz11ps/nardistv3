@@ -761,8 +761,31 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             if (finalGame.status === 'finished') return;
             
             if (finalGame.currentPlayer === 0) {
-              this.logger.log(`👤 Player's turn after bot move for gameId=${gameId}`);
-              // Не отправляем game_state повторно, т.к. он уже ушел в move_made
+              this.logger.log(`Player's turn after bot move for gameId=${gameId}`);
+              
+              // ВАЖНО: После хода бота нужно бросить кубики для игрока
+              const diceFromGame = finalGame.gameState?.dice;
+              const hasNoDice = !diceFromGame || (Array.isArray(diceFromGame) && diceFromGame.length === 0);
+              const bothOffsetsChosen = finalGame.p1OffsetChosenAt !== null && finalGame.p2OffsetChosenAt !== null;
+              
+              if (hasNoDice && bothOffsetsChosen && finalGame.status === 'in_progress') {
+                // Бросаем кубики для игрока
+                try {
+                  const playerId = finalGame.player1Id;
+                  const dice = await this.gamesService.rollDice(gameId, playerId, false);
+                  const eventId = `${gameId}_${Date.now()}_player_after_bot_move`;
+                  this.server.to(`game:${gameId}`).emit('dice_rolled', { 
+                    dice: dice, 
+                    playerId: playerId,
+                    eventId
+                  });
+                  const updatedGameState = await this.gamesService.getGameState(gameId);
+                  this.server.to(`game:${gameId}`).emit('game_state', updatedGameState);
+                  await this.sendTimerUpdateForGame(gameId);
+                } catch (rollError) {
+                  this.logger.error(`Error rolling dice for player after bot move:`, rollError);
+                }
+              }
             } else {
               // Если все еще ход бота (например, в длинных нардах не все кубики использованы),
               // но ходов больше нет - makeMove уже должен был переключить ход.
