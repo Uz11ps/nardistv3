@@ -14,7 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { BotService } from '../bot/bot.service';
 import { SkinsService } from '../skins/skins.service';
 import { Inject, forwardRef, Logger, OnModuleDestroy } from '@nestjs/common';
-import { GameType } from './game.entity';
+import { GameType, GameMode } from './game.entity';
 
 @WebSocketGateway({
   cors: {
@@ -717,21 +717,24 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         const gameStateAfterDice = await this.gamesService.getGameState(gameId);
         
         // ВАЖНО: Проверяем наличие валидных ходов после броска (как и для обычных игроков)
-        // Если есть шашки на баре, но нет валидных ходов с бара - автоматически передаем ход
+        // Это работает для ВСЕХ режимов (короткие и длинные нарды)
+        // Если нет валидных ходов - автоматически передаем ход
         const possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
         const hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
         
-        // Проверяем, есть ли шашки на баре у бота
+        // Проверяем, есть ли шашки на баре у бота (для коротких нардов)
         const bar = game.gameState?.bar;
         const barValue = Array.isArray(bar) 
           ? bar[1] // Бот всегда player 1
           : (bar?.black || 0);
         
-        // Если есть шашки на баре, но нет валидных ходов - автоматически передаем ход
-        const hasBarButNoMoves = barValue > 0 && !hasMoves;
+        // Если есть шашки на баре, но нет валидных ходов - автоматически передаем ход (только для коротких нардов)
+        const isShortBackgammon = game.mode === GameMode.SHORT;
+        const hasBarButNoMoves = isShortBackgammon && barValue > 0 && !hasMoves;
         
+        // ВАЖНО: Если нет валидных ходов (для любых нардов) - автоматически передаем ход
         if (!hasMoves || hasBarButNoMoves) {
-          this.logger.log(`🔄 No possible moves for bot${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''}, switching turn automatically for game ${gameId}`);
+          this.logger.log(`🔄 No possible moves for bot${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''} in ${isShortBackgammon ? 'short' : 'long'} backgammon, switching turn automatically for game ${gameId}`);
           // Переключаем ход сразу без задержки
           try {
             await this.gamesService.makeMove(gameId, botPlayerId, []);
