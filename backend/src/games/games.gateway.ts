@@ -251,6 +251,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
                 player2Score: finishedGame.player2Score,
                 gameState,
                 reason: 'timeout',
+                game: {
+                  player1Wins: finishedGame.player1Wins || 0,
+                  player2Wins: finishedGame.player2Wins || 0,
+                  matchesToWin: finishedGame.matchesToWin || 1,
+                },
               });
               
               this.logger.log(`✅ Bot game ${currentGame.id} finished due to timeout on disconnect, bot won`);
@@ -562,6 +567,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           player1Score: game.player1Score,
           player2Score: game.player2Score,
           gameState,
+          game: {
+            player1Wins: game.player1Wins || 0,
+            player2Wins: game.player2Wins || 0,
+            matchesToWin: game.matchesToWin || 1,
+          },
         });
       } else {
         // ВАЖНО: После завершения хода нужно бросить кубики для следующего игрока
@@ -816,6 +826,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
               player2Score: botMoveResult.player2Score,
               gameState: gameStateAfterMove,
               serverMoves: botMoves, // Добавляем ходы даже при завершении игры
+              game: {
+                player1Wins: botMoveResult.player1Wins || 0,
+                player2Wins: botMoveResult.player2Wins || 0,
+                matchesToWin: botMoveResult.matchesToWin || 1,
+              },
             });
           } else {
             // After bot move, check if it's still bot's turn or player's turn
@@ -882,6 +897,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
                  player1Score: moveResult.player1Score,
                  player2Score: moveResult.player2Score,
                  gameState: gameStateAfterMove,
+                 game: {
+                   player1Wins: moveResult.player1Wins || 0,
+                   player2Wins: moveResult.player2Wins || 0,
+                   matchesToWin: moveResult.matchesToWin || 1,
+                 },
                });
                return;
             }

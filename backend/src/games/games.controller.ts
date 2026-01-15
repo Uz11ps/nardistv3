@@ -152,6 +152,11 @@ export class GamesController {
         player1Score: game.player1Score,
         player2Score: game.player2Score,
         gameState,
+        game: {
+          player1Wins: game.player1Wins || 0,
+          player2Wins: game.player2Wins || 0,
+          matchesToWin: game.matchesToWin || 1,
+        },
       });
     }
     

@@ -245,6 +245,7 @@ export default function Game() {
   const [serverMovesForBoard, setServerMovesForBoard] = useState<any[] | undefined>(undefined)
   const pendingGameStateRef = useRef<any>(null)
   const isServerAnimatingRef = useRef<boolean>(false)
+  const [winnerId, setWinnerId] = useState<string | null>(null)
 
   // Синхронизируем рефы с состоянием
   useEffect(() => {
@@ -542,6 +543,12 @@ export default function Game() {
         : { player1: game.player1Score || 0, player2: game.player2Score || 0 }
       setScore(winsScore)
       setGameStatus(game.status)
+      // Если игра завершена, устанавливаем winnerId для отображения модального окна
+      if (game.status === 'finished') {
+        setWinnerId(game.winnerId || null)
+      } else {
+        setWinnerId(null)
+      }
       
       // Загружаем смещения игроков
       const isP1 = game.player1Id === user?.id
@@ -867,6 +874,7 @@ export default function Game() {
         })
         setGameStatus('waiting')
         setScore({ player1: 0, player2: 0 })
+        setWinnerId(null)
         setPlayer1Timer(15)
         setPlayer2Timer(15)
         setTotalTimeRemaining({ player1: 60, player2: 60 })
@@ -1344,6 +1352,27 @@ export default function Game() {
     })
 
     socket.on('game_finished', (data: any) => {
+      console.log('🎮 Game finished event received:', data);
+      
+      // ВАЖНО: Устанавливаем статус finished и счет ПРИ ЛЮБОМ завершении игры
+      // Это гарантирует показ модального окна результата
+      setGameStatus('finished');
+      
+      // Сохраняем winnerId для правильного отображения победителя
+      setWinnerId(data.winnerId || null);
+      
+      // Обновляем счет (учитываем серию матчей если есть)
+      const winsScore = data.game?.matchesToWin > 1
+        ? { player1: data.game?.player1Wins || 0, player2: data.game?.player2Wins || 0 }
+        : { player1: data.player1Score || 0, player2: data.player2Score || 0 };
+      setScore(winsScore);
+      
+      // Останавливаем все таймеры при завершении игры
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      
       // Если пришли серверные ходы (последний ход игры), анимируем их
       if (data.serverMoves && data.serverMoves.length > 0) {
         console.log('🤖 Game finished with moves, starting animation');
@@ -1355,19 +1384,45 @@ export default function Game() {
           status: 'finished',
           currentPlayer: data.winnerId === (data.player1Id || gameInfo?.player1Id) ? 0 : 1,
           canMove: false,
-          player1Score: data.player1Score,
-          player2Score: data.player2Score
         };
-        // Устанавливаем счет сразу, чтобы он обновился в UI
-        // Используем счет побед из серии матчей, если есть серия
-        const winsScore = data.game?.matchesToWin > 1
-          ? { player1: data.game?.player1Wins || 0, player2: data.game?.player2Wins || 0 }
-          : { player1: data.player1Score || 0, player2: data.player2Score || 0 }
-        setScore(winsScore);
-      } else {
-        setGameStatus('finished')
-        setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+      } else if (data.gameState) {
+        // Если нет серверных ходов, но есть gameState - обновляем состояние сразу
+        const barRaw = data.gameState.bar || [0, 0];
+        const bar = Array.isArray(barRaw) 
+          ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
+          : barRaw;
+          
+        const bearOffRaw = data.gameState.bearOff || data.gameState.borneOff || [0, 0];
+        const bearOff = Array.isArray(bearOffRaw)
+          ? { white: bearOffRaw[0] || 0, black: bearOffRaw[1] || 0 }
+          : bearOffRaw;
+        
+        const points = Array.isArray(data.gameState.points) 
+          ? [...data.gameState.points] 
+          : [];
+        
+        const diceData = data.gameState.dice;
+        let formattedDice: number[] | null = null;
+        if (Array.isArray(diceData)) {
+          formattedDice = diceData.length > 0 ? diceData : null;
+        } else if (diceData && (diceData as any).die1 !== undefined) {
+          formattedDice = [(diceData as any).die1, (diceData as any).die2];
+        }
+        
+        setGameState({
+          points,
+          bar,
+          bearOff,
+          currentPlayer: data.gameState.currentPlayer || 0,
+          dice: formattedDice,
+          canMove: false,
+          verificationSalt: data.gameState.verificationSalt,
+          p1Rolls: data.gameState.p1Rolls,
+          p2Rolls: data.gameState.p2Rolls,
+        });
       }
+      
+      console.log('✅ Game finished, status set to finished, score:', winsScore);
     })
 
     socket.on('sandbox_board_updated', (data: any) => {
@@ -2764,7 +2819,22 @@ export default function Game() {
             }}
           >
             <h2>Игра завершена!</h2>
-            <p>Победитель: {score.player1 > score.player2 ? (isPlayer1 ? 'Вы' : myPlayer?.username) : (isPlayer1 ? opponentPlayer?.username : 'Вы')}</p>
+            <p>Победитель: {(() => {
+              // Используем winnerId для точного определения победителя
+              if (winnerId === null) {
+                // Бот победил (для игр с ботом)
+                return isPlayer1 ? (opponentPlayer?.username || 'Бот') : 'Вы';
+              } else if (winnerId === gameInfo?.player1Id) {
+                return isPlayer1 ? 'Вы' : (myPlayer?.username || 'Игрок 1');
+              } else if (winnerId === gameInfo?.player2Id) {
+                return isPlayer1 ? (opponentPlayer?.username || 'Игрок 2') : 'Вы';
+              } else {
+                // Fallback на счет, если winnerId не определен
+                return score.player1 > score.player2 
+                  ? (isPlayer1 ? 'Вы' : (myPlayer?.username || 'Игрок 1'))
+                  : (isPlayer1 ? (opponentPlayer?.username || 'Игрок 2') : 'Вы');
+              }
+            })()}</p>
             
             <div className="fair-play-verification">
               <h4>Контроль честности</h4>
