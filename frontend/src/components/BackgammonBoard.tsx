@@ -63,7 +63,6 @@ export default function BackgammonBoard({
   
   // Скины теперь используют материалы (цвета) вместо текстур
   
-  const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
@@ -623,7 +622,6 @@ export default function BackgammonBoard({
     // Сбрасываем текущие возможные ходы при изменении pendingMoves или dice
     // Это предотвращает клики по старым (невалидным) ходам до получения новых от сервера
         setPossibleMoves([])
-    setSelectedPoint(null)
     setValidTargetPoints(new Set())
     
     // В Sandbox разрешаем получение ходов всегда, если есть кубики
@@ -675,7 +673,7 @@ export default function BackgammonBoard({
         }
         
         // Не подсвечиваем все возможные точки автоматически
-        // Подсветка будет только для выбранной точки (selectedPoint)
+        // Подсветка будет только при перетаскивании шашки
         setPossibleMoves(flatMoves)
 
         // Если ходов нет, и это наш ход, и мы еще ничего не сделали - сообщаем об этом
@@ -1321,8 +1319,8 @@ export default function BackgammonBoard({
         ctx.fillRect(highlightHX, highlightHY, highlightHW, highlightHH)
       }
 
-      // 2. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
-      if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
+      // 2. Подсветка валидных точек назначения при перетаскивании
+      if (dragging && validTargetPoints.has(pointIndex)) {
         // Применяем параметры из debugConfig для размера и смещения подсветки
         const validHW = pW * debugConfig.validHighlightWidthScale
         const validHH = hH * debugConfig.validHighlightHeightScale
@@ -1347,27 +1345,6 @@ export default function BackgammonBoard({
         ctx.strokeRect(validHX + 2, validHY + 2, validHW - 4, validHH - 4)
       }
       
-      // 3. Подсветка выбранной точки
-      if (selectedPoint === pointIndex) {
-        // Применяем параметры для highlight (так же как и для hover)
-        const selectedHW = pW * debugConfig.highlightWidthScale
-        const selectedHH = hH * debugConfig.highlightHeightScale
-        const selectedHX = hX + (pW - selectedHW) / 2 + scaleX(debugConfig.highlightXOffset)
-        
-        let selectedHY;
-        if (isTopRow) {
-            selectedHY = (y - pH) + (hH - selectedHH) / 2 + debugConfig.highlightYOffset;
-        } else {
-            const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
-                ? (debugConfig as any).highlightBottomYOffset 
-                : -debugConfig.highlightYOffset;
-            
-            selectedHY = y + (hH - selectedHH) / 2 + bottomOffset;
-        }
-
-        ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
-        ctx.fillRect(selectedHX, selectedHY, selectedHW, selectedHH)
-      }
     }
     
     // Отрисовка перетаскиваемой шашки (самый верхний слой)
@@ -1567,18 +1544,18 @@ export default function BackgammonBoard({
     }
 
     // Подсветка при перетаскивании в зону выноса (ВЕСЬ НИЗ - теперь разделен на 2 части)
-    if ((dragging || selectedPoint !== null) && validTargetPoints.has(-1)) {
+    if (dragging && validTargetPoints.has(-1)) {
       // Determine which side to highlight based on checker color
       let isRightSide = true; // Default to Right (White)
       
       if (dragging && dragging.checkerColor) {
         isRightSide = dragging.checkerColor === 'white';
-      } else if (selectedPoint !== null) {
-        // Try to determine from selected point
-        if (selectedPoint === 24) isRightSide = true; // White bar
-        else if (selectedPoint === 25) isRightSide = false; // Black bar
-        else if (virtualGameState?.points) {
-           const val = virtualGameState.points[selectedPoint] || 0;
+      } else if (dragging && dragging.pointIndex !== null && dragging.pointIndex !== undefined) {
+        // Try to determine from dragging point
+        if (dragging.pointIndex === 24) isRightSide = true; // White bar
+        else if (dragging.pointIndex === 25) isRightSide = false; // Black bar
+        else if (virtualGameState?.points && dragging.pointIndex >= 0 && dragging.pointIndex < 24) {
+           const val = virtualGameState.points[dragging.pointIndex] || 0;
            // White checkers are positive, Black are negative
            if (val !== 0) isRightSide = val > 0;
            else isRightSide = isPlayer1; 
@@ -1652,7 +1629,7 @@ export default function BackgammonBoard({
       ctx.restore()
     }
     */
-  }, [virtualGameState, selectedPoint, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, animatingChecker, currentPlayer, getPointCoordinates, boardSkinPlayer1, boardSkinPlayer2, checkerSkinPlayer1, checkerSkinPlayer2, opponentBoardColors, myBoardColors, checkerColorsPlayer1, checkerColorsPlayer2, isSandbox])
+  }, [virtualGameState, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, animatingChecker, currentPlayer, getPointCoordinates, boardSkinPlayer1, boardSkinPlayer2, checkerSkinPlayer1, checkerSkinPlayer2, opponentBoardColors, myBoardColors, checkerColorsPlayer1, checkerColorsPlayer2, isSandbox])
   
   // Перерисовка при изменении состояния
   useEffect(() => {
@@ -1689,8 +1666,7 @@ export default function BackgammonBoard({
         // Анимация завершена
         const finishedChecker = animatingChecker
         
-        // Сначала сбрасываем выбор
-        setSelectedPoint(null)
+        // Сбрасываем подсветку
         setValidTargetPoints(new Set())
         setShowBearOffButton(null)
         
@@ -1752,7 +1728,6 @@ export default function BackgammonBoard({
       isWhite // Store the color explicitly
     })
     // Сбрасываем состояния взаимодействия
-    setSelectedPoint(null)
     setDragging(null)
     setDragPosition(null)
     setHoveredPoint(null)
@@ -2390,19 +2365,12 @@ export default function BackgammonBoard({
     // ИЛИ мы должны учитывать смещение от центра шашки, если хотим "взять за край"
     // Но пользователь жалуется, что шашка "где-то справа или слева".
     // Если мы хотим центрировать шашку под курсором:
+    // Убираем логику выбора при клике - только drag-and-drop
+    // Начинаем перетаскивание сразу при mousedown
     setDragging({ pointIndex, offsetX: 0, offsetY: 0 })
-    
-    // Если мы хотим сохранить относительное смещение (чтобы шашка не прыгала):
-    // setDragging({ pointIndex, offsetX: x - pX, offsetY: y - pY })
-    // Но pX, pY - это центр точки (треугольника). Шашка может быть смещена по вертикали в стопке.
-    // Нам нужно найти визуальный центр конкретной шашки, по которой кликнули.
-    // Но getPointAtPosition возвращает только индекс точки.
-    // Поэтому самое надежное для UX - центрировать шашку под курсором (offsetX: 0, offsetY: 0).
-    // Это стандартное поведение drag-n-drop в играх.
-    
     setDragPosition({ x, y })
-    setSelectedPoint(pointIndex)
     
+    // Подсвечиваем валидные точки назначения для перетаскивания
     const validTargets = new Set<number>()
     let bearOffDie: number | null = null
     pointMoves.forEach(move => {
@@ -2588,25 +2556,16 @@ export default function BackgammonBoard({
     // Если ход не был выполнен, сбрасываем состояние перетаскивания
     setDragging(null)
     setDragPosition(null)
-    // Сбрасываем все выделения после перемещения - нужно ПОВТОРНО ВЫБРАТЬ ШАШКУ
-    setSelectedPoint(null)
     setValidTargetPoints(new Set())
     setShowBearOffButton(null)
     setHoveredPoint(null)
   }
   
-  // Обработка клика с защитой от двойных кликов
+  // Обработка клика только для тройного клика (быстрый ход)
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (dragging) return
-    // REMOVED: if (animatingChecker) return - blocking interaction caused "crazy lag" feeling for users
     
     if (!canMove || !isMyTurn || !canvasRef.current) return
-    
-    // Если это тройной клик, игнорируем одинарный клик
-    if (isTripleClickRef.current) {
-      isTripleClickRef.current = false
-      return
-    }
     
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
@@ -2637,101 +2596,18 @@ export default function BackgammonBoard({
       return
     }
     
-    // Добавляем текущий клик в историю
+    // Добавляем текущий клик в историю для тройного клика
     clickHistoryRef.current = [...recentHistory, { pointIndex, timestamp: now }]
     
-    // Устанавливаем таймаут для обработки одинарного клика
+    // Очищаем таймаут через задержку
     if (clickTimeoutRef.current !== null) {
       window.clearTimeout(clickTimeoutRef.current)
     }
     
     clickTimeoutRef.current = window.setTimeout(() => {
-      // Если таймаут истек, значит это был одинарный клик
-      const latestClick = clickHistoryRef.current[clickHistoryRef.current.length - 1]
-      if (latestClick && latestClick.pointIndex === pointIndex) {
-        handlePointClick(pointIndex)
-        clickHistoryRef.current = []
-      }
+      clickHistoryRef.current = []
       clickTimeoutRef.current = null
     }, CLICK_DELAY)
-  }
-  
-  const handlePointClick = (pointIndex: number) => {
-    if (!canMove || !isMyTurn) return
-    
-    // Если уже была выбрана точка, и мы кликнули на неё же - отменяем выбор
-    if (selectedPoint === pointIndex) {
-      setSelectedPoint(null)
-      setValidTargetPoints(new Set())
-      setShowBearOffButton(null)
-      return
-    }
-
-    const points = virtualGameState?.points || []
-    const bar = virtualGameState?.bar || { white: 0, black: 0 }
-    let pointValue = 0
-    if (pointIndex === 24) pointValue = bar.white
-    else if (pointIndex === 25) pointValue = -bar.black
-    else pointValue = points[pointIndex] || 0
-
-    // Проверяем, есть ли ходы из этой точки
-    const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
-    
-    if (selectedPoint === null) {
-      // Если ничего не выбрано, выбираем текущую точку (если из неё есть ходы)
-      // В Sandbox разрешаем клик по любой шашке, если для нее есть ходы
-      if (pointMoves.length > 0) {
-        setSelectedPoint(pointIndex)
-        const targets = new Set<number>()
-        let bearOffDie: number | null = null
-        let bearOffSteps: any[] | undefined = undefined
-        pointMoves.forEach(m => {
-          targets.add(m.to)
-          if (m.to === -1) {
-            bearOffDie = m.die
-            bearOffSteps = (m as any).steps
-          }
-        })
-        setValidTargetPoints(targets)
-        if (bearOffDie !== null) {
-          setShowBearOffButton({ pointIndex, die: bearOffDie, steps: bearOffSteps })
-        } else {
-          setShowBearOffButton(null)
-        }
-      }
-    } else {
-      // Если точка уже была выбрана, пытаемся сделать ход
-      const move = possibleMoves.find(m => m.from === selectedPoint && m.to === pointIndex)
-      if (move) {
-        startMoveAnimation(move.from, move.to, move.die, (move as any).steps)
-      } else {
-        // Если ход невозможен, но кликнули на другую свою шашку - переключаем выбор на неё
-        if (pointMoves.length > 0) {
-          setSelectedPoint(pointIndex)
-          const targets = new Set<number>()
-          let bearOffDie: number | null = null
-          let bearOffSteps: any[] | undefined = undefined
-          pointMoves.forEach(m => {
-            targets.add(m.to)
-            if (m.to === -1) {
-              bearOffDie = m.die
-              bearOffSteps = (m as any).steps
-            }
-          })
-          setValidTargetPoints(targets)
-          if (bearOffDie !== null) {
-            setShowBearOffButton({ pointIndex, die: bearOffDie, steps: bearOffSteps })
-          } else {
-            setShowBearOffButton(null)
-          }
-        } else {
-          // Иначе просто сбрасываем выбор
-          setSelectedPoint(null)
-          setValidTargetPoints(new Set())
-          setShowBearOffButton(null)
-        }
-      }
-    }
   }
   
   // Определение формата кубиков
@@ -2741,14 +2617,8 @@ export default function BackgammonBoard({
 
   // ВАЖНО: Обновляем позицию кубиков когда появляются кубики или завершается анимация
   // Это гарантирует, что кубики перемещаются в правильный угол после анимации
-  useEffect(() => {
-    // Устанавливаем позицию сразу при появлении кубиков, даже во время анимации
-    if (diceArray && diceArray.length > 0) {
-      updateDicePosition()
-    }
-  }, [diceArray, updateDicePosition])
-
-  // Дополнительно обновляем позицию после завершения анимации
+  // ВАЖНО: Обновляем позицию кубиков только при изменении currentPlayer или завершении анимации
+  // Не обновляем при каждом изменении diceArray, чтобы избежать смещения при дубле
   useEffect(() => {
     if (!diceAnimating && diceArray && diceArray.length > 0) {
       // Небольшая задержка для плавного перехода после завершения анимации
@@ -2757,7 +2627,7 @@ export default function BackgammonBoard({
       }, 100)
       return () => clearTimeout(timeoutId)
     }
-  }, [diceAnimating, diceArray, updateDicePosition])
+  }, [diceAnimating, currentPlayer, updateDicePosition])
   
   // Определяем использованные кубики из pendingMoves
   // Используем Set для отслеживания индексов использованных кубиков (для дублей)

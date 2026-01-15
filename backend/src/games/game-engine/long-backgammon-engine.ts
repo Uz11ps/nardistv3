@@ -142,7 +142,7 @@ export class LongBackgammonEngine {
    * - BUT: This is only allowed if opponent has at least one checker in their home (not on head)
    * - Building a fence of 6 points when opponent has no checkers in home is forbidden
    */
-  private checkBlockRule(state: LongBoardState, to: number): boolean {
+  private checkBlockRule(state: LongBoardState, from: number, to: number): boolean {
     const player = state.currentPlayer;
     const opponentSign = player === 0 ? -1 : 1;
     
@@ -172,7 +172,8 @@ export class LongBackgammonEngine {
     // If opponent has no checkers in home, we cannot create a 6-point block
     if (!opponentHasCheckerInHome) {
       // Check if placing a checker here would create a 6-point block
-      // We need to check all possible 6-point sequences
+      // ВАЖНО: Учитываем, что при ходе с точки 'from' эта точка освобождается
+      // Поэтому проверяем состояние ПОСЛЕ хода (точка 'from' освобождается, точка 'to' заполняется)
       for (let start = 0; start < this.BOARD_SIZE; start++) {
         let blockCount = 0;
         let hasOpponentInBlock = false;
@@ -180,12 +181,31 @@ export class LongBackgammonEngine {
         // Check 6 consecutive points (circular)
         for (let i = 0; i < 6; i++) {
           const pointIdx = (start + i) % this.BOARD_SIZE;
-          const pointValue = state.points[pointIdx] || 0;
+          let pointValue = state.points[pointIdx] || 0;
           
-          // Check if this point would be part of our block
-          const wouldBeOurs = (pointIdx === to && player === 0) || 
-                             (pointIdx === to && player === 1) ||
-                             (player === 0 && pointValue > 0) ||
+          // Симулируем состояние ПОСЛЕ хода:
+          // - Если это точка 'from' и на ней останется только 1 шашка (или 0), она освобождается
+          // - Если это точка 'to', она заполняется нашей шашкой
+          if (pointIdx === from && from >= 0 && from < this.BOARD_SIZE) {
+            // После хода на точке 'from' останется на 1 шашку меньше
+            const currentValue = pointValue;
+            if (player === 0 && currentValue > 0) {
+              pointValue = currentValue - 1; // Убираем одну шашку
+            } else if (player === 1 && currentValue < 0) {
+              pointValue = currentValue + 1; // Убираем одну шашку (отрицательное значение)
+            }
+          } else if (pointIdx === to && to >= 0 && to < this.BOARD_SIZE) {
+            // На точке 'to' добавляется наша шашка
+            const currentValue = pointValue;
+            if (player === 0) {
+              pointValue = currentValue + 1; // Добавляем шашку игрока 0
+            } else {
+              pointValue = currentValue - 1; // Добавляем шашку игрока 1 (отрицательное значение)
+            }
+          }
+          
+          // Check if this point would be part of our block AFTER the move
+          const wouldBeOurs = (player === 0 && pointValue > 0) ||
                              (player === 1 && pointValue < 0);
           
           if (wouldBeOurs) {
@@ -284,7 +304,7 @@ export class LongBackgammonEngine {
     
     // В длинных нард нет ограничения на количество шашек из одной точки (кроме головы)
     
-    if (!this.checkBlockRule(state, to)) return false;
+    if (!this.checkBlockRule(state, from, to)) return false;
     
     return true;
   }
@@ -331,7 +351,7 @@ export class LongBackgammonEngine {
     // Проверяем правило головы
     if (!this.checkHeadRule(state, from, die, isFirstMoveOfGame)) return false;
     
-    if (!this.checkBlockRule(state, to)) return false;
+    if (!this.checkBlockRule(state, from, to)) return false;
     
     return true;
   }
