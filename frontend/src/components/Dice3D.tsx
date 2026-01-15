@@ -83,7 +83,9 @@ function Die({ value, isRolling, delay, diceColor }: DieProps) {
 
   const dieFaceStyle = {
     backgroundColor: diceColor,
-    borderRadius: '20%', // Make it relative to size and ensure it's applied inline
+    borderRadius: '12px', // Fixed value matching CSS
+    overflow: 'hidden',
+    boxShadow: 'inset 0 0 5px rgba(0,0,0,0.1)', // Inline shadow
   }
 
   return (

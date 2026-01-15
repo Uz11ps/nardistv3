@@ -29,18 +29,20 @@
   width: 50px;
   height: 50px;
   background: #FFF;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 12px !important;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1), 0 2px 5px rgba(0, 0, 0, 0.2);
-  backface-visibility: visible;
+  backface-visibility: hidden; /* Fix rendering artifacts during animation */
   transform-origin: center center;
   left: 0;
   top: 0;
   margin: 0;
   overflow: hidden; /* Ensure content doesn't bleed out of rounded corners */
+  /* Ensure clipping works in 3D context */
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
 /* Расположение граней в 3D */
