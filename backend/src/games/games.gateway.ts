@@ -68,13 +68,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     const userId = client.data.userId;
     this.connectedUsers.delete(client.id);
     
-    // При дисконнекте проверяем все активные игры этого игрока и завершаем по таймауту если нужно
+    // ВАЖНО: НЕ проверяем таймауты при дисконнекте
+    // Игрок может просто обновить страницу или потерять соединение
+    // Таймауты проверяются только через checkMoveTimeouts() каждую секунду
+    // Это предотвращает преждевременное завершение игры при обновлении страницы
+    // Игра завершается только когда действительно истекло время (основное + овертайм)
     if (userId) {
-      try {
-        await this.checkPlayerGameTimeouts(userId);
-      } catch (error) {
-        this.logger.error(`Error checking timeouts for disconnected player ${userId}:`, error);
-      }
+      this.logger.log(`Player ${userId} disconnected, skipping timeout check (will be handled by checkMoveTimeouts)`);
     }
   }
 
@@ -250,8 +250,20 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
 
           // Для игр с ботами - проверяем 15 секунд на ход + овертайм (общее время игрока)
           if (currentGame.type === GameType.VS_BOT && currentGame.player2Id === null) {
-            if (currentGame.currentPlayer === 0 && timeSinceLastMoveSeconds > 15) {
-              this.logger.warn(`⏱️ Bot game timeout on disconnect for game ${currentGame.id}, player ${playerId} disconnected, timeSinceLastMove: ${timeSinceLastMoveSeconds.toFixed(2)}s`);
+            // ВАЖНО: Проверяем не только время на ход, но и общее время (овертайм)
+            // Игра завершается только если: прошло > 15 сек И общее время <= 0
+            const baseMoveTime = 15;
+            const currentPlayerTimeRemaining = currentGame.currentPlayer === 0 
+              ? (currentGame.player1TimeRemaining || 60000) 
+              : (currentGame.player2TimeRemaining || 60000);
+            
+            const excessTime = Math.max(0, timeSinceLastMoveSeconds - baseMoveTime);
+            const timeAfterBaseMove = Math.max(0, currentPlayerTimeRemaining - (excessTime * 1000));
+            
+            const isTimeOut = timeSinceLastMoveSeconds > baseMoveTime && timeAfterBaseMove <= 0;
+            
+            if (isTimeOut && currentGame.currentPlayer === 0) {
+              this.logger.warn(`⏱️ Bot game timeout on disconnect for game ${currentGame.id}, player ${playerId} disconnected, timeSinceLastMove: ${timeSinceLastMoveSeconds.toFixed(2)}s, timeRemaining: ${(currentPlayerTimeRemaining / 1000).toFixed(2)}s`);
               
               await this.gamesService.resignGame(currentGame.id, playerId);
               const gameState = await this.gamesService.getGameState(currentGame.id);
