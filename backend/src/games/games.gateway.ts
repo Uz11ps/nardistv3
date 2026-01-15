@@ -121,6 +121,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       // Общее время игрока после вычета превышения
       const totalTimeRemaining = Math.max(0, (currentPlayerTimeRemaining / 1000) - excessTime);
       
+      // ВАЖНО: Овертайм определяется как:
+      // 1. Прошло больше 15 секунд на ход (timeSinceLastMove > baseMoveTime) И
+      // 2. Общее время игрока <= 0 (totalTimeRemaining <= 0)
+      // Это означает, что игрок использует овертайм (1 минута общего времени)
+      const isOvertime = timeSinceLastMove > baseMoveTime && totalTimeRemaining <= 0;
+      
       // Отправляем таймер всем участникам игры
       this.server.to(`game:${gameId}`).emit('timer_update', {
         gameId: game.id,
@@ -128,7 +134,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         moveTimeElapsed: timeSinceLastMove,
         moveTimeRemaining: moveTimeRemaining,
         totalTimeRemaining: totalTimeRemaining,
-        isOvertime: timeSinceLastMove > baseMoveTime,
+        isOvertime: isOvertime,
         player1TimeRemaining: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
         player2TimeRemaining: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60,
       });
@@ -179,6 +185,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           // Общее время игрока после вычета превышения
           const totalTimeRemaining = Math.max(0, (currentPlayerTimeRemaining / 1000) - excessTime);
           
+          // ВАЖНО: Овертайм определяется как:
+          // 1. Прошло больше 15 секунд на ход (timeSinceLastMove > baseMoveTime) И
+          // 2. Общее время игрока <= 0 (totalTimeRemaining <= 0)
+          // Это означает, что игрок использует овертайм (1 минута общего времени)
+          const isOvertime = timeSinceLastMove > baseMoveTime && totalTimeRemaining <= 0;
+          
           // Отправляем таймер всем участникам игры
           this.server.to(`game:${game.id}`).emit('timer_update', {
             gameId: game.id,
@@ -186,7 +198,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             moveTimeElapsed: timeSinceLastMove,
             moveTimeRemaining: moveTimeRemaining,
             totalTimeRemaining: totalTimeRemaining,
-            isOvertime: timeSinceLastMove > baseMoveTime,
+            isOvertime: isOvertime,
             player1TimeRemaining: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
             player2TimeRemaining: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60,
           });

@@ -617,6 +617,11 @@ export default function Game() {
           player2: game.player2TimeRemaining ? Math.max(0, game.player2TimeRemaining / 1000) : 60
         }
         
+        // ВАЖНО: Проверяем овертайм при загрузке игры на основе общего времени игрока
+        // Овертайм = когда общее время игрока <= 0
+        const currentPlayerTime = game.currentPlayer === 0 ? initialTotalTime.player1 : initialTotalTime.player2
+        const isInOvertimeOnLoad = currentPlayerTime <= 0
+        
         if (socket && socket.connected) {
           // Таймеры обновятся через событие timer_update от сервера
           // Устанавливаем временные значения для отображения
@@ -626,6 +631,8 @@ export default function Game() {
           totalTimeRemainingRef.current = initialTotalTime
           lastTotalTimeRef.current = { ...initialTotalTime } // Сохраняем начальное значение для проверки
           pageLoadTimeRef.current = Date.now() // Обновляем время загрузки при загрузке игры
+          // ВАЖНО: Устанавливаем овертайм на основе реального состояния таймеров
+          setIsInOvertime(isInOvertimeOnLoad)
         } else {
           // Если WebSocket не подключен, используем значения из БД если есть
           setPlayer1Timer(timeLimitSeconds)
@@ -634,6 +641,8 @@ export default function Game() {
           totalTimeRemainingRef.current = initialTotalTime
           lastTotalTimeRef.current = { ...initialTotalTime } // Сохраняем начальное значение для проверки
           pageLoadTimeRef.current = Date.now() // Обновляем время загрузки при загрузке игры
+          // ВАЖНО: Устанавливаем овертайм на основе реального состояния таймеров
+          setIsInOvertime(isInOvertimeOnLoad)
         }
         
         // Если игра началась и это наш ход, но кубиков нет - бросаем их
@@ -1327,13 +1336,11 @@ export default function Game() {
           isOvertime = false
         }
         
-        // ВАЖНО: Для бот-игр проверяем овертайм по общему времени игрока
-        // Если общее время игрока <= 0, это овертайм
-        if (!isOvertime && (gameInfo?.type === 'vs_bot' || isBotGame)) {
-          const currentPlayerTime = data.currentPlayer === 0 ? totalTime1 : totalTime2
-          if (currentPlayerTime <= 0) {
-            isOvertime = true
-          }
+        // ВАЖНО: Дополнительная проверка овертайма для всех типов игр
+        // Если общее время текущего игрока <= 0 И время на ход <= 0, это овертайм
+        const currentPlayerTime = data.currentPlayer === 0 ? totalTime1 : totalTime2
+        if (currentPlayerTime <= 0 && moveTimeRemaining <= 0) {
+          isOvertime = true
         }
         
         lastTimerUpdateRef.current = Date.now() // Обновляем время последнего синхронизации
