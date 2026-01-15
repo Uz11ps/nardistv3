@@ -484,12 +484,24 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       const eventId = `${data.gameId}_${Date.now()}_${userId}`;
       this.server.to(`game:${data.gameId}`).emit('dice_rolled', { dice, playerId: userId, eventId });
       
-      // Проверяем наличие ходов после броска
+      // ВАЖНО: Проверяем наличие валидных ходов после броска кубиков
+      // Если есть шашки на баре, но нет валидных ходов с бара - автоматически передаем ход
       const possibleMoves = await this.gamesService.getPossibleMoves(data.gameId, userId);
       const hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
       
-      if (!hasMoves) {
-        this.logger.log(`🔄 No possible moves for user ${userId}, switching turn automatically`);
+      // Проверяем, есть ли шашки на баре у текущего игрока
+      const currentGame = await this.gamesService.findOne(data.gameId);
+      const currentPlayer = currentGame.currentPlayer;
+      const bar = currentGame.gameState?.bar;
+      const barValue = Array.isArray(bar) 
+        ? bar[currentPlayer] 
+        : (currentPlayer === 0 ? (bar?.white || 0) : (bar?.black || 0));
+      
+      // Если есть шашки на баре, но нет валидных ходов - автоматически передаем ход
+      const hasBarButNoMoves = barValue > 0 && !hasMoves;
+      
+      if (!hasMoves || hasBarButNoMoves) {
+        this.logger.log(`🔄 No possible moves for user ${userId}${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''}, switching turn automatically`);
         // Переключаем ход сразу без задержки
         try {
           await this.gamesService.makeMove(data.gameId, userId, []);
@@ -704,12 +716,22 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         // Получаем актуальное состояние игры (с кубиками)
         const gameStateAfterDice = await this.gamesService.getGameState(gameId);
         
-        // Проверяем наличие валидных ходов после броска (как и для обычных игроков)
+        // ВАЖНО: Проверяем наличие валидных ходов после броска (как и для обычных игроков)
+        // Если есть шашки на баре, но нет валидных ходов с бара - автоматически передаем ход
         const possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
         const hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
         
-        if (!hasMoves) {
-          this.logger.log(`🔄 No possible moves for bot, switching turn automatically for game ${gameId}`);
+        // Проверяем, есть ли шашки на баре у бота
+        const bar = game.gameState?.bar;
+        const barValue = Array.isArray(bar) 
+          ? bar[1] // Бот всегда player 1
+          : (bar?.black || 0);
+        
+        // Если есть шашки на баре, но нет валидных ходов - автоматически передаем ход
+        const hasBarButNoMoves = barValue > 0 && !hasMoves;
+        
+        if (!hasMoves || hasBarButNoMoves) {
+          this.logger.log(`🔄 No possible moves for bot${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''}, switching turn automatically for game ${gameId}`);
           // Переключаем ход сразу без задержки
           try {
             await this.gamesService.makeMove(gameId, botPlayerId, []);
