@@ -2360,6 +2360,13 @@ export default function Game() {
                       dice: pending.dice
                     });
                     
+                    // ВАЖНО: Отправляем событие на бэкенд о завершении анимации хода
+                    // Это позволяет бэкенду бросить кубики только после завершения анимации
+                    const socket = getSocket();
+                    if (socket && gameId) {
+                      socket.emit('move_animation_complete', { gameId });
+                    }
+                    
                     // Бросаем кубики если:
                     // 1. Это наш ход (isMyTurnNowByPlayer)
                     // 2. Кубики пустые (hasNoDice)

@@ -29,6 +29,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
   private readonly logger = new Logger(GamesGateway.name);
   private connectedUsers = new Map<string, string>();
   private moveTimeoutCheckInterval: NodeJS.Timeout | null = null;
+  // Храним информацию об играх, ожидающих завершения анимации перед броском кубиков
+  private pendingDiceRolls = new Map<string, { nextPlayerId: string | null; isBotTurn: boolean; gameId: string }>();
 
   constructor(
     @Inject(forwardRef(() => GamesService))
@@ -570,40 +572,27 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         
         if (hasNoDice && game.status === 'in_progress' && bothOffsetsChosen) {
           // Ход завершен, нужно бросить кубики для следующего игрока
+          // ВАЖНО: Сохраняем информацию о необходимости броска кубиков и ждем события о завершении анимации
           const nextPlayerId = gameState.currentPlayer === 0 ? gameState.player1Id : gameState.player2Id;
           const isBotTurn = gameState.type === 'vs_bot' && gameState.player2Id === null && gameState.currentPlayer === 1;
           
-          this.logger.log(`🎲 Rolling dice for next player: gameId=${data.gameId}, currentPlayer=${gameState.currentPlayer}, nextPlayerId=${nextPlayerId}, isBotTurn=${isBotTurn}`);
+          this.logger.log(`🎲 Waiting for move animation to complete before rolling dice: gameId=${data.gameId}, currentPlayer=${gameState.currentPlayer}, nextPlayerId=${nextPlayerId}, isBotTurn=${isBotTurn}`);
           
-          try {
-            // Бросаем кубики для следующего игрока
-            const dice = await this.gamesService.rollDice(data.gameId, isBotTurn ? null : nextPlayerId, isBotTurn);
-            this.logger.log(`✅ Dice rolled for next player: [${dice.join(', ')}]`);
-            
-            // Отправляем событие dice_rolled для анимации
-            const eventId = `${data.gameId}_${Date.now()}_auto`;
-            this.server.to(`game:${data.gameId}`).emit('dice_rolled', { 
-              dice: dice, 
-              playerId: isBotTurn ? null : nextPlayerId,
-              eventId
-            });
-            
-            // Отправляем обновленное состояние игры
-            const updatedGameState = await this.gamesService.getGameState(data.gameId);
-            this.server.to(`game:${data.gameId}`).emit('game_state', updatedGameState);
-            
-            // Если это ход бота - запускаем автоматический ход бота
-            if (isBotTurn) {
-              this.logger.log(`🤖 Bot turn detected, triggering bot move`);
-              // Не вызываем handleBotTurnIfNeeded здесь, т.к. кубики уже брошены
-              // Просто делаем ход бота
-              setTimeout(async () => {
-                await this.handleBotTurnIfNeeded(data.gameId);
-              }, 1000);
-            }
-          } catch (error) {
-            this.logger.error(`❌ Error rolling dice for next player:`, error);
+          // Сохраняем информацию о необходимости броска кубиков
+          this.pendingDiceRolls.set(data.gameId, {
+            nextPlayerId: isBotTurn ? null : nextPlayerId,
+            isBotTurn,
+            gameId: data.gameId
+          });
+          
+          // Если это бот, не ждем события от фронтенда (бот не отправляет события)
+          // Бросаем кубики сразу с небольшой задержкой
+          if (isBotTurn) {
+            setTimeout(async () => {
+              await this.executePendingDiceRoll(data.gameId);
+            }, 500);
           }
+          // Для обычных игроков ждем события move_animation_complete от фронтенда
         } else {
           // Кубики еще есть - это промежуточный ход (например, при дублях)
           // Проверяем бота только если это его ход и кубики уже есть
@@ -621,6 +610,62 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
   /**
    * Handle bot turn if next player is bot
    */
+  /**
+   * Выполняет отложенный бросок кубиков после завершения анимации хода
+   */
+  private async executePendingDiceRoll(gameId: string): Promise<void> {
+    const pending = this.pendingDiceRolls.get(gameId);
+    if (!pending) {
+      return; // Нет отложенного броска
+    }
+    
+    this.pendingDiceRolls.delete(gameId);
+    
+    try {
+      const dice = await this.gamesService.rollDice(pending.gameId, pending.nextPlayerId, pending.isBotTurn);
+      this.logger.log(`✅ Dice rolled after animation complete: [${dice.join(', ')}]`);
+      
+      const eventId = `${pending.gameId}_${Date.now()}_after_animation`;
+      this.server.to(`game:${pending.gameId}`).emit('dice_rolled', { 
+        dice: dice, 
+        playerId: pending.nextPlayerId,
+        eventId
+      });
+      
+      const updatedGameState = await this.gamesService.getGameState(pending.gameId);
+      this.server.to(`game:${pending.gameId}`).emit('game_state', updatedGameState);
+      
+      // Если это ход бота - запускаем автоматический ход бота
+      if (pending.isBotTurn) {
+        this.logger.log(`Bot turn detected, triggering bot move`);
+        setTimeout(async () => {
+          await this.handleBotTurnIfNeeded(pending.gameId);
+        }, 1000);
+      }
+    } catch (error) {
+      this.logger.error(`Error executing pending dice roll:`, error);
+    }
+  }
+
+  /**
+   * Обработчик события о завершении анимации хода от фронтенда
+   */
+  @SubscribeMessage('move_animation_complete')
+  async handleMoveAnimationComplete(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { gameId: string },
+  ) {
+    const gameId = data.gameId;
+    if (!gameId) {
+      return;
+    }
+    
+    this.logger.log(`Move animation complete received for gameId=${gameId}`);
+    
+    // Выполняем отложенный бросок кубиков
+    await this.executePendingDiceRoll(gameId);
+  }
+
   async handleBotTurnIfNeeded(gameId: string): Promise<void> {
     try {
       const game = await this.gamesService.findOne(gameId);
@@ -717,21 +762,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
               const bothOffsetsChosen = finalGame.p1OffsetChosenAt !== null && finalGame.p2OffsetChosenAt !== null;
               
               if (hasNoDice && bothOffsetsChosen && finalGame.currentPlayer === 0) {
-                // Бросаем кубики для игрока
-                try {
-                  const playerId = finalGame.player1Id;
-                  const dice = await this.gamesService.rollDice(gameId, playerId, false);
-                  const eventId = `${gameId}_${Date.now()}_player_after_bot_skip`;
-                  this.server.to(`game:${gameId}`).emit('dice_rolled', { 
-                    dice: dice, 
-                    playerId: playerId,
-                    eventId
-                  });
-                  const updatedGameState = await this.gamesService.getGameState(gameId);
-                  this.server.to(`game:${gameId}`).emit('game_state', updatedGameState);
-                } catch (rollError) {
-                  this.logger.error(`❌ Error rolling dice for player after bot skip:`, rollError);
-                }
+                // Сохраняем информацию о необходимости броска кубиков и ждем события о завершении анимации
+                this.logger.log(`Waiting for move animation to complete before rolling dice for player after bot skip: gameId=${gameId}`);
+                this.pendingDiceRolls.set(gameId, {
+                  nextPlayerId: finalGame.player1Id,
+                  isBotTurn: false,
+                  gameId: gameId
+                });
               }
             }
             
@@ -769,22 +806,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
               const bothOffsetsChosen = finalGame.p1OffsetChosenAt !== null && finalGame.p2OffsetChosenAt !== null;
               
               if (hasNoDice && bothOffsetsChosen && finalGame.status === 'in_progress') {
-                // Бросаем кубики для игрока
-                try {
-                  const playerId = finalGame.player1Id;
-                  const dice = await this.gamesService.rollDice(gameId, playerId, false);
-                  const eventId = `${gameId}_${Date.now()}_player_after_bot_move`;
-                  this.server.to(`game:${gameId}`).emit('dice_rolled', { 
-                    dice: dice, 
-                    playerId: playerId,
-                    eventId
-                  });
-                  const updatedGameState = await this.gamesService.getGameState(gameId);
-                  this.server.to(`game:${gameId}`).emit('game_state', updatedGameState);
-                  await this.sendTimerUpdateForGame(gameId);
-                } catch (rollError) {
-                  this.logger.error(`Error rolling dice for player after bot move:`, rollError);
-                }
+                // Сохраняем информацию о необходимости броска кубиков и ждем события о завершении анимации
+                this.logger.log(`Waiting for move animation to complete before rolling dice for player after bot move: gameId=${gameId}`);
+                this.pendingDiceRolls.set(gameId, {
+                  nextPlayerId: finalGame.player1Id,
+                  isBotTurn: false,
+                  gameId: gameId
+                });
               }
             } else {
               // Если все еще ход бота (например, в длинных нардах не все кубики использованы),

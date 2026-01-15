@@ -344,7 +344,10 @@ export class BackgammonEngine {
           if (triedDice.has(die)) continue;
           triedDice.add(die);
 
-          const enterPoint = player === 0 ? die - 1 : 24 - die;
+          // ВАЖНО: Формула входа с бара должна совпадать с validateMovePlayer1/Player2
+          // Для белых (player 0): die=1 → Point 24 → index 0, die=6 → Point 19 → index 5
+          // Для черных (player 1): die=1 → Point 1 → index 18, die=6 → Point 6 → index 23
+          const enterPoint = player === 0 ? die - 1 : 17 + die;
           if (this.validateMove(currentState, -1, enterPoint, die)) {
             foundAnyMove = true;
             const newState = this.applyMove(currentState, -1, enterPoint, die);
