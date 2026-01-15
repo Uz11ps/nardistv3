@@ -1299,8 +1299,18 @@ export default function Game() {
         
         // Если таймер на ход близок к 15 (начало хода), сбрасываем овертайм
         // Это предотвращает отображение овертайма при первом броске кубиков
-        if (moveTimeRemaining >= 14.5) {
+        // ВАЖНО: Для бот-игр также проверяем овертайм по общему времени
+        if (moveTimeRemaining >= 14.5 && totalTime1 > 0 && totalTime2 > 0) {
           isOvertime = false
+        }
+        
+        // ВАЖНО: Для бот-игр проверяем овертайм по общему времени игрока
+        // Если общее время игрока <= 0, это овертайм
+        if (!isOvertime && (gameInfo?.type === 'vs_bot' || isBotGame)) {
+          const currentPlayerTime = data.currentPlayer === 0 ? totalTime1 : totalTime2
+          if (currentPlayerTime <= 0) {
+            isOvertime = true
+          }
         }
         
         lastTimerUpdateRef.current = Date.now() // Обновляем время последнего синхронизации
@@ -1792,16 +1802,36 @@ export default function Game() {
         const movesFromPoint = validationResponse.data.movesFromPoint || []
         
         // Собираем все валидные ходы (из последовательностей и плоского списка)
+        // ВАЖНО: Для коротких нард преобразуем from: -1 в 24 (белые) или 25 (черные) для сравнения
         const allValidMoves = new Set<string>()
+        const isShort = gameInfo?.mode === 'short' || gameInfo?.mode === 'SHORT'
+        const bar = gameState.bar || { white: 0, black: 0 }
+        const isPlayer1 = gameInfo.player1Id === user?.id
+        const activePlayer = isPlayer1 ? 0 : 1
+        
+        // Функция для нормализации from для сравнения
+        const normalizeFromForComparison = (from: number): number => {
+          if (isShort && from === -1) {
+            // Для коротких нард: -1 преобразуем в 24 (белые) или 25 (черные)
+            return activePlayer === 0 ? 24 : 25
+          }
+          return from
+        }
         
         // Добавляем ходы из плоского списка
         for (const move of movesFromPoint) {
+          const normalizedFrom = normalizeFromForComparison(move.from)
+          allValidMoves.add(`${normalizedFrom}-${move.to}-${move.die}`)
+          // Также добавляем с оригинальным from для совместимости
           allValidMoves.add(`${move.from}-${move.to}-${move.die}`)
         }
         
         // Добавляем ходы из последовательностей
         for (const sequence of allMoves) {
           for (const move of sequence) {
+            const normalizedFrom = normalizeFromForComparison(move.from)
+            allValidMoves.add(`${normalizedFrom}-${move.to}-${move.die}`)
+            // Также добавляем с оригинальным from для совместимости
             allValidMoves.add(`${move.from}-${move.to}-${move.die}`)
           }
         }
@@ -1820,10 +1850,13 @@ export default function Game() {
           // Если есть steps, проверяем каждый шаг
           if ((pendingMove as any).steps && Array.isArray((pendingMove as any).steps)) {
             for (const step of (pendingMove as any).steps) {
-              const stepKey = `${step.from}-${step.to}-${step.die}`
+              // Нормализуем from для сравнения
+              const normalizedFrom = normalizeFromForComparison(step.from)
+              const stepKey = `${normalizedFrom}-${step.to}-${step.die}`
+              const stepKeyOriginal = `${step.from}-${step.to}-${step.die}`
               
-              // Проверяем наличие шага в валидных ходах
-              if (!allValidMoves.has(stepKey)) {
+              // Проверяем наличие шага в валидных ходах (проверяем оба варианта)
+              if (!allValidMoves.has(stepKey) && !allValidMoves.has(stepKeyOriginal)) {
                 isValid = false
                 break
               }
@@ -1841,9 +1874,12 @@ export default function Game() {
             }
           } else {
             // Обычный ход - проверяем его наличие в валидных ходах
-            const moveKey = `${pendingMove.from}-${pendingMove.to}-${pendingMove.die}`
+            const normalizedFrom = normalizeFromForComparison(pendingMove.from)
+            const moveKey = `${normalizedFrom}-${pendingMove.to}-${pendingMove.die}`
+            const moveKeyOriginal = `${pendingMove.from}-${pendingMove.to}-${pendingMove.die}`
             
-            if (!allValidMoves.has(moveKey)) {
+            // Проверяем оба варианта ключа
+            if (!allValidMoves.has(moveKey) && !allValidMoves.has(moveKeyOriginal)) {
               isValid = false
               break
             }
