@@ -94,7 +94,7 @@ function Die({ value, isRolling, delay, diceColor }: DieProps) {
         className={`die ${isRolling ? 'die-rolling' : ''}`}
         style={{ 
           transform: isRolling ? undefined : getRotation(value),
-          backgroundColor: diceColor,
+          // Removed backgroundColor from here to prevent square corners appearing behind rounded faces
         }}
       >
         <div className="die-face face-1" style={dieFaceStyle}>{renderDots(1)}</div>
