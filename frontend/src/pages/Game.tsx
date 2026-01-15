@@ -543,25 +543,28 @@ export default function Game() {
         : { player1: game.player1Score || 0, player2: game.player2Score || 0 }
       setScore(winsScore)
       
-      // ВАЖНО: Проверяем, действительно ли игра завершена перед установкой статуса
-      // Игра считается завершенной ТОЛЬКО если:
-      // 1. Статус в БД = 'finished' И
-      // 2. Есть winnerId (или winnerId === null для бот-игр, где null = победа бота)
-      // Это предотвращает показ модального окна при обновлении страницы, если игра еще не завершена
+      // ВАЖНО: Устанавливаем статус как есть из БД
+      // КРИТИЧЕСКИ ВАЖНО: 
+      // - Если статус 'in_progress' - игра НЕ завершена, НИ ПРИ КАКИХ ОБСТОЯТЕЛЬСТВАХ
+      // - Даже если таймеры истекли (овертайм) - игра продолжается, пока сервер не завершит её
+      // - Сервер сам завершает игру когда: основное время (15 сек) + овертайм (60 сек) истекли
+      // - ИЛИ когда одна из сторон победила по правилам игры
+      // - Если статус 'finished' - доверяем серверу, устанавливаем как есть
+      
+      // ВАЖНО: Для бот-игр проверяем, действительно ли игра завершена
+      // Для бот-игр: winnerId === null означает победу бота, но только если статус 'finished'
+      // Если статус 'in_progress' - игра продолжается, даже если winnerId === null (это не победа бота)
+      const isBotGameType = game.type === 'vs_bot'
       const isReallyFinished = game.status === 'finished' && 
-                               (game.winnerId !== undefined || (game.type === 'vs_bot' && game.winnerId === null))
+                               (game.winnerId !== undefined || (isBotGameType && game.winnerId === null))
       
       if (isReallyFinished) {
         setGameStatus('finished')
         setWinnerId(game.winnerId !== undefined ? game.winnerId : null)
       } else {
-        // Если статус 'finished', но игра не завершена - устанавливаем статус обратно
-        if (game.status === 'finished') {
-          console.warn('⚠️ Game status is finished but game is not actually finished, setting status to in_progress')
-          setGameStatus('in_progress')
-        } else {
-          setGameStatus(game.status)
-        }
+        // Игра НЕ завершена - устанавливаем статус как есть из БД
+        // Если статус 'finished', но нет winnerId (и не бот-игра) - это ошибка данных, но доверяем серверу
+        setGameStatus(game.status)
         setWinnerId(null)
       }
       
