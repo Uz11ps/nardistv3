@@ -1308,8 +1308,14 @@ export default function BackgammonBoard({
       
       // 3. Подсветка выбранной точки
       if (selectedPoint === pointIndex) {
+        // Применяем параметры для highlight (так же как и для hover)
+        const selectedHW = pW * debugConfig.highlightWidthScale
+        const selectedHH = hH * debugConfig.highlightHeightScale
+        const selectedHX = hX + (pW - selectedHW) / 2 + scaleX(debugConfig.highlightXOffset)
+        const selectedHY = hY + (hH - selectedHH) / 2 + debugConfig.highlightYOffset
+
         ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
-        ctx.fillRect(hX, hY, pW, hH)
+        ctx.fillRect(selectedHX, selectedHY, selectedHW, selectedHH)
       }
     }
     
