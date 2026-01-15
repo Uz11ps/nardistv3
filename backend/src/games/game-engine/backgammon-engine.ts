@@ -369,7 +369,8 @@ export class BackgammonEngine {
 
     generateMoves(state, dice, []);
     
-    if (moves.length === 0) return [[]];
+    // Если нет валидных ходов, возвращаем пустой массив (не [[]])
+    if (moves.length === 0) return [];
 
     const maxLength = Math.max(...moves.map((m) => m.length));
     return moves.filter((m) => m.length === maxLength);
