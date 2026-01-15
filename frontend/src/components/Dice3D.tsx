@@ -81,6 +81,11 @@ function Die({ value, isRolling, delay, diceColor }: DieProps) {
     }
   }
 
+  const dieFaceStyle = {
+    backgroundColor: diceColor,
+    borderRadius: '20%', // Make it relative to size and ensure it's applied inline
+  }
+
   return (
     <div className="die-container" style={{ animationDelay: `${delay}s` }}>
       <div 
@@ -90,12 +95,12 @@ function Die({ value, isRolling, delay, diceColor }: DieProps) {
           backgroundColor: diceColor,
         }}
       >
-        <div className="die-face face-1" style={{ backgroundColor: diceColor }}>{renderDots(1)}</div>
-        <div className="die-face face-2" style={{ backgroundColor: diceColor }}>{renderDots(2)}</div>
-        <div className="die-face face-3" style={{ backgroundColor: diceColor }}>{renderDots(3)}</div>
-        <div className="die-face face-4" style={{ backgroundColor: diceColor }}>{renderDots(4)}</div>
-        <div className="die-face face-5" style={{ backgroundColor: diceColor }}>{renderDots(5)}</div>
-        <div className="die-face face-6" style={{ backgroundColor: diceColor }}>{renderDots(6)}</div>
+        <div className="die-face face-1" style={dieFaceStyle}>{renderDots(1)}</div>
+        <div className="die-face face-2" style={dieFaceStyle}>{renderDots(2)}</div>
+        <div className="die-face face-3" style={dieFaceStyle}>{renderDots(3)}</div>
+        <div className="die-face face-4" style={dieFaceStyle}>{renderDots(4)}</div>
+        <div className="die-face face-5" style={dieFaceStyle}>{renderDots(5)}</div>
+        <div className="die-face face-6" style={dieFaceStyle}>{renderDots(6)}</div>
       </div>
     </div>
   )
