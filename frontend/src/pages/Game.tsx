@@ -542,11 +542,26 @@ export default function Game() {
         ? { player1: game.player1Wins || 0, player2: game.player2Wins || 0 }
         : { player1: game.player1Score || 0, player2: game.player2Score || 0 }
       setScore(winsScore)
-      setGameStatus(game.status)
-      // Если игра завершена, устанавливаем winnerId для отображения модального окна
-      if (game.status === 'finished') {
-        setWinnerId(game.winnerId || null)
+      
+      // ВАЖНО: Проверяем, действительно ли игра завершена перед установкой статуса
+      // Игра считается завершенной ТОЛЬКО если:
+      // 1. Статус в БД = 'finished' И
+      // 2. Есть winnerId (или winnerId === null для бот-игр, где null = победа бота)
+      // Это предотвращает показ модального окна при обновлении страницы, если игра еще не завершена
+      const isReallyFinished = game.status === 'finished' && 
+                               (game.winnerId !== undefined || (game.type === 'vs_bot' && game.winnerId === null))
+      
+      if (isReallyFinished) {
+        setGameStatus('finished')
+        setWinnerId(game.winnerId !== undefined ? game.winnerId : null)
       } else {
+        // Если статус 'finished', но игра не завершена - устанавливаем статус обратно
+        if (game.status === 'finished') {
+          console.warn('⚠️ Game status is finished but game is not actually finished, setting status to in_progress')
+          setGameStatus('in_progress')
+        } else {
+          setGameStatus(game.status)
+        }
         setWinnerId(null)
       }
       
