@@ -1920,7 +1920,6 @@ export default function BackgammonBoard({
           
           setDragging({ pointIndex, offsetX: x - pointX, offsetY: y - pointY })
           setDragPosition({ x, y })
-          setSelectedPoint(pointIndex)
           
           const validTargets = new Set<number>()
           pointMoves.forEach(move => {
@@ -1965,7 +1964,6 @@ export default function BackgammonBoard({
     // Если множественное касание - прерываем перетаскивание
     if (e.touches.length > 1) {
       setDragging(null)
-      setSelectedPoint(null)
       setValidTargetPoints(new Set())
       return
     }
@@ -2119,7 +2117,6 @@ export default function BackgammonBoard({
     // Если ход не был выполнен, сбрасываем состояние перетаскивания
     setDragging(null)
     setDragPosition(null)
-    setSelectedPoint(null)
     setHoveredPoint(null)
     setValidTargetPoints(new Set())
   }
@@ -2304,7 +2301,6 @@ export default function BackgammonBoard({
     const pointIndex = getPointAtPosition(x, y, canvas)
     
     if (pointIndex === null) {
-      setSelectedPoint(null)
       setValidTargetPoints(new Set())
       setShowBearOffButton(null)
       return
@@ -2317,7 +2313,6 @@ export default function BackgammonBoard({
       const hasBarCheckers = activePlayer === 0 ? bar.white > 0 : bar.black > 0
       
       if (hasBarCheckers && pointIndex !== 24 && pointIndex !== 25) {
-        setSelectedPoint(null)
         setValidTargetPoints(new Set())
         setShowBearOffButton(null)
         return
@@ -2336,7 +2331,6 @@ export default function BackgammonBoard({
     }
     
     if (pointValue === 0 && pointIndex !== -3) { // Разрешаем клик по мусорке
-      setSelectedPoint(null)
       setValidTargetPoints(new Set())
       setShowBearOffButton(null)
       return
@@ -2351,7 +2345,6 @@ export default function BackgammonBoard({
       : ((pointIndex === 24 && activePlayer === 0) || (pointIndex === 25 && activePlayer === 1))
     
     if (!isMyChecker && !isMyBar && pointIndex !== -3 && !isSandbox) {
-      setSelectedPoint(null)
       setValidTargetPoints(new Set())
       setShowBearOffButton(null)
       return
