@@ -34,10 +34,25 @@ export class BotService {
       ];
     }
 
+    // Логируем состояние бара для отладки
+    const player = normalizedState.currentPlayer || 0;
+    const barValue = Array.isArray(normalizedState.bar) 
+      ? normalizedState.bar[player] 
+      : (normalizedState.bar?.[player === 0 ? 'white' : 'black'] || 0);
+    this.logger.log(`🤖 Bot move: player=${player}, bar=${barValue}, dice=[${dice.join(', ')}]`);
+
     // Get all valid moves from engine
     const allValidMoves = (engine as any).getAllValidMoves 
       ? (engine as any).getAllValidMoves(normalizedState, dice) 
       : [];
+    
+    // Логируем найденные ходы с бара
+    const barMoves = allValidMoves.filter(seq => seq.some(m => m.from === -1));
+    if (barMoves.length > 0) {
+      this.logger.log(`🤖 Found ${barMoves.length} move sequences with bar moves: ${JSON.stringify(barMoves.map(seq => seq.filter(m => m.from === -1))))}`);
+    } else if (barValue > 0) {
+      this.logger.warn(`⚠️ Bot has ${barValue} checkers on bar but no bar moves found!`);
+    }
     
     if (allValidMoves.length === 0) {
       return [];
@@ -47,7 +62,7 @@ export class BotService {
     if (mode === GameMode.LONG) {
       try {
         const gptSelectedMove = await this.gptBotService.evaluateMoves(
-          gameState,
+          normalizedState,
           allValidMoves,
           dice,
           'long',
@@ -62,11 +77,20 @@ export class BotService {
       }
       
       // Fallback to improved bot with heuristics
-      return this.improvedBotService.selectBestMove(gameState, allValidMoves, mode);
+      return this.improvedBotService.selectBestMove(normalizedState, allValidMoves, mode);
     }
 
     // For short backgammon, use improved bot with heuristics
-    const bestMove = this.improvedBotService.selectBestMove(gameState, allValidMoves, mode);
+    const bestMove = this.improvedBotService.selectBestMove(normalizedState, allValidMoves, mode);
+    
+    // Логируем выбранный ход
+    const hasBarMove = bestMove.some(m => m.from === -1);
+    if (hasBarMove) {
+      this.logger.log(`✅ Bot selected move with bar: ${JSON.stringify(bestMove.filter(m => m.from === -1))}`);
+    } else if (barValue > 0) {
+      this.logger.warn(`⚠️ Bot has ${barValue} checkers on bar but selected move without bar: ${JSON.stringify(bestMove)}`);
+    }
+    
     return bestMove;
   }
 

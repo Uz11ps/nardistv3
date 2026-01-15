@@ -28,17 +28,42 @@ export class ImprovedBotService {
       return [];
     }
 
+    // ВАЖНО: Нормализуем bar в состоянии перед оценкой
+    const normalizedState = { ...currentState };
+    if (normalizedState.bar && !Array.isArray(normalizedState.bar)) {
+      normalizedState.bar = [
+        normalizedState.bar.white || normalizedState.bar[0] || 0,
+        normalizedState.bar.black || normalizedState.bar[1] || 0
+      ];
+    }
+
     if (validMoves.length === 1) {
       return validMoves[0];
     }
 
     const engine = mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     
-    let bestMove = validMoves[0];
-    let bestScore = this.evaluateMoveSequence(currentState, validMoves[0], mode, engine);
+    // ВАЖНО: Приоритет ходам с бара, если есть шашки на баре
+    const player = normalizedState.currentPlayer || 0;
+    const barValue = Array.isArray(normalizedState.bar) 
+      ? normalizedState.bar[player] 
+      : (normalizedState.bar?.[player === 0 ? 'white' : 'black'] || 0);
+    
+    // Если есть шашки на баре, фильтруем только ходы с бара
+    let movesToEvaluate = validMoves;
+    if (barValue > 0 && mode === GameMode.SHORT) {
+      const barMoves = validMoves.filter(seq => seq.some(m => m.from === -1));
+      if (barMoves.length > 0) {
+        movesToEvaluate = barMoves;
+        this.logger.log(`🎯 Prioritizing ${barMoves.length} bar moves out of ${validMoves.length} total moves`);
+      }
+    }
+    
+    let bestMove = movesToEvaluate[0];
+    let bestScore = this.evaluateMoveSequence(normalizedState, movesToEvaluate[0], mode, engine);
 
-    for (const move of validMoves.slice(1)) {
-      const score = this.evaluateMoveSequence(currentState, move, mode, engine);
+    for (const move of movesToEvaluate.slice(1)) {
+      const score = this.evaluateMoveSequence(normalizedState, move, mode, engine);
       if (score > bestScore) {
         bestScore = score;
         bestMove = move;
@@ -59,6 +84,14 @@ export class ImprovedBotService {
   ): number {
     let score = 0;
     let testState = JSON.parse(JSON.stringify(state));
+    
+    // ВАЖНО: Нормализуем bar в тестовом состоянии
+    if (testState.bar && !Array.isArray(testState.bar)) {
+      testState.bar = [
+        testState.bar.white || testState.bar[0] || 0,
+        testState.bar.black || testState.bar[1] || 0
+      ];
+    }
 
     for (const move of moves) {
       const moveScore = this.evaluateMove(testState, move, mode, engine);
@@ -66,6 +99,14 @@ export class ImprovedBotService {
       
       // Применяем ход для оценки следующего
       testState = engine.applyMove(testState, move.from, move.to, move.die);
+      
+      // ВАЖНО: Нормализуем bar после каждого хода
+      if (testState.bar && !Array.isArray(testState.bar)) {
+        testState.bar = [
+          testState.bar.white || testState.bar[0] || 0,
+          testState.bar.black || testState.bar[1] || 0
+        ];
+      }
     }
 
     return score;
@@ -100,21 +141,39 @@ export class ImprovedBotService {
     const isPlayer1 = player === 0;
     const opponent = 1 - player;
 
-    // 1. Вход с бара - высокий приоритет
+    // ВАЖНО: Нормализуем bar для проверки
+    let barValue = 0;
+    if (Array.isArray(state.bar)) {
+      barValue = state.bar[player] || 0;
+    } else if (state.bar && typeof state.bar === 'object') {
+      barValue = player === 0 
+        ? (state.bar.white || state.bar[0] || 0)
+        : (state.bar.black || state.bar[1] || 0);
+    }
+
+    // 1. Вход с бара - ОЧЕНЬ ВЫСОКИЙ приоритет (если есть шашки на баре)
     if (move.from === -1) {
-      score += 50;
+      // Если есть шашки на баре, ход с бара ОБЯЗАТЕЛЕН - даем максимальный приоритет
+      if (barValue > 0) {
+        score += 1000; // Максимальный приоритет для ходов с бара
+      } else {
+        score += 50; // Обычный приоритет, если bar уже пуст (не должно происходить)
+      }
       
       // Проверяем безопасность входа (не оставляем блот)
       const enterPoint = move.to;
       if (enterPoint >= 0 && enterPoint < 24) {
         const pointValue = state.points[enterPoint];
         if (isPlayer1 && pointValue === 1) {
-          // Оставляем блот - штраф
-          score -= 30;
+          // Оставляем блот - небольшой штраф, но все равно приоритет выше чем обычные ходы
+          score -= 20;
         } else if (!isPlayer1 && pointValue === -1) {
-          score -= 30;
+          score -= 20;
         }
       }
+    } else if (barValue > 0) {
+      // Если есть шашки на баре, но ход не с бара - большой штраф
+      score -= 500;
     }
 
     // 2. Вынос шашек (bearing off) - очень высокий приоритет

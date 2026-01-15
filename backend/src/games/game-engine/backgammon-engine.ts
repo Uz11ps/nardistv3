@@ -299,6 +299,16 @@ export class BackgammonEngine {
   getAllValidMoves(state: BoardState, dice: number[]): Array<Array<{ from: number; to: number; die: number }>> {
     if (dice.length === 0) return [];
 
+    // ВАЖНО: Нормализуем bar из объекта { white, black } в массив [white, black]
+    // для совместимости с различными форматами данных
+    const normalizedState = { ...state };
+    if (normalizedState.bar && !Array.isArray(normalizedState.bar)) {
+      normalizedState.bar = [
+        (normalizedState.bar as any).white || (normalizedState.bar as any)[0] || 0,
+        (normalizedState.bar as any).black || (normalizedState.bar as any)[1] || 0
+      ] as [number, number];
+    }
+
     const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
     
     const generateMoves = (
@@ -316,8 +326,18 @@ export class BackgammonEngine {
       const player = currentState.currentPlayer;
       let foundAnyMove = false;
 
+      // ВАЖНО: Нормализуем bar в текущем состоянии перед проверкой
+      let barValue = 0;
+      if (Array.isArray(currentState.bar)) {
+        barValue = currentState.bar[player] || 0;
+      } else if (currentState.bar && typeof currentState.bar === 'object') {
+        barValue = player === 0 
+          ? ((currentState.bar as any).white || (currentState.bar as any)[0] || 0)
+          : ((currentState.bar as any).black || (currentState.bar as any)[1] || 0);
+      }
+
       // Try entering from bar first
-      if (currentState.bar[player] > 0) {
+      if (barValue > 0) {
         const triedDice = new Set<number>();
         for (let i = 0; i < remainingDice.length; i++) {
           const die = remainingDice[i];
@@ -328,6 +348,13 @@ export class BackgammonEngine {
           if (this.validateMove(currentState, -1, enterPoint, die)) {
             foundAnyMove = true;
             const newState = this.applyMove(currentState, -1, enterPoint, die);
+            // ВАЖНО: Убеждаемся, что bar в новом состоянии нормализован как массив
+            if (newState.bar && !Array.isArray(newState.bar)) {
+              newState.bar = [
+                (newState.bar as any).white || (newState.bar as any)[0] || 0,
+                (newState.bar as any).black || (newState.bar as any)[1] || 0
+              ] as [number, number];
+            }
             const newDice = [...remainingDice];
             newDice.splice(i, 1);
             generateMoves(newState, newDice, [...currentMoves, { from: -1, to: enterPoint, die }]);
