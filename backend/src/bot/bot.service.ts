@@ -39,12 +39,15 @@ export class BotService {
     const barValue = Array.isArray(normalizedState.bar) 
       ? normalizedState.bar[player] 
       : (normalizedState.bar?.[player === 0 ? 'white' : 'black'] || 0);
-    this.logger.log(`Bot move: player=${player}, bar=${barValue}, dice=[${dice.join(', ')}]`);
+    this.logger.log(`Bot move: player=${player}, bar=${barValue}, dice=[${dice.join(', ')}], mode=${mode}`);
+    this.logger.log(`Bot normalizedState.bar: ${JSON.stringify(normalizedState.bar)}`);
 
     // Get all valid moves from engine
     const allValidMoves = (engine as any).getAllValidMoves 
       ? (engine as any).getAllValidMoves(normalizedState, dice) 
       : [];
+    
+    this.logger.log(`Bot getAllValidMoves returned ${allValidMoves.length} move sequences`);
     
     // Логируем найденные ходы с бара
     const barMoves = allValidMoves.filter(seq => seq.some(m => m.from === -1));
@@ -52,6 +55,7 @@ export class BotService {
       this.logger.log(`Bot found ${barMoves.length} move sequences with bar moves: ${JSON.stringify(barMoves.map(seq => seq.filter(m => m.from === -1)))}`);
     } else if (barValue > 0) {
       this.logger.warn(`Bot has ${barValue} checkers on bar but no bar moves found!`);
+      this.logger.warn(`Bot normalizedState: ${JSON.stringify({ bar: normalizedState.bar, currentPlayer: normalizedState.currentPlayer, points: normalizedState.points?.slice(0, 6) })}`);
     }
     
     if (allValidMoves.length === 0) {

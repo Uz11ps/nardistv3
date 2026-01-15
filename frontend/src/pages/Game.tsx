@@ -1330,21 +1330,10 @@ export default function Game() {
         const moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 15
         const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
-        let isOvertime = data.isOvertime || false
         
-        // Если таймер на ход близок к 15 (начало хода), сбрасываем овертайм
-        // Это предотвращает отображение овертайма при первом броске кубиков
-        // ВАЖНО: Для бот-игр также проверяем овертайм по общему времени
-        if (moveTimeRemaining >= 14.5 && totalTime1 > 0 && totalTime2 > 0) {
-          isOvertime = false
-        }
-        
-        // ВАЖНО: Дополнительная проверка овертайма для всех типов игр
-        // Если общее время текущего игрока <= 0 И время на ход <= 0, это овертайм
-        const currentPlayerTime = data.currentPlayer === 0 ? totalTime1 : totalTime2
-        if (currentPlayerTime <= 0 && moveTimeRemaining <= 0) {
-          isOvertime = true
-        }
+        // ВАЖНО: Используем isOvertime ТОЛЬКО из сервера, не пересчитываем локально
+        // Сервер уже правильно вычисляет овертайм на основе времени
+        const isOvertime = data.isOvertime || false
         
         lastTimerUpdateRef.current = Date.now() // Обновляем время последнего синхронизации
         
@@ -1850,22 +1839,38 @@ export default function Game() {
       if (gameInfo?.mode === 'short') {
         const bar = gameState.bar || { white: 0, black: 0 }
         const isPlayer1 = gameInfo.player1Id === user?.id
-        const hasBarCheckers = isPlayer1 ? bar.white > 0 : bar.black > 0
+        const initialBarCount = isPlayer1 ? bar.white : bar.black
         
-        if (hasBarCheckers) {
-          // Проверяем, есть ли хотя бы один ход не с бара
-          // ВАЖНО: from может быть 24 (белые) или 25 (черные) для бара, или -1 после нормализации
-          const hasNonBarMove = pendingMoves.some(move => {
+        // ВАЖНО: Проверяем только ИСХОДНОЕ количество шашек на баре
+        // Если ход с бара был совершен (даже без подтверждения), разрешаем последующие ходы
+        if (initialBarCount > 0) {
+          // Проверяем, был ли совершен хотя бы один ход с бара
+          const hasBarMove = pendingMoves.some(move => {
             const from = move.from === 24 || move.from === 25 ? -1 : move.from
-            // Если from !== -1, значит это ход не с бара - невалидно
-            return from !== -1 && from >= 0 && from < 24
+            // Проверяем также steps для комбинированных ходов
+            if ((move as any).steps) {
+              return (move as any).steps.some((step: any) => step.from === -1 || step.from === 24 || step.from === 25)
+            }
+            return from === -1 || from === 24 || from === 25
           })
           
-          if (hasNonBarMove) {
-            // Невалидный ход - откатываем локально без отправки на сервер
-            console.warn('⚠️ Invalid move: has bar checkers but trying to move from board')
-            setPendingMoves([])
-            return
+          // Если был совершен ход с бара, разрешаем все последующие ходы
+          // Если хода с бара не было, но есть ходы не с бара - невалидно
+          if (!hasBarMove) {
+            const hasNonBarMove = pendingMoves.some(move => {
+              const from = move.from === 24 || move.from === 25 ? -1 : move.from
+              if ((move as any).steps) {
+                return (move as any).steps.some((step: any) => step.from !== -1 && step.from !== 24 && step.from !== 25 && step.from >= 0 && step.from < 24)
+              }
+              return from !== -1 && from !== 24 && from !== 25 && from >= 0 && from < 24
+            })
+            
+            if (hasNonBarMove) {
+              // Невалидный ход - откатываем локально без отправки на сервер
+              console.warn('⚠️ Invalid move: has bar checkers but trying to move from board')
+              setPendingMoves([])
+              return
+            }
           }
         }
       }
