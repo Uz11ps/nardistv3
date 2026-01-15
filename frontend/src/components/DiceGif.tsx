@@ -90,16 +90,18 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
   const usedCount = usedDiceIndices.size;
   const remainingCount = totalDice - usedCount;
 
-  // Увеличиваем размер в 3 раза (было 2.5 и 1.5, стало 7.5 и 4.5)
-  const containerStyle: React.CSSProperties = {
-    position: 'relative',
-    width: size * 7.5,
-    height: size * 4.5,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 100,
-  };
+    // Увеличиваем размер в 3 раза (было 2.5 и 1.5, стало 7.5 и 4.5)
+    const containerStyle: React.CSSProperties = {
+      position: 'relative',
+      width: size * 7.5,
+      height: size * 4.5,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 100,
+      borderRadius: '12px', // Match Dice3D border radius
+      overflow: 'hidden',   // Clip corners to make it rounded
+    };
 
   if (remainingCount === 0) return null;
 

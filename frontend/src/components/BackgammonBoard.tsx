@@ -147,8 +147,8 @@ export default function BackgammonBoard({
     validHighlightXOffset: 0,
     validHighlightYOffset: -31,
     // Bottom row specific highlight offset (if needed separately, otherwise shared)
-    highlightBottomYOffset: 31,
-    validHighlightBottomYOffset: 31,
+    highlightBottomYOffset: 26,
+    validHighlightBottomYOffset: 26,
 
     // Dragging checker parameters
     dragCheckerSizeScale: 1.0,
