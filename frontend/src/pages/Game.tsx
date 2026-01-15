@@ -1764,13 +1764,16 @@ export default function Game() {
         
         if (hasBarCheckers) {
           // Проверяем, есть ли хотя бы один ход не с бара
+          // ВАЖНО: from может быть 24 (белые) или 25 (черные) для бара, или -1 после нормализации
           const hasNonBarMove = pendingMoves.some(move => {
             const from = move.from === 24 || move.from === 25 ? -1 : move.from
-            return from !== -1
+            // Если from !== -1, значит это ход не с бара - невалидно
+            return from !== -1 && from >= 0 && from < 24
           })
           
           if (hasNonBarMove) {
             // Невалидный ход - откатываем локально без отправки на сервер
+            console.warn('⚠️ Invalid move: has bar checkers but trying to move from board')
             setPendingMoves([])
             return
           }

@@ -1450,28 +1450,46 @@ export default function BackgammonBoard({
       const barCenterX = barX + barWidth / 2
       
       // Белые шашки на баре (положительные значения)
+      // ВАЖНО: Позиция должна совпадать с хитбоксом бара (height * 0.2 до height * 0.8)
       if (whiteBarCount > 0) {
         const isAnimatingFromWhiteBar = animatingChecker && animatingChecker.from === 24
         const countToDraw = isAnimatingFromWhiteBar ? whiteBarCount - 1 : whiteBarCount
-        const barStartY = height - pointHeight * 0.3
+        // Позиционируем в центре хитбокса бара (от height * 0.2 до height * 0.8)
+        const barHitboxTop = height * 0.2
+        const barHitboxBottom = height * 0.8
+        const barHitboxCenter = (barHitboxTop + barHitboxBottom) / 2
+        // Начинаем от центра и идем вниз
+        const barStartY = barHitboxCenter
         const isMyBar = isSandbox ? true : isPlayer1
         const overlap = countToDraw > 5 ? (checkerSize * 0.8) : checkerSize
         for (let i = 0; i < countToDraw; i++) {
-          const barY = barStartY - (i * overlap)
-          drawChecker(barCenterX, barY, checkerSize, true, isMyBar)
+          const barY = barStartY + (i * overlap)
+          // Ограничиваем позицию хитбоксом бара
+          if (barY >= barHitboxTop && barY <= barHitboxBottom) {
+            drawChecker(barCenterX, barY, checkerSize, true, isMyBar)
+          }
         }
       }
       
       // Черные шашки на баре (отрицательные значения)
+      // ВАЖНО: Позиция должна совпадать с хитбоксом бара (height * 0.2 до height * 0.8)
       if (blackBarCount > 0) {
         const isAnimatingFromBlackBar = animatingChecker && animatingChecker.from === 25
         const countToDraw = isAnimatingFromBlackBar ? blackBarCount - 1 : blackBarCount
-        const barStartY = pointHeight * 0.3
+        // Позиционируем в центре хитбокса бара (от height * 0.2 до height * 0.8)
+        const barHitboxTop = height * 0.2
+        const barHitboxBottom = height * 0.8
+        const barHitboxCenter = (barHitboxTop + barHitboxBottom) / 2
+        // Начинаем от центра и идем вверх
+        const barStartY = barHitboxCenter
         const isMyBar = isSandbox ? true : !isPlayer1
         const overlap = countToDraw > 5 ? (checkerSize * 0.8) : checkerSize
         for (let i = 0; i < countToDraw; i++) {
-          const barY = barStartY + (i * overlap)
-          drawChecker(barCenterX, barY, checkerSize, false, isMyBar)
+          const barY = barStartY - (i * overlap)
+          // Ограничиваем позицию хитбоксом бара
+          if (barY >= barHitboxTop && barY <= barHitboxBottom) {
+            drawChecker(barCenterX, barY, checkerSize, false, isMyBar)
+          }
         }
       }
     }
