@@ -1206,6 +1206,18 @@ export class GamesService {
     const engine = game.mode === GameMode.SHORT ? this.backgammonEngine : this.longBackgammonEngine;
     let state = game.gameState;
     
+    // ВАЖНО: Нормализуем bar из объекта { white, black } в массив [white, black]
+    // для совместимости с движком, который ожидает массив
+    if (state && state.bar && !Array.isArray(state.bar)) {
+      state = {
+        ...state,
+        bar: [
+          state.bar.white || state.bar[0] || 0,
+          state.bar.black || state.bar[1] || 0
+        ]
+      };
+    }
+    
     // В Sandbox режиме расслабляем некоторые правила
     const isSandbox = game.type === GameType.SANDBOX;
     if (isSandbox && state) {

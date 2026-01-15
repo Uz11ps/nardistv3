@@ -702,11 +702,39 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           const gameStateAfterMove = await this.gamesService.getGameState(gameId);
           
           // Если у бота не было ходов (botMoves.length === 0), makeMove уже переключил ход на игрока
-          // В этом случае не нужно проверять рекурсивно, просто отправляем состояние и выходим
+          // В этом случае нужно бросить кубики для игрока и выйти
           if (botMoves.length === 0) {
             this.logger.log(`🔄 Bot had no valid moves, turn switched to player for gameId=${gameId}`);
             this.server.to(`game:${gameId}`).emit('game_state', gameStateAfterMove);
             await this.sendTimerUpdateForGame(gameId);
+            
+            // ВАЖНО: После переключения хода на игрока нужно бросить кубики для игрока
+            // Проверяем, что кубики пустые и игра в процессе
+            const finalGame = await this.gamesService.findOne(gameId);
+            if (finalGame.status === 'in_progress') {
+              const diceFromGame = finalGame.gameState?.dice;
+              const hasNoDice = !diceFromGame || (Array.isArray(diceFromGame) && diceFromGame.length === 0);
+              const bothOffsetsChosen = finalGame.p1OffsetChosenAt !== null && finalGame.p2OffsetChosenAt !== null;
+              
+              if (hasNoDice && bothOffsetsChosen && finalGame.currentPlayer === 0) {
+                // Бросаем кубики для игрока
+                try {
+                  const playerId = finalGame.player1Id;
+                  const dice = await this.gamesService.rollDice(gameId, playerId, false);
+                  const eventId = `${gameId}_${Date.now()}_player_after_bot_skip`;
+                  this.server.to(`game:${gameId}`).emit('dice_rolled', { 
+                    dice: dice, 
+                    playerId: playerId,
+                    eventId
+                  });
+                  const updatedGameState = await this.gamesService.getGameState(gameId);
+                  this.server.to(`game:${gameId}`).emit('game_state', updatedGameState);
+                } catch (rollError) {
+                  this.logger.error(`❌ Error rolling dice for player after bot skip:`, rollError);
+                }
+              }
+            }
+            
             return; // Выходим, т.к. ход переключен на игрока
           }
           

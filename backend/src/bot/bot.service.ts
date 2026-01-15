@@ -24,9 +24,19 @@ export class BotService {
       return [];
     }
 
+    // ВАЖНО: Нормализуем bar из объекта { white, black } в массив [white, black]
+    // для совместимости с движком, который ожидает массив
+    const normalizedState = { ...gameState };
+    if (normalizedState.bar && !Array.isArray(normalizedState.bar)) {
+      normalizedState.bar = [
+        normalizedState.bar.white || normalizedState.bar[0] || 0,
+        normalizedState.bar.black || normalizedState.bar[1] || 0
+      ];
+    }
+
     // Get all valid moves from engine
     const allValidMoves = (engine as any).getAllValidMoves 
-      ? (engine as any).getAllValidMoves(gameState, dice) 
+      ? (engine as any).getAllValidMoves(normalizedState, dice) 
       : [];
     
     if (allValidMoves.length === 0) {
