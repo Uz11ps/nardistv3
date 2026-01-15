@@ -157,12 +157,32 @@ export default function Home() {
     }
   }
 
+  const handlePlayClick = async () => {
+    try {
+      // Проверяем наличие активной игры (включая бот-игры)
+      const response = await apiClient.get('/games/active').catch(() => ({ data: { game: null } }))
+      const activeGame = response.data?.game || response.data
+
+      if (activeGame && activeGame.id && (activeGame.status === 'in_progress' || activeGame.status === 'waiting')) {
+        // Если есть активная игра - переходим в неё
+        navigate(`/game/${activeGame.id}`)
+      } else {
+        // Если нет активной игры - переходим на страницу выбора режима
+        navigate('/game/modes')
+      }
+    } catch (error) {
+      // Если ошибка при проверке активной игры - переходим на страницу выбора режима
+      console.error('Ошибка при проверке активной игры:', error)
+      navigate('/game/modes')
+    }
+  }
+
   if (!user) {
     return null
   }
 
   const mainMenuItems = [
-    { icon: '/img/зарик.png', title: 'Играть', path: '/game/modes' },
+    { icon: '/img/зарик.png', title: 'Играть', path: '/game/modes', onClick: handlePlayClick },
     { icon: '/img/шляпа.png', title: 'Курсы', path: '/academy' },
     { icon: '/img/город.png', title: 'Город', path: '/city' },
     { icon: '/img/кланы.png', title: 'Кланы', path: '/clans', disabled: (user?.level || 0) < 10 },
@@ -249,7 +269,7 @@ export default function Home() {
 
         {/* Центральное лого */}
         <div className="home-central-logo-container-v3">
-          <div className="home-central-logo-circle-v3" onClick={() => navigate('/game/modes')} style={{ cursor: 'pointer' }}>
+          <div className="home-central-logo-circle-v3" onClick={handlePlayClick} style={{ cursor: 'pointer' }}>
             <img src="/img/logo.png" alt="Nardis" className="home-central-logo-v3" />
           </div>
         </div>

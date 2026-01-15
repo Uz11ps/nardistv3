@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { GamesGateway } from './games.gateway';
 import { MatchmakingService } from '../matchmaking/matchmaking.service';
+import { GameStatus } from './game.entity';
 
 @Controller('games')
 export class GamesController {
@@ -25,10 +26,21 @@ export class GamesController {
   @UseGuards(JwtAuthGuard)
   async getActiveGame(@CurrentUser() user: any) {
     try {
-      const game = await this.gamesService.getActiveGame(user.id);
+      // Сначала проверяем через getActiveGame (исключает бот-игры)
+      let game = await this.gamesService.getActiveGame(user.id);
+      
+      // Если не найдено, проверяем все активные игры игрока (включая бот-игры)
+      if (!game) {
+        const allActiveGames = await this.gamesService.getActiveGamesByPlayer(user.id);
+        // Берем первую активную игру (приоритет: in_progress > waiting)
+        const inProgressGame = allActiveGames.find(g => g.status === GameStatus.IN_PROGRESS);
+        game = inProgressGame || allActiveGames.find(g => g.status === GameStatus.WAITING) || null;
+      }
+      
       if (!game) {
         return { game: null };
       }
+      
       // Возвращаем только необходимые поля, чтобы избежать проблем с сериализацией
       return {
         game: {

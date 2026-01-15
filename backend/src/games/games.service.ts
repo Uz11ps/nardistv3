@@ -364,7 +364,7 @@ export class GamesService {
   }
 
   /**
-   * Получает все активные игры конкретного игрока
+   * Получает все активные игры конкретного игрока (включая бот-игры)
    */
   async getActiveGamesByPlayer(playerId: string): Promise<Game[]> {
     try {
@@ -377,6 +377,8 @@ export class GamesService {
         where: [
           { status: GameStatus.IN_PROGRESS, player1Id: playerId },
           { status: GameStatus.IN_PROGRESS, player2Id: playerId },
+          { status: GameStatus.WAITING, player1Id: playerId },
+          { status: GameStatus.WAITING, player2Id: playerId },
         ],
         relations: [],
       });
