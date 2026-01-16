@@ -81,15 +81,26 @@ export default function BackgammonBoard({
       return
     }
     
-    // Если это новый бросок (4 кубика или 2 разных/одинаковых)
+    const allEqual = diceArray.every(d => d === diceArray[0]);
+    
+    // В нардах дубль — это либо 4 кубика сразу, либо любое количество одинаковых кубиков
+    // (потому что сервер при ходе уменьшает их количество с 4 до 3, 2, 1).
+    // Если мы видим 2 кубика и они разные — это обычный ход.
+    // Если мы видим 2 одинаковых — это либо начало дубля (до расширения сервером), либо середина.
     if (diceArray.length === 4) {
       setIsTurnDoubles(true)
+    } else if (diceArray.length === 3) {
+      if (allEqual) setIsTurnDoubles(true)
     } else if (diceArray.length === 2) {
-      setIsTurnDoubles(diceArray[0] === diceArray[1])
+      setIsTurnDoubles(allEqual)
+    } else if (diceArray.length === 1) {
+      if (allEqual) setIsTurnDoubles(true)
     }
-    // Если в массиве 3 кубика или 1 кубик — это промежуточное состояние хода.
-    // Мы НЕ меняем setIsTurnDoubles, чтобы сохранить состояние "дубль это или нет", 
-    // которое было установлено в начале хода (при 4 или 2 кубиках).
+    
+    // Логирование для отладки (можно будет убрать потом)
+    if (diceArray.length > 0) {
+      console.log('🎲 [Dice State] array:', diceArray, 'isDoubles:', allEqual && diceArray.length !== 2 || (diceArray.length === 2 && allEqual));
+    }
   }, [diceArray, currentPlayer])
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
 
@@ -3249,15 +3260,17 @@ export default function BackgammonBoard({
 
               if (isTurnDoubles) {
                 // Всегда показываем 2 кубика при дубле
-                // Новая логика пошагового исчезновения "половинок":
-                // 4 хода: d1=1.0, d2=1.0 (2.0)
-                // 3 хода: d1=1.0, d2=0.5 (1.5)
-                // 2 хода: d1=0.5, d2=0.5 (1.0)
-                // 1 ход:  d1=0.5, d2=0.15 (0.5)
-                // 0 ходов: d1=0.15, d2=0.15 (0.0)
+                // Пошаговое исчезновение (тратим сначала второй кубик, потом первый):
+                // 4 хода: 1.0, 1.0 (Оба целые)
+                // 3 хода: 1.0, 0.5 (Один целый, один половинка)
+                // 2 хода: 1.0, 0.1 (Один целый, один "призрак")
+                // 1 ход:  0.5, 0.1 (Один половинка, один "призрак")
+                // 0 ходов: 0.1, 0.1 (Оба "призраки")
                 
-                const d1Opacity = movesCount >= 3 ? 1.0 : (movesCount >= 1 ? 0.5 : 0.15);
-                const d2Opacity = movesCount >= 4 ? 1.0 : (movesCount >= 2 ? 0.5 : 0.15);
+                // d1 (левый) тратится на 2-м и 1-м ходах
+                // d2 (правый) тратится на 4-м и 3-м ходах
+                const d1Opacity = movesCount >= 2 ? 1.0 : (movesCount === 1 ? 0.5 : 0.1);
+                const d2Opacity = movesCount >= 4 ? 1.0 : (movesCount === 3 ? 0.5 : 0.1);
 
                 return (
                   <>
