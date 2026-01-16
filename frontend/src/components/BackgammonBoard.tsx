@@ -74,15 +74,23 @@ export default function BackgammonBoard({
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
 
   // Эффект для отслеживания типа хода (дубль или нет)
+  // Теперь учитывает currentPlayer для сброса состояния
   useEffect(() => {
-    if (diceArray && diceArray.length >= 2) {
-      const doubles = diceArray.length > 2 || (diceArray.length === 2 && diceArray[0] === diceArray[1])
-      setIsTurnDoubles(doubles)
-    } else if (!diceArray || diceArray.length === 0) {
+    if (!diceArray || diceArray.length === 0) {
       setIsTurnDoubles(false)
+      return
     }
-    // При length === 1 сохраняем предыдущее состояние
-  }, [diceArray])
+    
+    // Если в массиве больше 2 кубиков - это точно дубль
+    if (diceArray.length > 2) {
+      setIsTurnDoubles(true)
+    } 
+    // Если 2 кубика - проверяем на равенство
+    else if (diceArray.length === 2) {
+      setIsTurnDoubles(diceArray[0] === diceArray[1])
+    }
+    // Если 1 кубик - сохраняем текущее состояние (дубль это или нет)
+  }, [diceArray, currentPlayer])
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
 
   // --- CONFIGURATIONS ---
@@ -3235,16 +3243,17 @@ export default function BackgammonBoard({
               if (!effectiveDice || effectiveDice.length === 0) return null;
               
               const dieValue = effectiveDice[0];
+              // Вычисляем оставшиеся ходы (половинки)
+              // В Sandbox usedDiceIndices обычно пустой, а длина массива уменьшается сервером
+              const movesCount = effectiveDice.length - usedDiceIndices.size;
 
               if (isTurnDoubles) {
-                // Логика для дубля: 2 кубика, которые тратятся по половинке (0.5 opacity за ход)
-                // remainingMoves учитывает и серверные данные, и локальные pending ходы
-                
-                // Распределяем ходы: 
-                // Кубик 2 отвечает за 4-й и 3-й ходы
-                // Кубик 1 отвечает за 2-й и 1-й ходы
-                const d2Opacity = remainingMoves >= 4 ? 1 : (remainingMoves === 3 ? 0.5 : 0.15);
-                const d1Opacity = remainingMoves >= 2 ? 1 : (remainingMoves === 1 ? 0.5 : 0.15);
+                // Всегда показываем 2 кубика при дубле
+                // d2 (правый) отвечает за 4-й и 3-й ходы
+                // d1 (левый) отвечает за 2-й и 1-й ходы
+                // Прозрачность: 1.0 (полный), 0.5 (половинка), 0.2 (призрак)
+                const d2Opacity = movesCount >= 4 ? 1 : (movesCount === 3 ? 0.5 : 0.2);
+                const d1Opacity = movesCount >= 2 ? 1 : (movesCount === 1 ? 0.5 : 0.2);
 
                 return (
                   <>
