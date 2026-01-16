@@ -2815,13 +2815,13 @@ export default function BackgammonBoard({
   const remainingMoves = useMemo(() => {
     if (!diceArray || diceArray.length === 0) return 0
     
-    const isDoubles = isTurnDoubles || (diceArray.length >= 2 && diceArray.every(d => d === diceArray[0]))
+    const isDoubles = isActuallyDoubles
     if (!isDoubles) return 0
     
     const totalDice = diceArray.length
     const usedCount = usedDiceIndices.size
     return totalDice - usedCount
-  }, [diceArray, usedDiceIndices])
+  }, [diceArray, usedDiceIndices, isActuallyDoubles])
 
   // --- DEBUG UI COMPONENT ---
   const DebugUI = () => {
