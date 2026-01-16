@@ -3147,7 +3147,7 @@ export default function BackgammonBoard({
               const isDoubles = effectiveDice.length > 2;
               const dieValue = effectiveDice[0];
 
-              if (isDoubles && !isSandbox) {
+              if (isDoubles) {
                 // Логика для дубля: показываем 2 кубика, которые "тратятся" по половинке
                 // 4 хода = 2 полных кубика
                 // 3 хода = 1 полный + 1 полупрозрачный
@@ -3181,7 +3181,7 @@ export default function BackgammonBoard({
                 );
               }
 
-              // Обычный режим (или Sandbox дубль)
+              // Обычный режим
               return effectiveDice.map((dieValue, index) => {
                 if (usedDiceIndices.has(index)) return null;
                 return (
