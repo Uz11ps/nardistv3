@@ -3247,21 +3247,49 @@ export default function BackgammonBoard({
               if (isActuallyDoubles) {
                 // Всегда показываем 2 кубика при дубле
                 // Пошаговое исчезновение (ровно по 0.5 за каждый ход):
-                // 4 хода: 1.0, 1.0 (Оба полные)
-                // 3 хода: 1.0, 0.5 (Один полный, одна половинка)
-                // 2 хода: 0.5, 0.5 (Две половинки)
-                // 1 ход:  0.5, 0.1 (Одна половинка, один призрак)
-                // 0 ходов: 0.1, 0.1 (Два призрака)
+                // 4 хода: 1.0, 1.0 (x2, x2)
+                // 3 хода: 1.0, 0.5 (x2, x1)
+                // 2 хода: 0.5, 0.5 (x1, x1) <- Две половинки
+                // 1 ход:  0.5, 0.1 (x1, x0)
+                // 0 ходов: 0.1, 0.1 (x0, x0)
                 
                 const d1Opacity = movesCount >= 3 ? 1.0 : (movesCount >= 1 ? 0.5 : 0.1);
                 const d2Opacity = movesCount >= 4 ? 1.0 : (movesCount >= 2 ? 0.5 : 0.1);
+                
+                const d1Multiplier = movesCount >= 3 ? 2 : (movesCount >= 1 ? 1 : 0);
+                const d2Multiplier = movesCount >= 4 ? 2 : (movesCount >= 2 ? 1 : 0);
+
+                const renderBadge = (multiplier: number) => {
+                  if (multiplier === 0) return null;
+                  return (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-15px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: 'rgba(232, 65, 66, 0.9)',
+                      color: 'white',
+                      borderRadius: '10px',
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      zIndex: 10,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      pointerEvents: 'none'
+                    }}>
+                      x{multiplier}
+                    </div>
+                  );
+                };
 
                 return (
                   <>
                     <div style={{ opacity: d1Opacity, position: 'relative', transition: 'opacity 0.3s ease' }}>
+                      {renderBadge(d1Multiplier)}
                       <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
                     </div>
                     <div style={{ opacity: d2Opacity, position: 'relative', transition: 'opacity 0.3s ease' }}>
+                      {renderBadge(d2Multiplier)}
                       <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
                     </div>
                   </>
