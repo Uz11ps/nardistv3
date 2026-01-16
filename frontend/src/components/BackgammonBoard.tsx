@@ -81,15 +81,15 @@ export default function BackgammonBoard({
       return
     }
     
-    // Если в массиве больше 2 кубиков - это точно дубль
-    if (diceArray.length > 2) {
+    // Если это новый бросок (4 кубика или 2 разных/одинаковых)
+    if (diceArray.length === 4) {
       setIsTurnDoubles(true)
-    } 
-    // Если 2 кубика - проверяем на равенство
-    else if (diceArray.length === 2) {
+    } else if (diceArray.length === 2) {
       setIsTurnDoubles(diceArray[0] === diceArray[1])
     }
-    // Если 1 кубик - сохраняем текущее состояние (дубль это или нет)
+    // Если в массиве 3 кубика или 1 кубик — это промежуточное состояние хода.
+    // Мы НЕ меняем setIsTurnDoubles, чтобы сохранить состояние "дубль это или нет", 
+    // которое было установлено в начале хода (при 4 или 2 кубиках).
   }, [diceArray, currentPlayer])
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
 
@@ -3249,11 +3249,15 @@ export default function BackgammonBoard({
 
               if (isTurnDoubles) {
                 // Всегда показываем 2 кубика при дубле
-                // d2 (правый) отвечает за 4-й и 3-й ходы
-                // d1 (левый) отвечает за 2-й и 1-й ходы
-                // Прозрачность: 1.0 (полный), 0.5 (половинка), 0.2 (призрак)
-                const d2Opacity = movesCount >= 4 ? 1 : (movesCount === 3 ? 0.5 : 0.2);
-                const d1Opacity = movesCount >= 2 ? 1 : (movesCount === 1 ? 0.5 : 0.2);
+                // Новая логика пошагового исчезновения "половинок":
+                // 4 хода: d1=1.0, d2=1.0 (2.0)
+                // 3 хода: d1=1.0, d2=0.5 (1.5)
+                // 2 хода: d1=0.5, d2=0.5 (1.0)
+                // 1 ход:  d1=0.5, d2=0.15 (0.5)
+                // 0 ходов: d1=0.15, d2=0.15 (0.0)
+                
+                const d1Opacity = movesCount >= 3 ? 1.0 : (movesCount >= 1 ? 0.5 : 0.15);
+                const d2Opacity = movesCount >= 4 ? 1.0 : (movesCount >= 2 ? 0.5 : 0.15);
 
                 return (
                   <>
