@@ -61,6 +61,11 @@ export default function BackgammonBoard({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   
+  // Определение формата кубиков (нужно объявить до использования в useEffect)
+  const diceArray = dice 
+    ? (Array.isArray(dice) ? dice : ('die1' in dice && 'die2' in dice ? [dice.die1, dice.die2] : null))
+    : null
+
   // Скины теперь используют материалы (цвета) вместо текстур
   
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
@@ -1986,6 +1991,7 @@ export default function BackgammonBoard({
         
         if (isMyChecker || isMyBar) {
           const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+          let localTouchBearOffDie: number | null = null
           
           if (pointMoves.length > 0) {
             setSelectedPoint(pointIndex)
@@ -1993,6 +1999,7 @@ export default function BackgammonBoard({
             pointMoves.forEach(move => {
               if (move.to !== undefined && move.to !== null) {
                 validTargets.add(move.to)
+                if (move.to === -1) localTouchBearOffDie = move.die
               }
             })
             setValidTargetPoints(validTargets)
@@ -2004,9 +2011,16 @@ export default function BackgammonBoard({
             setSelectedPoint(null)
             setValidTargetPoints(new Set())
           }
+
+          if (localTouchBearOffDie !== null) {
+            setShowBearOffButton({ pointIndex, die: localTouchBearOffDie })
+          } else {
+            setShowBearOffButton(null)
+          }
         } else {
           setSelectedPoint(null)
           setValidTargetPoints(new Set())
+          setShowBearOffButton(null)
         }
       }
     }
@@ -2451,16 +2465,16 @@ export default function BackgammonBoard({
     }
     
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+    let localBearOffDie: number | null = null
     
     if (pointMoves.length > 0) {
       setSelectedPoint(pointIndex)
       
       const validTargets = new Set<number>()
-      let bearOffDie: number | null = null
       pointMoves.forEach(move => {
         if (move.to !== undefined && move.to !== null) {
           validTargets.add(move.to)
-          if (move.to === -1) bearOffDie = move.die
+          if (move.to === -1) localBearOffDie = move.die
         }
       })
       setValidTargetPoints(validTargets)
@@ -2473,8 +2487,8 @@ export default function BackgammonBoard({
       setValidTargetPoints(new Set())
     }
     
-    if (bearOffDie !== null) {
-      setShowBearOffButton({ pointIndex, die: bearOffDie })
+    if (localBearOffDie !== null) {
+      setShowBearOffButton({ pointIndex, die: localBearOffDie })
     } else {
       setShowBearOffButton(null)
     }
@@ -2702,11 +2716,6 @@ export default function BackgammonBoard({
     }, CLICK_DELAY)
   }
   
-  // Определение формата кубиков
-  const diceArray = dice 
-    ? (Array.isArray(dice) ? dice : ('die1' in dice && 'die2' in dice ? [dice.die1, dice.die2] : null))
-    : null
-
   // ВАЖНО: Обновляем позицию кубиков когда появляются кубики или завершается анимация
   // Это гарантирует, что кубики перемещаются в правильный угол после анимации
   // ВАЖНО: Обновляем позицию кубиков только при изменении currentPlayer или завершении анимации
