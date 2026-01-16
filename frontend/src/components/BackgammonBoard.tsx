@@ -2638,7 +2638,7 @@ export default function BackgammonBoard({
       }, 100)
       return () => clearTimeout(timeoutId)
     }
-  }, [diceAnimating, currentPlayer, updateDicePosition])
+  }, [diceAnimating, currentPlayer, diceArray?.length, updateDicePosition])
   
   // Определяем использованные кубики из pendingMoves
   // Используем Set для отслеживания индексов использованных кубиков (для дублей)
@@ -3091,128 +3091,128 @@ export default function BackgammonBoard({
       )}
       
       {/* Кубики - показываем на стороне игрока, у которого ход, закрепляем после анимации внутри доски */}
-      {effectiveDice && effectiveDice.length > 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            // Если идет анимация гифки, показываем её в центре экрана
-            // После анимации переносим кубики в угол (внизу справа для player1, вверху слева для player2)
-            left: diceAnimating 
-              ? '50%'  // Во время анимации - в центре
-              : dice3DPosition 
-                ? `${dice3DPosition.x}px` // После анимации - в углу
-                : '50%', // Fallback на центр, если позиция еще не вычислена
-            top: diceAnimating 
-              ? '50%'  // Во время анимации - в центре
-              : dice3DPosition 
-                ? `${dice3DPosition.y}px` // После анимации - в углу
-                : '50%', // Fallback на центр, если позиция еще не вычислена
-            width: dice3DPosition ? `${dice3DPosition.size * 7.5}px` : '200px',
-            height: dice3DPosition ? `${dice3DPosition.size * 4.5}px` : '120px',
-            transform: 'translate(-50%, -50%)', // Центрируем кубики относительно их позиции
-            pointerEvents: 'none',
-            display: 'flex',
-            gap: '8px',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000, // Очень высокий z-index чтобы кубики были поверх всего
-            transition: diceAnimating ? 'none' : 'all 0.5s ease-out',
-            // Гарантируем, что кубики не выходят за границы доски
-            maxWidth: '100%',
-            maxHeight: '100%',
-            // Добавляем визуальные эффекты для лучшей видимости
-            filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))',
-            opacity: 1, // Явно устанавливаем непрозрачность
-            // Добавляем видимый фон для отладки (можно убрать позже)
-            backgroundColor: debugMode ? 'rgba(255, 0, 0, 0.3)' : 'transparent', // Red bg in debug mode
-            // Убеждаемся, что элемент виден
-            visibility: 'visible',
-          }}
-        >
-          {/* Показываем гифку, если она доступна для данного состояния кубиков */}
-          <DiceGif 
-            dice={effectiveDice}
-            usedDiceIndices={usedDiceIndices}
-            animating={diceAnimating}
-            size={dice3DPosition?.size || 50}
-          />
+      <div
+        style={{
+          position: 'absolute',
+          // Если идет анимация гифки, показываем её в центре экрана
+          // После анимации переносим кубики в угол (внизу справа для player1, вверху слева для player2)
+          left: diceAnimating 
+            ? '50%'  // Во время анимации - в центре
+            : dice3DPosition 
+              ? `${dice3DPosition.x}px` // После анимации - в углу
+              : '50%', // Fallback на центр, если позиция еще не вычислена
+          top: diceAnimating 
+            ? '50%'  // Во время анимации - в центре
+            : dice3DPosition 
+              ? `${dice3DPosition.y}px` // После анимации - в углу
+              : '50%', // Fallback на центр, если позиция еще не вычислена
+          width: dice3DPosition ? `${dice3DPosition.size * 7.5}px` : '200px',
+          height: dice3DPosition ? `${dice3DPosition.size * 4.5}px` : '120px',
+          transform: 'translate(-50%, -50%)', // Центрируем кубики относительно их позиции
+          pointerEvents: 'none',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000, // Очень высокий z-index чтобы кубики были поверх всего
+          // Убираем анимацию при инициализации позиции или во время анимации броска
+          transition: (diceAnimating || !dice3DPosition) ? 'none' : 'all 0.5s ease-out',
+          // Гарантируем, что кубики не выходят за границы доски
+          maxWidth: '100%',
+          maxHeight: '100%',
+          // Добавляем визуальные эффекты для лучшей видимости
+          filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8))',
+          // Показываем кубики только если они есть в gameState
+          opacity: (effectiveDice && effectiveDice.length > 0) ? 1 : 0,
+          visibility: (effectiveDice && effectiveDice.length > 0) ? 'visible' : 'hidden',
+          // Добавляем видимый фон для отладки (можно убрать позже)
+          backgroundColor: debugMode ? 'rgba(255, 0, 0, 0.3)' : 'transparent', // Red bg in debug mode
+        }}
+      >
+        {/* Показываем гифку, если она доступна для данного состояния кубиков */}
+        <DiceGif 
+          dice={effectiveDice}
+          usedDiceIndices={usedDiceIndices}
+          animating={diceAnimating}
+          size={dice3DPosition?.size || 50}
+        />
 
-          {/* Если гифка не показывается (например, анимация закончилась), 
-              показываем старые 3D кубики для отображения результата */}
-          {!diceAnimating && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {(() => {
-                const isDoubles = effectiveDice.length > 2;
-                if (isDoubles) {
-                  // В Sandbox всегда показываем все кубики по отдельности, чтобы не путать пользователя
-                  if (isSandbox) {
-                    // Фильтруем только неиспользованные кубики
-                    const unusedDice = effectiveDice.filter((_, index) => !usedDiceIndices.has(index));
-                    if (unusedDice.length === 0) return null; // Все кубики использованы
-                    
-                    return unusedDice.map((dieValue, idx) => (
-                      <div key={idx} style={{ position: 'relative' }}>
-                        <Dice3D
-                          values={[dieValue]}
-                          animating={false}
-                          diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
-                        />
-                      </div>
-                    ));
-                  }
-
-                  // Для обычных дублей показываем один кубик с множителем
-                  const dieValue = effectiveDice[0];
-                  return (
-                    <div style={{ position: 'relative' }}>
+        {/* Если гифка не показывается (например, анимация закончилась), 
+            показываем старые 3D кубики для отображения результата */}
+        {!diceAnimating && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {(() => {
+              if (!effectiveDice || effectiveDice.length === 0) return null;
+              const isDoubles = effectiveDice.length > 2;
+              if (isDoubles) {
+                // В Sandbox всегда показываем все кубики по отдельности, чтобы не путать пользователя
+                if (isSandbox) {
+                  // Фильтруем только неиспользованные кубики
+                  const unusedDice = effectiveDice.filter((_, index) => !usedDiceIndices.has(index));
+                  if (unusedDice.length === 0) return null; // Все кубики использованы
+                  
+                  return unusedDice.map((dieValue, idx) => (
+                    <div key={idx} style={{ position: 'relative' }}>
                       <Dice3D
                         values={[dieValue]}
                         animating={false}
                         diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
                       />
-                      {remainingMoves > 0 && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '-10px',
-                          right: '-10px',
-                          background: 'rgba(232, 65, 66, 0.9)',
-                          color: 'white',
-                          borderRadius: '50%',
-                          width: '24px',
-                          height: '24px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                          zIndex: 10
-                        }}>
-                          x{remainingMoves}
-                        </div>
-                      )}
+                    </div>
+                  ));
+                }
+
+                // Для обычных дублей показываем один кубик с множителем
+                const dieValue = effectiveDice[0];
+                return (
+                  <div style={{ position: 'relative' }}>
+                    <Dice3D
+                      values={[dieValue]}
+                      animating={false}
+                      diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                    />
+                    {remainingMoves > 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '-10px',
+                        right: '-10px',
+                        background: 'rgba(232, 65, 66, 0.9)',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                        zIndex: 10
+                      }}>
+                        x{remainingMoves}
+                      </div>
+                    )}
+                  </div>
+                );
+              } else {
+                // Для обычного броска показываем оставшиеся кубики
+                return effectiveDice.map((dieValue, index) => {
+                  if (usedDiceIndices.has(index)) return null;
+                  return (
+                    <div key={index} style={{ position: 'relative' }}>
+                      <Dice3D
+                        values={[dieValue]}
+                        animating={false}
+                        diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                      />
                     </div>
                   );
-                } else {
-                  // Для обычного броска показываем оставшиеся кубики
-                  return effectiveDice.map((dieValue, index) => {
-                    if (usedDiceIndices.has(index)) return null;
-                    return (
-                      <div key={index} style={{ position: 'relative' }}>
-                        <Dice3D
-                          values={[dieValue]}
-                          animating={false}
-                          diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
-                        />
-                      </div>
-                    );
-                  });
-                }
-              })()}
-            </div>
-          )}
-        </div>
-      )}
+                });
+              }
+            })()}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
