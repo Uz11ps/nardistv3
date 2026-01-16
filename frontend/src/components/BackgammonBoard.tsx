@@ -70,38 +70,25 @@ export default function BackgammonBoard({
   
   const [possibleMoves, setPossibleMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
-  const [isTurnDoubles, setIsTurnDoubles] = useState(false)
   const [highlightedPoints, setHighlightedPoints] = useState<Set<number>>(new Set())
 
-  // Эффект для отслеживания типа хода (дубль или нет)
-  // Теперь учитывает currentPlayer для сброса состояния
-  useEffect(() => {
-    if (!diceArray || diceArray.length === 0) {
-      setIsTurnDoubles(false)
-      return
-    }
+  // ВАЖНО: Определяем, является ли текущий набор кубиков дублем.
+  // Дубль в нардax — это когда все кубики в массиве имеют одинаковое значение.
+  // Это состояние должно быть стабильным на протяжении всего хода.
+  const isActuallyDoubles = useMemo(() => {
+    if (!diceArray || diceArray.length === 0) return false;
     
+    // Если все кубики в массиве одинаковые — это дубль.
+    // Это работает для 4, 3, 2 и 1 кубика (сервер уменьшает массив по мере ходов).
     const allEqual = diceArray.every(d => d === diceArray[0]);
     
-    // В нардах дубль — это либо 4 кубика сразу, либо любое количество одинаковых кубиков
-    // (потому что сервер при ходе уменьшает их количество с 4 до 3, 2, 1).
-    // Если мы видим 2 кубика и они разные — это обычный ход.
-    // Если мы видим 2 одинаковых — это либо начало дубля (до расширения сервером), либо середина.
-    if (diceArray.length === 4) {
-      setIsTurnDoubles(true)
-    } else if (diceArray.length === 3) {
-      if (allEqual) setIsTurnDoubles(true)
-    } else if (diceArray.length === 2) {
-      setIsTurnDoubles(allEqual)
-    } else if (diceArray.length === 1) {
-      if (allEqual) setIsTurnDoubles(true)
-    }
+    // Если кубиков 2 и они разные — это точно не дубль.
+    if (diceArray.length === 2 && !allEqual) return false;
     
-    // Логирование для отладки (можно будет убрать потом)
-    if (diceArray.length > 0) {
-      console.log('🎲 [Dice State] array:', diceArray, 'isDoubles:', allEqual && diceArray.length !== 2 || (diceArray.length === 2 && allEqual));
-    }
-  }, [diceArray, currentPlayer])
+    // В остальных случаях (4 одинаковых, 3 одинаковых, 2 одинаковых, 1 кубик) — это дубль.
+    return allEqual;
+  }, [diceArray]);
+
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
 
   // --- CONFIGURATIONS ---
@@ -3255,41 +3242,27 @@ export default function BackgammonBoard({
               
               const dieValue = effectiveDice[0];
               // Вычисляем оставшиеся ходы (половинки)
-              // В Sandbox usedDiceIndices обычно пустой, а длина массива уменьшается сервером
               const movesCount = effectiveDice.length - usedDiceIndices.size;
 
-              if (isTurnDoubles) {
+              if (isActuallyDoubles) {
                 // Всегда показываем 2 кубика при дубле
-                // Пошаговое исчезновение (тратим сначала второй кубик, потом первый):
-                // 4 хода: 1.0, 1.0 (Оба целые)
-                // 3 хода: 1.0, 0.5 (Один целый, один половинка)
-                // 2 хода: 1.0, 0.1 (Один целый, один "призрак")
-                // 1 ход:  0.5, 0.1 (Один половинка, один "призрак")
-                // 0 ходов: 0.1, 0.1 (Оба "призраки")
+                // Пошаговое исчезновение (ровно по 0.5 за каждый ход):
+                // 4 хода: 1.0, 1.0 (Оба полные)
+                // 3 хода: 1.0, 0.5 (Один полный, одна половинка)
+                // 2 хода: 0.5, 0.5 (Две половинки)
+                // 1 ход:  0.5, 0.1 (Одна половинка, один призрак)
+                // 0 ходов: 0.1, 0.1 (Два призрака)
                 
-                // d1 (левый) тратится на 2-м и 1-м ходах
-                // d2 (правый) тратится на 4-м и 3-м ходах
-                const d1Opacity = movesCount >= 2 ? 1.0 : (movesCount === 1 ? 0.5 : 0.1);
-                const d2Opacity = movesCount >= 4 ? 1.0 : (movesCount === 3 ? 0.5 : 0.1);
+                const d1Opacity = movesCount >= 3 ? 1.0 : (movesCount >= 1 ? 0.5 : 0.1);
+                const d2Opacity = movesCount >= 4 ? 1.0 : (movesCount >= 2 ? 0.5 : 0.1);
 
                 return (
                   <>
-                    {/* Первый кубик */}
                     <div style={{ opacity: d1Opacity, position: 'relative', transition: 'opacity 0.3s ease' }}>
-                      <Dice3D
-                        values={[dieValue]}
-                        animating={false}
-                        diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
-                      />
+                      <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
                     </div>
-                    
-                    {/* Второй кубик */}
                     <div style={{ opacity: d2Opacity, position: 'relative', transition: 'opacity 0.3s ease' }}>
-                      <Dice3D
-                        values={[dieValue]}
-                        animating={false}
-                        diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
-                      />
+                      <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
                     </div>
                   </>
                 );
