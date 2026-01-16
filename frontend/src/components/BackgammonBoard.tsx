@@ -3246,18 +3246,16 @@ export default function BackgammonBoard({
 
               if (isActuallyDoubles) {
                 // Всегда показываем 2 кубика при дубле
-                // Пошаговое исчезновение (ровно по 0.5 за каждый ход):
-                // 4 хода: 1.0, 1.0 (x2, x2)
-                // 3 хода: 1.0, 0.5 (x2, x1)
-                // 2 хода: 0.5, 0.5 (x1, x1) <- Две половинки
-                // 1 ход:  0.5, 0.1 (x1, x0)
-                // 0 ходов: 0.1, 0.1 (x0, x0)
+                // Логика затухания: кубик остается ярким (1.0) пока есть ходы (x2 или x1)
+                // Затухает до 0.1 (x0) только когда полностью потрачен (после 2-го хода этого кубика)
                 
-                const d1Opacity = movesCount >= 3 ? 1.0 : (movesCount >= 1 ? 0.5 : 0.1);
-                const d2Opacity = movesCount >= 4 ? 1.0 : (movesCount >= 2 ? 0.5 : 0.1);
-                
+                // Множители
                 const d1Multiplier = movesCount >= 3 ? 2 : (movesCount >= 1 ? 1 : 0);
                 const d2Multiplier = movesCount >= 4 ? 2 : (movesCount >= 2 ? 1 : 0);
+
+                // Прозрачность: 1.0 если есть ходы, 0.1 если ходов нет
+                const d1Opacity = d1Multiplier > 0 ? 1.0 : 0.1;
+                const d2Opacity = d2Multiplier > 0 ? 1.0 : 0.1;
 
                 const renderBadge = (multiplier: number) => {
                   if (multiplier === 0) return null;
