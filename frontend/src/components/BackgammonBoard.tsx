@@ -3143,72 +3143,57 @@ export default function BackgammonBoard({
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {(() => {
               if (!effectiveDice || effectiveDice.length === 0) return null;
+              
               const isDoubles = effectiveDice.length > 2;
-              if (isDoubles) {
-                // В Sandbox всегда показываем все кубики по отдельности, чтобы не путать пользователя
-                if (isSandbox) {
-                  // Фильтруем только неиспользованные кубики
-                  const unusedDice = effectiveDice.filter((_, index) => !usedDiceIndices.has(index));
-                  if (unusedDice.length === 0) return null; // Все кубики использованы
-                  
-                  return unusedDice.map((dieValue, idx) => (
-                    <div key={idx} style={{ position: 'relative' }}>
-                      <Dice3D
-                        values={[dieValue]}
-                        animating={false}
-                        diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
-                      />
-                    </div>
-                  ));
-                }
+              const dieValue = effectiveDice[0];
 
-                // Для обычных дублей показываем один кубик с множителем
-                const dieValue = effectiveDice[0];
+              if (isDoubles && !isSandbox) {
+                // Логика для дубля: показываем 2 кубика, которые "тратятся" по половинке
+                // 4 хода = 2 полных кубика
+                // 3 хода = 1 полный + 1 полупрозрачный
+                // 2 хода = 1 полный
+                // 1 ход = 1 полупрозрачный
+                
                 return (
-                  <div style={{ position: 'relative' }}>
+                  <>
+                    {/* Первый кубик (отвечает за 1-й и 2-й ходы) */}
+                    {remainingMoves >= 1 && (
+                      <div style={{ opacity: remainingMoves === 1 ? 0.5 : 1, position: 'relative' }}>
+                        <Dice3D
+                          values={[dieValue]}
+                          animating={false}
+                          diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Второй кубик (отвечает за 3-й и 4-й ходы) */}
+                    {remainingMoves >= 3 && (
+                      <div style={{ opacity: remainingMoves === 3 ? 0.5 : 1, position: 'relative' }}>
+                        <Dice3D
+                          values={[dieValue]}
+                          animating={false}
+                          diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
+                        />
+                      </div>
+                    )}
+                  </>
+                );
+              }
+
+              // Обычный режим (или Sandbox дубль)
+              return effectiveDice.map((dieValue, index) => {
+                if (usedDiceIndices.has(index)) return null;
+                return (
+                  <div key={index} style={{ position: 'relative' }}>
                     <Dice3D
                       values={[dieValue]}
                       animating={false}
                       diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
                     />
-                    {remainingMoves > 0 && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '-10px',
-                        right: '-10px',
-                        background: 'rgba(232, 65, 66, 0.9)',
-                        color: 'white',
-                        borderRadius: '50%',
-                        width: '24px',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                        zIndex: 10
-                      }}>
-                        x{remainingMoves}
-                      </div>
-                    )}
                   </div>
                 );
-              } else {
-                // Для обычного броска показываем оставшиеся кубики
-                return effectiveDice.map((dieValue, index) => {
-                  if (usedDiceIndices.has(index)) return null;
-                  return (
-                    <div key={index} style={{ position: 'relative' }}>
-                      <Dice3D
-                        values={[dieValue]}
-                        animating={false}
-                        diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2}
-                      />
-                    </div>
-                  );
-                });
-              }
+              });
             })()}
           </div>
         )}
