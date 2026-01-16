@@ -3144,21 +3144,21 @@ export default function BackgammonBoard({
             {(() => {
               if (!effectiveDice || effectiveDice.length === 0) return null;
               
-              const isDoubles = effectiveDice.length > 2;
+              // Проверяем на дубль более надежно
+              const isDoublesRoll = (effectiveDice.length >= 2 && effectiveDice.every(v => v === effectiveDice[0])) || 
+                                    (diceArray && diceArray.length > 2 && diceArray.every(v => v === diceArray[0]));
               const dieValue = effectiveDice[0];
 
-              if (isDoubles) {
+              // Вычисляем реальное кол-во оставшихся "половинок" (ходов)
+              const leftMoves = effectiveDice.length - usedDiceIndices.size;
+
+              if (isDoublesRoll && leftMoves > 0) {
                 // Логика для дубля: показываем 2 кубика, которые "тратятся" по половинке
-                // 4 хода = 2 полных кубика
-                // 3 хода = 1 полный + 1 полупрозрачный
-                // 2 хода = 1 полный
-                // 1 ход = 1 полупрозрачный
-                
                 return (
                   <>
                     {/* Первый кубик (отвечает за 1-й и 2-й ходы) */}
-                    {remainingMoves >= 1 && (
-                      <div style={{ opacity: remainingMoves === 1 ? 0.5 : 1, position: 'relative' }}>
+                    {leftMoves >= 1 && (
+                      <div style={{ opacity: leftMoves === 1 ? 0.5 : 1, position: 'relative' }}>
                         <Dice3D
                           values={[dieValue]}
                           animating={false}
@@ -3168,8 +3168,8 @@ export default function BackgammonBoard({
                     )}
                     
                     {/* Второй кубик (отвечает за 3-й и 4-й ходы) */}
-                    {remainingMoves >= 3 && (
-                      <div style={{ opacity: remainingMoves === 3 ? 0.5 : 1, position: 'relative' }}>
+                    {leftMoves >= 3 && (
+                      <div style={{ opacity: leftMoves === 3 ? 0.5 : 1, position: 'relative' }}>
                         <Dice3D
                           values={[dieValue]}
                           animating={false}
