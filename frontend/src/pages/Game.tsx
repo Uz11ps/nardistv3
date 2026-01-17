@@ -2616,10 +2616,10 @@ export default function Game() {
             </div>
           )}
 
-          {/* Состояние ожидания (только в портрете или если не в процессе) */}
-          {gameStatus === 'waiting' && !isBotGame && gameInfo?.type === 'vs_player' && (
+          {/* Состояние ожидания - показываем для всех типов игр (кроме sandbox), когда нужно выбрать смещение */}
+          {gameStatus === 'waiting' && gameInfo?.type !== 'sandbox' && (
             <div className="game-waiting-section">
-              {!gameInfo?.player2Id ? (
+              {(!isBotGame && gameInfo?.type === 'vs_player' && !gameInfo?.player2Id) ? (
                 <div>⏳ Ожидание соперника...</div>
               ) : (
                 <div className="fair-play-setup">
@@ -2669,14 +2669,20 @@ export default function Game() {
                     </div>
                     <div className="offset-values">
                       <span>Вы: <strong>{myOffset}</strong></span>
-                      <span>Соперник: <strong>{opponentOffset}</strong></span>
+                      {isBotGame ? (
+                        <span>Бот: <strong>{opponentOffset > 0 ? opponentOffset : 'выбирает...'}</strong></span>
+                      ) : (
+                        <span>Соперник: <strong>{opponentOffset}</strong></span>
+                      )}
                     </div>
                   </div>
 
-                  {!myReady ? (
-                    <Button variant="primary" onClick={handleReadyToStart} className="ready-btn">Готов</Button>
-                  ) : (
-                    <div className="ready-status">✅ Готов. Ожидание соперника...</div>
+                  {!isBotGame && gameInfo?.type === 'vs_player' && (
+                    !myReady ? (
+                      <Button variant="primary" onClick={handleReadyToStart} className="ready-btn">Готов</Button>
+                    ) : (
+                      <div className="ready-status">✅ Готов. Ожидание соперника...</div>
+                    )
                   )}
                 </div>
               )}
