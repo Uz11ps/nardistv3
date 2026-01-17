@@ -45,6 +45,8 @@ export default function Game() {
   const player1TimerRef = useRef<number>(15)
   const player2TimerRef = useRef<number>(15)
   const totalTimeRemainingRef = useRef<{ player1: number; player2: number }>({ player1: 60, player2: 60 })
+  const gameStatusRef = useRef<string>('waiting') // Ref для актуального статуса игры
+  const currentPlayerRef = useRef<number>(0) // Ref для актуального текущего игрока
   const pageLoadTimeRef = useRef<number>(Date.now()) // Время загрузки страницы для защиты от немедленного автолуза
   const lastTotalTimeRef = useRef<{ player1: number; player2: number }>({ player1: 60, player2: 60 }) // Предыдущее значение общего времени
   const [pipCounts, setPipCounts] = useState({ player1: 0, player2: 0 })
@@ -285,7 +287,11 @@ export default function Game() {
   // Закрытие меню при клике вне его
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (showGameMenu && !(e.target as HTMLElement).closest('[data-game-menu]')) {
+      const target = e.target as HTMLElement
+      // НЕ закрываем меню, если клик был на кнопку меню или внутри содержимого меню
+      if (showGameMenu && 
+          !target.closest('[data-game-menu]') && 
+          !target.closest('[data-game-menu-content]')) {
         setShowGameMenu(false)
       }
     }
@@ -437,6 +443,15 @@ export default function Game() {
     totalTimeRemainingRef.current = totalTimeRemaining
   }, [totalTimeRemaining])
 
+  // Синхронизируем refs для gameStatus и currentPlayer
+  useEffect(() => {
+    gameStatusRef.current = gameStatus
+  }, [gameStatus])
+
+  useEffect(() => {
+    currentPlayerRef.current = gameState?.currentPlayer ?? 0
+  }, [gameState?.currentPlayer])
+
   const isPlayer1 = gameInfo?.player1Id === user?.id
   const isSandbox = gameInfo?.type === 'sandbox'
   const [sandboxMode, setSandboxMode] = useState<'setup' | 'play'>('setup')
@@ -461,84 +476,15 @@ export default function Game() {
     }
   }, [gameId, isBotGame, gameInfo?.type])
 
-  // Локальный таймер для плавного обновления UI
+  // ВАЖНО: Таймеры обновляются ТОЛЬКО с сервера через событие timer_update
+  // Локальный интервал убран - все обновления идут с сервера для синхронизации
   useEffect(() => {
-    // ВАЖНО: Таймер запускается всегда, когда игра идет (не только для нашего хода)
-    // Таймер должен отображаться для обоих игроков, но тикать только для текущего
-    if (gameStatus !== 'in_progress' || isSandbox) {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current)
-        timerIntervalRef.current = null
-      }
-      return
+    // Очищаем интервал если он остался
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
     }
-
-    // ВАЖНО: Обновляем метку времени при запуске таймера, 
-    // чтобы не было скачка из-за времени, прошедшего в WAITING
-    lastTimerUpdateRef.current = Date.now()
-
-    timerIntervalRef.current = window.setInterval(() => {
-      // Проверяем, что игра все еще идет
-      if (gameStatus !== 'in_progress') {
-        return
-      }
-      
-      const now = Date.now()
-      const deltaSeconds = (now - lastTimerUpdateRef.current) / 1000
-      lastTimerUpdateRef.current = now
-
-      if (gameState?.currentPlayer === 0) {
-        // Ход игрока 1
-        if (player1TimerRef.current > 0) {
-          const oldValue = player1TimerRef.current
-          const newValue = Math.max(0, oldValue - deltaSeconds)
-          setPlayer1Timer(newValue)
-          player1TimerRef.current = newValue // Обновляем ref для следующей итерации
-          if (newValue === 0 && oldValue > 0) {
-            setIsInOvertime(true)
-          }
-        } else {
-          // Овертайм - визуально обновляем totalTimeRemaining на основе последнего значения с сервера
-          // ВАЖНО: Автолуз обрабатывается на сервере через checkMoveTimeouts()
-          // Клиент визуально отображает таймер, уменьшая на основе прошедшего времени
-          if (isInOvertime && totalTimeRemainingRef.current.player1 > 0) {
-            const currentTotal = totalTimeRemainingRef.current.player1
-            const newTotal = Math.max(0, currentTotal - deltaSeconds)
-            setTotalTimeRemaining(prev => ({ ...prev, player1: newTotal }))
-            totalTimeRemainingRef.current.player1 = newTotal
-          }
-        }
-      } else if (gameState?.currentPlayer === 1) {
-        // Ход игрока 2
-        if (player2TimerRef.current > 0) {
-          const oldValue = player2TimerRef.current
-          const newValue = Math.max(0, oldValue - deltaSeconds)
-          setPlayer2Timer(newValue)
-          player2TimerRef.current = newValue // Обновляем ref для следующей итерации
-          if (newValue === 0 && oldValue > 0) {
-            setIsInOvertime(true)
-          }
-        } else {
-          // Овертайм - визуально обновляем totalTimeRemaining на основе последнего значения с сервера
-          // ВАЖНО: Автолуз обрабатывается на сервере через checkMoveTimeouts()
-          // Клиент визуально отображает таймер, уменьшая на основе прошедшего времени
-          if (isInOvertime && totalTimeRemainingRef.current.player2 > 0) {
-            const currentTotal = totalTimeRemainingRef.current.player2
-            const newTotal = Math.max(0, currentTotal - deltaSeconds)
-            setTotalTimeRemaining(prev => ({ ...prev, player2: newTotal }))
-            totalTimeRemainingRef.current.player2 = newTotal
-          }
-        }
-      }
-    }, 100) // Обновляем каждые 100мс для плавности
-
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current)
-        timerIntervalRef.current = null
-      }
-    }
-  }, [gameStatus, gameState?.currentPlayer, gameState?.canMove, isPlayer1, isSandbox, isBotGame, gameInfo?.type, handleAutoMove])
+  }, [gameStatus, isSandbox])
   
   const loadGame = async () => {
     try {
@@ -2220,6 +2166,7 @@ export default function Game() {
         >
           <div
             data-game-menu-content
+            onClick={(e) => e.stopPropagation()}
             style={{
               position: 'fixed',
               top: '60px',
@@ -2234,7 +2181,10 @@ export default function Game() {
             }}
           >
                 <button
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    console.log('🚩 Сдаться clicked')
                     setShowExitModal(true)
                     setShowGameMenu(false)
                   }}
@@ -2254,13 +2204,18 @@ export default function Game() {
                   🚩 Сдаться
                 </button>
                 <button
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    console.log('⬜ Полноэкранный режим clicked, current fullscreen:', !!document.fullscreenElement)
                     try {
                       if (!document.fullscreenElement) {
+                        console.log('Вход в полноэкранный режим...')
                         await document.documentElement.requestFullscreen().catch((err) => {
                           console.error('Ошибка входа в полноэкранный режим:', err)
                         })
                       } else {
+                        console.log('Выход из полноэкранного режима...')
                         await document.exitFullscreen().catch((err) => {
                           console.error('Ошибка выхода из полноэкранного режима:', err)
                         })
@@ -2287,17 +2242,23 @@ export default function Game() {
                   {isFullscreen ? '🔲 Выйти из полноэкранного режима' : '⬜ Полноэкранный режим'}
                 </button>
                 <button
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
                     const newValue = !requireConfirmMove
+                    console.log('✓ Требовать подтверждение хода clicked, newValue:', newValue, 'oldValue:', requireConfirmMove)
                     setRequireConfirmMove(newValue)
                     setShowGameMenu(false)
                     try {
+                      console.log('Сохранение настройки requireConfirmMove:', newValue)
                       await apiClient.put('/users/settings', {
                         requireConfirmMove: newValue
                       })
+                      console.log('Настройка сохранена успешно')
                       // Обновляем пользователя в store
                       const userResponse = await apiClient.get('/users/me')
                       useAuthStore.setState({ user: userResponse.data })
+                      console.log('Пользователь обновлен в store')
                     } catch (error) {
                       console.error('Ошибка сохранения настройки:', error)
                       // Откатываем изменение при ошибке
