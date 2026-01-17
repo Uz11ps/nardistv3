@@ -2152,7 +2152,8 @@ export default function Game() {
     }
   }
 
-  // Автоматическое подтверждение хода через 3 секунды, если requireConfirmMove = false
+  // Автоматическое подтверждение хода, если requireConfirmMove = false
+  // Отправляем ход автоматически, когда все кубики использованы или нет валидных ходов
   useEffect(() => {
     // Очищаем предыдущий таймер при изменении зависимостей
     if (autoConfirmTimeoutRef.current) {
@@ -2167,11 +2168,66 @@ export default function Game() {
         (gameStatus === 'in_progress' || isSandbox) && 
         gameState?.dice &&
         !isProcessingConfirm) {
-      console.log('⏱️ Auto-confirm timer started: 3 seconds');
-      autoConfirmTimeoutRef.current = window.setTimeout(() => {
-        console.log('✅ Auto-confirming moves after 3 seconds');
-        handleConfirm();
-      }, 3000); // 3 секунды
+      
+      // Проверяем, все ли кубики использованы
+      const diceArray = (() => {
+        const d = gameState.dice;
+        if (!d) return [];
+        if (Array.isArray(d)) return d;
+        return [d.die1, d.die2];
+      })();
+      
+      // Подсчитываем использованные кубики
+      const usedDice = new Map<number, number>();
+      pendingMoves.forEach(move => {
+        if ((move as any).steps) {
+          (move as any).steps.forEach((step: any) => {
+            usedDice.set(step.die, (usedDice.get(step.die) || 0) + 1);
+          });
+        } else {
+          usedDice.set(move.die, (usedDice.get(move.die) || 0) + 1);
+        }
+      });
+      
+      // Проверяем, все ли кубики использованы
+      let allDiceUsed = true;
+      for (const die of diceArray) {
+        const used = usedDice.get(die) || 0;
+        const available = diceArray.filter(d => d === die).length;
+        if (used < available) {
+          allDiceUsed = false;
+          break;
+        }
+      }
+      
+      // Если все кубики использованы - автоматически отправляем ход
+      if (allDiceUsed) {
+        console.log('✅ All dice used, auto-confirming moves');
+        // Небольшая задержка для завершения анимации хода
+        autoConfirmTimeoutRef.current = window.setTimeout(() => {
+          handleConfirm();
+        }, 100);
+      } else {
+        // Если не все кубики использованы, проверяем, есть ли еще валидные ходы
+        // Используем небольшую задержку для проверки валидных ходов
+        autoConfirmTimeoutRef.current = window.setTimeout(async () => {
+          try {
+            const possibleMoves = await apiClient.post(`/games/${gameId}/possible-moves`, { 
+              pendingMoves: pendingMoves 
+            });
+            const hasValidMoves = possibleMoves.data?.allMoves?.length > 0 && 
+                                  possibleMoves.data.allMoves.some((seq: any[]) => seq.length > 0);
+            
+            // Если нет валидных ходов - автоматически отправляем текущие ходы
+            if (!hasValidMoves && pendingMoves.length > 0) {
+              console.log('✅ No valid moves remaining, auto-confirming current moves');
+              handleConfirm();
+            }
+          } catch (error) {
+            console.error('Error checking possible moves for auto-confirm:', error);
+          }
+        }, 300);
+      }
     }
 
     return () => {
@@ -2180,7 +2236,7 @@ export default function Game() {
         autoConfirmTimeoutRef.current = null;
       }
     };
-  }, [pendingMoves.length, requireConfirmMove, isMyTurn, gameStatus, isSandbox, gameState?.dice, isProcessingConfirm, handleConfirm])
+  }, [pendingMoves, requireConfirmMove, isMyTurn, gameStatus, isSandbox, gameState?.dice, isProcessingConfirm, handleConfirm, gameId])
 
   if (!gameState || !gameInfo) {
     return (
