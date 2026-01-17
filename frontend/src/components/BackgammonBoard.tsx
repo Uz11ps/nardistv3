@@ -137,6 +137,10 @@ export default function BackgammonBoard({
       dragCheckerSizeScale: 1.0,
       dragCheckerXOffset: 0,
       dragCheckerYOffset: 0,
+      // Bear-off (lot) customization
+      bearOffCheckerScale: 1.2, // Увеличенные шашки в лоте
+      bearOffXOffset: 0,
+      bearOffYOffset: 0,
       // Advanced text offsets (quadrants)
       textTopRightY: -15, // Points 19-24 (Indices 0-5)
       textTopLeftY: -15,  // Points 13-18 (Indices 6-11)
@@ -183,6 +187,10 @@ export default function BackgammonBoard({
     dragCheckerSizeScale: 1.0,
     dragCheckerXOffset: 0,
     dragCheckerYOffset: 0,
+    // Bear-off (lot) customization
+    bearOffCheckerScale: 1.3,
+    bearOffXOffset: 0,
+    bearOffYOffset: 0,
     // Advanced text offsets (quadrants)
     textTopRightY: -316,
     textTopLeftY: -316, 
@@ -196,7 +204,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v12')
+      const saved = localStorage.getItem('backgammon-debug-config-v13')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -219,7 +227,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v12', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v13', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -1098,11 +1106,20 @@ export default function BackgammonBoard({
     }
     
     // Проверяем контейнеры (bearOff) - теперь СНИЗУ
-    // Высота bearOffHeight
+    const bearOffHeight = height * debugConfig.bearOffHeightPct
     if (actualY >= height - bearOffHeight) {
-      // Весь низ - это bearOff? Или только определенные зоны?
-      // Для простоты - весь низ.
-      return -1
+      // В sandbox разрешаем всегда, если там есть шашки
+      if (isSandbox) {
+        const bearOff = gameState?.bearOff || { white: 0, black: 0 }
+        const isRightSide = actualX > width / 2
+        if (isRightSide && bearOff.white > 0) return -1
+        if (!isRightSide && bearOff.black > 0) return -1
+        
+        // Если шашек нет в конкретной половине, но это sandbox - всё равно возвращаем -1
+        // чтобы можно было начать перетаскивание "из пустоты" или если кликнули рядом
+        return -1
+      }
+      return validTargetPoints.has(-1) ? -1 : null
     }
     
     // В Sandbox режиме проверяем зону "удаления" (мусорка) в левом нижнем углу
@@ -1546,7 +1563,7 @@ export default function BackgammonBoard({
     }
     
     // Отрисовка области выноса (Теперь СНИЗУ, используем изображения сбоку)
-    const bearOffAreaY = height - bearOffHeight
+    const bearOffAreaY = height - bearOffHeight + (debugConfig.bearOffYOffset || 0)
 
     if (virtualGameState.bearOff) {
       const bOff = virtualGameState.bearOff
@@ -1559,7 +1576,7 @@ export default function BackgammonBoard({
       
       // Параметры для отрисовки сбоку (стоячие шашки)
       // Высота шашки сбоку = диаметру (примерно)
-      const checkerSideHeight = bearOffHeight * 0.85
+      const checkerSideHeight = bearOffHeight * 0.85 * (debugConfig.bearOffCheckerScale || 1.0)
       
       // Вычисляем ширину по пропорциям изображения
       const getSideWidth = (img: HTMLImageElement | undefined) => {
@@ -1576,7 +1593,7 @@ export default function BackgammonBoard({
       
       // Белые шашки - Справа налево (Дом белых обычно справа)
       // Размещаем их в правой части лотка
-      const startXWhite = width - sideMargin - whiteW
+      const startXWhite = width - sideMargin - whiteW + (debugConfig.bearOffXOffset || 0)
       
       for (let i = 0; i < whiteBearOffCount; i++) {
         // Плотная стопка со смещением
@@ -1595,7 +1612,7 @@ export default function BackgammonBoard({
       
       // Черные шашки - Слева направо (Дом черных обычно слева)
       // Размещаем их в левой части лотка
-      const startXBlack = sideMargin
+      const startXBlack = sideMargin + (debugConfig.bearOffXOffset || 0)
       
       for (let i = 0; i < blackBearOffCount; i++) {
         const step = redW * 0.25
@@ -1935,9 +1952,29 @@ export default function BackgammonBoard({
               const isMyChecker = (activePlayer === 0 && isWhiteChecker) || (activePlayer === 1 && isBlackChecker)
               
               // Проверяем есть ли возможные ходы для этой точки
-              const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+            const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+            
+            // В sandbox режиме разрешаем перетаскивать из bearOff
+            if (isSandbox && pointIndex === -1) {
+              const bearOff = virtualGameState?.bearOff || { white: 0, black: 0 }
+              const isWhiteSide = x > canvas.width / 2
+              const checkerColor = isWhiteSide ? 'white' : 'black'
+              const count = isWhiteSide ? bearOff.white : bearOff.black
               
-              if (pointMoves.length > 0 && isMyChecker) {
+              if (count > 0) {
+                setDragging({ 
+                  pointIndex: -1, 
+                  offsetX: 0, 
+                  offsetY: 0,
+                  freeMove: true,
+                  checkerColor
+                })
+                setDragPosition({ x, y })
+                return
+              }
+            }
+
+            if (pointMoves.length > 0 && isMyChecker) {
                 // Если есть возможные ходы - используем обычную логику выбора
                 setSelectedPoint(pointIndex)
                 const validTargets = new Set<number>()
@@ -1967,12 +2004,17 @@ export default function BackgammonBoard({
 
         const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
         const isMyChecker = isSandbox ? pointValue !== 0 : (activePlayer === 0 ? pointValue > 0 : pointValue < 0)
-        const isMyBar = isSandbox 
-          ? (pointIndex === 24 ? (virtualGameState?.bar?.white || 0) > 0 : (pointIndex === 25 ? (virtualGameState?.bar?.black || 0) > 0 : false))
-          : ((pointIndex === 24 && activePlayer === 0 && pointValue > 0) || (pointIndex === 25 && activePlayer === 1 && pointValue < 0))
-        
-        if (isMyChecker || isMyBar) {
-          const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+    const isMyBar = isSandbox 
+      ? (pointIndex === 24 ? (virtualGameState?.bar?.white || 0) > 0 : (pointIndex === 25 ? (virtualGameState?.bar?.black || 0) > 0 : false))
+      : ((pointIndex === 24 && activePlayer === 0 && pointValue > 0) || (pointIndex === 25 && activePlayer === 1 && pointValue < 0))
+    
+    // В sandbox режиме разрешаем брать из bearOff (код -1)
+    const isMyBearOff = isSandbox && pointIndex === -1 && (
+      (virtualGameState?.bearOff?.white || 0) > 0 || (virtualGameState?.bearOff?.black || 0) > 0
+    )
+    
+    if (isMyChecker || isMyBar || isMyBearOff) {
+      const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
           let localTouchBearOffDie: number | null = null
           
           if (pointMoves.length > 0) {

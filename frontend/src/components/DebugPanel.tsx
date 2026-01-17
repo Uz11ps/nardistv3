@@ -82,6 +82,9 @@ export const DebugPanel = memo(({
       { key: 'validHighlightXOffset', label: 'Valid Highlight X Offset (px)', min: -1000, max: 1000, step: 1 },
       { key: 'validHighlightYOffset', label: 'Valid Highlight Y Offset (px)', min: -1000, max: 1000, step: 1 },
       { key: 'dragCheckerSizeScale', label: 'Drag Checker Size Scale', min: 0.01, max: 20, step: 0.01 },
+      { key: 'bearOffCheckerScale', label: 'BearOff Checker Size', min: 0.01, max: 20, step: 0.01 },
+      { key: 'bearOffXOffset', label: 'BearOff X Offset (px)', min: -1000, max: 1000, step: 1 },
+      { key: 'bearOffYOffset', label: 'BearOff Y Offset (px)', min: -1000, max: 1000, step: 1 },
       { key: 'dragCheckerXOffset', label: 'Drag Checker X Offset (px)', min: -1000, max: 1000, step: 1 },
       { key: 'dragCheckerYOffset', label: 'Drag Checker Y Offset (px)', min: -1000, max: 1000, step: 1 },
       { key: 'textTopLeftY', label: 'Text Top Left Y', min: -1000, max: 1000, step: 1 },
@@ -139,13 +142,13 @@ export const DebugPanel = memo(({
       onTouchEnd={(e) => e.stopPropagation()}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10, paddingBottom: '5px' }}>
-        <h3 style={{ margin: 0 }}>Debug v10 ({isMobile ? 'Mobile' : 'Desktop'})</h3>
+        <h3 style={{ margin: 0 }}>Debug v13 ({isMobile ? 'Mobile' : 'Desktop'})</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
            <button 
              onClick={() => {
                const defaultConfig = isMobile ? MOBILE_CONFIG : DESKTOP_CONFIG
                setDebugConfig(defaultConfig)
-               localStorage.removeItem('backgammon-debug-config-v10')
+               localStorage.removeItem('backgammon-debug-config-v13')
              }}  
              style={{ fontSize: '12px', padding: '3px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
              title="Сбросить на дефолт"
@@ -188,6 +191,9 @@ export const DebugPanel = memo(({
         { key: 'validHighlightXOffset', label: 'Valid Highlight X Offset (px)', min: -1000, max: 1000, step: 1 },
         { key: 'validHighlightYOffset', label: 'Valid Highlight Y Offset (px)', min: -1000, max: 1000, step: 1 },
         { key: 'dragCheckerSizeScale', label: 'Drag Checker Size Scale', min: 0.01, max: 20, step: 0.01 },
+        { key: 'bearOffCheckerScale', label: 'BearOff Checker Size', min: 0.01, max: 20, step: 0.01 },
+        { key: 'bearOffXOffset', label: 'BearOff X Offset (px)', min: -1000, max: 1000, step: 1 },
+        { key: 'bearOffYOffset', label: 'BearOff Y Offset (px)', min: -1000, max: 1000, step: 1 },
         { key: 'dragCheckerXOffset', label: 'Drag Checker X Offset (px)', min: -1000, max: 1000, step: 1 },
         { key: 'dragCheckerYOffset', label: 'Drag Checker Y Offset (px)', min: -1000, max: 1000, step: 1 },
         { key: 'textTopLeftY', label: 'Text Top Left Y', min: -1000, max: 1000, step: 1 },
