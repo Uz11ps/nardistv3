@@ -1366,88 +1366,10 @@ export default function BackgammonBoard({
       const hY = isTopRow ? (y - pH) : y
       const hH = pH
 
-      // 1. Подсветка точки под курсором
-      if (hoveredPoint === pointIndex) {
-        // Применяем параметры для highlight
-        const highlightHW = pW * debugConfig.highlightWidthScale
-        const highlightHH = hH * debugConfig.highlightHeightScale
-        const highlightHX = hX + (pW - highlightHW) / 2 + scaleX(debugConfig.highlightXOffset)
-        
-        // Use different Y offset for bottom row if specified, or fall back to standard logic
-        // Standard logic: if top row, y is bottom, so offset moves up (-). 
-        // If bottom row, y is top, offset moves down (+).
-        // BUT current code uses same 'debugConfig.highlightYOffset' for both?
-        // Let's see: 
-        // const hY = isTopRow ? (y - pH) : y
-        // highlightYOffset = -31. 
-        // Top: (y-pH) + -31 -> moves UP. Correct.
-        // Bottom: y + -31 -> moves UP. Incorrect? Should move DOWN.
-        
-        let highlightHY;
-        if (isTopRow) {
-            highlightHY = (y - pH) + (hH - highlightHH) / 2 + debugConfig.highlightYOffset;
-        } else {
-            // Use specific bottom offset if available, otherwise invert the standard offset?
-            // The user asked to fix bottom row "12 to 1".
-            // If validHighlightBottomYOffset is defined (31), use it.
-            const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
-                ? (debugConfig as any).highlightBottomYOffset 
-                : -debugConfig.highlightYOffset; // Invert by default if not specified? Or just use same?
-            
-            highlightHY = y + (hH - highlightHH) / 2 + bottomOffset;
-        }
-
-        ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
-        ctx.fillRect(highlightHX, highlightHY, highlightHW, highlightHH)
-      }
-
-      // 2. Подсветка валидных точек назначения при перетаскивании ИЛИ выборе точки
-      if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
-        // Применяем параметры из debugConfig для размера и смещения подсветки
-        const validHW = pW * debugConfig.validHighlightWidthScale
-        const validHH = hH * debugConfig.validHighlightHeightScale
-        const validHX = hX + (pW - validHW) / 2 + scaleX(debugConfig.validHighlightXOffset)
-        
-        let validHY;
-        if (isTopRow) {
-             validHY = (y - pH) + (hH - validHH) / 2 + debugConfig.validHighlightYOffset;
-        } else {
-             const bottomOffset = (debugConfig as any).validHighlightBottomYOffset !== undefined 
-                ? (debugConfig as any).validHighlightBottomYOffset 
-                : -debugConfig.highlightYOffset;
-             
-             validHY = y + (hH - validHH) / 2 + bottomOffset;
-        }
-        
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
-        ctx.fillRect(validHX, validHY, validHW, validHH)
-        
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
-        ctx.lineWidth = 2
-        ctx.strokeRect(validHX + 2, validHY + 2, validHW - 4, validHH - 4)
-      }
-      
-      // 3. Подсветка выбранной точки
-      if (selectedPoint === pointIndex) {
-        // Применяем параметры для highlight (так же как и для hover)
-        const selectedHW = pW * debugConfig.highlightWidthScale
-        const selectedHH = hH * debugConfig.highlightHeightScale
-        const selectedHX = hX + (pW - selectedHW) / 2 + scaleX(debugConfig.highlightXOffset)
-        
-        let selectedHY;
-        if (isTopRow) {
-            selectedHY = (y - pH) + (hH - selectedHH) / 2 + debugConfig.highlightYOffset;
-        } else {
-            const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
-                ? (debugConfig as any).highlightBottomYOffset 
-                : -debugConfig.highlightYOffset;
-            
-            selectedHY = y + (hH - selectedHH) / 2 + bottomOffset;
-        }
-
-        ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
-        ctx.fillRect(selectedHX, selectedHY, selectedHW, selectedHH)
-      }
+      // Подсветка отключена по запросу пользователя
+      // 1. Подсветка точки под курсором - отключена
+      // 2. Подсветка валидных точек назначения - отключена
+      // 3. Подсветка выбранной точки - отключена
       
     }
     
