@@ -35,6 +35,7 @@ export default function Game() {
   const [opponent, setOpponent] = useState<any>(null)
   const [score, setScore] = useState({ player1: 0, player2: 0 })
   const [gameStatus, setGameStatus] = useState<string>('waiting')
+  const [finishedModalKey, setFinishedModalKey] = useState<string>('')
   const [player1Timer, setPlayer1Timer] = useState<number>(15)
   const [player2Timer, setPlayer2Timer] = useState<number>(15)
   const [moveTimer, setMoveTimer] = useState<number>(15) // Таймер на ход (15 секунд)
@@ -1501,6 +1502,14 @@ export default function Game() {
       }
       
       console.log('✅ Game finished, status set to finished, score:', winsScore);
+      // ВАЖНО: Принудительно обновляем состояние для гарантированного появления модального окна
+      setGameStatus('finished');
+      // Убеждаемся, что winnerId установлен (даже если он null для ботов)
+      if (data.winnerId !== undefined) {
+        setWinnerId(data.winnerId);
+      }
+      // Обновляем ключ модального окна для принудительного обновления
+      setFinishedModalKey(`game-finished-${gameId}-${Date.now()}`);
     })
 
     socket.on('sandbox_board_updated', (data: any) => {
@@ -3136,7 +3145,7 @@ export default function Game() {
       )}
 
       {(gameStatus === 'finished' || winnerId !== null) && createPortal(
-        <div key={`game-finished-${gameId}-${Date.now()}`} 
+        <div key={finishedModalKey || `game-finished-${gameId}-${Date.now()}`} 
           className="game-overlay" 
           style={{
             position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',

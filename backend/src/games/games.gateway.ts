@@ -391,6 +391,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
                 player2Score: finishedGame.player2Score,
                 gameState,
                 reason: 'timeout',
+                game: {
+                  player1Wins: finishedGame.player1Wins || 0,
+                  player2Wins: finishedGame.player2Wins || 0,
+                  matchesToWin: finishedGame.matchesToWin || 1,
+                },
               });
               
               this.logger.log(`✅ Bot game ${game.id} finished due to timeout, winner: ${finishedGame.winnerId}`);
@@ -439,6 +444,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
               player2Score: finishedGame.player2Score,
               gameState,
               reason: 'timeout',
+              game: {
+                player1Wins: finishedGame.player1Wins || 0,
+                player2Wins: finishedGame.player2Wins || 0,
+                matchesToWin: finishedGame.matchesToWin || 1,
+              },
             });
             
             this.logger.log(`✅ Game ${game.id} finished due to time control timeout, winner: ${finishedGame.winnerId}`);
