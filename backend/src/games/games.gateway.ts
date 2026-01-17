@@ -100,8 +100,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       }
 
       const now = new Date();
-      // Используем lastMoveAt, если он установлен, иначе используем createdAt для первых ходов
-      const referenceTime = game.lastMoveAt || game.createdAt || now;
+      // ВАЖНО: Если lastMoveAt не установлен, время еще не началось
+      if (!game.lastMoveAt) {
+        // Время еще не началось - не проверяем таймаут
+        continue;
+      }
+      const referenceTime = game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt);
       const timeSinceLastMove = (now.getTime() - referenceTime.getTime()) / 1000; // в секундах
       const baseMoveTime = 15; // 15 секунд на ход (было 20)
       
@@ -162,10 +166,25 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         }
 
         try {
-          // Используем lastMoveAt, если он установлен, иначе используем createdAt для первых ходов
-          const referenceTime = game.lastMoveAt 
-            ? (game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt))
-            : (game.createdAt || now);
+          // ВАЖНО: Используем lastMoveAt только если он установлен (после первого хода)
+          // Если lastMoveAt не установлен, время еще не должно отсчитываться
+          if (!game.lastMoveAt) {
+            // Время еще не началось - игрок еще не сделал первый ход
+            // Отправляем полное время без отсчета
+            const currentPlayerTimeRemaining = game.currentPlayer === 0 
+              ? (game.player1TimeRemaining || 60000) 
+              : (game.player2TimeRemaining || 60000);
+            
+            this.server.to(game.id).emit('timer_update', {
+              gameId: game.id,
+              moveTimeRemaining: 15, // Полные 15 секунд
+              totalTimeRemaining: currentPlayerTimeRemaining / 1000,
+              isOvertime: false,
+            });
+            continue;
+          }
+          
+          const referenceTime = game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt);
           const timeSinceLastMove = (now.getTime() - referenceTime.getTime()) / 1000; // в секундах
           const baseMoveTime = 15; // 15 секунд на ход (было 20)
           
@@ -233,9 +252,23 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             continue;
           }
 
-          const referenceTime = currentGame.lastMoveAt 
-            ? (currentGame.lastMoveAt instanceof Date ? currentGame.lastMoveAt : new Date(currentGame.lastMoveAt))
-            : (currentGame.createdAt || now);
+          // ВАЖНО: Если lastMoveAt не установлен, время еще не началось
+          if (!currentGame.lastMoveAt) {
+            // Время еще не началось - отправляем полное время
+            const currentPlayerTimeRemaining = currentGame.currentPlayer === 0 
+              ? (currentGame.player1TimeRemaining || 60000) 
+              : (currentGame.player2TimeRemaining || 60000);
+            
+            socket.emit('timer_update', {
+              gameId: currentGame.id,
+              moveTimeRemaining: 15,
+              totalTimeRemaining: currentPlayerTimeRemaining / 1000,
+              isOvertime: false,
+            });
+            return;
+          }
+          
+          const referenceTime = currentGame.lastMoveAt instanceof Date ? currentGame.lastMoveAt : new Date(currentGame.lastMoveAt);
           
           const timeSinceLastMove = now.getTime() - referenceTime.getTime();
           const timeSinceLastMoveSeconds = timeSinceLastMove / 1000;
@@ -347,11 +380,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           continue;
         }
 
-        // Используем lastMoveAt, если он установлен, иначе используем createdAt для первых ходов
-        // Таймер должен работать с самого начала игры, даже если кубики еще не брошены
-        const referenceTime = game.lastMoveAt 
-          ? (game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt))
-          : (game.createdAt || now);
+        // ВАЖНО: Если lastMoveAt не установлен, время еще не началось
+        if (!game.lastMoveAt) {
+          // Время еще не началось - не проверяем таймаут
+          continue;
+        }
+        const referenceTime = game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt);
         
         const timeSinceLastMove = now.getTime() - referenceTime.getTime();
         const timeSinceLastMoveSeconds = timeSinceLastMove / 1000;

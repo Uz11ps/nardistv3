@@ -1133,8 +1133,8 @@ export class GamesService {
     // Если это первый ход (игра в статусе WAITING), переводим в IN_PROGRESS
     if (updatedGame.status === GameStatus.WAITING) {
       updatedGame.status = GameStatus.IN_PROGRESS;
-      // ВАЖНО: Всегда устанавливаем lastMoveAt при переходе в IN_PROGRESS, чтобы таймер начинал отсчет с начала игры
-      // Это предотвращает овертайм при старте игры
+      // ВАЖНО: Устанавливаем lastMoveAt только после первого хода, чтобы таймер начинал отсчет с момента первого хода
+      // Это предотвращает начало отсчета времени до того, как игрок сделал первый ход
       updatedGame.lastMoveAt = now;
     }
 
@@ -2623,7 +2623,9 @@ export class GamesService {
       
       game.status = GameStatus.IN_PROGRESS;
       game.currentPlayer = firstPlayer;
-      game.lastMoveAt = now;
+      // ВАЖНО: НЕ устанавливаем lastMoveAt здесь - он будет установлен только после первого хода игрока
+      // Это предотвращает начало отсчета времени до того, как игрок сделал первый ход
+      game.lastMoveAt = undefined;
       
       // Инициализируем gameState если его еще нет
       if (!game.gameState) {
