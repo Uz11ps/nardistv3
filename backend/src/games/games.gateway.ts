@@ -847,61 +847,62 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
                 // ВАЖНО: Если нет валидных ходов с оставшимися кубиками - переключаем ход
                 if (!hasMovesAfterMove || hasBarButNoMoves) {
                   this.logger.log(`🔄 No possible moves after move for player ${currentPlayerId}${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''}, remainingDice=${JSON.stringify(remainingDice)}, switching turn automatically`);
-                // Переключаем ход автоматически
-                await this.gamesService.makeMove(data.gameId, currentPlayerId, []);
-                const updatedGameStateAfterSkip = await this.gamesService.getGameState(data.gameId);
-                this.server.to(`game:${data.gameId}`).emit('move_made', updatedGameStateAfterSkip);
-                this.server.to(`game:${data.gameId}`).emit('game_state', updatedGameStateAfterSkip);
-                await this.sendTimerUpdateForGame(data.gameId);
-                
-                // Если игра завершена - выходим
-                const finalGameAfterSkip = await this.gamesService.findOne(data.gameId);
-                if (finalGameAfterSkip.status === 'finished') {
-                  this.server.to(`game:${data.gameId}`).emit('game_finished', {
-                    winnerId: finalGameAfterSkip.winnerId,
-                    player1Score: finalGameAfterSkip.player1Score,
-                    player2Score: finalGameAfterSkip.player2Score,
-                    gameState: updatedGameStateAfterSkip,
-                    game: {
-                      player1Wins: finalGameAfterSkip.player1Wins || 0,
-                      player2Wins: finalGameAfterSkip.player2Wins || 0,
-                      matchesToWin: finalGameAfterSkip.matchesToWin || 1,
-                    },
-                  });
-                  return;
-                }
-                
-                // Проверяем, нужно ли бросить кубики для следующего игрока
-                const nextPlayerIdAfterSkip = updatedGameStateAfterSkip.currentPlayer === 0 
-                  ? updatedGameStateAfterSkip.player1Id 
-                  : updatedGameStateAfterSkip.player2Id;
-                const isBotTurnAfterSkip = updatedGameStateAfterSkip.type === 'vs_bot' && 
-                                          updatedGameStateAfterSkip.player2Id === null && 
-                                          updatedGameStateAfterSkip.currentPlayer === 1;
-                
-                const diceAfterSkip = finalGameAfterSkip.gameState?.dice;
-                const hasNoDiceAfterSkip = !diceAfterSkip || (Array.isArray(diceAfterSkip) && diceAfterSkip.length === 0);
-                const bothOffsetsChosenAfterSkip = finalGameAfterSkip.p1OffsetChosenAt !== null && finalGameAfterSkip.p2OffsetChosenAt !== null;
-                
-                if (hasNoDiceAfterSkip && finalGameAfterSkip.status === 'in_progress' && bothOffsetsChosenAfterSkip) {
-                  this.pendingDiceRolls.set(data.gameId, {
-                    nextPlayerId: isBotTurnAfterSkip ? null : nextPlayerIdAfterSkip,
-                    isBotTurn: isBotTurnAfterSkip,
-                    gameId: data.gameId
-                  });
+                  // Переключаем ход автоматически
+                  await this.gamesService.makeMove(data.gameId, currentPlayerId, []);
+                  const updatedGameStateAfterSkip = await this.gamesService.getGameState(data.gameId);
+                  this.server.to(`game:${data.gameId}`).emit('move_made', updatedGameStateAfterSkip);
+                  this.server.to(`game:${data.gameId}`).emit('game_state', updatedGameStateAfterSkip);
+                  await this.sendTimerUpdateForGame(data.gameId);
                   
-                  if (isBotTurnAfterSkip) {
-                    setTimeout(async () => {
-                      await this.executePendingDiceRoll(data.gameId);
-                    }, 500);
+                  // Если игра завершена - выходим
+                  const finalGameAfterSkip = await this.gamesService.findOne(data.gameId);
+                  if (finalGameAfterSkip.status === 'finished') {
+                    this.server.to(`game:${data.gameId}`).emit('game_finished', {
+                      winnerId: finalGameAfterSkip.winnerId,
+                      player1Score: finalGameAfterSkip.player1Score,
+                      player2Score: finalGameAfterSkip.player2Score,
+                      gameState: updatedGameStateAfterSkip,
+                      game: {
+                        player1Wins: finalGameAfterSkip.player1Wins || 0,
+                        player2Wins: finalGameAfterSkip.player2Wins || 0,
+                        matchesToWin: finalGameAfterSkip.matchesToWin || 1,
+                      },
+                    });
+                    return;
                   }
-                } else if (isBotTurnAfterSkip) {
-                  await this.handleBotTurnIfNeeded(data.gameId);
+                  
+                  // Проверяем, нужно ли бросить кубики для следующего игрока
+                  const nextPlayerIdAfterSkip = updatedGameStateAfterSkip.currentPlayer === 0 
+                    ? updatedGameStateAfterSkip.player1Id 
+                    : updatedGameStateAfterSkip.player2Id;
+                  const isBotTurnAfterSkip = updatedGameStateAfterSkip.type === 'vs_bot' && 
+                                            updatedGameStateAfterSkip.player2Id === null && 
+                                            updatedGameStateAfterSkip.currentPlayer === 1;
+                  
+                  const diceAfterSkip = finalGameAfterSkip.gameState?.dice;
+                  const hasNoDiceAfterSkip = !diceAfterSkip || (Array.isArray(diceAfterSkip) && diceAfterSkip.length === 0);
+                  const bothOffsetsChosenAfterSkip = finalGameAfterSkip.p1OffsetChosenAt !== null && finalGameAfterSkip.p2OffsetChosenAt !== null;
+                  
+                  if (hasNoDiceAfterSkip && finalGameAfterSkip.status === 'in_progress' && bothOffsetsChosenAfterSkip) {
+                    this.pendingDiceRolls.set(data.gameId, {
+                      nextPlayerId: isBotTurnAfterSkip ? null : nextPlayerIdAfterSkip,
+                      isBotTurn: isBotTurnAfterSkip,
+                      gameId: data.gameId
+                    });
+                    
+                    if (isBotTurnAfterSkip) {
+                      setTimeout(async () => {
+                        await this.executePendingDiceRoll(data.gameId);
+                      }, 500);
+                    }
+                  } else if (isBotTurnAfterSkip) {
+                    await this.handleBotTurnIfNeeded(data.gameId);
+                  }
+                  
+                  return; // Выходим, т.к. ход переключен
                 }
-                
-                return; // Выходим, т.к. ход переключен
+                // Если есть кубики и есть валидные ходы - продолжаем обычную логику
               }
-              // Если есть кубики и есть валидные ходы - продолжаем обычную логику
             } catch (e) {
               this.logger.error(`Error checking possible moves after move: ${e.message}`);
             }
@@ -923,12 +924,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     }
   }
 
-  /**
-   * Handle bot turn if next player is bot
-   */
-  /**
-   * Выполняет отложенный бросок кубиков после завершения анимации хода
-   */
+
   private async executePendingDiceRoll(gameId: string): Promise<void> {
     const pending = this.pendingDiceRolls.get(gameId);
     if (!pending) {
