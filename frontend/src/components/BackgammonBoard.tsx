@@ -100,93 +100,93 @@ export default function BackgammonBoard({
   // --- CONFIGURATIONS ---
     // Large Screen (Desktop) - Optimized
     const DESKTOP_CONFIG = {
-      sideMarginLeftPct: 0.032,
-      sideMarginRightPct: 0.047,
-      barMarginLeftPct: 0.018,
-      barMarginRightPct: 0.003,
-      barWidthPct: 0.056,
-      topMarginPct: 0.073,
-      bearOffHeightPct: 0.090, // Согласно скриншоту
+      sideMarginLeftPct: 0.04,
+      sideMarginRightPct: 0.05,
+      barMarginLeftPct: 0.03,
+      barMarginRightPct: 0.012,
+      barWidthPct: 0.025,
+      topMarginPct: 0.058,
+      bearOffHeightPct: 0.134,
       checkerWidthRatio: 1.5,
-      checkerHeightRatio: 0.216,
-      checkerDrawScale: 1.2,
-      diceP1X: 0.66,
-      diceP1Y: 0.85,
-      diceP2X: 0.90,
-      diceP2Y: 0.38,
-      checkerTopOffset: -25,
-      checkerBottomOffset: -44,
+      checkerHeightRatio: 0.252,
+      checkerDrawScale: 1.28,
+      diceP1X: 0.5,
+      diceP1Y: 0.6,
+      diceP2X: 0.16,
+      diceP2Y: 0.24,
+      checkerTopOffset: -349,
+      checkerBottomOffset: 349,
       // Legacy text offsets (for fallback)
       textTopOffset: -15,
       textBottomOffset: 15,
       // New parameters for advanced highlight and text control
-      highlightWidthScale: 1.0,
-      highlightHeightScale: 1.0,
+      highlightWidthScale: 1,
+      highlightHeightScale: 1,
       highlightXOffset: 0,
-      highlightYOffset: 0,
+      highlightYOffset: -31,
       // Valid moves highlight parameters
-      validHighlightWidthScale: 1.0,
-      validHighlightHeightScale: 1.0,
+      validHighlightWidthScale: 1,
+      validHighlightHeightScale: 1,
       validHighlightXOffset: 0,
-      validHighlightYOffset: 0,
+      validHighlightYOffset: -31,
       // Dedicated bear-off valid highlight
-      bearOffValidWidthScale: 1.0,
-      bearOffValidHeightScale: 1.0,
+      bearOffValidWidthScale: 1,
+      bearOffValidHeightScale: 1,
       bearOffValidXOffset: 0,
       bearOffValidYOffset: 0,
       // Bottom row specific highlight offset (if needed separately, otherwise shared)
-      highlightBottomYOffset: 0,
-      validHighlightBottomYOffset: 0,
+      highlightBottomYOffset: 26,
+      validHighlightBottomYOffset: 26,
 
       // Dragging checker parameters
-      dragCheckerSizeScale: 1.0,
+      dragCheckerSizeScale: 1,
       dragCheckerXOffset: 0,
       dragCheckerYOffset: 0,
       // Bear-off (lot) customization
-      bearOffCheckerScale: 0.900, // Согласно скриншоту
-      bearOffXOffset: 2.0, // Согласно скриншоту
+      bearOffCheckerScale: 0.9,
+      bearOffXOffset: 2,
       bearOffYOffset: 0,
       // Advanced text offsets (quadrants)
-      textTopRightY: -15, // Points 19-24 (Indices 0-5)
-      textTopLeftY: -15,  // Points 13-18 (Indices 6-11)
-      textBottomLeftY: 15, // Points 7-12 (Indices 12-17)
-      textBottomRightY: 15, // Points 1-6 (Indices 18-23)
+      textTopRightY: -316, // Points 19-24 (Indices 0-5)
+      textTopLeftY: -316,  // Points 13-18 (Indices 6-11)
+      textBottomLeftY: 316, // Points 7-12 (Indices 12-17)
+      textBottomRightY: 316, // Points 1-6 (Indices 18-23)
     }
 
   // Small Screen (Mobile) - Optimized
   const MOBILE_CONFIG = {
-    sideMarginLeftPct: 0.031,
-    sideMarginRightPct: 0.050,
-    barMarginLeftPct: 0.030,
+    sideMarginLeftPct: 0.04,
+    sideMarginRightPct: 0.05,
+    barMarginLeftPct: 0.03,
     barMarginRightPct: 0.012,
     barWidthPct: 0.025,
-    topMarginPct: 0.079,
-    bearOffHeightPct: 0.090, // Согласно скриншоту
+    topMarginPct: 0.058,
+    bearOffHeightPct: 0.134,
     checkerWidthRatio: 1.5,
     checkerHeightRatio: 0.252,
-    checkerDrawScale: 1.23,
-    diceP1X: 0.55,
-    diceP1Y: 0.65,
-    diceP2X: 0.09,
-    diceP2Y: 0.38, 
-    checkerTopOffset: -363, 
-    checkerBottomOffset: 363,
+    checkerDrawScale: 1.28,
+    diceP1X: 0.5,
+    diceP1Y: 0.6,
+    diceP2X: 0.16,
+    diceP2Y: 0.24, 
+    checkerTopOffset: -349, 
+    checkerBottomOffset: 349,
     // Legacy text offsets
     textTopOffset: -15,
     textBottomOffset: 15,
     // New parameters for advanced highlight and text control
-    highlightWidthScale: 1.0,
-    highlightHeightScale: 1.0,
+    highlightWidthScale: 1,
+    highlightHeightScale: 1,
     highlightXOffset: 0,
     highlightYOffset: -31,
     // Valid moves highlight parameters
-    validHighlightWidthScale: 1.0,
-    validHighlightHeightScale: 1.0,
+    validHighlightWidthScale: 1,
+    validHighlightHeightScale: 1,
     validHighlightXOffset: 0,
     validHighlightYOffset: -31,
     // Dedicated bear-off valid highlight
-    bearOffValidWidthScale: 1.0,
-    bearOffValidHeightScale: 1.0,
+    bearOffValidWidthScale: 1,
+    bearOffValidHeightScale: 1,
     bearOffValidXOffset: 0,
     bearOffValidYOffset: 0,
     // Bottom row specific highlight offset (if needed separately, otherwise shared)
@@ -194,12 +194,12 @@ export default function BackgammonBoard({
     validHighlightBottomYOffset: 26,
 
     // Dragging checker parameters
-    dragCheckerSizeScale: 1.0,
+    dragCheckerSizeScale: 1,
     dragCheckerXOffset: 0,
     dragCheckerYOffset: 0,
     // Bear-off (lot) customization
-    bearOffCheckerScale: 0.900, // Согласно скриншоту
-    bearOffXOffset: 2.0, // Согласно скриншоту
+    bearOffCheckerScale: 0.9,
+    bearOffXOffset: 2,
     bearOffYOffset: 0,
     // Advanced text offsets (quadrants)
     textTopRightY: -316,
@@ -951,21 +951,19 @@ export default function BackgammonBoard({
     // Возвращаем Player 1 вниз-вправо, Player 2 вверх-влево.
     // Используем безопасный отступ 150px от краев, чтобы точно попасть на поле.
 
+    // ВАЖНО: Используем параметры из debugConfig для позиции кубиков
     if (currentPlayer === 0) {
-      // Player1 (белые) - Внизу Справа (Дом белых, пункты 1-6)
-      // Размещаем в правой части доски, но внутри границ
-      // Используем безопасные отступы от краев
-      xPos = width * 0.82
-      yPos = height * 0.75
+      // Player1 (белые) - используем diceP1X и diceP1Y из конфига
+      xPos = width * (debugConfig.diceP1X ?? 0.5)
+      yPos = height * (debugConfig.diceP1Y ?? 0.6)
       
-      console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos })
+      console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos, config: { diceP1X: debugConfig.diceP1X, diceP1Y: debugConfig.diceP1Y } })
     } else {
-      // Player2 (черные, соперник) - Вверху Слева (Дом черных, пункт 13)
-      // Размещаем в левой части доски, но внутри границ
-      xPos = width * 0.18
-      yPos = height * 0.25
+      // Player2 (черные, соперник) - используем diceP2X и diceP2Y из конфига
+      xPos = width * (debugConfig.diceP2X ?? 0.16)
+      yPos = height * (debugConfig.diceP2Y ?? 0.24)
       
-      console.log('🎲 Player2 dice position (TOP-LEFT):', { xPos, yPos })
+      console.log('🎲 Player2 dice position (TOP-LEFT):', { xPos, yPos, config: { diceP2X: debugConfig.diceP2X, diceP2Y: debugConfig.diceP2Y } })
     }
     
     // Ограничиваем позицию кубиков границами доски с учетом размера кубиков
@@ -979,7 +977,7 @@ export default function BackgammonBoard({
       y: yPos,
       size: diceSize,
     })
-  }, [currentPlayer, getPointCoordinates])
+  }, [currentPlayer, getPointCoordinates, debugConfig])
 
   useEffect(() => {
     updateDicePosition()
