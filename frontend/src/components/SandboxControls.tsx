@@ -47,6 +47,7 @@ export default function SandboxControls({
   const [diceTargetPlayer, setDiceTargetPlayer] = useState<number | null>(null)
   const [showDiceModal, setShowDiceModal] = useState(false)
   const [diceQueue, setDiceQueue] = useState<number[][]>([])
+  const [diceModalDismissed, setDiceModalDismissed] = useState(false) // Флаг для предотвращения повторного открытия после отмены
 
   // Auto-show dice modal in play mode if no dice
   useEffect(() => {
@@ -55,8 +56,8 @@ export default function SandboxControls({
     const hasDice = !!dice && (Array.isArray(dice) ? dice.length > 0 : (dice.die1 !== undefined && dice.die1 !== null));
     
     // Показываем модалку только если мы в режиме игры, нет кубиков, модалка еще не открыта 
-    // и мы НЕ просматриваем историю (selectedMoveIndex === null)
-    if (mode === 'play' && !hasDice && !showDiceModal && selectedMoveIndex === null) {
+    // и мы НЕ просматриваем историю (selectedMoveIndex === null) и модалка не была закрыта пользователем
+    if (mode === 'play' && !hasDice && !showDiceModal && selectedMoveIndex === null && !diceModalDismissed) {
       console.log('🎲 [SandboxControls] Auto-showing dice modal, current player:', currentPlayer);
       
       const timer = setTimeout(() => {
@@ -186,6 +187,8 @@ export default function SandboxControls({
     }
   }
 
+  const [isLockedAfterSave, setIsLockedAfterSave] = useState(false) // Флаг блокировки после сохранения
+  
   const handleSaveChapter = async () => {
     const name = prompt('Введите название главы:')
     if (!name) return
@@ -196,16 +199,24 @@ export default function SandboxControls({
       })
       loadChapters()
       alert('Глава сохранена')
+      // Блокируем изменения после сохранения - разблокировка произойдет при переключении режима или загрузке другой главы
+      setIsLockedAfterSave(true)
     } catch (e) {
       alert('Ошибка при сохранении')
     }
   }
+  
+  // Разблокировка при переключении режима или загрузке главы
+  useEffect(() => {
+    setIsLockedAfterSave(false)
+  }, [mode, gameId])
 
   const handleLoadChapter = async (chapter: SandboxChapter) => {
     try {
       await apiClient.post(`/games/${gameId}/sandbox/setup-board`, chapter.gameState)
       onBoardUpdate()
       setMode('setup')
+      setIsLockedAfterSave(false) // Разблокируем при загрузке главы
       alert(`Глава "${chapter.name}" загружена`)
     } catch (e) {
       alert('Ошибка при загрузке главы')
@@ -426,7 +437,12 @@ export default function SandboxControls({
               ))}
             </div>
             <div className="modal-actions">
-              <button onClick={() => setShowDiceModal(false)}>Отмена</button>
+              <button onClick={() => {
+                setShowDiceModal(false)
+                setDiceModalDismissed(true) // Устанавливаем флаг чтобы предотвратить автоматическое открытие
+                // Сбрасываем флаг через 2 секунды чтобы модалка могла открыться снова при следующем ходе
+                setTimeout(() => setDiceModalDismissed(false), 2000)
+              }}>Отмена</button>
               <button className="queue-btn" onClick={handleAddToQueue}>В очередь</button>
               <button className="confirm-btn" onClick={handleSetDice}>Бросить</button>
             </div>

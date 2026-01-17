@@ -27,6 +27,7 @@ interface BuildingConfig {
   maxAccumulation: number
   maxLevel: number
   upgradeMultiplier?: number
+  incomeMultiplier?: number
 }
 
 interface DistrictData {
@@ -198,10 +199,43 @@ export default function City() {
                 />
               </div>
               <div className="city-modal-stats">
-                <div className="city-modal-stat">
-                  <span className="label">Прибыль:</span>
-                  <span className="value">{showBuildingModal.baseIncomePerHour} NAR/час</span>
-                </div>
+                {(() => {
+                  const userBuilding = currentDistrict?.buildings.find(b => b.config.id === showBuildingModal.id)?.userBuilding
+                  const incomeMultiplier = showBuildingModal.incomeMultiplier || 0.07
+                  
+                  if (userBuilding) {
+                    // Текущая прибыль
+                    const currentIncome = userBuilding.incomePerHour
+                    // Прибыль после улучшения (уровень + 1)
+                    const nextLevel = userBuilding.level + 1
+                    const baseIncome = showBuildingModal.baseIncomePerHour
+                    const nextIncome = Math.floor(baseIncome * (1 + incomeMultiplier * (nextLevel - 1)))
+                    
+                    return (
+                      <>
+                        <div className="city-modal-stat">
+                          <span className="label">Прибыль была:</span>
+                          <span className="value">{currentIncome} NAR/час</span>
+                        </div>
+                        <div className="city-modal-stat">
+                          <span className="label">Станет:</span>
+                          <span className="value">{nextIncome} NAR/час</span>
+                        </div>
+                        <div className="city-modal-stat">
+                          <span className="label">Улучшение с уровня {userBuilding.level} до уровня {nextLevel}</span>
+                        </div>
+                      </>
+                    )
+                  }
+                  
+                  // Для нового здания показываем базовую прибыль
+                  return (
+                    <div className="city-modal-stat">
+                      <span className="label">Прибыль:</span>
+                      <span className="value">{showBuildingModal.baseIncomePerHour} NAR/час</span>
+                    </div>
+                  )
+                })()}
               </div>
               
               <div className="city-modal-footer">

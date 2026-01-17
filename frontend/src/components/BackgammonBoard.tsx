@@ -1071,11 +1071,23 @@ export default function BackgammonBoard({
     }
     
     // Проверяем бар (упрощенно - центр экрана)
+    // В sandbox режиме проверяем наличие шашек на баре, а не isPlayer1
     const barWidth = width * 0.088
     const barX = (width - barWidth) / 2
     if (actualX >= barX && actualX <= barX + barWidth) {
       if (actualY >= height * 0.2 && actualY <= height * 0.8) {
-         return isPlayer1 ? 24 : 25
+        // Проверяем наличие шашек на баре для определения какой бар (24 для белых, 25 для черных)
+        const bar = gameState?.bar || { white: 0, black: 0 }
+        // Если есть белые на баре - возвращаем 24, если черные - 25
+        // Для sandbox проверяем оба бары
+        if (isSandbox) {
+          // В sandbox режиме возвращаем 24 если есть белые, иначе 25 если есть черные
+          if (bar.white > 0) return 24
+          if (bar.black > 0) return 25
+        } else {
+          // В обычной игре проверяем isPlayer1 для определения цвета
+          return isPlayer1 ? 24 : 25
+        }
       }
     }
     
@@ -2040,36 +2052,49 @@ export default function BackgammonBoard({
         else pointValue = points[pointIndex] || 0
         
         // В sandbox разрешаем перетаскивать любую шашку за обе стороны
-        // В режиме расстановки сразу включаем свободное перемещение
+        // В режиме play - drag & drop без выбора (как в обычной игре)
+        // В режиме setup - сразу включаем свободное перемещение
         if (isSandbox) {
           if (pointValue !== 0) {
-            if (sandboxMode === 'setup') {
-              const { x: pX, y: pY } = getPointCoordinates(pointIndex, canvas)
-              setDragging({ 
-                pointIndex, 
-                offsetX: x - pX, 
-                offsetY: y - pY,
-                freeMove: true 
-              })
-              setDragPosition({ x, y })
-              return
-            }
-
-            longPressStartRef.current = { x, y, pointIndex }
-            longPressTimerRef.current = window.setTimeout(() => {
-              if (longPressStartRef.current && canvasRef.current) {
-                const { pointIndex: startPoint, x: startX, y: startY } = longPressStartRef.current
-                const { x: pX, y: pY } = getPointCoordinates(startPoint, canvasRef.current)
-                setDragging({ 
-                  pointIndex: startPoint, 
-                  offsetX: startX - pX, 
-                  offsetY: startY - pY,
-                  freeMove: true 
+            // В режиме play используем drag & drop сразу без выбора (как в обычной игре)
+            // В режиме setup - свободное перемещение
+            const { x: pX, y: pY } = getPointCoordinates(pointIndex, canvas)
+            if (sandboxMode === 'play') {
+              // В play режиме начинаем drag & drop сразу, но с учетом правил игры (возможные ходы)
+              // Если есть возможные ходы - используем обычную логику выбора, иначе - свободное перемещение
+              const activePlayer = currentPlayer
+              const isWhiteChecker = pointValue > 0
+              const isBlackChecker = pointValue < 0
+              const isMyChecker = (activePlayer === 0 && isWhiteChecker) || (activePlayer === 1 && isBlackChecker)
+              
+              // Проверяем есть ли возможные ходы для этой точки
+              const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+              
+              if (pointMoves.length > 0 && isMyChecker) {
+                // Если есть возможные ходы - используем обычную логику выбора
+                setSelectedPoint(pointIndex)
+                const validTargets = new Set<number>()
+                pointMoves.forEach(move => {
+                  if (move.to !== undefined && move.to !== null) {
+                    validTargets.add(move.to)
+                  }
                 })
-                setDragPosition({ x: startX, y: startY })
-                longPressStartRef.current = null
+                setValidTargetPoints(validTargets)
+                setDragging({ pointIndex, offsetX: 0, offsetY: 0 })
+                setDragPosition({ x, y })
+                return
               }
-            }, 300)
+            }
+            
+            // В setup режиме или если нет возможных ходов - свободное перемещение
+            setDragging({ 
+              pointIndex, 
+              offsetX: x - pX, 
+              offsetY: y - pY,
+              freeMove: true 
+            })
+            setDragPosition({ x, y })
+            return
           }
         }
 

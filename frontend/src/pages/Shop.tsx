@@ -435,7 +435,7 @@ export default function Shop() {
   const tabs = [
     { id: 'coin', label: 'NAR-coin', active: activeTab === 'coin', onClick: () => setActiveTab('coin') },
     { id: 'subscription', label: 'Подписка', active: activeTab === 'subscription', onClick: () => setActiveTab('subscription') },
-    { id: 'skins', label: 'Доски', active: activeTab === 'skins', onClick: () => setActiveTab('skins') },
+    { id: 'skins', label: 'Скины', active: activeTab === 'skins', onClick: () => setActiveTab('skins') },
   ]
 
   return (
@@ -663,7 +663,7 @@ export default function Shop() {
                 className={`shop-skin-filter ${skinFilter === 'board' ? 'active' : ''}`}
                 onClick={() => setSkinFilter('board')}
               >
-                Доски
+                Скины
               </button>
               <button
                 className={`shop-skin-filter ${skinFilter === 'dice' ? 'active' : ''}`}
@@ -690,7 +690,7 @@ export default function Shop() {
                 <>
                   {getSkinsByType('board').length > 0 && (
                     <>
-                      <div className="shop-skin-group-title">Доски</div>
+                      <div className="shop-skin-group-title">Скины</div>
                       {getSkinsByType('board').map((skin) => renderSkinCard(skin))}
                     </>
                   )}
