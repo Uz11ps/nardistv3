@@ -103,7 +103,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       // ВАЖНО: Если lastMoveAt не установлен, время еще не началось
       if (!game.lastMoveAt) {
         // Время еще не началось - не проверяем таймаут
-        continue;
+        return;
       }
       const referenceTime = game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt);
       const timeSinceLastMove = (now.getTime() - referenceTime.getTime()) / 1000; // в секундах
