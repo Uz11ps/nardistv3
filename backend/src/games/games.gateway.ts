@@ -254,18 +254,20 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
 
           // ВАЖНО: Если lastMoveAt не установлен, время еще не началось
           if (!currentGame.lastMoveAt) {
-            // Время еще не началось - отправляем полное время
+            // Время еще не началось - отправляем полное время через server
             const currentPlayerTimeRemaining = currentGame.currentPlayer === 0 
               ? (currentGame.player1TimeRemaining || 60000) 
               : (currentGame.player2TimeRemaining || 60000);
             
-            socket.emit('timer_update', {
-              gameId: currentGame.id,
-              moveTimeRemaining: 15,
-              totalTimeRemaining: currentPlayerTimeRemaining / 1000,
-              isOvertime: false,
-            });
-            return;
+            if (this.server) {
+              this.server.to(`game:${currentGame.id}`).emit('timer_update', {
+                gameId: currentGame.id,
+                moveTimeRemaining: 15,
+                totalTimeRemaining: currentPlayerTimeRemaining / 1000,
+                isOvertime: false,
+              });
+            }
+            continue;
           }
           
           const referenceTime = currentGame.lastMoveAt instanceof Date ? currentGame.lastMoveAt : new Date(currentGame.lastMoveAt);
