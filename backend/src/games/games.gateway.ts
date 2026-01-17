@@ -689,6 +689,95 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         const bothOffsetsChosen = updatedGameAfterMove.p1OffsetChosenAt !== null && updatedGameAfterMove.p2OffsetChosenAt !== null;
         
         if (hasNoDice && game.status === 'in_progress' && bothOffsetsChosen) {
+          // Ход завершен (все кубики использованы), нужно проверить валидные ходы
+          // ВАЖНО: Если после использования всех кубиков нет валидных ходов - автоматически пропускаем ход
+          const currentPlayerId = gameState.currentPlayer === 0 ? gameState.player1Id : gameState.player2Id;
+          const isBotGame = gameState.type === 'vs_bot' && gameState.player2Id === null;
+          
+          // Для обычных игроков (не бот) проверяем валидные ходы после использования всех кубиков
+          let shouldSkipTurn = false;
+          if (!isBotGame && currentPlayerId) {
+            try {
+              const possibleMovesAfterAllDiceUsed = await this.gamesService.getPossibleMoves(data.gameId, currentPlayerId);
+              const hasMovesAfterAllDiceUsed = possibleMovesAfterAllDiceUsed.allMoves.length > 0 && 
+                                             possibleMovesAfterAllDiceUsed.allMoves.some(seq => seq.length > 0);
+              
+              // ВАЖНО: Проверка бара актуальна ТОЛЬКО для коротких нардов
+              let hasBarButNoMoves = false;
+              const isShortBackgammon = updatedGameAfterMove.mode === GameMode.SHORT;
+              if (isShortBackgammon) {
+                const bar = updatedGameAfterMove.gameState?.bar;
+                const currentPlayer = gameState.currentPlayer;
+                const barValue = Array.isArray(bar) 
+                  ? bar[currentPlayer] 
+                  : (currentPlayer === 0 ? (bar?.white || 0) : (bar?.black || 0));
+                hasBarButNoMoves = barValue > 0 && !hasMovesAfterAllDiceUsed;
+              }
+              
+              if (!hasMovesAfterAllDiceUsed || hasBarButNoMoves) {
+                this.logger.log(`🔄 No possible moves after all dice used for player ${currentPlayerId}${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''}, switching turn automatically`);
+                // Переключаем ход автоматически
+                await this.gamesService.makeMove(data.gameId, currentPlayerId, []);
+                const updatedGameStateAfterSkip = await this.gamesService.getGameState(data.gameId);
+                this.server.to(`game:${data.gameId}`).emit('move_made', updatedGameStateAfterSkip);
+                this.server.to(`game:${data.gameId}`).emit('game_state', updatedGameStateAfterSkip);
+                await this.sendTimerUpdateForGame(data.gameId);
+                
+                // Если игра завершена - выходим
+                const finalGameAfterSkip = await this.gamesService.findOne(data.gameId);
+                if (finalGameAfterSkip.status === 'finished') {
+                  this.server.to(`game:${data.gameId}`).emit('game_finished', {
+                    winnerId: finalGameAfterSkip.winnerId,
+                    player1Score: finalGameAfterSkip.player1Score,
+                    player2Score: finalGameAfterSkip.player2Score,
+                    gameState: updatedGameStateAfterSkip,
+                    game: {
+                      player1Wins: finalGameAfterSkip.player1Wins || 0,
+                      player2Wins: finalGameAfterSkip.player2Wins || 0,
+                      matchesToWin: finalGameAfterSkip.matchesToWin || 1,
+                    },
+                  });
+                  return;
+                }
+                
+                // Обновляем gameState после пропуска хода
+                const newGameState = await this.gamesService.getGameState(data.gameId);
+                const newUpdatedGame = await this.gamesService.findOne(data.gameId);
+                const newDiceFromGame = newUpdatedGame.gameState?.dice;
+                const newHasNoDice = !newDiceFromGame || (Array.isArray(newDiceFromGame) && newDiceFromGame.length === 0);
+                
+                // Проверяем, нужно ли бросить кубики для следующего игрока
+                const nextPlayerIdAfterSkip = newGameState.currentPlayer === 0 
+                  ? newGameState.player1Id 
+                  : newGameState.player2Id;
+                const isBotTurnAfterSkip = newGameState.type === 'vs_bot' && 
+                                          newGameState.player2Id === null && 
+                                          newGameState.currentPlayer === 1;
+                
+                if (newHasNoDice && newUpdatedGame.status === 'in_progress' && bothOffsetsChosen) {
+                  this.pendingDiceRolls.set(data.gameId, {
+                    nextPlayerId: isBotTurnAfterSkip ? null : nextPlayerIdAfterSkip,
+                    isBotTurn: isBotTurnAfterSkip,
+                    gameId: data.gameId
+                  });
+                  
+                  if (isBotTurnAfterSkip) {
+                    setTimeout(async () => {
+                      await this.executePendingDiceRoll(data.gameId);
+                    }, 500);
+                  }
+                } else if (isBotTurnAfterSkip) {
+                  await this.handleBotTurnIfNeeded(data.gameId);
+                }
+                
+                return; // Выходим, т.к. ход переключен
+              }
+            } catch (e) {
+              this.logger.error(`Error checking possible moves after all dice used: ${e.message}`);
+            }
+          }
+          
+          // Если ход не был пропущен, продолжаем обычную логику броска кубиков
           // Ход завершен, нужно бросить кубики для следующего игрока
           // ВАЖНО: Сохраняем информацию о необходимости броска кубиков и ждем события о завершении анимации
           const nextPlayerId = gameState.currentPlayer === 0 ? gameState.player1Id : gameState.player2Id;
@@ -721,24 +810,43 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           // Для обычных игроков (не бот) проверяем валидные ходы после хода
           if (!isBotGame && currentPlayerId) {
             try {
-              const possibleMovesAfterMove = await this.gamesService.getPossibleMoves(data.gameId, currentPlayerId);
-              const hasMovesAfterMove = possibleMovesAfterMove.allMoves.length > 0 && 
-                                       possibleMovesAfterMove.allMoves.some(seq => seq.length > 0);
+              // ВАЖНО: Получаем актуальное состояние игры после хода для проверки
+              const freshGameState = await this.gamesService.getGameState(data.gameId);
+              const freshGame = await this.gamesService.findOne(data.gameId);
               
-              // ВАЖНО: Проверка бара актуальна ТОЛЬКО для коротких нардов
-              let hasBarButNoMoves = false;
-              const isShortBackgammon = updatedGameAfterMove.mode === GameMode.SHORT;
-              if (isShortBackgammon) {
-                const bar = updatedGameAfterMove.gameState?.bar;
-                const currentPlayer = gameState.currentPlayer;
-                const barValue = Array.isArray(bar) 
-                  ? bar[currentPlayer] 
-                  : (currentPlayer === 0 ? (bar?.white || 0) : (bar?.black || 0));
-                hasBarButNoMoves = barValue > 0 && !hasMovesAfterMove;
-              }
+              // Проверяем, есть ли еще кубики
+              const remainingDice = freshGameState.gameState?.dice || freshGame.gameState?.dice || [];
+              const hasRemainingDice = Array.isArray(remainingDice) && remainingDice.length > 0;
               
-              if (!hasMovesAfterMove || hasBarButNoMoves) {
-                this.logger.log(`🔄 No possible moves after move for player ${currentPlayerId}${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''}, switching turn automatically`);
+              this.logger.log(`🔍 Checking moves after partial move: currentPlayer=${freshGameState.currentPlayer}, remainingDice=${JSON.stringify(remainingDice)}, hasRemainingDice=${hasRemainingDice}`);
+              
+              // ВАЖНО: Проверяем валидные ходы только если есть оставшиеся кубики
+              // Если кубиков нет - ход уже завершен, и проверка будет в другом месте
+              if (hasRemainingDice) {
+                // ВАЖНО: getPossibleMoves должен учитывать оставшиеся кубики из freshGameState
+                // Но getPossibleMoves использует состояние из БД, которое уже обновлено после makeMove
+                // Поэтому оставшиеся кубики уже должны быть в состоянии
+                const possibleMovesAfterMove = await this.gamesService.getPossibleMoves(data.gameId, currentPlayerId);
+                const hasMovesAfterMove = possibleMovesAfterMove.allMoves.length > 0 && 
+                                         possibleMovesAfterMove.allMoves.some(seq => seq.length > 0);
+                
+                this.logger.log(`🔍 Possible moves check after partial move: remainingDice=${JSON.stringify(remainingDice)}, allMoves.length=${possibleMovesAfterMove.allMoves.length}, hasNonEmptySequences=${hasMovesAfterMove}, sequences=${possibleMovesAfterMove.allMoves.map(s => s.length).join(',')}`);
+                
+                // ВАЖНО: Проверка бара актуальна ТОЛЬКО для коротких нардов
+                let hasBarButNoMoves = false;
+                const isShortBackgammon = freshGame.mode === GameMode.SHORT;
+                if (isShortBackgammon) {
+                  const bar = freshGame.gameState?.bar || freshGameState.gameState?.bar;
+                  const currentPlayer = freshGameState.currentPlayer;
+                  const barValue = Array.isArray(bar) 
+                    ? bar[currentPlayer] 
+                    : (currentPlayer === 0 ? (bar?.white || 0) : (bar?.black || 0));
+                  hasBarButNoMoves = barValue > 0 && !hasMovesAfterMove;
+                }
+                
+                // ВАЖНО: Если нет валидных ходов с оставшимися кубиками - переключаем ход
+                if (!hasMovesAfterMove || hasBarButNoMoves) {
+                  this.logger.log(`🔄 No possible moves after move for player ${currentPlayerId}${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''}, remainingDice=${JSON.stringify(remainingDice)}, switching turn automatically`);
                 // Переключаем ход автоматически
                 await this.gamesService.makeMove(data.gameId, currentPlayerId, []);
                 const updatedGameStateAfterSkip = await this.gamesService.getGameState(data.gameId);
@@ -773,8 +881,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
                 
                 const diceAfterSkip = finalGameAfterSkip.gameState?.dice;
                 const hasNoDiceAfterSkip = !diceAfterSkip || (Array.isArray(diceAfterSkip) && diceAfterSkip.length === 0);
+                const bothOffsetsChosenAfterSkip = finalGameAfterSkip.p1OffsetChosenAt !== null && finalGameAfterSkip.p2OffsetChosenAt !== null;
                 
-                if (hasNoDiceAfterSkip && finalGameAfterSkip.status === 'in_progress' && bothOffsetsChosen) {
+                if (hasNoDiceAfterSkip && finalGameAfterSkip.status === 'in_progress' && bothOffsetsChosenAfterSkip) {
                   this.pendingDiceRolls.set(data.gameId, {
                     nextPlayerId: isBotTurnAfterSkip ? null : nextPlayerIdAfterSkip,
                     isBotTurn: isBotTurnAfterSkip,
@@ -792,13 +901,18 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
                 
                 return; // Выходим, т.к. ход переключен
               }
+              // Если есть кубики и есть валидные ходы - продолжаем обычную логику
             } catch (e) {
               this.logger.error(`Error checking possible moves after move: ${e.message}`);
             }
           }
           
           // Проверяем бота только если это его ход и кубики уже есть
-          this.logger.log(`🔄 No dice roll needed (intermediate move or dice still available), diceFromState=${JSON.stringify(diceFromGameState)}, diceFromGame=${JSON.stringify(diceFromGame)}, bothOffsetsChosen=${bothOffsetsChosen}`);
+          // Получаем актуальное состояние для логирования
+          const currentGameForLog = await this.gamesService.findOne(data.gameId);
+          const currentDiceForLog = currentGameForLog.gameState?.dice;
+          const bothOffsetsChosenForLog = currentGameForLog.p1OffsetChosenAt !== null && currentGameForLog.p2OffsetChosenAt !== null;
+          this.logger.log(`🔄 No dice roll needed (intermediate move or dice still available), dice=${JSON.stringify(currentDiceForLog)}, bothOffsetsChosen=${bothOffsetsChosenForLog}`);
           await this.handleBotTurnIfNeeded(data.gameId);
         }
       }
