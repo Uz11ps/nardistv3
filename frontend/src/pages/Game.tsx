@@ -252,6 +252,7 @@ export default function Game() {
   const pendingGameStateRef = useRef<any>(null)
   const isServerAnimatingRef = useRef<boolean>(false)
   const [winnerId, setWinnerId] = useState<string | null>(null)
+  const autoConfirmTimeoutRef = useRef<number | null>(null) // Таймаут для автоматического подтверждения
 
   // Синхронизируем рефы с состоянием
   useEffect(() => {
@@ -882,6 +883,35 @@ export default function Game() {
             dice: data.dice
           };
         });
+        
+        // ВАЖНО: Проверяем валидные ходы после обновления кубиков
+        // Если нет валидных ходов - автоматически пропускаем ход
+        // Проверяем через setTimeout, чтобы состояние обновилось
+        setTimeout(async () => {
+          try {
+            // Проверяем, что это действительно мой ход и не sandbox
+            const currentGameState = await apiClient.get(`/games/${gameId}`);
+            const game = currentGameState.data;
+            const isCurrentPlayer = game.currentPlayer === (game.player1Id === user?.id ? 0 : 1);
+            const isGameSandbox = game.type === 'sandbox';
+            
+            if (!isGameSandbox && isCurrentPlayer && data.dice && data.dice.length > 0) {
+              const possibleMoves = await apiClient.post(`/games/${gameId}/possible-moves`, { pendingMoves: [] });
+              const hasValidMoves = possibleMoves.data?.allMoves?.length > 0 && 
+                                    possibleMoves.data.allMoves.some((seq: any[]) => seq.length > 0);
+              
+              if (!hasValidMoves) {
+                console.log('🔄 No valid moves detected after dice roll, auto-skipping turn');
+                const socket = getSocket();
+                if (socket) {
+                  socket.emit('make_move', { gameId, moves: [] });
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error checking possible moves for auto-skip:', error);
+          }
+        }, 1000); // Задержка после обновления состояния для проверки ходов
       }
       
       // Запускаем анимацию ОДИН раз - устанавливаем ref СРАЗУ
@@ -1800,6 +1830,11 @@ export default function Game() {
   }
 
   const handleUndo = () => {
+    // Очищаем таймер автоматического подтверждения при отмене
+    if (autoConfirmTimeoutRef.current) {
+      clearTimeout(autoConfirmTimeoutRef.current);
+      autoConfirmTimeoutRef.current = null;
+    }
     if (pendingMoves.length > 0) {
       setPendingMoves(prev => prev.slice(0, -1))
       // После отмены хода нужно перезагрузить возможные ходы
@@ -2116,6 +2151,36 @@ export default function Game() {
       }
     }
   }
+
+  // Автоматическое подтверждение хода через 3 секунды, если requireConfirmMove = false
+  useEffect(() => {
+    // Очищаем предыдущий таймер при изменении зависимостей
+    if (autoConfirmTimeoutRef.current) {
+      clearTimeout(autoConfirmTimeoutRef.current);
+      autoConfirmTimeoutRef.current = null;
+    }
+
+    // Если подтверждение не требуется, есть ходы, это мой ход, игра в процессе и нет обработки подтверждения
+    if (!requireConfirmMove && 
+        pendingMoves.length > 0 && 
+        isMyTurn && 
+        (gameStatus === 'in_progress' || isSandbox) && 
+        gameState?.dice &&
+        !isProcessingConfirm) {
+      console.log('⏱️ Auto-confirm timer started: 3 seconds');
+      autoConfirmTimeoutRef.current = window.setTimeout(() => {
+        console.log('✅ Auto-confirming moves after 3 seconds');
+        handleConfirm();
+      }, 3000); // 3 секунды
+    }
+
+    return () => {
+      if (autoConfirmTimeoutRef.current) {
+        clearTimeout(autoConfirmTimeoutRef.current);
+        autoConfirmTimeoutRef.current = null;
+      }
+    };
+  }, [pendingMoves.length, requireConfirmMove, isMyTurn, gameStatus, isSandbox, gameState?.dice, isProcessingConfirm, handleConfirm])
 
   if (!gameState || !gameInfo) {
     return (
@@ -2584,7 +2649,7 @@ export default function Game() {
           {(gameStatus === 'in_progress' || gameStatus === 'finished' || isSandbox) && (
             <div className="board-wrapper">
               {/* Кнопки подтверждения и отмены в нижней части бара (ландшафт и портретный режим) */}
-              {((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0 && requireConfirmMove) && (
+              {((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0) && (
                 <>
                   <button 
                     className="game-bar-btn game-bar-btn-cancel"
@@ -2593,13 +2658,15 @@ export default function Game() {
                   >
                     ✕
                   </button>
-                  <button 
-                    className="game-bar-btn game-bar-btn-confirm"
-                    onClick={handleConfirm}
-                    title={`Подтвердить (${pendingMoves.length})`}
-                  >
-                    ✓
-                  </button>
+                  {requireConfirmMove && (
+                    <button 
+                      className="game-bar-btn game-bar-btn-confirm"
+                      onClick={handleConfirm}
+                      title={`Подтвердить (${pendingMoves.length})`}
+                    >
+                      ✓
+                    </button>
+                  )}
                 </>
               )}
               <BackgammonBoard
