@@ -1063,30 +1063,28 @@ export default function BackgammonBoard({
           const triangleBase = pY - pH;
           const triangleTip = pY;
           const visualBase = pY + scaleY(debugConfig.checkerTopOffset);
-          // Visual stack extends down by ~5 checkers
-          const visualEnd = visualBase + (5 * checkerSize_approx);
+          // Visual stack extends from (visualBase - size/2) to (visualBase + 5*overlap + size/2)
+          const visualTop = visualBase - (checkerSize_approx / 2);
+          const visualBottom = visualBase + (4 * (checkerSize_approx - 8)) + (checkerSize_approx / 2);
           
-          yStart = Math.min(triangleBase, visualBase) - padding;
-          yEnd = Math.max(triangleTip, visualEnd) + padding;
+          yStart = Math.min(triangleBase, visualTop) - padding;
+          yEnd = Math.max(triangleTip, visualBottom) + padding;
       } else {
           // Bottom Row: Triangle goes from pY (tip) down to (pY + pH)
           // Visual checkers start at: pY + scaleY(debugConfig.checkerBottomOffset)
-          // And go upwards (decreasing Y) from the base? 
-          // Wait, drawBoard logic:
-          // checkerBaseY = y - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset)
-          // checkerY = checkerBaseY - yOffset (goes UP)
-          // So visual checkers start near bottom edge and go UP.
+          // And go upwards (decreasing Y) from the base.
           
           const triangleTip = pY;
           const triangleBase = pY + pH;
           
-          // checkerBaseY is roughly where the first checker is (bottom-most)
+          // visualBase is the center of the first (bottom-most) checker
           const visualBase = pY + scaleY(debugConfig.checkerBottomOffset);
-          // Visual stack extends UP by ~5 checkers
-          const visualTop = visualBase - (5 * checkerSize_approx);
+          // Visual stack extends from (visualBase + size/2) down to (visualBase - 5*overlap - size/2) up
+          const visualBottom = visualBase + (checkerSize_approx / 2);
+          const visualTop = visualBase - (4 * (checkerSize_approx - 8)) - (checkerSize_approx / 2);
           
           yStart = Math.min(triangleTip, visualTop) - padding;
-          yEnd = Math.max(triangleBase, visualBase) + padding;
+          yEnd = Math.max(triangleBase, visualBottom) + padding;
       }
       
       if (actualX >= xStart && actualX <= xEnd && actualY >= yStart && actualY <= yEnd) {
