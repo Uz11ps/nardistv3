@@ -864,11 +864,14 @@ export default function BackgammonBoard({
     let width = rect.width
     let height = rect.height
     
-    // ВАЖНО: Для модальных окон (реплей) используем разумные ограничения на размер контейнера
-    // Проверяем, находится ли контейнер внутри модального окна реплея или анализа
-    const isInModal = container.closest('.replay-modal') !== null || container.closest('.analysis-modal-v2') !== null
+    // ВАЖНО: Для модальных окон (реплей, анализ, админка) используем разумные ограничения на размер контейнера
+    // Проверяем, находится ли контейнер внутри модального окна или имеет необоснованно большую высоту
+    const isInModal = container.closest('.replay-modal') !== null || 
+                      container.closest('.analysis-modal-v2') !== null || 
+                      container.closest('.admin-modal-overlay') !== null ||
+                      height > window.innerHeight * 1.5 // Если высота больше 1.5x viewport - это точно модальное окно или проблемный контейнер
     
-    if (isInModal) {
+    if (isInModal || height > 1500) { // Дополнительная проверка: если высота больше 1500px - применяем ограничения
       // Для модальных окон используем ограничения на основе viewport
       const MAX_MODAL_HEIGHT = window.innerHeight * 0.6 // Максимум 60% от высоты экрана
       const MAX_MODAL_WIDTH = window.innerWidth * 0.8 // Максимум 80% от ширины экрана
