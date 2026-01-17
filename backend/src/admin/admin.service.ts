@@ -158,9 +158,9 @@ export class AdminService implements OnModuleInit {
       .getCount();
     
     // Исключаем sandbox игры из статистики
-    const totalGames = await this.gamesRepository.count({ where: { type: Not('sandbox') } });
-    const finishedGames = await this.gamesRepository.count({ where: { status: GameStatus.FINISHED, type: Not('sandbox') } });
-    const inProgressGames = await this.gamesRepository.count({ where: { status: GameStatus.IN_PROGRESS, type: Not('sandbox') } });
+    const totalGames = await this.gamesRepository.count({ where: { type: Not(GameType.SANDBOX) } });
+    const finishedGames = await this.gamesRepository.count({ where: { status: GameStatus.FINISHED, type: Not(GameType.SANDBOX) } });
+    const inProgressGames = await this.gamesRepository.count({ where: { status: GameStatus.IN_PROGRESS, type: Not(GameType.SANDBOX) } });
     
     const totalMoves = await this.movesRepository.count();
     
@@ -214,7 +214,7 @@ export class AdminService implements OnModuleInit {
     const gamesLast7DaysRaw = await this.gamesRepository
       .createQueryBuilder('game')
       .where('game.createdAt >= :date', { date: sevenDaysAgo })
-      .andWhere('game.type != :sandboxType', { sandboxType: 'sandbox' })
+      .andWhere('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
       .select("TO_CHAR(game.createdAt, 'YYYY-MM-DD')", 'date')
       .addSelect('COUNT(*)', 'count')
       .groupBy("TO_CHAR(game.createdAt, 'YYYY-MM-DD')")
