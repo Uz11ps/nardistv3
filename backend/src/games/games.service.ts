@@ -490,8 +490,20 @@ export class GamesService {
     const playerNumber = isPlayer1 ? 0 : 1;
     let rollCount = 0;
     
-    // Проверяем, был ли этот игрок выбран первым при определении первого игрока
-    const wasFirstPlayer = game.currentPlayer === playerNumber;
+    // ВАЖНО: Проверяем, был ли этот игрок выбран первым при определении первого игрока
+    // Это определяется по первому ходу в игре (если есть ходы) или по текущему игроку (если ходов нет)
+    let wasFirstPlayer = false;
+    if (game.moves && game.moves.length > 0) {
+      // Проверяем первого игрока по первому ходу в игре
+      const firstMove = game.moves[0];
+      const firstMovePlayerId = firstMove.playerId;
+      const firstMoveIsPlayer1 = firstMovePlayerId === game.player1Id;
+      const firstMovePlayer = firstMoveIsPlayer1 ? 0 : 1;
+      wasFirstPlayer = firstMovePlayer === playerNumber;
+    } else {
+      // Нет ходов - проверяем по текущему игроку (это первый бросок)
+      wasFirstPlayer = game.currentPlayer === playerNumber;
+    }
     
     // ВАЖНО: Считаем количество раз, когда этот игрок БРОСАЛ кубики
     // Каждый вызов rollDice для этого игрока = один бросок
@@ -564,6 +576,7 @@ export class GamesService {
     
     // Логируем детальную информацию для отладки
     this.logger.log(`🎲 Provably Fair Dice: player=${isPlayer1 ? 'P1' : 'P2'}, gameId=${gameId}`);
+    this.logger.log(`🎲   Формула смещения: startIdx = (${myOffset} - 1) * 2 + ${opponentOffset} = ${startIdx}`);
     this.logger.log(`🎲   myOffset=${myOffset}, opponentOffset=${opponentOffset}`);
     this.logger.log(`🎲   startIdx=${startIdx}, rollCount=${rollCount}, currentRollIdx=${currentRollIdx}`);
     this.logger.log(`🎲   playerRolls.length=${playerRolls.length}`);
@@ -573,6 +586,7 @@ export class GamesService {
     this.logger.log(`🎲   Next 3 rolls: [${playerRolls[(currentRollIdx + 1) % playerRolls.length]?.join(', ')}, ${playerRolls[(currentRollIdx + 2) % playerRolls.length]?.join(', ')}, ${playerRolls[(currentRollIdx + 3) % playerRolls.length]?.join(', ')}]`);
     
     console.log(`🎲 Provably Fair Dice: player=${isPlayer1 ? 'P1' : 'P2'}, myOffset=${myOffset}, opponentOffset=${opponentOffset}, startIdx=${startIdx}, rollCount=${rollCount}, rollIdx=${currentRollIdx}, roll=[${diceRoll.join(', ')}]`);
+    console.log(`🎲   Формула смещения: startIdx = (${myOffset} - 1) * 2 + ${opponentOffset} = ${startIdx}`);
     
     console.log(`🎲 rollDice called: gameId=${gameId}, mode=${game.mode}, diceRoll=[${diceRoll.join(', ')}]`);
     
