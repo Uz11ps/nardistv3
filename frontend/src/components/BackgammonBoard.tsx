@@ -1740,8 +1740,30 @@ export default function BackgammonBoard({
     if (canvasRef.current && containerRef.current) {
       const container = containerRef.current
       const rect = container.getBoundingClientRect()
-      canvasRef.current.width = rect.width
-      canvasRef.current.height = rect.height
+      
+      // Ограничиваем размеры canvas, чтобы предотвратить огромные размеры в реплее/модальных окнах
+      const isInModal = container.closest('.replay-modal') !== null || 
+                        container.closest('.analysis-modal-v2') !== null || 
+                        container.closest('.admin-modal-overlay') !== null ||
+                        rect.height > window.innerHeight * 1.5
+      
+      let canvasWidth = rect.width
+      let canvasHeight = rect.height
+      
+      if (isInModal || rect.height > 1500) {
+        // Для модальных окон ограничиваем размеры
+        const MAX_MODAL_HEIGHT = window.innerHeight * 0.6
+        const MAX_MODAL_WIDTH = window.innerWidth * 0.8
+        canvasWidth = Math.min(canvasWidth, MAX_MODAL_WIDTH)
+        canvasHeight = Math.min(canvasHeight, MAX_MODAL_HEIGHT)
+      } else {
+        // Для обычной игры ограничиваем максимальными значениями
+        canvasWidth = Math.min(canvasWidth, 2000)
+        canvasHeight = Math.min(canvasHeight, 2000)
+      }
+      
+      canvasRef.current.width = canvasWidth
+      canvasRef.current.height = canvasHeight
       drawBoard()
     }
   }, [drawBoard])
@@ -1847,9 +1869,31 @@ export default function BackgammonBoard({
       if (canvasRef.current && containerRef.current) {
         const container = containerRef.current
         const rect = container.getBoundingClientRect()
-        canvasRef.current.width = rect.width
-        canvasRef.current.height = rect.height
-        setContainerHeight(rect.height)
+        
+        // Ограничиваем размеры canvas, чтобы предотвратить огромные размеры в реплее/модальных окнах
+        const isInModal = container.closest('.replay-modal') !== null || 
+                          container.closest('.analysis-modal-v2') !== null || 
+                          container.closest('.admin-modal-overlay') !== null ||
+                          rect.height > window.innerHeight * 1.5
+        
+        let canvasWidth = rect.width
+        let canvasHeight = rect.height
+        
+        if (isInModal || rect.height > 1500) {
+          // Для модальных окон ограничиваем размеры
+          const MAX_MODAL_HEIGHT = window.innerHeight * 0.6
+          const MAX_MODAL_WIDTH = window.innerWidth * 0.8
+          canvasWidth = Math.min(canvasWidth, MAX_MODAL_WIDTH)
+          canvasHeight = Math.min(canvasHeight, MAX_MODAL_HEIGHT)
+        } else {
+          // Для обычной игры ограничиваем максимальными значениями
+          canvasWidth = Math.min(canvasWidth, 2000)
+          canvasHeight = Math.min(canvasHeight, 2000)
+        }
+        
+        canvasRef.current.width = canvasWidth
+        canvasRef.current.height = canvasHeight
+        setContainerHeight(canvasHeight) // Используем ограниченную высоту
         drawBoard()
       }
     })
