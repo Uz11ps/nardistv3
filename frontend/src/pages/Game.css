@@ -567,33 +567,54 @@
 }
 
 .offset-selector {
-  margin-bottom: 32px;
-  text-align: left;
+  margin-bottom: 24px;
 }
 
 .offset-selector label {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  color: #fff;
   font-weight: 600;
 }
 
-.offset-selector input[type="range"] {
-  width: 100%;
-  height: 6px;
-  background: #333;
-  border-radius: 3px;
-  appearance: none;
-  outline: none;
+.offset-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
-.offset-selector input[type="range"]::-webkit-slider-thumb {
-  appearance: none;
-  width: 20px;
-  height: 20px;
-  background: #E84142;
-  border-radius: 50%;
+.offset-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 20px;
+  font-weight: bold;
   cursor: pointer;
-  border: 2px solid #fff;
+  transition: all 0.2s;
+}
+
+.offset-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.offset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.offset-btn-selected {
+  border: 2px solid #4caf50;
+  background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
+}
+
+.offset-btn-selected:hover:not(:disabled) {
+  background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
 }
 
 .offset-values {

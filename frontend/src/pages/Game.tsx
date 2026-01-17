@@ -635,13 +635,8 @@ export default function Game() {
                                 !offsetConfirmedRef.current && 
                                 !showOffsetModalRef.current
         
-        if (shouldShowModal) {
-          console.log('✅ [loadGame] Показываем модальное окно выбора смещения (смещение еще не выбрано)')
-          requestAnimationFrame(() => {
-            setShowOffsetModal(true)
-            console.log('✅ [loadGame] showOffsetModal установлен в true')
-          })
-        } else if (myOffsetChosenAt !== null) {
+        // Модальное окно убрано - выбор смещения происходит в блоке "КОНТРОЛЬ ЧЕСТНОСТИ"
+        if (myOffsetChosenAt !== null) {
           // Если смещение уже выбрано - помечаем как подтвержденное локально
           if (!offsetConfirmedRef.current) {
             setOffsetConfirmed(true)
@@ -1094,13 +1089,8 @@ export default function Game() {
                                 !offsetConfirmedRef.current && 
                                 !showOffsetModalRef.current
         
-        if (shouldShowModal) {
-          console.log('✅ [WebSocket] Показываем модальное окно выбора смещения (смещение еще не выбрано)')
-          requestAnimationFrame(() => {
-            setShowOffsetModal(true)
-            console.log('✅ [WebSocket] showOffsetModal установлен в true')
-          })
-        } else if (myOffsetChosenAt !== null) {
+        // Модальное окно убрано - выбор смещения происходит в блоке "КОНТРОЛЬ ЧЕСТНОСТИ"
+        if (myOffsetChosenAt !== null) {
           // Если смещение уже выбрано - помечаем как подтвержденное локально
           if (!offsetConfirmedRef.current) {
             setOffsetConfirmed(true)
@@ -1892,32 +1882,24 @@ export default function Game() {
     }
   }
 
-  const handleConfirmOffset = async () => {
-    if (!gameId) return
+  const handleOffsetButtonClick = async (value: number) => {
+    if (value < 1 || value > 5) return
+    // Обновляем локально только свой offset
+    setMyOffset(value)
+    // Сохраняем отправленное значение, чтобы игнорировать его в offset_updated
+    lastSentOffsetRef.current = value
     try {
-      // Отправляем текущее значение смещения на сервер
-      await apiClient.post(`/games/${gameId}/offset`, { offset: myOffset })
-      setOffsetConfirmed(true)
-      setShowOffsetModal(false)
-      
-      // ВАЖНО: Перезагружаем игру после выбора смещения, чтобы получить обновленное состояние
-      // Это нужно для загрузки доски после выбора смещения обоими игроками
-      setTimeout(() => {
-        loadGame()
-      }, 50)
-      
-      // Для игр с ботом автоматически начинаем игру после выбора смещения
-      if (isBotGame || gameInfo?.type === 'vs_bot') {
-        // Игра с ботом начнется автоматически
-      } else if (gameInfo?.type === 'vs_player' || gameInfo?.type === 'tournament') {
-        // Для игр с игроком или турниров - ждем готовности обоих игроков
-        // Кнопка "Готов" уже есть в интерфейсе
-      }
+      await apiClient.post(`/games/${gameId}/offset`, { offset: value })
+      // После успешной отправки НЕ обновляем локальное состояние,
+      // т.к. оно уже обновлено выше. Событие offset_updated придет от сервера,
+      // но мы его проигнорируем для своего offset.
     } catch (error) {
-      console.error('Ошибка при сохранении смещения:', error)
-      alert('Не удалось сохранить смещение. Попробуйте еще раз.')
+      // Если ошибка, сбрасываем отслеживание
+      lastSentOffsetRef.current = null
     }
   }
+
+  // handleConfirmOffset больше не нужен - смещение отправляется сразу при выборе кнопки
 
   const [isProcessingConfirm, setIsProcessingConfirm] = useState(false)
 
@@ -2669,14 +2651,22 @@ export default function Game() {
                   <div className="offset-selector">
                     <label>Ваше смещение (1-5):</label>
                     <p className="offset-hint">Каждый игрок выбирает свое смещение независимо</p>
-                    <input 
-                      type="range" 
-                      min="1" 
-                      max="5" 
-                      value={myOffset} 
-                      onChange={handleOffsetChange}
-                      disabled={myReady}
-                    />
+                    <div className="offset-buttons">
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <button
+                          key={value}
+                          className={`offset-btn ${myOffset === value ? 'offset-btn-selected' : ''}`}
+                          onClick={() => {
+                            if (!myReady) {
+                              handleOffsetButtonClick(value);
+                            }
+                          }}
+                          disabled={myReady}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </div>
                     <div className="offset-values">
                       <span>Вы: <strong>{myOffset}</strong></span>
                       <span>Соперник: <strong>{opponentOffset}</strong></span>
@@ -3102,141 +3092,6 @@ export default function Game() {
         document.body
       )}
 
-      {(showOffsetModal && gameInfo?.type !== 'sandbox') && createPortal(
-        <div 
-          className="offset-modal-overlay modal-visible"
-          style={{
-            position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
-            width: '100vw', height: '100vh', minWidth: '100vw', minHeight: '100vh',
-            background: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', zIndex: 2147483647, padding: '12px', margin: '0',
-            border: 'none', outline: 'none', touchAction: 'none', overflow: 'hidden',
-            overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
-          }}
-        >
-          <div 
-            className="offset-modal-content" 
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'relative', margin: '0', background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
-              padding: '20px', borderRadius: '16px', textAlign: 'center', maxWidth: '90vw',
-              width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
-            }}
-          >
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => setShowOffsetModal(false)}
-                style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  right: '-10px',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 1,
-                }}
-                title="Закрыть"
-              >
-                ×
-              </button>
-            </div>
-            <h2>Выбор смещения</h2>
-            <p className="offset-modal-description">
-              Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 5).
-            </p>
-            
-            <div className="offset-selector">
-              <label>Ваше смещение (1-5):</label>
-              <p className="offset-hint">
-                Смещение влияет на выбор начальной позиции в последовательности бросков кубиков
-              </p>
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <button
-                    key={value}
-                    onClick={() => setMyOffset(value)}
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '8px',
-                      border: myOffset === value ? '2px solid #4caf50' : '1px solid rgba(255, 255, 255, 0.2)',
-                      background: myOffset === value 
-                        ? 'linear-gradient(180deg, #4caf50 0%, #2e7d32 100%)'
-                        : 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      fontSize: '20px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (myOffset !== value) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (myOffset !== value) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                      }
-                    }}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
-              <div className="offset-values">
-                <span>Вы: <strong>{myOffset}</strong></span>
-                {opponentOffset > 0 && (
-                  <span>Соперник: <strong>{opponentOffset}</strong></span>
-                )}
-              </div>
-            </div>
-
-            {gameInfo?.rngHash && (
-              <div className="hash-display">
-                <div>Хеш последовательности (SHA-256):</div>
-                <code>
-                  {(() => {
-                    try {
-                      if (typeof gameInfo.rngHash === 'string') {
-                        const parsed = JSON.parse(gameInfo.rngHash)
-                        if (parsed && parsed.p1Hash) {
-                          return parsed.p1Hash.substring(0, 16) + '...'
-                        }
-                      }
-                      return gameInfo.rngHash.substring(0, 16) + '...'
-                    } catch (e) {
-                      return typeof gameInfo.rngHash === 'string' 
-                        ? gameInfo.rngHash.substring(0, 16) + '...'
-                        : '---'
-                    }
-                  })()}
-                </code>
-              </div>
-            )}
-
-            <div className="offset-modal-actions">
-              <Button 
-                variant="primary" 
-                onClick={handleConfirmOffset} 
-                style={{ flex: 1 }}
-              >
-                Подтвердить
-              </Button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
 
       {(gameStatus === 'finished' || winnerId !== null) && createPortal(
         <div key={finishedModalKey || `game-finished-${gameId}-${Date.now()}`} 
