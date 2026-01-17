@@ -12,6 +12,10 @@ interface VerificationData {
   p1Offset: number
   p2Offset: number
   gameId: string
+  moves?: any[]
+  player1Id?: string
+  player2Id?: string
+  type?: string
 }
 
 export default function FairPlayVerification() {
@@ -38,8 +42,12 @@ export default function FairPlayVerification() {
     
     try {
       setLoading(true)
-      const response = await apiClient.get(`/games/${gameId}`)
-      const game = response.data
+      const [gameResponse, movesResponse] = await Promise.all([
+        apiClient.get(`/games/${gameId}`),
+        apiClient.get(`/games/${gameId}/moves`).catch(() => ({ data: [] }))
+      ])
+      const game = gameResponse.data
+      const moves = movesResponse.data || []
       
       if (!game.p1Rolls || !game.p2Rolls || !game.verificationSalt || !game.rngHash) {
         alert('Недостаточно данных для проверки. Игра должна быть завершена.')
@@ -55,6 +63,10 @@ export default function FairPlayVerification() {
         p1Offset: game.p1Offset || 1,
         p2Offset: game.p2Offset || 1,
         gameId: game.id,
+        moves: moves,
+        player1Id: game.player1Id,
+        player2Id: game.player2Id,
+        type: game.type,
       })
     } catch (error: any) {
       console.error('Ошибка загрузки данных игры:', error)
@@ -71,6 +83,64 @@ export default function FairPlayVerification() {
     const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer)
     const hashArray = Array.from(new Uint8Array(hashBuffer))
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  }
+
+  const calculateUsedRollIndices = () => {
+    if (!data || !data.moves || data.moves.length === 0) {
+      return { p1UsedIndices: new Set<number>(), p2UsedIndices: new Set<number>() }
+    }
+
+    // Формула смещения
+    const p1StartIdx = ((data.p1Offset - 1) * 2 + data.p2Offset) % data.p1Rolls.length
+    const p2StartIdx = ((data.p2Offset - 1) * 2 + data.p1Offset) % data.p2Rolls.length
+
+    const p1UsedIndices = new Set<number>()
+    const p2UsedIndices = new Set<number>()
+
+    // Определяем первого игрока (для игр с ботом - всегда player1)
+    let firstPlayer = 0
+    if (data.type !== 'vs_bot' || data.player2Id !== null) {
+      const p1FirstRoll = data.p1Rolls[p1StartIdx]
+      const p2FirstRoll = data.p2Rolls[p2StartIdx]
+      const sum1 = p1FirstRoll[0] + p1FirstRoll[1]
+      const sum2 = p2FirstRoll[0] + p2FirstRoll[1]
+      firstPlayer = sum1 >= sum2 ? 0 : 1
+    }
+
+    // Сортируем ходы по номеру
+    const sortedMoves = [...data.moves].sort((a, b) => a.moveNumber - b.moveNumber)
+
+    // Считаем количество бросков для каждого игрока
+    let p1RollCount = 0
+    let p2RollCount = 0
+
+    for (const move of sortedMoves) {
+      const isPlayer1 = move.playerId === data.player1Id
+      
+      if (isPlayer1) {
+        // Для player1: если был первым, то startIdx уже использован при определении первого игрока
+        // Поэтому rollCount = p1RollCount + 1 (если был первым) или p1RollCount (если не был первым)
+        const rollCount = firstPlayer === 0 ? p1RollCount + 1 : p1RollCount
+        const rollIdx = (p1StartIdx + rollCount) % data.p1Rolls.length
+        p1UsedIndices.add(rollIdx)
+        p1RollCount++
+      } else {
+        // Для player2: если был первым, то startIdx уже использован при определении первого игрока
+        const rollCount = firstPlayer === 1 ? p2RollCount + 1 : p2RollCount
+        const rollIdx = (p2StartIdx + rollCount) % data.p2Rolls.length
+        p2UsedIndices.add(rollIdx)
+        p2RollCount++
+      }
+    }
+
+    // Добавляем индекс для определения первого игрока (startIdx)
+    if (firstPlayer === 0) {
+      p1UsedIndices.add(p1StartIdx)
+    } else {
+      p2UsedIndices.add(p2StartIdx)
+    }
+
+    return { p1UsedIndices, p2UsedIndices }
   }
 
   const handleVerify = async () => {
@@ -179,22 +249,40 @@ export default function FairPlayVerification() {
             <div className="rolls-column">
               <h3>Игрок 1 (1000 бросков)</h3>
               <div className="rolls-list">
-                {data.p1Rolls.map((roll, index) => (
-                  <div key={index} className="roll-item">
-                    [{roll[0]}, {roll[1]}]
-                  </div>
-                ))}
+                {(() => {
+                  const { p1UsedIndices } = calculateUsedRollIndices()
+                  return data.p1Rolls.map((roll, index) => {
+                    const isUsed = p1UsedIndices.has(index)
+                    return (
+                      <div 
+                        key={index} 
+                        className={`roll-item ${isUsed ? 'roll-item-used' : 'roll-item-unused'}`}
+                      >
+                        [{roll[0]}, {roll[1]}]
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             </div>
 
             <div className="rolls-column">
               <h3>Игрок 2 (1000 бросков)</h3>
               <div className="rolls-list">
-                {data.p2Rolls.map((roll, index) => (
-                  <div key={index} className="roll-item">
-                    [{roll[0]}, {roll[1]}]
-                  </div>
-                ))}
+                {(() => {
+                  const { p2UsedIndices } = calculateUsedRollIndices()
+                  return data.p2Rolls.map((roll, index) => {
+                    const isUsed = p2UsedIndices.has(index)
+                    return (
+                      <div 
+                        key={index} 
+                        className={`roll-item ${isUsed ? 'roll-item-used' : 'roll-item-unused'}`}
+                      >
+                        [{roll[0]}, {roll[1]}]
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             </div>
           </div>

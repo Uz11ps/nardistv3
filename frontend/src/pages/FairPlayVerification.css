@@ -159,13 +159,26 @@
 }
 
 .roll-item {
-  color: #4caf50;
   font-size: 11px;
   font-family: 'Courier New', monospace;
   padding: 4px 8px;
-  background: #252525;
   border-radius: 4px;
   border: 1px solid #333;
+  transition: all 0.2s;
+}
+
+.roll-item-used {
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+  font-weight: 600;
+}
+
+.roll-item-unused {
+  color: #666;
+  background: #1a1a1a;
+  border-color: #333;
+  opacity: 0.6;
 }
 
 .verification-details {

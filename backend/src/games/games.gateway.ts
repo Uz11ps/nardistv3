@@ -648,8 +648,26 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         type: gameState.type,
         status: gameState.status
       });
+      
+      // ВАЖНО: Преобразуем ходы в формат для анимации (serverMoves)
+      // Для обычных игроков тоже нужно передавать serverMoves для анимации
+      const serverMoves = data.moves && data.moves.length > 0 
+        ? data.moves.map((move: any) => ({
+            from: move.from,
+            to: move.to,
+            die: move.die,
+            steps: move.steps
+          }))
+        : [];
+      
       // ВАЖНО: Эмитим move_made для обновления состояния на фронтенде
-      this.server.to(`game:${data.gameId}`).emit('move_made', gameState);
+      // Добавляем playerId чтобы фронтенд мог определить, чей это ход
+      const moveMadeData = {
+        ...gameState,
+        playerId: userId, // ID игрока, который сделал ход
+        serverMoves: serverMoves.length > 0 ? serverMoves : undefined
+      };
+      this.server.to(`game:${data.gameId}`).emit('move_made', moveMadeData);
       // ВАЖНО: Также эмитим game_state для синхронизации состояния (как для ботов)
       this.server.to(`game:${data.gameId}`).emit('game_state', gameState);
       

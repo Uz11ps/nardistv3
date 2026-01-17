@@ -1310,7 +1310,9 @@ export default function Game() {
 
       // Если есть серверные ходы (ход бота или другого игрока), 
       // откладываем обновление gameState до завершения анимации
-      if (data.serverMoves && data.serverMoves.length > 0) {
+      // ВАЖНО: Проверяем, что это НЕ наш ход (чтобы не было двойной анимации)
+      const isMyMove = data.playerId === user?.id;
+      if (data.serverMoves && data.serverMoves.length > 0 && !isMyMove) {
         console.log('🤖 Saving pending gameState and starting animation:', data.serverMoves);
         isServerAnimatingRef.current = true;
         pendingGameStateRef.current = nextGameState;
@@ -3317,7 +3319,16 @@ export default function Game() {
               )}
             </div>
 
-            <button className="result-close-btn" onClick={() => navigate('/game/result/' + gameId)}>К результатам</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+              <button className="result-close-btn" onClick={() => navigate('/game/result/' + gameId)}>К результатам</button>
+              <button 
+                className="result-close-btn" 
+                onClick={() => navigate('/')}
+                style={{ background: 'linear-gradient(180deg, #2C2D31 0%, #1C1D21 100%)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+              >
+                На главную
+              </button>
+            </div>
           </div>
         </div>,
         document.body
