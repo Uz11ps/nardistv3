@@ -2221,7 +2221,7 @@ export default function Game() {
         autoConfirmTimeoutRef.current = null;
       }
     };
-  }, [pendingMoves, requireConfirmMove, isMyTurn, gameStatus, isSandbox, gameState?.dice, isProcessingConfirm, handleConfirm, gameId])
+  }, [pendingMoves.length, requireConfirmMove, isMyTurn, gameStatus, isSandbox, gameState?.dice, isProcessingConfirm, handleConfirm, gameId])
 
   if (!gameState || !gameInfo) {
     return (

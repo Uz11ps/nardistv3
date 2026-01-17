@@ -1366,10 +1366,35 @@ export default function BackgammonBoard({
       const hY = isTopRow ? (y - pH) : y
       const hH = pH
 
-      // Подсветка отключена по запросу пользователя
-      // 1. Подсветка точки под курсором - отключена
-      // 2. Подсветка валидных точек назначения - отключена
-      // 3. Подсветка выбранной точки - отключена
+      // 1. Подсветка точки под курсором - отключена (не нужна)
+      
+      // 2. Подсветка валидных точек назначения при перетаскивании
+      if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
+        // Применяем параметры из debugConfig для размера и смещения подсветки
+        const validHW = pW * debugConfig.validHighlightWidthScale
+        const validHH = hH * debugConfig.validHighlightHeightScale
+        const validHX = hX + (pW - validHW) / 2 + scaleX(debugConfig.validHighlightXOffset)
+        
+        let validHY;
+        if (isTopRow) {
+             validHY = (y - pH) + (hH - validHH) / 2 + debugConfig.validHighlightYOffset;
+        } else {
+             const bottomOffset = (debugConfig as any).validHighlightBottomYOffset !== undefined 
+                ? (debugConfig as any).validHighlightBottomYOffset 
+                : -debugConfig.highlightYOffset;
+             
+             validHY = y + (hH - validHH) / 2 + bottomOffset;
+        }
+        
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
+        ctx.fillRect(validHX, validHY, validHW, validHH)
+        
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
+        ctx.lineWidth = 2
+        ctx.strokeRect(validHX + 2, validHY + 2, validHW - 4, validHH - 4)
+      }
+      
+      // 3. Подсветка выбранной точки - отключена (не нужна)
       
     }
     
