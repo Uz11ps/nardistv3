@@ -589,7 +589,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         type: gameState.type,
         status: gameState.status
       });
+      // ВАЖНО: Эмитим move_made для обновления состояния на фронтенде
       this.server.to(`game:${data.gameId}`).emit('move_made', gameState);
+      // ВАЖНО: Также эмитим game_state для синхронизации состояния (как для ботов)
+      this.server.to(`game:${data.gameId}`).emit('game_state', gameState);
       
       // Отправляем обновление таймера сразу после хода
       await this.sendTimerUpdateForGame(data.gameId);

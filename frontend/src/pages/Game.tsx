@@ -1225,7 +1225,9 @@ export default function Game() {
       // Это предотвращает дублирование анимации
       
       const isMyTurnNow = canMove
-      const wasMyTurn = gameState?.canMove || false
+      // ВАЖНО: wasMyTurn определяем на основе previousCurrentPlayer для правильного определения смены хода
+      const previousCurrentPlayer = gameState?.currentPlayer ?? (gameInfo?.currentPlayer ?? -1)
+      const wasMyTurn = previousCurrentPlayer === (data.player1Id === user?.id ? 0 : 1)
       
       const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 60
       if (data.currentPlayer === 0) {
