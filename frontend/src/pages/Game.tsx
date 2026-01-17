@@ -497,10 +497,15 @@ export default function Game() {
             setIsInOvertime(true)
           }
         } else {
-          // Овертайм - НЕ уменьшаем локально, используем только данные с сервера
+          // Овертайм - визуально обновляем totalTimeRemaining на основе последнего значения с сервера
           // ВАЖНО: Автолуз обрабатывается на сервере через checkMoveTimeouts()
-          // Клиент только отображает таймер, который обновляется через timer_update с сервера
-          // Не изменяем totalTimeRemaining локально - ждем обновления с сервера
+          // Клиент визуально отображает таймер, уменьшая на основе прошедшего времени
+          if (isInOvertime && totalTimeRemainingRef.current.player1 > 0) {
+            const currentTotal = totalTimeRemainingRef.current.player1
+            const newTotal = Math.max(0, currentTotal - deltaSeconds)
+            setTotalTimeRemaining(prev => ({ ...prev, player1: newTotal }))
+            totalTimeRemainingRef.current.player1 = newTotal
+          }
         }
       } else if (gameState?.currentPlayer === 1) {
         // Ход игрока 2
@@ -513,10 +518,15 @@ export default function Game() {
             setIsInOvertime(true)
           }
         } else {
-          // Овертайм - НЕ уменьшаем локально, используем только данные с сервера
+          // Овертайм - визуально обновляем totalTimeRemaining на основе последнего значения с сервера
           // ВАЖНО: Автолуз обрабатывается на сервере через checkMoveTimeouts()
-          // Клиент только отображает таймер, который обновляется через timer_update с сервера
-          // Не изменяем totalTimeRemaining локально - ждем обновления с сервера
+          // Клиент визуально отображает таймер, уменьшая на основе прошедшего времени
+          if (isInOvertime && totalTimeRemainingRef.current.player2 > 0) {
+            const currentTotal = totalTimeRemainingRef.current.player2
+            const newTotal = Math.max(0, currentTotal - deltaSeconds)
+            setTotalTimeRemaining(prev => ({ ...prev, player2: newTotal }))
+            totalTimeRemainingRef.current.player2 = newTotal
+          }
         }
       }
     }, 100) // Обновляем каждые 100мс для плавности
@@ -1260,12 +1270,24 @@ export default function Game() {
         
         // ВАЖНО: После завершения хода обоих игроков нужно бросить кубики для следующего игрока
         // Проверяем, что кубики пустые и ход переключился на другого игрока
+        // Проверяем изменение currentPlayer, а не только wasMyTurn/isMyTurnNow
         const bothOffsetsChosen = data.p1OffsetChosenAt && data.p2OffsetChosenAt;
         const hasNoDice = !formattedDice || (Array.isArray(formattedDice) && formattedDice.length === 0);
-        const turnChanged = !wasMyTurn && isMyTurnNow;
+        const currentPlayerChanged = gameState?.currentPlayer !== data.currentPlayer;
+        // Также проверяем, что ход переключился на нашего игрока
+        const isNowMyTurn = data.currentPlayer === (gameInfo?.player1Id === user?.id ? 0 : 1);
         
-        if (hasNoDice && turnChanged && bothOffsetsChosen && data.status === 'in_progress' && data.type !== 'sandbox') {
-          console.log('🎲 Auto-rolling dice after turn change in move_made:', { wasMyTurn, isMyTurnNow, hasNoDice, bothOffsetsChosen });
+        if (hasNoDice && currentPlayerChanged && isNowMyTurn && bothOffsetsChosen && data.status === 'in_progress' && data.type !== 'sandbox') {
+          console.log('🎲 Auto-rolling dice after turn change in move_made:', { 
+            wasMyTurn, 
+            isMyTurnNow, 
+            currentPlayerChanged,
+            isNowMyTurn,
+            hasNoDice, 
+            bothOffsetsChosen,
+            oldCurrentPlayer: gameState?.currentPlayer,
+            newCurrentPlayer: data.currentPlayer
+          });
           setTimeout(() => {
             const socket = getSocket();
             if (socket && gameId) {
@@ -2165,21 +2187,43 @@ export default function Game() {
             >
               ⋮
             </button>
-            {showGameMenu && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '40px',
-                  right: '0',
-                  background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  minWidth: '200px',
-                  zIndex: 2147483647,
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
-                }}
-              >
+          </div>
+        }
+      />
+      
+      {/* Меню игры через Portal для правильного z-index */}
+      {showGameMenu && createPortal(
+        <div
+          onClick={(e) => {
+            if (!(e.target as HTMLElement).closest('[data-game-menu-content]')) {
+              setShowGameMenu(false)
+            }
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 2147483646,
+            background: 'transparent',
+          }}
+        >
+          <div
+            data-game-menu-content
+            style={{
+              position: 'fixed',
+              top: '60px',
+              right: '12px',
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              padding: '8px',
+              minWidth: '200px',
+              zIndex: 2147483647,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+            }}
+          >
                 <button
                   onClick={async () => {
                     setShowExitModal(true)
@@ -2260,10 +2304,9 @@ export default function Game() {
                   {requireConfirmMove ? '✓ Требовать подтверждение хода' : '✗ Не требовать подтверждение хода'}
                 </button>
               </div>
-            )}
-          </div>
-        }
-      />
+          </div>,
+          document.body
+        )}
       
       <div className="game-main-layout">
         {/* Левая панель (ландшафт) */}
@@ -2333,25 +2376,6 @@ export default function Game() {
         <div className="game-center-content">
           {!isLandscape && (
             <div className="game-players-section">
-              {/* Кнопки подтверждения и отмены в портретном режиме */}
-              {((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0) && (
-                <>
-                  <button 
-                    className="game-action-btn-header game-action-btn-cancel"
-                    onClick={handleUndo}
-                    title="Отменить ход"
-                  >
-                    ✕
-                  </button>
-                  <button 
-                    className="game-action-btn-header game-action-btn-confirm"
-                    onClick={handleConfirm}
-                    title={`Подтвердить (${pendingMoves.length})`}
-                  >
-                    ✓
-                  </button>
-                </>
-              )}
               {/* Противник слева */}
               <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
@@ -2745,6 +2769,77 @@ export default function Game() {
                 } : undefined}
                 onNoMoves={handleNoMoves}
               />
+              {/* Кнопки подтверждения и отмены снизу доски по центру (портретный режим) */}
+              {!isLandscape && ((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0) && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '16px',
+                  marginTop: '16px',
+                  marginBottom: '16px',
+                }}>
+                  <button 
+                    onClick={handleUndo}
+                    title="Отменить ход"
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: 'linear-gradient(180deg, #f44336 0%, #c62828 100%)',
+                      color: 'white',
+                      fontSize: '20px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.1)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
+                    }}
+                  >
+                    ✕
+                  </button>
+                  <button 
+                    onClick={handleConfirm}
+                    title={`Подтвердить (${pendingMoves.length})`}
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: 'linear-gradient(180deg, #4caf50 0%, #2e7d32 100%)',
+                      color: 'white',
+                      fontSize: '20px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.1)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
+                    }}
+                  >
+                    ✓
+                  </button>
+                </div>
+              )}
               {isSandbox && (
                 <>
                   <SandboxControls

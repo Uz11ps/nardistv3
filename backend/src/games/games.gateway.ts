@@ -748,6 +748,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         }
         
         // Получаем актуальное состояние игры (с кубиками)
+        const updatedGame = await this.gamesService.findOne(gameId);
         const gameStateAfterDice = await this.gamesService.getGameState(gameId);
         
         // ВАЖНО: Проверяем наличие валидных ходов после броска (как и для обычных игроков)
@@ -757,18 +758,20 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         const hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
         
         // Проверяем, есть ли шашки на баре у бота (для коротких нардов)
-        const bar = game.gameState?.bar;
+        // ВАЖНО: Используем актуальное состояние игры после броска кубиков
+        const bar = updatedGame.gameState?.bar || gameStateAfterDice.gameState?.bar;
         const barValue = Array.isArray(bar) 
           ? bar[1] // Бот всегда player 1
           : (bar?.black || 0);
         
         // Если есть шашки на баре, но нет валидных ходов - автоматически передаем ход (только для коротких нардов)
-        const isShortBackgammon = game.mode === GameMode.SHORT;
+        const isShortBackgammon = updatedGame.mode === GameMode.SHORT;
         const hasBarButNoMoves = isShortBackgammon && barValue > 0 && !hasMoves;
         
         // ВАЖНО: Если нет валидных ходов (для любых нардов) - автоматически передаем ход
+        // Проверяем для всех режимов: короткие и длинные нарды
         if (!hasMoves || hasBarButNoMoves) {
-          this.logger.log(`🔄 No possible moves for bot${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''} in ${isShortBackgammon ? 'short' : 'long'} backgammon, switching turn automatically for game ${gameId}`);
+          this.logger.log(`🔄 No possible moves for bot${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''} in ${isShortBackgammon ? 'short' : 'long'} backgammon, switching turn automatically for game ${gameId}, dice=${JSON.stringify(updatedGame.gameState?.dice || gameStateAfterDice.gameState?.dice)}`);
           // Переключаем ход сразу без задержки
           try {
             await this.gamesService.makeMove(gameId, botPlayerId, []);
