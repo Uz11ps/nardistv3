@@ -23,9 +23,11 @@
   min-height: 0;
 }
 
-/* В реплее убираем min-height */
+/* В реплее убираем min-height и ограничиваем height */
 .replay-board .backgammon-board-container {
   min-height: 0;
+  height: auto;
+  max-height: 600px; /* Ограничиваем максимальную высоту контейнера доски в реплее */
 }
 
 @media (max-width: 768px) {
