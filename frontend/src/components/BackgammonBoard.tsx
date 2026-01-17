@@ -169,8 +169,8 @@ export default function BackgammonBoard({
     diceP1Y: 0.65,
     diceP2X: 0.09,
     diceP2Y: 0.38, 
-    checkerTopOffset: -330, 
-    checkerBottomOffset: 330,
+    checkerTopOffset: -363, 
+    checkerBottomOffset: 363,
     // Legacy text offsets
     textTopOffset: -15,
     textBottomOffset: 15,
@@ -214,7 +214,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v14')
+      const saved = localStorage.getItem('backgammon-debug-config-v15')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -237,7 +237,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v14', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v15', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -1392,7 +1392,26 @@ export default function BackgammonBoard({
       const hY = isTopRow ? (y - pH) : y
       const hH = pH
 
-      // 1. Подсветка точки под курсором - отключена (не нужна)
+      // 1. Подсветка точки под курсором
+      if (hoveredPoint === pointIndex) {
+        const highlightHW = pW * debugConfig.highlightWidthScale
+        const highlightHH = hH * debugConfig.highlightHeightScale
+        const highlightHX = hX + (pW - highlightHW) / 2 + scaleX(debugConfig.highlightXOffset)
+        
+        let highlightHY;
+        if (isTopRow) {
+             highlightHY = (y - pH) + (hH - highlightHH) / 2 + debugConfig.highlightYOffset;
+        } else {
+             const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
+                ? (debugConfig as any).highlightBottomYOffset 
+                : -debugConfig.highlightYOffset;
+             
+             highlightHY = y + (hH - highlightHH) / 2 + bottomOffset;
+        }
+        
+        ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
+        ctx.fillRect(highlightHX, highlightHY, highlightHW, highlightHH)
+      }
       
       // 2. Подсветка валидных точек назначения при перетаскивании
       if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
@@ -1420,7 +1439,26 @@ export default function BackgammonBoard({
         ctx.strokeRect(validHX + 2, validHY + 2, validHW - 4, validHH - 4)
       }
       
-      // 3. Подсветка выбранной точки - отключена (не нужна)
+      // 3. Подсветка выбранной точки
+      if (selectedPoint === pointIndex) {
+        const selectedHW = pW * debugConfig.highlightWidthScale
+        const selectedHH = hH * debugConfig.highlightHeightScale
+        const selectedHX = hX + (pW - selectedHW) / 2 + scaleX(debugConfig.highlightXOffset)
+        
+        let selectedHY;
+        if (isTopRow) {
+             selectedHY = (y - pH) + (hH - selectedHH) / 2 + debugConfig.highlightYOffset;
+        } else {
+             const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
+                ? (debugConfig as any).highlightBottomYOffset 
+                : -debugConfig.highlightYOffset;
+             
+             selectedHY = y + (hH - selectedHH) / 2 + bottomOffset;
+        }
+        
+        ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
+        ctx.fillRect(selectedHX, selectedHY, selectedHW, selectedHH)
+      }
       
     }
     
