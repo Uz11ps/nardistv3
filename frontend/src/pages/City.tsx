@@ -208,13 +208,18 @@ export default function City() {
                     const currentIncome = userBuilding.incomePerHour
                     // Прибыль после улучшения (уровень + 1)
                     const nextLevel = userBuilding.level + 1
-                    const baseIncome = Number(showBuildingModal.baseIncomePerHour)
                     const multiplier = Number(incomeMultiplier)
                     
+                    // ВАЖНО: Пересчитываем baseIncomePerHour из текущего дохода и уровня
+                    // Потому что конфиг мог быть изменен в админке после создания здания
+                    // Формула: incomePerHour = baseIncomePerHour * (1 + multiplier * (level - 1))
+                    // Отсюда: baseIncomePerHour = incomePerHour / (1 + multiplier * (level - 1))
+                    const currentLevel = userBuilding.level
+                    const calculatedBaseIncome = currentIncome / (1 + multiplier * (currentLevel - 1))
+                    
                     // Используем ту же формулу, что и на бэкенде: baseIncomePerHour * (1 + incomeMultiplier * (level - 1))
-                    // Для текущего уровня: baseIncome * (1 + multiplier * (currentLevel - 1))
-                    // Для следующего уровня: baseIncome * (1 + multiplier * (nextLevel - 1))
-                    const nextIncome = Math.floor(baseIncome * (1 + multiplier * (nextLevel - 1)))
+                    // Для следующего уровня: calculatedBaseIncome * (1 + multiplier * (nextLevel - 1))
+                    const nextIncome = Math.floor(calculatedBaseIncome * (1 + multiplier * (nextLevel - 1)))
                     
                     return (
                       <>

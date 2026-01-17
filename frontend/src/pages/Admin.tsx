@@ -5019,6 +5019,23 @@ export default function Admin() {
                               onChange={e => setB({...b, incomeMultiplier: parseFloat(e.target.value) || 0.07})} 
                             />
                           </div>
+                          {/* Показываем расчет прибыли для разных уровней */}
+                          <div style={{ gridColumn: '1 / -1', marginTop: '16px', padding: '12px', background: '#1a1a1a', borderRadius: '8px', border: '1px solid #3a3a3a' }}>
+                            <div style={{ marginBottom: '8px', fontWeight: 'bold', color: '#fff' }}>Расчет прибыли по уровням:</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', fontSize: '12px' }}>
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].slice(0, b.maxLevel || 10).map(level => {
+                                const baseIncome = Number(b.baseIncomePerHour || 0)
+                                const multiplier = Number(b.incomeMultiplier || 0.07)
+                                const income = Math.floor(baseIncome * (1 + multiplier * (level - 1)))
+                                return (
+                                  <div key={level} style={{ padding: '6px', background: '#0a0a0a', borderRadius: '4px' }}>
+                                    <div style={{ color: '#999' }}>Ур. {level}:</div>
+                                    <div style={{ color: '#4caf50', fontWeight: 'bold' }}>{income.toLocaleString('ru-RU')} NAR/ч</div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
                           <div className="form-group">
                             <label>Район (ID)</label>
                             <select
