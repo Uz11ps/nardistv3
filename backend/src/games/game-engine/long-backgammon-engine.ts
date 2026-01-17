@@ -304,8 +304,9 @@ export class LongBackgammonEngine {
     
     // В длинных нард нет ограничения на количество шашек из одной точки (кроме головы)
     
-    // Правило блокировки 6 точек отключено - разрешаем любые ходы
-    // if (!this.checkBlockRule(state, from, to)) return false;
+    // Проверяем правило блокировки 6 точек - запрещаем создавать блок из 6 точек,
+    // если у противника нет шашек в доме
+    if (!this.checkBlockRule(state, from, to)) return false;
     
     return true;
   }
@@ -352,8 +353,9 @@ export class LongBackgammonEngine {
     // Проверяем правило головы
     if (!this.checkHeadRule(state, from, die, isFirstMoveOfGame)) return false;
     
-    // Правило блокировки 6 точек отключено - разрешаем любые ходы
-    // if (!this.checkBlockRule(state, from, to)) return false;
+    // Проверяем правило блокировки 6 точек - запрещаем создавать блок из 6 точек,
+    // если у противника нет шашек в доме
+    if (!this.checkBlockRule(state, from, to)) return false;
     
     return true;
   }
