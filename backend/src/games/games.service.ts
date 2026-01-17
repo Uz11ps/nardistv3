@@ -3080,4 +3080,113 @@ ${formattedMoves.join('\n')}
     // Завершаем игру через resignGame (автоматически засчитает поражение)
     await this.resignGame(gameId, timeoutPlayerId);
   }
+
+  /**
+   * Проверяет, что все броски в игре соответствуют предгенерированной последовательности согласно смещению
+   */
+  async verifyGameRolls(gameId: string): Promise<{
+    valid: boolean;
+    errors: Array<{ moveNumber: number; player: string; expected: number[]; actual: number[]; rollIndex: number }>;
+    summary: { totalMoves: number; p1Rolls: number; p2Rolls: number; validRolls: number; invalidRolls: number };
+  }> {
+    const game = await this.findOne(gameId);
+    
+    if (!game.p1Rolls || !game.p2Rolls || !game.p1Offset || !game.p2Offset) {
+      throw new BadRequestException('Игра не содержит данных для проверки бросков');
+    }
+
+    const p1Rolls = game.p1Rolls;
+    const p2Rolls = game.p2Rolls;
+    const p1Offset = game.p1Offset;
+    const p2Offset = game.p2Offset;
+
+    // Вычисляем startIdx для каждого игрока
+    const p1StartIdx = ((p1Offset - 1) * 2 + p2Offset) % p1Rolls.length;
+    const p2StartIdx = ((p2Offset - 1) * 2 + p1Offset) % p2Rolls.length;
+
+    const errors: Array<{ moveNumber: number; player: string; expected: number[]; actual: number[]; rollIndex: number }> = [];
+    
+    // Определяем, кто был первым игроком (по текущему игроку или первому ходу)
+    let wasFirstPlayer = false;
+    if (game.moves && game.moves.length > 0) {
+      const firstMove = game.moves[0];
+      const firstMoveIsPlayer1 = firstMove.playerId === game.player1Id;
+      wasFirstPlayer = firstMoveIsPlayer1;
+    } else {
+      // Нет ходов - проверяем по текущему игроку (это первый бросок)
+      wasFirstPlayer = game.currentPlayer === 0;
+    }
+
+    // Счетчики бросков для каждого игрока
+    // ВАЖНО: При определении первого игрока используется p1Rolls[p1StartIdx] и p2Rolls[p2StartIdx] для обоих игроков
+    // Если P1 был первым, его startIdx уже использован, поэтому его первый реальный бросок будет startIdx + 1
+    // Если P2 не был первым, его startIdx еще не использован, поэтому его первый реальный бросок будет startIdx + 0
+    let p1RollCount = wasFirstPlayer ? 1 : 0; // Если P1 был первым, его startIdx уже использован
+    let p2RollCount = !wasFirstPlayer ? 1 : 0; // Если P2 был первым, его startIdx уже использован
+
+    // Проверяем каждый ход
+    for (const move of game.moves || []) {
+      const moveIsPlayer1 = move.playerId === game.player1Id;
+      const playerRolls = moveIsPlayer1 ? p1Rolls : p2Rolls;
+      const startIdx = moveIsPlayer1 ? p1StartIdx : p2StartIdx;
+      const rollCount = moveIsPlayer1 ? p1RollCount : p2RollCount;
+      
+      // Вычисляем индекс броска в последовательности
+      const currentRollIdx = (startIdx + rollCount) % playerRolls.length;
+      const expectedRoll = playerRolls[currentRollIdx];
+
+      // Получаем фактический бросок из хода
+      const actualDice = Array.isArray(move.dice) ? move.dice : [];
+
+      // Проверяем соответствие (учитываем дубли)
+      // Дубли: если expectedRoll = [a, a], то actualDice может быть [a, a, a, a]
+      const isExpectedDouble = expectedRoll.length === 2 && expectedRoll[0] === expectedRoll[1];
+      const isActualDouble = actualDice.length === 4 && actualDice.every((d: number) => d === actualDice[0]);
+      
+      let isValid = false;
+      if (isExpectedDouble && isActualDouble) {
+        // Оба дубли - проверяем, что значения совпадают
+        isValid = expectedRoll[0] === actualDice[0];
+      } else if (!isExpectedDouble && !isActualDouble) {
+        // Оба обычные броски - проверяем точное совпадение (учитывая порядок)
+        const expectedSorted = [...expectedRoll].sort((a, b) => a - b);
+        const actualSorted = [...actualDice].sort((a, b) => a - b);
+        isValid = expectedSorted.length === actualSorted.length && 
+                  expectedSorted.every((val, idx) => val === actualSorted[idx]);
+      }
+
+      if (!isValid) {
+        errors.push({
+          moveNumber: move.moveNumber,
+          player: moveIsPlayer1 ? 'P1' : 'P2',
+          expected: expectedRoll,
+          actual: actualDice,
+          rollIndex: currentRollIdx,
+        });
+      }
+
+      // Увеличиваем счетчик бросков для этого игрока
+      if (moveIsPlayer1) {
+        p1RollCount++;
+      } else {
+        p2RollCount++;
+      }
+    }
+
+    const totalMoves = game.moves?.length || 0;
+    const invalidRolls = errors.length;
+    const validRolls = totalMoves - invalidRolls;
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      summary: {
+        totalMoves,
+        p1Rolls: p1RollCount,
+        p2Rolls: p2RollCount,
+        validRolls,
+        invalidRolls,
+      },
+    };
+  }
 }

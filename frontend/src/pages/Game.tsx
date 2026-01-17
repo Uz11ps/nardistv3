@@ -2255,13 +2255,20 @@ export default function Game() {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!document.fullscreenElement) {
-                      await document.documentElement.requestFullscreen()
-                      setIsFullscreen(true)
-                    } else {
-                      await document.exitFullscreen()
-                      setIsFullscreen(false)
+                    try {
+                      if (!document.fullscreenElement) {
+                        await document.documentElement.requestFullscreen().catch((err) => {
+                          console.error('Ошибка входа в полноэкранный режим:', err)
+                        })
+                      } else {
+                        await document.exitFullscreen().catch((err) => {
+                          console.error('Ошибка выхода из полноэкранного режима:', err)
+                        })
+                      }
+                    } catch (error) {
+                      console.error('Ошибка работы с полноэкранным режимом:', error)
                     }
+                    // Состояние isFullscreen обновится автоматически через обработчик fullscreenchange
                     setShowGameMenu(false)
                   }}
                   style={{
@@ -2554,8 +2561,8 @@ export default function Game() {
           {/* Доска */}
           {(gameStatus === 'in_progress' || gameStatus === 'finished' || isSandbox) && (
             <div className="board-wrapper">
-              {/* Кнопки подтверждения и отмены в нижней части бара (ландшафт) */}
-              {isLandscape && ((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0) && (
+              {/* Кнопки подтверждения и отмены в нижней части бара (ландшафт и портретный режим) */}
+              {((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0 && requireConfirmMove) && (
                 <>
                   <button 
                     className="game-bar-btn game-bar-btn-cancel"
@@ -2778,77 +2785,6 @@ export default function Game() {
                 } : undefined}
                 onNoMoves={handleNoMoves}
               />
-              {/* Кнопки подтверждения и отмены снизу доски по центру (портретный режим) */}
-              {!isLandscape && ((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0) && (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: '16px',
-                  marginTop: '16px',
-                  marginBottom: '16px',
-                }}>
-                  <button 
-                    onClick={handleUndo}
-                    title="Отменить ход"
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      border: 'none',
-                      background: 'linear-gradient(180deg, #f44336 0%, #c62828 100%)',
-                      color: 'white',
-                      fontSize: '20px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.1)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)'
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
-                    }}
-                  >
-                    ✕
-                  </button>
-                  <button 
-                    onClick={handleConfirm}
-                    title={`Подтвердить (${pendingMoves.length})`}
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      border: 'none',
-                      background: 'linear-gradient(180deg, #4caf50 0%, #2e7d32 100%)',
-                      color: 'white',
-                      fontSize: '20px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.1)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)'
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
-                    }}
-                  >
-                    ✓
-                  </button>
-                </div>
-              )}
               {isSandbox && (
                 <>
                   <SandboxControls

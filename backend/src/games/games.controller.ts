@@ -136,6 +136,12 @@ export class GamesController {
     return this.gamesService.getMoves(id);
   }
 
+  @Get(':id/verify-rolls')
+  @UseGuards(JwtAuthGuard)
+  async verifyGameRolls(@Param('id') id: string) {
+    return this.gamesService.verifyGameRolls(id);
+  }
+
   @Post(':id/possible-moves')
   @UseGuards(JwtAuthGuard)
   async getPossibleMoves(
