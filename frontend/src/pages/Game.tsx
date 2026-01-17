@@ -467,13 +467,10 @@ export default function Game() {
             setIsInOvertime(true)
           }
         } else {
-          // Овертайм - уменьшаем общее время
+          // Овертайм - НЕ уменьшаем локально, используем только данные с сервера
           // ВАЖНО: Автолуз обрабатывается на сервере через checkMoveTimeouts()
-          // Клиент только отображает таймер, не вызывает автолуз
-          const newTotal = Math.max(0, totalTimeRemainingRef.current.player1 - deltaSeconds)
-          setTotalTimeRemaining(prev => ({ ...prev, player1: newTotal }))
-          totalTimeRemainingRef.current.player1 = newTotal // Обновляем ref
-          lastTotalTimeRef.current.player1 = newTotal
+          // Клиент только отображает таймер, который обновляется через timer_update с сервера
+          // Не изменяем totalTimeRemaining локально - ждем обновления с сервера
         }
       } else if (gameState?.currentPlayer === 1) {
         // Ход игрока 2
@@ -486,13 +483,10 @@ export default function Game() {
             setIsInOvertime(true)
           }
         } else {
-          // Овертайм - уменьшаем общее время
+          // Овертайм - НЕ уменьшаем локально, используем только данные с сервера
           // ВАЖНО: Автолуз обрабатывается на сервере через checkMoveTimeouts()
-          // Клиент только отображает таймер, не вызывает автолуз
-          const newTotal = Math.max(0, totalTimeRemainingRef.current.player2 - deltaSeconds)
-          setTotalTimeRemaining(prev => ({ ...prev, player2: newTotal }))
-          totalTimeRemainingRef.current.player2 = newTotal // Обновляем ref
-          lastTotalTimeRef.current.player2 = newTotal
+          // Клиент только отображает таймер, который обновляется через timer_update с сервера
+          // Не изменяем totalTimeRemaining локально - ждем обновления с сервера
         }
       }
     }, 100) // Обновляем каждые 100мс для плавности
@@ -1331,14 +1325,26 @@ export default function Game() {
         const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
         
+        // ВАЖНО: Используем totalTimeRemaining с сервера для текущего игрока в овертайме
+        // Это гарантирует синхронизацию с сервером
+        const serverTotalTimeRemaining = data.totalTimeRemaining !== undefined ? data.totalTimeRemaining : null
+        
         // ВАЖНО: Используем isOvertime ТОЛЬКО из сервера, не пересчитываем локально
         // Сервер уже правильно вычисляет овертайм на основе времени
         const isOvertime = data.isOvertime || false
         
         lastTimerUpdateRef.current = Date.now() // Обновляем время последнего синхронизации
         
-        // Обновляем общее время игроков
+        // Обновляем общее время игроков с сервера
         const newTotalTime = { player1: totalTime1, player2: totalTime2 }
+        // ВАЖНО: Если сервер отправил totalTimeRemaining для текущего игрока, используем его
+        if (serverTotalTimeRemaining !== null && data.currentPlayer !== undefined) {
+          if (data.currentPlayer === 0) {
+            newTotalTime.player1 = serverTotalTimeRemaining
+          } else {
+            newTotalTime.player2 = serverTotalTimeRemaining
+          }
+        }
         setTotalTimeRemaining(newTotalTime)
         totalTimeRemainingRef.current = newTotalTime
         // ВАЖНО: Обновляем lastTotalTimeRef только если это первое обновление после загрузки
@@ -1385,6 +1391,12 @@ export default function Game() {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
+      }
+      
+      // Останавливаем локальный таймер интервал если он есть
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
       }
       
       // Если пришли серверные ходы (последний ход игры), анимируем их
@@ -2827,8 +2839,8 @@ export default function Game() {
         document.body
       )}
 
-      {gameStatus === 'finished' && createPortal(
-        <div 
+      {(gameStatus === 'finished' || winnerId !== null) && createPortal(
+        <div key={`game-finished-${gameId}-${Date.now()}`} 
           className="game-overlay" 
           style={{
             position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',

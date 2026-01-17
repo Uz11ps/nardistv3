@@ -139,7 +139,8 @@
   flex-direction: column;
   animation: slideUp 0.3s;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto; /* Изменено с overflow: hidden на overflow-y: auto для прокрутки */
+  overflow-x: hidden; /* Предотвращаем горизонтальную прокрутку */
 }
 
 /* Адаптация для мобильных устройств */
@@ -189,7 +190,7 @@
 }
 
 .replay-board {
-  flex: 1;
+  flex-shrink: 0; /* Не сжимаемся, но и не растягиваемся на весь доступный размер */
   min-height: 400px;
   max-height: 600px; /* Ограничиваем максимальную высоту для правильного расчета позиции кубиков */
   background: #1a1a1a;
