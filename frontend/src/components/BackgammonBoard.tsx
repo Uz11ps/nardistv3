@@ -861,8 +861,22 @@ export default function BackgammonBoard({
     
     const container = containerRef.current
     const rect = container.getBoundingClientRect()
-    const width = rect.width
-    const height = rect.height
+    let width = rect.width
+    let height = rect.height
+    
+    // ВАЖНО: Ограничиваем максимальный размер контейнера, чтобы избежать бесконечного роста top
+    // Это особенно важно для модальных окон реплея, где высота может быть вычислена неправильно
+    const MAX_CONTAINER_HEIGHT = 10000 // Максимальная высота в пикселях
+    const MAX_CONTAINER_WIDTH = 10000 // Максимальная ширина в пикселях
+    
+    if (height > MAX_CONTAINER_HEIGHT) {
+      console.warn(`Container height (${height}px) exceeds maximum (${MAX_CONTAINER_HEIGHT}px), limiting to maximum`)
+      height = MAX_CONTAINER_HEIGHT
+    }
+    if (width > MAX_CONTAINER_WIDTH) {
+      console.warn(`Container width (${width}px) exceeds maximum (${MAX_CONTAINER_WIDTH}px), limiting to maximum`)
+      width = MAX_CONTAINER_WIDTH
+    }
     
     if (width === 0 || height === 0) return // Не вычисляем позицию если контейнер еще не отрисован
     

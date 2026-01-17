@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, MoreThan, In } from 'typeorm';
+import { Repository, LessThan, MoreThan, In, Not } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { AcademyService } from '../academy/academy.service';
@@ -157,9 +157,10 @@ export class AdminService implements OnModuleInit {
       .andWhere('user.updatedAt > :date', { date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) })
       .getCount();
     
-    const totalGames = await this.gamesRepository.count();
-    const finishedGames = await this.gamesRepository.count({ where: { status: GameStatus.FINISHED } });
-    const inProgressGames = await this.gamesRepository.count({ where: { status: GameStatus.IN_PROGRESS } });
+    // Исключаем sandbox игры из статистики
+    const totalGames = await this.gamesRepository.count({ where: { type: Not('sandbox') } });
+    const finishedGames = await this.gamesRepository.count({ where: { status: GameStatus.FINISHED, type: Not('sandbox') } });
+    const inProgressGames = await this.gamesRepository.count({ where: { status: GameStatus.IN_PROGRESS, type: Not('sandbox') } });
     
     const totalMoves = await this.movesRepository.count();
     
@@ -209,10 +210,11 @@ export class AdminService implements OnModuleInit {
       });
     }
 
-    // Получаем данные из БД
+    // Получаем данные из БД (исключаем sandbox игры)
     const gamesLast7DaysRaw = await this.gamesRepository
       .createQueryBuilder('game')
       .where('game.createdAt >= :date', { date: sevenDaysAgo })
+      .andWhere('game.type != :sandboxType', { sandboxType: 'sandbox' })
       .select("TO_CHAR(game.createdAt, 'YYYY-MM-DD')", 'date')
       .addSelect('COUNT(*)', 'count')
       .groupBy("TO_CHAR(game.createdAt, 'YYYY-MM-DD')")

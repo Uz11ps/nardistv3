@@ -24,7 +24,8 @@ export class HistoryService {
       .leftJoinAndSelect('game.player1', 'player1')
       .leftJoinAndSelect('game.player2', 'player2')
       .where('(game.player1Id = :userId OR game.player2Id = :userId)', { userId })
-      .andWhere('game.status = :status', { status: GameStatus.FINISHED });
+      .andWhere('game.status = :status', { status: GameStatus.FINISHED })
+      .andWhere('game.type != :sandboxType', { sandboxType: 'sandbox' }); // Исключаем sandbox игры из истории
 
     if (filters?.mode) {
       query.andWhere('game.mode = :mode', { mode: filters.mode });
