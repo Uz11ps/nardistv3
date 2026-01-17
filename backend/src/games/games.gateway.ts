@@ -894,8 +894,28 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         // ВАЖНО: Проверяем наличие валидных ходов после броска (как и для обычных игроков)
         // Это работает для ВСЕХ режимов (короткие и длинные нарды)
         // Если нет валидных ходов - автоматически передаем ход
-        const possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
-        const hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
+        // ВАЖНО: Проверяем ДВАЖДЫ - через getPossibleMoves и через makeBotMove
+        // Это гарантирует, что мы точно знаем, есть ли ходы
+        let possibleMoves;
+        let hasMoves = false;
+        
+        try {
+          possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
+          hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
+        } catch (error) {
+          this.logger.warn(`Error getting possible moves for bot: ${error.message}, checking via makeBotMove instead`);
+        }
+        
+        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Если getPossibleMoves не сработал, проверяем через makeBotMove
+        if (!hasMoves) {
+          try {
+            const testBotMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
+            hasMoves = testBotMoves.length > 0;
+            this.logger.log(`🤖 Bot move check via makeBotMove: ${testBotMoves.length} moves found, hasMoves=${hasMoves}`);
+          } catch (error) {
+            this.logger.warn(`Error checking bot moves via makeBotMove: ${error.message}`);
+          }
+        }
         
         // Проверяем, есть ли шашки на баре у бота (для коротких нардов)
         // ВАЖНО: Используем актуальное состояние игры после броска кубиков
@@ -918,6 +938,24 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
             const updatedGameState = await this.gamesService.getGameState(gameId);
             this.server.to(`game:${gameId}`).emit('game_state', updatedGameState);
             await this.sendTimerUpdateForGame(gameId);
+            
+            // ВАЖНО: После переключения хода на игрока нужно бросить кубики для игрока
+            const finalGame = await this.gamesService.findOne(gameId);
+            if (finalGame.status === 'in_progress' && finalGame.currentPlayer === 0) {
+              const diceFromGame = finalGame.gameState?.dice;
+              const hasNoDice = !diceFromGame || (Array.isArray(diceFromGame) && diceFromGame.length === 0);
+              const bothOffsetsChosen = finalGame.p1OffsetChosenAt !== null && finalGame.p2OffsetChosenAt !== null;
+              
+              if (hasNoDice && bothOffsetsChosen) {
+                this.logger.log(`Waiting for move animation to complete before rolling dice for player after bot skip: gameId=${gameId}`);
+                this.pendingDiceRolls.set(gameId, {
+                  nextPlayerId: finalGame.player1Id,
+                  isBotTurn: false,
+                  gameId: gameId
+                });
+              }
+            }
+            
             return; // Выходим, т.к. ход переключен на игрока
           } catch (e) {
             this.logger.error(`Error in auto-skip turn for bot: ${e.message}`);
