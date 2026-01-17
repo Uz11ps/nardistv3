@@ -242,6 +242,9 @@ export default function Game() {
   const showOffsetModalRef = useRef<boolean>(false)
   const [offsetConfirmed, setOffsetConfirmed] = useState<boolean>(false)
   const offsetConfirmedRef = useRef<boolean>(false)
+  const [showGameMenu, setShowGameMenu] = useState<boolean>(false)
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false)
+  const [requireConfirmMove, setRequireConfirmMove] = useState<boolean>((user as any)?.requireConfirmMove ?? true)
   const [serverMovesForBoard, setServerMovesForBoard] = useState<any[] | undefined>(undefined)
   const pendingGameStateRef = useRef<any>(null)
   const isServerAnimatingRef = useRef<boolean>(false)
@@ -277,6 +280,33 @@ export default function Game() {
   useEffect(() => {
     offsetConfirmedRef.current = offsetConfirmed
   }, [offsetConfirmed])
+
+  // Закрытие меню при клике вне его
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showGameMenu && !(e.target as HTMLElement).closest('[data-game-menu]')) {
+        setShowGameMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showGameMenu])
+
+  // Отслеживание состояния полноэкранного режима
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
+  // Загрузка настройки requireConfirmMove из пользователя
+  useEffect(() => {
+    if (user) {
+      setRequireConfirmMove((user as any).requireConfirmMove ?? true)
+    }
+  }, [user])
   const [pendingMoves, setPendingMoves] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -2113,6 +2143,126 @@ export default function Game() {
       <PageHeader 
         title={`Table ${tableNumber} - ${getGameModeName(gameMode)}${stake > 0 ? ` - ${stake} NAR` : ''}`}
         onBack={handleBack}
+        rightAction={
+          <div style={{ position: 'relative' }} data-game-menu>
+            <button
+              onClick={() => setShowGameMenu(!showGameMenu)}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                border: 'none',
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                fontSize: '20px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+              }}
+              title="Меню"
+            >
+              ⋮
+            </button>
+            {showGameMenu && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '40px',
+                  right: '0',
+                  background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  minWidth: '200px',
+                  zIndex: 1000,
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+                }}
+              >
+                <button
+                  onClick={async () => {
+                    setShowExitModal(true)
+                    setShowGameMenu(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#f44336',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  🚩 Сдаться
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!document.fullscreenElement) {
+                      await document.documentElement.requestFullscreen()
+                      setIsFullscreen(true)
+                    } else {
+                      await document.exitFullscreen()
+                      setIsFullscreen(false)
+                    }
+                    setShowGameMenu(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#fff',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  {isFullscreen ? '🔲 Выйти из полноэкранного режима' : '⬜ Полноэкранный режим'}
+                </button>
+                <button
+                  onClick={async () => {
+                    const newValue = !requireConfirmMove
+                    setRequireConfirmMove(newValue)
+                    setShowGameMenu(false)
+                    try {
+                      await apiClient.put('/users/settings', {
+                        requireConfirmMove: newValue
+                      })
+                      // Обновляем пользователя в store
+                      const userResponse = await apiClient.get('/users/me')
+                      useAuthStore.setState({ user: userResponse.data })
+                    } catch (error) {
+                      console.error('Ошибка сохранения настройки:', error)
+                      // Откатываем изменение при ошибке
+                      setRequireConfirmMove(!newValue)
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#fff',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  {requireConfirmMove ? '✓ Требовать подтверждение хода' : '✗ Не требовать подтверждение хода'}
+                </button>
+              </div>
+            )}
+          </div>
+        }
       />
       
       <div className="game-main-layout">
@@ -2777,6 +2927,31 @@ export default function Game() {
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
             }}
           >
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowOffsetModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '-10px',
+                  right: '-10px',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1,
+                }}
+                title="Закрыть"
+              >
+                ×
+              </button>
+            </div>
             <h2>Выбор смещения</h2>
             <p className="offset-modal-description">
               Выберите смещение для контроля честности игры. Каждый игрок выбирает свое смещение независимо (от 1 до 5).

@@ -180,6 +180,9 @@ export class User {
   @Column({ default: 'Europe/Moscow' })
   timezone: string; // Часовой пояс пользователя (IANA timezone)
 
+  @Column({ default: true })
+  requireConfirmMove: boolean; // Требовать подтверждение хода
+
   @CreateDateColumn()
   createdAt: Date;
 

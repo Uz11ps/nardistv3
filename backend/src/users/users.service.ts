@@ -183,6 +183,7 @@ export class UsersService {
       clanEvents: user.clanEvents ?? true,
       language: user.languageCode === 'ru' ? 'Русский' : user.languageCode,
       timezone: user.timezone ?? 'Europe/Moscow',
+      requireConfirmMove: user.requireConfirmMove ?? true,
     };
   }
 
@@ -194,6 +195,7 @@ export class UsersService {
     clanEvents?: boolean;
     language?: string;
     timezone?: string;
+    requireConfirmMove?: boolean;
   }) {
     const user = await this.findOne(userId);
     
@@ -218,6 +220,9 @@ export class UsersService {
     }
     if (settings.timezone !== undefined) {
       user.timezone = settings.timezone;
+    }
+    if (settings.requireConfirmMove !== undefined) {
+      user.requireConfirmMove = settings.requireConfirmMove;
     }
     
     return this.usersRepository.save(user);
