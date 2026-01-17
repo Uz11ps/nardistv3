@@ -106,7 +106,7 @@ export default function BackgammonBoard({
       barMarginRightPct: 0.003,
       barWidthPct: 0.056,
       topMarginPct: 0.073,
-      bearOffHeightPct: 0.131,
+      bearOffHeightPct: 0.090, // Согласно скриншоту
       checkerWidthRatio: 1.5,
       checkerHeightRatio: 0.216,
       checkerDrawScale: 1.2,
@@ -129,6 +129,11 @@ export default function BackgammonBoard({
       validHighlightHeightScale: 1.0,
       validHighlightXOffset: 0,
       validHighlightYOffset: 0,
+      // Dedicated bear-off valid highlight
+      bearOffValidWidthScale: 1.0,
+      bearOffValidHeightScale: 1.0,
+      bearOffValidXOffset: 0,
+      bearOffValidYOffset: 0,
       // Bottom row specific highlight offset (if needed separately, otherwise shared)
       highlightBottomYOffset: 0,
       validHighlightBottomYOffset: 0,
@@ -137,6 +142,10 @@ export default function BackgammonBoard({
       dragCheckerSizeScale: 1.0,
       dragCheckerXOffset: 0,
       dragCheckerYOffset: 0,
+      // Bear-off (lot) customization
+      bearOffCheckerScale: 0.900, // Согласно скриншоту
+      bearOffXOffset: 2.0, // Согласно скриншоту
+      bearOffYOffset: 0,
       // Advanced text offsets (quadrants)
       textTopRightY: -15, // Points 19-24 (Indices 0-5)
       textTopLeftY: -15,  // Points 13-18 (Indices 6-11)
@@ -152,7 +161,7 @@ export default function BackgammonBoard({
     barMarginRightPct: 0.012,
     barWidthPct: 0.025,
     topMarginPct: 0.079,
-    bearOffHeightPct: 0.139,
+    bearOffHeightPct: 0.090, // Согласно скриншоту
     checkerWidthRatio: 1.5,
     checkerHeightRatio: 0.252,
     checkerDrawScale: 1.23,
@@ -160,8 +169,8 @@ export default function BackgammonBoard({
     diceP1Y: 0.65,
     diceP2X: 0.09,
     diceP2Y: 0.38, 
-    checkerTopOffset: -330, 
-    checkerBottomOffset: 330,
+    checkerTopOffset: -363, 
+    checkerBottomOffset: 363,
     // Legacy text offsets
     textTopOffset: -15,
     textBottomOffset: 15,
@@ -175,6 +184,11 @@ export default function BackgammonBoard({
     validHighlightHeightScale: 1.0,
     validHighlightXOffset: 0,
     validHighlightYOffset: -31,
+    // Dedicated bear-off valid highlight
+    bearOffValidWidthScale: 1.0,
+    bearOffValidHeightScale: 1.0,
+    bearOffValidXOffset: 0,
+    bearOffValidYOffset: 0,
     // Bottom row specific highlight offset (if needed separately, otherwise shared)
     highlightBottomYOffset: 26,
     validHighlightBottomYOffset: 26,
@@ -183,6 +197,10 @@ export default function BackgammonBoard({
     dragCheckerSizeScale: 1.0,
     dragCheckerXOffset: 0,
     dragCheckerYOffset: 0,
+    // Bear-off (lot) customization
+    bearOffCheckerScale: 0.900, // Согласно скриншоту
+    bearOffXOffset: 2.0, // Согласно скриншоту
+    bearOffYOffset: 0,
     // Advanced text offsets (quadrants)
     textTopRightY: -316,
     textTopLeftY: -316, 
@@ -196,7 +214,7 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v12')
+      const saved = localStorage.getItem('backgammon-debug-config-v15')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
@@ -219,7 +237,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v12', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v15', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
@@ -1014,7 +1032,7 @@ export default function BackgammonBoard({
     const actualY = y
     
     // ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ (дублируем логику из getPointCoordinates)
-    const bearOffHeight = height * 0.13
+    const bearOffHeight = height * debugConfig.bearOffHeightPct
     
     // Проверяем все точки
     // Прямой расчет попадания в точку на основе логики getPointCoordinates
@@ -1045,30 +1063,28 @@ export default function BackgammonBoard({
           const triangleBase = pY - pH;
           const triangleTip = pY;
           const visualBase = pY + scaleY(debugConfig.checkerTopOffset);
-          // Visual stack extends down by ~5 checkers
-          const visualEnd = visualBase + (5 * checkerSize_approx);
+          // Visual stack extends from (visualBase - size/2) to (visualBase + 5*overlap + size/2)
+          const visualTop = visualBase - (checkerSize_approx / 2);
+          const visualBottom = visualBase + (4 * (checkerSize_approx - 8)) + (checkerSize_approx / 2);
           
-          yStart = Math.min(triangleBase, visualBase) - padding;
-          yEnd = Math.max(triangleTip, visualEnd) + padding;
+          yStart = Math.min(triangleBase, visualTop) - padding;
+          yEnd = Math.max(triangleTip, visualBottom) + padding;
       } else {
           // Bottom Row: Triangle goes from pY (tip) down to (pY + pH)
           // Visual checkers start at: pY + scaleY(debugConfig.checkerBottomOffset)
-          // And go upwards (decreasing Y) from the base? 
-          // Wait, drawBoard logic:
-          // checkerBaseY = y - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset)
-          // checkerY = checkerBaseY - yOffset (goes UP)
-          // So visual checkers start near bottom edge and go UP.
+          // And go upwards (decreasing Y) from the base.
           
           const triangleTip = pY;
           const triangleBase = pY + pH;
           
-          // checkerBaseY is roughly where the first checker is (bottom-most)
+          // visualBase is the center of the first (bottom-most) checker
           const visualBase = pY + scaleY(debugConfig.checkerBottomOffset);
-          // Visual stack extends UP by ~5 checkers
-          const visualTop = visualBase - (5 * checkerSize_approx);
+          // Visual stack extends from (visualBase + size/2) down to (visualBase - 5*overlap - size/2) up
+          const visualBottom = visualBase + (checkerSize_approx / 2);
+          const visualTop = visualBase - (4 * (checkerSize_approx - 8)) - (checkerSize_approx / 2);
           
           yStart = Math.min(triangleTip, visualTop) - padding;
-          yEnd = Math.max(triangleBase, visualBase) + padding;
+          yEnd = Math.max(triangleBase, visualBottom) + padding;
       }
       
       if (actualX >= xStart && actualX <= xEnd && actualY >= yStart && actualY <= yEnd) {
@@ -1098,11 +1114,19 @@ export default function BackgammonBoard({
     }
     
     // Проверяем контейнеры (bearOff) - теперь СНИЗУ
-    // Высота bearOffHeight
     if (actualY >= height - bearOffHeight) {
-      // Весь низ - это bearOff? Или только определенные зоны?
-      // Для простоты - весь низ.
-      return -1
+      // В sandbox разрешаем всегда, если там есть шашки
+      if (isSandbox) {
+        const bearOff = gameState?.bearOff || { white: 0, black: 0 }
+        const isRightSide = actualX > width / 2
+        if (isRightSide && bearOff.white > 0) return -1
+        if (!isRightSide && bearOff.black > 0) return -1
+        
+        // Если шашек нет в конкретной половине, но это sandbox - всё равно возвращаем -1
+        // чтобы можно было начать перетаскивание "из пустоты" или если кликнули рядом
+        return -1
+      }
+      return validTargetPoints.has(-1) ? -1 : null
     }
     
     // В Sandbox режиме проверяем зону "удаления" (мусорка) в левом нижнем углу
@@ -1156,8 +1180,8 @@ export default function BackgammonBoard({
     ctx.clearRect(0, 0, width, height)
     
     // ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ (дублируем логику из getPointCoordinates)
-    const bearOffHeight = height * 0.036
-    const topMargin = height * 0.06
+    const bearOffHeight = height * debugConfig.bearOffHeightPct
+    const topMargin = height * debugConfig.topMarginPct
     const sideMargin = width * 0.040 // Adjusted
     
     // Определяем параметры доски
@@ -1366,7 +1390,26 @@ export default function BackgammonBoard({
       const hY = isTopRow ? (y - pH) : y
       const hH = pH
 
-      // 1. Подсветка точки под курсором - отключена (не нужна)
+      // 1. Подсветка точки под курсором
+      if (hoveredPoint === pointIndex) {
+        const highlightHW = pW * debugConfig.highlightWidthScale
+        const highlightHH = hH * debugConfig.highlightHeightScale
+        const highlightHX = hX + (pW - highlightHW) / 2 + scaleX(debugConfig.highlightXOffset)
+        
+        let highlightHY;
+        if (isTopRow) {
+             highlightHY = (y - pH) + (hH - highlightHH) / 2 + debugConfig.highlightYOffset;
+        } else {
+             const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
+                ? (debugConfig as any).highlightBottomYOffset 
+                : -debugConfig.highlightYOffset;
+             
+             highlightHY = y + (hH - highlightHH) / 2 + bottomOffset;
+        }
+        
+        ctx.fillStyle = dragging ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 255, 255, 0.15)'
+        ctx.fillRect(highlightHX, highlightHY, highlightHW, highlightHH)
+      }
       
       // 2. Подсветка валидных точек назначения при перетаскивании
       if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
@@ -1394,7 +1437,26 @@ export default function BackgammonBoard({
         ctx.strokeRect(validHX + 2, validHY + 2, validHW - 4, validHH - 4)
       }
       
-      // 3. Подсветка выбранной точки - отключена (не нужна)
+      // 3. Подсветка выбранной точки
+      if (selectedPoint === pointIndex) {
+        const selectedHW = pW * debugConfig.highlightWidthScale
+        const selectedHH = hH * debugConfig.highlightHeightScale
+        const selectedHX = hX + (pW - selectedHW) / 2 + scaleX(debugConfig.highlightXOffset)
+        
+        let selectedHY;
+        if (isTopRow) {
+             selectedHY = (y - pH) + (hH - selectedHH) / 2 + debugConfig.highlightYOffset;
+        } else {
+             const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
+                ? (debugConfig as any).highlightBottomYOffset 
+                : -debugConfig.highlightYOffset;
+             
+             selectedHY = y + (hH - selectedHH) / 2 + bottomOffset;
+        }
+        
+        ctx.fillStyle = 'rgba(90, 127, 196, 0.3)'
+        ctx.fillRect(selectedHX, selectedHY, selectedHW, selectedHH)
+      }
       
     }
     
@@ -1546,7 +1608,7 @@ export default function BackgammonBoard({
     }
     
     // Отрисовка области выноса (Теперь СНИЗУ, используем изображения сбоку)
-    const bearOffAreaY = height - bearOffHeight
+    const bearOffAreaY = height - bearOffHeight + (debugConfig.bearOffYOffset || 0)
 
     if (virtualGameState.bearOff) {
       const bOff = virtualGameState.bearOff
@@ -1559,7 +1621,7 @@ export default function BackgammonBoard({
       
       // Параметры для отрисовки сбоку (стоячие шашки)
       // Высота шашки сбоку = диаметру (примерно)
-      const checkerSideHeight = bearOffHeight * 0.85
+      const checkerSideHeight = bearOffHeight * 0.85 * (debugConfig.bearOffCheckerScale || 1.0)
       
       // Вычисляем ширину по пропорциям изображения
       const getSideWidth = (img: HTMLImageElement | undefined) => {
@@ -1576,7 +1638,7 @@ export default function BackgammonBoard({
       
       // Белые шашки - Справа налево (Дом белых обычно справа)
       // Размещаем их в правой части лотка
-      const startXWhite = width - sideMargin - whiteW
+      const startXWhite = width - sideMargin - whiteW + (debugConfig.bearOffXOffset || 0)
       
       for (let i = 0; i < whiteBearOffCount; i++) {
         // Плотная стопка со смещением
@@ -1595,7 +1657,7 @@ export default function BackgammonBoard({
       
       // Черные шашки - Слева направо (Дом черных обычно слева)
       // Размещаем их в левой части лотка
-      const startXBlack = sideMargin
+      const startXBlack = sideMargin + (debugConfig.bearOffXOffset || 0)
       
       for (let i = 0; i < blackBearOffCount; i++) {
         const step = redW * 0.25
@@ -1609,6 +1671,46 @@ export default function BackgammonBoard({
            ctx.strokeStyle = '#000'
            ctx.strokeRect(x, yPos, redW, checkerSideHeight)
         }
+      }
+    }
+
+    // Подсветка при перетаскивании в зону выноса (ВЕСЬ НИЗ - теперь разделен на 2 части)
+    if ((dragging || selectedPoint !== null) && validTargetPoints.has(-1)) {
+      // Determine which side to highlight based on checker color
+      let isRightSide = true; // Default to Right (White)
+      
+      if (dragging && dragging.checkerColor) {
+        isRightSide = dragging.checkerColor === 'white';
+      } else if (selectedPoint !== null) {
+        // Если точка выбрана кликом
+        const val = virtualGameState?.points[selectedPoint] || 0;
+        if (val !== 0) isRightSide = val > 0;
+        else if (selectedPoint === 24) isRightSide = true;
+        else if (selectedPoint === 25) isRightSide = false;
+      }
+
+      // Применяем параметры из debugConfig для размера и смещения подсветки bear-off
+      // Используем ПОЛОВИНУ ширины доски как базу
+      const halfWidth = width / 2;
+      const bearOffValidHW = halfWidth * (debugConfig.bearOffValidWidthScale || debugConfig.validHighlightWidthScale || 1.0)
+      const bearOffValidHH = bearOffHeight * (debugConfig.bearOffValidHeightScale || debugConfig.validHighlightHeightScale || 1.0)
+      
+      // Вычисляем центр нужной половины
+      const centerX = isRightSide ? (width * 0.75) : (width * 0.25);
+      
+      const bearOffValidHX = centerX - (bearOffValidHW / 2) + scaleX(debugConfig.bearOffValidXOffset || debugConfig.validHighlightXOffset || 0)
+      const bearOffValidHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + (debugConfig.bearOffValidYOffset || debugConfig.validHighlightYOffset || 0)
+      
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
+      ctx.fillRect(bearOffValidHX, bearOffValidHY, bearOffValidHW, bearOffValidHH)
+      
+      ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
+      ctx.lineWidth = 2
+      ctx.strokeRect(bearOffValidHX + 2, bearOffValidHY + 2, bearOffValidHW - 4, bearOffValidHH - 4)
+      
+      if (hoveredPoint === -1) {
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'
+        ctx.fillRect(bearOffValidHX, bearOffValidHY, bearOffValidHW, bearOffValidHH)
       }
     }
 
@@ -1935,9 +2037,29 @@ export default function BackgammonBoard({
               const isMyChecker = (activePlayer === 0 && isWhiteChecker) || (activePlayer === 1 && isBlackChecker)
               
               // Проверяем есть ли возможные ходы для этой точки
-              const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+            const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+            
+            // В sandbox режиме разрешаем перетаскивать из bearOff
+            if (isSandbox && pointIndex === -1) {
+              const bearOff = virtualGameState?.bearOff || { white: 0, black: 0 }
+              const isWhiteSide = x > canvas.width / 2
+              const checkerColor = isWhiteSide ? 'white' : 'black'
+              const count = isWhiteSide ? bearOff.white : bearOff.black
               
-              if (pointMoves.length > 0 && isMyChecker) {
+              if (count > 0) {
+                setDragging({ 
+                  pointIndex: -1, 
+                  offsetX: 0, 
+                  offsetY: 0,
+                  freeMove: true,
+                  checkerColor
+                })
+                setDragPosition({ x, y })
+                return
+              }
+            }
+
+            if (pointMoves.length > 0 && isMyChecker) {
                 // Если есть возможные ходы - используем обычную логику выбора
                 setSelectedPoint(pointIndex)
                 const validTargets = new Set<number>()
@@ -1967,12 +2089,17 @@ export default function BackgammonBoard({
 
         const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
         const isMyChecker = isSandbox ? pointValue !== 0 : (activePlayer === 0 ? pointValue > 0 : pointValue < 0)
-        const isMyBar = isSandbox 
-          ? (pointIndex === 24 ? (virtualGameState?.bar?.white || 0) > 0 : (pointIndex === 25 ? (virtualGameState?.bar?.black || 0) > 0 : false))
-          : ((pointIndex === 24 && activePlayer === 0 && pointValue > 0) || (pointIndex === 25 && activePlayer === 1 && pointValue < 0))
-        
-        if (isMyChecker || isMyBar) {
-          const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+    const isMyBar = isSandbox 
+      ? (pointIndex === 24 ? (virtualGameState?.bar?.white || 0) > 0 : (pointIndex === 25 ? (virtualGameState?.bar?.black || 0) > 0 : false))
+      : ((pointIndex === 24 && activePlayer === 0 && pointValue > 0) || (pointIndex === 25 && activePlayer === 1 && pointValue < 0))
+    
+    // В sandbox режиме разрешаем брать из bearOff (код -1)
+    const isMyBearOff = isSandbox && pointIndex === -1 && (
+      (virtualGameState?.bearOff?.white || 0) > 0 || (virtualGameState?.bearOff?.black || 0) > 0
+    )
+    
+    if (isMyChecker || isMyBar || isMyBearOff) {
+      const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
           let localTouchBearOffDie: number | null = null
           
           if (pointMoves.length > 0) {
@@ -2298,24 +2425,24 @@ export default function BackgammonBoard({
     
     // В sandbox режиме обрабатываем перетаскивание из bearOff
     if (isSandbox) {
-      const checkerColor = getBearOffAtPosition(x, y, canvas)
-      if (checkerColor) {
-        // Начинаем перетаскивание шашки из bearOff
-        // Рассчитываем координаты центра области для корректного отображения перетаскивания
-        const bWidth = canvas.width * 0.06
-        const lContainerX = 0
-        const rContainerX = canvas.width - bWidth
-        const areaX = (checkerColor === 'white' ? (isPlayer1 ? rContainerX : lContainerX) : (isPlayer1 ? lContainerX : rContainerX)) + bWidth / 2
-        const areaY = checkerColor === 'white' ? canvas.height - 75 : 75
+      // Прямая проверка клика в зону bearOff снизу
+      const bHeight = canvas.height * debugConfig.bearOffHeightPct
+      if (y >= canvas.height - bHeight) {
+        const isWhiteSide = x > canvas.width / 2
+        const color = isWhiteSide ? 'white' : 'black'
+        const count = isWhiteSide ? (virtualGameState?.bearOff?.white || 0) : (virtualGameState?.bearOff?.black || 0)
         
-        setDragging({ 
-          pointIndex: -1, 
-          offsetX: x - areaX, 
-          offsetY: y - areaY, 
-          checkerColor 
-        })
-        setDragPosition({ x, y })
-        return
+        if (count > 0 || sandboxMode === 'setup') {
+          setDragging({ 
+            pointIndex: -1, 
+            offsetX: 0, 
+            offsetY: 0,
+            freeMove: true,
+            checkerColor: color
+          })
+          setDragPosition({ x, y })
+          return
+        }
       }
       
       // В sandbox режиме разрешаем обычные ходы, если есть кубики
