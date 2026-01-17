@@ -476,15 +476,76 @@ export default function Game() {
     }
   }, [gameId, isBotGame, gameInfo?.type])
 
-  // ВАЖНО: Таймеры обновляются ТОЛЬКО с сервера через событие timer_update
-  // Локальный интервал убран - все обновления идут с сервера для синхронизации
+  // Локальный интервал для плавного визуального обновления UI
+  // ВАЖНО: Интервал НЕ изменяет логику времени - только визуальное отображение
+  // Реальные значения таймеров приходят с сервера через timer_update
   useEffect(() => {
-    // Очищаем интервал если он остался
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current)
-      timerIntervalRef.current = null
+    if (gameStatus !== 'in_progress' || isSandbox) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current)
+        timerIntervalRef.current = null
+      }
+      return
     }
-  }, [gameStatus, isSandbox])
+
+    // ВАЖНО: Обновляем метку времени при запуске таймера
+    lastTimerUpdateRef.current = Date.now()
+
+    timerIntervalRef.current = window.setInterval(() => {
+      const currentGameStatus = gameStatusRef.current
+      const currentPlayer = currentPlayerRef.current
+      
+      // Проверяем, что игра все еще идет
+      if (currentGameStatus !== 'in_progress') {
+        return
+      }
+      
+      const now = Date.now()
+      const deltaSeconds = (now - lastTimerUpdateRef.current) / 1000
+      lastTimerUpdateRef.current = now
+
+      // ВАЖНО: Визуально обновляем таймеры на основе последних значений с сервера
+      // Не изменяем логику - только визуальное отображение для плавности
+      if (currentPlayer === 0) {
+        // Ход игрока 1
+        if (player1TimerRef.current > 0) {
+          const newValue = Math.max(0, player1TimerRef.current - deltaSeconds)
+          setPlayer1Timer(newValue)
+          player1TimerRef.current = newValue
+        } else if (totalTimeRemainingRef.current.player1 > 0) {
+          // Овертайм - визуально обновляем на основе последнего значения с сервера
+          const newTotal = Math.max(0, totalTimeRemainingRef.current.player1 - deltaSeconds)
+          setTotalTimeRemaining(prev => {
+            const updated = { ...prev, player1: newTotal }
+            totalTimeRemainingRef.current = updated
+            return updated
+          })
+        }
+      } else if (currentPlayer === 1) {
+        // Ход игрока 2
+        if (player2TimerRef.current > 0) {
+          const newValue = Math.max(0, player2TimerRef.current - deltaSeconds)
+          setPlayer2Timer(newValue)
+          player2TimerRef.current = newValue
+        } else if (totalTimeRemainingRef.current.player2 > 0) {
+          // Овертайм - визуально обновляем на основе последнего значения с сервера
+          const newTotal = Math.max(0, totalTimeRemainingRef.current.player2 - deltaSeconds)
+          setTotalTimeRemaining(prev => {
+            const updated = { ...prev, player2: newTotal }
+            totalTimeRemainingRef.current = updated
+            return updated
+          })
+        }
+      }
+    }, 100) // Обновляем каждые 100мс для плавности
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current)
+        timerIntervalRef.current = null
+      }
+    }
+  }, [gameStatus, gameState?.currentPlayer, isSandbox])
   
   const loadGame = async () => {
     try {
