@@ -884,8 +884,8 @@ export default function BackgammonBoard({
     // ВАЖНО: Ограничиваем максимальный размер для предотвращения слишком больших кубиков в модальных окнах (реплей)
     // Используем минимальное значение между размером контейнера и фиксированным максимумом
     const effectiveSize = Math.min(width, height)
-    const maxDiceSize = 80 // Максимальный размер кубика в пикселях (для реплея и модальных окон)
-    const diceSize = Math.min(effectiveSize * 0.08, maxDiceSize / 7.5) // Размер кубика ограничен максимумом
+    const maxDiceSize = 240 // Максимальный размер кубика в пикселях (для реплея и модальных окон) - увеличен в 3 раза
+    const diceSize = Math.min(effectiveSize * 0.24, maxDiceSize / 7.5) // Размер кубика ограничен максимумом (увеличен коэффициент в 3 раза: 0.08 -> 0.24)
     const diceWidth = diceSize * 7.5
     const diceHeight = diceSize * 4.5
     
