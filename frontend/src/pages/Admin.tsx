@@ -1623,7 +1623,11 @@ export default function Admin() {
                         {game.status === 'waiting' && <span className="badge waiting">Ожидание</span>}
                       </td>
                       <td>{game.player1?.nickname || game.player1?.username || 'N/A'}</td>
-                      <td>{game.player2?.nickname || game.player2?.username || 'Бот'}</td>
+                      <td>
+                        {game.type === 'sandbox' 
+                          ? 'Свободный стол' 
+                          : (game.player2?.nickname || game.player2?.username || (game.type === 'vs_bot' ? 'Бот' : 'N/A'))}
+                      </td>
                       <td>{formatDateTime(game.createdAt, 'Europe/Moscow')}</td>
                       <td>
                         <div className="btn-group">

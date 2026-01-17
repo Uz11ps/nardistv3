@@ -36,7 +36,9 @@ export class HistoryService {
     } else if (filters?.result === 'losses') {
       query.andWhere('game.winnerId != :userId AND game.winnerId IS NOT NULL', { userId });
     } else if (filters?.result === 'bot') {
+      // Фильтр "бот" должен показывать только игры с ботом, исключая sandbox
       query.andWhere('game.type = :type', { type: 'vs_bot' });
+      query.andWhere('game.type != :sandboxType', { sandboxType: 'sandbox' }); // Дополнительная проверка для sandbox
     }
 
     // Проверяем подписку для лимита истории
