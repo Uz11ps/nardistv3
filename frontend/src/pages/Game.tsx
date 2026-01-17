@@ -290,11 +290,7 @@ export default function Game() {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       // НЕ закрываем меню, если клик был на кнопку меню или внутри содержимого меню
-      if (showGameMenu && 
-          !target.closest('[data-game-menu]') && 
-          !target.closest('[data-game-menu-content]')) {
-        setShowGameMenu(false)
-      }
+      // Модальное окно закрывается по клику на overlay, поэтому проверка не нужна
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -2228,6 +2224,59 @@ export default function Game() {
     };
   }, [pendingMoves.length, requireConfirmMove, isMyTurn, gameStatus, isSandbox, gameState?.dice, isProcessingConfirm, handleConfirm, gameId])
 
+  // ВАЖНО: Постоянная проверка валидных ходов, если остались кубики но нет валидных ходов - автоматически пропускаем
+  // Это исправляет ситуацию, когда пользователь частично использовал кубики, но больше некуда ходить
+  // ВАЖНО: Автоматическое подтверждение работает только если requireConfirmMove = false (как с ботом)
+  useEffect(() => {
+    // Пропускаем проверку, если:
+    // - игра не в процессе или sandbox
+    // - не мой ход
+    // - нет кубиков
+    // - уже обрабатывается подтверждение
+    // - нет gameId
+    // - требуется подтверждение (requireConfirmMove = true) - в этом случае пользователь сам подтверждает
+    if (!gameId || gameStatus !== 'in_progress' || isSandbox || !isMyTurn || !gameState?.dice || isProcessingConfirm || requireConfirmMove) {
+      return;
+    }
+
+    // Проверяем валидные ходы с текущими pendingMoves
+    const checkAndSkipIfNoValidMoves = async () => {
+      try {
+        const possibleMoves = await apiClient.post(`/games/${gameId}/possible-moves`, { 
+          pendingMoves: pendingMoves 
+        });
+        const hasValidMoves = possibleMoves.data?.allMoves?.length > 0 && 
+                              possibleMoves.data.allMoves.some((seq: any[]) => seq.length > 0);
+        
+        // Если нет валидных ходов и есть pendingMoves - автоматически подтверждаем их
+        // Если нет валидных ходов и нет pendingMoves - автоматически пропускаем ход
+        if (!hasValidMoves) {
+          if (pendingMoves.length > 0) {
+            console.log('🔄 No valid moves remaining, auto-confirming current moves');
+            // Автоматически подтверждаем текущие ходы, если они есть
+            handleConfirm();
+          } else {
+            console.log('🔄 No valid moves available, auto-skipping turn');
+            // Автоматически пропускаем ход, отправляя пустой массив
+            const socket = getSocket();
+            if (socket) {
+              socket.emit('make_move', { gameId, moves: [] });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error checking possible moves for auto-skip after move:', error);
+      }
+    };
+
+    // Используем задержку для проверки после обновления состояния
+    const timeoutId = setTimeout(checkAndSkipIfNoValidMoves, 500);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [gameState?.dice, gameState?.currentPlayer, pendingMoves.length, isMyTurn, gameStatus, isSandbox, isProcessingConfirm, gameId, handleConfirm, requireConfirmMove])
+
   if (!gameState || !gameInfo) {
     return (
       <div className="app-container">
@@ -2318,14 +2367,11 @@ export default function Game() {
         }
       />
       
-      {/* Меню игры через Portal для правильного z-index */}
+      {/* Модальное окно меню игры */}
       {showGameMenu && createPortal(
         <div
-          onClick={(e) => {
-            if (!(e.target as HTMLElement).closest('[data-game-menu-content]')) {
-              setShowGameMenu(false)
-            }
-          }}
+          className="offset-modal-overlay modal-visible"
+          onClick={() => setShowGameMenu(false)}
           style={{
             position: 'fixed',
             top: 0,
@@ -2333,22 +2379,22 @@ export default function Game() {
             right: 0,
             bottom: 0,
             zIndex: 2147483646,
-            background: 'transparent',
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <div
-            data-game-menu-content
+            className="offset-modal-content"
             onClick={(e) => e.stopPropagation()}
             style={{
-              position: 'fixed',
-              top: '60px',
-              right: '12px',
               background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              padding: '8px',
-              minWidth: '200px',
-              zIndex: 2147483647,
+              borderRadius: '12px',
+              padding: '16px',
+              minWidth: '300px',
+              maxWidth: '90%',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
             }}
           >
@@ -2417,6 +2463,11 @@ export default function Game() {
                   onClick={async (e) => {
                     e.stopPropagation()
                     e.preventDefault()
+                    // ВАЖНО: Нельзя менять настройку во время активного хода
+                    if (pendingMoves.length > 0) {
+                      console.log('⚠️ Cannot change requireConfirmMove during active move')
+                      return
+                    }
                     const newValue = !requireConfirmMove
                     console.log('✓ Требовать подтверждение хода clicked, newValue:', newValue, 'oldValue:', requireConfirmMove)
                     setRequireConfirmMove(newValue)
@@ -2437,20 +2488,29 @@ export default function Game() {
                       setRequireConfirmMove(!newValue)
                     }
                   }}
+                  disabled={pendingMoves.length > 0}
                   style={{
                     width: '100%',
                     padding: '12px',
                     background: 'transparent',
                     border: 'none',
-                    color: '#fff',
+                    color: pendingMoves.length > 0 ? 'rgba(255, 255, 255, 0.5)' : '#fff',
                     textAlign: 'left',
-                    cursor: 'pointer',
+                    cursor: pendingMoves.length > 0 ? 'not-allowed' : 'pointer',
                     borderRadius: '4px',
+                    opacity: pendingMoves.length > 0 ? 0.5 : 1,
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  onMouseEnter={(e) => {
+                    if (pendingMoves.length === 0) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent'
+                  }}
                 >
                   {requireConfirmMove ? '✓ Требовать подтверждение хода' : '✗ Не требовать подтверждение хода'}
+                  {pendingMoves.length > 0 && ' (недоступно во время хода)'}
                 </button>
               </div>
           </div>,
