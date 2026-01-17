@@ -204,22 +204,27 @@ export default function City() {
                   const incomeMultiplier = showBuildingModal.incomeMultiplier || 0.07
                   
                   if (userBuilding) {
-                    // Текущая прибыль
+                    // Текущая прибыль из базы данных
                     const currentIncome = userBuilding.incomePerHour
                     // Прибыль после улучшения (уровень + 1)
                     const nextLevel = userBuilding.level + 1
-                    const baseIncome = showBuildingModal.baseIncomePerHour
-                    const nextIncome = Math.floor(baseIncome * (1 + incomeMultiplier * (nextLevel - 1)))
+                    const baseIncome = Number(showBuildingModal.baseIncomePerHour)
+                    const multiplier = Number(incomeMultiplier)
+                    
+                    // Используем ту же формулу, что и на бэкенде: baseIncomePerHour * (1 + incomeMultiplier * (level - 1))
+                    // Для текущего уровня: baseIncome * (1 + multiplier * (currentLevel - 1))
+                    // Для следующего уровня: baseIncome * (1 + multiplier * (nextLevel - 1))
+                    const nextIncome = Math.floor(baseIncome * (1 + multiplier * (nextLevel - 1)))
                     
                     return (
                       <>
                         <div className="city-modal-stat">
                           <span className="label">Прибыль была:</span>
-                          <span className="value">{currentIncome} NAR/час</span>
+                          <span className="value">{currentIncome.toLocaleString('ru-RU')} NAR/час</span>
                         </div>
                         <div className="city-modal-stat">
                           <span className="label">Станет:</span>
-                          <span className="value">{nextIncome} NAR/час</span>
+                          <span className="value">{nextIncome.toLocaleString('ru-RU')} NAR/час</span>
                         </div>
                         <div className="city-modal-stat">
                           <span className="label">Улучшение с уровня {userBuilding.level} до уровня {nextLevel}</span>

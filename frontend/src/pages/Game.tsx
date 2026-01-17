@@ -253,6 +253,7 @@ export default function Game() {
   const isServerAnimatingRef = useRef<boolean>(false)
   const [winnerId, setWinnerId] = useState<string | null>(null)
   const autoConfirmTimeoutRef = useRef<number | null>(null) // Таймаут для автоматического подтверждения
+  const checkAutoConfirmRef = useRef<((moves: Array<{ from: number; to: number; die: number; steps?: any[] }>) => void) | null>(null)
 
   // Синхронизируем рефы с состоянием
   useEffect(() => {
@@ -1804,7 +1805,24 @@ export default function Game() {
       }
     }
 
-    setPendingMoves(prev => [...prev, { from, to, die, steps }])
+    setPendingMoves(prev => {
+      const newMoves = [...prev, { from, to, die, steps }]
+      
+      // Если подтверждение не требуется, проверяем авто-подтверждение сразу после добавления хода
+      if (!requireConfirmMove && 
+          isMyTurn && 
+          (gameStatus === 'in_progress' || isSandbox) && 
+          gameState?.dice &&
+          !isProcessingConfirm) {
+        
+        // Используем setTimeout для проверки после обновления состояния
+        setTimeout(() => {
+          checkAutoConfirmRef.current?.(newMoves)
+        }, 100)
+      }
+      
+      return newMoves
+    })
   }
 
   const handleNoMoves = async () => {
@@ -2135,13 +2153,90 @@ export default function Game() {
     }
   }
 
+  // Функция для проверки и запуска авто-подтверждения
+  const checkAutoConfirm = useCallback((moves: Array<{ from: number; to: number; die: number; steps?: any[] }>) => {
+    if (!gameId || !gameState?.dice || isProcessingConfirm || requireConfirmMove) return
+    
+    // Очищаем предыдущий таймер
+    if (autoConfirmTimeoutRef.current) {
+      clearTimeout(autoConfirmTimeoutRef.current)
+      autoConfirmTimeoutRef.current = null
+    }
+    
+    const diceArray = (() => {
+      const d = gameState.dice
+      if (!d) return []
+      if (Array.isArray(d)) return d
+      return [d.die1, d.die2]
+    })()
+    
+    if (diceArray.length === 0) return
+    
+    // Подсчитываем использованные кубики
+    const usedDice = new Map<number, number>()
+    moves.forEach(move => {
+      if ((move as any).steps) {
+        (move as any).steps.forEach((step: any) => {
+          usedDice.set(step.die, (usedDice.get(step.die) || 0) + 1)
+        })
+      } else {
+        usedDice.set(move.die, (usedDice.get(move.die) || 0) + 1)
+      }
+    })
+    
+    // Проверяем, все ли кубики использованы
+    let allDiceUsed = true
+    for (const die of diceArray) {
+      const used = usedDice.get(die) || 0
+      const available = diceArray.filter(d => d === die).length
+      if (used < available) {
+        allDiceUsed = false
+        break
+      }
+    }
+    
+    // Если все кубики использованы - автоматически отправляем ход после задержки
+    if (allDiceUsed) {
+      console.log('✅ All dice used, auto-confirming moves after 3 seconds')
+      autoConfirmTimeoutRef.current = window.setTimeout(() => {
+        handleConfirm()
+      }, 3000)
+    } else {
+      // Если не все кубики использованы, проверяем, есть ли еще валидные ходы
+      autoConfirmTimeoutRef.current = window.setTimeout(async () => {
+        try {
+          const possibleMoves = await apiClient.post(`/games/${gameId}/possible-moves`, { 
+            pendingMoves: moves 
+          })
+          const hasValidMoves = possibleMoves.data?.allMoves?.length > 0 && 
+                                possibleMoves.data.allMoves.some((seq: any[]) => seq.length > 0)
+          
+          // Если нет валидных ходов - автоматически отправляем текущие ходы
+          if (!hasValidMoves && moves.length > 0) {
+            console.log('✅ No valid moves remaining, auto-confirming current moves after 3 seconds')
+            autoConfirmTimeoutRef.current = window.setTimeout(() => {
+              handleConfirm()
+            }, 3000)
+          }
+        } catch (error) {
+          console.error('Error checking possible moves for auto-confirm:', error)
+        }
+      }, 500)
+    }
+  }, [gameId, gameState?.dice, isProcessingConfirm, requireConfirmMove, handleConfirm])
+
+  // Сохраняем функцию в ref для использования в handleMove
+  useEffect(() => {
+    checkAutoConfirmRef.current = checkAutoConfirm
+  }, [checkAutoConfirm])
+
   // Автоматическое подтверждение хода, если requireConfirmMove = false
-  // Отправляем ход автоматически, когда все кубики использованы или нет валидных ходов
+  // Дополнительная проверка через useEffect на случай, если checkAutoConfirm не сработал
   useEffect(() => {
     // Очищаем предыдущий таймер при изменении зависимостей
     if (autoConfirmTimeoutRef.current) {
-      clearTimeout(autoConfirmTimeoutRef.current);
-      autoConfirmTimeoutRef.current = null;
+      clearTimeout(autoConfirmTimeoutRef.current)
+      autoConfirmTimeoutRef.current = null
     }
 
     // Если подтверждение не требуется, есть ходы, это мой ход, игра в процессе и нет обработки подтверждения
@@ -2152,77 +2247,17 @@ export default function Game() {
         gameState?.dice &&
         !isProcessingConfirm) {
       
-      // Проверяем, все ли кубики использованы
-      const diceArray = (() => {
-        const d = gameState.dice;
-        if (!d) return [];
-        if (Array.isArray(d)) return d;
-        return [d.die1, d.die2];
-      })();
-      
-      // Подсчитываем использованные кубики
-      const usedDice = new Map<number, number>();
-      pendingMoves.forEach(move => {
-        if ((move as any).steps) {
-          (move as any).steps.forEach((step: any) => {
-            usedDice.set(step.die, (usedDice.get(step.die) || 0) + 1);
-          });
-        } else {
-          usedDice.set(move.die, (usedDice.get(move.die) || 0) + 1);
-        }
-      });
-      
-      // Проверяем, все ли кубики использованы
-      let allDiceUsed = true;
-      for (const die of diceArray) {
-        const used = usedDice.get(die) || 0;
-        const available = diceArray.filter(d => d === die).length;
-        if (used < available) {
-          allDiceUsed = false;
-          break;
-        }
-      }
-      
-      // Если все кубики использованы - автоматически отправляем ход после задержки
-      if (allDiceUsed) {
-        console.log('✅ All dice used, auto-confirming moves after 3 seconds');
-        // Задержка для завершения анимации хода и возможности отмены
-        autoConfirmTimeoutRef.current = window.setTimeout(() => {
-          handleConfirm();
-        }, 3000); // 3 секунды для возможности отмены хода
-      } else {
-        // Если не все кубики использованы, проверяем, есть ли еще валидные ходы
-        // Используем задержку для проверки валидных ходов
-        autoConfirmTimeoutRef.current = window.setTimeout(async () => {
-          try {
-            const possibleMoves = await apiClient.post(`/games/${gameId}/possible-moves`, { 
-              pendingMoves: pendingMoves 
-            });
-            const hasValidMoves = possibleMoves.data?.allMoves?.length > 0 && 
-                                  possibleMoves.data.allMoves.some((seq: any[]) => seq.length > 0);
-            
-            // Если нет валидных ходов - автоматически отправляем текущие ходы
-            if (!hasValidMoves && pendingMoves.length > 0) {
-              console.log('✅ No valid moves remaining, auto-confirming current moves after 3 seconds');
-              // Дополнительная задержка перед отправкой
-              autoConfirmTimeoutRef.current = window.setTimeout(() => {
-                handleConfirm();
-              }, 3000); // 3 секунды для возможности отмены хода
-            }
-          } catch (error) {
-            console.error('Error checking possible moves for auto-confirm:', error);
-          }
-        }, 500); // Небольшая задержка перед проверкой валидных ходов
-      }
+      // Используем функцию checkAutoConfirm
+      checkAutoConfirm(pendingMoves)
     }
 
     return () => {
       if (autoConfirmTimeoutRef.current) {
-        clearTimeout(autoConfirmTimeoutRef.current);
-        autoConfirmTimeoutRef.current = null;
+        clearTimeout(autoConfirmTimeoutRef.current)
+        autoConfirmTimeoutRef.current = null
       }
-    };
-  }, [pendingMoves.length, requireConfirmMove, isMyTurn, gameStatus, isSandbox, gameState?.dice, isProcessingConfirm, handleConfirm, gameId])
+    }
+  }, [pendingMoves.length, requireConfirmMove, isMyTurn, gameStatus, isSandbox, gameState?.dice, isProcessingConfirm, checkAutoConfirm])
 
   // ВАЖНО: Постоянная проверка валидных ходов, если остались кубики но нет валидных ходов - автоматически пропускаем
   // Это исправляет ситуацию, когда пользователь частично использовал кубики, но больше некуда ходить

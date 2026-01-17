@@ -28,9 +28,6 @@ export default function Shop() {
   const [loading, setLoading] = useState(true)
   const [processingSkinId, setProcessingSkinId] = useState<string | null>(null)
   const [buyingNarCoinAmount, setBuyingNarCoinAmount] = useState<number | null>(null)
-  const [hasCityAutobuild, setHasCityAutobuild] = useState(false)
-  const [purchasingAutobuild, setPurchasingAutobuild] = useState(false)
-  const [autobuildPaymentMethod, setAutobuildPaymentMethod] = useState<'usd' | 'nar'>('nar')
   const [paymentMethod, setPaymentMethod] = useState<'TRIBUTE' | 'STARS'>('TRIBUTE')
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [showSkinPreview, setShowSkinPreview] = useState(false)
@@ -41,8 +38,6 @@ export default function Shop() {
       loadNarCoinPackages()
     } else if (activeTab === 'skins') {
       loadSkins()
-    } else if (activeTab === 'subscription') {
-      loadCityAutobuildStatus()
     }
   }, [activeTab])
 
@@ -129,37 +124,9 @@ export default function Shop() {
     })
   }
 
-  const loadCityAutobuildStatus = async () => {
-    try {
-      const response = await apiClient.get('/subscription/city-autobuild/status').catch(() => ({ data: { hasAutobuild: false } }))
-      setHasCityAutobuild(response.data?.hasAutobuild || false)
-    } catch (error) {
-      console.error('Failed to load city autobuild status:', error)
-    }
-  }
-
   const handleBuySubscription = () => {
     // Перенаправляем на страницу подписки, где пользователь сможет выбрать длительность
     navigate('/subscription')
-  }
-
-  const handlePurchaseCityAutobuild = async () => {
-    try {
-      setPurchasingAutobuild(true)
-      await apiClient.post('/subscription/city-autobuild/purchase', { paymentMethod: autobuildPaymentMethod })
-      alert('Автобилд города успешно активирован!')
-      await loadCityAutobuildStatus()
-      // Обновляем данные пользователя
-      if (user) {
-        const userResponse = await apiClient.get('/users/me')
-        useAuthStore.setState({ user: userResponse.data })
-      }
-    } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при покупке автобилда города')
-      console.error('Failed to purchase city autobuild:', error)
-    } finally {
-      setPurchasingAutobuild(false)
-    }
   }
 
   const handleBuyNarCoin = async (amount: number, price: number) => {
@@ -554,97 +521,6 @@ export default function Shop() {
               </div>
             </Card>
 
-            {/* Автобилд города - отдельная карточка */}
-            <Card className="shop-subscription-card shop-autobuild-card">
-              <div className="shop-subscription-content">
-                <div className="shop-subscription-info">
-                  <div className="shop-subscription-title">Автобилд города</div>
-                  <div className="shop-subscription-description" style={{ marginTop: '8px', marginBottom: '12px' }}>
-                    Автоматическая покупка построек при наличии средств
-                  </div>
-                  {hasCityAutobuild ? (
-                    <div style={{
-                      padding: '8px 16px',
-                      background: '#4CAF50',
-                      borderRadius: '8px',
-                      color: '#FFF',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      textAlign: 'center',
-                      marginTop: '8px',
-                    }}>
-                      ✅ Активировано
-                    </div>
-                  ) : (
-                    <>
-                      <div style={{ 
-                        display: 'flex', 
-                        gap: '8px', 
-                        marginBottom: '12px',
-                        flexWrap: 'wrap'
-                      }}>
-                        <button
-                          className={`shop-autobuild-payment-btn ${autobuildPaymentMethod === 'usd' ? 'active' : ''}`}
-                          onClick={() => setAutobuildPaymentMethod('usd')}
-                          style={{
-                            flex: 1,
-                            minWidth: '120px',
-                            padding: '10px 16px',
-                            borderRadius: '8px',
-                            background: autobuildPaymentMethod === 'usd' 
-                              ? 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)' 
-                              : '#3a3a3a',
-                            border: autobuildPaymentMethod === 'usd' ? '2px solid #C93C3D' : '1px solid #4a4a4a',
-                            color: '#FFF',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                        >
-                          $50 USD
-                        </button>
-                        <button
-                          className={`shop-autobuild-payment-btn ${autobuildPaymentMethod === 'nar' ? 'active' : ''}`}
-                          onClick={() => setAutobuildPaymentMethod('nar')}
-                          style={{
-                            flex: 1,
-                            minWidth: '120px',
-                            padding: '10px 16px',
-                            borderRadius: '8px',
-                            background: autobuildPaymentMethod === 'nar' 
-                              ? 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)' 
-                              : '#3a3a3a',
-                            border: autobuildPaymentMethod === 'nar' ? '2px solid #C93C3D' : '1px solid #4a4a4a',
-                            color: '#FFF',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                        >
-                          10,000 NAR
-                        </button>
-                      </div>
-                      <button
-                        className="shop-subscription-buy-btn"
-                        onClick={handlePurchaseCityAutobuild}
-                        disabled={purchasingAutobuild}
-                        style={{
-                          opacity: purchasingAutobuild ? 0.6 : 1,
-                          cursor: purchasingAutobuild ? 'not-allowed' : 'pointer',
-                        }}
-                      >
-                        {purchasingAutobuild ? 'Покупка...' : 'Купить навсегда'}
-                      </button>
-                    </>
-                  )}
-                </div>
-                <div className="shop-subscription-icon">
-                  <div style={{ fontSize: '64px' }}>🏗️</div>
-                </div>
-              </div>
-            </Card>
           </div>
         )}
 
