@@ -1022,7 +1022,7 @@ export default function BackgammonBoard({
     const actualY = y
     
     // ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ (дублируем логику из getPointCoordinates)
-    const bearOffHeight = height * 0.13
+    const bearOffHeight = height * debugConfig.bearOffHeightPct
     
     // Проверяем все точки
     // Прямой расчет попадания в точку на основе логики getPointCoordinates
@@ -1106,7 +1106,6 @@ export default function BackgammonBoard({
     }
     
     // Проверяем контейнеры (bearOff) - теперь СНИЗУ
-    const bearOffHeight = height * debugConfig.bearOffHeightPct
     if (actualY >= height - bearOffHeight) {
       // В sandbox разрешаем всегда, если там есть шашки
       if (isSandbox) {
@@ -1173,8 +1172,8 @@ export default function BackgammonBoard({
     ctx.clearRect(0, 0, width, height)
     
     // ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ (дублируем логику из getPointCoordinates)
-    const bearOffHeight = height * 0.036
-    const topMargin = height * 0.06
+    const bearOffHeight = height * debugConfig.bearOffHeightPct
+    const topMargin = height * debugConfig.topMarginPct
     const sideMargin = width * 0.040 // Adjusted
     
     // Определяем параметры доски
