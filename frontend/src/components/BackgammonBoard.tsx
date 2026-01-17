@@ -864,18 +864,37 @@ export default function BackgammonBoard({
     let width = rect.width
     let height = rect.height
     
-    // ВАЖНО: Ограничиваем максимальный размер контейнера, чтобы избежать бесконечного роста top
-    // Это особенно важно для модальных окон реплея, где высота может быть вычислена неправильно
-    const MAX_CONTAINER_HEIGHT = 10000 // Максимальная высота в пикселях
-    const MAX_CONTAINER_WIDTH = 10000 // Максимальная ширина в пикселях
+    // ВАЖНО: Для модальных окон (реплей) используем разумные ограничения на размер контейнера
+    // Проверяем, находится ли контейнер внутри модального окна реплея или анализа
+    const isInModal = container.closest('.replay-modal') !== null || container.closest('.analysis-modal-v2') !== null
     
-    if (height > MAX_CONTAINER_HEIGHT) {
-      console.warn(`Container height (${height}px) exceeds maximum (${MAX_CONTAINER_HEIGHT}px), limiting to maximum`)
-      height = MAX_CONTAINER_HEIGHT
-    }
-    if (width > MAX_CONTAINER_WIDTH) {
-      console.warn(`Container width (${width}px) exceeds maximum (${MAX_CONTAINER_WIDTH}px), limiting to maximum`)
-      width = MAX_CONTAINER_WIDTH
+    if (isInModal) {
+      // Для модальных окон используем ограничения на основе viewport
+      const MAX_MODAL_HEIGHT = window.innerHeight * 0.6 // Максимум 60% от высоты экрана
+      const MAX_MODAL_WIDTH = window.innerWidth * 0.8 // Максимум 80% от ширины экрана
+      
+      // Если высота контейнера необоснованно большая (больше viewport), используем viewport
+      if (height > MAX_MODAL_HEIGHT || height > window.innerHeight) {
+        console.warn(`Container height in modal (${height}px) exceeds reasonable maximum, using viewport-based limit`)
+        height = Math.min(MAX_MODAL_HEIGHT, rect.height || window.innerHeight * 0.5)
+      }
+      if (width > MAX_MODAL_WIDTH || width > window.innerWidth) {
+        console.warn(`Container width in modal (${width}px) exceeds reasonable maximum, using viewport-based limit`)
+        width = Math.min(MAX_MODAL_WIDTH, rect.width || window.innerWidth * 0.8)
+      }
+    } else {
+      // Для обычной игры используем более мягкие ограничения
+      const MAX_CONTAINER_HEIGHT = 2000 // Максимальная высота для обычной игры
+      const MAX_CONTAINER_WIDTH = 2000 // Максимальная ширина для обычной игры
+      
+      if (height > MAX_CONTAINER_HEIGHT) {
+        console.warn(`Container height (${height}px) exceeds maximum (${MAX_CONTAINER_HEIGHT}px), limiting to maximum`)
+        height = MAX_CONTAINER_HEIGHT
+      }
+      if (width > MAX_CONTAINER_WIDTH) {
+        console.warn(`Container width (${width}px) exceeds maximum (${MAX_CONTAINER_WIDTH}px), limiting to maximum`)
+        width = MAX_CONTAINER_WIDTH
+      }
     }
     
     if (width === 0 || height === 0) return // Не вычисляем позицию если контейнер еще не отрисован
