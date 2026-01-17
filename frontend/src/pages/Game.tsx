@@ -2164,6 +2164,11 @@ export default function Game() {
       return
     }
     
+    // ВАЖНО: Если таймер уже установлен, не переустанавливаем его
+    if (autoConfirmTimeoutRef.current) {
+      return
+    }
+    
     const diceArray = (() => {
       const d = gameState?.dice
       if (!d) return []
@@ -2176,12 +2181,6 @@ export default function Game() {
       console.log('✅ No dice, auto-confirming moves immediately')
       handleConfirm()
       return
-    }
-    
-    // Очищаем предыдущий таймер
-    if (autoConfirmTimeoutRef.current) {
-      clearTimeout(autoConfirmTimeoutRef.current)
-      autoConfirmTimeoutRef.current = null
     }
     
     // Подсчитываем использованные кубики
@@ -2212,6 +2211,7 @@ export default function Game() {
       console.log('✅ All dice used, auto-confirming moves after 3 seconds', { moves: moves.length })
       autoConfirmTimeoutRef.current = window.setTimeout(() => {
         console.log('⏰ Auto-confirm timeout fired, calling handleConfirm')
+        autoConfirmTimeoutRef.current = null // Очищаем ref перед вызовом
         handleConfirm()
       }, 3000)
       return
@@ -2230,6 +2230,7 @@ export default function Game() {
         console.log('✅ No valid moves remaining, auto-confirming current moves after 3 seconds', { moves: moves.length })
         autoConfirmTimeoutRef.current = window.setTimeout(() => {
           console.log('⏰ Auto-confirm timeout fired (no valid moves), calling handleConfirm')
+          autoConfirmTimeoutRef.current = null // Очищаем ref перед вызовом
           handleConfirm()
         }, 3000)
       }
@@ -2244,14 +2245,8 @@ export default function Game() {
   }, [checkAutoConfirm])
 
   // Автоматическое подтверждение хода, если requireConfirmMove = false
-  // Постоянная проверка через useEffect и интервал
+  // Проверка через useEffect при изменении pendingMoves
   useEffect(() => {
-    // Очищаем предыдущий таймер при изменении зависимостей
-    if (autoConfirmTimeoutRef.current) {
-      clearTimeout(autoConfirmTimeoutRef.current)
-      autoConfirmTimeoutRef.current = null
-    }
-
     // Если подтверждение не требуется, есть ходы, это мой ход, игра в процессе и нет обработки подтверждения
     if (!requireConfirmMove && 
         pendingMoves.length > 0 && 
@@ -2259,37 +2254,16 @@ export default function Game() {
         (gameStatus === 'in_progress' || isSandbox) && 
         !isProcessingConfirm) {
       
-      // Сразу проверяем
-      checkAutoConfirm(pendingMoves)
-      
-      // Также проверяем каждую секунду на случай, если условия изменились
-      const intervalId = setInterval(() => {
-        if (!requireConfirmMove && 
-            pendingMoves.length > 0 && 
-            isMyTurn && 
-            (gameStatus === 'in_progress' || isSandbox) && 
-            !isProcessingConfirm &&
-            !autoConfirmTimeoutRef.current) {
-          checkAutoConfirm(pendingMoves)
-        }
-      }, 1000)
-      
-      return () => {
-        clearInterval(intervalId)
-        if (autoConfirmTimeoutRef.current) {
-          clearTimeout(autoConfirmTimeoutRef.current)
-          autoConfirmTimeoutRef.current = null
-        }
+      // Проверяем только если таймер еще не установлен
+      if (!autoConfirmTimeoutRef.current) {
+        checkAutoConfirm(pendingMoves)
       }
     }
 
     return () => {
-      if (autoConfirmTimeoutRef.current) {
-        clearTimeout(autoConfirmTimeoutRef.current)
-        autoConfirmTimeoutRef.current = null
-      }
+      // НЕ очищаем таймер при изменении зависимостей - пусть он сработает
     }
-  }, [pendingMoves.length, requireConfirmMove, isMyTurn, gameStatus, isSandbox, isProcessingConfirm, checkAutoConfirm, pendingMoves])
+  }, [pendingMoves.length, requireConfirmMove, isMyTurn, gameStatus, isSandbox, isProcessingConfirm, checkAutoConfirm])
 
   // ВАЖНО: Постоянная проверка валидных ходов, если остались кубики но нет валидных ходов - автоматически пропускаем
   // Это исправляет ситуацию, когда пользователь частично использовал кубики, но больше некуда ходить
