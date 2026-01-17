@@ -1031,7 +1031,10 @@ export default function Game() {
       
       const canMove = isSandbox ? (Array.isArray(diceData) && diceData.length > 0) : (data.currentPlayer === (data.player1Id === user?.id ? 0 : 1))
       const isMyTurnNow = canMove
-      const wasMyTurn = gameState?.canMove || false
+      // ВАЖНО: wasMyTurn определяем на основе предыдущего currentPlayer, а не canMove
+      // Это позволяет правильно определить смену хода даже при первом подключении
+      const previousCurrentPlayer = gameState?.currentPlayer ?? (gameInfo?.currentPlayer ?? -1)
+      const wasMyTurn = previousCurrentPlayer === (data.player1Id === user?.id ? 0 : 1)
       
       const barRaw = data.gameState?.bar || [0, 0]
       const bar = Array.isArray(barRaw) 

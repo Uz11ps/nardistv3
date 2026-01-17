@@ -1133,10 +1133,9 @@ export class GamesService {
     // Если это первый ход (игра в статусе WAITING), переводим в IN_PROGRESS
     if (updatedGame.status === GameStatus.WAITING) {
       updatedGame.status = GameStatus.IN_PROGRESS;
-      // Устанавливаем lastMoveAt при первом переходе в IN_PROGRESS для работы таймера
-      if (!updatedGame.lastMoveAt) {
-        updatedGame.lastMoveAt = now;
-      }
+      // ВАЖНО: Всегда устанавливаем lastMoveAt при переходе в IN_PROGRESS, чтобы таймер начинал отсчет с начала игры
+      // Это предотвращает овертайм при старте игры
+      updatedGame.lastMoveAt = now;
     }
 
     // В свободном столе игра никогда не заканчивается автоматически
