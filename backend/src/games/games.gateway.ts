@@ -101,12 +101,25 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
 
       const now = new Date();
       // ВАЖНО: Если lastMoveAt не установлен, время еще не началось
+      // Отправляем полное время без отсчета, чтобы фронтенд не показывал овертайм
       if (!game.lastMoveAt) {
-        // Время еще не началось - не проверяем таймаут
+        const currentPlayerTimeRemaining = game.currentPlayer === 0 
+          ? (game.player1TimeRemaining || 60000) 
+          : (game.player2TimeRemaining || 60000);
+        
+        this.server.to(`game:${gameId}`).emit('timer_update', {
+          gameId: game.id,
+          currentPlayer: game.currentPlayer,
+          moveTimeRemaining: 15, // Полные 15 секунд
+          totalTimeRemaining: currentPlayerTimeRemaining / 1000,
+          isOvertime: false,
+          player1TimeRemaining: game.player1TimeRemaining ? game.player1TimeRemaining / 1000 : 60,
+          player2TimeRemaining: game.player2TimeRemaining ? game.player2TimeRemaining / 1000 : 60,
+        });
         return;
       }
       const referenceTime = game.lastMoveAt instanceof Date ? game.lastMoveAt : new Date(game.lastMoveAt);
-      const timeSinceLastMove = (now.getTime() - referenceTime.getTime()) / 1000; // в секундах
+      const timeSinceLastMove = Math.max(0, (now.getTime() - referenceTime.getTime()) / 1000); // в секундах, не меньше 0
       const baseMoveTime = 15; // 15 секунд на ход (было 20)
       
       // Получаем общее время текущего игрока
@@ -118,17 +131,20 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       const excessTime = Math.max(0, timeSinceLastMove - baseMoveTime);
       
       // Оставшееся время на ход: если прошло <= 15 сек, показываем оставшиеся 15 сек, иначе показываем общее время
+      // ВАЖНО: Если timeSinceLastMove очень маленький (только что установлен lastMoveAt), показываем полные 15 секунд
       const moveTimeRemaining = timeSinceLastMove <= baseMoveTime 
-        ? baseMoveTime - timeSinceLastMove 
+        ? Math.max(0, baseMoveTime - timeSinceLastMove)
         : 0;
       
       // Общее время игрока после вычета превышения
+      // ВАЖНО: Если timeSinceLastMove очень маленький, excessTime будет 0, и totalTimeRemaining будет полным
       const totalTimeRemaining = Math.max(0, (currentPlayerTimeRemaining / 1000) - excessTime);
       
       // ВАЖНО: Овертайм определяется как:
       // 1. Прошло больше 15 секунд на ход (timeSinceLastMove > baseMoveTime) И
       // 2. Общее время игрока <= 0 (totalTimeRemaining <= 0)
       // Это означает, что игрок использует овертайм (1 минута общего времени)
+      // ВАЖНО: Если timeSinceLastMove очень маленький (только что установлен), isOvertime всегда false
       const isOvertime = timeSinceLastMove > baseMoveTime && totalTimeRemaining <= 0;
       
       // Отправляем таймер всем участникам игры
@@ -894,26 +910,41 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         // ВАЖНО: Проверяем наличие валидных ходов после броска (как и для обычных игроков)
         // Это работает для ВСЕХ режимов (короткие и длинные нарды)
         // Если нет валидных ходов - автоматически передаем ход
-        // ВАЖНО: Проверяем ДВАЖДЫ - через getPossibleMoves и через makeBotMove
-        // Это гарантирует, что мы точно знаем, есть ли ходы
-        let possibleMoves;
+        // ВАЖНО: Проверяем через makeBotMove - это самый надежный способ
+        // getPossibleMoves может возвращать пустые последовательности, что может дать ложный результат
         let hasMoves = false;
         
         try {
-          possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
-          hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
+          // ПРОВЕРКА 1: Через makeBotMove - это основной и самый надежный способ
+          const testBotMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
+          hasMoves = testBotMoves.length > 0;
+          this.logger.log(`🤖 Bot move check via makeBotMove: ${testBotMoves.length} moves found, hasMoves=${hasMoves}, dice=${JSON.stringify(updatedGame.gameState?.dice)}`);
+          
+          // ПРОВЕРКА 2: Дополнительная проверка через getPossibleMoves для логирования
+          if (!hasMoves) {
+            try {
+              const possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
+              const hasMovesFromGetPossible = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
+              this.logger.log(`🤖 Bot getPossibleMoves check: allMoves.length=${possibleMoves.allMoves.length}, hasNonEmptySequences=${hasMovesFromGetPossible}`);
+              
+              // Если getPossibleMoves говорит, что есть ходы, но makeBotMove вернул пустой массив - это странно
+              // В этом случае доверяем makeBotMove, так как он реально пытается сделать ход
+              if (hasMovesFromGetPossible && !hasMoves) {
+                this.logger.warn(`⚠️ Discrepancy: getPossibleMoves says there are moves, but makeBotMove returned empty. Trusting makeBotMove.`);
+              }
+            } catch (error) {
+              this.logger.warn(`Error getting possible moves for bot (secondary check): ${error.message}`);
+            }
+          }
         } catch (error) {
-          this.logger.warn(`Error getting possible moves for bot: ${error.message}, checking via makeBotMove instead`);
-        }
-        
-        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Если getPossibleMoves не сработал, проверяем через makeBotMove
-        if (!hasMoves) {
+          this.logger.error(`❌ Error checking bot moves via makeBotMove: ${error.message}`);
+          // В случае ошибки пробуем через getPossibleMoves как fallback
           try {
-            const testBotMoves = await this.botService.makeBotMove(updatedGame.gameState, updatedGame.mode);
-            hasMoves = testBotMoves.length > 0;
-            this.logger.log(`🤖 Bot move check via makeBotMove: ${testBotMoves.length} moves found, hasMoves=${hasMoves}`);
-          } catch (error) {
-            this.logger.warn(`Error checking bot moves via makeBotMove: ${error.message}`);
+            const possibleMoves = await this.gamesService.getPossibleMoves(gameId, botPlayerId);
+            hasMoves = possibleMoves.allMoves.length > 0 && possibleMoves.allMoves.some(seq => seq.length > 0);
+            this.logger.log(`🤖 Fallback check via getPossibleMoves: hasMoves=${hasMoves}`);
+          } catch (fallbackError) {
+            this.logger.error(`❌ Error in fallback getPossibleMoves check: ${fallbackError.message}`);
           }
         }
         
