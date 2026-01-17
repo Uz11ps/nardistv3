@@ -2176,7 +2176,7 @@ export default function Game() {
                   borderRadius: '8px',
                   padding: '8px',
                   minWidth: '200px',
-                  zIndex: 1000,
+                  zIndex: 2147483647,
                   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
                 }}
               >
@@ -2907,7 +2907,6 @@ export default function Game() {
       {(showOffsetModal && gameInfo?.type !== 'sandbox') && createPortal(
         <div 
           className="offset-modal-overlay modal-visible"
-          onClick={() => setShowOffsetModal(false)}
           style={{
             position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
             width: '100vw', height: '100vh', minWidth: '100vw', minHeight: '100vh',
@@ -2962,13 +2961,40 @@ export default function Game() {
               <p className="offset-hint">
                 Смещение влияет на выбор начальной позиции в последовательности бросков кубиков
               </p>
-              <input 
-                type="range" 
-                min="1" 
-                max="5" 
-                value={myOffset} 
-                onChange={(e) => setMyOffset(parseInt(e.target.value))}
-              />
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    onClick={() => setMyOffset(value)}
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '8px',
+                      border: myOffset === value ? '2px solid #4caf50' : '1px solid rgba(255, 255, 255, 0.2)',
+                      background: myOffset === value 
+                        ? 'linear-gradient(180deg, #4caf50 0%, #2e7d32 100%)'
+                        : 'rgba(255, 255, 255, 0.1)',
+                      color: '#fff',
+                      fontSize: '20px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (myOffset !== value) {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (myOffset !== value) {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                      }
+                    }}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
               <div className="offset-values">
                 <span>Вы: <strong>{myOffset}</strong></span>
                 {opponentOffset > 0 && (
