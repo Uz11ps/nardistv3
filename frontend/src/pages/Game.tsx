@@ -2200,16 +2200,16 @@ export default function Game() {
         }
       }
       
-      // Если все кубики использованы - автоматически отправляем ход
+      // Если все кубики использованы - автоматически отправляем ход после задержки
       if (allDiceUsed) {
-        console.log('✅ All dice used, auto-confirming moves');
-        // Небольшая задержка для завершения анимации хода
+        console.log('✅ All dice used, auto-confirming moves after 3 seconds');
+        // Задержка для завершения анимации хода и возможности отмены
         autoConfirmTimeoutRef.current = window.setTimeout(() => {
           handleConfirm();
-        }, 100);
+        }, 3000); // 3 секунды для возможности отмены хода
       } else {
         // Если не все кубики использованы, проверяем, есть ли еще валидные ходы
-        // Используем небольшую задержку для проверки валидных ходов
+        // Используем задержку для проверки валидных ходов
         autoConfirmTimeoutRef.current = window.setTimeout(async () => {
           try {
             const possibleMoves = await apiClient.post(`/games/${gameId}/possible-moves`, { 
@@ -2220,13 +2220,16 @@ export default function Game() {
             
             // Если нет валидных ходов - автоматически отправляем текущие ходы
             if (!hasValidMoves && pendingMoves.length > 0) {
-              console.log('✅ No valid moves remaining, auto-confirming current moves');
-              handleConfirm();
+              console.log('✅ No valid moves remaining, auto-confirming current moves after 3 seconds');
+              // Дополнительная задержка перед отправкой
+              autoConfirmTimeoutRef.current = window.setTimeout(() => {
+                handleConfirm();
+              }, 3000); // 3 секунды для возможности отмены хода
             }
           } catch (error) {
             console.error('Error checking possible moves for auto-confirm:', error);
           }
-        }, 300);
+        }, 500); // Небольшая задержка перед проверкой валидных ходов
       }
     }
 
@@ -2707,20 +2710,30 @@ export default function Game() {
               {/* Кнопки подтверждения и отмены в нижней части бара (ландшафт и портретный режим) */}
               {((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0) && (
                 <>
-                  <button 
-                    className="game-bar-btn game-bar-btn-cancel"
-                    onClick={handleUndo}
-                    title="Отменить ход"
-                  >
-                    ✕
-                  </button>
-                  {requireConfirmMove && (
+                  {requireConfirmMove ? (
+                    <>
+                      <button 
+                        className="game-bar-btn game-bar-btn-cancel"
+                        onClick={handleUndo}
+                        title="Отменить ход"
+                      >
+                        ✕
+                      </button>
+                      <button 
+                        className="game-bar-btn game-bar-btn-confirm"
+                        onClick={handleConfirm}
+                        title={`Подтвердить (${pendingMoves.length})`}
+                      >
+                        ✓
+                      </button>
+                    </>
+                  ) : (
                     <button 
-                      className="game-bar-btn game-bar-btn-confirm"
-                      onClick={handleConfirm}
-                      title={`Подтвердить (${pendingMoves.length})`}
+                      className="game-bar-btn game-bar-btn-cancel game-bar-btn-cancel-centered"
+                      onClick={handleUndo}
+                      title="Отменить ход"
                     >
-                      ✓
+                      ✕
                     </button>
                   )}
                 </>

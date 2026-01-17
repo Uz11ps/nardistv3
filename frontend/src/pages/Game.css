@@ -124,6 +124,25 @@
   transform: scale(0.95);
 }
 
+/* Центрированная кнопка отмены, когда подтверждение отключено */
+.game-bar-btn-cancel-centered {
+  left: 50% !important;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #ff5252 0%, #d32f2f 100%) !important;
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  min-height: 56px !important;
+  font-size: 24px !important;
+  box-shadow: 0 4px 16px rgba(244, 67, 54, 0.6), 0 0 20px rgba(244, 67, 54, 0.4) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.game-bar-btn-cancel-centered:hover {
+  transform: translateX(-50%) scale(1.15) !important;
+  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.8), 0 0 30px rgba(244, 67, 54, 0.6) !important;
+}
+
 .game-bar-btn-confirm {
   left: calc(50% + 6px); /* Галочка справа снизу в баре */
   background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
