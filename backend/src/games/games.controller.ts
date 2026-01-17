@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { GamesGateway } from './games.gateway';
 import { MatchmakingService } from '../matchmaking/matchmaking.service';
-import { GameStatus } from './game.entity';
+import { GameStatus, GameType } from './game.entity';
 
 @Controller('games')
 export class GamesController {
@@ -29,12 +29,13 @@ export class GamesController {
       // Сначала проверяем через getActiveGame (исключает бот-игры)
       let game = await this.gamesService.getActiveGame(user.id);
       
-      // Если не найдено, проверяем все активные игры игрока (включая бот-игры)
+      // Если не найдено, проверяем все активные игры игрока (включая бот-игры, исключая sandbox)
       if (!game) {
         const allActiveGames = await this.gamesService.getActiveGamesByPlayer(user.id);
-        // Берем первую активную игру (приоритет: in_progress > waiting)
-        const inProgressGame = allActiveGames.find(g => g.status === GameStatus.IN_PROGRESS);
-        game = inProgressGame || allActiveGames.find(g => g.status === GameStatus.WAITING) || null;
+        // Фильтруем sandbox игры и берем первую активную игру (приоритет: in_progress > waiting)
+        const nonSandboxGames = allActiveGames.filter(g => g.type !== GameType.SANDBOX);
+        const inProgressGame = nonSandboxGames.find(g => g.status === GameStatus.IN_PROGRESS);
+        game = inProgressGame || nonSandboxGames.find(g => g.status === GameStatus.WAITING) || null;
       }
       
       if (!game) {
