@@ -170,139 +170,75 @@ export class LongBackgammonEngine {
     }
     
     // If opponent has no checkers in home, we cannot create a 6-point block
-    if (!opponentHasCheckerInHome) {
-      // Сначала проверяем, существует ли уже блок из 6 точек ДО хода
-      const existingBlockPoints = new Set<number>();
-      for (let start = 0; start < this.BOARD_SIZE; start++) {
+    if (!opponentHasCheckerInHome && to >= 0 && to < this.BOARD_SIZE) {
+      // ОПТИМИЗАЦИЯ: Проверяем только блоки, которые могут включать точку 'to'
+      // Вместо проверки всех 24 возможных блоков, проверяем только 6 блоков, которые могут включать 'to'
+      for (let offset = 0; offset < 6; offset++) {
+        const start = (to - offset + this.BOARD_SIZE) % this.BOARD_SIZE;
+        
+        // Проверяем блок из 6 точек, начиная с 'start'
         let blockCount = 0;
         let hasOpponentInBlock = false;
+        let toInBlock = false;
         
-        for (let i = 0; i < 6; i++) {
-          const pointIdx = (start + i) % this.BOARD_SIZE;
-          const pointValue = state.points[pointIdx] || 0;
-          
-          const wouldBeOurs = (player === 0 && pointValue > 0) ||
-                             (player === 1 && pointValue < 0);
-          
-          if (wouldBeOurs) {
-            blockCount++;
-          }
-          
-          if (pointValue * opponentSign > 0) {
-            hasOpponentInBlock = true;
-          }
-        }
-        
-        if (blockCount === 6 && !hasOpponentInBlock) {
-          for (let i = 0; i < 6; i++) {
-            const pointIdx = (start + i) % this.BOARD_SIZE;
-            existingBlockPoints.add(pointIdx);
-          }
-        }
-      }
-      
-      // Если 'to' уже входит в существующий блок - разрешаем ход (движение внутри блока)
-      if (existingBlockPoints.has(to)) {
-        return true;
-      }
-      
-      // Проверяем, создается ли НОВЫЙ блок из 6 точек ПОСЛЕ хода
-      for (let start = 0; start < this.BOARD_SIZE; start++) {
-        let blockCount = 0;
-        let hasOpponentInBlock = false;
-        
-        // Check 6 consecutive points (circular)
         for (let i = 0; i < 6; i++) {
           const pointIdx = (start + i) % this.BOARD_SIZE;
           let pointValue = state.points[pointIdx] || 0;
           
-          // Симулируем состояние ПОСЛЕ хода:
-          // - Если это точка 'from' и на ней останется только 1 шашка (или 0), она освобождается
-          // - Если это точка 'to', она заполняется нашей шашкой
+          // Симулируем состояние ПОСЛЕ хода
           if (pointIdx === from && from >= 0 && from < this.BOARD_SIZE) {
-            // После хода на точке 'from' останется на 1 шашку меньше
-            const currentValue = pointValue;
-            if (player === 0 && currentValue > 0) {
-              pointValue = currentValue - 1; // Убираем одну шашку
-            } else if (player === 1 && currentValue < 0) {
-              pointValue = currentValue + 1; // Убираем одну шашку (отрицательное значение)
+            if (player === 0 && pointValue > 0) {
+              pointValue = pointValue - 1;
+            } else if (player === 1 && pointValue < 0) {
+              pointValue = pointValue + 1;
             }
-          } else if (pointIdx === to && to >= 0 && to < this.BOARD_SIZE) {
-            // На точке 'to' добавляется наша шашка
-            const currentValue = pointValue;
+          } else if (pointIdx === to) {
             if (player === 0) {
-              pointValue = currentValue + 1; // Добавляем шашку игрока 0
+              pointValue = pointValue + 1;
             } else {
-              pointValue = currentValue - 1; // Добавляем шашку игрока 1 (отрицательное значение)
+              pointValue = pointValue - 1;
             }
+            toInBlock = true;
           }
           
-          // Check if this point would be part of our block AFTER the move
-          const wouldBeOurs = (player === 0 && pointValue > 0) ||
-                             (player === 1 && pointValue < 0);
-          
-          if (wouldBeOurs) {
-            blockCount++;
-          }
-          
-          // Check if opponent has checkers in this block
-          if (pointValue * opponentSign > 0) {
-            hasOpponentInBlock = true;
-          }
+          const wouldBeOurs = (player === 0 && pointValue > 0) || (player === 1 && pointValue < 0);
+          if (wouldBeOurs) blockCount++;
+          if (pointValue * opponentSign > 0) hasOpponentInBlock = true;
         }
         
-        // If we have a 6-point block (and no opponent in block), check if it's NEW
-        if (blockCount === 6 && !hasOpponentInBlock) {
-          // Проверяем, существовал ли ИМЕННО ЭТОТ блок (6 точек подряд) до хода
-          // Проверяем весь блок целиком, а не отдельные точки
+        // Если это блок из 6 точек и 'to' входит в него
+        if (blockCount === 6 && !hasOpponentInBlock && toInBlock) {
+          // Проверяем, существовал ли этот блок ДО хода
           let wasBlockBefore = true;
           for (let i = 0; i < 6; i++) {
             const pointIdx = (start + i) % this.BOARD_SIZE;
-            const currentValue = state.points[pointIdx] || 0;
+            let valueBeforeMove = state.points[pointIdx] || 0;
             
-            // Симулируем состояние ДО хода (обратная операция):
-            // - Если это точка 'from' и там наша шашка - добавляем обратно
-            // - Если это точка 'to' - убираем нашу шашку
-            let valueBeforeMove = currentValue;
+            // Симулируем состояние ДО хода
             if (pointIdx === from && from >= 0 && from < this.BOARD_SIZE) {
-              if (player === 0 && currentValue > 0) {
-                valueBeforeMove = currentValue + 1; // Возвращаем шашку
-              } else if (player === 1 && currentValue < 0) {
-                valueBeforeMove = currentValue - 1; // Возвращаем шашку
+              if (player === 0 && valueBeforeMove > 0) {
+                valueBeforeMove = valueBeforeMove + 1;
+              } else if (player === 1 && valueBeforeMove < 0) {
+                valueBeforeMove = valueBeforeMove - 1;
               }
-            } else if (pointIdx === to && to >= 0 && to < this.BOARD_SIZE) {
-              if (player === 0 && currentValue > 0) {
-                valueBeforeMove = currentValue - 1; // Убираем шашку
-              } else if (player === 1 && currentValue < 0) {
-                valueBeforeMove = currentValue + 1; // Убираем шашку
+            } else if (pointIdx === to) {
+              if (player === 0 && valueBeforeMove > 0) {
+                valueBeforeMove = valueBeforeMove - 1;
+              } else if (player === 1 && valueBeforeMove < 0) {
+                valueBeforeMove = valueBeforeMove + 1;
               }
             }
             
-            // Проверяем, была ли эта точка нашей ДО хода
-            const wasOursBefore = (player === 0 && valueBeforeMove > 0) ||
-                                 (player === 1 && valueBeforeMove < 0);
-            
+            const wasOursBefore = (player === 0 && valueBeforeMove > 0) || (player === 1 && valueBeforeMove < 0);
             if (!wasOursBefore) {
               wasBlockBefore = false;
               break;
             }
           }
           
-          // Если блок НОВЫЙ (не существовал до хода) - блокируем ход
+          // Если блок НОВЫЙ - запрещаем ход
           if (!wasBlockBefore) {
-            // Check if 'to' is part of this NEW block
-            let toInBlock = false;
-            for (let i = 0; i < 6; i++) {
-              const pointIdx = (start + i) % this.BOARD_SIZE;
-              if (pointIdx === to) {
-                toInBlock = true;
-                break;
-              }
-            }
-            
-            if (toInBlock) {
-              return false; // Illegal: creating a NEW 6-point block when opponent has no checkers in home
-            }
+            return false;
           }
         }
       }
