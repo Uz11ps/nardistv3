@@ -1044,8 +1044,9 @@ export class GamesService {
         
         // ВСЕГДА проверяем валидные ходы для всех режимов (и длинных, и коротких нард)
         if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
-          // Проверяем валидность ходов с текущим состоянием после применения всех ходов
-          const remainingMoves = engine.getAllValidMoves(currentState, remainingDice, isFirstMoveOfGame);
+          // ВАЖНО: После применения ходов это уже НЕ первый ход игры
+          // Используем isFirstMoveOfGame = false для проверки оставшихся ходов
+          const remainingMoves = engine.getAllValidMoves(currentState, remainingDice, false);
           // getAllValidMoves возвращает последовательности. Если есть хотя бы одна непустая - ходы есть.
           hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
           this.logger.log(`🔍 Checking remaining moves after ${finalMovesToSave.length} moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}, movesFound=${remainingMoves.length}, sequences=${remainingMoves.map(s => s.length).join(',')}`);
