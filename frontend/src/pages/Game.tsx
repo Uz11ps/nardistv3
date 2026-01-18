@@ -55,8 +55,11 @@ export default function Game() {
   const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight)
   const animationFrameRef = useRef<number | null>(null)
   const timerIntervalRef = useRef<number | null>(null)
-  const [preparationCountdown, setPreparationCountdown] = useState<number | null>(null) // Отсчет подготовки (10 секунд)
+  const [preparationCountdown, setPreparationCountdown] = useState<number | null>(null) // Отсчет подготовки (5 секунд)
   const preparationCountdownRef = useRef<number | null>(null)
+  const [offsetSelectionTimer, setOffsetSelectionTimer] = useState<number | null>(null) // Таймер выбора смещения (10 секунд)
+  const offsetSelectionTimerRef = useRef<number | null>(null)
+  const offsetSelectionTimerIntervalRef = useRef<number | null>(null)
 
   // Отключаем вертикальный свайп в Telegram Web App при монтировании компонента игры
   useEffect(() => {
@@ -173,6 +176,71 @@ export default function Game() {
       return () => clearInterval(interval)
     }
   }, [preparationCountdown])
+
+  // Таймер выбора смещения (10 секунд) - если не выбрано, ставится 1 по умолчанию
+  useEffect(() => {
+    // Запускаем таймер только для vs_player игр, когда игра в статусе 'waiting' и смещение еще не выбрано
+    const isBotGameType = gameInfo?.type === 'vs_bot'
+    if (gameStatus === 'waiting' && gameInfo?.type === 'vs_player' && !isBotGameType && gameInfo) {
+      const isP1 = gameInfo.player1Id === user?.id
+      const myOffsetChosenAt = isP1 ? gameInfo.p1OffsetChosenAt : gameInfo.p2OffsetChosenAt
+      
+      // Если смещение еще не выбрано и таймер не запущен
+      if (!myOffsetChosenAt && offsetSelectionTimer === null && offsetSelectionTimerIntervalRef.current === null) {
+        console.log('⏱️ Запускаем таймер выбора смещения (10 секунд)')
+        setOffsetSelectionTimer(10)
+        offsetSelectionTimerRef.current = 10
+        
+        const interval = setInterval(() => {
+          setOffsetSelectionTimer((prev) => {
+            if (prev === null || prev <= 1) {
+              // Время истекло - отправляем смещение 1 по умолчанию
+              offsetSelectionTimerRef.current = null
+              if (offsetSelectionTimerIntervalRef.current) {
+                clearInterval(offsetSelectionTimerIntervalRef.current)
+                offsetSelectionTimerIntervalRef.current = null
+              }
+              
+              // Проверяем, не выбрано ли уже смещение
+              const currentOffsetChosenAt = isP1 ? gameInfo.p1OffsetChosenAt : gameInfo.p2OffsetChosenAt
+              if (!currentOffsetChosenAt && gameId) {
+                console.log('⏱️ Время выбора смещения истекло, устанавливаем 1 по умолчанию')
+                // Отправляем смещение 1 по умолчанию
+                setMyOffset(1)
+                lastSentOffsetRef.current = 1
+                apiClient.post(`/games/${gameId}/offset`, { offset: 1 }).catch((error) => {
+                  console.error('Failed to set default offset:', error)
+                  lastSentOffsetRef.current = null
+                })
+              }
+              
+              return null
+            }
+            const newValue = prev - 1
+            offsetSelectionTimerRef.current = newValue
+            return newValue
+          })
+        }, 1000)
+        
+        offsetSelectionTimerIntervalRef.current = interval as any
+      }
+    } else {
+      // Если игра началась или смещение выбрано - останавливаем таймер
+      if (offsetSelectionTimerIntervalRef.current) {
+        clearInterval(offsetSelectionTimerIntervalRef.current)
+        offsetSelectionTimerIntervalRef.current = null
+        setOffsetSelectionTimer(null)
+        offsetSelectionTimerRef.current = null
+      }
+    }
+    
+    return () => {
+      if (offsetSelectionTimerIntervalRef.current) {
+        clearInterval(offsetSelectionTimerIntervalRef.current)
+        offsetSelectionTimerIntervalRef.current = null
+      }
+    }
+  }, [gameStatus, gameInfo?.type, gameInfo?.p1OffsetChosenAt, gameInfo?.p2OffsetChosenAt, offsetSelectionTimer, gameId, user?.id, gameInfo?.player1Id])
 
   // Расчет Pip Count (очков до финиша)
   const calculatePipCount = useCallback((points: number[], bar: any, bearOff: any, player: number, mode: string) => {
@@ -1120,6 +1188,17 @@ export default function Game() {
       }
       
       setGameStatus(newStatus)
+      
+      // ВАЖНО: Если игра завершена в game_state, устанавливаем winnerId и обновляем ключ модального окна
+      // Это гарантирует автоматическое появление модального окна завершения игры
+      if (newStatus === 'finished') {
+        console.log('🎮 Game finished in game_state, setting winnerId:', data.winnerId);
+        setGameStatus('finished');
+        setWinnerId(data.winnerId !== undefined ? data.winnerId : null);
+        // Обновляем ключ модального окна для принудительного обновления
+        setFinishedModalKey(`game-finished-${gameId}-${Date.now()}`);
+      }
+      
       // Используем счет побед из серии матчей, если есть серия
       const winsScore = data.matchesToWin > 1
         ? { player1: data.player1Wins || 0, player2: data.player2Wins || 0 }
@@ -1142,9 +1221,9 @@ export default function Game() {
       // Проверяем также, что игра еще не началась (нет кубиков)
       const hasNoDice = !data.gameState?.dice || (Array.isArray(data.gameState.dice) && data.gameState.dice.length === 0)
       if (bothOffsetsChosen && (newStatus === 'waiting' || (newStatus === 'in_progress' && hasNoDice)) && preparationCountdown === null) {
-        console.log('⏱️ Запускаем отсчет подготовки к игре (10 секунд) для типа:', data.type)
-        setPreparationCountdown(10)
-        preparationCountdownRef.current = 10
+        console.log('⏱️ Запускаем отсчет подготовки к игре (5 секунд) для типа:', data.type)
+        setPreparationCountdown(5)
+        preparationCountdownRef.current = 5
       }
 
       // Таймер и броски кубиков запускаются ТОЛЬКО после выбора смещения обоими игроками
@@ -1351,6 +1430,16 @@ export default function Game() {
 
       setGameStatus(data.status || 'in_progress')
       setScore({ player1: data.player1Score || 0, player2: data.player2Score || 0 })
+      
+      // ВАЖНО: Если игра завершена в move_made, устанавливаем winnerId и обновляем ключ модального окна
+      // Это гарантирует автоматическое появление модального окна завершения игры
+      if (data.status === 'finished') {
+        console.log('🎮 Game finished in move_made, setting winnerId:', data.winnerId);
+        setGameStatus('finished');
+        setWinnerId(data.winnerId !== undefined ? data.winnerId : null);
+        // Обновляем ключ модального окна для принудительного обновления
+        setFinishedModalKey(`game-finished-${gameId}-${Date.now()}`);
+      }
       
       // Сбрасываем таймер при смене хода
       if (!isMyTurnNow && wasMyTurn) {
@@ -2921,7 +3010,11 @@ export default function Game() {
                     
                     // Если это было финальное состояние игры (есть статус finished)
                     if (pending.status === 'finished' || gameStatus === 'finished') {
+                      console.log('🎮 Game finished in onServerMovesFinished, ensuring modal is shown');
                       setGameStatus('finished');
+                      // ВАЖНО: Обновляем ключ модального окна для принудительного обновления
+                      // Это гарантирует появление модального окна даже после завершения анимации
+                      setFinishedModalKey(`game-finished-${gameId}-${Date.now()}`);
                     }
                     
                     const wasMyTurnBefore = gameState?.canMove || false;
