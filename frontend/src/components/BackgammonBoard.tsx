@@ -720,30 +720,22 @@ export default function BackgammonBoard({
           }
         }
         
-        // Для длинных нард: фильтруем ходы, которые нарушают правило блокировки 6 точек
+        
+        // Для длинных нард: фильтруем ходы, которые нарушают правило блокировки 6 точек (только для визуальной подсветки)
         // Правило: нельзя создавать блок из 6 точек, если у противника нет шашек в доме
+        // ВАЖНО: Это только для визуализации, реальная проверка происходит на бэкенде
         if (gameMode === 'long' && flatMoves.length > 0) {
           const currentState = virtualGameState()
           const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
           const points = currentState?.points || []
           const BOARD_SIZE = 24
-          // Coordinate system matches backend:
-          // Index 0 = Point 24 (White Head)
-          // Index 11 = Point 13
-          // Index 12 = Point 12 (Black Head)
-          // Index 23 = Point 1
-          // Black home: Points 13-18 = indices 11, 10, 9, 8, 7, 6
-          // White home: Points 1-6 = indices 23, 22, 21, 20, 19, 18
           const BLACK_HOME_START = 6 // Point 18
-          const BLACK_HEAD = 12 // Point 12 (Black Head, не входит в дом)
+          const BLACK_HEAD = 12 // Point 12
           const WHITE_HOME_START = 18 // Point 6
           
           // Проверка: есть ли у противника хотя бы одна шашка в доме
-          // Дом черных = Points 13-18 = indices 6-11 (6, 7, 8, 9, 10, 11)
-          // Дом белых = Points 1-6 = indices 18-23 (18, 19, 20, 21, 22, 23)
           let opponentHasCheckerInHome = false
           if (activePlayer === 0) {
-            // Мы играем белыми (activePlayer 0), проверяем дом черных (Points 13-18, indices 6-11)
             for (let i = BLACK_HOME_START; i < BLACK_HEAD; i++) {
               if (points[i] < 0) {
                 opponentHasCheckerInHome = true
@@ -751,7 +743,6 @@ export default function BackgammonBoard({
               }
             }
           } else {
-            // Мы играем черными (activePlayer 1), проверяем дом белых (Points 1-6, indices 18-23)
             for (let i = WHITE_HOME_START; i < BOARD_SIZE; i++) {
               if (points[i] > 0) {
                 opponentHasCheckerInHome = true
@@ -762,9 +753,8 @@ export default function BackgammonBoard({
           
           // Если у противника нет шашек в доме - фильтруем ходы, создающие блок из 6 точек
           if (!opponentHasCheckerInHome) {
-            const originalMovesCount = flatMoves.length
             flatMoves = flatMoves.filter(move => {
-              // Пропускаем bear-off ходы (to === -1 или to >= 24)
+              // Пропускаем bear-off ходы
               if (move.to === -1 || move.to >= 24 || move.to < 0) return true
               
               const from = (move.from >= 24 || move.from < 0) ? (activePlayer === 0 ? 0 : 12) : move.from
@@ -772,12 +762,8 @@ export default function BackgammonBoard({
               
               if (from < 0 || from >= BOARD_SIZE || to < 0 || to >= BOARD_SIZE) return true
               
-              // Симулируем состояние ПОСЛЕ хода (точно так же, как на бэкенде)
-              // ВАЖНО: На бэкенде симуляция делается в цикле проверки блока,
-              // но для упрощения делаем глобальную симуляцию для from и to
+              // Симулируем состояние ПОСЛЕ хода
               const simPoints = [...points]
-              
-              // Убираем шашку с точки from (если это наш ход)
               if (from >= 0 && from < BOARD_SIZE) {
                 const currentValue = simPoints[from] || 0
                 if (activePlayer === 0 && currentValue > 0) {
@@ -786,8 +772,6 @@ export default function BackgammonBoard({
                   simPoints[from] = currentValue + 1
                 }
               }
-              
-              // Добавляем шашку на точку to
               if (to >= 0 && to < BOARD_SIZE) {
                 const currentValue = simPoints[to] || 0
                 if (activePlayer === 0) {
@@ -799,18 +783,14 @@ export default function BackgammonBoard({
               
               const opponentSign = activePlayer === 0 ? -1 : 1
               
-              // Проверяем, создает ли этот ход блок из 6 точек
-              // ВАЖНО: Проверяем состояние ПОСЛЕ хода точно так же, как на бэкенде
-              // Нужно проверить, существовал ли блок из 6 точек ДО хода
-              let existingBlockStart: number | null = null
+              // Проверяем все возможные блоки из 6 точек ПОСЛЕ хода
               for (let start = 0; start < BOARD_SIZE; start++) {
                 let blockCount = 0
                 let hasOpponentInBlock = false
                 
-                // Проверяем 6 последовательных точек ДО хода
                 for (let i = 0; i < 6; i++) {
                   const pointIdx = (start + i) % BOARD_SIZE
-                  const pointValue = points[pointIdx] || 0
+                  const pointValue = simPoints[pointIdx] || 0
                   
                   const wouldBeOurs = (activePlayer === 0 && pointValue > 0) ||
                                      (activePlayer === 1 && pointValue < 0)
@@ -824,66 +804,19 @@ export default function BackgammonBoard({
                   }
                 }
                 
+                // Если есть блок из 6 точек без противника и 'to' входит в этот блок - не подсвечиваем
                 if (blockCount === 6 && !hasOpponentInBlock) {
-                  existingBlockStart = start
-                  break
-                }
-              }
-              
-              // Теперь проверяем, создается ли НОВЫЙ блок из 6 точек ПОСЛЕ хода
-              for (let start = 0; start < BOARD_SIZE; start++) {
-                let blockCount = 0
-                let hasOpponentInBlock = false
-                
-                // Проверяем 6 последовательных точек (circular)
-                for (let i = 0; i < 6; i++) {
-                  const pointIdx = (start + i) % BOARD_SIZE
-                  let pointValue = simPoints[pointIdx] || 0
-                  
-                  // Проверяем, принадлежит ли точка нашему блоку ПОСЛЕ хода
-                  const wouldBeOurs = (activePlayer === 0 && pointValue > 0) ||
-                                     (activePlayer === 1 && pointValue < 0)
-                  
-                  if (wouldBeOurs) {
-                    blockCount++
-                  }
-                  
-                  // Проверяем, есть ли у противника шашки в этом блоке
-                  if (pointValue * opponentSign > 0) {
-                    hasOpponentInBlock = true
-                  }
-                }
-                
-                // Если создается блок из 6 точек без противника - проверяем, является ли 'to' частью этого блока
-                // И блокируем ТОЛЬКО если это НОВЫЙ блок (не существовал до хода)
-                if (blockCount === 6 && !hasOpponentInBlock) {
-                  let toInBlock = false
                   for (let i = 0; i < 6; i++) {
                     const pointIdx = (start + i) % BOARD_SIZE
                     if (pointIdx === to) {
-                      toInBlock = true
-                      break
+                      return false // Не подсвечиваем этот ход
                     }
-                  }
-                  
-                  // Если 'to' является частью блока И это НОВЫЙ блок - ход недопустим
-                  if (toInBlock && existingBlockStart !== start) {
-                    return false // Недопустимый ход: создает НОВЫЙ блок из 6 точек
                   }
                 }
               }
               
-              return true // Ход допустим
+              return true // Подсвечиваем ход
             })
-            
-            // Отладочный лог (можно удалить после отладки)
-            if (flatMoves.length === 0 && originalMovesCount > 0) {
-              console.warn('⚠️ [6-point block rule] Все ходы заблокированы:', {
-                originalMovesCount,
-                opponentHasCheckerInHome,
-                activePlayer
-              })
-            }
           }
         }
         
