@@ -594,71 +594,9 @@ export class LongBackgammonEngine {
     ): void => {
       if (remainingDice.length === 0) {
         if (currentMoves.length > 0) {
-          // ВАЖНО: Проверяем финальное состояние последовательности ходов на недопустимые блоки
-          // Создаем тестовое состояние и применяем все ходы из последовательности
-          const testState = JSON.parse(JSON.stringify(state));
-          let isValidSequence = true;
-          
-          for (const move of currentMoves) {
-            if (!this.validateMove(testState, move.from, move.to, move.die, isFirstMoveOfGame)) {
-              isValidSequence = false;
-              break;
-            }
-            const newTestState = this.applyMove(testState, move.from, move.to, move.die);
-            Object.assign(testState, newTestState);
-            
-            // Проверяем правило блока после каждого хода в последовательности
-            // Проверяем, создается ли недопустимый блок после этого хода
-            const player = testState.currentPlayer;
-            const opponentSign = player === 0 ? -1 : 1;
-            
-            // Check if opponent has at least one checker in their home
-            let opponentHasCheckerInHome = false;
-            if (player === 0) {
-              for (let i = this.BLACK_HOME_START; i < this.BLACK_HEAD; i++) {
-                if (testState.points[i] < 0) {
-                  opponentHasCheckerInHome = true;
-                  break;
-                }
-              }
-            } else {
-              for (let i = this.WHITE_HOME_START; i < this.BOARD_SIZE; i++) {
-                if (testState.points[i] > 0) {
-                  opponentHasCheckerInHome = true;
-                  break;
-                }
-              }
-            }
-            
-            // Если противник не имеет шашек в доме, проверяем блоки
-            if (!opponentHasCheckerInHome) {
-              // Проверяем наличие блоков из 6 точек
-              for (let start = 0; start < this.BOARD_SIZE; start++) {
-                let blockCount = 0;
-                let hasOpponentInBlock = false;
-                
-                for (let i = 0; i < 6; i++) {
-                  const pointIdx = (start + i) % this.BOARD_SIZE;
-                  const pointValue = testState.points[pointIdx] || 0;
-                  const wouldBeOurs = (player === 0 && pointValue > 0) || (player === 1 && pointValue < 0);
-                  if (wouldBeOurs) blockCount++;
-                  if (pointValue * opponentSign > 0) hasOpponentInBlock = true;
-                }
-                
-                // Если найден блок из 6 точек - последовательность недопустима
-                if (blockCount === 6 && !hasOpponentInBlock) {
-                  isValidSequence = false;
-                  break;
-                }
-              }
-            }
-            
-            if (!isValidSequence) break;
-          }
-          
-          if (isValidSequence) {
-            moves.push([...currentMoves]);
-          }
+          // validateMove уже проверяет правило блока для каждого хода
+          // Поэтому финальная проверка не нужна - если все ходы валидны, последовательность валидна
+          moves.push([...currentMoves]);
         }
         return;
       }
@@ -697,75 +635,12 @@ export class LongBackgammonEngine {
         const to = isBearingOffMove ? -1 : toPoint;
 
         if (this.validateMove(currentState, from, to, die, isFirstMoveOfGame)) {
-          // ВАЖНО: Дополнительная проверка после применения хода - не создается ли недопустимый блок
-          const testState = this.applyMove(currentState, from, to, die);
-          const player = testState.currentPlayer;
-          const opponentSign = player === 0 ? -1 : 1;
-          
-          // Check if opponent has at least one checker in their home
-          let opponentHasCheckerInHome = false;
-          if (player === 0) {
-            for (let i = this.BLACK_HOME_START; i < this.BLACK_HEAD; i++) {
-              if (testState.points[i] < 0) {
-                opponentHasCheckerInHome = true;
-                break;
-              }
-            }
-          } else {
-            for (let i = this.WHITE_HOME_START; i < this.BOARD_SIZE; i++) {
-              if (testState.points[i] > 0) {
-                opponentHasCheckerInHome = true;
-                break;
-              }
-            }
-          }
-          
-          // Если противник не имеет шашек в доме, проверяем блоки ПОСЛЕ этого хода
-          let isValidAfterMove = true;
-          if (!opponentHasCheckerInHome) {
-            // Проверяем наличие блоков из 6 точек после этого хода
-            for (let start = 0; start < this.BOARD_SIZE; start++) {
-              let blockCount = 0;
-              let hasOpponentInBlock = false;
-              
-              for (let i = 0; i < 6; i++) {
-                const pointIdx = (start + i) % this.BOARD_SIZE;
-                const pointValue = testState.points[pointIdx] || 0;
-                const wouldBeOurs = (player === 0 && pointValue > 0) || (player === 1 && pointValue < 0);
-                if (wouldBeOurs) blockCount++;
-                if (pointValue * opponentSign > 0) hasOpponentInBlock = true;
-              }
-              
-              // Если найден блок из 6 точек - ход недопустим
-              if (blockCount === 6 && !hasOpponentInBlock) {
-                // Проверяем, был ли этот блок ДО хода
-                let wasBlockBefore = true;
-                for (let i = 0; i < 6; i++) {
-                  const pointIdx = (start + i) % this.BOARD_SIZE;
-                  const currentValue = currentState.points[pointIdx] || 0;
-                  const wouldBeOurs = (player === 0 && currentValue > 0) || (player === 1 && currentValue < 0);
-                  if (!wouldBeOurs) {
-                    wasBlockBefore = false;
-                    break;
-                  }
-                }
-                
-                // Если блок НОВЫЙ (не существовал до хода) - ход недопустим
-                if (!wasBlockBefore) {
-                  isValidAfterMove = false;
-                  break;
-                }
-              }
-            }
-          }
-          
-          if (isValidAfterMove) {
-            foundAnyMove = true;
-            const newState = this.applyMove(currentState, from, to, die);
-            const newDice = [...remainingDice];
-            newDice.splice(i, 1);
-            generateMoves(newState, newDice, [...currentMoves, { from, to, die }]);
-          }
+          // validateMove уже проверяет правило блока через checkBlockRule
+          foundAnyMove = true;
+          const newState = this.applyMove(currentState, from, to, die);
+          const newDice = [...remainingDice];
+          newDice.splice(i, 1);
+          generateMoves(newState, newDice, [...currentMoves, { from, to, die }]);
         }
       }
       
