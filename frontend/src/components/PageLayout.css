@@ -140,6 +140,8 @@
 /* Body */
 .page-layout-body {
   flex: 1;
-  padding: 0 16px 40px;
+  padding: 0 16px 90px; /* Увеличен padding-bottom для нижней панели навигации (70px высота + 20px отступ) */
+  position: relative;
+  z-index: 10; /* Выше чем bottom-nav (z-index: 1) */
 }
 
