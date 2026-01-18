@@ -720,6 +720,120 @@ export default function BackgammonBoard({
           }
         }
         
+        // Для длинных нард: фильтруем ходы, которые нарушают правило блокировки 6 точек
+        // Правило: нельзя создавать блок из 6 точек, если у противника нет шашек в доме
+        if (gameMode === 'long' && flatMoves.length > 0) {
+          const currentState = virtualGameState()
+          const activePlayer = isSandbox ? currentPlayer : (isPlayer1 ? 0 : 1)
+          const points = currentState?.points || []
+          const BOARD_SIZE = 24
+          // Coordinate system matches backend:
+          // Index 0 = Point 24 (White Head)
+          // Index 11 = Point 13
+          // Index 12 = Point 12 (Black Head)
+          // Index 23 = Point 1
+          // Black home: Points 13-18 = indices 11, 10, 9, 8, 7, 6
+          // White home: Points 1-6 = indices 23, 22, 21, 20, 19, 18
+          const BLACK_HOME_START = 6 // Point 18
+          const BLACK_HEAD = 12 // Point 12 (Black Head, не входит в дом)
+          const WHITE_HOME_START = 18 // Point 6
+          
+          // Проверка: есть ли у противника хотя бы одна шашка в доме
+          // Дом черных = Points 13-18 = indices 6-11 (6, 7, 8, 9, 10, 11)
+          // Дом белых = Points 1-6 = indices 18-23 (18, 19, 20, 21, 22, 23)
+          let opponentHasCheckerInHome = false
+          if (activePlayer === 0) {
+            // Мы играем белыми (activePlayer 0), проверяем дом черных (Points 13-18, indices 6-11)
+            for (let i = BLACK_HOME_START; i < BLACK_HEAD; i++) {
+              if (points[i] < 0) {
+                opponentHasCheckerInHome = true
+                break
+              }
+            }
+          } else {
+            // Мы играем черными (activePlayer 1), проверяем дом белых (Points 1-6, indices 18-23)
+            for (let i = WHITE_HOME_START; i < BOARD_SIZE; i++) {
+              if (points[i] > 0) {
+                opponentHasCheckerInHome = true
+                break
+              }
+            }
+          }
+          
+          // Если у противника нет шашек в доме - фильтруем ходы, создающие блок из 6 точек
+          if (!opponentHasCheckerInHome) {
+            flatMoves = flatMoves.filter(move => {
+              // Пропускаем bear-off ходы (to === -1 или to >= 24)
+              if (move.to === -1 || move.to >= 24 || move.to < 0) return true
+              
+              const from = (move.from >= 24 || move.from < 0) ? (activePlayer === 0 ? 0 : 12) : move.from
+              const to = move.to
+              
+              if (from < 0 || from >= BOARD_SIZE || to < 0 || to >= BOARD_SIZE) return true
+              
+              // Симулируем состояние после хода
+              const simPoints = [...points]
+              // Убираем шашку с точки from
+              if (activePlayer === 0 && simPoints[from] > 0) {
+                simPoints[from]--
+              } else if (activePlayer === 1 && simPoints[from] < 0) {
+                simPoints[from]++
+              }
+              // Добавляем шашку на точку to
+              if (activePlayer === 0) {
+                simPoints[to] = (simPoints[to] || 0) + 1
+              } else {
+                simPoints[to] = (simPoints[to] || 0) - 1
+              }
+              
+              // Проверяем, создает ли этот ход блок из 6 точек
+              for (let start = 0; start < BOARD_SIZE; start++) {
+                let blockCount = 0
+                let hasOpponentInBlock = false
+                
+                // Проверяем 6 последовательных точек (circular)
+                for (let i = 0; i < 6; i++) {
+                  const pointIdx = (start + i) % BOARD_SIZE
+                  const pointValue = simPoints[pointIdx] || 0
+                  
+                  // Проверяем, принадлежит ли точка нашему блоку ПОСЛЕ хода
+                  const wouldBeOurs = (activePlayer === 0 && pointValue > 0) ||
+                                     (activePlayer === 1 && pointValue < 0)
+                  
+                  if (wouldBeOurs) {
+                    blockCount++
+                  }
+                  
+                  // Проверяем, есть ли у противника шашки в этом блоке
+                  const opponentSign = activePlayer === 0 ? -1 : 1
+                  if (pointValue * opponentSign > 0) {
+                    hasOpponentInBlock = true
+                  }
+                }
+                
+                // Если создается блок из 6 точек без противника - этот ход недопустим
+                if (blockCount === 6 && !hasOpponentInBlock) {
+                  // Проверяем, является ли 'to' частью этого блока
+                  let toInBlock = false
+                  for (let i = 0; i < 6; i++) {
+                    const pointIdx = (start + i) % BOARD_SIZE
+                    if (pointIdx === to) {
+                      toInBlock = true
+                      break
+                    }
+                  }
+                  
+                  if (toInBlock) {
+                    return false // Недопустимый ход: создает блок из 6 точек
+                  }
+                }
+              }
+              
+              return true // Ход допустим
+            })
+          }
+        }
+        
         // Не подсвечиваем все возможные точки автоматически
         // Подсветка будет только при перетаскивании шашки
         setPossibleMoves(flatMoves)

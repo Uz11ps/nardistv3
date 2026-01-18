@@ -1220,9 +1220,12 @@ export default function Game() {
       const diceData = data.gameState?.dice
       const isP1 = data.player1Id === user?.id
       
+      // ВАЖНО: Определяем, был ли это наш ход (для предотвращения двойной анимации)
+      const isMyMove = data.playerId === user?.id
+      
       // ВАЖНО: Если пришли серверные ходы, передаем их доске для анимации
       // Но только если это НЕ наш ход (наши ходы анимируются локально)
-      if (data.serverMoves && data.currentPlayer !== (isP1 ? 0 : 1)) {
+      if (data.serverMoves && !isMyMove) {
         console.log('🤖 Setting server moves for board animation:', data.serverMoves)
         setServerMovesForBoard(data.serverMoves)
         
@@ -1361,7 +1364,7 @@ export default function Game() {
       // Если есть серверные ходы (ход бота или другого игрока), 
       // откладываем обновление gameState до завершения анимации
       // ВАЖНО: Проверяем, что это НЕ наш ход (чтобы не было двойной анимации)
-      const isMyMove = data.playerId === user?.id;
+      // isMyMove уже определен выше в начале обработчика
       if (data.serverMoves && data.serverMoves.length > 0 && !isMyMove) {
         console.log('🤖 Saving pending gameState and starting animation:', data.serverMoves);
         isServerAnimatingRef.current = true;
