@@ -1199,15 +1199,42 @@ export class GamesService {
   }
 
   /**
-   * Подсчитать количество активных игр
+   * Подсчитать количество активных игроков в играх in_progress
+   * Считает только уникальных игроков в играх со статусом IN_PROGRESS, исключая бот-игры и sandbox
    */
   async countActiveGames(): Promise<number> {
-    return await this.gamesRepository.count({
-      where: [
-        { status: GameStatus.IN_PROGRESS },
-        { status: GameStatus.WAITING },
-      ],
-    });
+    try {
+      // Находим все игры со статусом IN_PROGRESS (исключаем WAITING и FINISHED)
+      const activeGames = await this.gamesRepository.find({
+        where: {
+          status: GameStatus.IN_PROGRESS,
+        },
+        select: ['player1Id', 'player2Id', 'type'],
+      });
+
+      // Фильтруем: исключаем игры с ботом и sandbox
+      const playerGames = activeGames.filter(game => 
+        game.type !== GameType.VS_BOT && 
+        game.type !== GameType.SANDBOX
+      );
+
+      // Собираем уникальных игроков из player1Id и player2Id
+      const uniquePlayers = new Set<string>();
+      for (const game of playerGames) {
+        if (game.player1Id) {
+          uniquePlayers.add(game.player1Id);
+        }
+        if (game.player2Id) {
+          uniquePlayers.add(game.player2Id);
+        }
+      }
+
+      // Возвращаем количество уникальных игроков, а не количество игр
+      return uniquePlayers.size;
+    } catch (error: any) {
+      this.logger.error(`Error counting active games: ${error?.message || error}`);
+      return 0;
+    }
   }
 
   /**

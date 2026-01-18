@@ -127,40 +127,74 @@ export default function City() {
   return (
     <PageLayout title="Районы" showBack={true}>
       <div className="city-content-v3">
-        {/* Горизонтальные вкладки районов */}
-        <div className="city-tabs-v3">
+        {/* Сетка районов (как курсы в Academy) */}
+        <div className="academy-grid">
           {cityData.map(district => (
-            <button
+            <div
               key={district.id}
-              className={`city-tab-v3 ${selectedDistrictId === district.id ? 'active' : ''} ${!district.isUnlocked ? 'locked' : ''}`}
-              onClick={() => setSelectedDistrictId(district.id)}
+              className={`academy-grid-card ${!district.isUnlocked ? 'locked' : ''}`}
+              onClick={() => district.isUnlocked && setSelectedDistrictId(district.id)}
             >
-              <span>{district.name}</span>
-              {!district.isUnlocked && (
-                <span className="city-tab-unlock-text">разблокируется с {district.requiredLevel}</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Сетка строений */}
-        <div className="city-grid-v3">
-          {currentDistrict?.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map(({ config, userBuilding }) => (
-            <div 
-              key={config.id} 
-              className={`city-card-v3 ${!currentDistrict.isUnlocked ? 'locked' : ''}`}
-              onClick={() => currentDistrict.isUnlocked && setShowBuildingModal(config)}
-            >
-              <div className="city-card-v3-icon">
-                <img
-                  src={getImageUrl(config.icon) || config.icon || '/img/building_placeholder.png'}
-                  alt={config.name}
-                  onError={(e) => { e.currentTarget.src = '/img/building_placeholder.png' }}
-                />
+              <div className="academy-grid-card-icon">
+                {district.icon ? (
+                  <img
+                    src={getImageUrl(district.icon) || district.icon}
+                    alt={district.name}
+                    style={{ width: '40px', height: '40px', objectFit: 'contain' }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                      const parent = e.currentTarget.parentElement
+                      if (parent) {
+                        parent.innerHTML = `
+                          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
+                            <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
+                          </svg>
+                        `
+                      }
+                    }}
+                  />
+                ) : (
+                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
+                    <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
+                  </svg>
+                )}
               </div>
+              <div className="academy-grid-card-title">{district.name}</div>
+              {!district.isUnlocked && (
+                <div className="academy-grid-card-author">Уровень {district.requiredLevel}</div>
+              )}
+              {district.isUnlocked && district.description && (
+                <div className="academy-grid-card-author">{district.description}</div>
+              )}
             </div>
           ))}
         </div>
+
+        {/* Сетка строений для выбранного района */}
+        {selectedDistrictId && currentDistrict && (
+          <div className="city-buildings-section">
+            <h3 className="city-buildings-title">{currentDistrict.name}</h3>
+            <div className="city-grid-v3">
+              {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map(({ config, userBuilding }) => (
+                <div 
+                  key={config.id} 
+                  className={`city-card-v3 ${!currentDistrict.isUnlocked ? 'locked' : ''}`}
+                  onClick={() => currentDistrict.isUnlocked && setShowBuildingModal(config)}
+                >
+                  <div className="city-card-v3-icon">
+                    <img
+                      src={getImageUrl(config.icon) || config.icon || '/img/building_placeholder.png'}
+                      alt={config.name}
+                      onError={(e) => { e.currentTarget.src = '/img/building_placeholder.png' }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {showBuildingModal && createPortal(

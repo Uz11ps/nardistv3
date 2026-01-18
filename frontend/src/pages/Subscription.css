@@ -1,15 +1,15 @@
 .subscription-content {
-  padding: 16px;
-  max-width: 600px;
-  margin: 0 auto;
+  padding: 0;
+  max-width: 100%;
 }
 
 .subscription-subtitle {
-  font-size: 13px;
-  color: #888;
+  font-size: 14px;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-align: center;
   margin-bottom: 24px;
-  margin-top: -8px;
+  line-height: 1.4;
 }
 
 /* Преимущества подписки */
@@ -21,12 +21,19 @@
 }
 
 .subscription-feature-card {
-  background: #1C1C1E; /* Dark grey similar to iOS settings or modern dark apps */
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 16px;
   border: none;
   display: flex;
   align-items: center;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.subscription-feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
 .subscription-feature-content {
@@ -53,16 +60,19 @@
 }
 
 .subscription-feature-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #FFF;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  line-height: 1.2;
 }
 
 .subscription-feature-description {
-  font-size: 12px;
-  color: #888;
-  line-height: 1.3;
+  font-size: 13px;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.4;
 }
 
 /* Переключатель методов оплаты */
@@ -84,8 +94,8 @@
 
 .subscription-plan-card {
   flex: 1;
-  background: #1C1C1E;
-  border-radius: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
   padding: 16px;
   cursor: pointer;
   transition: all 0.2s;
@@ -95,16 +105,18 @@
   flex-direction: column;
   justify-content: space-between;
   min-height: 120px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
 .subscription-plan-card:hover {
   transform: translateY(-2px);
-  background: #252528;
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
 .subscription-plan-card.selected {
-  border-color: #FF3B30; /* Red selection border */
-  background: #252528;
+  border-color: #C93C3D;
+  background: linear-gradient(180deg, #2C2D31 2.86%, #1C1D21 100%);
+  box-shadow: 0 6px 16px 0 rgba(201, 60, 61, 0.3), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
 .subscription-plan-card.popular {
@@ -118,38 +130,53 @@
 }
 
 .subscription-plan-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #FFF;
+  line-height: 1.2;
 }
 
 .subscription-plan-badge {
   font-size: 10px;
   font-weight: 700;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #FFF;
   padding: 2px 6px;
-  background: #FF3B30; /* Red badge */
+  background: #C93C3D;
   border-radius: 4px;
   align-self: flex-start;
   text-transform: uppercase;
+  line-height: 1.2;
 }
 
 .subscription-plan-price {
   font-size: 14px;
   font-weight: 600;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #FFF;
   margin-top: 8px;
+  line-height: 1.2;
 }
 
 /* Кнопка оформления */
 .subscription-submit-btn {
-  background: #FF3B30 !important; /* Red button */
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%) !important;
+  border: 0.1px solid #C93C3D !important;
   color: #FFF !important;
   font-weight: 600 !important;
-  font-size: 16px !important;
-  height: 50px !important;
+  font-size: 18px !important;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  height: 52px !important;
   border-radius: 12px !important;
-  margin-bottom: 32px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset !important;
+  margin-bottom: 90px !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+}
+
+.subscription-submit-btn:hover {
+  transform: scale(1.02) !important;
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset !important;
 }
 
 /* Автобилд города */
