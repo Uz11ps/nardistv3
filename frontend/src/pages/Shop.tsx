@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
@@ -602,7 +603,7 @@ export default function Shop() {
       </div>
 
       {/* Модальное окно с преимуществами премиум подписки */}
-      {showPremiumModal && (
+      {showPremiumModal && createPortal(
         <div className="shop-premium-modal-overlay" onClick={() => setShowPremiumModal(false)}>
           <div className="shop-premium-modal" onClick={(e) => e.stopPropagation()}>
             <div className="shop-premium-modal-header">
@@ -675,12 +676,13 @@ export default function Shop() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
 
       {/* Предпросмотр скина */}
-      {showSkinPreview && previewSkin && (
+      {showSkinPreview && previewSkin && createPortal(
         <div className="shop-skin-preview-modal-overlay" onClick={() => setShowSkinPreview(false)}>
           <div className="shop-skin-preview-modal" onClick={e => e.stopPropagation()}>
             <div className="preview-modal-header">
@@ -749,7 +751,8 @@ export default function Shop() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </PageLayout>
   )
