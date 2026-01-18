@@ -762,6 +762,7 @@ export default function BackgammonBoard({
           
           // Если у противника нет шашек в доме - фильтруем ходы, создающие блок из 6 точек
           if (!opponentHasCheckerInHome) {
+            const originalMovesCount = flatMoves.length
             flatMoves = flatMoves.filter(move => {
               // Пропускаем bear-off ходы (to === -1 или to >= 24)
               if (move.to === -1 || move.to >= 24 || move.to < 0) return true
@@ -772,29 +773,64 @@ export default function BackgammonBoard({
               if (from < 0 || from >= BOARD_SIZE || to < 0 || to >= BOARD_SIZE) return true
               
               // Симулируем состояние ПОСЛЕ хода (точно так же, как на бэкенде)
+              // ВАЖНО: На бэкенде симуляция делается в цикле проверки блока,
+              // но для упрощения делаем глобальную симуляцию для from и to
               const simPoints = [...points]
               
               // Убираем шашку с точки from (если это наш ход)
               if (from >= 0 && from < BOARD_SIZE) {
-                if (activePlayer === 0 && simPoints[from] > 0) {
-                  simPoints[from] = simPoints[from] - 1
-                } else if (activePlayer === 1 && simPoints[from] < 0) {
-                  simPoints[from] = simPoints[from] + 1
+                const currentValue = simPoints[from] || 0
+                if (activePlayer === 0 && currentValue > 0) {
+                  simPoints[from] = currentValue - 1
+                } else if (activePlayer === 1 && currentValue < 0) {
+                  simPoints[from] = currentValue + 1
                 }
               }
               
               // Добавляем шашку на точку to
               if (to >= 0 && to < BOARD_SIZE) {
+                const currentValue = simPoints[to] || 0
                 if (activePlayer === 0) {
-                  simPoints[to] = (simPoints[to] || 0) + 1
+                  simPoints[to] = currentValue + 1
                 } else {
-                  simPoints[to] = (simPoints[to] || 0) - 1
+                  simPoints[to] = currentValue - 1
                 }
               }
               
               const opponentSign = activePlayer === 0 ? -1 : 1
               
               // Проверяем, создает ли этот ход блок из 6 точек
+              // ВАЖНО: Проверяем состояние ПОСЛЕ хода точно так же, как на бэкенде
+              // Нужно проверить, существовал ли блок из 6 точек ДО хода
+              let existingBlockStart: number | null = null
+              for (let start = 0; start < BOARD_SIZE; start++) {
+                let blockCount = 0
+                let hasOpponentInBlock = false
+                
+                // Проверяем 6 последовательных точек ДО хода
+                for (let i = 0; i < 6; i++) {
+                  const pointIdx = (start + i) % BOARD_SIZE
+                  const pointValue = points[pointIdx] || 0
+                  
+                  const wouldBeOurs = (activePlayer === 0 && pointValue > 0) ||
+                                     (activePlayer === 1 && pointValue < 0)
+                  
+                  if (wouldBeOurs) {
+                    blockCount++
+                  }
+                  
+                  if (pointValue * opponentSign > 0) {
+                    hasOpponentInBlock = true
+                  }
+                }
+                
+                if (blockCount === 6 && !hasOpponentInBlock) {
+                  existingBlockStart = start
+                  break
+                }
+              }
+              
+              // Теперь проверяем, создается ли НОВЫЙ блок из 6 точек ПОСЛЕ хода
               for (let start = 0; start < BOARD_SIZE; start++) {
                 let blockCount = 0
                 let hasOpponentInBlock = false
@@ -819,6 +855,7 @@ export default function BackgammonBoard({
                 }
                 
                 // Если создается блок из 6 точек без противника - проверяем, является ли 'to' частью этого блока
+                // И блокируем ТОЛЬКО если это НОВЫЙ блок (не существовал до хода)
                 if (blockCount === 6 && !hasOpponentInBlock) {
                   let toInBlock = false
                   for (let i = 0; i < 6; i++) {
@@ -829,15 +866,24 @@ export default function BackgammonBoard({
                     }
                   }
                   
-                  // Если 'to' является частью блока - ход недопустим
-                  if (toInBlock) {
-                    return false // Недопустимый ход: создает блок из 6 точек
+                  // Если 'to' является частью блока И это НОВЫЙ блок - ход недопустим
+                  if (toInBlock && existingBlockStart !== start) {
+                    return false // Недопустимый ход: создает НОВЫЙ блок из 6 точек
                   }
                 }
               }
               
               return true // Ход допустим
             })
+            
+            // Отладочный лог (можно удалить после отладки)
+            if (flatMoves.length === 0 && originalMovesCount > 0) {
+              console.warn('⚠️ [6-point block rule] Все ходы заблокированы:', {
+                originalMovesCount,
+                opponentHasCheckerInHome,
+                activePlayer
+              })
+            }
           }
         }
         
