@@ -1784,14 +1784,11 @@ export default function BackgammonBoard({
           // Если это был последний серверный ход из очереди
           if (serverMoveQueue.length === 0 && onServerMovesFinished) {
             console.log('🤖 All server moves finished')
-            // Небольшая задержка перед финальным обновлением gameState,
-            // чтобы пользователь увидел шашку в конечной точке
-            setTimeout(() => {
-              // Сначала очищаем локальные завершенные ходы, чтобы избежать дублирования
-              // при обновлении основного gameState из пропсов
-              setCompletedServerMoves([]) 
-              onServerMovesFinished()
-            }, 300)
+            // ВАЖНО: Вызываем сразу, без задержки, чтобы состояние обновилось и можно было ходить
+            // Сначала очищаем локальные завершенные ходы, чтобы избежать дублирования
+            // при обновлении основного gameState из пропсов
+            setCompletedServerMoves([]) 
+            onServerMovesFinished()
           }
         } else {
           // Локальный ход пользователя
@@ -1968,8 +1965,12 @@ export default function BackgammonBoard({
       const touch = e.touches[0]
       const canvas = canvasRef.current
       const rect = canvas.getBoundingClientRect()
-      const x = touch.clientX - rect.left
-      const y = touch.clientY - rect.top
+      // ВАЖНО: Преобразуем координаты с учетом масштаба canvas
+      // canvas.width/height - внутренний размер, rect.width/height - визуальный размер
+      const scaleX = canvas.width / rect.width
+      const scaleY = canvas.height / rect.height
+      const x = (touch.clientX - rect.left) * scaleX
+      const y = (touch.clientY - rect.top) * scaleY
       
       // В sandbox режиме обрабатываем перетаскивание из bearOff
       if (isSandbox) {
@@ -2147,8 +2148,11 @@ export default function BackgammonBoard({
     const touch = e.touches[0]
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    const x = touch.clientX - rect.left
-    const y = touch.clientY - rect.top
+    // ВАЖНО: Преобразуем координаты с учетом масштаба canvas
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (touch.clientX - rect.left) * scaleX
+    const y = (touch.clientY - rect.top) * scaleY
 
     // Если началось движение, отменяем таймер долгого зажатия
     if (longPressTimerRef.current && longPressStartRef.current) {
@@ -2420,8 +2424,12 @@ export default function BackgammonBoard({
     
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    // ВАЖНО: Преобразуем координаты с учетом масштаба canvas
+    // canvas.width/height - внутренний размер, rect.width/height - визуальный размер
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (e.clientX - rect.left) * scaleX
+    const y = (e.clientY - rect.top) * scaleY
     
     // В sandbox режиме обрабатываем перетаскивание из bearOff
     if (isSandbox) {
@@ -2609,8 +2617,11 @@ export default function BackgammonBoard({
     
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    // ВАЖНО: Преобразуем координаты с учетом масштаба canvas
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (e.clientX - rect.left) * scaleX
+    const y = (e.clientY - rect.top) * scaleY
     
     // Если началось движение мыши, отменяем таймер долгого зажатия (если переместились больше чем на 5 пикселей)
     if (longPressTimerRef.current && longPressStartRef.current) {
@@ -2658,8 +2669,11 @@ export default function BackgammonBoard({
     
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    // ВАЖНО: Преобразуем координаты с учетом масштаба canvas
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (e.clientX - rect.left) * scaleX
+    const y = (e.clientY - rect.top) * scaleY
     
     // Сохраняем исходную точку перетаскивания
     const fromPoint = dragging.pointIndex
@@ -2784,8 +2798,11 @@ export default function BackgammonBoard({
     
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    // ВАЖНО: Преобразуем координаты с учетом масштаба canvas
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (e.clientX - rect.left) * scaleX
+    const y = (e.clientY - rect.top) * scaleY
     
     const pointIndex = getPointAtPosition(x, y, canvas)
     if (pointIndex === null) return
@@ -3245,8 +3262,11 @@ export default function BackgammonBoard({
             e.preventDefault()
             e.stopPropagation()
             const rect = canvasRef.current.getBoundingClientRect()
-            const x = e.clientX - rect.left
-            const y = e.clientY - rect.top
+            // ВАЖНО: Преобразуем координаты с учетом масштаба canvas
+            const scaleX = canvasRef.current.width / rect.width
+            const scaleY = canvasRef.current.height / rect.height
+            const x = (e.clientX - rect.left) * scaleX
+            const y = (e.clientY - rect.top) * scaleY
             const pointIndex = getPointAtPosition(x, y, canvasRef.current)
             if (pointIndex !== null && pointIndex !== 24 && pointIndex !== 25 && pointIndex !== -1) {
               // Не позволяем бросать на бар или bearOff

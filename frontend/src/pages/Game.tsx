@@ -528,7 +528,7 @@ export default function Game() {
     try {
       await apiClient.post(`/games/${gameId}/resign`)
       setGameStatus('finished')
-    } catch (error) {
+        } catch (error) {
       console.error('❌ Ошибка при автоматической сдаче:', error)
     }
   }, [gameId, isBotGame, gameInfo?.type])
@@ -624,7 +624,7 @@ export default function Game() {
           setWinnerId(game.winnerId !== undefined ? game.winnerId : null)
           setFinishedModalKey(`game-finished-${gameId}-${Date.now()}`)
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Failed to check game status:', error)
       }
     }
@@ -730,7 +730,7 @@ export default function Game() {
         if (myOffsetChosenAt !== null) {
           // Если смещение уже выбрано - помечаем как подтвержденное локально
           if (!offsetConfirmedRef.current) {
-            setOffsetConfirmed(true)
+          setOffsetConfirmed(true)
             console.log('✅ [loadGame] Смещение уже выбрано на сервере, помечаем как подтвержденное')
           }
         }
@@ -757,14 +757,14 @@ export default function Game() {
         if (socket && socket.connected) {
           // Таймеры обновятся через событие timer_update от сервера
           // Устанавливаем временные значения для отображения
-          setPlayer1Timer(timeLimitSeconds)
-          setPlayer2Timer(timeLimitSeconds)
-          setTotalTimeRemaining(initialTotalTime)
-          totalTimeRemainingRef.current = initialTotalTime
+        setPlayer1Timer(timeLimitSeconds)
+        setPlayer2Timer(timeLimitSeconds)
+        setTotalTimeRemaining(initialTotalTime)
+        totalTimeRemainingRef.current = initialTotalTime
           lastTotalTimeRef.current = { ...initialTotalTime } // Сохраняем начальное значение для проверки
           pageLoadTimeRef.current = Date.now() // Обновляем время загрузки при загрузке игры
           // ВАЖНО: Устанавливаем овертайм на основе реального состояния таймеров
-          setIsInOvertime(isInOvertimeOnLoad)
+        setIsInOvertime(isInOvertimeOnLoad)
         } else {
           // Если WebSocket не подключен, используем значения из БД если есть
           setPlayer1Timer(timeLimitSeconds)
@@ -1102,7 +1102,7 @@ export default function Game() {
       } else if (diceData) {
         // Если это объект {die1, die2}, превращаем в массив
         if ((diceData as any).die1 !== undefined) {
-          formattedDice = [(diceData as any).die1, (diceData as any).die2]
+        formattedDice = [(diceData as any).die1, (diceData as any).die2]
         }
       }
       
@@ -1146,16 +1146,16 @@ export default function Game() {
       // Если кубики есть в game_state - обновляем их (даже если dice_rolled еще не пришло)
       setGameState((prev) => {
         const newState = {
-          points,
-          bar,
-          bearOff,
-          currentPlayer: data.currentPlayer || 0,
+        points,
+        bar,
+        bearOff,
+        currentPlayer: data.currentPlayer || 0,
           dice: formattedDice, // ВАЖНО: Всегда обновляем кубики из game_state
           canMove: canMove,
-          verificationSalt: data.verificationSalt,
-          p1Rolls: data.p1Rolls,
-          p2Rolls: data.p2Rolls,
-        }
+        verificationSalt: data.verificationSalt,
+        p1Rolls: data.p1Rolls,
+        p2Rolls: data.p2Rolls,
+      }
         console.log('📊 Updating gameState:', { 
           dice: formattedDice, 
           previousDice: prev?.dice,
@@ -1258,16 +1258,6 @@ export default function Game() {
       // ВАЖНО: Определяем, был ли это наш ход (для предотвращения двойной анимации)
       const isMyMove = data.playerId === user?.id
       
-      // ВАЖНО: Если пришли серверные ходы, передаем их доске для анимации
-      // Но только если это НЕ наш ход (наши ходы анимируются локально)
-      if (data.serverMoves && !isMyMove) {
-        console.log('🤖 Setting server moves for board animation:', data.serverMoves)
-        setServerMovesForBoard(data.serverMoves)
-        
-        // Сбрасываем их через небольшую задержку, чтобы prop change сработал
-        setTimeout(() => setServerMovesForBoard(undefined), 100)
-      }
-      
       // ВАЖНО: Всегда сохраняем кубики как массив для корректной работы
       const formattedDice = Array.isArray(diceData) && diceData.length > 0
         ? diceData
@@ -1342,7 +1332,7 @@ export default function Game() {
         setPlayer2Timer(timeLimitSeconds)
         setPlayer1Timer(timeLimitSeconds)
       }
-      
+
       const barRaw = data.gameState?.bar || [0, 0]
       const bar = Array.isArray(barRaw) 
         ? { white: barRaw[0] || 0, black: barRaw[1] || 0 }
@@ -1369,7 +1359,7 @@ export default function Game() {
         p1Rolls: data.p1Rolls,
         p2Rolls: data.p2Rolls,
       };
-      
+
       // Логирование для отладки Sandbox режима
       if (isSandboxMove) {
         console.log('🎮 [Sandbox move_made]', {
@@ -1752,16 +1742,16 @@ export default function Game() {
             setGameInfo(data.game)
             // Автоматически загружаем игру и бросаем кубики
             // НО НЕ для sandbox игр - там пользователь сам управляет всем
-            loadGame().then(() => {
+          loadGame().then(() => {
               // Небольшая задержка для обновления состояния
-              setTimeout(() => {
+            setTimeout(() => {
                 const socket = getSocket()
                 if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1) && data.game.type !== 'sandbox') {
                   // Если это наш ход, бросаем кубики (но не для sandbox)
                   socket.emit('roll_dice', { gameId })
-                }
-              }, 300)
-            })
+              }
+            }, 300)
+          })
           } else {
             loadGame()
           }
@@ -2065,7 +2055,7 @@ export default function Game() {
             return
           }
         }
-        socket.emit('roll_dice', { gameId })
+          socket.emit('roll_dice', { gameId })
         setTimeout(() => loadGame(), 2000)
       } catch (error) {
         alert('Ошибка начала игры: ' + (error as Error).message)
@@ -2428,7 +2418,7 @@ export default function Game() {
             }
           }
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Error checking possible moves for auto-skip after move:', error);
       }
     };
@@ -2637,17 +2627,17 @@ export default function Game() {
                 >
                   {requireConfirmMove ? '✓ Требовать подтверждение хода' : '✗ Не требовать подтверждение хода'}
                   {pendingMoves.length > 0 && ' (недоступно во время хода)'}
-                </button>
-              </div>
-          </div>,
-          document.body
-        )}
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
       
       <div className="game-main-layout">
         {/* Левая панель (ландшафт) */}
         {isLandscape && (
           <div className="game-side-panel left">
-              <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
+            <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">
                   {opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}
                   <div className="pip-count-display">
@@ -2659,7 +2649,7 @@ export default function Game() {
                     )}
                   </div>
                 </div>
-                <div className="game-player-avatar">
+              <div className="game-player-avatar">
                   {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
                   {gameStatus === 'in_progress' && (() => {
                     // Таймер противника (всегда слева)
@@ -2698,8 +2688,8 @@ export default function Game() {
                       </svg>
                     )
                   })()}
-                </div>
               </div>
+            </div>
             
             <div className="game-score-side">
               <div className="game-score-label">до {gameInfo?.matchesToWin || 1}</div>
@@ -2857,16 +2847,16 @@ export default function Game() {
                           {value}
                         </button>
                       ))}
-                    </div>
+                      </div>
                     <div className="offset-values">
                       <span>Вы: <strong>{myOffset}</strong></span>
                       {isBotGame ? (
                         <span>Бот: <strong>{opponentOffset > 0 ? opponentOffset : 'выбирает...'}</strong></span>
                       ) : (
                         <span>Соперник: <strong>{opponentOffset}</strong></span>
-                      )}
-                    </div>
-                  </div>
+                  )}
+                </div>
+              </div>
 
                   {!isBotGame && gameInfo?.type === 'vs_player' && (
                     !myReady ? (
@@ -2874,8 +2864,8 @@ export default function Game() {
                     ) : (
                       <div className="ready-status">✅ Готов. Ожидание соперника...</div>
                     )
-                  )}
-                </div>
+            )}
+          </div>
               )}
             </div>
           )}
@@ -2887,8 +2877,8 @@ export default function Game() {
                 <div className="preparation-title">Подготовка к игре</div>
                 <div className="preparation-countdown">{preparationCountdown}</div>
                 <div className="preparation-message">Генерация ходов...</div>
-              </div>
-            </div>
+                </div>
+                </div>
           )}
 
           {/* Доска */}
@@ -2972,9 +2962,12 @@ export default function Game() {
                     const wasMyTurnBefore = gameState?.canMove || false;
                     const wasMyTurnBeforeByPlayer = gameState?.currentPlayer === (gameInfo?.player1Id === user?.id ? 0 : 1);
                     
+                    // ВАЖНО: Обновляем состояние сразу, без задержек, чтобы можно было ходить
                     setGameState(pending);
                     pendingGameStateRef.current = null;
                     setServerMovesForBoard(undefined);
+                    // Сбрасываем флаг анимации сразу после обновления состояния
+                    isServerAnimatingRef.current = false;
 
                     // ВАЖНО: После завершения анимации хода противника (бота или другого игрока)
                     // проверяем, нужно ли бросить кубики для следующего игрока
@@ -3134,7 +3127,7 @@ export default function Game() {
                 } : undefined}
                 onNoMoves={handleNoMoves}
               />
-              {isSandbox && (
+                {isSandbox && (
                 <>
                   <SandboxControls
                     gameId={gameId || ''}
@@ -3209,8 +3202,8 @@ export default function Game() {
                       ({pipDiff.player1 > 0 ? '+' : ''}{pipDiff.player1})
                     </span>
                   )}
-                </div>
               </div>
+            </div>
               <div className="game-player-avatar">
                 {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
                 {gameStatus === 'in_progress' && (() => {
@@ -3251,7 +3244,7 @@ export default function Game() {
                   )
                 })()}
               </div>
-            </div>
+              </div>
 
           </div>
         )}
@@ -3261,7 +3254,7 @@ export default function Game() {
       {/* Модальные окна рендерятся через Portal вне контейнера игры */}
       {showExitModal && createPortal(
         <div 
-          className="offset-modal-overlay modal-visible"
+          className="offset-modal-overlay modal-visible" 
           onClick={() => setShowExitModal(false)}
           style={{
             position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
@@ -3338,11 +3331,11 @@ export default function Game() {
               <div className="verification-item">
                 <span>Ваше смещение:</span>
                 <strong>{myOffset}</strong>
-              </div>
+            </div>
               <div className="verification-item">
                 <span>Смещение соперника:</span>
                 <strong>{opponentOffset}</strong>
-              </div>
+          </div>
               {gameState?.verificationSalt && (
                 <div className="verification-details">
                   <div className="salt-display">

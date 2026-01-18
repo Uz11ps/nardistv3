@@ -306,11 +306,16 @@ export class ImprovedBotService {
       
       score += (distFromHeadAfter - distFromHeadBefore) * 10;
 
-      // Бонус за вход в дом
-      if (isPlayer1 && move.to >= 18) {
-        score += 100;
-      } else if (!isPlayer1 && move.to >= 6 && move.to < 12) {
-        score += 100;
+      // Бонус за вход в дом - ТОЛЬКО если большинство шашек уже выведено из головы
+      // Считаем шашки в голове
+      const checkersInHead = Math.abs(state.points[headIndex] || 0);
+      // Даем бонус только если в голове осталось меньше 8 шашек (больше половины выведено)
+      if (checkersInHead < 8) {
+        if (isPlayer1 && move.to >= 18) {
+          score += 100;
+        } else if (!isPlayer1 && move.to >= 6 && move.to < 12) {
+          score += 100;
+        }
       }
     }
 
