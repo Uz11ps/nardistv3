@@ -363,7 +363,7 @@ input, textarea, select {
   display: flex;
   justify-content: space-around;
   padding: 8px 0;
-  z-index: 100;
+  z-index: 1;
   animation: slideInUp 0.3s ease-out;
 }
 
