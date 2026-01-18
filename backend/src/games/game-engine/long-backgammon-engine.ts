@@ -171,9 +171,42 @@ export class LongBackgammonEngine {
     
     // If opponent has no checkers in home, we cannot create a 6-point block
     if (!opponentHasCheckerInHome) {
-      // Check if placing a checker here would create a 6-point block
-      // ВАЖНО: Учитываем, что при ходе с точки 'from' эта точка освобождается
-      // Поэтому проверяем состояние ПОСЛЕ хода (точка 'from' освобождается, точка 'to' заполняется)
+      // Сначала проверяем, существует ли уже блок из 6 точек ДО хода
+      const existingBlockPoints = new Set<number>();
+      for (let start = 0; start < this.BOARD_SIZE; start++) {
+        let blockCount = 0;
+        let hasOpponentInBlock = false;
+        
+        for (let i = 0; i < 6; i++) {
+          const pointIdx = (start + i) % this.BOARD_SIZE;
+          const pointValue = state.points[pointIdx] || 0;
+          
+          const wouldBeOurs = (player === 0 && pointValue > 0) ||
+                             (player === 1 && pointValue < 0);
+          
+          if (wouldBeOurs) {
+            blockCount++;
+          }
+          
+          if (pointValue * opponentSign > 0) {
+            hasOpponentInBlock = true;
+          }
+        }
+        
+        if (blockCount === 6 && !hasOpponentInBlock) {
+          for (let i = 0; i < 6; i++) {
+            const pointIdx = (start + i) % this.BOARD_SIZE;
+            existingBlockPoints.add(pointIdx);
+          }
+        }
+      }
+      
+      // Если 'to' уже входит в существующий блок - разрешаем ход (движение внутри блока)
+      if (existingBlockPoints.has(to)) {
+        return true;
+      }
+      
+      // Проверяем, создается ли НОВЫЙ блок из 6 точек ПОСЛЕ хода
       for (let start = 0; start < this.BOARD_SIZE; start++) {
         let blockCount = 0;
         let hasOpponentInBlock = false;
@@ -218,20 +251,33 @@ export class LongBackgammonEngine {
           }
         }
         
-        // If we have a 6-point block (and no opponent in block), this is illegal
+        // If we have a 6-point block (and no opponent in block), check if it's NEW
         if (blockCount === 6 && !hasOpponentInBlock) {
-          // Check if 'to' is part of this block
-          let toInBlock = false;
+          // Проверяем, существовал ли этот блок до хода
+          let wasBlockBefore = true;
           for (let i = 0; i < 6; i++) {
             const pointIdx = (start + i) % this.BOARD_SIZE;
-            if (pointIdx === to) {
-              toInBlock = true;
+            if (!existingBlockPoints.has(pointIdx)) {
+              wasBlockBefore = false;
               break;
             }
           }
           
-          if (toInBlock) {
-            return false; // Illegal: creating a 6-point block when opponent has no checkers in home
+          // Если блок НОВЫЙ (не существовал до хода) - блокируем ход
+          if (!wasBlockBefore) {
+            // Check if 'to' is part of this NEW block
+            let toInBlock = false;
+            for (let i = 0; i < 6; i++) {
+              const pointIdx = (start + i) % this.BOARD_SIZE;
+              if (pointIdx === to) {
+                toInBlock = true;
+                break;
+              }
+            }
+            
+            if (toInBlock) {
+              return false; // Illegal: creating a NEW 6-point block when opponent has no checkers in home
+            }
           }
         }
       }
