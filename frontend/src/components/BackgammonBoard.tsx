@@ -751,8 +751,41 @@ export default function BackgammonBoard({
             }
           }
           
-          // Если у противника нет шашек в доме - фильтруем ходы, создающие блок из 6 точек
+          // Если у противника нет шашек в доме - фильтруем ходы, создающие НОВЫЙ блок из 6 точек
+          // ВАЖНО: Разрешаем ходы внутри уже существующего блока
           if (!opponentHasCheckerInHome) {
+            // Сначала проверяем, существует ли уже блок из 6 точек ДО хода
+            const existingBlocks = new Set<number>()
+            const opponentSign = activePlayer === 0 ? -1 : 1
+            
+            for (let start = 0; start < BOARD_SIZE; start++) {
+              let blockCount = 0
+              let hasOpponentInBlock = false
+              
+              for (let i = 0; i < 6; i++) {
+                const pointIdx = (start + i) % BOARD_SIZE
+                const pointValue = points[pointIdx] || 0
+                
+                const wouldBeOurs = (activePlayer === 0 && pointValue > 0) ||
+                                   (activePlayer === 1 && pointValue < 0)
+                
+                if (wouldBeOurs) {
+                  blockCount++
+                }
+                
+                if (pointValue * opponentSign > 0) {
+                  hasOpponentInBlock = true
+                }
+              }
+              
+              if (blockCount === 6 && !hasOpponentInBlock) {
+                for (let i = 0; i < 6; i++) {
+                  const pointIdx = (start + i) % BOARD_SIZE
+                  existingBlocks.add(pointIdx)
+                }
+              }
+            }
+            
             flatMoves = flatMoves.filter(move => {
               // Пропускаем bear-off ходы
               if (move.to === -1 || move.to >= 24 || move.to < 0) return true
@@ -761,6 +794,11 @@ export default function BackgammonBoard({
               const to = move.to
               
               if (from < 0 || from >= BOARD_SIZE || to < 0 || to >= BOARD_SIZE) return true
+              
+              // Если 'to' уже входит в существующий блок - разрешаем ход (движение внутри блока)
+              if (existingBlocks.has(to)) {
+                return true
+              }
               
               // Симулируем состояние ПОСЛЕ хода
               const simPoints = [...points]
@@ -780,8 +818,6 @@ export default function BackgammonBoard({
                   simPoints[to] = currentValue - 1
                 }
               }
-              
-              const opponentSign = activePlayer === 0 ? -1 : 1
               
               // Проверяем все возможные блоки из 6 точек ПОСЛЕ хода
               for (let start = 0; start < BOARD_SIZE; start++) {
@@ -804,12 +840,25 @@ export default function BackgammonBoard({
                   }
                 }
                 
-                // Если есть блок из 6 точек без противника и 'to' входит в этот блок - не подсвечиваем
+                // Если создается НОВЫЙ блок из 6 точек без противника и 'to' входит в этот блок - не подсвечиваем
                 if (blockCount === 6 && !hasOpponentInBlock) {
+                  // Проверяем, что это НОВЫЙ блок (не существовал до хода)
+                  let wasBlockBefore = true
                   for (let i = 0; i < 6; i++) {
                     const pointIdx = (start + i) % BOARD_SIZE
-                    if (pointIdx === to) {
-                      return false // Не подсвечиваем этот ход
+                    if (!existingBlocks.has(pointIdx)) {
+                      wasBlockBefore = false
+                      break
+                    }
+                  }
+                  
+                  // Если блок НОВЫЙ (не существовал до хода) - не подсвечиваем
+                  if (!wasBlockBefore) {
+                    for (let i = 0; i < 6; i++) {
+                      const pointIdx = (start + i) % BOARD_SIZE
+                      if (pointIdx === to) {
+                        return false // Не подсвечиваем этот ход
+                      }
                     }
                   }
                 }
