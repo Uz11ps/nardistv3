@@ -603,6 +603,39 @@ export default function Game() {
       }
     }
   }, [gameStatus, gameState?.currentPlayer, isSandbox])
+
+  // Периодическая проверка статуса игры (на случай, если окно было свернуто и событие пропущено)
+  useEffect(() => {
+    if (!gameId || gameStatus === 'finished' || isSandbox) return
+
+    const checkGameStatus = async () => {
+      try {
+        const response = await apiClient.get(`/games/${gameId}`)
+        const game = response.data
+        
+        // Проверяем, завершена ли игра
+        const isBotGameType = game.type === 'vs_bot'
+        const isReallyFinished = game.status === 'finished' && 
+                                 (game.winnerId !== undefined || (isBotGameType && game.winnerId === null))
+        
+        if (isReallyFinished && gameStatus !== 'finished') {
+          console.log('🎮 Game finished detected via status check (window was minimized)')
+          setGameStatus('finished')
+          setWinnerId(game.winnerId !== undefined ? game.winnerId : null)
+          setFinishedModalKey(`game-finished-${gameId}-${Date.now()}`)
+        }
+      } catch (error) {
+        console.error('Failed to check game status:', error)
+      }
+    }
+
+    // Проверяем статус каждые 2 секунды
+    const statusCheckInterval = setInterval(checkGameStatus, 2000)
+
+    return () => {
+      clearInterval(statusCheckInterval)
+    }
+  }, [gameId, gameStatus, isSandbox])
   
   const loadGame = async () => {
     try {
@@ -660,6 +693,8 @@ export default function Game() {
       if (isReallyFinished) {
         setGameStatus('finished')
         setWinnerId(game.winnerId !== undefined ? game.winnerId : null)
+        // ВАЖНО: Обновляем ключ модального окна при загрузке завершенной игры
+        setFinishedModalKey(`game-finished-${gameId}-${Date.now()}`)
       } else {
         // Игра НЕ завершена - устанавливаем статус как есть из БД
         // Если статус 'finished', но нет winnerId (и не бот-игра) - это ошибка данных, но доверяем серверу
@@ -1546,7 +1581,10 @@ export default function Game() {
       setGameStatus('finished');
       
       // Сохраняем winnerId для правильного отображения победителя
-      setWinnerId(data.winnerId || null);
+      setWinnerId(data.winnerId !== undefined ? data.winnerId : null);
+      
+      // ВАЖНО: Обновляем ключ модального окна для принудительного показа
+      setFinishedModalKey(`game-finished-${gameId}-${Date.now()}`);
       
       // Обновляем счет (учитываем серию матчей если есть)
       const winsScore = data.game?.matchesToWin > 1
