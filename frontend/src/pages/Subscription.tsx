@@ -261,13 +261,16 @@ export default function Subscription() {
           display: 'flex', 
           gap: '8px', 
           marginBottom: '24px',
-          marginTop: '24px'
+          marginTop: '24px',
+          width: '100%',
+          boxSizing: 'border-box'
         }}>
           <button
             onClick={() => setPaymentMethod('TRIBUTE')}
             style={{
               flex: 1,
-              padding: '10px 16px',
+              minWidth: 0,
+              padding: '10px 8px',
               borderRadius: '8px',
               background: paymentMethod === 'TRIBUTE' 
                 ? 'linear-gradient(180deg, #3390EC 0%, #1E5FA8 100%)' 
@@ -278,6 +281,10 @@ export default function Subscription() {
               fontWeight: '500',
               cursor: 'pointer',
               transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              boxSizing: 'border-box',
             }}
           >
             Tribute ⭐
@@ -286,7 +293,8 @@ export default function Subscription() {
             onClick={() => setPaymentMethod('STARS')}
             style={{
               flex: 1,
-              padding: '10px 16px',
+              minWidth: 0,
+              padding: '10px 8px',
               borderRadius: '8px',
               background: paymentMethod === 'STARS' 
                 ? 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)' 
@@ -297,6 +305,10 @@ export default function Subscription() {
               fontWeight: '500',
               cursor: 'pointer',
               transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              boxSizing: 'border-box',
             }}
           >
             Stars ⭐

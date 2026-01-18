@@ -83,6 +83,8 @@
   background: #1C1C1E;
   padding: 4px;
   border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Варианты подписки */
@@ -90,10 +92,15 @@
   display: flex;
   gap: 12px;
   margin-bottom: 24px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+  overflow-x: visible;
 }
 
 .subscription-plan-card {
   flex: 1;
+  min-width: 0; /* Позволяет карточкам сжиматься */
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
   border-radius: 12px;
   padding: 16px;
@@ -106,6 +113,52 @@
   justify-content: space-between;
   min-height: 120px;
   box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  box-sizing: border-box;
+}
+
+/* Адаптивность для маленьких экранов */
+@media (max-width: 480px) {
+  .subscription-payment-methods {
+    gap: 6px;
+    padding: 3px;
+  }
+  
+  .subscription-plans {
+    gap: 8px;
+  }
+  
+  .subscription-plan-card {
+    padding: 12px;
+    min-height: 100px;
+  }
+  
+  .subscription-plan-name {
+    font-size: 13px;
+  }
+  
+  .subscription-plan-price {
+    font-size: 12px;
+  }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 360px) {
+  .subscription-plans {
+    gap: 6px;
+  }
+  
+  .subscription-plan-card {
+    padding: 10px;
+    min-height: 90px;
+  }
+  
+  .subscription-plan-name {
+    font-size: 12px;
+  }
+  
+  .subscription-plan-price {
+    font-size: 11px;
+  }
 }
 
 .subscription-plan-card:hover {

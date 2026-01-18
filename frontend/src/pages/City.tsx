@@ -130,7 +130,7 @@ export default function City() {
       showBack={true}
       tabs={cityData.map(district => ({
         id: district.id,
-        label: district.name,
+        label: district.isUnlocked ? district.name : `🔒 LVL: ${district.requiredLevel}`,
         active: selectedDistrictId === district.id,
         onClick: () => district.isUnlocked && setSelectedDistrictId(district.id)
       }))}

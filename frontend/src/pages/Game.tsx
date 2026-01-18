@@ -314,7 +314,6 @@ export default function Game() {
   const [offsetConfirmed, setOffsetConfirmed] = useState<boolean>(false)
   const offsetConfirmedRef = useRef<boolean>(false)
   const [showGameMenu, setShowGameMenu] = useState<boolean>(false)
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false)
   const [requireConfirmMove, setRequireConfirmMove] = useState<boolean>((user as any)?.requireConfirmMove ?? true)
   const [serverMovesForBoard, setServerMovesForBoard] = useState<any[] | undefined>(undefined)
   const pendingGameStateRef = useRef<any>(null)
@@ -365,34 +364,6 @@ export default function Game() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showGameMenu])
 
-  // Отслеживание состояния полноэкранного режима
-  useEffect(() => {
-    // Проверяем, запущено ли приложение в Telegram
-    const telegramWebApp = (window as any).Telegram?.WebApp
-    
-    if (telegramWebApp) {
-      // Для Telegram Mini App используем WebApp API
-      const checkExpanded = () => {
-        setIsFullscreen(telegramWebApp.isExpanded || false)
-      }
-      
-      // Проверяем начальное состояние
-      checkExpanded()
-      
-      // Слушаем изменения через viewportStableHeight (когда доступно)
-      if (telegramWebApp.viewportStableHeight) {
-        const checkInterval = setInterval(checkExpanded, 500)
-        return () => clearInterval(checkInterval)
-      }
-    } else {
-      // Для обычного браузера используем стандартный Fullscreen API
-      const handleFullscreenChange = () => {
-        setIsFullscreen(!!document.fullscreenElement)
-      }
-      document.addEventListener('fullscreenchange', handleFullscreenChange)
-      return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
-    }
-  }, [])
 
   // Загрузка настройки requireConfirmMove из пользователя
   useEffect(() => {
@@ -2572,66 +2543,6 @@ export default function Game() {
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   🚩 Сдаться
-                </button>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation()
-                    e.preventDefault()
-                    const telegramWebApp = (window as any).Telegram?.WebApp
-                    
-                    if (telegramWebApp) {
-                      // Для Telegram Mini App используем WebApp.expand()
-                      try {
-                        if (!telegramWebApp.isExpanded) {
-                          console.log('Вход в полноэкранный режим через Telegram WebApp...')
-                          telegramWebApp.expand()
-                          setIsFullscreen(true)
-                        } else {
-                          console.log('Выход из полноэкранного режима через Telegram WebApp...')
-                          // В Telegram нет метода для выхода из expand, но можно попробовать
-                          // Обычно expand() переключает состояние
-                          telegramWebApp.expand()
-                          setIsFullscreen(false)
-                        }
-                      } catch (error) {
-                        console.error('Ошибка работы с полноэкранным режимом Telegram:', error)
-                      }
-                    } else {
-                      // Для обычного браузера используем стандартный Fullscreen API
-                      console.log('⬜ Полноэкранный режим clicked, current fullscreen:', !!document.fullscreenElement)
-                      try {
-                        if (!document.fullscreenElement) {
-                          console.log('Вход в полноэкранный режим...')
-                          await document.documentElement.requestFullscreen().catch((err) => {
-                            console.error('Ошибка входа в полноэкранный режим:', err)
-                          })
-                        } else {
-                          console.log('Выход из полноэкранного режима...')
-                          await document.exitFullscreen().catch((err) => {
-                            console.error('Ошибка выхода из полноэкранного режима:', err)
-                          })
-                        }
-                      } catch (error) {
-                        console.error('Ошибка работы с полноэкранным режимом:', error)
-                      }
-                      // Состояние isFullscreen обновится автоматически через обработчик fullscreenchange
-                    }
-                    setShowGameMenu(false)
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#fff',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    borderRadius: '4px',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                >
-                  {isFullscreen ? '🔲 Выйти из полноэкранного режима' : '⬜ Полноэкранный режим'}
                 </button>
                 <button
                   onClick={async (e) => {
