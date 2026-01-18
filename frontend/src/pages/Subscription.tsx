@@ -347,49 +347,6 @@ export default function Subscription() {
           {loading ? 'Оформление...' : 'Оформить подписку'}
         </Button>
 
-        {/* Автобилд города */}
-        <Card className="subscription-autobuild-card">
-          <div className="subscription-autobuild-header">
-            <div className="subscription-autobuild-icon">🏗️</div>
-            <div className="subscription-autobuild-info">
-              <div className="subscription-autobuild-title">Автобилд города</div>
-              <div className="subscription-autobuild-description">
-                Автоматическая покупка построек при наличии средств
-              </div>
-            </div>
-          </div>
-          {hasCityAutobuild ? (
-            <div className="subscription-autobuild-activated">
-              ✅ Активировано
-            </div>
-          ) : (
-            <div className="subscription-autobuild-purchase">
-              <div className="subscription-autobuild-payment-methods">
-                <button
-                  className={`subscription-autobuild-payment-btn ${autobuildPaymentMethod === 'usd' ? 'active' : ''}`}
-                  onClick={() => setAutobuildPaymentMethod('usd')}
-                >
-                  $50 USD
-                </button>
-                <button
-                  className={`subscription-autobuild-payment-btn ${autobuildPaymentMethod === 'nar' ? 'active' : ''}`}
-                  onClick={() => setAutobuildPaymentMethod('nar')}
-                >
-                  10,000 NAR
-                </button>
-              </div>
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={handlePurchaseCityAutobuild}
-                disabled={purchasingAutobuild}
-                className="subscription-autobuild-buy-btn"
-              >
-                {purchasingAutobuild ? 'Покупка...' : 'Купить навсегда'}
-              </Button>
-            </div>
-          )}
-        </Card>
       </div>
 
     </div>
