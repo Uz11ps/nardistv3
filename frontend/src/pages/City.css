@@ -7,65 +7,8 @@
   gap: 24px;
 }
 
-/* Стили для сетки районов (как в Academy) */
-.academy-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.academy-grid-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 20px 12px;
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 12px;
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  gap: 12px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.academy-grid-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35);
-}
-
-.academy-grid-card-icon {
-  margin-bottom: 4px;
-  opacity: 0.8;
-}
-
-.academy-grid-card-title {
-  color: #FFF;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.2;
-}
-
-.academy-grid-card-author {
-  color: #666;
-  font-size: 11px;
-}
-
-.academy-grid-card.locked {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .city-buildings-section {
   margin-top: 8px;
-}
-
-.city-buildings-title {
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 16px;
 }
 
 .city-grid-v3 {
@@ -154,14 +97,14 @@
 
 .city-modal {
   background: #1c1c1c;
-  border-radius: 20px;
-  width: 90%;
-  max-width: 400px;
+  border-radius: 10px;
+  width: 45%;
+  max-width: 200px;
   overflow: hidden;
 }
 
 .city-modal-header {
-  padding: 20px;
+  padding: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -171,26 +114,29 @@
 .city-modal-header h3 {
   margin: 0;
   color: #FFF;
+  font-size: 14px;
 }
 
 .city-modal-header button {
   background: none;
   border: none;
   color: #FFF;
-  font-size: 24px;
+  font-size: 18px;
   cursor: pointer;
+  line-height: 1;
+  padding: 0;
 }
 
 .city-modal-content {
-  padding: 24px;
+  padding: 12px;
 }
 
 .city-modal-image-container {
   width: 100%;
   aspect-ratio: 1;
   background: #2a2a2a;
-  border-radius: 12px;
-  margin-bottom: 24px;
+  border-radius: 6px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -205,8 +151,8 @@
 .city-modal-stats {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .city-modal-stat {

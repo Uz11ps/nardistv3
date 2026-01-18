@@ -125,57 +125,20 @@ export default function City() {
   }
 
   return (
-    <PageLayout title="Районы" showBack={true}>
+    <PageLayout 
+      title="Районы" 
+      showBack={true}
+      tabs={cityData.map(district => ({
+        id: district.id,
+        label: district.name,
+        active: selectedDistrictId === district.id,
+        onClick: () => district.isUnlocked && setSelectedDistrictId(district.id)
+      }))}
+    >
       <div className="city-content-v3">
-        {/* Сетка районов (как курсы в Academy) */}
-        <div className="academy-grid">
-          {cityData.map(district => (
-            <div
-              key={district.id}
-              className={`academy-grid-card ${!district.isUnlocked ? 'locked' : ''}`}
-              onClick={() => district.isUnlocked && setSelectedDistrictId(district.id)}
-            >
-              <div className="academy-grid-card-icon">
-                {district.icon ? (
-                  <img
-                    src={getImageUrl(district.icon) || district.icon}
-                    alt={district.name}
-                    style={{ width: '40px', height: '40px', objectFit: 'contain' }}
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                      const parent = e.currentTarget.parentElement
-                      if (parent) {
-                        parent.innerHTML = `
-                          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
-                            <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
-                          </svg>
-                        `
-                      }
-                    }}
-                  />
-                ) : (
-                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
-                    <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
-                  </svg>
-                )}
-              </div>
-              <div className="academy-grid-card-title">{district.name}</div>
-              {!district.isUnlocked && (
-                <div className="academy-grid-card-author">Уровень {district.requiredLevel}</div>
-              )}
-              {district.isUnlocked && district.description && (
-                <div className="academy-grid-card-author">{district.description}</div>
-              )}
-            </div>
-          ))}
-        </div>
-
         {/* Сетка строений для выбранного района */}
         {selectedDistrictId && currentDistrict && (
           <div className="city-buildings-section">
-            <h3 className="city-buildings-title">{currentDistrict.name}</h3>
             <div className="city-grid-v3">
               {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map(({ config, userBuilding }) => (
                 <div 
@@ -215,8 +178,8 @@ export default function City() {
             onClick={e => e.stopPropagation()}
             style={{
               position: 'relative', margin: '0', background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
-              padding: '0', borderRadius: '16px', textAlign: 'center', maxWidth: '400px',
-              width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '0', borderRadius: '10px', textAlign: 'center', maxWidth: '200px',
+              width: '45%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
             }}
           >
