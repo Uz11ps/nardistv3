@@ -771,20 +771,28 @@ export default function BackgammonBoard({
               
               if (from < 0 || from >= BOARD_SIZE || to < 0 || to >= BOARD_SIZE) return true
               
-              // Симулируем состояние после хода
+              // Симулируем состояние ПОСЛЕ хода (точно так же, как на бэкенде)
               const simPoints = [...points]
-              // Убираем шашку с точки from
-              if (activePlayer === 0 && simPoints[from] > 0) {
-                simPoints[from]--
-              } else if (activePlayer === 1 && simPoints[from] < 0) {
-                simPoints[from]++
+              
+              // Убираем шашку с точки from (если это наш ход)
+              if (from >= 0 && from < BOARD_SIZE) {
+                if (activePlayer === 0 && simPoints[from] > 0) {
+                  simPoints[from] = simPoints[from] - 1
+                } else if (activePlayer === 1 && simPoints[from] < 0) {
+                  simPoints[from] = simPoints[from] + 1
+                }
               }
+              
               // Добавляем шашку на точку to
-              if (activePlayer === 0) {
-                simPoints[to] = (simPoints[to] || 0) + 1
-              } else {
-                simPoints[to] = (simPoints[to] || 0) - 1
+              if (to >= 0 && to < BOARD_SIZE) {
+                if (activePlayer === 0) {
+                  simPoints[to] = (simPoints[to] || 0) + 1
+                } else {
+                  simPoints[to] = (simPoints[to] || 0) - 1
+                }
               }
+              
+              const opponentSign = activePlayer === 0 ? -1 : 1
               
               // Проверяем, создает ли этот ход блок из 6 точек
               for (let start = 0; start < BOARD_SIZE; start++) {
@@ -794,7 +802,7 @@ export default function BackgammonBoard({
                 // Проверяем 6 последовательных точек (circular)
                 for (let i = 0; i < 6; i++) {
                   const pointIdx = (start + i) % BOARD_SIZE
-                  const pointValue = simPoints[pointIdx] || 0
+                  let pointValue = simPoints[pointIdx] || 0
                   
                   // Проверяем, принадлежит ли точка нашему блоку ПОСЛЕ хода
                   const wouldBeOurs = (activePlayer === 0 && pointValue > 0) ||
@@ -805,15 +813,13 @@ export default function BackgammonBoard({
                   }
                   
                   // Проверяем, есть ли у противника шашки в этом блоке
-                  const opponentSign = activePlayer === 0 ? -1 : 1
                   if (pointValue * opponentSign > 0) {
                     hasOpponentInBlock = true
                   }
                 }
                 
-                // Если создается блок из 6 точек без противника - этот ход недопустим
+                // Если создается блок из 6 точек без противника - проверяем, является ли 'to' частью этого блока
                 if (blockCount === 6 && !hasOpponentInBlock) {
-                  // Проверяем, является ли 'to' частью этого блока
                   let toInBlock = false
                   for (let i = 0; i < 6; i++) {
                     const pointIdx = (start + i) % BOARD_SIZE
@@ -823,6 +829,7 @@ export default function BackgammonBoard({
                     }
                   }
                   
+                  // Если 'to' является частью блока - ход недопустим
                   if (toInBlock) {
                     return false // Недопустимый ход: создает блок из 6 точек
                   }
