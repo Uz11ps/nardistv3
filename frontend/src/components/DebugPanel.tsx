@@ -239,7 +239,7 @@ export const DebugPanel = memo(({
             onClick={() => {
               const defaultConfig = isMobile ? MOBILE_CONFIG : DESKTOP_CONFIG
               setDebugConfig(defaultConfig)
-              localStorage.removeItem('backgammon-debug-config-v15')
+              localStorage.removeItem('backgammon-debug-config-v16')
             }}  
             style={{ fontSize: '12px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
             title="Сбросить на дефолт"

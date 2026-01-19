@@ -222,16 +222,32 @@ export default function BackgammonBoard({
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = useCallback(() => {
     try {
-      const saved = localStorage.getItem('backgammon-debug-config-v15')
+      const saved = localStorage.getItem('backgammon-debug-config-v16')
       if (saved) {
         const parsed = JSON.parse(saved)
         // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
         if (parsed.sideMarginLeftPct !== undefined) {
-             // Мержим с дефолтным конфигом чтобы добавить новые параметры если они появились
-             return { ...DESKTOP_CONFIG, ...parsed }
+             // Мержим: сначала сохраненный конфиг, потом дефолтный поверх него
+             // Это позволяет дефолтным значениям обновляться динамически, но сохраняет пользовательские настройки
+             const merged = { ...parsed, ...DESKTOP_CONFIG }
+             // Принудительно обновляем ключевые значения, которые были изменены в дефолтах
+             // (кубики и bear off offsets)
+             merged.diceP1X = DESKTOP_CONFIG.diceP1X
+             merged.diceP1Y = DESKTOP_CONFIG.diceP1Y
+             merged.diceP2X = DESKTOP_CONFIG.diceP2X
+             merged.diceP2Y = DESKTOP_CONFIG.diceP2Y
+             merged.bearOffWhiteXOffset = DESKTOP_CONFIG.bearOffWhiteXOffset
+             merged.bearOffWhiteYOffset = DESKTOP_CONFIG.bearOffWhiteYOffset
+             merged.bearOffBlackXOffset = DESKTOP_CONFIG.bearOffBlackXOffset
+             merged.bearOffBlackYOffset = DESKTOP_CONFIG.bearOffBlackYOffset
+             return merged
         } else {
              console.log('Detected legacy config in localStorage, ignoring to enforce new defaults.')
         }
+      }
+      // Если есть старый конфиг v15, удаляем его чтобы использовать новые дефолты
+      if (localStorage.getItem('backgammon-debug-config-v15')) {
+        localStorage.removeItem('backgammon-debug-config-v15')
       }
     } catch (e) {
       console.warn('Failed to load debug config from localStorage:', e)
@@ -241,11 +257,36 @@ export default function BackgammonBoard({
   
   const [debugConfig, setDebugConfig] = useState(loadDebugConfig)
   
+  // Динамически обновляем конфиг при изменении дефолтных значений
+  useEffect(() => {
+    // Определяем какой конфиг использовать (mobile или desktop)
+    const defaultConfig = containerRef.current && containerRef.current.offsetWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+    
+    // Ключевые поля, которые должны обновляться из дефолтного конфига
+    const keyFields = ['diceP1X', 'diceP1Y', 'diceP2X', 'diceP2Y', 'bearOffWhiteXOffset', 'bearOffWhiteYOffset', 'bearOffBlackXOffset', 'bearOffBlackYOffset']
+    
+    // Проверяем, нужно ли обновить конфиг
+    const needsUpdate = keyFields.some(key => {
+      const currentValue = debugConfig[key]
+      const defaultValue = defaultConfig[key]
+      return currentValue !== defaultValue
+    })
+    
+    if (needsUpdate) {
+      // Обновляем только измененные ключевые поля, сохраняя остальные пользовательские настройки
+      const updatedConfig = { ...debugConfig }
+      keyFields.forEach(key => {
+        updatedConfig[key] = defaultConfig[key]
+      })
+      setDebugConfig(updatedConfig)
+    }
+  }, []) // Запускаем при монтировании для применения обновленных дефолтов
+  
   // Сохраняем конфиг в localStorage при каждом изменении
   useEffect(() => {
     if (debugMode) {
       try {
-        localStorage.setItem('backgammon-debug-config-v15', JSON.stringify(debugConfig))
+        localStorage.setItem('backgammon-debug-config-v16', JSON.stringify(debugConfig))
       } catch (e) {
         console.warn('Failed to save debug config to localStorage:', e)
       }
