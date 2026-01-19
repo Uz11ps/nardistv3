@@ -24,9 +24,9 @@ export default function BottomNav() {
           style={{ transition: 'all 0.2s ease' }}
         >
           <span className="nav-item-icon">
-            <img src={item.icon} alt={item.label} style={{ width: '24px', height: '24px', opacity: location.pathname === item.path ? 1 : 0.5 }} />
+            <img src={item.icon} alt={item.label} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: location.pathname === item.path ? 1 : 0.5 }} />
           </span>
-          <span>{item.label}</span>
+          <span style={{ fontSize: 'inherit', lineHeight: '1.2', textAlign: 'center' }}>{item.label}</span>
         </button>
       ))}
     </div>

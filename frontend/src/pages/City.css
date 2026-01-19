@@ -179,3 +179,102 @@
   padding: 40px;
   color: #888;
 }
+
+/* Информация о районе */
+.city-district-info {
+  margin-bottom: 16px;
+}
+
+.city-district-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.city-district-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #FFF;
+}
+
+.city-district-lock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #FFD700;
+}
+
+.lock-icon {
+  font-size: 18px;
+}
+
+.lock-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.city-district-level {
+  font-size: 14px;
+  color: #888;
+}
+
+/* Информация о строении */
+.city-building-info {
+  margin-top: 24px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.city-building-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.city-building-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #FFF;
+}
+
+.city-building-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.city-building-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.city-building-stat .label {
+  color: #888;
+  font-size: 14px;
+}
+
+.city-building-stat .value {
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.city-building-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.city-card-v3.selected {
+  border: 2px solid #C93C3D;
+  box-shadow: 0 0 8px rgba(201, 60, 61, 0.3);
+}

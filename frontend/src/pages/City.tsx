@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createPortal } from 'react-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import { apiClient, getImageUrl } from '../api/client'
@@ -53,7 +52,7 @@ export default function City() {
   const [collecting, setCollecting] = useState<string | null>(null)
   const [purchasing, setPurchasing] = useState<string | null>(null)
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null)
-  const [showBuildingModal, setShowBuildingModal] = useState<BuildingConfig | null>(null)
+  const [selectedBuilding, setSelectedBuilding] = useState<{ config: BuildingConfig; userBuilding: Building | null } | null>(null)
   const [skillPoints, setSkillPoints] = useState({ economy: 0 })
 
   const loadData = useCallback(async () => {
@@ -91,7 +90,6 @@ export default function City() {
       const userRes = await apiClient.get('/users/me')
       updateUser(userRes.data)
       await loadData()
-      setShowBuildingModal(null)
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка улучшения здания')
     } finally {
@@ -102,15 +100,28 @@ export default function City() {
   const handlePurchaseBuilding = async (configId: string) => {
     try {
       setPurchasing(configId)
-      await apiClient.post('/city/buildings/purchase', { configId })
+      await apiClient.post('/city/buildings/purchase', { buildingConfigId: configId })
       const userRes = await apiClient.get('/users/me')
       updateUser(userRes.data)
       await loadData()
-      setShowBuildingModal(null)
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка покупки здания')
     } finally {
       setPurchasing(null)
+    }
+  }
+
+  const handleCollectIncome = async (buildingId: string) => {
+    try {
+      setCollecting(buildingId)
+      await apiClient.post(`/city/buildings/${buildingId}/collect`)
+      const userRes = await apiClient.get('/users/me')
+      updateUser(userRes.data)
+      await loadData()
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка сбора прибыли')
+    } finally {
+      setCollecting(null)
     }
   }
 
@@ -130,26 +141,46 @@ export default function City() {
       showBack={true}
       tabs={cityData.map(district => ({
         id: district.id,
-        label: district.isUnlocked ? district.name : `🔒 LVL: ${district.requiredLevel}`,
+        label: district.name,
         active: selectedDistrictId === district.id,
-        onClick: () => district.isUnlocked && setSelectedDistrictId(district.id)
+        onClick: () => setSelectedDistrictId(district.id)
       }))}
     >
       <div className="city-content-v3">
-        {/* Сетка строений для выбранного района */}
+        {/* Информация о районе */}
         {selectedDistrictId && currentDistrict && (
+          <div className="city-district-info">
+            <div className="city-district-header">
+              <h2 className="city-district-name">{currentDistrict.name}</h2>
+              {!currentDistrict.isUnlocked && (
+                <div className="city-district-lock">
+                  <span className="lock-icon">🔒</span>
+                  <span className="lock-text">LVL: {currentDistrict.requiredLevel}</span>
+                </div>
+              )}
+              {currentDistrict.isUnlocked && (
+                <div className="city-district-level">
+                  <span>LVL: {currentDistrict.requiredLevel}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Сетка строений для выбранного района */}
+        {selectedDistrictId && currentDistrict && currentDistrict.isUnlocked && (
           <div className="city-buildings-section">
             <div className="city-grid-v3">
-              {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map(({ config, userBuilding }) => (
+              {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map((buildingData) => (
                 <div 
-                  key={config.id} 
-                  className={`city-card-v3 ${!currentDistrict.isUnlocked ? 'locked' : ''}`}
-                  onClick={() => currentDistrict.isUnlocked && setShowBuildingModal(config)}
+                  key={buildingData.config.id} 
+                  className={`city-card-v3 ${selectedBuilding?.config.id === buildingData.config.id ? 'selected' : ''}`}
+                  onClick={() => setSelectedBuilding(buildingData)}
                 >
                   <div className="city-card-v3-icon">
                     <img
-                      src={getImageUrl(config.icon) || config.icon || '/img/building_placeholder.png'}
-                      alt={config.name}
+                      src={getImageUrl(buildingData.config.icon) || buildingData.config.icon || '/img/building_placeholder.png'}
+                      alt={buildingData.config.name}
                       onError={(e) => { e.currentTarget.src = '/img/building_placeholder.png' }}
                     />
                   </div>
@@ -158,121 +189,104 @@ export default function City() {
             </div>
           </div>
         )}
-      </div>
 
-      {showBuildingModal && createPortal(
-        <div 
-          className="city-modal-overlay" 
-          onClick={() => setShowBuildingModal(null)}
-          style={{
-            position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
-            width: '100vw', height: '100vh', minWidth: '100vw', minHeight: '100vh',
-            background: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', zIndex: 2147483647, padding: '12px', margin: '0',
-            border: 'none', outline: 'none', touchAction: 'none', overflow: 'hidden',
-            overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
-          }}
-        >
-          <div 
-            className="city-modal" 
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: 'relative', margin: '0', background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
-              padding: '0', borderRadius: '10px', textAlign: 'center', maxWidth: '200px',
-              width: '45%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)', transform: 'none', animation: 'none', transition: 'none',
-            }}
-          >
-            <div className="city-modal-header">
-              <h3>{showBuildingModal.name}</h3>
-              <button onClick={() => setShowBuildingModal(null)}>×</button>
+        {/* Информация о выбранном строении (вместо модального окна) */}
+        {selectedBuilding && currentDistrict?.isUnlocked && (
+          <div className="city-building-info">
+            <div className="city-building-header">
+              <h3>{selectedBuilding.config.name}</h3>
             </div>
-            <div className="city-modal-content">
-              <div className="city-modal-image-container">
-                <img 
-                  src={getImageUrl(showBuildingModal.image || showBuildingModal.icon) || showBuildingModal.image || showBuildingModal.icon || '/img/building_placeholder.png'} 
-                  alt={showBuildingModal.name} 
-                  className="city-modal-image" 
-                />
-              </div>
-              <div className="city-modal-stats">
-                {(() => {
-                  const userBuilding = currentDistrict?.buildings.find(b => b.config.id === showBuildingModal.id)?.userBuilding
-                  const incomeMultiplier = showBuildingModal.incomeMultiplier || 0.07
+            <div className="city-building-details">
+              {(() => {
+                const { config, userBuilding } = selectedBuilding
+                const incomeMultiplier = config.incomeMultiplier || 0.07
+                
+                if (userBuilding) {
+                  const currentIncome = userBuilding.incomePerHour
+                  const nextLevel = userBuilding.level + 1
+                  const multiplier = Number(incomeMultiplier)
+                  const currentLevel = userBuilding.level
+                  const calculatedBaseIncome = currentIncome / (1 + multiplier * (currentLevel - 1))
+                  const nextIncome = Math.floor(calculatedBaseIncome * (1 + multiplier * (nextLevel - 1)))
+                  const accumulatedIncome = Number(userBuilding.accumulatedIncome || 0)
                   
-                  if (userBuilding) {
-                    // Текущая прибыль из базы данных
-                    const currentIncome = userBuilding.incomePerHour
-                    // Прибыль после улучшения (уровень + 1)
-                    const nextLevel = userBuilding.level + 1
-                    const multiplier = Number(incomeMultiplier)
-                    
-                    // ВАЖНО: Пересчитываем baseIncomePerHour из текущего дохода и уровня
-                    // Потому что конфиг мог быть изменен в админке после создания здания
-                    // Формула: incomePerHour = baseIncomePerHour * (1 + multiplier * (level - 1))
-                    // Отсюда: baseIncomePerHour = incomePerHour / (1 + multiplier * (level - 1))
-                    const currentLevel = userBuilding.level
-                    const calculatedBaseIncome = currentIncome / (1 + multiplier * (currentLevel - 1))
-                    
-                    // Используем ту же формулу, что и на бэкенде: baseIncomePerHour * (1 + incomeMultiplier * (level - 1))
-                    // Для следующего уровня: calculatedBaseIncome * (1 + multiplier * (nextLevel - 1))
-                    const nextIncome = Math.floor(calculatedBaseIncome * (1 + multiplier * (nextLevel - 1)))
-                    
-                    return (
-                      <>
-                        <div className="city-modal-stat">
-                          <span className="label">Прибыль была:</span>
-                          <span className="value">{currentIncome.toLocaleString('ru-RU')} NAR/час</span>
-                        </div>
-                        <div className="city-modal-stat">
-                          <span className="label">Станет:</span>
-                          <span className="value">{nextIncome.toLocaleString('ru-RU')} NAR/час</span>
-                        </div>
-                        <div className="city-modal-stat">
-                          <span className="label">Улучшение с уровня {userBuilding.level} до уровня {nextLevel}</span>
-                        </div>
-                      </>
-                    )
-                  }
-                  
-                  // Для нового здания показываем базовую прибыль
                   return (
-                    <div className="city-modal-stat">
+                    <>
+                      <div className="city-building-stat">
+                        <span className="label">Прибыль:</span>
+                        <span className="value">{currentIncome.toLocaleString('ru-RU')} NAR/час</span>
+                      </div>
+                      <div className="city-building-stat">
+                        <span className="label">Была:</span>
+                        <span className="value">{currentIncome.toLocaleString('ru-RU')} NAR/час</span>
+                      </div>
+                      <div className="city-building-stat">
+                        <span className="label">Станет:</span>
+                        <span className="value">{nextIncome.toLocaleString('ru-RU')} NAR/час</span>
+                      </div>
+                      <div className="city-building-stat">
+                        <span className="label">Улучшение:</span>
+                        <span className="value">с уровня {userBuilding.level} до уровня {nextLevel}</span>
+                      </div>
+                      {accumulatedIncome > 0 && (
+                        <div className="city-building-stat">
+                          <span className="label">Накоплено:</span>
+                          <span className="value">{accumulatedIncome.toLocaleString('ru-RU')} NAR</span>
+                        </div>
+                      )}
+                      <div className="city-building-actions">
+                        {accumulatedIncome > 0 && (
+                          <Button 
+                            variant="primary" 
+                            fullWidth 
+                            onClick={() => handleCollectIncome(userBuilding.id)} 
+                            disabled={collecting === userBuilding.id}
+                            style={{ marginBottom: '8px' }}
+                          >
+                            {collecting === userBuilding.id ? 'Сбор...' : `Собрать ${accumulatedIncome.toLocaleString('ru-RU')} NAR`}
+                          </Button>
+                        )}
+                        {userBuilding.level < config.maxLevel ? (
+                          <Button 
+                            variant="primary" 
+                            fullWidth 
+                            onClick={() => handleUpgradeBuilding(userBuilding.id)} 
+                            disabled={purchasing === userBuilding.id || (user?.narCoin || 0) < Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.15, userBuilding.level))}
+                          >
+                            {purchasing === userBuilding.id ? '...' : `Улучшить (${Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.15, userBuilding.level)).toLocaleString('ru-RU')} NAR)`}
+                          </Button>
+                        ) : (
+                          <div className="city-max-lvl">МАКС. УРОВЕНЬ</div>
+                        )}
+                      </div>
+                    </>
+                  )
+                }
+                
+                return (
+                  <>
+                    <div className="city-building-stat">
                       <span className="label">Прибыль:</span>
-                      <span className="value">{showBuildingModal.baseIncomePerHour} NAR/час</span>
+                      <span className="value">{config.baseIncomePerHour} NAR/час</span>
                     </div>
-                  )
-                })()}
-              </div>
-              
-              <div className="city-modal-footer">
-                {(() => {
-                  const userBuilding = currentDistrict?.buildings.find(b => b.config.id === showBuildingModal.id)?.userBuilding
-                  const upgradePrice = userBuilding 
-                    ? Math.floor(showBuildingModal.basePrice * Math.pow(showBuildingModal.upgradeMultiplier || 1.15, userBuilding.level))
-                    : showBuildingModal.basePrice
-
-                  if (userBuilding) {
-                    return userBuilding.level < showBuildingModal.maxLevel ? (
-                      <Button variant="primary" fullWidth onClick={() => handleUpgradeBuilding(userBuilding.id)} disabled={purchasing === userBuilding.id || (user?.narCoin || 0) < upgradePrice}>
-                        {purchasing === userBuilding.id ? '...' : `Улучшить (${upgradePrice} NAR)`}
+                    <div className="city-building-actions">
+                      <Button 
+                        variant="primary" 
+                        fullWidth 
+                        onClick={() => handlePurchaseBuilding(config.id)} 
+                        disabled={purchasing === config.id || (user?.narCoin || 0) < config.basePrice}
+                      >
+                        {purchasing === config.id ? '...' : `Купить (${config.basePrice.toLocaleString('ru-RU')} NAR)`}
                       </Button>
-                    ) : (
-                      <div className="city-max-lvl">МАКС. УРОВЕНЬ</div>
-                    )
-                  }
-                  return (
-                    <Button variant="primary" fullWidth onClick={() => handlePurchaseBuilding(showBuildingModal.id)} disabled={purchasing === showBuildingModal.id || (user?.narCoin || 0) < showBuildingModal.basePrice}>
-                      {purchasing === showBuildingModal.id ? '...' : `Купить (${showBuildingModal.basePrice} NAR)`}
-                    </Button>
-                  )
-                })()}
-              </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           </div>
-        </div>,
-        document.body
-      )}
+        )}
+      </div>
+
     </PageLayout>
   )
 }
