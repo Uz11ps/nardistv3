@@ -217,6 +217,7 @@ export class AcademyService {
         isVerified: article.isVerified,
         isCompleted,
         gameMode: article.gameMode,
+        assignment: article.assignment, // Добавляем assignment для проверки наличия quiz
       });
     }
 

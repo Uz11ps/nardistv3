@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Not, IsNull } from 'typeorm';
+import { Repository, In, Not, IsNull, MoreThan } from 'typeorm';
 import { Tournament, TournamentFormat, TournamentStatus } from './tournament.entity';
 import { TournamentMatch, MatchStatus } from './tournament-match.entity';
 import { GamesService } from '../games/games.service';
@@ -67,6 +67,10 @@ export class TournamentsService {
       const statuses = status.split(',').map(s => s.trim());
       if (statuses.length === 1) {
         where.status = statuses[0] as TournamentStatus;
+        // Для статуса 'upcoming' показываем только турниры, где регистрация еще не открыта
+        if (statuses[0] === 'upcoming') {
+          where.registrationStart = MoreThan(new Date());
+        }
       } else {
         // Используем In() для фильтрации по нескольким статусам
         where.status = In(statuses as TournamentStatus[]);

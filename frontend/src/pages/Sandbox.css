@@ -1,0 +1,138 @@
+.sandbox-content {
+  padding: 0 16px 90px;
+}
+
+.sandbox-card {
+  background: #1C1D21;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sandbox-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sandbox-card-title {
+  color: #FFF;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sandbox-card-description {
+  color: #B6B6B6;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.sandbox-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sandbox-mode-option {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sandbox-mode-option h4 {
+  color: #FFF;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sandbox-card-button {
+  background: #3a3a3a;
+  border: none;
+  border-radius: 12px;
+  color: #FFF;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sandbox-card-button:hover {
+  background: #4a4a4a;
+}
+
+.sandbox-card-button-primary {
+  background: linear-gradient(180deg, #A32E2E 0%, #681C1C 100%);
+}
+
+.sandbox-card-button-primary:hover {
+  background: linear-gradient(180deg, #B83E3E 0%, #782C2C 100%);
+}
+
+.sandbox-chapters-card {
+  margin-top: 20px;
+}
+
+.sandbox-chapters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sandbox-chapter-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sandbox-chapter-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sandbox-chapter-name {
+  color: #FFF;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.sandbox-chapter-date {
+  color: #888;
+  font-size: 12px;
+}
+
+.sandbox-chapter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sandbox-chapter-delete {
+  background: #A32E2E;
+  border: none;
+  border-radius: 8px;
+  color: #FFF;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.sandbox-chapter-delete:hover {
+  background: #B83E3E;
+}
+

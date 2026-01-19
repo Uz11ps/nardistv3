@@ -31,6 +31,12 @@ export default function GameModes() {
       description: 'Тренируйся без ограничений',
       path: '/game/bot/mode',
     },
+    {
+      id: 'sandbox',
+      name: 'Песочница',
+      description: 'Расставь шашки как хочешь и тренируйся',
+      path: '/game/sandbox',
+    },
   ]
 
   return (
