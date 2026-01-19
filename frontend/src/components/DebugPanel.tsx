@@ -290,40 +290,39 @@ export const DebugPanel = memo(({
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '5px', flexWrap: 'wrap' }}>
           <button 
             onClick={() => {
-              const defaultConfig = isMobile ? MOBILE_CONFIG : DESKTOP_CONFIG
+              const defaultConfig = selectedSize < 768 ? { ...MOBILE_CONFIG } : { ...DESKTOP_CONFIG }
               setDebugConfig(defaultConfig)
-              localStorage.removeItem('backgammon-debug-config-v16')
+              localStorage.removeItem(getConfigKey(selectedSize))
             }}  
             style={{ fontSize: '12px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
-            title="Сбросить на дефолт"
+            title={`Сбросить конфиг для ${selectedSize}px на дефолт`}
           >
-            Reset
+            Reset ({selectedSize}px)
           </button>
           <button 
             onClick={() => {
               try {
                 // Используем актуальный конфиг из ref
                 const configToSave = { ...configRef.current }
-                console.log('💾 Сохраняю конфиг из ref:', configToSave)
-                console.log('💾 Текущий debugConfig prop:', debugConfig)
+                const configKey = getConfigKey(selectedSize)
+                console.log(`💾 Сохраняю конфиг для размера ${selectedSize}px:`, configToSave)
                 const jsonString = JSON.stringify(configToSave, null, 2)
-                localStorage.setItem('backgammon-debug-config-v16', jsonString)
+                localStorage.setItem(configKey, jsonString)
                 
                 // Проверяем, что сохранилось
-                const saved = localStorage.getItem('backgammon-debug-config-v16')
+                const saved = localStorage.getItem(configKey)
                 console.log('✅ Проверка сохранения:', saved ? 'СОХРАНЕНО' : 'НЕ СОХРАНЕНО')
-                console.log('✅ Первые 200 символов:', saved?.substring(0, 200))
                 
-                alert('Конфиг сохранен! Проверьте консоль для деталей.')
+                alert(`Конфиг для ${selectedSize}px сохранен!`)
               } catch (e) {
                 console.error('❌ Ошибка при сохранении:', e)
                 alert('Ошибка при сохранении: ' + e)
               }
             }}  
             style={{ fontSize: '12px', padding: '5px 10px', background: '#4a9', border: '1px solid #6bb', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
-            title="Сохранить текущие значения"
+            title={`Сохранить конфиг для ${selectedSize}px`}
           >
-            💾 Save
+            💾 Save ({selectedSize}px)
           </button>
           <button onClick={scrollUp} style={{ fontSize: '16px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px' }}>⬆️</button>
           <button onClick={scrollDown} style={{ fontSize: '16px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px' }}>⬇️</button>
