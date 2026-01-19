@@ -110,10 +110,10 @@ export default function BackgammonBoard({
       checkerWidthRatio: 1.5,
       checkerHeightRatio: 0.252,
       checkerDrawScale: 1.28,
-      diceP1X: 0.73,
-      diceP1Y: 0.51,
-      diceP2X: 0.16,
-      diceP2Y: 0.27,
+      diceP1X: 0.550,
+      diceP1Y: 0.530,
+      diceP2X: 0.210,
+      diceP2Y: 0.390,
       checkerTopOffset: -349,
       checkerBottomOffset: 349,
       // Legacy text offsets (for fallback)
@@ -146,10 +146,10 @@ export default function BackgammonBoard({
       dragCheckerYOffset: 0,
       // Bear-off (lot) customization
       bearOffCheckerScale: 0.9,
-      bearOffWhiteXOffset: 2,
-      bearOffWhiteYOffset: 0,
-      bearOffBlackXOffset: 2,
-      bearOffBlackYOffset: 0,
+      bearOffWhiteXOffset: 5,
+      bearOffWhiteYOffset: 5,
+      bearOffBlackXOffset: -5,
+      bearOffBlackYOffset: 5,
       // Advanced text offsets (quadrants)
       textTopRightY: -316, // Points 19-24 (Indices 0-5)
       textTopLeftY: -316,  // Points 13-18 (Indices 6-11)
@@ -2196,8 +2196,9 @@ export default function BackgammonBoard({
                   }
                 })
                 setValidTargetPoints(validTargets)
+                // Используем координаты точки как начальную позицию, чтобы шашка не прыгала
                 setDragging({ pointIndex, offsetX: 0, offsetY: 0 })
-                setDragPosition({ x, y })
+                setDragPosition({ x: pX, y: pY })
                 return
               }
             }
@@ -2241,9 +2242,10 @@ export default function BackgammonBoard({
             })
             setValidTargetPoints(validTargets)
 
-            // Начинаем перетаскивание (центрируем шашку)
+            // Начинаем перетаскивание (используем координаты точки, чтобы шашка не прыгала)
+            const { x: pX, y: pY } = getPointCoordinates(pointIndex, canvas)
             setDragging({ pointIndex, offsetX: 0, offsetY: 0 })
-            setDragPosition({ x, y })
+            setDragPosition({ x: pX, y: pY })
           } else {
             setSelectedPoint(null)
             setValidTargetPoints(new Set())
