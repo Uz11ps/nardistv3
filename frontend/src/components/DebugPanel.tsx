@@ -234,7 +234,7 @@ export const DebugPanel = memo(({
           Current Width: {containerWidth}px
         </div>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '5px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '5px', flexWrap: 'wrap' }}>
           <button 
             onClick={() => {
               const defaultConfig = isMobile ? MOBILE_CONFIG : DESKTOP_CONFIG
@@ -245,6 +245,20 @@ export const DebugPanel = memo(({
             title="Сбросить на дефолт"
           >
             Reset
+          </button>
+          <button 
+            onClick={() => {
+              try {
+                localStorage.setItem('backgammon-debug-config-v16', JSON.stringify(debugConfig))
+                alert('Конфиг сохранен!')
+              } catch (e) {
+                alert('Ошибка при сохранении: ' + e)
+              }
+            }}  
+            style={{ fontSize: '12px', padding: '5px 10px', background: '#4a9', border: '1px solid #6bb', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
+            title="Сохранить текущие значения"
+          >
+            💾 Save
           </button>
           <button onClick={scrollUp} style={{ fontSize: '16px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px' }}>⬆️</button>
           <button onClick={scrollDown} style={{ fontSize: '16px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px' }}>⬇️</button>

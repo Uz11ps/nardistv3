@@ -284,39 +284,11 @@ export default function BackgammonBoard({
     return defaultConfig
   })
   
-  // Динамически обновляем ВСЕ поля из дефолтного конфига при каждом рендере
-  // Это гарантирует, что изменения в дефолтных значениях применяются сразу
-  const defaultConfig = containerRef.current && containerRef.current.offsetWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+  // Используем текущий конфиг без автоматического обновления
+  // Пользователь может менять значения, они сохраняются только при нажатии кнопки Save
+  const effectiveDebugConfig = debugConfig
   
-  // Создаем обновленный конфиг: сначала сохраненный конфиг, потом дефолтный поверх него
-  // Это позволяет дефолтным значениям обновляться динамически, но сохраняет пользовательские настройки
-  // НЕ используем useMemo, чтобы всегда брать актуальные значения из дефолтного конфига
-  const effectiveDebugConfig = { ...debugConfig, ...defaultConfig }
-  
-  // Обновляем состояние, если конфиг изменился (синхронизируем с дефолтным)
-  useEffect(() => {
-    const hasChanges = Object.keys(defaultConfig).some(key => {
-      const currentValue = debugConfig[key]
-      const defaultValue = defaultConfig[key]
-      return currentValue !== defaultValue
-    })
-    
-    if (hasChanges) {
-      // Обновляем только измененные поля из дефолтного конфига
-      setDebugConfig(prev => ({ ...prev, ...defaultConfig }))
-    }
-  }, [defaultConfig]) // Зависимость только от defaultConfig, чтобы обновляться при изменении дефолтных значений
-  
-  // Сохраняем конфиг в localStorage при каждом изменении
-  useEffect(() => {
-    if (debugMode) {
-      try {
-        localStorage.setItem('backgammon-debug-config-v16', JSON.stringify(debugConfig))
-      } catch (e) {
-        console.warn('Failed to save debug config to localStorage:', e)
-      }
-    }
-  }, [debugConfig, debugMode])
+  // НЕ сохраняем автоматически - только по кнопке Save в дебаг-панели
 
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
   useEffect(() => {
