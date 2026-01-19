@@ -657,6 +657,7 @@ export class LongBackgammonEngine {
     
     // Перемешиваем порядок ходов для разнообразия (особенно важно для первого хода)
     // Используем детерминированный RNG на основе seed для provably fair
+    if (bestMoves.length <= 1) {
       return bestMoves;
     }
     
