@@ -231,19 +231,11 @@ export class LongBackgammonEngine {
         // Если блок включает from или to И после хода создается блок из 6 наших точек без противника
         if (blockIncludesFromOrTo && ourCountAfter === 6 && !hasOpponentAfter) {
           // Подсчитываем блок ДО хода
+          // state.points уже содержит состояние ДО хода, так что просто считаем
           let ourCountBefore = 0;
           for (let i = 0; i < 6; i++) {
             const idx = (blockStart + i) % this.BOARD_SIZE;
-            let value = state.points[idx] || 0;
-            
-            // Откатываем ход для проверки состояния ДО
-            if (idx === from && from >= 0 && from < this.BOARD_SIZE) {
-              if (player === 0 && value > 0) value++;
-              else if (player === 1 && value < 0) value--;
-            } else if (idx === to) {
-              if (player === 0 && value > 0) value--;
-              else if (player === 1 && value < 0) value++;
-            }
+            const value = state.points[idx] || 0;
             
             if ((player === 0 && value > 0) || (player === 1 && value < 0)) {
               ourCountBefore++;

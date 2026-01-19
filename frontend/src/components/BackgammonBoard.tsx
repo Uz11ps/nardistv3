@@ -720,7 +720,120 @@ export default function BackgammonBoard({
           }
         }
         
-        
+        // Для длинных нард: фильтруем ходы, которые создают незаконный 6-точечный блок
+        if (gameMode === 'long' && !isSandbox) {
+          const points = gameState?.points || []
+          const activePlayer = isPlayer1 ? 0 : 1
+          const BOARD_SIZE = 24
+          const WHITE_HOME_START = 18 // Point 1-6 (indices 18-23)
+          const BLACK_HOME_START = 6 // Point 13-18 (indices 6-11)
+          
+          // Проверяем, есть ли у противника шашки в доме
+          let opponentHasCheckerInHome = false
+          if (activePlayer === 0) {
+            // Для белых проверяем дом черных (indices 6-11)
+            for (let i = 6; i <= 11; i++) {
+              if (points[i] < 0) {
+                opponentHasCheckerInHome = true
+                break
+              }
+            }
+          } else {
+            // Для черных проверяем дом белых (indices 18-23)
+            for (let i = 18; i <= 23; i++) {
+              if (points[i] > 0) {
+                opponentHasCheckerInHome = true
+                break
+              }
+            }
+          }
+          
+          // Если противник не имеет шашек в доме - фильтруем ходы, создающие 6-точечный блок
+          if (!opponentHasCheckerInHome) {
+            flatMoves = flatMoves.filter(move => {
+              const from = move.from
+              const to = move.to
+              
+              // Если to выходит за пределы доски (bear off) - правило не применяется
+              if (to < 0 || to >= BOARD_SIZE) {
+                return true
+              }
+              
+              // Проверяем все блоки, которые могут быть затронуты ходом
+              const checkPoints = new Set<number>()
+              if (from >= 0 && from < BOARD_SIZE) {
+                for (let i = -5; i <= 5; i++) {
+                  checkPoints.add((from + i + BOARD_SIZE) % BOARD_SIZE)
+                }
+              }
+              for (let i = -5; i <= 5; i++) {
+                checkPoints.add((to + i + BOARD_SIZE) % BOARD_SIZE)
+              }
+              
+              // Для каждой точки, которая может быть началом блока, проверяем блок из 6 точек
+              for (const potentialStart of checkPoints) {
+                for (let offset = 0; offset < 6; offset++) {
+                  const blockStart = (potentialStart - offset + BOARD_SIZE) % BOARD_SIZE
+                  
+                  let ourCountAfter = 0
+                  let hasOpponentAfter = false
+                  let blockIncludesFromOrTo = false
+                  
+                  // Проверяем блок из 6 точек, начиная с blockStart
+                  for (let i = 0; i < 6; i++) {
+                    const idx = (blockStart + i) % BOARD_SIZE
+                    let value = points[idx] || 0
+                    
+                    // Отслеживаем, включает ли блок from или to
+                    if (idx === from || idx === to) {
+                      blockIncludesFromOrTo = true
+                    }
+                    
+                    // Симуляция хода ПОСЛЕ
+                    if (idx === from && from >= 0 && from < BOARD_SIZE) {
+                      if (activePlayer === 0 && value > 0) value--
+                      else if (activePlayer === 1 && value < 0) value++
+                    } else if (idx === to) {
+                      if (activePlayer === 0) value++
+                      else value--
+                    }
+                    
+                    // Подсчитываем наши шашки в блоке
+                    if ((activePlayer === 0 && value > 0) || (activePlayer === 1 && value < 0)) {
+                      ourCountAfter++
+                    }
+                    
+                    // Проверяем наличие противника в блоке
+                    if ((activePlayer === 0 && value < 0) || (activePlayer === 1 && value > 0)) {
+                      hasOpponentAfter = true
+                    }
+                  }
+                  
+                  // Если блок включает from или to И после хода создается блок из 6 наших точек без противника
+                  if (blockIncludesFromOrTo && ourCountAfter === 6 && !hasOpponentAfter) {
+                    // Подсчитываем блок ДО хода
+                    let ourCountBefore = 0
+                    for (let i = 0; i < 6; i++) {
+                      const idx = (blockStart + i) % BOARD_SIZE
+                      const value = points[idx] || 0
+                      
+                      if ((activePlayer === 0 && value > 0) || (activePlayer === 1 && value < 0)) {
+                        ourCountBefore++
+                      }
+                    }
+                    
+                    // Если блок создается заново (было меньше 6, стало 6) - запрещаем
+                    if (ourCountBefore < 6) {
+                      return false
+                    }
+                  }
+                }
+              }
+              
+              return true
+            })
+          }
+        }
         
         // Не подсвечиваем все возможные точки автоматически
         // Подсветка будет только при перетаскивании шашки
@@ -1019,10 +1132,28 @@ export default function BackgammonBoard({
     const REFERENCE_MOBILE_WIDTH = 430;
     const REFERENCE_MOBILE_HEIGHT = 932;
     const isMobile = width < 768;
+    // Определяем landscape режим (широкий экран)
+    const isLandscape = width > height;
 
     const scaleY = (val: number) => {
         if (!isMobile) return val;
+        // Для landscape режима используем ширину как референс для высоты
+        if (isLandscape) {
+          const factor = height / REFERENCE_MOBILE_WIDTH;
+          return val * factor;
+        }
         const factor = height / REFERENCE_MOBILE_HEIGHT;
+        return val * factor;
+    }
+    
+    const scaleX = (val: number) => {
+        if (!isMobile) return val;
+        // Для landscape режима используем высоту как референс для ширины
+        if (isLandscape) {
+          const factor = width / REFERENCE_MOBILE_HEIGHT;
+          return val * factor;
+        }
+        const factor = width / REFERENCE_MOBILE_WIDTH;
         return val * factor;
     }
     // ------------------------------------------
@@ -1160,17 +1291,28 @@ export default function BackgammonBoard({
     const REFERENCE_MOBILE_WIDTH = 430;
     const REFERENCE_MOBILE_HEIGHT = 932;
     const isMobile = width < 768;
+    // Определяем landscape режим (широкий экран)
+    const isLandscape = width > height;
 
     // Helper functions to scale fixed pixel offsets based on screen size
     const scaleY = (val: number) => {
         if (!isMobile) return val;
-        // Calculate scale factor
+        // Для landscape режима используем ширину как референс для высоты
+        if (isLandscape) {
+          const factor = height / REFERENCE_MOBILE_WIDTH;
+          return val * factor;
+        }
         const factor = height / REFERENCE_MOBILE_HEIGHT;
         return val * factor;
     }
 
     const scaleX = (val: number) => {
         if (!isMobile) return val;
+        // Для landscape режима используем высоту как референс для ширины
+        if (isLandscape) {
+          const factor = width / REFERENCE_MOBILE_HEIGHT;
+          return val * factor;
+        }
         const factor = width / REFERENCE_MOBILE_WIDTH;
         return val * factor;
     }
