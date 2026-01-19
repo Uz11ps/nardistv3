@@ -1181,49 +1181,41 @@ export default function BackgammonBoard({
       const xEnd = pX + pW / 2 + padding;
       
       // Hitbox по вертикали:
-      // Ограничиваем хитбокс только визуальной областью шашек, без излишнего расширения
+      // Расширяем хитбокс чтобы он покрывал визуальное положение шашек
+      // которые могут быть смещены через checkerTopOffset/checkerBottomOffset
       let yStart, yEnd;
       
       if (isTopRow) {
           // Top Row: Triangle goes from (pY - pH) down to pY (tip)
           // Visual checkers start at: pY + scaleY(debugConfig.checkerTopOffset)
           // And go downwards.
+          // Hitbox should cover from Min(TriangleBase, VisualBase) to Max(TriangleTip, VisualEnd)
           
+          const triangleBase = pY - pH;
+          const triangleTip = pY;
           const visualBase = pY + scaleY(debugConfig.checkerTopOffset);
           // Visual stack extends from (visualBase - size/2) to (visualBase + 5*overlap + size/2)
           const visualTop = visualBase - (checkerSize_approx / 2);
           const visualBottom = visualBase + (4 * (checkerSize_approx - 8)) + (checkerSize_approx / 2);
           
-          // Хитбокс строго по визуальной области шашек с минимальным padding
-          const mobilePadding = isMobile ? 3 : padding;
-          yStart = visualTop - mobilePadding;
-          yEnd = visualBottom + mobilePadding;
-          
-          // Не позволяем хитбоксу выходить за пределы треугольника слишком сильно
-          const triangleBase = pY - pH;
-          const triangleTip = pY;
-          yStart = Math.max(yStart, triangleBase - checkerSize_approx * 0.3);
-          yEnd = Math.min(yEnd, triangleTip + checkerSize_approx * 0.3);
+          yStart = Math.min(triangleBase, visualTop) - padding;
+          yEnd = Math.max(triangleTip, visualBottom) + padding;
       } else {
           // Bottom Row: Triangle goes from pY (tip) down to (pY + pH)
           // Visual checkers start at: pY + scaleY(debugConfig.checkerBottomOffset)
           // And go upwards (decreasing Y) from the base.
           
+          const triangleTip = pY;
+          const triangleBase = pY + pH;
+          
+          // visualBase is the center of the first (bottom-most) checker
           const visualBase = pY + scaleY(debugConfig.checkerBottomOffset);
           // Visual stack extends from (visualBase + size/2) down to (visualBase - 5*overlap - size/2) up
           const visualBottom = visualBase + (checkerSize_approx / 2);
           const visualTop = visualBase - (4 * (checkerSize_approx - 8)) - (checkerSize_approx / 2);
           
-          // Хитбокс строго по визуальной области шашек с минимальным padding
-          const mobilePadding = isMobile ? 3 : padding;
-          yStart = visualTop - mobilePadding;
-          yEnd = visualBottom + mobilePadding;
-          
-          // Не позволяем хитбоксу выходить за пределы треугольника слишком сильно
-          const triangleTip = pY;
-          const triangleBase = pY + pH;
-          yStart = Math.max(yStart, triangleTip - checkerSize_approx * 0.3);
-          yEnd = Math.min(yEnd, triangleBase + checkerSize_approx * 0.3);
+          yStart = Math.min(triangleTip, visualTop) - padding;
+          yEnd = Math.max(triangleBase, visualBottom) + padding;
       }
       
       if (actualX >= xStart && actualX <= xEnd && actualY >= yStart && actualY <= yEnd) {
@@ -1304,16 +1296,12 @@ export default function BackgammonBoard({
 
     // Helper functions to scale fixed pixel offsets based on screen size
     const scaleY = (val: number) => {
-        // Для desktop не масштабируем - конфиги уже настроены для правильных размеров
         if (!isMobile) return val;
-        
-        // Для мобильных устройств масштабируем
+        // Для landscape режима используем ширину как референс для высоты
         if (isLandscape) {
-          // В landscape режиме используем ширину как референс для высоты
           const factor = height / REFERENCE_MOBILE_WIDTH;
           return val * factor;
         }
-        // Для portrait режима
         const factor = height / REFERENCE_MOBILE_HEIGHT;
         return val * factor;
     }
@@ -1510,14 +1498,6 @@ export default function BackgammonBoard({
         const checkerY = isTopRow 
           ? checkerBaseY + yOffset 
           : checkerBaseY - yOffset
-        
-        // Проверяем, что шашка находится в пределах canvas
-        const checkerRadius = (checkerSize * debugConfig.checkerDrawScale) / 2
-        if (checkerY - checkerRadius < 0 || checkerY + checkerRadius > height || 
-            x - checkerRadius < 0 || x + checkerRadius > width) {
-          // Если шашка выходит за пределы canvas, пропускаем её отрисовку
-          continue
-        }
         
         // Используем текстуры шашек если есть
         drawChecker(x, checkerY, checkerSize, isWhiteChecker, isMyPoint)
