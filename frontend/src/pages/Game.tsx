@@ -737,7 +737,8 @@ export default function Game() {
       }
       
       if (game.status === 'in_progress') {
-        const timeLimitSeconds = game.moveTimeLimit ? Math.floor(game.moveTimeLimit / 1000) : 15
+        // Используем константу 15 секунд для таймера на ход
+        const MOVE_TIME_LIMIT = 15
         
         // Запрашиваем актуальное состояние таймеров с сервера через WebSocket
         // Если WebSocket подключен, таймеры придут в событии timer_update
@@ -758,8 +759,8 @@ export default function Game() {
         if (socket && socket.connected) {
           // Таймеры обновятся через событие timer_update от сервера
           // Устанавливаем временные значения для отображения
-        setPlayer1Timer(timeLimitSeconds)
-        setPlayer2Timer(timeLimitSeconds)
+        setPlayer1Timer(MOVE_TIME_LIMIT)
+        setPlayer2Timer(MOVE_TIME_LIMIT)
         setTotalTimeRemaining(initialTotalTime)
         totalTimeRemainingRef.current = initialTotalTime
           lastTotalTimeRef.current = { ...initialTotalTime } // Сохраняем начальное значение для проверки
@@ -768,8 +769,8 @@ export default function Game() {
         setIsInOvertime(isInOvertimeOnLoad)
         } else {
           // Если WebSocket не подключен, используем значения из БД если есть
-          setPlayer1Timer(timeLimitSeconds)
-          setPlayer2Timer(timeLimitSeconds)
+          setPlayer1Timer(MOVE_TIME_LIMIT)
+          setPlayer2Timer(MOVE_TIME_LIMIT)
           setTotalTimeRemaining(initialTotalTime)
           totalTimeRemainingRef.current = initialTotalTime
           lastTotalTimeRef.current = { ...initialTotalTime } // Сохраняем начальное значение для проверки
@@ -1325,13 +1326,14 @@ export default function Game() {
       const previousCurrentPlayer = gameState?.currentPlayer ?? (gameInfo?.currentPlayer ?? -1)
       const wasMyTurn = previousCurrentPlayer === (data.player1Id === user?.id ? 0 : 1)
       
-      const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 60
+      // Используем константу 15 секунд для таймера на ход
+      const MOVE_TIME_LIMIT = 15
       if (data.currentPlayer === 0) {
-        setPlayer1Timer(timeLimitSeconds)
-        setPlayer2Timer(timeLimitSeconds)
+        setPlayer1Timer(MOVE_TIME_LIMIT)
+        setPlayer2Timer(MOVE_TIME_LIMIT)
       } else {
-        setPlayer2Timer(timeLimitSeconds)
-        setPlayer1Timer(timeLimitSeconds)
+        setPlayer2Timer(MOVE_TIME_LIMIT)
+        setPlayer1Timer(MOVE_TIME_LIMIT)
       }
 
       const barRaw = data.gameState?.bar || [0, 0]
@@ -1514,7 +1516,11 @@ export default function Game() {
       if (data.gameId === gameId) {
         // ВАЖНО: Таймер обновляется всегда от сервера, независимо от наличия кубиков
         // Сервер сам решает, когда начинать отсчет времени
-        const moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 15
+        // Округляем moveTimeRemaining до 15, если он близок к 15 (для правильного отображения полного круга)
+        let moveTimeRemaining = data.moveTimeRemaining !== undefined ? data.moveTimeRemaining : 15
+        if (moveTimeRemaining >= 14.5 && moveTimeRemaining <= 15.5) {
+          moveTimeRemaining = 15
+        }
         const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
         
@@ -2769,10 +2775,12 @@ export default function Game() {
                     const myTimer = isPlayer1 ? player1Timer : player2Timer
                     const myTotalTime = isPlayer1 ? totalTimeRemaining.player1 : totalTimeRemaining.player2
                     const isOvertime = myTimer <= 0 || isInOvertime
-                    const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 15
+                    // Используем константы: 15 секунд на ход, 60 секунд овертайм
+                    const MOVE_TIME_LIMIT = 15
+                    const TOTAL_TIME_LIMIT = 60
                     const progress = isOvertime 
-                      ? Math.max(0, Math.min(1, myTotalTime / 60))
-                      : Math.max(0, Math.min(1, myTimer / timeLimitSeconds))
+                      ? Math.max(0, Math.min(1, myTotalTime / TOTAL_TIME_LIMIT))
+                      : Math.max(0, Math.min(1, myTimer / MOVE_TIME_LIMIT))
                     return (
                       <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                         <circle
