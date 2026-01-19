@@ -191,8 +191,10 @@ export default function BackgammonBoard({
     // Dedicated bear-off valid highlight
     bearOffValidWidthScale: 1,
     bearOffValidHeightScale: 1,
-    bearOffValidXOffset: 0,
-    bearOffValidYOffset: 0,
+    bearOffValidWhiteXOffset: 0,
+    bearOffValidWhiteYOffset: 0,
+    bearOffValidBlackXOffset: 0,
+    bearOffValidBlackYOffset: 0,
     // Bottom row specific highlight offset (if needed separately, otherwise shared)
     highlightBottomYOffset: 26,
     validHighlightBottomYOffset: 26,
@@ -1750,69 +1752,43 @@ export default function BackgammonBoard({
     }
     
     // Отрисовка области выноса (Теперь СНИЗУ, используем изображения сбоку)
-    const bearOffAreaY = height - bearOffHeight + (debugConfig.bearOffYOffset || 0)
+    // Y offset области используем из белого (или можно использовать общий, но пока используем белый для совместимости)
+    const bearOffAreaY = height - bearOffHeight
 
     if (virtualGameState.bearOff) {
       const bOff = virtualGameState.bearOff
       const whiteBearOffCount = bOff.white || 0
       const blackBearOffCount = bOff.black || 0
       
-      // Изображения сбоку
-      const whiteSideImg = imagesRef.current['whiteSide']
-      const redSideImg = imagesRef.current['redSide']
-      
-      // Параметры для отрисовки сбоку (стоячие шашки)
-      // Высота шашки сбоку = диаметру (примерно)
-      const checkerSideHeight = bearOffHeight * 0.85 * (debugConfig.bearOffCheckerScale || 1.0)
-      
-      // Вычисляем ширину по пропорциям изображения
-      const getSideWidth = (img: HTMLImageElement | undefined) => {
-          if (img && img.complete && img.height > 0) {
-              return checkerSideHeight * (img.width / img.height)
-          }
-          return checkerSideHeight * 0.25 // Default thickness fallback
-      }
-      
-      const whiteW = getSideWidth(whiteSideImg)
-      const redW = getSideWidth(redSideImg)
-      
-      const yPos = bearOffAreaY + (bearOffHeight - checkerSideHeight) / 2
+      // Используем те же изображения, что и для обычных шашек (вид сверху)
+      const checkerSize = Math.min(pointWidth * debugConfig.checkerWidthRatio, pointHeight * debugConfig.checkerHeightRatio)
+      const bearOffCheckerSize = checkerSize * (debugConfig.bearOffCheckerScale || 1.0)
       
       // Белые шашки - Справа налево (Дом белых обычно справа)
       // Размещаем их в правой части лотка
-      const startXWhite = width - sideMargin - whiteW + (debugConfig.bearOffXOffset || 0)
+      const startXWhite = width - sideMargin - bearOffCheckerSize / 2 + (debugConfig.bearOffWhiteXOffset || 0)
+      const yPosWhite = bearOffAreaY + bearOffHeight / 2 + (debugConfig.bearOffWhiteYOffset || 0)
       
       for (let i = 0; i < whiteBearOffCount; i++) {
         // Плотная стопка со смещением
-        const step = whiteW * 0.25
+        const step = bearOffCheckerSize * 0.3
         const x = startXWhite - (i * step)
         
-        if (whiteSideImg && whiteSideImg.complete) {
-           ctx.drawImage(whiteSideImg, x, yPos, whiteW, checkerSideHeight)
-        } else {
-           ctx.fillStyle = '#F0F0F0'
-           ctx.fillRect(x, yPos, whiteW, checkerSideHeight)
-           ctx.strokeStyle = '#999'
-           ctx.strokeRect(x, yPos, whiteW, checkerSideHeight)
-        }
+        // Используем функцию drawChecker для единообразия с остальными шашками
+        drawChecker(x, yPosWhite, bearOffCheckerSize, true, isPlayer1)
       }
       
       // Черные шашки - Слева направо (Дом черных обычно слева)
       // Размещаем их в левой части лотка
-      const startXBlack = sideMargin + (debugConfig.bearOffXOffset || 0)
+      const startXBlack = sideMargin + bearOffCheckerSize / 2 + (debugConfig.bearOffBlackXOffset || 0)
+      const yPosBlack = bearOffAreaY + bearOffHeight / 2 + (debugConfig.bearOffBlackYOffset || 0)
       
       for (let i = 0; i < blackBearOffCount; i++) {
-        const step = redW * 0.25
+        const step = bearOffCheckerSize * 0.3
         const x = startXBlack + (i * step)
         
-        if (redSideImg && redSideImg.complete) {
-           ctx.drawImage(redSideImg, x, yPos, redW, checkerSideHeight)
-        } else {
-           ctx.fillStyle = '#333333'
-           ctx.fillRect(x, yPos, redW, checkerSideHeight)
-           ctx.strokeStyle = '#000'
-           ctx.strokeRect(x, yPos, redW, checkerSideHeight)
-        }
+        // Используем функцию drawChecker для единообразия с остальными шашками
+        drawChecker(x, yPosBlack, bearOffCheckerSize, false, !isPlayer1)
       }
     }
 
@@ -1840,8 +1816,16 @@ export default function BackgammonBoard({
       // Вычисляем центр нужной половины
       const centerX = isRightSide ? (width * 0.75) : (width * 0.25);
       
-      const bearOffValidHX = centerX - (bearOffValidHW / 2) + scaleX(debugConfig.bearOffValidXOffset || debugConfig.validHighlightXOffset || 0)
-      const bearOffValidHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + (debugConfig.bearOffValidYOffset || debugConfig.validHighlightYOffset || 0)
+      // Используем отдельные offset'ы для белых и черных
+      const bearOffValidXOffset = isRightSide 
+        ? (debugConfig.bearOffValidWhiteXOffset || debugConfig.bearOffValidXOffset || debugConfig.validHighlightXOffset || 0)
+        : (debugConfig.bearOffValidBlackXOffset || debugConfig.bearOffValidXOffset || debugConfig.validHighlightXOffset || 0)
+      const bearOffValidYOffset = isRightSide
+        ? (debugConfig.bearOffValidWhiteYOffset || debugConfig.bearOffValidYOffset || debugConfig.validHighlightYOffset || 0)
+        : (debugConfig.bearOffValidBlackYOffset || debugConfig.bearOffValidYOffset || debugConfig.validHighlightYOffset || 0)
+      
+      const bearOffValidHX = centerX - (bearOffValidHW / 2) + scaleX(bearOffValidXOffset)
+      const bearOffValidHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidYOffset
       
       ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'
       ctx.fillRect(bearOffValidHX, bearOffValidHY, bearOffValidHW, bearOffValidHH)
