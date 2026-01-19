@@ -13,10 +13,29 @@
 
 .city-grid-v3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  max-width: 400px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  max-width: 600px;
   margin: 0 auto;
+}
+
+.city-card-v3-complete {
+  aspect-ratio: 1;
+  background: #2a2a2a;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.city-card-v3-complete:hover {
+  border-color: rgba(201, 60, 61, 0.5);
+  box-shadow: 0 4px 12px rgba(201, 60, 61, 0.2);
 }
 
 .city-card-v3 {
@@ -79,6 +98,126 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* Новые стили для квадратных карточек с кнопками */
+.city-card-v3-icon-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  margin-bottom: 8px;
+}
+
+.city-card-v3-icon-wrapper img {
+  width: 100%;
+  height: 100%;
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.city-card-v3-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.city-card-v3-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #FFF;
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city-card-v3-level {
+  font-size: 10px;
+  color: #888;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.city-card-v3-income {
+  font-size: 11px;
+  color: #4CAF50;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.city-card-v3-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.city-card-v3-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.city-card-v3-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.city-card-v3-btn-collect {
+  background: #4CAF50;
+  color: #FFF;
+}
+
+.city-card-v3-btn-collect:hover:not(:disabled) {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+.city-card-v3-btn-upgrade {
+  background: #C93C3D;
+  color: #FFF;
+}
+
+.city-card-v3-btn-upgrade:hover:not(:disabled) {
+  background: #b83536;
+  transform: translateY(-1px);
+}
+
+.city-card-v3-btn-purchase {
+  background: #2196F3;
+  color: #FFF;
+}
+
+.city-card-v3-btn-purchase:hover:not(:disabled) {
+  background: #1976D2;
+  transform: translateY(-1px);
+}
+
+.city-card-v3-max-level {
+  text-align: center;
+  color: #4CAF50;
+  font-weight: 600;
+  font-size: 10px;
+  padding: 6px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 6px;
 }
 
 /* Modal Styles */

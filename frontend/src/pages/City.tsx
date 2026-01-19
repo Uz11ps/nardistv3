@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import { apiClient, getImageUrl } from '../api/client'
-import Button from '../components/Button'
 import './City.css'
 
 interface Building {
@@ -52,7 +51,6 @@ export default function City() {
   const [collecting, setCollecting] = useState<string | null>(null)
   const [purchasing, setPurchasing] = useState<string | null>(null)
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null)
-  const [selectedBuilding, setSelectedBuilding] = useState<{ config: BuildingConfig; userBuilding: Building | null } | null>(null)
   const [skillPoints, setSkillPoints] = useState({ economy: 0 })
 
   const loadData = useCallback(async () => {
@@ -84,6 +82,13 @@ export default function City() {
   }, [loadData])
 
   const handleUpgradeBuilding = async (buildingId: string) => {
+    const building = currentDistrict?.buildings.find(b => b.userBuilding?.id === buildingId)
+    if (!building) return
+    
+    const upgradePrice = Math.floor(building.config.basePrice * Math.pow(building.config.upgradeMultiplier || 1.15, building.userBuilding!.level))
+    const confirmed = window.confirm(`Улучшить здание за ${upgradePrice.toLocaleString('ru-RU')} NAR?`)
+    if (!confirmed) return
+    
     try {
       setPurchasing(buildingId)
       await apiClient.put(`/city/buildings/${buildingId}/upgrade`)
@@ -171,117 +176,93 @@ export default function City() {
         {selectedDistrictId && currentDistrict && currentDistrict.isUnlocked && (
           <div className="city-buildings-section">
             <div className="city-grid-v3">
-              {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map((buildingData) => (
-                <div 
-                  key={buildingData.config.id} 
-                  className={`city-card-v3 ${selectedBuilding?.config.id === buildingData.config.id ? 'selected' : ''}`}
-                  onClick={() => setSelectedBuilding(buildingData)}
-                >
-                  <div className="city-card-v3-icon">
-                    <img
-                      src={getImageUrl(buildingData.config.icon) || buildingData.config.icon || '/img/building_placeholder.png'}
-                      alt={buildingData.config.name}
-                      onError={(e) => { e.currentTarget.src = '/img/building_placeholder.png' }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Информация о выбранном строении (вместо модального окна) */}
-        {selectedBuilding && currentDistrict?.isUnlocked && (
-          <div className="city-building-info">
-            <div className="city-building-header">
-              <h3>{selectedBuilding.config.name}</h3>
-            </div>
-            <div className="city-building-details">
-              {(() => {
-                const { config, userBuilding } = selectedBuilding
+              {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map((buildingData) => {
+                const { config, userBuilding } = buildingData
                 const incomeMultiplier = config.incomeMultiplier || 0.07
-                
-                if (userBuilding) {
-                  const currentIncome = userBuilding.incomePerHour
-                  const nextLevel = userBuilding.level + 1
-                  const multiplier = Number(incomeMultiplier)
-                  const currentLevel = userBuilding.level
-                  const calculatedBaseIncome = currentIncome / (1 + multiplier * (currentLevel - 1))
-                  const nextIncome = Math.floor(calculatedBaseIncome * (1 + multiplier * (nextLevel - 1)))
-                  const accumulatedIncome = Number(userBuilding.accumulatedIncome || 0)
-                  
-                  return (
-                    <>
-                      <div className="city-building-stat">
-                        <span className="label">Прибыль:</span>
-                        <span className="value">{currentIncome.toLocaleString('ru-RU')} NAR/час</span>
-                      </div>
-                      <div className="city-building-stat">
-                        <span className="label">Была:</span>
-                        <span className="value">{currentIncome.toLocaleString('ru-RU')} NAR/час</span>
-                      </div>
-                      <div className="city-building-stat">
-                        <span className="label">Станет:</span>
-                        <span className="value">{nextIncome.toLocaleString('ru-RU')} NAR/час</span>
-                      </div>
-                      <div className="city-building-stat">
-                        <span className="label">Улучшение:</span>
-                        <span className="value">с уровня {userBuilding.level} до уровня {nextLevel}</span>
-                      </div>
-                      {accumulatedIncome > 0 && (
-                        <div className="city-building-stat">
-                          <span className="label">Накоплено:</span>
-                          <span className="value">{accumulatedIncome.toLocaleString('ru-RU')} NAR</span>
-                        </div>
-                      )}
-                      <div className="city-building-actions">
-                        {accumulatedIncome > 0 && (
-                          <Button 
-                            variant="primary" 
-                            fullWidth 
-                            onClick={() => handleCollectIncome(userBuilding.id)} 
-                            disabled={collecting === userBuilding.id}
-                            style={{ marginBottom: '8px' }}
-                          >
-                            {collecting === userBuilding.id ? 'Сбор...' : `Собрать ${accumulatedIncome.toLocaleString('ru-RU')} NAR`}
-                          </Button>
-                        )}
-                        {userBuilding.level < config.maxLevel ? (
-                          <Button 
-                            variant="primary" 
-                            fullWidth 
-                            onClick={() => handleUpgradeBuilding(userBuilding.id)} 
-                            disabled={purchasing === userBuilding.id || (user?.narCoin || 0) < Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.15, userBuilding.level))}
-                          >
-                            {purchasing === userBuilding.id ? '...' : `Улучшить (${Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.15, userBuilding.level)).toLocaleString('ru-RU')} NAR)`}
-                          </Button>
-                        ) : (
-                          <div className="city-max-lvl">МАКС. УРОВЕНЬ</div>
-                        )}
-                      </div>
-                    </>
-                  )
-                }
+                const accumulatedIncome = userBuilding ? Number(userBuilding.accumulatedIncome || 0) : 0
+                const upgradePrice = userBuilding && userBuilding.level < config.maxLevel
+                  ? Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.15, userBuilding.level))
+                  : 0
                 
                 return (
-                  <>
-                    <div className="city-building-stat">
-                      <span className="label">Прибыль:</span>
-                      <span className="value">{config.baseIncomePerHour} NAR/час</span>
+                  <div 
+                    key={config.id} 
+                    className="city-card-v3-complete"
+                  >
+                    {/* Иконка здания */}
+                    <div className="city-card-v3-icon-wrapper">
+                      <img
+                        src={getImageUrl(config.icon) || config.icon || '/img/building_placeholder.png'}
+                        alt={config.name}
+                        onError={(e) => { e.currentTarget.src = '/img/building_placeholder.png' }}
+                      />
                     </div>
-                    <div className="city-building-actions">
-                      <Button 
-                        variant="primary" 
-                        fullWidth 
-                        onClick={() => handlePurchaseBuilding(config.id)} 
-                        disabled={purchasing === config.id || (user?.narCoin || 0) < config.basePrice}
-                      >
-                        {purchasing === config.id ? '...' : `Купить (${config.basePrice.toLocaleString('ru-RU')} NAR)`}
-                      </Button>
+                    
+                    {/* Название и уровень */}
+                    <div className="city-card-v3-title">
+                      <span className="city-card-v3-name">{config.name}</span>
+                      {userBuilding && (
+                        <span className="city-card-v3-level">LVL {userBuilding.level}</span>
+                      )}
                     </div>
-                  </>
+                    
+                    {/* Информация о прибыли */}
+                    {userBuilding && (
+                      <div className="city-card-v3-income">
+                        {userBuilding.incomePerHour.toLocaleString('ru-RU')} NAR/час
+                      </div>
+                    )}
+                    
+                    {/* Кнопки действий */}
+                    <div className="city-card-v3-actions">
+                      {userBuilding ? (
+                        <>
+                          {/* Кнопка сбора прибыли */}
+                          {accumulatedIncome > 0 && (
+                            <button
+                              className="city-card-v3-btn city-card-v3-btn-collect"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCollectIncome(userBuilding.id)
+                              }}
+                              disabled={collecting === userBuilding.id}
+                            >
+                              {collecting === userBuilding.id ? 'Сбор...' : `💰 Собрать ${accumulatedIncome.toLocaleString('ru-RU')}`}
+                            </button>
+                          )}
+                          
+                          {/* Кнопка улучшения */}
+                          {userBuilding.level < config.maxLevel ? (
+                            <button
+                              className="city-card-v3-btn city-card-v3-btn-upgrade"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleUpgradeBuilding(userBuilding.id)
+                              }}
+                              disabled={purchasing === userBuilding.id || (user?.narCoin || 0) < upgradePrice}
+                            >
+                              {purchasing === userBuilding.id ? '...' : `⬆️ Улучшить ${upgradePrice.toLocaleString('ru-RU')} NAR`}
+                            </button>
+                          ) : (
+                            <div className="city-card-v3-max-level">МАКС. УРОВЕНЬ</div>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          className="city-card-v3-btn city-card-v3-btn-purchase"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handlePurchaseBuilding(config.id)
+                          }}
+                          disabled={purchasing === config.id || (user?.narCoin || 0) < config.basePrice}
+                        >
+                          {purchasing === config.id ? '...' : `🛒 Купить ${config.basePrice.toLocaleString('ru-RU')} NAR`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )
-              })()}
+              })}
             </div>
           </div>
         )}
