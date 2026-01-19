@@ -3035,6 +3035,7 @@ export default function Game() {
                     const currentPoints = [...(gameState.points || Array(24).fill(0))]
                     const currentValue = currentPoints[pointIndex] || 0
                     const currentBearOff = { ...(gameState.bearOff || { white: 0, black: 0 }) }
+                    const currentBar = { ...(gameState.bar || { white: 0, black: 0 }) }
                     
                     // Проверяем, есть ли шашки в bearOff
                     if (checkerColor === 'white' && currentBearOff.white <= 0) {
@@ -3043,6 +3044,26 @@ export default function Game() {
                     }
                     if (checkerColor === 'black' && currentBearOff.black <= 0) {
                       alert('Нет черных шашек в лоте')
+                      return
+                    }
+                    
+                    // Подсчитываем общее количество шашек данного цвета на доске
+                    let totalCheckers = 0
+                    if (checkerColor === 'white') {
+                      // Считаем белые шашки (положительные значения)
+                      totalCheckers = currentPoints.filter(p => p > 0).reduce((sum, p) => sum + p, 0)
+                      totalCheckers += currentBar.white
+                      totalCheckers += currentBearOff.white
+                    } else {
+                      // Считаем черные шашки (отрицательные значения)
+                      totalCheckers = currentPoints.filter(p => p < 0).reduce((sum, p) => sum + Math.abs(p), 0)
+                      totalCheckers += currentBar.black
+                      totalCheckers += currentBearOff.black
+                    }
+                    
+                    // Проверяем лимит в 15 шашек
+                    if (totalCheckers >= 15) {
+                      alert(`Максимум 15 шашек для ${checkerColor === 'white' ? 'белых' : 'черных'}. У вас уже ${totalCheckers}.`)
                       return
                     }
                     
@@ -3057,7 +3078,7 @@ export default function Game() {
                     
                     await apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
                       points: currentPoints,
-                      bar: gameState.bar || { white: 0, black: 0 },
+                      bar: currentBar,
                       bearOff: currentBearOff,
                     })
                     
