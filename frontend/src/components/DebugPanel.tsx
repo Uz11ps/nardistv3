@@ -30,6 +30,14 @@ export const DebugPanel = memo(({
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef<number>(0)
   const isScrollingRef = useRef<boolean>(false)
+  // Храним актуальный конфиг в ref для сохранения
+  const configRef = useRef(debugConfig)
+  
+  // Обновляем ref при изменении конфига
+  useEffect(() => {
+    configRef.current = debugConfig
+    console.log('📝 Конфиг обновлен в ref:', configRef.current)
+  }, [debugConfig])
   
   // Сохраняем позицию скролла при каждом скролле
   useEffect(() => {
@@ -54,7 +62,12 @@ export const DebugPanel = memo(({
   })
 
   const handleChange = (key: string, value: number) => {
-    setDebugConfig((prev: any) => ({ ...prev, [key]: value }))
+    console.log(`🔧 Изменение ${key}:`, value, 'Текущий конфиг:', debugConfig)
+    setDebugConfig((prev: any) => {
+      const updated = { ...prev, [key]: value }
+      console.log(`✅ Новый конфиг после изменения ${key}:`, updated)
+      return updated
+    })
   }
   
   const handleIncrement = (key: string, delta: number) => {
@@ -249,9 +262,21 @@ export const DebugPanel = memo(({
           <button 
             onClick={() => {
               try {
-                localStorage.setItem('backgammon-debug-config-v16', JSON.stringify(debugConfig))
-                alert('Конфиг сохранен!')
+                // Используем актуальный конфиг из ref
+                const configToSave = { ...configRef.current }
+                console.log('💾 Сохраняю конфиг из ref:', configToSave)
+                console.log('💾 Текущий debugConfig prop:', debugConfig)
+                const jsonString = JSON.stringify(configToSave, null, 2)
+                localStorage.setItem('backgammon-debug-config-v16', jsonString)
+                
+                // Проверяем, что сохранилось
+                const saved = localStorage.getItem('backgammon-debug-config-v16')
+                console.log('✅ Проверка сохранения:', saved ? 'СОХРАНЕНО' : 'НЕ СОХРАНЕНО')
+                console.log('✅ Первые 200 символов:', saved?.substring(0, 200))
+                
+                alert('Конфиг сохранен! Проверьте консоль для деталей.')
               } catch (e) {
+                console.error('❌ Ошибка при сохранении:', e)
                 alert('Ошибка при сохранении: ' + e)
               }
             }}  
