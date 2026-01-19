@@ -1132,33 +1132,15 @@ export default function BackgammonBoard({
     const REFERENCE_MOBILE_WIDTH = 430;
     const REFERENCE_MOBILE_HEIGHT = 932;
     const isMobile = width < 768;
-    // Определяем landscape режим (широкий экран)
-    const isLandscape = width > height;
 
     const scaleY = (val: number) => {
-        if (!isMobile) return val;
-        // Референсные значения настроены для portrait режима (высота 932, ширина 430)
-        // В landscape режиме экран повернут: высота становится меньше (была ширина 430)
-        if (isLandscape) {
-          // В landscape: высота canvas соответствует ширине portrait (430)
-          const factor = height / REFERENCE_MOBILE_WIDTH;
-          return val * factor;
-        }
-        // В portrait: используем стандартные референсы
+        // Всегда применяем масштабирование для всех размеров экрана
         const factor = height / REFERENCE_MOBILE_HEIGHT;
         return val * factor;
     }
     
     const scaleX = (val: number) => {
-        if (!isMobile) return val;
-        // Референсные значения настроены для portrait режима (высота 932, ширина 430)
-        // В landscape режиме экран повернут: ширина становится больше (была высота 932)
-        if (isLandscape) {
-          // В landscape: ширина canvas соответствует высоте portrait (932)
-          const factor = width / REFERENCE_MOBILE_HEIGHT;
-          return val * factor;
-        }
-        // В portrait: используем стандартные референсы
+        // Всегда применяем масштабирование для всех размеров экрана
         const factor = width / REFERENCE_MOBILE_WIDTH;
         return val * factor;
     }
@@ -1297,34 +1279,16 @@ export default function BackgammonBoard({
     const REFERENCE_MOBILE_WIDTH = 430;
     const REFERENCE_MOBILE_HEIGHT = 932;
     const isMobile = width < 768;
-    // Определяем landscape режим (широкий экран)
-    const isLandscape = width > height;
 
     // Helper functions to scale fixed pixel offsets based on screen size
+    // Используем одинаковую логику для portrait и landscape - просто растягиваем пропорционально
+    // Всегда применяем масштабирование для всех размеров экрана
     const scaleY = (val: number) => {
-        if (!isMobile) return val;
-        // Референсные значения настроены для portrait режима (высота 932, ширина 430)
-        // В landscape режиме экран повернут: высота становится меньше (была ширина 430)
-        if (isLandscape) {
-          // В landscape: высота canvas соответствует ширине portrait (430)
-          const factor = height / REFERENCE_MOBILE_WIDTH;
-          return val * factor;
-        }
-        // В portrait: используем стандартные референсы
         const factor = height / REFERENCE_MOBILE_HEIGHT;
         return val * factor;
     }
 
     const scaleX = (val: number) => {
-        if (!isMobile) return val;
-        // Референсные значения настроены для portrait режима (высота 932, ширина 430)
-        // В landscape режиме экран повернут: ширина становится больше (была высота 932)
-        if (isLandscape) {
-          // В landscape: ширина canvas соответствует высоте portrait (932)
-          const factor = width / REFERENCE_MOBILE_HEIGHT;
-          return val * factor;
-        }
-        // В portrait: используем стандартные референсы
         const factor = width / REFERENCE_MOBILE_WIDTH;
         return val * factor;
     }
