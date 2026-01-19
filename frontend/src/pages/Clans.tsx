@@ -71,7 +71,7 @@ export default function Clans() {
   return (
     <PageLayout 
       title="Федерации" 
-      subtitle={`создать федерацию можно с 15 уровня, а вступить в федерацию можно с 10 уровня, прокачайся, играй в турнирах и зарабатывай очки`}
+      subtitle={`Создать федерацию можно с 15 уровня, а вступить в федерацию можно с 10 уровня, прокачайся, играй в турнирах и зарабатывай очки`}
       showBack={true}
     >
       <div className="federations-welcome">
@@ -79,7 +79,7 @@ export default function Clans() {
           <img src="/img/кланы.png" alt="Federations" />
         </div>
         
-        <button className="federations-welcome-btn" onClick={() => navigate('/clans/search')}>
+        <button className="federations-welcome-btn" onClick={() => navigate('/')}>
           Играть
         </button>
       </div>
