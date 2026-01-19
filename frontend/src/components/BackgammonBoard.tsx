@@ -1164,7 +1164,7 @@ export default function BackgammonBoard({
 
     // Сначала собираем все точки с их хитбоксами и расстоянием до клика
     const pointsWithHitboxes: Array<{ index: number; distance: number; hitbox: { xStart: number; xEnd: number; yStart: number; yEnd: number } }> = []
-    
+
     for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
       const { x: pX, y: pY, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       
@@ -1921,10 +1921,10 @@ export default function BackgammonBoard({
           if (serverMoveQueue.length === 0 && onServerMovesFinished) {
             console.log('🤖 All server moves finished')
             // ВАЖНО: Вызываем сразу, без задержки, чтобы состояние обновилось и можно было ходить
-            // Сначала очищаем локальные завершенные ходы, чтобы избежать дублирования
-            // при обновлении основного gameState из пропсов
-            setCompletedServerMoves([]) 
-            onServerMovesFinished()
+              // Сначала очищаем локальные завершенные ходы, чтобы избежать дублирования
+              // при обновлении основного gameState из пропсов
+              setCompletedServerMoves([]) 
+              onServerMovesFinished()
           }
         } else {
           // Локальный ход пользователя
