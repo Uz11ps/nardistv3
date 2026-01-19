@@ -423,6 +423,41 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
           const excessTime = Math.max(0, timeSinceLastMoveSeconds - baseMoveTime);
           const totalRemaining = Math.max(0, (playerTimeRemaining / 1000) - excessTime);
 
+          // ВАЖНО: Перед проверкой таймаута проверяем, есть ли у бота валидные ходы
+          // Если ходов нет - сразу пропускаем ход, не дожидаясь таймаута
+          if (currentPlayer === 1 && timeSinceLastMoveSeconds > 1) {
+            // Проверяем наличие ходов у бота (только если прошла хотя бы 1 секунда, чтобы не спамить)
+            try {
+              const currentGame = await this.gamesService.findOne(game.id);
+              if (currentGame.status === 'finished' || currentGame.status === 'abandoned') {
+                continue;
+              }
+              
+              // Проверяем наличие валидных ходов у бота
+              const testBotMoves = await this.botService.makeBotMove(currentGame.gameState, currentGame.mode);
+              const hasMoves = testBotMoves.length > 0;
+              
+              if (!hasMoves) {
+                // Нет валидных ходов - сразу пропускаем ход
+                this.logger.log(`🔄 Bot has no valid moves, skipping turn immediately (before timeout) for game ${game.id}`);
+                await this.gamesService.makeMove(game.id, null, []);
+                const updatedGameState = await this.gamesService.getGameState(game.id);
+                this.server.to(`game:${game.id}`).emit('game_state', updatedGameState);
+                await this.sendTimerUpdateForGame(game.id);
+                
+                // После пропуска хода проверяем, нужно ли боту ходить снова
+                const gameAfterSkip = await this.gamesService.findOne(game.id);
+                if (gameAfterSkip.currentPlayer === 1 && gameAfterSkip.status === 'in_progress') {
+                  await this.handleBotTurnIfNeeded(game.id);
+                }
+                continue; // Пропускаем проверку таймаута, т.к. ход уже переключен
+              }
+            } catch (error) {
+              this.logger.error(`Error checking bot moves before timeout: ${error.message}`);
+              // В случае ошибки продолжаем проверку таймаута
+            }
+          }
+
           if (timeSinceLastMoveSeconds > baseMoveTime && totalRemaining <= 0) {
             this.logger.warn(`⏱️ Bot game timeout detected for game ${game.id}, player ${currentPlayer} time expired. Move time: ${timeSinceLastMoveSeconds.toFixed(2)}s`);
             
