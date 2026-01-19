@@ -2659,10 +2659,12 @@ export default function Game() {
                     const opponentTimer = isPlayer1 ? player2Timer : player1Timer
                     const opponentTotalTime = isPlayer1 ? totalTimeRemaining.player2 : totalTimeRemaining.player1
                     const isOvertime = opponentTimer <= 0 || isInOvertime
-                    const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 15
+                    // Используем константы: 15 секунд на ход, 60 секунд овертайм
+                    const MOVE_TIME_LIMIT = 15
+                    const TOTAL_TIME_LIMIT = 60
                     const progress = isOvertime 
-                      ? Math.max(0, Math.min(1, opponentTotalTime / 60))
-                      : Math.max(0, Math.min(1, opponentTimer / timeLimitSeconds))
+                      ? Math.max(0, Math.min(1, opponentTotalTime / TOTAL_TIME_LIMIT))
+                      : Math.max(0, Math.min(1, opponentTimer / MOVE_TIME_LIMIT))
                     return (
                       <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                         <circle
@@ -2715,10 +2717,12 @@ export default function Game() {
                     const opponentTimer = isPlayer1 ? player2Timer : player1Timer
                     const opponentTotalTime = isPlayer1 ? totalTimeRemaining.player2 : totalTimeRemaining.player1
                     const isOvertime = opponentTimer <= 0 || isInOvertime
-                    const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 15
+                    // Используем константы: 15 секунд на ход, 60 секунд овертайм
+                    const MOVE_TIME_LIMIT = 15
+                    const TOTAL_TIME_LIMIT = 60
                     const progress = isOvertime 
-                      ? Math.max(0, Math.min(1, opponentTotalTime / 60))
-                      : Math.max(0, Math.min(1, opponentTimer / timeLimitSeconds))
+                      ? Math.max(0, Math.min(1, opponentTotalTime / TOTAL_TIME_LIMIT))
+                      : Math.max(0, Math.min(1, opponentTimer / MOVE_TIME_LIMIT))
                     return (
                       <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                         <circle
@@ -3217,11 +3221,12 @@ export default function Game() {
                   const myTimer = isPlayer1 ? player1Timer : player2Timer
                   const myTotalTime = isPlayer1 ? totalTimeRemaining.player1 : totalTimeRemaining.player2
                   const isOvertime = myTimer <= 0 || isInOvertime
-                  // Используем timeLimitSeconds для правильного расчета progress
-                  const timeLimitSeconds = gameInfo?.moveTimeLimit ? Math.floor(gameInfo.moveTimeLimit / 1000) : 15
+                  // Используем константы: 15 секунд на ход, 60 секунд овертайм
+                  const MOVE_TIME_LIMIT = 15
+                  const TOTAL_TIME_LIMIT = 60
                   const progress = isOvertime 
-                    ? Math.max(0, Math.min(1, myTotalTime / 60))
-                    : Math.max(0, Math.min(1, myTimer / timeLimitSeconds))
+                    ? Math.max(0, Math.min(1, myTotalTime / TOTAL_TIME_LIMIT))
+                    : Math.max(0, Math.min(1, myTimer / MOVE_TIME_LIMIT))
                   return (
                     <svg className="game-player-timer-ring" viewBox="0 0 100 100">
                       <circle
