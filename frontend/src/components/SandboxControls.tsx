@@ -37,6 +37,7 @@ export default function SandboxControls({
 }: SandboxControlsProps) {
   const [mode, setMode] = useState<'setup' | 'play'>('setup')
   const [showPanel, setShowPanel] = useState(false)
+  const [isHidden, setIsHidden] = useState(false)
   const [chapters, setChapters] = useState<SandboxChapter[]>([])
   const [moves, setMoves] = useState<GameMove[]>([])
   const [selectedMoveIndex, setSelectedMoveIndex] = useState<number | null>(null)
@@ -279,6 +280,16 @@ export default function SandboxControls({
     }
   }
 
+  if (isHidden) {
+    return (
+      <div className="sandbox-studio sandbox-studio-hidden">
+        <button className="show-studio-btn" onClick={() => setIsHidden(false)}>
+          Показать панель
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="sandbox-studio">
       <div className="studio-toolbar">
@@ -291,7 +302,7 @@ export default function SandboxControls({
             setSelectedMoveIndex(null)
           }}
         >
-          <span>✏️</span> Расстановка
+          <span>✏️</span> Свободное перемещение
         </button>
         <button 
           className={`mode-btn ${mode === 'play' ? 'active' : ''}`}
@@ -300,10 +311,25 @@ export default function SandboxControls({
             onModeChange?.('play')
           }}
         >
-          <span>▶️</span> Интерактив
+          <span>▶️</span> Игра
         </button>
-        <button className="panel-toggle" onClick={() => setShowPanel(!showPanel)}>
-          {showPanel ? 'Скрыть панель' : 'Студия'}
+        <button 
+          className="mode-btn"
+          onClick={() => setShowDiceModal(true)}
+        >
+          <span>🎲</span> Установить ход
+        </button>
+        <button 
+          className={`mode-btn ${showPanel ? 'active' : ''}`}
+          onClick={() => setShowPanel(!showPanel)}
+        >
+          <span>🎬</span> Студия
+        </button>
+        <button 
+          className="panel-toggle"
+          onClick={() => setIsHidden(true)}
+        >
+          <span>👁️</span> Скрыть панель
         </button>
       </div>
 
@@ -354,9 +380,6 @@ export default function SandboxControls({
           {mode === 'play' && (
             <div className="studio-section interactive-section">
               <h3>Интерактив</h3>
-              <button className="dice-btn" onClick={() => setShowDiceModal(true)}>
-                <span>🎲</span> Установить кубики
-              </button>
               {diceQueue.length > 0 && (
                 <div className="dice-queue">
                   <div className="queue-label">Очередь:</div>
