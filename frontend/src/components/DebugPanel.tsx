@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, memo } from 'react'
+import { useEffect, useLayoutEffect, useRef, memo, useState } from 'react'
 
 interface DebugPanelProps {
   debugConfig: any
@@ -116,39 +116,117 @@ export const DebugPanel = memo(({
     if (scrollContainerRef.current) scrollContainerRef.current.scrollBy({ top: 50, behavior: 'smooth' })
   }
 
+  // Обработчики для перетаскивания
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.debug-panel-header')) {
+      setIsDragging(true)
+      setDragOffset({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      })
+      e.preventDefault()
+    }
+  }
+
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setPosition({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y
+      })
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, dragOffset])
+
   return (
-    <div 
-      ref={scrollContainerRef}
+    <div
+      ref={panelRef}
       style={{
-        position: 'absolute',
-        top: '10px',
-        left: '10px',
-        zIndex: 100000,
-        background: 'rgba(0,0,0,0.85)',
+        position: 'fixed',
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        zIndex: 1000000,
+        background: 'rgba(0,0,0,0.95)',
         color: 'white',
-        padding: '15px',
         borderRadius: '10px',
         fontSize: '12px',
-        maxHeight: '80vh',
-        height: '80vh',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        border: '1px solid #444',
-        boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-        width: '300px',
+        border: '2px solid #555',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.8)',
+        width: '350px',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
         pointerEvents: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain',
+        userSelect: 'none',
       }}
       onMouseDown={(e) => e.stopPropagation()}
-      onMouseMove={(e) => e.stopPropagation()}
-      onMouseUp={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      onWheel={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
-      onTouchMove={(e) => e.stopPropagation()}
-      onTouchEnd={(e) => e.stopPropagation()}
     >
+      {/* Заголовок с кнопкой закрытия */}
+      <div
+        className="debug-panel-header"
+        onMouseDown={handleMouseDown}
+        style={{
+          padding: '10px 15px',
+          background: 'rgba(50,50,50,0.9)',
+          borderBottom: '1px solid #555',
+          borderRadius: '10px 10px 0 0',
+          cursor: 'move',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <div style={{ fontWeight: 'bold', fontSize: '14px' }}>⚙️ Debug Panel</div>
+        <button
+          onClick={() => setDebugMode(false)}
+          style={{
+            background: 'rgba(200,50,50,0.8)',
+            border: 'none',
+            color: 'white',
+            borderRadius: '5px',
+            padding: '5px 10px',
+            cursor: 'pointer',
+            fontSize: '12px',
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          ✕ Закрыть
+        </button>
+      </div>
+
+      {/* Контент с прокруткой */}
+      <div 
+        ref={scrollContainerRef}
+        style={{
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: '15px',
+          flex: 1,
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseMove={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+      >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10, paddingBottom: '5px' }}>
         <h3 style={{ margin: 0 }}>Debug v15 ({isMobile ? 'Mobile' : 'Desktop'})</h3>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
