@@ -2896,13 +2896,13 @@ export default function BackgammonBoard({
         return
       }
       
-      // 3. Свободное перемещение (долгое зажатие)
-      if (dragging.freeMove && fromPoint !== -1) {
+      // 3. Свободное перемещение (долгое зажатие) или обычное перемещение в sandbox
+      if (isSandbox && fromPoint !== -1 && fromPoint !== null) {
         if (targetPoint !== null && fromPoint !== targetPoint) {
           const points = virtualGameState?.points || []
           const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
           const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
-            const currentPoints = [...points]
+          const currentPoints = [...points]
           
           let isWhite = false
           let hasChecker = false
@@ -2938,11 +2938,13 @@ export default function BackgammonBoard({
               currentBar.white++
             } else if (targetPoint === 25) {
               currentBar.black++
+            } else if (targetPoint === -3) {
+              // Удаление в мусорку - ничего не добавляем
             } else if (targetPoint >= 0 && targetPoint < 24) {
               if (isWhite) {
-              currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
+                currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
               } else {
-              currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) - 1
+                currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) - 1
               }
             }
             
