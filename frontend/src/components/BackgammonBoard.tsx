@@ -1162,6 +1162,9 @@ export default function BackgammonBoard({
     const pW_approx = (width / 2) / 6; 
     const checkerSize_approx = pW_approx * debugConfig.checkerWidthRatio;
 
+    // Сначала собираем все точки с их хитбоксами и расстоянием до клика
+    const pointsWithHitboxes: Array<{ index: number; distance: number; hitbox: { xStart: number; xEnd: number; yStart: number; yEnd: number } }> = []
+    
     for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
       const { x: pX, y: pY, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvas)
       
@@ -1206,9 +1209,24 @@ export default function BackgammonBoard({
           yEnd = Math.max(triangleBase, visualBottom) + padding;
       }
       
+      // Проверяем попадание в хитбокс
       if (actualX >= xStart && actualX <= xEnd && actualY >= yStart && actualY <= yEnd) {
-        return pointIndex
+        // Вычисляем расстояние от клика до центра точки по Y
+        const centerY = (yStart + yEnd) / 2;
+        const distance = Math.abs(actualY - centerY);
+        pointsWithHitboxes.push({ 
+          index: pointIndex, 
+          distance,
+          hitbox: { xStart, xEnd, yStart, yEnd }
+        });
       }
+    }
+    
+    // Если найдены точки, возвращаем ближайшую по Y координате
+    if (pointsWithHitboxes.length > 0) {
+      // Сортируем по расстоянию (ближайшие первыми)
+      pointsWithHitboxes.sort((a, b) => a.distance - b.distance);
+      return pointsWithHitboxes[0].index;
     }
     
     // Проверяем бар (упрощенно - центр экрана)
