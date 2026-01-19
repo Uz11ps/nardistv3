@@ -211,7 +211,7 @@ export const DebugPanel = memo(({
         { key: 'bearOffValidWhiteXOffset', label: 'BearOff Valid White X Offset (px)', min: -1000, max: 1000, step: 1 },
         { key: 'bearOffValidWhiteYOffset', label: 'BearOff Valid White Y Offset (px)', min: -1000, max: 1000, step: 1 },
         { key: 'bearOffValidBlackXOffset', label: 'BearOff Valid Black X Offset (px)', min: -1000, max: 1000, step: 1 },
-        { key: 'bearOffValidYOffset', label: 'BearOff Valid Y Offset (px)', min: -1000, max: 1000, step: 1 },
+        { key: 'bearOffValidBlackYOffset', label: 'BearOff Valid Black Y Offset (px)', min: -1000, max: 1000, step: 1 },
         { key: 'textTopLeftY', label: 'Text Top Left Y', min: -1000, max: 1000, step: 1 },
         { key: 'textTopRightY', label: 'Text Top Right Y', min: -1000, max: 1000, step: 1 },
         { key: 'textBottomLeftY', label: 'Text Bottom Left Y', min: -1000, max: 1000, step: 1 },
@@ -228,7 +228,7 @@ export const DebugPanel = memo(({
               >
                 −
               </button>
-              <span style={{ minWidth: '80px', textAlign: 'center' }}>{debugConfig[item.key].toFixed(3)}</span>
+              <span style={{ minWidth: '80px', textAlign: 'center' }}>{(debugConfig[item.key] ?? 0).toFixed(3)}</span>
               <button
                 onClick={() => handleIncrement(item.key, 1)}
                 style={{ fontSize: '14px', padding: '2px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}

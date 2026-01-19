@@ -3283,7 +3283,7 @@ export default function BackgammonBoard({
                 >
                   −
                 </button>
-                <span style={{ minWidth: '80px', textAlign: 'center' }}>{debugConfig[item.key as keyof typeof debugConfig].toFixed(3)}</span>
+                <span style={{ minWidth: '80px', textAlign: 'center' }}>{(debugConfig[item.key as keyof typeof debugConfig] ?? 0).toFixed(3)}</span>
                 <button
                   onClick={() => handleIncrement(item.key as keyof typeof debugConfig, 1)}
                   style={{ fontSize: '14px', padding: '2px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
