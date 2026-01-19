@@ -224,7 +224,7 @@ export default function Academy() {
     if (!material.purchased && (material.isPaid || material.price > 0)) {
       setShowPurchaseModal(material)
     } else {
-      navigate(`/academy/${material.id}`)
+    navigate(`/academy/${material.id}`)
     }
   }
 
@@ -355,40 +355,40 @@ export default function Academy() {
             </div>
           </div>
         ) : (
-          <div className="academy-material-content">
-            {materialDetail.sections && materialDetail.sections.length > 0 ? (
-              materialDetail.sections.map((section) => (
-                <div key={section.id} className="academy-material-section">
-                  <div className="academy-material-section-header">
-                    {section.icon && <span className="academy-material-section-icon">{section.icon}</span>}
-                    <h3 className="academy-material-section-title">{section.title}</h3>
-                  </div>
+        <div className="academy-material-content">
+          {materialDetail.sections && materialDetail.sections.length > 0 ? (
+            materialDetail.sections.map((section) => (
+              <div key={section.id} className="academy-material-section">
+                <div className="academy-material-section-header">
+                  {section.icon && <span className="academy-material-section-icon">{section.icon}</span>}
+                  <h3 className="academy-material-section-title">{section.title}</h3>
+                </div>
                   <div 
                     className="academy-material-section-content" 
                     dangerouslySetInnerHTML={{ __html: section.content }}
                   />
-                </div>
-              ))
-            ) : (
+              </div>
+            ))
+          ) : (
               <div 
                 className="academy-material-content-text" 
                 dangerouslySetInnerHTML={{ __html: materialDetail.content || 'Содержание отсутствует' }}
               />
-            )}
-            
+          )}
+          
             {/* Тест для курсов - показываем только если курс куплен или бесплатный */}
             {materialDetail.quiz && materialDetail.type === 'course' && (materialDetail.purchased || !materialDetail.isPaid) && (
-              <Quiz
-                courseId={materialDetail.id}
-                quiz={materialDetail.quiz}
-                quizPassed={materialDetail.quizPassed || false}
-                onComplete={(result) => {
-                  // Обновляем статус после прохождения теста
-                  setMaterialDetail(prev => prev ? { ...prev, quizPassed: result.passed } : null)
-                }}
-              />
-            )}
-          </div>
+            <Quiz
+              courseId={materialDetail.id}
+              quiz={materialDetail.quiz}
+              quizPassed={materialDetail.quizPassed || false}
+              onComplete={(result) => {
+                // Обновляем статус после прохождения теста
+                setMaterialDetail(prev => prev ? { ...prev, quizPassed: result.passed } : null)
+              }}
+            />
+          )}
+        </div>
         )}
       </PageLayout>
     )
