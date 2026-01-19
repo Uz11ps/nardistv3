@@ -51,11 +51,19 @@ interface MaterialSection {
   icon?: string
 }
 
-interface MaterialDetail extends Course {
-  type?: string
+interface MaterialDetail {
+  id: string
+  title: string
+  author: string
+  price: number
+  purchased: boolean
+  isCompleted?: boolean
+  description?: string
+  gameMode?: 'long' | 'short'
+  type?: 'course' | 'article' | 'onboarding'
+  isPaid?: boolean
   sections?: MaterialSection[]
   content?: string
-  isPaid?: boolean
   quiz?: {
     questions: Array<{
       id: number
