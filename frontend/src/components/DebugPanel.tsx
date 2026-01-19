@@ -33,7 +33,19 @@ export const DebugPanel = memo(({
   const [position, setPosition] = useState({ x: 50, y: 50 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [selectedSize, setSelectedSize] = useState<DebugSize | null>(null)
+  const [activeCategory, setActiveCategory] = useState<'dice' | 'bearoff' | 'board' | 'text'>('dice')
+  const [activeSide, setActiveSide] = useState<'all' | 'white' | 'black'>('all')
+  // Инициализируем размер на основе текущей ширины
+  const getInitialSize = (): DebugSize => {
+    if (containerWidth > 0) {
+      const closest = DEBUG_SIZES.reduce((prev, curr) => 
+        Math.abs(curr - containerWidth) < Math.abs(prev - containerWidth) ? curr : prev
+      )
+      return closest
+    }
+    return 768 // Дефолт если ширина неизвестна
+  }
+  const [selectedSize, setSelectedSize] = useState<DebugSize>(getInitialSize())
   const panelRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef<number>(0)
@@ -66,10 +78,17 @@ export const DebugPanel = memo(({
     return size < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
   }
   
-  // При изменении размера загружаем соответствующий конфиг
+  // Флаг для отслеживания, был ли конфиг загружен для текущего размера
+  const configLoadedForSizeRef = useRef<DebugSize | null>(null)
+  
+  // При изменении размера загружаем соответствующий конфиг (только при переключении размера)
   useEffect(() => {
-    const config = loadConfigForSize(selectedSize)
-    setDebugConfig(config)
+    // Загружаем конфиг только если размер изменился
+    if (configLoadedForSizeRef.current !== selectedSize) {
+      const config = loadConfigForSize(selectedSize)
+      setDebugConfig(config)
+      configLoadedForSizeRef.current = selectedSize
+    }
     
     // Изменяем размер контейнера для тестирования
     if (containerRef?.current) {
@@ -77,7 +96,7 @@ export const DebugPanel = memo(({
       containerRef.current.style.maxWidth = `${selectedSize}px`
       containerRef.current.style.margin = '0 auto'
     }
-  }, [selectedSize, containerRef, MOBILE_CONFIG, DESKTOP_CONFIG])
+  }, [selectedSize, containerRef])
   
   // Сохраняем позицию скролла при каждом скролле
   useEffect(() => {
@@ -317,20 +336,17 @@ export const DebugPanel = memo(({
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '5px', flexWrap: 'wrap' }}>
           <button 
             onClick={() => {
-              if (!selectedSize) return
               const defaultConfig = selectedSize < 768 ? { ...MOBILE_CONFIG } : { ...DESKTOP_CONFIG }
               setDebugConfig(defaultConfig)
               localStorage.removeItem(getConfigKey(selectedSize))
             }}  
-            disabled={!selectedSize}
-            style={{ fontSize: '12px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: selectedSize ? 'pointer' : 'not-allowed', borderRadius: '5px', flex: 1, opacity: selectedSize ? 1 : 0.5 }}
-            title={selectedSize ? `Сбросить конфиг для ${selectedSize}px на дефолт` : 'Выберите размер'}
+            style={{ fontSize: '12px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
+            title={`Сбросить конфиг для ${selectedSize}px на дефолт`}
           >
-            Reset {selectedSize ? `(${selectedSize}px)` : ''}
+            Reset ({selectedSize}px)
           </button>
           <button 
             onClick={() => {
-              if (!selectedSize) return
               try {
                 // Используем актуальный конфиг из ref
                 const configToSave = { ...configRef.current }
@@ -349,60 +365,147 @@ export const DebugPanel = memo(({
                 alert('Ошибка при сохранении: ' + e)
               }
             }}  
-            disabled={!selectedSize}
-            style={{ fontSize: '12px', padding: '5px 10px', background: '#4a9', border: '1px solid #6bb', color: '#fff', cursor: selectedSize ? 'pointer' : 'not-allowed', borderRadius: '5px', flex: 1, opacity: selectedSize ? 1 : 0.5 }}
-            title={selectedSize ? `Сохранить конфиг для ${selectedSize}px` : 'Выберите размер'}
+            style={{ fontSize: '12px', padding: '5px 10px', background: '#4a9', border: '1px solid #6bb', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
+            title={`Сохранить конфиг для ${selectedSize}px`}
           >
-            💾 Save {selectedSize ? `(${selectedSize}px)` : ''}
+            💾 Save ({selectedSize}px)
           </button>
-          <button onClick={scrollUp} style={{ fontSize: '16px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px' }}>⬆️</button>
-          <button onClick={scrollDown} style={{ fontSize: '16px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px' }}>⬇️</button>
         </div>
-        
-        {[
-          { key: 'sideMarginLeftPct', label: 'Side Margin Left', min: 0, max: 2, step: 0.001 },
-          { key: 'sideMarginRightPct', label: 'Side Margin Right', min: 0, max: 2, step: 0.001 },
-          { key: 'barMarginLeftPct', label: 'Bar Margin Left (Offset)', min: 0, max: 2, step: 0.001 },
-          { key: 'barMarginRightPct', label: 'Bar Margin Right (Offset)', min: 0, max: 2, step: 0.001 },
-          { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 2, step: 0.001 },
-          { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 2, step: 0.001 },
-          { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 2, step: 0.001 },
-          { key: 'checkerWidthRatio', label: 'Checker Width Ratio', min: 0.01, max: 20, step: 0.01 },
-          { key: 'checkerHeightRatio', label: 'Checker Height Ratio', min: 0.001, max: 5, step: 0.001 },
-          { key: 'checkerDrawScale', label: 'Checker Draw Scale', min: 0.01, max: 20, step: 0.01 },
-          { key: 'diceP1X', label: 'Dice P1 X (0-1)', min: -2, max: 3, step: 0.01 },
-          { key: 'diceP1Y', label: 'Dice P1 Y (0-1)', min: -2, max: 3, step: 0.01 },
-          { key: 'diceP2X', label: 'Dice P2 X (0-1)', min: -2, max: 3, step: 0.01 },
-          { key: 'diceP2Y', label: 'Dice P2 Y (0-1)', min: -2, max: 3, step: 0.01 },
-          { key: 'checkerTopOffset', label: 'Top Checker Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'checkerBottomOffset', label: 'Bottom Checker Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'highlightWidthScale', label: 'Highlight Width Scale', min: 0.01, max: 20, step: 0.01 },
-          { key: 'highlightHeightScale', label: 'Highlight Height Scale', min: 0.01, max: 20, step: 0.01 },
-          { key: 'highlightXOffset', label: 'Highlight X Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'highlightYOffset', label: 'Highlight Y Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'validHighlightWidthScale', label: 'Valid Highlight Width Scale', min: 0.01, max: 20, step: 0.01 },
-          { key: 'validHighlightHeightScale', label: 'Valid Highlight Height Scale', min: 0.01, max: 20, step: 0.01 },
-          { key: 'validHighlightXOffset', label: 'Valid Highlight X Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'validHighlightYOffset', label: 'Valid Highlight Y Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'dragCheckerSizeScale', label: 'Drag Checker Size Scale', min: 0.01, max: 20, step: 0.01 },
-          { key: 'bearOffCheckerScale', label: 'BearOff Checker Size', min: 0.01, max: 20, step: 0.01 },
-          { key: 'bearOffWhiteXOffset', label: 'BearOff White X Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'bearOffWhiteYOffset', label: 'BearOff White Y Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'bearOffBlackXOffset', label: 'BearOff Black X Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'bearOffBlackYOffset', label: 'BearOff Black Y Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'dragCheckerXOffset', label: 'Drag Checker X Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'dragCheckerYOffset', label: 'Drag Checker Y Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'bearOffValidWidthScale', label: 'BearOff Valid Width Scale', min: 0.01, max: 20, step: 0.01 },
-          { key: 'bearOffValidHeightScale', label: 'BearOff Valid Height Scale', min: 0.01, max: 20, step: 0.01 },
-          { key: 'bearOffValidWhiteXOffset', label: 'BearOff Valid White X Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'bearOffValidWhiteYOffset', label: 'BearOff Valid White Y Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'bearOffValidBlackXOffset', label: 'BearOff Valid Black X Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'bearOffValidBlackYOffset', label: 'BearOff Valid Black Y Offset (px)', min: -1000, max: 1000, step: 1 },
-          { key: 'textTopLeftY', label: 'Text Top Left Y', min: -1000, max: 1000, step: 1 },
-          { key: 'textTopRightY', label: 'Text Top Right Y', min: -1000, max: 1000, step: 1 },
-          { key: 'textBottomLeftY', label: 'Text Bottom Left Y', min: -1000, max: 1000, step: 1 },
-          { key: 'textBottomRightY', label: 'Text Bottom Right Y', min: -1000, max: 1000, step: 1 },
-        ].map(item => (
+
+        {/* Фильтры категорий */}
+        <div style={{ marginBottom: '15px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+          <div style={{ marginBottom: '8px', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+            Категория:
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+            {[
+              { id: 'dice', label: '🎲 Кости' },
+              { id: 'bearoff', label: '📦 Скид' },
+              { id: 'board', label: '🎯 Доска' },
+              { id: 'text', label: '🔢 Индексы' },
+            ].map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setActiveCategory(cat.id as any)
+                  setActiveSide('all')
+                }}
+                style={{
+                  fontSize: '11px',
+                  padding: '6px 10px',
+                  background: activeCategory === cat.id ? '#C93C3D' : '#444',
+                  border: activeCategory === cat.id ? '2px solid #fff' : '1px solid #666',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  borderRadius: '5px',
+                  fontWeight: activeCategory === cat.id ? 'bold' : 'normal',
+                }}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+          
+          {/* Фильтр сторон (только для BearOff) */}
+          {activeCategory === 'bearoff' && (
+            <div>
+              <div style={{ marginBottom: '8px', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+                Сторона:
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {[
+                  { id: 'all', label: 'Все' },
+                  { id: 'white', label: '⚪ Белые' },
+                  { id: 'black', label: '⚫ Черные' },
+                ].map(side => (
+                  <button
+                    key={side.id}
+                    onClick={() => setActiveSide(side.id as any)}
+                    style={{
+                      fontSize: '11px',
+                      padding: '6px 10px',
+                      background: activeSide === side.id ? '#4a9' : '#444',
+                      border: activeSide === side.id ? '2px solid #fff' : '1px solid #666',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      borderRadius: '5px',
+                      fontWeight: activeSide === side.id ? 'bold' : 'normal',
+                    }}
+                  >
+                    {side.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Определяем параметры по категориям */}
+        {(() => {
+          const allItems = [
+            // Кости
+            { key: 'diceP1X', label: 'Dice P1 X (0-1)', min: -2, max: 3, step: 0.01, category: 'dice', side: 'all' },
+            { key: 'diceP1Y', label: 'Dice P1 Y (0-1)', min: -2, max: 3, step: 0.01, category: 'dice', side: 'all' },
+            { key: 'diceP2X', label: 'Dice P2 X (0-1)', min: -2, max: 3, step: 0.01, category: 'dice', side: 'all' },
+            { key: 'diceP2Y', label: 'Dice P2 Y (0-1)', min: -2, max: 3, step: 0.01, category: 'dice', side: 'all' },
+            
+            // Скид - Общие
+            { key: 'bearOffHeightPct', label: 'BearOff Height', min: 0, max: 2, step: 0.001, category: 'bearoff', side: 'all' },
+            { key: 'bearOffCheckerScale', label: 'BearOff Checker Size', min: 0.01, max: 20, step: 0.01, category: 'bearoff', side: 'all' },
+            { key: 'bearOffValidWidthScale', label: 'BearOff Valid Width Scale', min: 0.01, max: 20, step: 0.01, category: 'bearoff', side: 'all' },
+            { key: 'bearOffValidHeightScale', label: 'BearOff Valid Height Scale', min: 0.01, max: 20, step: 0.01, category: 'bearoff', side: 'all' },
+            // Скид - Белые
+            { key: 'bearOffWhiteXOffset', label: 'BearOff White X Offset (px)', min: -1000, max: 1000, step: 1, category: 'bearoff', side: 'white' },
+            { key: 'bearOffWhiteYOffset', label: 'BearOff White Y Offset (px)', min: -1000, max: 1000, step: 1, category: 'bearoff', side: 'white' },
+            { key: 'bearOffValidWhiteXOffset', label: 'BearOff Valid White X Offset (px)', min: -1000, max: 1000, step: 1, category: 'bearoff', side: 'white' },
+            { key: 'bearOffValidWhiteYOffset', label: 'BearOff Valid White Y Offset (px)', min: -1000, max: 1000, step: 1, category: 'bearoff', side: 'white' },
+            // Скид - Черные
+            { key: 'bearOffBlackXOffset', label: 'BearOff Black X Offset (px)', min: -1000, max: 1000, step: 1, category: 'bearoff', side: 'black' },
+            { key: 'bearOffBlackYOffset', label: 'BearOff Black Y Offset (px)', min: -1000, max: 1000, step: 1, category: 'bearoff', side: 'black' },
+            { key: 'bearOffValidBlackXOffset', label: 'BearOff Valid Black X Offset (px)', min: -1000, max: 1000, step: 1, category: 'bearoff', side: 'black' },
+            { key: 'bearOffValidBlackYOffset', label: 'BearOff Valid Black Y Offset (px)', min: -1000, max: 1000, step: 1, category: 'bearoff', side: 'black' },
+            
+            // Доска - Общие
+            { key: 'sideMarginLeftPct', label: 'Side Margin Left', min: 0, max: 2, step: 0.001, category: 'board', side: 'all' },
+            { key: 'sideMarginRightPct', label: 'Side Margin Right', min: 0, max: 2, step: 0.001, category: 'board', side: 'all' },
+            { key: 'barMarginLeftPct', label: 'Bar Margin Left (Offset)', min: 0, max: 2, step: 0.001, category: 'board', side: 'all' },
+            { key: 'barMarginRightPct', label: 'Bar Margin Right (Offset)', min: 0, max: 2, step: 0.001, category: 'board', side: 'all' },
+            { key: 'barWidthPct', label: 'Bar Width', min: 0, max: 2, step: 0.001, category: 'board', side: 'all' },
+            { key: 'topMarginPct', label: 'Top Margin', min: 0, max: 2, step: 0.001, category: 'board', side: 'all' },
+            // Доска - Шашки
+            { key: 'checkerWidthRatio', label: 'Checker Width Ratio', min: 0.01, max: 20, step: 0.01, category: 'board', side: 'all' },
+            { key: 'checkerHeightRatio', label: 'Checker Height Ratio', min: 0.001, max: 5, step: 0.001, category: 'board', side: 'all' },
+            { key: 'checkerDrawScale', label: 'Checker Draw Scale', min: 0.01, max: 20, step: 0.01, category: 'board', side: 'all' },
+            { key: 'checkerTopOffset', label: 'Top Checker Offset (px)', min: -1000, max: 1000, step: 1, category: 'board', side: 'all' },
+            { key: 'checkerBottomOffset', label: 'Bottom Checker Offset (px)', min: -1000, max: 1000, step: 1, category: 'board', side: 'all' },
+            // Доска - Подсветка
+            { key: 'highlightWidthScale', label: 'Highlight Width Scale', min: 0.01, max: 20, step: 0.01, category: 'board', side: 'all' },
+            { key: 'highlightHeightScale', label: 'Highlight Height Scale', min: 0.01, max: 20, step: 0.01, category: 'board', side: 'all' },
+            { key: 'highlightXOffset', label: 'Highlight X Offset (px)', min: -1000, max: 1000, step: 1, category: 'board', side: 'all' },
+            { key: 'highlightYOffset', label: 'Highlight Y Offset (px)', min: -1000, max: 1000, step: 1, category: 'board', side: 'all' },
+            { key: 'validHighlightWidthScale', label: 'Valid Highlight Width Scale', min: 0.01, max: 20, step: 0.01, category: 'board', side: 'all' },
+            { key: 'validHighlightHeightScale', label: 'Valid Highlight Height Scale', min: 0.01, max: 20, step: 0.01, category: 'board', side: 'all' },
+            { key: 'validHighlightXOffset', label: 'Valid Highlight X Offset (px)', min: -1000, max: 1000, step: 1, category: 'board', side: 'all' },
+            { key: 'validHighlightYOffset', label: 'Valid Highlight Y Offset (px)', min: -1000, max: 1000, step: 1, category: 'board', side: 'all' },
+            // Доска - Перетаскивание
+            { key: 'dragCheckerSizeScale', label: 'Drag Checker Size Scale', min: 0.01, max: 20, step: 0.01, category: 'board', side: 'all' },
+            { key: 'dragCheckerXOffset', label: 'Drag Checker X Offset (px)', min: -1000, max: 1000, step: 1, category: 'board', side: 'all' },
+            { key: 'dragCheckerYOffset', label: 'Drag Checker Y Offset (px)', min: -1000, max: 1000, step: 1, category: 'board', side: 'all' },
+            
+            // Индексы
+            { key: 'textTopLeftY', label: 'Text Top Left Y', min: -1000, max: 1000, step: 1, category: 'text', side: 'all' },
+            { key: 'textTopRightY', label: 'Text Top Right Y', min: -1000, max: 1000, step: 1, category: 'text', side: 'all' },
+            { key: 'textBottomLeftY', label: 'Text Bottom Left Y', min: -1000, max: 1000, step: 1, category: 'text', side: 'all' },
+            { key: 'textBottomRightY', label: 'Text Bottom Right Y', min: -1000, max: 1000, step: 1, category: 'text', side: 'all' },
+          ]
+          
+          const filteredItems = allItems.filter(item => {
+            if (item.category !== activeCategory) return false
+            if (activeCategory === 'bearoff' && activeSide !== 'all' && item.side !== activeSide && item.side !== 'all') return false
+            return true
+          })
+          
+          return filteredItems.map(item => (
           <div key={item.key} style={{ marginBottom: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
               <label style={{ flex: 1 }}>{item.label}</label>
@@ -436,7 +539,8 @@ export const DebugPanel = memo(({
               style={{ width: '100%' }}
             />
           </div>
-        ))}
+          ))
+        })()}
         
         <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #444' }}>
           <div style={{ marginBottom: '10px' }}>
