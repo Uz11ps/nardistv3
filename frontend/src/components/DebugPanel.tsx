@@ -92,9 +92,30 @@ export const DebugPanel = memo(({
     
     // Изменяем размер контейнера для тестирования
     if (containerRef?.current) {
-      containerRef.current.style.width = `${selectedSize}px`
-      containerRef.current.style.maxWidth = `${selectedSize}px`
-      containerRef.current.style.margin = '0 auto'
+      const container = containerRef.current
+      // Устанавливаем фиксированный размер доски (независимо от размеров окна)
+      const fixedWidth = selectedSize
+      
+      // Вычисляем пропорциональную высоту на основе текущего соотношения сторон
+      const currentWidth = container.offsetWidth || fixedWidth
+      const currentHeight = container.offsetHeight || (fixedWidth * 1.5)
+      const aspectRatio = currentHeight / currentWidth || 1.5
+      const fixedHeight = fixedWidth * aspectRatio
+      
+      // Устанавливаем фиксированный размер доски
+      container.style.width = `${fixedWidth}px`
+      container.style.maxWidth = `${fixedWidth}px`
+      container.style.minWidth = `${fixedWidth}px`
+      container.style.height = `${fixedHeight}px`
+      container.style.maxHeight = `${fixedHeight}px`
+      container.style.minHeight = `${fixedHeight}px`
+      container.style.margin = '0 auto'
+      container.style.flex = 'none'
+      container.style.boxSizing = 'border-box'
+      container.style.overflow = 'hidden'
+      // Добавляем атрибут для отслеживания в ResizeObserver
+      container.setAttribute('data-debug-size', fixedWidth.toString())
+      container.setAttribute('data-debug-height', fixedHeight.toString())
     }
   }, [selectedSize, containerRef])
   

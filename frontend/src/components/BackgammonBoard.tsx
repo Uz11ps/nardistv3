@@ -2017,6 +2017,31 @@ export default function BackgammonBoard({
         const container = containerRef.current
         const rect = container.getBoundingClientRect()
         
+        // Если установлен фиксированный размер в режиме дебага, используем его
+        const debugSize = container.getAttribute('data-debug-size')
+        if (debugSize && debugMode) {
+          const fixedSize = parseInt(debugSize, 10)
+          // Используем сохраненную высоту
+          const savedHeight = container.getAttribute('data-debug-height')
+          const fixedHeight = savedHeight ? parseFloat(savedHeight) : fixedSize * 1.5
+          
+          // Устанавливаем фиксированный размер доски (независимо от размеров окна или родителя)
+          container.style.width = `${fixedSize}px`
+          container.style.maxWidth = `${fixedSize}px`
+          container.style.minWidth = `${fixedSize}px`
+          container.style.height = `${fixedHeight}px`
+          container.style.maxHeight = `${fixedHeight}px`
+          container.style.minHeight = `${fixedHeight}px`
+          container.style.boxSizing = 'border-box'
+          container.style.overflow = 'hidden'
+          
+          canvasRef.current.width = fixedSize
+          canvasRef.current.height = fixedHeight
+          setContainerHeight(fixedHeight)
+          drawBoard()
+          return
+        }
+        
         // Ограничиваем размеры canvas, чтобы предотвратить огромные размеры в реплее/модальных окнах
         const isInModal = container.closest('.replay-modal') !== null || 
                           container.closest('.analysis-modal-v2') !== null || 
@@ -2050,7 +2075,7 @@ export default function BackgammonBoard({
     }
     
     return () => resizeObserver.disconnect()
-  }, [drawBoard])
+  }, [drawBoard, debugMode])
   
   // Обработка тройного клика (быстрый ход) - через счетчик кликов
   const handleTripleClick = (pointIndex: number) => {
@@ -3389,7 +3414,21 @@ export default function BackgammonBoard({
         <DebugPanel
           debugConfig={debugConfig}
           setDebugConfig={setDebugConfig}
-          setDebugMode={setDebugMode}
+          setDebugMode={(mode) => {
+            setDebugMode(mode)
+            // При выходе из режима дебага очищаем фиксированный размер
+            if (!mode && containerRef.current) {
+              containerRef.current.removeAttribute('data-debug-size')
+              containerRef.current.removeAttribute('data-debug-height')
+              containerRef.current.style.width = ''
+              containerRef.current.style.maxWidth = ''
+              containerRef.current.style.minWidth = ''
+              containerRef.current.style.height = ''
+              containerRef.current.style.maxHeight = ''
+              containerRef.current.style.minHeight = ''
+              containerRef.current.style.flex = ''
+            }
+          }}
           debugDice={debugDice}
           setDebugDice={setDebugDice}
           containerWidth={containerRef.current?.offsetWidth || 0}
