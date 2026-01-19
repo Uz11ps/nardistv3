@@ -110,10 +110,10 @@ export default function BackgammonBoard({
       checkerWidthRatio: 1.5,
       checkerHeightRatio: 0.252,
       checkerDrawScale: 1.28,
-      diceP1X: 0.5,
-      diceP1Y: 0.6,
+      diceP1X: 0.73,
+      diceP1Y: 0.51,
       diceP2X: 0.16,
-      diceP2Y: 0.24,
+      diceP2Y: 0.27,
       checkerTopOffset: -349,
       checkerBottomOffset: 349,
       // Legacy text offsets (for fallback)
@@ -2203,13 +2203,14 @@ export default function BackgammonBoard({
             }
             
             // В setup режиме или если нет возможных ходов - свободное перемещение
+            // Используем координаты точки как начальную позицию, чтобы шашка не прыгала
             setDragging({ 
               pointIndex, 
-              offsetX: x - pX, 
-              offsetY: y - pY,
+              offsetX: 0, 
+              offsetY: 0,
               freeMove: true 
             })
-            setDragPosition({ x, y })
+            setDragPosition({ x: pX, y: pY })
             return
           }
         }
@@ -2598,13 +2599,14 @@ export default function BackgammonBoard({
           // В режиме расстановки сразу включаем свободное перемещение
           if (sandboxMode === 'setup') {
             const { x: pX, y: pY } = getPointCoordinates(pointIndex, canvas)
+            // Используем координаты точки как начальную позицию, чтобы шашка не прыгала
             setDragging({ 
               pointIndex, 
-              offsetX: x - pX, 
-              offsetY: y - pY,
+              offsetX: 0, 
+              offsetY: 0,
               freeMove: true 
             })
-            setDragPosition({ x, y })
+            setDragPosition({ x: pX, y: pY })
             return
           }
 
@@ -2616,13 +2618,14 @@ export default function BackgammonBoard({
               // Активируем режим свободного перемещения
               const { pointIndex: startPoint, x: startX, y: startY } = longPressStartRef.current
               const { x: pointX, y: pointY } = getPointCoordinates(startPoint, canvasRef.current)
+              // Используем координаты точки как начальную позицию, чтобы шашка не прыгала
               setDragging({ 
                 pointIndex: startPoint, 
-                offsetX: startX - pointX, 
-                offsetY: startY - pointY,
+                offsetX: 0, 
+                offsetY: 0,
                 freeMove: true 
               })
-              setDragPosition({ x: startX, y: startY })
+              setDragPosition({ x: pointX, y: pointY })
               longPressStartRef.current = null
             }
           }, 300)
