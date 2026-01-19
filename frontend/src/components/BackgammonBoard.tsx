@@ -415,15 +415,19 @@ export default function BackgammonBoard({
     })
 
     // Применяем уже завершенные серверные ходы из текущей очереди
-    completedServerMoves.forEach(move => {
-      // Определяем цвет шашки бота/другого игрока
-      const isWhiteMove = move.isWhite !== undefined ? move.isWhite : (isPlayer1 ? false : true)
-      if ((move as any).steps) {
-        (move as any).steps.forEach((s: any) => applyStep(s, isWhiteMove))
-      } else {
-        applyStep(move, isWhiteMove)
-      }
-    })
+    // ВАЖНО: Применяем только если анимация еще идет (есть animatingChecker или serverMoveQueue не пуста)
+    // Это предотвращает двойное применение ходов, когда gameState уже обновлен с финальным состоянием
+    if (animatingChecker || serverMoveQueue.length > 0) {
+      completedServerMoves.forEach(move => {
+        // Определяем цвет шашки бота/другого игрока
+        const isWhiteMove = move.isWhite !== undefined ? move.isWhite : (isPlayer1 ? false : true)
+        if ((move as any).steps) {
+          (move as any).steps.forEach((s: any) => applyStep(s, isWhiteMove))
+        } else {
+          applyStep(move, isWhiteMove)
+        }
+      })
+    }
     
     // ВАЖНО: Анимируемая шашка должна быть ВРЕМЕННО удалена из точки 'from', 
     // чтобы не дублироваться (одна стоит, вторая летит).
@@ -483,7 +487,9 @@ export default function BackgammonBoard({
   useEffect(() => {
     if (serverMoves && serverMoves.length > 0) {
       console.log('🤖 Received server moves for animation:', serverMoves)
-      setCompletedServerMoves([]) // Сбрасываем завершенные ходы при новой пачке
+      // ВАЖНО: Не сбрасываем completedServerMoves, если анимация еще идет
+      // Это предотвращает визуальный "откат" последних ходов в дубле
+      // completedServerMoves будут очищены только после завершения всех анимаций
       setServerMoveQueue(prev => [...prev, ...serverMoves])
     }
   }, [serverMoves])
@@ -1950,15 +1956,23 @@ export default function BackgammonBoard({
         if (finishedChecker.isServerMove) {
           setCompletedServerMoves(prev => [...prev, finishedChecker])
           
-          // Если это был последний серверный ход из очереди
-          if (serverMoveQueue.length === 0 && onServerMovesFinished) {
-            console.log('🤖 All server moves finished')
-            // ВАЖНО: Вызываем сразу, без задержки, чтобы состояние обновилось и можно было ходить
-              // Сначала очищаем локальные завершенные ходы, чтобы избежать дублирования
-              // при обновлении основного gameState из пропсов
-              setCompletedServerMoves([]) 
-              onServerMovesFinished()
-          }
+          // Проверяем, остались ли еще ходы в очереди
+          // Используем setTimeout, чтобы проверить состояние после обновления очереди
+          setTimeout(() => {
+            setServerMoveQueue(prev => {
+              // Если это был последний серверный ход из очереди
+              if (prev.length === 0 && onServerMovesFinished) {
+                console.log('🤖 All server moves finished')
+                // ВАЖНО: Очищаем завершенные ходы только после завершения ВСЕХ анимаций
+                // Это предотвращает визуальный "откат" при обновлении gameState
+                setTimeout(() => {
+                  setCompletedServerMoves([])
+                }, 50) // Небольшая задержка для завершения всех обновлений состояния
+                onServerMovesFinished()
+              }
+              return prev
+            })
+          }, 0)
         } else {
           // Локальный ход пользователя
           onMove(finishedChecker.from, finishedChecker.to, finishedChecker.die, finishedChecker.steps)
@@ -3589,30 +3603,33 @@ export default function BackgammonBoard({
               const movesCount = effectiveDice.length - usedDiceIndices.size;
 
               if (isActuallyDoubles) {
-                // Всегда показываем 2 кубика при дубле
                 // При дубле всего 4 хода
-                // Прогресс: сколько ходов сделано из 4
+                // Первый кубик: после 1 хода - затемнение на 50%, после 2 ходов - полностью скрыт
+                // Второй кубик: после 3 ходов - затемнение на 50%, после 4 ходов - полностью скрыт
                 const totalMoves = 4;
                 const madeMoves = totalMoves - movesCount;
                 
-                // Для первого кубика: полностью прозрачен после 2 ходов
-                // Для второго кубика: полностью прозрачен после 4 ходов
-                const d1Progress = Math.max(0, Math.min(2, madeMoves)) / 2; // 0-1, где 1 = полностью использован
-                const d2Progress = Math.max(0, Math.min(2, madeMoves - 2)) / 2; // 0-1, где 1 = полностью использован
+                // Для первого кубика: 1 ход = 0.5 (50% затемнения), 2 хода = 1.0 (полностью скрыт)
+                const d1Used = Math.min(2, madeMoves);
+                const d1Progress = d1Used >= 2 ? 1.0 : (d1Used >= 1 ? 0.5 : 0); // 0, 0.5, или 1.0
+                const d1FullyUsed = d1Used >= 2;
                 
-                // Функция для отрисовки треугольного overlay
+                // Для второго кубика: 3 хода = 0.5 (50% затемнения), 4 хода = 1.0 (полностью скрыт)
+                const d2Used = Math.max(0, madeMoves - 2);
+                const d2Progress = d2Used >= 2 ? 1.0 : (d2Used >= 1 ? 0.5 : 0); // 0, 0.5, или 1.0
+                const d2FullyUsed = d2Used >= 2;
+                
+                // Функция для отрисовки треугольного overlay (ровно половина кубика)
                 const renderTriangleOverlay = (progress: number) => {
                   if (progress <= 0) return null;
                   
-                  // progress от 0 до 1: 0 = нет затемнения, 1 = полностью затемнен (половина кубика)
+                  // progress: 0.5 = затемнение ровно половины, 1.0 = полностью скрыт
                   // Рисуем треугольник от верхнего левого угла к нижнему правому
-                  // При progress = 0.5 (1 ход из 4) - треугольник закрывает половину
-                  // При progress = 1.0 (2 хода из 4) - треугольник закрывает всю половину
-                  
-                  // Если progress >= 1, закрываем всю половину (от левого верхнего до правого нижнего угла)
-                  const clipPath = progress >= 1
+                  // При progress = 0.5 - треугольник закрывает ровно половину (диагональ)
+                  // При progress = 1.0 - треугольник закрывает всю половину
+                  const clipPath = progress >= 1.0
                     ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' // Полностью закрыт
-                    : `polygon(0% 0%, ${progress * 100}% 0%, ${progress * 100}% ${progress * 100}%, 0% ${progress * 100}%)`;
+                    : 'polygon(0% 0%, 100% 0%, 0% 100%)'; // Ровно половина (треугольник по диагонали)
                   
                   return (
                     <div
@@ -3623,9 +3640,7 @@ export default function BackgammonBoard({
                         right: 0,
                         bottom: 0,
                         background: 'rgba(0, 0, 0, 0.6)',
-                        clipPath: progress >= 1 
-                          ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)'
-                          : `polygon(0% 0%, ${progress * 100}% 0%, 0% ${progress * 100}%)`,
+                        clipPath: clipPath,
                         borderRadius: '12px',
                         pointerEvents: 'none',
                         zIndex: 1,
@@ -3636,14 +3651,18 @@ export default function BackgammonBoard({
 
                 return (
                   <>
-                    <div style={{ position: 'relative', transition: 'opacity 0.3s ease' }}>
-                      {renderTriangleOverlay(d1Progress)}
-                      <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
-                    </div>
-                    <div style={{ position: 'relative', transition: 'opacity 0.3s ease' }}>
-                      {renderTriangleOverlay(d2Progress)}
-                      <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
-                    </div>
+                    {!d1FullyUsed && (
+                      <div style={{ position: 'relative', transition: 'opacity 0.3s ease' }}>
+                        {renderTriangleOverlay(d1Progress)}
+                        <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
+                      </div>
+                    )}
+                    {!d2FullyUsed && (
+                      <div style={{ position: 'relative', transition: 'opacity 0.3s ease' }}>
+                        {renderTriangleOverlay(d2Progress)}
+                        <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
+                      </div>
+                    )}
                   </>
                 );
               }

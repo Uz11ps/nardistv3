@@ -1034,10 +1034,35 @@ export class GamesService {
       currentState.movesFromPoint = {};
       this.logger.log(`🔄 Turn switched: all dice used. Old player: ${oldPlayer}, New player: ${currentState.currentPlayer} (Sandbox: ${isSandbox})`);
     } else {
-      // В Sandbox режиме, если кубики еще остались, НЕ переключаем ход
+      // В Sandbox режиме в режиме "игра" применяем ту же логику, что и в обычной игре
+      // Проверяем валидные ходы для всех режимов (включая sandbox в режиме "игра")
       if (isSandbox) {
-        currentState.dice = remainingDice;
-        this.logger.log(`🟡 Sandbox: keeping same player ${currentState.currentPlayer} because dice remain [${remainingDice.join(', ')}]`);
+        // В sandbox режиме проверяем валидные ходы, как в обычной игре
+        // Это предотвращает бесконечное использование одних и тех же кубиков
+        let hasValidMoves = false;
+        
+        if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
+          const remainingMoves = engine.getAllValidMoves(currentState, remainingDice, false, game.rngSeed);
+          hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
+          this.logger.log(`🔍 [Sandbox] Checking remaining moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}, movesFound=${remainingMoves.length}`);
+          
+          if (hasValidMoves) {
+            // Есть еще ходы - оставляем того же игрока
+            currentState.dice = remainingDice;
+            this.logger.log(`🟡 [Sandbox] Keeping same player: valid moves remain with dice [${remainingDice.join(', ')}]`);
+          } else {
+            // Ходов больше нет - ПРИНУДИТЕЛЬНАЯ смена хода
+            currentState.dice = [];
+            currentState.currentPlayer = currentState.currentPlayer === 0 ? 1 : 0;
+            currentState.movesFromHead = 0;
+            currentState.movesFromPoint = {};
+            this.logger.log(`🔄 [Sandbox] Turn switched: no valid moves remain with [${remainingDice.join(', ')}]. New player: ${currentState.currentPlayer}`);
+          }
+        } else {
+          // Если нет метода getAllValidMoves, оставляем кубики (для режима "расстановка")
+          currentState.dice = remainingDice;
+          this.logger.log(`🟡 [Sandbox] Keeping same player ${currentState.currentPlayer} because dice remain [${remainingDice.join(', ')}] (no getAllValidMoves method)`);
+        }
       } else {
         // ОБЯЗАТЕЛЬНАЯ проверка: есть ли валидные ходы с оставшимися кубиками после применения всех ходов
         let hasValidMoves = false;

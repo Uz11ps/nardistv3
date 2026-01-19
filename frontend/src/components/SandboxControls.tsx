@@ -37,7 +37,7 @@ export default function SandboxControls({
 }: SandboxControlsProps) {
   const [mode, setMode] = useState<'setup' | 'play'>('setup')
   const [showPanel, setShowPanel] = useState(false)
-  const [isHidden, setIsHidden] = useState(false)
+  const [isHidden, setIsHidden] = useState(true)
   const [chapters, setChapters] = useState<SandboxChapter[]>([])
   const [moves, setMoves] = useState<GameMove[]>([])
   const [selectedMoveIndex, setSelectedMoveIndex] = useState<number | null>(null)
@@ -282,59 +282,70 @@ export default function SandboxControls({
 
   if (isHidden) {
     return (
-      <div className="sandbox-studio sandbox-studio-hidden">
-        <button className="show-studio-btn" onClick={() => setIsHidden(false)}>
-          Показать панель
+      <div className="sandbox-studio-menu-toggle">
+        <button className="menu-toggle-btn" onClick={() => setIsHidden(false)} title="Меню">
+          <span>⋯</span>
         </button>
       </div>
     )
   }
 
   return (
-    <div className="sandbox-studio">
-      <div className="studio-toolbar">
-        <button 
-          className={`mode-btn ${mode === 'setup' ? 'active' : ''}`}
-          onClick={() => {
-            setMode('setup')
-            onModeChange?.('setup')
-            onHistoryPreview?.(null)
-            setSelectedMoveIndex(null)
-          }}
-        >
-          <span>✏️</span> Свободное перемещение
-        </button>
-        <button 
-          className={`mode-btn ${mode === 'play' ? 'active' : ''}`}
-          onClick={() => {
-            setMode('play')
-            onModeChange?.('play')
-          }}
-        >
-          <span>▶️</span> Игра
-        </button>
-        <button 
-          className="mode-btn"
-          onClick={() => setShowDiceModal(true)}
-        >
-          <span>🎲</span> Установить ход
-        </button>
-        <button 
-          className={`mode-btn ${showPanel ? 'active' : ''}`}
-          onClick={() => setShowPanel(!showPanel)}
-        >
-          <span>🎬</span> Студия
-        </button>
-        <button 
-          className="panel-toggle"
-          onClick={() => setIsHidden(true)}
-        >
-          <span>👁️</span> Скрыть панель
-        </button>
-      </div>
+    <>
+      <div className="sandbox-modal-overlay" onClick={() => setIsHidden(true)}>
+        <div className="sandbox-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="sandbox-modal-header">
+            <h2>Песочница</h2>
+            <button 
+              className="modal-close-btn"
+              onClick={() => setIsHidden(true)}
+              title="Закрыть"
+            >
+              <span>✕</span>
+            </button>
+          </div>
+          
+          <div className="sandbox-modal-content">
+            <div className="studio-toolbar">
+              <button 
+                className={`mode-btn ${mode === 'setup' ? 'active' : ''}`}
+                onClick={() => {
+                  setMode('setup')
+                  onModeChange?.('setup')
+                  onHistoryPreview?.(null)
+                  setSelectedMoveIndex(null)
+                }}
+              >
+                <span>✏️</span> Свободное перемещение
+              </button>
+              <button 
+                className={`mode-btn ${mode === 'play' ? 'active' : ''}`}
+                onClick={() => {
+                  setMode('play')
+                  onModeChange?.('play')
+                }}
+              >
+                <span>▶️</span> Игра
+              </button>
+              <button 
+                className="mode-btn"
+                onClick={() => {
+                  setShowDiceModal(true)
+                  setIsHidden(true)
+                }}
+              >
+                <span>🎲</span> Установить ход
+              </button>
+              <button 
+                className={`mode-btn ${showPanel ? 'active' : ''}`}
+                onClick={() => setShowPanel(!showPanel)}
+              >
+                <span>🎬</span> Студия
+              </button>
+            </div>
 
-      {showPanel && (
-        <div className="studio-panel">
+            {showPanel && (
+              <div className="studio-panel">
           <div className="studio-section chapters-section">
             <div className="section-header">
               <h3>Главы</h3>
@@ -472,6 +483,9 @@ export default function SandboxControls({
           </div>
         </div>
       )}
-    </div>
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
