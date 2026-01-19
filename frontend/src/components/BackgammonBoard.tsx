@@ -220,7 +220,7 @@ export default function BackgammonBoard({
   const [debugMode, setDebugMode] = useState(false)
   
   // Загружаем конфиг из localStorage или используем дефолтный
-  const loadDebugConfig = useCallback(() => {
+  const loadDebugConfig = () => {
     try {
       const saved = localStorage.getItem('backgammon-debug-config-v16')
       if (saved) {
@@ -229,17 +229,18 @@ export default function BackgammonBoard({
         if (parsed.sideMarginLeftPct !== undefined) {
              // Мержим: сначала сохраненный конфиг, потом дефолтный поверх него
              // Это позволяет дефолтным значениям обновляться динамически, но сохраняет пользовательские настройки
-             const merged = { ...parsed, ...DESKTOP_CONFIG }
+             const defaultConfig = containerRef.current && containerRef.current.offsetWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+             const merged = { ...parsed, ...defaultConfig }
              // Принудительно обновляем ключевые значения, которые были изменены в дефолтах
              // (кубики и bear off offsets)
-             merged.diceP1X = DESKTOP_CONFIG.diceP1X
-             merged.diceP1Y = DESKTOP_CONFIG.diceP1Y
-             merged.diceP2X = DESKTOP_CONFIG.diceP2X
-             merged.diceP2Y = DESKTOP_CONFIG.diceP2Y
-             merged.bearOffWhiteXOffset = DESKTOP_CONFIG.bearOffWhiteXOffset
-             merged.bearOffWhiteYOffset = DESKTOP_CONFIG.bearOffWhiteYOffset
-             merged.bearOffBlackXOffset = DESKTOP_CONFIG.bearOffBlackXOffset
-             merged.bearOffBlackYOffset = DESKTOP_CONFIG.bearOffBlackYOffset
+             merged.diceP1X = defaultConfig.diceP1X
+             merged.diceP1Y = defaultConfig.diceP1Y
+             merged.diceP2X = defaultConfig.diceP2X
+             merged.diceP2Y = defaultConfig.diceP2Y
+             merged.bearOffWhiteXOffset = defaultConfig.bearOffWhiteXOffset
+             merged.bearOffWhiteYOffset = defaultConfig.bearOffWhiteYOffset
+             merged.bearOffBlackXOffset = defaultConfig.bearOffBlackXOffset
+             merged.bearOffBlackYOffset = defaultConfig.bearOffBlackYOffset
              return merged
         } else {
              console.log('Detected legacy config in localStorage, ignoring to enforce new defaults.')
@@ -252,35 +253,59 @@ export default function BackgammonBoard({
     } catch (e) {
       console.warn('Failed to load debug config from localStorage:', e)
     }
-    return DESKTOP_CONFIG
-  }, [])
-  
-  const [debugConfig, setDebugConfig] = useState(loadDebugConfig)
-  
-  // Динамически обновляем конфиг при изменении дефолтных значений
-  useEffect(() => {
-    // Определяем какой конфиг использовать (mobile или desktop)
     const defaultConfig = containerRef.current && containerRef.current.offsetWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
-    
-    // Ключевые поля, которые должны обновляться из дефолтного конфига
-    const keyFields = ['diceP1X', 'diceP1Y', 'diceP2X', 'diceP2Y', 'bearOffWhiteXOffset', 'bearOffWhiteYOffset', 'bearOffBlackXOffset', 'bearOffBlackYOffset']
-    
-    // Проверяем, нужно ли обновить конфиг
-    const needsUpdate = keyFields.some(key => {
+    return defaultConfig
+  }
+  
+  const [debugConfig, setDebugConfig] = useState(() => {
+    // Используем функцию инициализации, чтобы получить актуальный конфиг
+    const defaultConfig = containerRef.current && containerRef.current.offsetWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+    try {
+      const saved = localStorage.getItem('backgammon-debug-config-v16')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed.sideMarginLeftPct !== undefined) {
+          const merged = { ...parsed, ...defaultConfig }
+          // Принудительно обновляем ключевые значения из дефолтного конфига
+          merged.diceP1X = defaultConfig.diceP1X
+          merged.diceP1Y = defaultConfig.diceP1Y
+          merged.diceP2X = defaultConfig.diceP2X
+          merged.diceP2Y = defaultConfig.diceP2Y
+          merged.bearOffWhiteXOffset = defaultConfig.bearOffWhiteXOffset
+          merged.bearOffWhiteYOffset = defaultConfig.bearOffWhiteYOffset
+          merged.bearOffBlackXOffset = defaultConfig.bearOffBlackXOffset
+          merged.bearOffBlackYOffset = defaultConfig.bearOffBlackYOffset
+          return merged
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load debug config:', e)
+    }
+    return defaultConfig
+  })
+  
+  // Динамически обновляем ВСЕ поля из дефолтного конфига при каждом рендере
+  // Это гарантирует, что изменения в дефолтных значениях применяются сразу
+  const defaultConfig = containerRef.current && containerRef.current.offsetWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+  
+  // Создаем обновленный конфиг: сначала сохраненный конфиг, потом дефолтный поверх него
+  // Это позволяет дефолтным значениям обновляться динамически, но сохраняет пользовательские настройки
+  // НЕ используем useMemo, чтобы всегда брать актуальные значения из дефолтного конфига
+  const effectiveDebugConfig = { ...debugConfig, ...defaultConfig }
+  
+  // Обновляем состояние, если конфиг изменился (синхронизируем с дефолтным)
+  useEffect(() => {
+    const hasChanges = Object.keys(defaultConfig).some(key => {
       const currentValue = debugConfig[key]
       const defaultValue = defaultConfig[key]
       return currentValue !== defaultValue
     })
     
-    if (needsUpdate) {
-      // Обновляем только измененные ключевые поля, сохраняя остальные пользовательские настройки
-      const updatedConfig = { ...debugConfig }
-      keyFields.forEach(key => {
-        updatedConfig[key] = defaultConfig[key]
-      })
-      setDebugConfig(updatedConfig)
+    if (hasChanges) {
+      // Обновляем только измененные поля из дефолтного конфига
+      setDebugConfig(prev => ({ ...prev, ...defaultConfig }))
     }
-  }, []) // Запускаем при монтировании для применения обновленных дефолтов
+  }, [defaultConfig]) // Зависимость только от defaultConfig, чтобы обновляться при изменении дефолтных значений
   
   // Сохраняем конфиг в localStorage при каждом изменении
   useEffect(() => {
@@ -938,24 +963,27 @@ export default function BackgammonBoard({
     const width = canvas.width
     const height = canvas.height
     
+    // Используем effectiveDebugConfig для динамического обновления всех значений
+    const config = effectiveDebugConfig
+    
     // ПАРАМЕТРЫ ПОДГОНКИ ПОД СКИН (skin1.png)
     // Лот для скида снизу -> bearOffHeight
-    const bearOffHeight = height * debugConfig.bearOffHeightPct
-    const topMargin = height * debugConfig.topMarginPct
+    const bearOffHeight = height * config.bearOffHeightPct
+    const topMargin = height * config.topMarginPct
     
     // Отступы от центральной линии (бара) для левой и правой части
-    const barMarginLeft = width * (debugConfig.barMarginLeftPct ?? 0)
-    const barMarginRight = width * (debugConfig.barMarginRightPct ?? 0)
+    const barMarginLeft = width * (config.barMarginLeftPct ?? 0)
+    const barMarginRight = width * (config.barMarginRightPct ?? 0)
 
     // Уменьшаем отступы сбоку и ширину бара, чтобы треугольники стали шире
-    const sideMarginLeft = width * (debugConfig.sideMarginLeftPct ?? debugConfig.sideMarginPct ?? 0.032)
-    const sideMarginRight = width * (debugConfig.sideMarginRightPct ?? debugConfig.sideMarginPct ?? 0.047)
+    const sideMarginLeft = width * (config.sideMarginLeftPct ?? config.sideMarginPct ?? 0.032)
+    const sideMarginRight = width * (config.sideMarginRightPct ?? config.sideMarginPct ?? 0.047)
     
     // Рабочая область доски (без лотка и рамки)
     const playAreaHeight = height - bearOffHeight - topMargin
     
     // Центральная полоса (бар)
-    const barWidth = width * debugConfig.barWidthPct
+    const barWidth = width * config.barWidthPct
     
     // Вычисляем ширину половин доски отдельно
     const boardCenter = width / 2
@@ -1104,6 +1132,9 @@ export default function BackgammonBoard({
     tempCanvas.width = width
     tempCanvas.height = height
     
+    // Используем effectiveDebugConfig для динамического обновления всех значений
+    const config = effectiveDebugConfig
+    
     let xPos: number
     let yPos: number
     
@@ -1115,19 +1146,19 @@ export default function BackgammonBoard({
     // Возвращаем Player 1 вниз-вправо, Player 2 вверх-влево.
     // Используем безопасный отступ 150px от краев, чтобы точно попасть на поле.
 
-    // ВАЖНО: Используем параметры из debugConfig для позиции кубиков
+    // ВАЖНО: Используем параметры из config для позиции кубиков
     if (currentPlayer === 0) {
       // Player1 (белые) - используем diceP1X и diceP1Y из конфига
-      xPos = width * (debugConfig.diceP1X ?? 0.5)
-      yPos = height * (debugConfig.diceP1Y ?? 0.6)
+      xPos = width * (config.diceP1X ?? 0.5)
+      yPos = height * (config.diceP1Y ?? 0.6)
       
-      console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos, config: { diceP1X: debugConfig.diceP1X, diceP1Y: debugConfig.diceP1Y } })
+      console.log('🎲 Player1 dice position (BOTTOM-RIGHT):', { xPos, yPos, config: { diceP1X: config.diceP1X, diceP1Y: config.diceP1Y } })
     } else {
       // Player2 (черные, соперник) - используем diceP2X и diceP2Y из конфига
-      xPos = width * (debugConfig.diceP2X ?? 0.16)
-      yPos = height * (debugConfig.diceP2Y ?? 0.24)
+      xPos = width * (config.diceP2X ?? 0.16)
+      yPos = height * (config.diceP2Y ?? 0.24)
       
-      console.log('🎲 Player2 dice position (TOP-LEFT):', { xPos, yPos, config: { diceP2X: debugConfig.diceP2X, diceP2Y: debugConfig.diceP2Y } })
+      console.log('🎲 Player2 dice position (TOP-LEFT):', { xPos, yPos, config: { diceP2X: config.diceP2X, diceP2Y: config.diceP2Y } })
     }
     
     // Ограничиваем позицию кубиков границами доски с учетом размера кубиков
@@ -1199,8 +1230,11 @@ export default function BackgammonBoard({
     const actualX = x
     const actualY = y
     
+    // Используем effectiveDebugConfig для динамического обновления всех значений
+    const config = effectiveDebugConfig
+    
     // ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ (дублируем логику из getPointCoordinates)
-    const bearOffHeight = height * debugConfig.bearOffHeightPct
+    const bearOffHeight = height * config.bearOffHeightPct
     
     // Проверяем все точки
     // Прямой расчет попадания в точку на основе логики getPointCoordinates
@@ -1209,7 +1243,7 @@ export default function BackgammonBoard({
     // Определяем размер шашки для расширения хитбокса
     // Берем приблизительный размер на основе ширины точки
     const pW_approx = (width / 2) / 6; 
-    const checkerSize_approx = pW_approx * debugConfig.checkerWidthRatio;
+    const checkerSize_approx = pW_approx * config.checkerWidthRatio;
 
     // Сначала собираем все точки с их хитбоксами и расстоянием до клика
     const pointsWithHitboxes: Array<{ index: number; distance: number; hitbox: { xStart: number; xEnd: number; yStart: number; yEnd: number } }> = []
@@ -1227,13 +1261,13 @@ export default function BackgammonBoard({
       
       if (isTopRow) {
           // Top Row: Triangle goes from (pY - pH) down to pY (tip)
-          // Visual checkers start at: pY + scaleY(debugConfig.checkerTopOffset)
+          // Visual checkers start at: pY + scaleY(config.checkerTopOffset)
           // And go downwards.
           // Hitbox should cover from Min(TriangleBase, VisualBase) to Max(TriangleTip, VisualEnd)
           
           const triangleBase = pY - pH;
           const triangleTip = pY;
-          const visualBase = pY + scaleY(debugConfig.checkerTopOffset);
+          const visualBase = pY + scaleY(config.checkerTopOffset);
           // Visual stack extends from (visualBase - size/2) to (visualBase + 5*overlap + size/2)
           const visualTop = visualBase - (checkerSize_approx / 2);
           const visualBottom = visualBase + (4 * (checkerSize_approx - 8)) + (checkerSize_approx / 2);
@@ -1242,14 +1276,14 @@ export default function BackgammonBoard({
           yEnd = Math.max(triangleTip, visualBottom) + padding;
       } else {
           // Bottom Row: Triangle goes from pY (tip) down to (pY + pH)
-          // Visual checkers start at: pY + scaleY(debugConfig.checkerBottomOffset)
+          // Visual checkers start at: pY + scaleY(config.checkerBottomOffset)
           // And go upwards (decreasing Y) from the base.
           
           const triangleTip = pY;
           const triangleBase = pY + pH;
           
           // visualBase is the center of the first (bottom-most) checker
-          const visualBase = pY + scaleY(debugConfig.checkerBottomOffset);
+          const visualBase = pY + scaleY(config.checkerBottomOffset);
           // Visual stack extends from (visualBase + size/2) down to (visualBase - 5*overlap - size/2) up
           const visualBottom = visualBase + (checkerSize_approx / 2);
           const visualTop = visualBase - (4 * (checkerSize_approx - 8)) - (checkerSize_approx / 2);
@@ -1364,9 +1398,12 @@ export default function BackgammonBoard({
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, width, height)
     
+    // Используем effectiveDebugConfig для динамического обновления всех значений
+    const config = effectiveDebugConfig
+    
     // ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ (дублируем логику из getPointCoordinates)
-    const bearOffHeight = height * debugConfig.bearOffHeightPct
-    const topMargin = height * debugConfig.topMarginPct
+    const bearOffHeight = height * config.bearOffHeightPct
+    const topMargin = height * config.topMarginPct
     const sideMargin = width * 0.040 // Adjusted
     
     // Определяем параметры доски
@@ -1419,10 +1456,10 @@ export default function BackgammonBoard({
             // Left Side: Indices 6-11 (Points 18-13)
             if (pointIndex < 6) {
                 // Top Right
-                yOffset = scaleY(debugConfig.textTopRightY)
+                yOffset = scaleY(config.textTopRightY)
             } else {
                 // Top Left
-                yOffset = scaleY(debugConfig.textTopLeftY)
+                yOffset = scaleY(config.textTopLeftY)
             }
             ctx.fillText(debugText, x, y + yOffset)
         } else {
@@ -1431,10 +1468,10 @@ export default function BackgammonBoard({
             // Right Side: Indices 18-23 (Points 6-1)
             if (pointIndex < 18) {
                 // Bottom Left
-                yOffset = scaleY(debugConfig.textBottomLeftY)
+                yOffset = scaleY(config.textBottomLeftY)
             } else {
                 // Bottom Right
-                yOffset = scaleY(debugConfig.textBottomRightY)
+                yOffset = scaleY(config.textBottomRightY)
             }
             ctx.fillText(debugText, x, y + yOffset)
         }
@@ -1460,7 +1497,7 @@ export default function BackgammonBoard({
           ctx.shadowOffsetY = 2
           
           // Увеличиваем размер изображения, но не слишком сильно, так как базовый размер уже увеличен
-          const scale = debugConfig.checkerDrawScale
+          const scale = config.checkerDrawScale
           const drawSize = size * scale
           
           ctx.drawImage(img, cX - drawSize/2, cY - drawSize/2, drawSize, drawSize)
@@ -1521,10 +1558,10 @@ export default function BackgammonBoard({
       const isMyPoint = isSandbox ? true : ((isPlayer1 && isWhiteChecker) || (!isPlayer1 && !isWhiteChecker))
       
       // Увеличиваем размер шашки относительно ширины треугольника
-      const checkerSize = Math.min(pW * debugConfig.checkerWidthRatio, pH * debugConfig.checkerHeightRatio) 
+      const checkerSize = Math.min(pW * config.checkerWidthRatio, pH * config.checkerHeightRatio) 
       const checkerBaseY = isTopRow 
-        ? y + checkerSize/2 + scaleY(debugConfig.checkerTopOffset)
-        : y - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset)  
+        ? y + checkerSize/2 + scaleY(config.checkerTopOffset)
+        : y - checkerSize/2 + scaleY(config.checkerBottomOffset)  
       
       const isDraggingFromThisPoint = dragging && dragging.pointIndex === pointIndex
       const isAnimatingFromThisPoint = animatingChecker && animatingChecker.from === pointIndex
@@ -1577,17 +1614,17 @@ export default function BackgammonBoard({
 
       // 1. Подсветка точки под курсором
       if (hoveredPoint === pointIndex) {
-        const highlightHW = pW * debugConfig.highlightWidthScale
-        const highlightHH = hH * debugConfig.highlightHeightScale
-        const highlightHX = hX + (pW - highlightHW) / 2 + scaleX(debugConfig.highlightXOffset)
+        const highlightHW = pW * config.highlightWidthScale
+        const highlightHH = hH * config.highlightHeightScale
+        const highlightHX = hX + (pW - highlightHW) / 2 + scaleX(config.highlightXOffset)
         
         let highlightHY;
         if (isTopRow) {
-             highlightHY = (y - pH) + (hH - highlightHH) / 2 + debugConfig.highlightYOffset;
+             highlightHY = (y - pH) + (hH - highlightHH) / 2 + config.highlightYOffset;
         } else {
-             const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
-                ? (debugConfig as any).highlightBottomYOffset 
-                : -debugConfig.highlightYOffset;
+             const bottomOffset = (config as any).highlightBottomYOffset !== undefined 
+                ? (config as any).highlightBottomYOffset 
+                : -config.highlightYOffset;
              
              highlightHY = y + (hH - highlightHH) / 2 + bottomOffset;
         }
@@ -1599,17 +1636,17 @@ export default function BackgammonBoard({
       // 2. Подсветка валидных точек назначения при перетаскивании
       if ((dragging || selectedPoint !== null) && validTargetPoints.has(pointIndex)) {
         // Применяем параметры из debugConfig для размера и смещения подсветки
-        const validHW = pW * debugConfig.validHighlightWidthScale
-        const validHH = hH * debugConfig.validHighlightHeightScale
-        const validHX = hX + (pW - validHW) / 2 + scaleX(debugConfig.validHighlightXOffset)
+        const validHW = pW * config.validHighlightWidthScale
+        const validHH = hH * config.validHighlightHeightScale
+        const validHX = hX + (pW - validHW) / 2 + scaleX(config.validHighlightXOffset)
         
         let validHY;
         if (isTopRow) {
-             validHY = (y - pH) + (hH - validHH) / 2 + debugConfig.validHighlightYOffset;
+             validHY = (y - pH) + (hH - validHH) / 2 + config.validHighlightYOffset;
         } else {
-             const bottomOffset = (debugConfig as any).validHighlightBottomYOffset !== undefined 
-                ? (debugConfig as any).validHighlightBottomYOffset 
-                : -debugConfig.highlightYOffset;
+             const bottomOffset = (config as any).validHighlightBottomYOffset !== undefined 
+                ? (config as any).validHighlightBottomYOffset 
+                : -config.highlightYOffset;
              
              validHY = y + (hH - validHH) / 2 + bottomOffset;
         }
@@ -1624,17 +1661,17 @@ export default function BackgammonBoard({
       
       // 3. Подсветка выбранной точки
       if (selectedPoint === pointIndex) {
-        const selectedHW = pW * debugConfig.highlightWidthScale
-        const selectedHH = hH * debugConfig.highlightHeightScale
-        const selectedHX = hX + (pW - selectedHW) / 2 + scaleX(debugConfig.highlightXOffset)
+        const selectedHW = pW * config.highlightWidthScale
+        const selectedHH = hH * config.highlightHeightScale
+        const selectedHX = hX + (pW - selectedHW) / 2 + scaleX(config.highlightXOffset)
         
         let selectedHY;
         if (isTopRow) {
-             selectedHY = (y - pH) + (hH - selectedHH) / 2 + debugConfig.highlightYOffset;
+             selectedHY = (y - pH) + (hH - selectedHH) / 2 + config.highlightYOffset;
         } else {
-             const bottomOffset = (debugConfig as any).highlightBottomYOffset !== undefined 
-                ? (debugConfig as any).highlightBottomYOffset 
-                : -debugConfig.highlightYOffset;
+             const bottomOffset = (config as any).highlightBottomYOffset !== undefined 
+                ? (config as any).highlightBottomYOffset 
+                : -config.highlightYOffset;
              
              selectedHY = y + (hH - selectedHH) / 2 + bottomOffset;
         }
@@ -1651,12 +1688,12 @@ export default function BackgammonBoard({
       const coords = getPointCoordinates(dragging.pointIndex === -1 ? 0 : dragging.pointIndex, canvas)
       const pW = coords.pointWidth
       const pH = coords.pointHeight
-      const baseCheckerSize = Math.min(pW * debugConfig.checkerWidthRatio, pH * debugConfig.checkerHeightRatio)
-      // Применяем масштаб из debugConfig
-      const checkerSize = baseCheckerSize * debugConfig.dragCheckerSizeScale
-      // Применяем смещения из debugConfig
-      const dragX = dragPosition.x - dragging.offsetX + scaleX(debugConfig.dragCheckerXOffset)
-      const dragY = dragPosition.y - dragging.offsetY + scaleY(debugConfig.dragCheckerYOffset)
+      const baseCheckerSize = Math.min(pW * config.checkerWidthRatio, pH * config.checkerHeightRatio)
+      // Применяем масштаб из config
+      const checkerSize = baseCheckerSize * config.dragCheckerSizeScale
+      // Применяем смещения из config
+      const dragX = dragPosition.x - dragging.offsetX + scaleX(config.dragCheckerXOffset)
+      const dragY = dragPosition.y - dragging.offsetY + scaleY(config.dragCheckerYOffset)
       
       // Определяем цвет шашки для отрисовки при перетаскивании
       let isWhite = isPlayer1
@@ -1678,7 +1715,7 @@ export default function BackgammonBoard({
     // Отрисовка анимируемой шашки
     if (animatingChecker) {
       const { x: fromX, y: fromY, isTopRow: fromTop, pointWidth: pW, pointHeight: pH } = getPointCoordinates(animatingChecker.from, canvas)
-      const checkerSize = Math.min(pW * debugConfig.checkerWidthRatio, pH * debugConfig.checkerHeightRatio)
+      const checkerSize = Math.min(pW * config.checkerWidthRatio, pH * config.checkerHeightRatio)
       
       let toX, toY, toTop;
       if (animatingChecker.to === -1 || animatingChecker.to >= 24) {
@@ -1714,8 +1751,8 @@ export default function BackgammonBoard({
       const fromVisualIndex = Math.min(originalFromCount, 5) - 1
       
       const startY = fromTop 
-        ? fromY + checkerSize/2 + scaleY(debugConfig.checkerTopOffset) + fromVisualIndex * fromOverlap
-        : fromY - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset) - fromVisualIndex * fromOverlap
+        ? fromY + checkerSize/2 + scaleY(config.checkerTopOffset) + fromVisualIndex * fromOverlap
+        : fromY - checkerSize/2 + scaleY(config.checkerBottomOffset) - fromVisualIndex * fromOverlap
 
       // Конечная позиция Y (куда приземлится)
       let endY;
@@ -1729,8 +1766,8 @@ export default function BackgammonBoard({
         const toVisualIndex = Math.min(toCheckerCount, 4)
         
         endY = toTop
-          ? toY + checkerSize/2 + scaleY(debugConfig.checkerTopOffset) + toVisualIndex * toOverlap
-          : toY - checkerSize/2 + scaleY(debugConfig.checkerBottomOffset) - toVisualIndex * toOverlap
+          ? toY + checkerSize/2 + scaleY(config.checkerTopOffset) + toVisualIndex * toOverlap
+          : toY - checkerSize/2 + scaleY(config.checkerBottomOffset) - toVisualIndex * toOverlap
       }
 
       const curX = fromX + (toX - fromX) * animatingChecker.progress
@@ -1802,13 +1839,13 @@ export default function BackgammonBoard({
       const blackBearOffCount = bOff.black || 0
       
       // Используем те же изображения, что и для обычных шашек (вид сверху)
-      const checkerSize = Math.min(pointWidth * debugConfig.checkerWidthRatio, pointHeight * debugConfig.checkerHeightRatio)
-      const bearOffCheckerSize = checkerSize * (debugConfig.bearOffCheckerScale || 1.0)
+      const checkerSize = Math.min(pointWidth * config.checkerWidthRatio, pointHeight * config.checkerHeightRatio)
+      const bearOffCheckerSize = checkerSize * (config.bearOffCheckerScale || 1.0)
       
       // Белые шашки - Справа налево (Дом белых обычно справа)
       // Размещаем их в правой части лотка
-      const startXWhite = width - sideMargin - bearOffCheckerSize / 2 + (debugConfig.bearOffWhiteXOffset || 0)
-      const yPosWhite = bearOffAreaY + bearOffHeight / 2 + (debugConfig.bearOffWhiteYOffset || 0)
+      const startXWhite = width - sideMargin - bearOffCheckerSize / 2 + (config.bearOffWhiteXOffset || 0)
+      const yPosWhite = bearOffAreaY + bearOffHeight / 2 + (config.bearOffWhiteYOffset || 0)
       
       for (let i = 0; i < whiteBearOffCount; i++) {
         // Плотная стопка со смещением
@@ -1821,8 +1858,8 @@ export default function BackgammonBoard({
       
       // Черные шашки - Слева направо (Дом черных обычно слева)
       // Размещаем их в левой части лотка
-      const startXBlack = sideMargin + bearOffCheckerSize / 2 + (debugConfig.bearOffBlackXOffset || 0)
-      const yPosBlack = bearOffAreaY + bearOffHeight / 2 + (debugConfig.bearOffBlackYOffset || 0)
+      const startXBlack = sideMargin + bearOffCheckerSize / 2 + (config.bearOffBlackXOffset || 0)
+      const yPosBlack = bearOffAreaY + bearOffHeight / 2 + (config.bearOffBlackYOffset || 0)
       
       for (let i = 0; i < blackBearOffCount; i++) {
         const step = bearOffCheckerSize * 0.3
@@ -1848,22 +1885,22 @@ export default function BackgammonBoard({
         else if (selectedPoint === 25) isRightSide = false;
       }
 
-      // Применяем параметры из debugConfig для размера и смещения подсветки bear-off
+      // Применяем параметры из config для размера и смещения подсветки bear-off
       // Используем ПОЛОВИНУ ширины доски как базу
       const halfWidth = width / 2;
-      const bearOffValidHW = halfWidth * (debugConfig.bearOffValidWidthScale || debugConfig.validHighlightWidthScale || 1.0)
-      const bearOffValidHH = bearOffHeight * (debugConfig.bearOffValidHeightScale || debugConfig.validHighlightHeightScale || 1.0)
+      const bearOffValidHW = halfWidth * (config.bearOffValidWidthScale || config.validHighlightWidthScale || 1.0)
+      const bearOffValidHH = bearOffHeight * (config.bearOffValidHeightScale || config.validHighlightHeightScale || 1.0)
       
       // Вычисляем центр нужной половины
       const centerX = isRightSide ? (width * 0.75) : (width * 0.25);
       
       // Используем отдельные offset'ы для белых и черных
       const bearOffValidXOffset = isRightSide 
-        ? (debugConfig.bearOffValidWhiteXOffset || debugConfig.bearOffValidXOffset || debugConfig.validHighlightXOffset || 0)
-        : (debugConfig.bearOffValidBlackXOffset || debugConfig.bearOffValidXOffset || debugConfig.validHighlightXOffset || 0)
+        ? (config.bearOffValidWhiteXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0)
+        : (config.bearOffValidBlackXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0)
       const bearOffValidYOffset = isRightSide
-        ? (debugConfig.bearOffValidWhiteYOffset || debugConfig.bearOffValidYOffset || debugConfig.validHighlightYOffset || 0)
-        : (debugConfig.bearOffValidBlackYOffset || debugConfig.bearOffValidYOffset || debugConfig.validHighlightYOffset || 0)
+        ? (config.bearOffValidWhiteYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0)
+        : (config.bearOffValidBlackYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0)
       
       const bearOffValidHX = centerX - (bearOffValidHW / 2) + scaleX(bearOffValidXOffset)
       const bearOffValidHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidYOffset
@@ -2604,7 +2641,9 @@ export default function BackgammonBoard({
     // В sandbox режиме обрабатываем перетаскивание из bearOff
     if (isSandbox) {
       // Прямая проверка клика в зону bearOff снизу
-      const bHeight = canvas.height * debugConfig.bearOffHeightPct
+      // Используем effectiveDebugConfig для динамического обновления всех значений
+      const config = effectiveDebugConfig
+      const bHeight = canvas.height * config.bearOffHeightPct
       if (y >= canvas.height - bHeight) {
         const isWhiteSide = x > canvas.width / 2
         const color = isWhiteSide ? 'white' : 'black'
