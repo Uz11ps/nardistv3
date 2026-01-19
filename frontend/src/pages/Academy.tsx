@@ -18,6 +18,7 @@ interface Course {
   gameMode?: 'long' | 'short'
   type?: 'course'
   isPaid?: boolean
+  quizPassed?: boolean
   assignment?: {
     quiz?: {
       questions: Array<{
@@ -27,6 +28,14 @@ interface Course {
         correctAnswer: number
       }>
     }
+  }
+  quiz?: {
+    questions: Array<{
+      id: number
+      question: string
+      options: string[]
+      correctAnswer: number
+    }>
   }
 }
 
@@ -93,6 +102,7 @@ export default function Academy() {
   const { user, updateUser } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'training' | 'my-materials'>('my-materials')
   const [activeFilter, setActiveFilter] = useState<'long' | 'short'>('long')
+  const [myMaterialsFilter, setMyMaterialsFilter] = useState<'all' | 'training' | 'courses' | 'articles'>('all')
   
   // Сбрасываем фильтр при переключении вкладок
   useEffect(() => {
@@ -139,6 +149,13 @@ export default function Academy() {
     }
   }, [activeTab, materialId, isMaterialPage, activeFilter])
 
+  // Сбрасываем скролл в начало при открытии материала
+  useEffect(() => {
+    if (materialId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [materialId])
+
   useEffect(() => {
     // Проверяем параметр type из URL
     const urlParams = new URLSearchParams(location.search)
@@ -147,11 +164,24 @@ export default function Academy() {
       setPublishForm(prev => ({ ...prev, type: 'course' }))
     }
   }, [location.search])
+
+  // Сбрасываем скролл в начало при открытии материала
+  useEffect(() => {
+    if (materialId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [materialId])
   
   const loadMaterialDetail = async (id: string) => {
     try {
+      // Сбрасываем скролл в начало перед загрузкой
+      window.scrollTo({ top: 0, behavior: 'instant' })
       const response = await apiClient.get(`/academy/materials/${id}`).catch(() => ({ data: null }))
       setMaterialDetail(response.data)
+      // Дополнительно сбрасываем скролл после загрузки (на случай если контент уже был отрендерен)
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }, 100)
     } catch (error) {
       console.error('Failed to load material detail:', error)
     }
@@ -168,6 +198,16 @@ export default function Academy() {
       } else if (activeTab === 'articles') {
         const response = await apiClient.get('/academy/articles')
         setArticles(response.data || [])
+      } else if (activeTab === 'my-materials') {
+        // Загружаем все материалы для "Мои материалы"
+        const [coursesRes, articlesRes, onboardingRes] = await Promise.all([
+          apiClient.get('/academy/courses').catch(() => ({ data: [] })),
+          apiClient.get('/academy/articles').catch(() => ({ data: [] })),
+          apiClient.get('/academy/onboarding').catch(() => ({ data: [] }))
+        ])
+        setCourses(coursesRes.data || [])
+        setArticles(articlesRes.data || [])
+        setOnboarding(onboardingRes.data || [])
       }
     } catch (error) {
       console.error('Failed to load academy data:', error)
@@ -183,7 +223,18 @@ export default function Academy() {
       await apiClient.post(endpoint)
       alert('Материал успешно куплен!')
       setShowPurchaseModal(null)
-      loadData()
+      
+      // Обновляем данные сразу, чтобы материалы пропали динамически
+      if (activeTab === 'onboarding') {
+        const response = await apiClient.get('/academy/onboarding')
+        setOnboarding(response.data || [])
+      } else if (activeTab === 'courses' || activeTab === 'training') {
+        const response = await apiClient.get('/academy/courses')
+        setCourses(response.data || [])
+      } else if (activeTab === 'articles') {
+        const response = await apiClient.get('/academy/articles')
+        setArticles(response.data || [])
+      }
       // Если открыт материал, перезагружаем его
       if (isMaterialPage && materialId === item.id) {
         await loadMaterialDetail(item.id)
@@ -203,6 +254,8 @@ export default function Academy() {
     if (!material.purchased) {
       setShowPurchaseModal(material)
     } else {
+      // Сбрасываем скролл перед навигацией
+      window.scrollTo({ top: 0, behavior: 'instant' })
       navigate(`/academy/${material.id}`)
     }
   }
@@ -241,8 +294,29 @@ export default function Academy() {
       })
     }
     
-    // Фильтрация по типу нард для моих материалов
+    // Фильтрация по типу материалов для моих материалов
     if (activeTab === 'my-materials') {
+      // Фильтр по типу материала (обучение/курсы/статьи)
+      if (myMaterialsFilter !== 'all') {
+        if (myMaterialsFilter === 'training') {
+          // Обучение - только курсы с квестами
+          filtered = filtered.filter(item => {
+            const course = item as any
+            return course.assignment?.quiz || course.quiz
+          })
+        } else if (myMaterialsFilter === 'courses') {
+          // Курсы - только курсы без квестов
+          filtered = filtered.filter(item => {
+            const course = item as any
+            return (item.type === 'course' || item.type === 'onboarding') && !course.assignment?.quiz && !course.quiz
+          })
+        } else if (myMaterialsFilter === 'articles') {
+          // Статьи
+          filtered = filtered.filter(item => item.type === 'article')
+        }
+      }
+      
+      // Фильтрация по типу нард для моих материалов
       filtered = filtered.filter(item => {
         const titleLower = (item.title || '').toLowerCase()
         const isLongKeyword = titleLower.includes('длинн')
@@ -691,19 +765,43 @@ export default function Academy() {
         {activeTab === 'training' && (
           <div className="academy-training">
             <div className="academy-grid">
-              {/* Здесь будут курсы с квестами внутри */}
-              {courses.filter(course => course.assignment?.quiz).map((course) => (
-                <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
-                  <div className="academy-grid-card-icon">
-                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
-                      <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
-                    </svg>
+              {/* Курсы с квестами - используем getFilteredAndSortedItems для фильтрации купленных */}
+              {getFilteredAndSortedItems(courses.filter(course => course.assignment?.quiz || (course as any).quiz)).map((course) => {
+                const courseWithQuiz = course as Course & { assignment?: { quiz?: any }, quiz?: any }
+                const quiz = courseWithQuiz.assignment?.quiz || courseWithQuiz.quiz
+                const questionsCount = quiz?.questions?.length || 0
+                // quizPassed может быть в course или нужно загрузить из деталей
+                const quizPassed = course.quizPassed || false
+                const passedCount = quizPassed ? questionsCount : 0
+                const progressPercentage = questionsCount > 0 ? (passedCount / questionsCount) * 100 : 0
+                
+                return (
+                  <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
+                    <div className="academy-grid-card-icon">
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
+                        <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
+                      </svg>
+                    </div>
+                    <div className="academy-grid-card-title">{course.title}</div>
+                    <div className="academy-grid-card-author">{course.author}</div>
+                    {/* Шкала прогресса квеста */}
+                    {questionsCount > 0 && (
+                      <div className="academy-training-progress">
+                        <div className="academy-training-progress-bar">
+                          <div 
+                            className="academy-training-progress-fill"
+                            style={{ width: `${progressPercentage}%` }}
+                          />
+                        </div>
+                        <div className="academy-training-progress-text">
+                          {passedCount}/{questionsCount}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="academy-grid-card-title">{course.title}</div>
-                  <div className="academy-grid-card-author">{course.author}</div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
@@ -713,6 +811,34 @@ export default function Academy() {
             <button className="academy-publish-own-btn" onClick={() => navigate('/academy/publish')}>
               Опубликовать свое
             </button>
+            
+            {/* Фильтр по типу материалов */}
+            <div className="academy-filters">
+              <button 
+                className={`academy-filter-btn ${myMaterialsFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setMyMaterialsFilter('all')}
+              >
+                Все
+              </button>
+              <button 
+                className={`academy-filter-btn ${myMaterialsFilter === 'training' ? 'active' : ''}`}
+                onClick={() => setMyMaterialsFilter('training')}
+              >
+                Обучение
+              </button>
+              <button 
+                className={`academy-filter-btn ${myMaterialsFilter === 'courses' ? 'active' : ''}`}
+                onClick={() => setMyMaterialsFilter('courses')}
+              >
+                Курсы
+              </button>
+              <button 
+                className={`academy-filter-btn ${myMaterialsFilter === 'articles' ? 'active' : ''}`}
+                onClick={() => setMyMaterialsFilter('articles')}
+              >
+                Статьи
+              </button>
+            </div>
             
             <div className="academy-grid">
               {getFilteredAndSortedItems([...courses, ...articles, ...onboarding])

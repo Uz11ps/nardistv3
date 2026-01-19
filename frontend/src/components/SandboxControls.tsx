@@ -280,6 +280,7 @@ export default function SandboxControls({
     }
   }
 
+  // В sandbox режиме показываем только кнопку с тремя точками, которая открывает меню с подтверждением хода
   if (isHidden) {
     return (
       <div className="sandbox-studio-menu-toggle">
@@ -306,183 +307,19 @@ export default function SandboxControls({
           </div>
           
           <div className="sandbox-modal-content">
-            <div className="studio-toolbar">
-              <button 
-                className={`mode-btn ${mode === 'setup' ? 'active' : ''}`}
-                onClick={() => {
-                  setMode('setup')
-                  onModeChange?.('setup')
-                  onHistoryPreview?.(null)
-                  setSelectedMoveIndex(null)
-                }}
-              >
-                <span>✏️</span> Свободное перемещение
-              </button>
-              <button 
-                className={`mode-btn ${mode === 'play' ? 'active' : ''}`}
-                onClick={() => {
-                  setMode('play')
-                  onModeChange?.('play')
-                }}
-              >
-                <span>▶️</span> Игра
-              </button>
-              <button 
-                className="mode-btn"
-                onClick={() => {
-                  setShowDiceModal(true)
-                  setIsHidden(true)
-                }}
-              >
-                <span>🎲</span> Установить ход
-              </button>
-              <button 
-                className={`mode-btn ${showPanel ? 'active' : ''}`}
-                onClick={() => setShowPanel(!showPanel)}
-              >
-                <span>🎬</span> Студия
-              </button>
-            </div>
-
-            {showPanel && (
-              <div className="studio-panel">
-          <div className="studio-section chapters-section">
-            <div className="section-header">
-              <h3>Главы</h3>
-              <button onClick={handleSaveChapter} title="Сохранить текущую позицию">
-                <span>+</span>
-              </button>
-            </div>
-            <div className="chapters-list">
-              {chapters.length === 0 && <div className="empty-msg">Нет сохраненных глав</div>}
-              {chapters.map(chapter => (
-                <div key={chapter.id} className="chapter-item">
-                  <span onClick={() => handleLoadChapter(chapter)}>{chapter.name}</span>
-                  <button onClick={() => handleDeleteChapter(chapter.id)}>×</button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="studio-section history-section">
-            <h3>История ходов</h3>
-            <div className="moves-list">
-              {moves.length === 0 && <div className="empty-msg">Ходов пока нет</div>}
-              {moves.map((move, idx) => (
-                <div 
-                  key={move.id} 
-                  className={`move-item ${selectedMoveIndex === idx ? 'active' : ''}`}
-                  onClick={() => handleMoveClick(idx)}
-                >
-                  <span className="move-num">{idx + 1}.</span>
-                  <span className="move-dice">[{Array.isArray(move.dice) ? move.dice.join(',') : ''}]</span>
-                  <span className="move-details">
-                    {Array.isArray(move.moves) && move.moves.map((m, i) => (
-                      <span key={i} className="move-step">
-                        {(m as any).from === -1 ? 'B' : (m as any).from + 1}→{(m as any).to === -1 ? 'B' : (m as any).to + 1}
-                      </span>
-                    ))}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {mode === 'play' && (
-            <div className="studio-section interactive-section">
-              <h3>Интерактив</h3>
-              {diceQueue.length > 0 && (
-                <div className="dice-queue">
-                  <div className="queue-label">Очередь:</div>
-                  {diceQueue.map((dq, idx) => (
-                    <div key={idx} className="queue-item">
-                      {dq[0]}:{dq[1]}
-                      <button onClick={() => setDiceQueue(prev => prev.filter((_, i) => i !== idx))}>×</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="turn-info">
-                Сейчас ход: <strong>{currentPlayer === 0 ? 'Белых' : 'Черных'}</strong>
-                <button className="skip-turn-btn" onClick={handleSkipTurn} title="Передать ход другому игроку">
-                  <span>🔄</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {showDiceModal && (
-        <div className="dice-modal-overlay">
-          <div className="dice-modal">
-            <h3>Установите кубики для {
-              diceTargetPlayer === 0 ? 'Белых' : 
-              diceTargetPlayer === 1 ? 'Черных' : 
-              (currentPlayer === 0 ? 'Белых' : 'Черных')
-            }</h3>
-            
-            <div className="modal-section-label">Выбрать игрока:</div>
-          <div className="player-selector">
+            {/* Кнопка подтверждения хода */}
             <button 
-              className={diceTargetPlayer === 0 ? 'active' : ''} 
-              onClick={(e) => { e.stopPropagation(); setDiceTargetPlayer(0); }}
-              type="button"
+              className="sandbox-confirm-btn"
+              onClick={() => {
+                // Вызываем handleConfirm через событие, так как у нас нет прямого доступа к нему
+                window.dispatchEvent(new CustomEvent('sandbox-confirm-move'))
+                setIsHidden(true)
+              }}
+              disabled={!gameState?.canMove || (gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length === 0)}
             >
-              Белые
-            </button>
-            <button 
-              className={diceTargetPlayer === 1 ? 'active' : ''} 
-              onClick={(e) => { e.stopPropagation(); setDiceTargetPlayer(1); }}
-              type="button"
-            >
-              Черные
-            </button>
-            <button 
-              className={diceTargetPlayer === null ? 'active' : ''} 
-              onClick={(e) => { e.stopPropagation(); setDiceTargetPlayer(null); }}
-              type="button"
-            >
-              Текущий
+              <span>✓</span> Подтвердить ход
             </button>
           </div>
-
-            <div className="modal-section-label">Значения:</div>
-            <div className="dice-inputs">
-              {[1, 2, 3, 4, 5, 6].map(val => (
-                <button 
-                  key={`d1-${val}`}
-                  className={dice1 === val ? 'active' : ''}
-                  onClick={() => setDice1(val)}
-                >
-                  {val}
-                </button>
-              ))}
-            </div>
-            <div className="dice-inputs">
-              {[1, 2, 3, 4, 5, 6].map(val => (
-                <button 
-                  key={`d2-${val}`}
-                  className={dice2 === val ? 'active' : ''}
-                  onClick={() => setDice2(val)}
-                >
-                  {val}
-                </button>
-              ))}
-            </div>
-            <div className="modal-actions">
-              <button onClick={() => {
-                setShowDiceModal(false)
-                setDiceModalDismissed(true) // Устанавливаем флаг чтобы предотвратить автоматическое открытие
-                // Сбрасываем флаг через 2 секунды чтобы модалка могла открыться снова при следующем ходе
-                setTimeout(() => setDiceModalDismissed(false), 2000)
-              }}>Отмена</button>
-              <button className="queue-btn" onClick={handleAddToQueue}>В очередь</button>
-              <button className="confirm-btn" onClick={handleSetDice}>Бросить</button>
-            </div>
-          </div>
-        </div>
-      )}
           </div>
         </div>
       </div>

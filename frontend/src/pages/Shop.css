@@ -4,6 +4,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 /* Tabs are handled by PageLayout */
@@ -12,6 +15,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  align-items: stretch;
 }
 
 /* Для подписки используем обычный layout */
@@ -56,15 +61,68 @@
   }
 }
 
-@media (min-width: 769px) {
+/* Адаптивность для разных размеров экранов */
+@media (min-width: 481px) and (max-width: 768px) {
   .shop-content {
-    max-width: 800px;
-    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .shop-nar-coin-card,
+  .shop-subscription-card,
+  .shop-skin-card {
+    padding: 18px;
+  }
+  
+  .shop-nar-coin-icon {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .shop-subscription-icon {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .shop-content {
+    max-width: 900px;
+    margin: 0;
+    padding: 0 24px;
   }
   
   .shop-list {
-    max-width: 800px;
-    margin: 0 auto;
+    max-width: 100%;
+  }
+  
+  .shop-nar-coin-card,
+  .shop-subscription-card,
+  .shop-skin-card {
+    padding: 20px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .shop-content {
+    max-width: 1000px;
+    margin: 0;
+    padding: 0 32px;
+  }
+  
+  .shop-list {
+    max-width: 100%;
+  }
+  
+  /* На очень больших экранах можно сделать grid для скинов */
+  .shop-list:has(.shop-skin-card) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  
+  .shop-nar-coin-card,
+  .shop-subscription-card {
+    max-width: 600px;
   }
 }
 
@@ -117,6 +175,7 @@
   gap: 16px;
   width: 100%;
   min-height: 0;
+  flex-wrap: wrap;
 }
 
 .shop-nar-coin-info {
@@ -202,6 +261,7 @@
   justify-content: space-between;
   gap: 24px;
   flex-direction: row;
+  flex-wrap: wrap;
 }
 
 .shop-subscription-info {
@@ -748,9 +808,8 @@
   font-weight: 600;
   margin-top: 16px;
   margin-bottom: 8px;
-  margin-top: var(--spacing-4);
-  margin-bottom: var(--spacing-3);
-  padding-left: var(--spacing-2);
+  padding-left: 0;
+  text-align: left;
 }
 
 .shop-skin-group-title:first-child {
@@ -933,21 +992,39 @@
 
 @media (max-width: 480px) {
   .shop-content {
-    padding: var(--spacing-4);
+    padding: 0 12px;
   }
 
   .shop-nar-coin-card,
-  .shop-skin-card {
-    padding: var(--spacing-3);
+  .shop-skin-card,
+  .shop-subscription-card {
+    padding: 12px;
+  }
+
+  .shop-nar-coin-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .shop-nar-coin-icon {
+    width: 80px;
+    height: 80px;
+    align-self: center;
   }
 
   .shop-nar-coin-amount {
-    font-size: var(--font-size-lg);
+    font-size: 20px;
+  }
+
+  .shop-subscription-content {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .shop-subscription-icon {
     width: 80px;
     height: 80px;
+    align-self: center;
   }
 
   .shop-premium-modal {
@@ -962,5 +1039,14 @@
 
   .shop-subscription-info {
     gap: 12px;
+    width: 100%;
+  }
+
+  .shop-skin-content {
+    min-height: 320px;
+  }
+
+  .shop-skin-image {
+    margin: 50px 0 70px 0;
   }
 }

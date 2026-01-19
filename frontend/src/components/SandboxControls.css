@@ -104,6 +104,40 @@
   letter-spacing: 2px;
 }
 
+.sandbox-confirm-btn {
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.sandbox-confirm-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5cbf60 0%, #3e8d42 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+}
+
+.sandbox-confirm-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.sandbox-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(180deg, #666 0%, #444 100%);
+}
+
 .studio-toolbar {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

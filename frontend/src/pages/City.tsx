@@ -9,9 +9,10 @@ interface Building {
   id: string
   type: string
   level: number
-  accumulatedIncome: number
-  incomePerHour: number
+  accumulatedIncome: number | string
+  incomePerHour: number | string
   lastIncomeCollection: string | null
+  createdAt?: string
 }
 
 interface BuildingConfig {
@@ -52,6 +53,7 @@ export default function City() {
   const [purchasing, setPurchasing] = useState<string | null>(null)
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null)
   const [skillPoints, setSkillPoints] = useState({ economy: 0 })
+  const [showUpgradeModal, setShowUpgradeModal] = useState<{ buildingId: string; buildingName: string; currentLevel: number; newLevel: number; currentIncome: number; newIncome: number; price: number } | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -83,18 +85,41 @@ export default function City() {
 
   const handleUpgradeBuilding = async (buildingId: string) => {
     const building = currentDistrict?.buildings.find(b => b.userBuilding?.id === buildingId)
-    if (!building) return
+    if (!building || !building.userBuilding) return
     
-    const upgradePrice = Math.floor(building.config.basePrice * Math.pow(building.config.upgradeMultiplier || 1.15, building.userBuilding!.level))
-    const confirmed = window.confirm(`Улучшить здание за ${upgradePrice.toLocaleString('ru-RU')} NAR?`)
-    if (!confirmed) return
+    const currentLevel = building.userBuilding.level
+    const newLevel = currentLevel + 1
+    const currentIncome = Number(building.userBuilding.incomePerHour)
+    
+    // Рассчитываем новый доход после улучшения
+    const incomeMultiplier = building.config.incomeMultiplier || 0.07
+    const baseIncome = Number(building.config.baseIncomePerHour)
+    const newIncome = Math.floor(baseIncome * (1 + incomeMultiplier * (newLevel - 1)))
+    
+    const upgradePrice = Math.floor(building.config.basePrice * Math.pow(building.config.upgradeMultiplier || 1.15, currentLevel))
+    
+    // Показываем модальное окно вместо window.confirm
+    setShowUpgradeModal({
+      buildingId,
+      buildingName: building.config.name,
+      currentLevel,
+      newLevel,
+      currentIncome,
+      newIncome,
+      price: upgradePrice
+    })
+  }
+
+  const confirmUpgrade = async () => {
+    if (!showUpgradeModal) return
     
     try {
-      setPurchasing(buildingId)
-      await apiClient.put(`/city/buildings/${buildingId}/upgrade`)
+      setPurchasing(showUpgradeModal.buildingId)
+      await apiClient.put(`/city/buildings/${showUpgradeModal.buildingId}/upgrade`)
       const userRes = await apiClient.get('/users/me')
       updateUser(userRes.data)
       await loadData()
+      setShowUpgradeModal(null)
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка улучшения здания')
     } finally {
@@ -179,7 +204,31 @@ export default function City() {
               {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map((buildingData) => {
                 const { config, userBuilding } = buildingData
                 const incomeMultiplier = config.incomeMultiplier || 0.07
-                const accumulatedIncome = userBuilding ? Number(userBuilding.accumulatedIncome || 0) : 0
+                
+                // Рассчитываем актуальный накопленный доход на основе времени
+                let accumulatedIncome = 0
+                if (userBuilding) {
+                  const baseAccumulated = Number(userBuilding.accumulatedIncome || 0)
+                  // Используем lastIncomeCollection или текущее время, если его нет
+                  const lastCollection = userBuilding.lastIncomeCollection 
+                    ? new Date(userBuilding.lastIncomeCollection) 
+                    : (userBuilding.createdAt ? new Date(userBuilding.createdAt) : new Date())
+                  const now = new Date()
+                  const hoursPassed = Math.max(0, (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60))
+                  // incomePerHour может быть строкой (bigint) или числом
+                  const incomePerHour = typeof userBuilding.incomePerHour === 'string' 
+                    ? Number(userBuilding.incomePerHour) 
+                    : (userBuilding.incomePerHour || 0)
+                  const newIncome = Math.floor(incomePerHour * hoursPassed)
+                  accumulatedIncome = baseAccumulated + newIncome
+                  
+                  // Ограничиваем максимальным накоплением
+                  const maxAccumulation = Number(config.maxAccumulation || 0)
+                  if (maxAccumulation > 0) {
+                    accumulatedIncome = Math.min(accumulatedIncome, maxAccumulation)
+                  }
+                }
+                
                 const upgradePrice = userBuilding && userBuilding.level < config.maxLevel
                   ? Math.floor(config.basePrice * Math.pow(config.upgradeMultiplier || 1.15, userBuilding.level))
                   : 0
@@ -209,7 +258,16 @@ export default function City() {
                     {/* Информация о прибыли */}
                     {userBuilding && (
                       <div className="city-card-v3-income">
-                        {userBuilding.incomePerHour.toLocaleString('ru-RU')} NAR/час
+                        <div>
+                          {(typeof userBuilding.incomePerHour === 'string' 
+                            ? Number(userBuilding.incomePerHour) 
+                            : (userBuilding.incomePerHour || 0)).toLocaleString('ru-RU')} NAR/час
+                        </div>
+                        {accumulatedIncome > 0 && (
+                          <div className="city-card-v3-accumulated">
+                            Накоплено: {accumulatedIncome.toLocaleString('ru-RU')} NAR
+                          </div>
+                        )}
                       </div>
                     )}
                     
@@ -217,19 +275,17 @@ export default function City() {
                     <div className="city-card-v3-actions">
                       {userBuilding ? (
                         <>
-                          {/* Кнопка сбора прибыли */}
-                          {accumulatedIncome > 0 && (
-                            <button
-                              className="city-card-v3-btn city-card-v3-btn-collect"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleCollectIncome(userBuilding.id)
-                              }}
-                              disabled={collecting === userBuilding.id}
-                            >
-                              {collecting === userBuilding.id ? 'Сбор...' : `💰 Собрать ${accumulatedIncome.toLocaleString('ru-RU')}`}
-                            </button>
-                          )}
+                          {/* Кнопка сбора прибыли - показываем всегда, если есть накопленный доход */}
+                          <button
+                            className="city-card-v3-btn city-card-v3-btn-collect"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleCollectIncome(userBuilding.id)
+                            }}
+                            disabled={collecting === userBuilding.id || accumulatedIncome <= 0}
+                          >
+                            {collecting === userBuilding.id ? 'Сбор...' : accumulatedIncome > 0 ? `💰 Собрать ${accumulatedIncome.toLocaleString('ru-RU')}` : '💰 Нет дохода'}
+                          </button>
                           
                           {/* Кнопка улучшения */}
                           {userBuilding.level < config.maxLevel ? (
@@ -268,6 +324,58 @@ export default function City() {
         )}
       </div>
 
+      {/* Модальное окно улучшения */}
+      {showUpgradeModal && (
+        <div className="city-upgrade-modal-overlay" onClick={() => setShowUpgradeModal(null)}>
+          <div className="city-upgrade-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="city-upgrade-modal-header">
+              <h3>Улучшение здания</h3>
+              <button className="city-upgrade-modal-close" onClick={() => setShowUpgradeModal(null)}>✕</button>
+            </div>
+            <div className="city-upgrade-modal-content">
+              <div className="city-upgrade-building-name">{showUpgradeModal.buildingName}</div>
+              <div className="city-upgrade-levels">
+                <div className="city-upgrade-level-item">
+                  <span className="city-upgrade-level-label">Текущий уровень:</span>
+                  <span className="city-upgrade-level-value">LVL {showUpgradeModal.currentLevel}</span>
+                </div>
+                <div className="city-upgrade-level-item">
+                  <span className="city-upgrade-level-label">Новый уровень:</span>
+                  <span className="city-upgrade-level-value">LVL {showUpgradeModal.newLevel}</span>
+                </div>
+              </div>
+              <div className="city-upgrade-income">
+                <div className="city-upgrade-income-item">
+                  <span className="city-upgrade-income-label">Был доход:</span>
+                  <span className="city-upgrade-income-value">{showUpgradeModal.currentIncome.toLocaleString('ru-RU')} NAR/час</span>
+                </div>
+                <div className="city-upgrade-income-item">
+                  <span className="city-upgrade-income-label">Станет доход:</span>
+                  <span className="city-upgrade-income-value city-upgrade-income-new">{showUpgradeModal.newIncome.toLocaleString('ru-RU')} NAR/час</span>
+                </div>
+              </div>
+              <div className="city-upgrade-price">
+                Стоимость: <strong>{showUpgradeModal.price.toLocaleString('ru-RU')} NAR</strong>
+              </div>
+            </div>
+            <div className="city-upgrade-modal-actions">
+              <button 
+                className="city-upgrade-btn city-upgrade-btn-cancel"
+                onClick={() => setShowUpgradeModal(null)}
+              >
+                Отмена
+              </button>
+              <button 
+                className="city-upgrade-btn city-upgrade-btn-confirm"
+                onClick={confirmUpgrade}
+                disabled={purchasing === showUpgradeModal.buildingId || (user?.narCoin || 0) < showUpgradeModal.price}
+              >
+                {purchasing === showUpgradeModal.buildingId ? 'Улучшение...' : 'Улучшить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   )
 }

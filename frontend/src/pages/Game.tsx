@@ -364,7 +364,6 @@ export default function Game() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showGameMenu])
 
-
   // Загрузка настройки requireConfirmMove из пользователя
   useEffect(() => {
     if (user) {
@@ -2273,6 +2272,21 @@ export default function Game() {
     }
   }
 
+  // Обработчик события подтверждения хода из SandboxControls
+  useEffect(() => {
+    if (!isSandbox) return
+    
+    const handleSandboxConfirm = () => {
+      if (pendingMoves.length > 0) {
+        handleConfirm()
+      }
+    }
+    window.addEventListener('sandbox-confirm-move', handleSandboxConfirm)
+    return () => {
+      window.removeEventListener('sandbox-confirm-move', handleSandboxConfirm)
+    }
+  }, [isSandbox, pendingMoves.length, handleConfirm])
+
   // Функция для проверки и запуска авто-подтверждения
   const checkAutoConfirm = useCallback(async (moves: Array<{ from: number; to: number; die: number; steps?: any[] }>) => {
     // Базовые проверки
@@ -2901,7 +2915,8 @@ export default function Game() {
           {(gameStatus === 'in_progress' || gameStatus === 'finished' || isSandbox) && (
             <div className="board-wrapper">
               {/* Кнопки подтверждения и отмены в нижней части бара (ландшафт и портретный режим) */}
-              {((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0) && (
+              {/* В sandbox режиме кнопки подтверждения скрыты - используется панель с тремя точками */}
+              {((gameStatus === 'in_progress' || isSandbox) && isMyTurn && gameState?.dice && pendingMoves.length > 0 && !isSandbox) && (
                 <>
                   {requireConfirmMove ? (
                     <>

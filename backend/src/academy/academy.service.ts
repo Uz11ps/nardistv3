@@ -187,7 +187,19 @@ export class AcademyService {
       const purchased = purchasedArticleIds.includes(article.id);
       let isCompleted = false;
 
+      let isCompleted = false;
+      let quizPassed = false;
+
       if (purchased && userId) {
+        // Получаем информацию о покупке материала
+        const userMaterial = await this.userMaterialsRepository.findOne({
+          where: { userId, articleId: article.id },
+        });
+        
+        if (userMaterial) {
+          quizPassed = userMaterial.quizPassed || false;
+        }
+
         // Проверяем, выполнены ли все задания курса
         const tasks = await this.courseTasksRepository.find({
           where: { courseId: article.id, isActive: true },
@@ -216,6 +228,7 @@ export class AcademyService {
         views: article.views,
         isVerified: article.isVerified,
         isCompleted,
+        quizPassed,
         gameMode: article.gameMode,
         assignment: article.assignment, // Добавляем assignment для проверки наличия quiz
       });

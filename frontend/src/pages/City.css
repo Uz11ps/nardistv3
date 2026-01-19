@@ -151,6 +151,15 @@
   color: #4CAF50;
   margin-bottom: 8px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.city-card-v3-accumulated {
+  font-size: 10px;
+  color: #FFD700;
+  font-weight: 600;
 }
 
 .city-card-v3-actions {
@@ -416,4 +425,195 @@
 .city-card-v3.selected {
   border: 2px solid #C93C3D;
   box-shadow: 0 0 8px rgba(201, 60, 61, 0.3);
+}
+
+/* Модальное окно улучшения */
+.city-upgrade-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.city-upgrade-modal {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+}
+
+.city-upgrade-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.city-upgrade-modal-header h3 {
+  margin: 0;
+  color: #FFF;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.city-upgrade-modal-close {
+  background: none;
+  border: none;
+  color: #FFF;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.city-upgrade-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.city-upgrade-modal-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.city-upgrade-building-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #FFF;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.city-upgrade-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.city-upgrade-level-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.city-upgrade-level-label {
+  color: #888;
+  font-size: 14px;
+}
+
+.city-upgrade-level-value {
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.city-upgrade-income {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.city-upgrade-income-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.city-upgrade-income-label {
+  color: #888;
+  font-size: 14px;
+}
+
+.city-upgrade-income-value {
+  color: #4CAF50;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.city-upgrade-income-new {
+  color: #FFD700;
+}
+
+.city-upgrade-price {
+  text-align: center;
+  padding: 12px;
+  background: rgba(201, 60, 61, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(201, 60, 61, 0.3);
+  color: #FFF;
+  font-size: 14px;
+}
+
+.city-upgrade-price strong {
+  color: #C93C3D;
+  font-size: 16px;
+}
+
+.city-upgrade-modal-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.city-upgrade-btn {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.city-upgrade-btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFF;
+}
+
+.city-upgrade-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.city-upgrade-btn-confirm {
+  background: #C93C3D;
+  color: #FFF;
+}
+
+.city-upgrade-btn-confirm:hover:not(:disabled) {
+  background: #b83536;
+  transform: translateY(-1px);
+}
+
+.city-upgrade-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
