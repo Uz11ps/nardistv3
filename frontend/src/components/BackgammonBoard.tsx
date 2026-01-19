@@ -2727,9 +2727,10 @@ export default function BackgammonBoard({
       })
       setValidTargetPoints(validTargets)
 
-      // Начинаем перетаскивание сразу при mousedown
+      // Начинаем перетаскивание сразу при mousedown (используем координаты точки, чтобы шашка не прыгала)
+      const { x: pX, y: pY } = getPointCoordinates(pointIndex, canvas)
       setDragging({ pointIndex, offsetX: 0, offsetY: 0 })
-      setDragPosition({ x, y })
+      setDragPosition({ x: pX, y: pY })
     } else {
       setSelectedPoint(null)
       setValidTargetPoints(new Set())
