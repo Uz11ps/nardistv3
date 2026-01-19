@@ -132,8 +132,10 @@ export default function BackgammonBoard({
       // Dedicated bear-off valid highlight
       bearOffValidWidthScale: 1,
       bearOffValidHeightScale: 1,
-      bearOffValidXOffset: 0,
-      bearOffValidYOffset: 0,
+      bearOffValidWhiteXOffset: 0,
+      bearOffValidWhiteYOffset: 0,
+      bearOffValidBlackXOffset: 0,
+      bearOffValidBlackYOffset: 0,
       // Bottom row specific highlight offset (if needed separately, otherwise shared)
       highlightBottomYOffset: 26,
       validHighlightBottomYOffset: 26,
@@ -144,8 +146,10 @@ export default function BackgammonBoard({
       dragCheckerYOffset: 0,
       // Bear-off (lot) customization
       bearOffCheckerScale: 0.9,
-      bearOffXOffset: 2,
-      bearOffYOffset: 0,
+      bearOffWhiteXOffset: 2,
+      bearOffWhiteYOffset: 0,
+      bearOffBlackXOffset: 2,
+      bearOffBlackYOffset: 0,
       // Advanced text offsets (quadrants)
       textTopRightY: -316, // Points 19-24 (Indices 0-5)
       textTopLeftY: -316,  // Points 13-18 (Indices 6-11)
@@ -199,8 +203,10 @@ export default function BackgammonBoard({
     dragCheckerYOffset: 0,
     // Bear-off (lot) customization
     bearOffCheckerScale: 0.9,
-    bearOffXOffset: 2,
-    bearOffYOffset: 0,
+    bearOffWhiteXOffset: 2,
+    bearOffWhiteYOffset: 0,
+    bearOffBlackXOffset: 2,
+    bearOffBlackYOffset: 0,
     // Advanced text offsets (quadrants)
     textTopRightY: -316,
     textTopLeftY: -316, 
