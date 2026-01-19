@@ -68,6 +68,11 @@ export default function Clans() {
     )
   }
 
+  const userLevel = user?.level || 0
+  const canCreateClan = userLevel >= 15
+  const buttonText = canCreateClan ? 'Создать федерацию' : 'Вступить в федерацию'
+  const buttonRoute = canCreateClan ? '/clans/create' : '/clans/search'
+
   return (
     <PageLayout 
       title="Федерации" 
@@ -79,8 +84,8 @@ export default function Clans() {
           <img src="/img/кланы.png" alt="Federations" />
         </div>
         
-        <button className="federations-welcome-btn" onClick={() => navigate('/')}>
-          Играть
+        <button className="federations-welcome-btn" onClick={() => navigate(buttonRoute)}>
+          {buttonText}
         </button>
       </div>
     </PageLayout>
