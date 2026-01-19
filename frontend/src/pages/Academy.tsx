@@ -182,10 +182,18 @@ export default function Academy() {
 
   const handlePurchase = async (item: Course | Article | Onboarding) => {
     try {
-      await apiClient.post(`/academy/courses/${item.id}/purchase`)
+      // Используем правильный эндпоинт в зависимости от типа материала
+      const endpoint = item.type === 'article' 
+        ? `/academy/articles/${item.id}/purchase`
+        : `/academy/courses/${item.id}/purchase`
+      await apiClient.post(endpoint)
       alert('Материал успешно куплен!')
       setShowPurchaseModal(null)
       loadData()
+      // Если открыт материал, перезагружаем его
+      if (isMaterialPage && materialId === item.id) {
+        loadMaterialDetail(item.id)
+      }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Ошибка при покупке'
       alert(errorMessage)
@@ -194,7 +202,12 @@ export default function Academy() {
   }
 
   const handleOpen = (material: Course | Article | Onboarding) => {
-    navigate(`/academy/${material.id}`)
+    // Если материал не куплен и платный - показываем модалку покупки
+    if (!material.purchased && (material.isPaid || material.price > 0)) {
+      setShowPurchaseModal(material)
+    } else {
+      navigate(`/academy/${material.id}`)
+    }
   }
 
   // Функция фильтрации и сортировки элементов
@@ -304,37 +317,55 @@ export default function Academy() {
     const mainTitle = titleParts[0] || 'Основы'
     const subtitle = titleParts.slice(1).join(' ') || 'Длинных нард'
     
+    // Если материал не куплен и платный - показываем сообщение о необходимости покупки
+    const isNotPurchased = !materialDetail.purchased && (materialDetail.isPaid || materialDetail.price > 0)
+    
     return (
       <PageLayout title={mainTitle} subtitle={subtitle} showBack={true}>
         <div className="academy-material-author">{materialDetail.author || 'Администратор'}</div>
-        <div className="academy-material-content">
-          {materialDetail.sections && materialDetail.sections.length > 0 ? (
-            materialDetail.sections.map((section) => (
-              <div key={section.id} className="academy-material-section">
-                <div className="academy-material-section-header">
-                  {section.icon && <span className="academy-material-section-icon">{section.icon}</span>}
-                  <h3 className="academy-material-section-title">{section.title}</h3>
+        {isNotPurchased ? (
+          <div className="academy-material-content">
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <p style={{ fontSize: '18px', marginBottom: '20px' }}>Курс не куплен</p>
+              <button 
+                className="academy-my-material-open-btn"
+                onClick={() => setShowPurchaseModal(materialDetail)}
+                style={{ margin: '0 auto' }}
+              >
+                Купить за {materialDetail.price || 0} NAR
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="academy-material-content">
+            {materialDetail.sections && materialDetail.sections.length > 0 ? (
+              materialDetail.sections.map((section) => (
+                <div key={section.id} className="academy-material-section">
+                  <div className="academy-material-section-header">
+                    {section.icon && <span className="academy-material-section-icon">{section.icon}</span>}
+                    <h3 className="academy-material-section-title">{section.title}</h3>
+                  </div>
+                  <div className="academy-material-section-content" dangerouslySetInnerHTML={{ __html: section.content }} />
                 </div>
-                <div className="academy-material-section-content" dangerouslySetInnerHTML={{ __html: section.content }} />
-              </div>
-            ))
-          ) : (
-            <div className="academy-material-content-text" dangerouslySetInnerHTML={{ __html: materialDetail.content || 'Содержание отсутствует' }} />
-          )}
-          
-          {/* Тест для курсов */}
-          {materialDetail.quiz && materialDetail.type === 'course' && (
-            <Quiz
-              courseId={materialDetail.id}
-              quiz={materialDetail.quiz}
-              quizPassed={materialDetail.quizPassed || false}
-              onComplete={(result) => {
-                // Обновляем статус после прохождения теста
-                setMaterialDetail(prev => prev ? { ...prev, quizPassed: result.passed } : null)
-              }}
-            />
-          )}
-        </div>
+              ))
+            ) : (
+              <div className="academy-material-content-text" dangerouslySetInnerHTML={{ __html: materialDetail.content || 'Содержание отсутствует' }} />
+            )}
+            
+            {/* Тест для курсов */}
+            {materialDetail.quiz && materialDetail.type === 'course' && (
+              <Quiz
+                courseId={materialDetail.id}
+                quiz={materialDetail.quiz}
+                quizPassed={materialDetail.quizPassed || false}
+                onComplete={(result) => {
+                  // Обновляем статус после прохождения теста
+                  setMaterialDetail(prev => prev ? { ...prev, quizPassed: result.passed } : null)
+                }}
+              />
+            )}
+          </div>
+        )}
       </PageLayout>
     )
   }
@@ -639,6 +670,39 @@ export default function Academy() {
           </div>
         )}
       </div>
+
+      {/* Модалка покупки */}
+      {showPurchaseModal && (
+        <div className="modal-overlay" onClick={() => setShowPurchaseModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Покупка материала</h2>
+              <button className="modal-close" onClick={() => setShowPurchaseModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: '20px', fontSize: '16px' }}>{showPurchaseModal.title}</p>
+              <p style={{ marginBottom: '20px', color: '#888' }}>
+                Цена: <strong>{showPurchaseModal.price || 0} NAR</strong>
+              </p>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button 
+                  className="academy-card-button"
+                  onClick={() => setShowPurchaseModal(null)}
+                  style={{ background: '#3a3a3a' }}
+                >
+                  Отмена
+                </button>
+                <button 
+                  className="academy-card-button academy-card-button-primary"
+                  onClick={() => handlePurchase(showPurchaseModal)}
+                >
+                  {showPurchaseModal.price === 0 ? 'Получить бесплатно' : `Купить за ${showPurchaseModal.price} NAR`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   )
 }

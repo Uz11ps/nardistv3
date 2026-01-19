@@ -55,53 +55,66 @@ export class AcademyService {
     article.views++;
     await this.articlesRepository.save(article);
 
-    // Формируем результат с content и sections
-    const result: any = { ...article, purchased };
+    // Формируем базовый результат
+    const result: any = { 
+      id: article.id,
+      title: article.title,
+      author: article.author,
+      type: article.type,
+      price: Number(article.price || 0),
+      isPaid: article.isPaid,
+      views: article.views,
+      gameMode: article.gameMode,
+      purchased,
+    };
     
-    // Если есть content, добавляем его в результат
-    if (article.content) {
-      result.content = article.content;
-    }
-
-    // Если это курс или онбординг, загружаем задания как sections
-    if (article.type === 'course' || article.type === 'onboarding') {
-      const tasks = await this.courseTasksRepository.find({
-        where: { courseId: id, isActive: true },
-        order: { order: 'ASC' },
-      });
-
-      // Преобразуем задания в sections
-      result.sections = tasks.map((task, index) => ({
-        id: task.id,
-        title: task.title,
-        description: task.description || '',
-        content: task.description || '', // Используем description как content для отображения
-        icon: this.getTaskIcon(task.type),
-        order: task.order || index,
-        type: task.type,
-        requirements: task.requirements,
-        rewardNarCoin: Number(task.rewardNarCoin || 0),
-        rewardXP: task.rewardXP || 0,
-        isRequired: task.isRequired,
-      }));
-
-      // Если sections пустые, используем content как fallback
-      if (result.sections.length === 0 && article.content) {
-        result.sections = [{
-          id: 'main',
-          title: article.type === 'onboarding' ? 'Содержание онбординга' : 'Содержание курса',
-          content: article.content,
-          order: 0,
-        }];
+    // Контент, sections и quiz возвращаем только если материал куплен или бесплатный
+    if (purchased) {
+      // Если есть content, добавляем его в результат
+      if (article.content) {
+        result.content = article.content;
       }
 
-      // Добавляем quiz из assignment, если он есть
-      if (article.assignment && article.assignment.quiz) {
-        result.quiz = article.assignment.quiz;
-        // Если курс куплен, проверяем статус прохождения теста
-        if (purchased && userMaterial) {
-          result.quizPassed = userMaterial.quizPassed || false;
-          result.quizPassedAt = userMaterial.quizPassedAt || null;
+      // Если это курс или онбординг, загружаем задания как sections
+      if (article.type === 'course' || article.type === 'onboarding') {
+        const tasks = await this.courseTasksRepository.find({
+          where: { courseId: id, isActive: true },
+          order: { order: 'ASC' },
+        });
+
+        // Преобразуем задания в sections
+        result.sections = tasks.map((task, index) => ({
+          id: task.id,
+          title: task.title,
+          description: task.description || '',
+          content: task.description || '', // Используем description как content для отображения
+          icon: this.getTaskIcon(task.type),
+          order: task.order || index,
+          type: task.type,
+          requirements: task.requirements,
+          rewardNarCoin: Number(task.rewardNarCoin || 0),
+          rewardXP: task.rewardXP || 0,
+          isRequired: task.isRequired,
+        }));
+
+        // Если sections пустые, используем content как fallback
+        if (result.sections.length === 0 && article.content) {
+          result.sections = [{
+            id: 'main',
+            title: article.type === 'onboarding' ? 'Содержание онбординга' : 'Содержание курса',
+            content: article.content,
+            order: 0,
+          }];
+        }
+
+        // Добавляем quiz из assignment, если он есть
+        if (article.assignment && article.assignment.quiz) {
+          result.quiz = article.assignment.quiz;
+          // Если курс куплен, проверяем статус прохождения теста
+          if (userMaterial) {
+            result.quizPassed = userMaterial.quizPassed || false;
+            result.quizPassedAt = userMaterial.quizPassedAt || null;
+          }
         }
       }
     }
@@ -336,7 +349,7 @@ export class AcademyService {
 
     const price = Number(course.price || 0);
     
-    // Если материал платный, проверяем баланс и списываем средства
+    // Если материал платный (цена > 0), проверяем баланс и списываем средства
     if (price > 0) {
       if (Number(user.narCoin) < price) {
         throw new BadRequestException('Недостаточно NAR-coin');
@@ -363,7 +376,7 @@ export class AcademyService {
       }
       // Остальные (100% - royaltyPercent) остаются в экономике проекта
     }
-    // Если материал бесплатный (price <= 0), просто открываем доступ без списания средств
+    // Если материал бесплатный (price === 0), просто открываем доступ без списания средств
 
     // Сохраняем покупку (или бесплатное получение)
     const userMaterial = this.userMaterialsRepository.create({

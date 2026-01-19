@@ -151,92 +151,110 @@ export class LongBackgammonEngine {
     const player = state.currentPlayer;
     
     // Быстрая проверка: есть ли у противника шашки в доме
+    let opponentHasCheckerInHome = false;
     if (player === 0) {
       // Для белых проверяем дом черных (indices 6-11)
-      if (state.points[6] < 0 || state.points[7] < 0 || state.points[8] < 0 || 
-          state.points[9] < 0 || state.points[10] < 0 || state.points[11] < 0) {
-        return true; // Противник имеет шашки в доме - правило не применяется
-      }
-    } else {
-      // Для черных проверяем дом белых (indices 18-23)
-      if (state.points[18] > 0 || state.points[19] > 0 || state.points[20] > 0 || 
-          state.points[21] > 0 || state.points[22] > 0 || state.points[23] > 0) {
-        return true; // Противник имеет шашки в доме - правило не применяется
-      }
-    }
-    
-    // Противник не имеет шашек в доме - проверяем, создает ли ход новый блок из 6 точек
-    // Ищем максимальный непрерывный блок, который включает 'to' ПОСЛЕ хода
-    let maxBlockAfter = 0;
-    let blockStartAfter = to;
-    
-    // Ищем блок назад от 'to'
-    for (let i = 0; i < 6; i++) {
-      const idx = (to - i + this.BOARD_SIZE) % this.BOARD_SIZE;
-      let value = state.points[idx] || 0;
-      
-      // Симуляция хода
-      if (idx === from && from >= 0 && from < this.BOARD_SIZE) {
-        if (player === 0 && value > 0) value--;
-        else if (player === 1 && value < 0) value++;
-      } else if (idx === to) {
-        if (player === 0) value++;
-        else value--;
-      }
-      
-      if ((player === 0 && value > 0) || (player === 1 && value < 0)) {
-        if (i === 0) blockStartAfter = idx;
-        maxBlockAfter++;
-      } else {
-        break;
-      }
-    }
-    
-    // Ищем блок вперед от 'to'
-    for (let i = 1; i < 6; i++) {
-      const idx = (to + i) % this.BOARD_SIZE;
-      let value = state.points[idx] || 0;
-      
-      // Симуляция хода
-      if (idx === from && from >= 0 && from < this.BOARD_SIZE) {
-        if (player === 0 && value > 0) value--;
-        else if (player === 1 && value < 0) value++;
-      }
-      
-      if ((player === 0 && value > 0) || (player === 1 && value < 0)) {
-        maxBlockAfter++;
-      } else {
-        break;
-      }
-    }
-    
-    // Если после хода создается блок из 6 или более точек - проверяем, был ли он ДО хода
-    if (maxBlockAfter >= 6) {
-      // Подсчитываем блок ДО хода
-      let maxBlockBefore = 0;
-      for (let i = 0; i < 6; i++) {
-        const idx = (blockStartAfter + i) % this.BOARD_SIZE;
-        let value = state.points[idx] || 0;
-        
-        // Откатываем ход для проверки состояния ДО
-        if (idx === from && from >= 0 && from < this.BOARD_SIZE) {
-          if (player === 0 && value > 0) value++;
-          else if (player === 1 && value < 0) value--;
-        } else if (idx === to) {
-          if (player === 0 && value > 0) value--;
-          else if (player === 1 && value < 0) value++;
-        }
-        
-        if ((player === 0 && value > 0) || (player === 1 && value < 0)) {
-          maxBlockBefore++;
-        } else {
+      for (let i = 6; i <= 11; i++) {
+        if (state.points[i] < 0) {
+          opponentHasCheckerInHome = true;
           break;
         }
       }
-      
-      // Если блок создается заново (было меньше 6, стало 6+) - запрещаем
-      if (maxBlockBefore < 6) {
-        return false;
+    } else {
+      // Для черных проверяем дом белых (indices 18-23)
+      for (let i = 18; i <= 23; i++) {
+        if (state.points[i] > 0) {
+          opponentHasCheckerInHome = true;
+          break;
+        }
+      }
+    }
+    
+    // Если противник имеет шашки в доме - правило не применяется
+    if (opponentHasCheckerInHome) {
+      return true;
+    }
+    
+    // Противник не имеет шашек в доме - проверяем все блоки, которые могут быть затронуты ходом
+    // Блок может быть затронут, если он включает 'from' или 'to', или находится рядом
+    // Проверяем блоки, которые могут включать точки от (from-5) до (to+5)
+    const checkPoints = new Set<number>();
+    if (from >= 0 && from < this.BOARD_SIZE) {
+      for (let i = -5; i <= 5; i++) {
+        checkPoints.add((from + i + this.BOARD_SIZE) % this.BOARD_SIZE);
+      }
+    }
+    for (let i = -5; i <= 5; i++) {
+      checkPoints.add((to + i + this.BOARD_SIZE) % this.BOARD_SIZE);
+    }
+    
+    // Для каждой точки, которая может быть началом блока, проверяем блок из 6 точек
+    for (const potentialStart of checkPoints) {
+      // Блок может начинаться максимум за 5 позиций до этой точки
+      for (let offset = 0; offset < 6; offset++) {
+        const blockStart = (potentialStart - offset + this.BOARD_SIZE) % this.BOARD_SIZE;
+        
+        let ourCountAfter = 0;
+        let hasOpponentAfter = false;
+        let blockIncludesFromOrTo = false;
+        
+        // Проверяем блок из 6 точек, начиная с blockStart
+        for (let i = 0; i < 6; i++) {
+          const idx = (blockStart + i) % this.BOARD_SIZE;
+          let value = state.points[idx] || 0;
+          
+          // Отслеживаем, включает ли блок from или to
+          if (idx === from || idx === to) {
+            blockIncludesFromOrTo = true;
+          }
+          
+          // Симуляция хода ПОСЛЕ
+          if (idx === from && from >= 0 && from < this.BOARD_SIZE) {
+            if (player === 0 && value > 0) value--;
+            else if (player === 1 && value < 0) value++;
+          } else if (idx === to) {
+            if (player === 0) value++;
+            else value--;
+          }
+          
+          // Подсчитываем наши шашки в блоке
+          if ((player === 0 && value > 0) || (player === 1 && value < 0)) {
+            ourCountAfter++;
+          }
+          
+          // Проверяем наличие противника в блоке
+          if ((player === 0 && value < 0) || (player === 1 && value > 0)) {
+            hasOpponentAfter = true;
+          }
+        }
+        
+        // Если блок включает from или to И после хода создается блок из 6 наших точек без противника
+        if (blockIncludesFromOrTo && ourCountAfter === 6 && !hasOpponentAfter) {
+          // Подсчитываем блок ДО хода
+          let ourCountBefore = 0;
+          for (let i = 0; i < 6; i++) {
+            const idx = (blockStart + i) % this.BOARD_SIZE;
+            let value = state.points[idx] || 0;
+            
+            // Откатываем ход для проверки состояния ДО
+            if (idx === from && from >= 0 && from < this.BOARD_SIZE) {
+              if (player === 0 && value > 0) value++;
+              else if (player === 1 && value < 0) value--;
+            } else if (idx === to) {
+              if (player === 0 && value > 0) value--;
+              else if (player === 1 && value < 0) value++;
+            }
+            
+            if ((player === 0 && value > 0) || (player === 1 && value < 0)) {
+              ourCountBefore++;
+            }
+          }
+          
+          // Если блок создается заново (было меньше 6, стало 6) - запрещаем
+          if (ourCountBefore < 6) {
+            return false;
+          }
+        }
       }
     }
     

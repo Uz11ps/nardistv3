@@ -260,6 +260,51 @@
   cursor: not-allowed;
 }
 
+/* Модалка покупки */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header .modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #FFF;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.modal-close:hover {
+  color: #FFF;
+}
+
+.modal-body {
+  color: #FFF;
+}
+
+.modal-body p {
+  margin: 0 0 12px 0;
+  color: #B6B6B6;
+}
+
 /* Material Detail Content Styles */
 .academy-material-content {
   color: #FFF;

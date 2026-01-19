@@ -41,6 +41,12 @@ export class AcademyController {
     return this.academyService.purchaseCourse(user.id, id);
   }
 
+  @Post('articles/:id/purchase')
+  @UseGuards(JwtAuthGuard)
+  async purchaseArticle(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.academyService.purchaseCourse(user.id, id);
+  }
+
   @Get('materials/:id')
   @UseGuards(JwtAuthGuard)
   async getMaterial(@CurrentUser() user: any, @Param('id') id: string) {
