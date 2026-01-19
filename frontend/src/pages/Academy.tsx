@@ -212,8 +212,6 @@ export default function Academy() {
       // Обновляем пользователя для обновления баланса
       const userRes = await apiClient.get('/users/me')
       updateUser(userRes.data)
-        loadMaterialDetail(item.id)
-      }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Ошибка при покупке'
       alert(errorMessage)
