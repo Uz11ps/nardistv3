@@ -529,7 +529,7 @@ export class LongBackgammonEngine {
     return null;
   }
 
-  getAllValidMoves(state: LongBoardState, dice: number[], isFirstMoveOfGame: boolean = false): Array<Array<{ from: number; to: number; die: number }>> {
+  getAllValidMoves(state: LongBoardState, dice: number[], isFirstMoveOfGame: boolean = false, seed?: string): Array<Array<{ from: number; to: number; die: number }>> {
     if (dice.length === 0) return [];
 
     const moves: Array<Array<{ from: number; to: number; die: number }>> = [];
@@ -653,6 +653,28 @@ export class LongBackgammonEngine {
     if (moves.length === 0) return [];
 
     const maxLength = Math.max(...moves.map((m) => m.length));
-    return moves.filter((m) => m.length === maxLength);
+    const bestMoves = moves.filter((m) => m.length === maxLength);
+    
+    // Перемешиваем порядок ходов для разнообразия (особенно важно для первого хода)
+    // Используем детерминированный RNG на основе seed для provably fair
+      return bestMoves;
+    }
+    
+    // Создаем seed для перемешивания на основе переданного seed + текущего состояния
+    // Это гарантирует детерминированность при одинаковых условиях
+    const shuffleSeed = seed 
+      ? `${seed}-${JSON.stringify(state.points)}-${dice.join(',')}-${state.currentPlayer}`
+      : `${JSON.stringify(state.points)}-${dice.join(',')}-${state.currentPlayer}-${Date.now()}`;
+    
+    const rng = this.createSeededRNG(shuffleSeed);
+    const shuffledMoves = [...bestMoves];
+    
+    // Алгоритм Фишера-Йетса с детерминированным RNG
+    for (let i = shuffledMoves.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [shuffledMoves[i], shuffledMoves[j]] = [shuffledMoves[j], shuffledMoves[i]];
+    }
+    
+    return shuffledMoves;
   }
 }

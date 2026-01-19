@@ -902,7 +902,7 @@ export class GamesService {
     // getAllValidMoves доступен только для BackgammonEngine
     let allValidMoves: Array<Array<{ from: number; to: number; die: number }>> = [];
     if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
-      allValidMoves = engine.getAllValidMoves(game.gameState, dice);
+      allValidMoves = engine.getAllValidMoves(game.gameState, dice, false, game.rngSeed);
     }
     
     // Финальная проверка использования кубиков для дублей
@@ -1046,7 +1046,7 @@ export class GamesService {
         if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
           // ВАЖНО: После применения ходов это уже НЕ первый ход игры
           // Используем isFirstMoveOfGame = false для проверки оставшихся ходов
-          const remainingMoves = engine.getAllValidMoves(currentState, remainingDice, false);
+          const remainingMoves = engine.getAllValidMoves(currentState, remainingDice, false, game.rngSeed);
           // getAllValidMoves возвращает последовательности. Если есть хотя бы одна непустая - ходы есть.
           hasValidMoves = remainingMoves.length > 0 && remainingMoves.some(seq => seq.length > 0);
           this.logger.log(`🔍 Checking remaining moves after ${finalMovesToSave.length} moves: dice=[${remainingDice.join(', ')}], hasValidMoves=${hasValidMoves}, movesFound=${remainingMoves.length}, sequences=${remainingMoves.map(s => s.length).join(',')}`);
@@ -1362,7 +1362,7 @@ export class GamesService {
     let allMoves: Array<Array<{ from: number; to: number; die: number }>> = [];
     if ('getAllValidMoves' in engine && typeof engine.getAllValidMoves === 'function') {
       // Важно: для дублей передаем только первые 2 кубика (если нет pendingMoves)
-      allMoves = engine.getAllValidMoves(state, diceForMoves, isFirstMoveOfGame);
+      allMoves = engine.getAllValidMoves(state, diceForMoves, isFirstMoveOfGame, game.rngSeed);
     }
     
     // Преобразуем последовательности в плоский список доступных ходов,

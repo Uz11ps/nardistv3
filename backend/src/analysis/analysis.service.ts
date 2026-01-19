@@ -109,7 +109,9 @@ export class AnalysisService {
       const gameStateAfter = move.gameStateAfter;
 
       // Находим все возможные ходы для этой позиции, чтобы показать альтернативы
-      const allPossibleMovesSequences = engine.getAllValidMoves(gameStateBefore, move.dice);
+      // Используем состояние игры как seed для детерминированного перемешивания
+      const stateSeed = JSON.stringify(gameStateBefore.points) + JSON.stringify(move.dice) + gameStateBefore.currentPlayer;
+      const allPossibleMovesSequences = engine.getAllValidMoves(gameStateBefore, move.dice, false, stateSeed);
       const evaluatedAlternatives: Array<{
         moves: Array<{ from: number; to: number; die: number }>;
         equity: number;

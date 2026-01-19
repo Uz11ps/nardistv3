@@ -16,6 +16,8 @@ interface Course {
   isCompleted?: boolean
   description?: string
   gameMode?: 'long' | 'short'
+  type?: 'course'
+  isPaid?: boolean
 }
 
 interface Article {
@@ -26,6 +28,8 @@ interface Article {
   purchased: boolean
   isCompleted?: boolean
   gameMode?: 'long' | 'short'
+  type?: 'article'
+  isPaid?: boolean
 }
 
 interface Onboarding {
@@ -36,6 +40,8 @@ interface Onboarding {
   purchased: boolean
   isCompleted?: boolean
   gameMode?: 'long' | 'short'
+  type?: 'onboarding'
+  isPaid?: boolean
 }
 
 interface MaterialSection {
@@ -49,6 +55,7 @@ interface MaterialDetail extends Course {
   type?: string
   sections?: MaterialSection[]
   content?: string
+  isPaid?: boolean
   quiz?: {
     questions: Array<{
       id: number

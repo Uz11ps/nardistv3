@@ -43,8 +43,10 @@ export class BotService {
     this.logger.log(`Bot normalizedState.bar: ${JSON.stringify(normalizedState.bar)}`);
 
     // Get all valid moves from engine
+    // Используем состояние игры как seed для детерминированного перемешивания
+    const stateSeed = JSON.stringify(normalizedState.points) + JSON.stringify(dice) + normalizedState.currentPlayer;
     const allValidMoves = (engine as any).getAllValidMoves 
-      ? (engine as any).getAllValidMoves(normalizedState, dice) 
+      ? (engine as any).getAllValidMoves(normalizedState, dice, false, stateSeed) 
       : [];
     
     this.logger.log(`Bot getAllValidMoves returned ${allValidMoves.length} move sequences`);
