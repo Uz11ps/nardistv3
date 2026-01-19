@@ -33,7 +33,7 @@ export const DebugPanel = memo(({
   const [position, setPosition] = useState({ x: 50, y: 50 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [selectedSize, setSelectedSize] = useState<DebugSize>(768)
+  const [selectedSize, setSelectedSize] = useState<DebugSize | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef<number>(0)
@@ -287,20 +287,50 @@ export const DebugPanel = memo(({
           Current Width: {containerWidth}px
         </div>
         
+        {/* Переключатель размеров */}
+        <div style={{ marginBottom: '15px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+          <div style={{ marginBottom: '8px', fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+            Размер экрана:
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {DEBUG_SIZES.map(size => (
+              <button
+                key={size}
+                onClick={() => setSelectedSize(size)}
+                style={{
+                  fontSize: '11px',
+                  padding: '6px 10px',
+                  background: selectedSize === size ? '#C93C3D' : '#444',
+                  border: selectedSize === size ? '2px solid #fff' : '1px solid #666',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  borderRadius: '5px',
+                  fontWeight: selectedSize === size ? 'bold' : 'normal',
+                }}
+              >
+                {size}px
+              </button>
+            ))}
+          </div>
+        </div>
+        
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '5px', flexWrap: 'wrap' }}>
           <button 
             onClick={() => {
+              if (!selectedSize) return
               const defaultConfig = selectedSize < 768 ? { ...MOBILE_CONFIG } : { ...DESKTOP_CONFIG }
               setDebugConfig(defaultConfig)
               localStorage.removeItem(getConfigKey(selectedSize))
             }}  
-            style={{ fontSize: '12px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
-            title={`Сбросить конфиг для ${selectedSize}px на дефолт`}
+            disabled={!selectedSize}
+            style={{ fontSize: '12px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: selectedSize ? 'pointer' : 'not-allowed', borderRadius: '5px', flex: 1, opacity: selectedSize ? 1 : 0.5 }}
+            title={selectedSize ? `Сбросить конфиг для ${selectedSize}px на дефолт` : 'Выберите размер'}
           >
-            Reset ({selectedSize}px)
+            Reset {selectedSize ? `(${selectedSize}px)` : ''}
           </button>
           <button 
             onClick={() => {
+              if (!selectedSize) return
               try {
                 // Используем актуальный конфиг из ref
                 const configToSave = { ...configRef.current }
@@ -319,10 +349,11 @@ export const DebugPanel = memo(({
                 alert('Ошибка при сохранении: ' + e)
               }
             }}  
-            style={{ fontSize: '12px', padding: '5px 10px', background: '#4a9', border: '1px solid #6bb', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
-            title={`Сохранить конфиг для ${selectedSize}px`}
+            disabled={!selectedSize}
+            style={{ fontSize: '12px', padding: '5px 10px', background: '#4a9', border: '1px solid #6bb', color: '#fff', cursor: selectedSize ? 'pointer' : 'not-allowed', borderRadius: '5px', flex: 1, opacity: selectedSize ? 1 : 0.5 }}
+            title={selectedSize ? `Сохранить конфиг для ${selectedSize}px` : 'Выберите размер'}
           >
-            💾 Save ({selectedSize}px)
+            💾 Save {selectedSize ? `(${selectedSize}px)` : ''}
           </button>
           <button onClick={scrollUp} style={{ fontSize: '16px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px' }}>⬆️</button>
           <button onClick={scrollDown} style={{ fontSize: '16px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px' }}>⬇️</button>

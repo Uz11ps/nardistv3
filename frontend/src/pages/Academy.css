@@ -275,6 +275,9 @@
   padding: 16px;
   box-sizing: border-box;
   animation: fadeIn 0.2s ease-out;
+  /* Принудительно центрируем сразу */
+  margin: 0;
+  transform: none;
 }
 
 .modal-content {
@@ -290,6 +293,13 @@
   position: relative;
   animation: slideUp 0.3s ease-out;
   box-sizing: border-box;
+  /* Принудительно центрируем сразу */
+  margin: 0 auto;
+  transform: none;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
 }
 
 @keyframes fadeIn {

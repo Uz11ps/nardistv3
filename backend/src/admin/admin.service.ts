@@ -2351,7 +2351,7 @@ export class AdminService implements OnModuleInit {
         user.lives = Math.max(0, Math.floor(livesValue));
       }
       if (data.maxLives !== undefined && data.maxLives !== null) {
-        const maxLivesValue = typeof data.maxLives === 'number' ? data.maxLives : parseInt(String(data.maxLives)) || 100;
+        const maxLivesValue = typeof data.maxLives === 'number' ? data.maxLives : parseInt(String(data.maxLives)) || 5;
         user.maxLives = Math.max(1, Math.floor(maxLivesValue));
       }
 

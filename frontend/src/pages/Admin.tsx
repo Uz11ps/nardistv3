@@ -6666,8 +6666,8 @@ export default function Admin() {
                   <label>Макс. жизни</label>
                   <input
                     type="number"
-                    value={editingUser.maxLives || 100}
-                    onChange={(e) => setEditingUser({ ...editingUser, maxLives: parseInt(e.target.value) || 100 })}
+                    value={editingUser.maxLives || 5}
+                    onChange={(e) => setEditingUser({ ...editingUser, maxLives: parseInt(e.target.value) || 5 })}
                   />
                 </div>
                 <div>

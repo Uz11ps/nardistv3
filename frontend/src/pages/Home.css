@@ -693,6 +693,9 @@
   grid-template-columns: repeat(6, 1fr);
   gap: 8px;
   padding: 20px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .home-stat-card-v3 {
@@ -705,6 +708,8 @@
   align-items: center;
   gap: 4px;
   text-align: center;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .home-stat-card-v3:nth-child(1),
@@ -833,30 +838,18 @@
 }
 
 @media (min-width: 769px) {
-  .home-container-v3 {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-  
   .home-header-v3 {
     padding: calc(50px + env(safe-area-inset-top)) 20px 10px;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-  
-  .home-content-v3 {
-    max-width: 600px;
-    margin: 0 auto;
   }
   
   .home-stats-grid-v3 {
-    max-width: 600px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
   }
   
-  .home-central-logo-container-v3 {
-    max-width: 600px;
-    margin: 0 auto;
+  .home-content-v3 {
+    width: 100%;
+    max-width: 100%;
   }
   
   .home-central-logo-circle-v3 {

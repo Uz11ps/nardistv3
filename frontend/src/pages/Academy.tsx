@@ -92,15 +92,11 @@ export default function Academy() {
   const { materialId } = useParams<{ materialId?: string }>()
   const { user, updateUser } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'training' | 'my-materials'>('my-materials')
-  const [activeFilter, setActiveFilter] = useState<'long' | 'short' | 'all'>('all')
+  const [activeFilter, setActiveFilter] = useState<'long' | 'short'>('long')
   
   // Сбрасываем фильтр при переключении вкладок
   useEffect(() => {
-    if (activeTab === 'my-materials') {
-      setActiveFilter('all')
-    } else if (activeTab === 'courses' || activeTab === 'articles') {
-      setActiveFilter('long')
-    }
+    setActiveFilter('long')
   }, [activeTab])
   const [onboarding, setOnboarding] = useState<Onboarding[]>([])
   const [courses, setCourses] = useState<Course[]>([])
@@ -215,8 +211,13 @@ export default function Academy() {
   const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean; title?: string; gameMode?: string }>(items: T[]): T[] => {
     let filtered = items
 
+    // Исключаем купленные материалы из списков курсов, статей и обучения
+    if (activeTab === 'courses' || activeTab === 'articles' || activeTab === 'training') {
+      filtered = filtered.filter(item => !item.purchased)
+    }
+
     // Фильтрация по типу нард (только для курсов и статей)
-    if (activeTab === 'courses' || activeTab === 'articles') {
+    if (activeTab === 'courses' || activeTab === 'articles' || activeTab === 'training') {
       filtered = filtered.filter(item => {
         const titleLower = (item.title || '').toLowerCase()
         const isLongKeyword = titleLower.includes('длинн')
@@ -240,8 +241,8 @@ export default function Academy() {
       })
     }
     
-    // Фильтрация по типу нард для моих материалов (с учетом фильтра "все")
-    if (activeTab === 'my-materials' && activeFilter !== 'all') {
+    // Фильтрация по типу нард для моих материалов
+    if (activeTab === 'my-materials') {
       filtered = filtered.filter(item => {
         const titleLower = (item.title || '').toLowerCase()
         const isLongKeyword = titleLower.includes('длинн')
@@ -633,14 +634,6 @@ export default function Academy() {
             >
               короткие нарды
             </button>
-            {activeTab === 'my-materials' && (
-              <button 
-                className={`academy-filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
-                onClick={() => setActiveFilter('all')}
-              >
-                все
-              </button>
-            )}
           </div>
         )}
 
