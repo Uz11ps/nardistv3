@@ -207,6 +207,11 @@ export default function Academy() {
       loadData()
       // Если открыт материал, перезагружаем его
       if (isMaterialPage && materialId === item.id) {
+        await loadMaterialDetail(item.id)
+      }
+      // Обновляем пользователя для обновления баланса
+      const userRes = await apiClient.get('/users/me')
+      updateUser(userRes.data)
         loadMaterialDetail(item.id)
       }
     } catch (error: any) {
@@ -360,15 +365,21 @@ export default function Academy() {
                     {section.icon && <span className="academy-material-section-icon">{section.icon}</span>}
                     <h3 className="academy-material-section-title">{section.title}</h3>
                   </div>
-                  <div className="academy-material-section-content" dangerouslySetInnerHTML={{ __html: section.content }} />
+                  <div 
+                    className="academy-material-section-content" 
+                    dangerouslySetInnerHTML={{ __html: section.content }}
+                  />
                 </div>
               ))
             ) : (
-              <div className="academy-material-content-text" dangerouslySetInnerHTML={{ __html: materialDetail.content || 'Содержание отсутствует' }} />
+              <div 
+                className="academy-material-content-text" 
+                dangerouslySetInnerHTML={{ __html: materialDetail.content || 'Содержание отсутствует' }}
+              />
             )}
             
-            {/* Тест для курсов */}
-            {materialDetail.quiz && materialDetail.type === 'course' && (
+            {/* Тест для курсов - показываем только если курс куплен или бесплатный */}
+            {materialDetail.quiz && materialDetail.type === 'course' && (materialDetail.purchased || !materialDetail.isPaid) && (
               <Quiz
                 courseId={materialDetail.id}
                 quiz={materialDetail.quiz}
