@@ -1270,19 +1270,47 @@ export default function BackgammonBoard({
       }
     }
     
-    // Проверяем контейнеры (bearOff) - теперь СНИЗУ
-    if (actualY >= height - bearOffHeight) {
-      // В sandbox разрешаем всегда, если там есть шашки
-      if (isSandbox) {
-        const bearOff = gameState?.bearOff || { white: 0, black: 0 }
-        const isRightSide = actualX > width / 2
-        if (isRightSide && bearOff.white > 0) return -1
-        if (!isRightSide && bearOff.black > 0) return -1
-        
-        // Если шашек нет в конкретной половине, но это sandbox - всё равно возвращаем -1
-        // чтобы можно было начать перетаскивание "из пустоты" или если кликнули рядом
-        return -1
-      }
+    // Проверяем контейнеры (bearOff) - используем те же параметры, что и для подсветки
+    const bearOffAreaY = height - bearOffHeight
+    const halfWidth = width / 2
+    
+    // Параметры подсветки из конфига
+    const bearOffValidHW = halfWidth * (config.bearOffValidWidthScale || config.validHighlightWidthScale || 1.0)
+    const bearOffValidHH = bearOffHeight * (config.bearOffValidHeightScale || config.validHighlightHeightScale || 1.0)
+    
+    // Проверяем обе половины (белую и черную)
+    const whiteCenterX = width * 0.75
+    const blackCenterX = width * 0.25
+    
+    // Белая половина (правая)
+    const bearOffValidWhiteXOffset = config.bearOffValidWhiteXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
+    const bearOffValidWhiteYOffset = config.bearOffValidWhiteYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
+    const bearOffValidWhiteHX = whiteCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidWhiteXOffset)
+    const bearOffValidWhiteHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidWhiteYOffset
+    
+    if (actualX >= bearOffValidWhiteHX && 
+        actualX <= bearOffValidWhiteHX + bearOffValidHW &&
+        actualY >= bearOffValidWhiteHY && 
+        actualY <= bearOffValidWhiteHY + bearOffValidHH) {
+      // В sandbox разрешаем всегда
+      if (isSandbox) return -1
+      // В обычной игре проверяем, есть ли валидный ход в bear off
+      return validTargetPoints.has(-1) ? -1 : null
+    }
+    
+    // Черная половина (левая)
+    const bearOffValidBlackXOffset = config.bearOffValidBlackXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
+    const bearOffValidBlackYOffset = config.bearOffValidBlackYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
+    const bearOffValidBlackHX = blackCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidBlackXOffset)
+    const bearOffValidBlackHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidBlackYOffset
+    
+    if (actualX >= bearOffValidBlackHX && 
+        actualX <= bearOffValidBlackHX + bearOffValidHW &&
+        actualY >= bearOffValidBlackHY && 
+        actualY <= bearOffValidBlackHY + bearOffValidHH) {
+      // В sandbox разрешаем всегда
+      if (isSandbox) return -1
+      // В обычной игре проверяем, есть ли валидный ход в bear off
       return validTargetPoints.has(-1) ? -1 : null
     }
     
@@ -3368,6 +3396,7 @@ export default function BackgammonBoard({
           isMobile={containerRef.current ? containerRef.current.offsetWidth < 768 : false}
           MOBILE_CONFIG={MOBILE_CONFIG}
           DESKTOP_CONFIG={DESKTOP_CONFIG}
+          containerRef={containerRef}
         />
       ) : (
         <button 

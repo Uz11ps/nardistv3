@@ -10,7 +10,13 @@ interface DebugPanelProps {
   isMobile: boolean
   MOBILE_CONFIG: any
   DESKTOP_CONFIG: any
+  containerRef?: React.RefObject<HTMLDivElement>
 }
+
+const DEBUG_SIZES = [368, 512, 768, 1024, 1440, 1920] as const
+type DebugSize = typeof DEBUG_SIZES[number]
+
+const getConfigKey = (size: number) => `backgammon-debug-config-v16-${size}px`
 
 export const DebugPanel = memo(({
   debugConfig,
@@ -21,11 +27,13 @@ export const DebugPanel = memo(({
   containerWidth,
   isMobile,
   MOBILE_CONFIG,
-  DESKTOP_CONFIG
+  DESKTOP_CONFIG,
+  containerRef
 }: DebugPanelProps) => {
   const [position, setPosition] = useState({ x: 50, y: 50 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [selectedSize, setSelectedSize] = useState<DebugSize>(768)
   const panelRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef<number>(0)
@@ -38,6 +46,38 @@ export const DebugPanel = memo(({
     configRef.current = debugConfig
     console.log('📝 Конфиг обновлен в ref:', configRef.current)
   }, [debugConfig])
+  
+  // Загружаем конфиг для выбранного размера
+  const loadConfigForSize = (size: DebugSize) => {
+    try {
+      const saved = localStorage.getItem(getConfigKey(size))
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed.sideMarginLeftPct !== undefined) {
+          // Возвращаем сохраненный конфиг как есть - он полный и независимый
+          return parsed
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load config for size:', size, e)
+    }
+    // Если нет сохраненного конфига - используем дефолтный (MOBILE или DESKTOP)
+    // Но это только при первом создании, потом каждый размер живет своей жизнью
+    return size < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+  }
+  
+  // При изменении размера загружаем соответствующий конфиг
+  useEffect(() => {
+    const config = loadConfigForSize(selectedSize)
+    setDebugConfig(config)
+    
+    // Изменяем размер контейнера для тестирования
+    if (containerRef?.current) {
+      containerRef.current.style.width = `${selectedSize}px`
+      containerRef.current.style.maxWidth = `${selectedSize}px`
+      containerRef.current.style.margin = '0 auto'
+    }
+  }, [selectedSize, containerRef, MOBILE_CONFIG, DESKTOP_CONFIG])
   
   // Сохраняем позицию скролла при каждом скролле
   useEffect(() => {
