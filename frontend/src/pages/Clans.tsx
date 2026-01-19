@@ -69,9 +69,10 @@ export default function Clans() {
   }
 
   const userLevel = user?.level || 0
-  const canCreateClan = userLevel >= 15
-  const buttonText = canCreateClan ? 'Создать федерацию' : 'Вступить в федерацию'
-  const buttonRoute = canCreateClan ? '/clans/create' : '/clans/search'
+  // Для всех уровней >= 10 показываем кнопку "Вступить в федерацию"
+  // Игроки с уровнем >= 15 могут также создать федерацию через другой путь, но основное действие - вступление
+  const buttonText = 'Вступить в федерацию'
+  const buttonRoute = '/clans/search'
 
   return (
     <PageLayout 
