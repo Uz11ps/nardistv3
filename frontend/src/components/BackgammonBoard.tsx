@@ -3590,48 +3590,58 @@ export default function BackgammonBoard({
 
               if (isActuallyDoubles) {
                 // Всегда показываем 2 кубика при дубле
-                // Логика затухания: кубик остается ярким (1.0) пока есть ходы (x2 или x1)
-                // Затухает до 0.1 (x0) только когда полностью потрачен (после 2-го хода этого кубика)
+                // При дубле всего 4 хода
+                // Прогресс: сколько ходов сделано из 4
+                const totalMoves = 4;
+                const madeMoves = totalMoves - movesCount;
                 
-                // Множители
-                const d1Multiplier = movesCount >= 3 ? 2 : (movesCount >= 1 ? 1 : 0);
-                const d2Multiplier = movesCount >= 4 ? 2 : (movesCount >= 2 ? 1 : 0);
-
-                // Прозрачность: 1.0 если есть ходы, 0.1 если ходов нет
-                const d1Opacity = d1Multiplier > 0 ? 1.0 : 0.1;
-                const d2Opacity = d2Multiplier > 0 ? 1.0 : 0.1;
-
-                const renderBadge = (multiplier: number) => {
-                  if (multiplier === 0) return null;
+                // Для первого кубика: полностью прозрачен после 2 ходов
+                // Для второго кубика: полностью прозрачен после 4 ходов
+                const d1Progress = Math.max(0, Math.min(2, madeMoves)) / 2; // 0-1, где 1 = полностью использован
+                const d2Progress = Math.max(0, Math.min(2, madeMoves - 2)) / 2; // 0-1, где 1 = полностью использован
+                
+                // Функция для отрисовки треугольного overlay
+                const renderTriangleOverlay = (progress: number) => {
+                  if (progress <= 0) return null;
+                  
+                  // progress от 0 до 1: 0 = нет затемнения, 1 = полностью затемнен (половина кубика)
+                  // Рисуем треугольник от верхнего левого угла к нижнему правому
+                  // При progress = 0.5 (1 ход из 4) - треугольник закрывает половину
+                  // При progress = 1.0 (2 хода из 4) - треугольник закрывает всю половину
+                  
+                  // Если progress >= 1, закрываем всю половину (от левого верхнего до правого нижнего угла)
+                  const clipPath = progress >= 1
+                    ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' // Полностью закрыт
+                    : `polygon(0% 0%, ${progress * 100}% 0%, ${progress * 100}% ${progress * 100}%, 0% ${progress * 100}%)`;
+                  
                   return (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-15px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: 'rgba(232, 65, 66, 0.9)',
-                      color: 'white',
-                      borderRadius: '10px',
-                      padding: '2px 6px',
-                      fontSize: '10px',
-                      fontWeight: 'bold',
-                      zIndex: 10,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                      pointerEvents: 'none'
-                    }}>
-                      x{multiplier}
-                    </div>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0, 0, 0, 0.6)',
+                        clipPath: progress >= 1 
+                          ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)'
+                          : `polygon(0% 0%, ${progress * 100}% 0%, 0% ${progress * 100}%)`,
+                        borderRadius: '12px',
+                        pointerEvents: 'none',
+                        zIndex: 1,
+                      }}
+                    />
                   );
                 };
 
                 return (
                   <>
-                    <div style={{ opacity: d1Opacity, position: 'relative', transition: 'opacity 0.3s ease' }}>
-                      {renderBadge(d1Multiplier)}
+                    <div style={{ position: 'relative', transition: 'opacity 0.3s ease' }}>
+                      {renderTriangleOverlay(d1Progress)}
                       <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
                     </div>
-                    <div style={{ opacity: d2Opacity, position: 'relative', transition: 'opacity 0.3s ease' }}>
-                      {renderBadge(d2Multiplier)}
+                    <div style={{ position: 'relative', transition: 'opacity 0.3s ease' }}>
+                      {renderTriangleOverlay(d2Progress)}
                       <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
                     </div>
                   </>
