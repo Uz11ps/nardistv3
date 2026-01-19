@@ -88,7 +88,7 @@ export default function Academy() {
   const navigate = useNavigate()
   const location = useLocation()
   const { materialId } = useParams<{ materialId?: string }>()
-  const { user } = useAuthStore()
+  const { user, updateUser } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'free-table' | 'my-materials'>('onboarding')
   const [activeFilter, setActiveFilter] = useState<'long' | 'short'>('long')
   const [onboarding, setOnboarding] = useState<Onboarding[]>([])
