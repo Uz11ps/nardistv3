@@ -1304,12 +1304,16 @@ export default function BackgammonBoard({
 
     // Helper functions to scale fixed pixel offsets based on screen size
     const scaleY = (val: number) => {
+        // Для desktop не масштабируем - конфиги уже настроены для правильных размеров
         if (!isMobile) return val;
-        // Для landscape режима используем ширину как референс для высоты
+        
+        // Для мобильных устройств масштабируем
         if (isLandscape) {
+          // В landscape режиме используем ширину как референс для высоты
           const factor = height / REFERENCE_MOBILE_WIDTH;
           return val * factor;
         }
+        // Для portrait режима
         const factor = height / REFERENCE_MOBILE_HEIGHT;
         return val * factor;
     }
@@ -1506,6 +1510,14 @@ export default function BackgammonBoard({
         const checkerY = isTopRow 
           ? checkerBaseY + yOffset 
           : checkerBaseY - yOffset
+        
+        // Проверяем, что шашка находится в пределах canvas
+        const checkerRadius = (checkerSize * debugConfig.checkerDrawScale) / 2
+        if (checkerY - checkerRadius < 0 || checkerY + checkerRadius > height || 
+            x - checkerRadius < 0 || x + checkerRadius > width) {
+          // Если шашка выходит за пределы canvas, пропускаем её отрисовку
+          continue
+        }
         
         // Используем текстуры шашек если есть
         drawChecker(x, checkerY, checkerSize, isWhiteChecker, isMyPoint)
