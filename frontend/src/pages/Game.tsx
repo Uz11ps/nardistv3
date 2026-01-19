@@ -3047,25 +3047,8 @@ export default function Game() {
                       return
                     }
                     
-                    // Подсчитываем общее количество шашек данного цвета на доске
-                    let totalCheckers = 0
-                    if (checkerColor === 'white') {
-                      // Считаем белые шашки (положительные значения)
-                      totalCheckers = currentPoints.filter(p => p > 0).reduce((sum, p) => sum + p, 0)
-                      totalCheckers += currentBar.white
-                      totalCheckers += currentBearOff.white
-                    } else {
-                      // Считаем черные шашки (отрицательные значения)
-                      totalCheckers = currentPoints.filter(p => p < 0).reduce((sum, p) => sum + Math.abs(p), 0)
-                      totalCheckers += currentBar.black
-                      totalCheckers += currentBearOff.black
-                    }
-                    
-                    // Проверяем лимит в 15 шашек
-                    if (totalCheckers >= 15) {
-                      alert(`Максимум 15 шашек для ${checkerColor === 'white' ? 'белых' : 'черных'}. У вас уже ${totalCheckers}.`)
-                      return
-                    }
+                    // При перемещении из bearOff мы просто перемещаем существующую шашку,
+                    // общее количество шашек не меняется, поэтому проверка на 15 шашек не нужна
                     
                     // Уменьшаем bearOff и добавляем шашку на точку
                     if (checkerColor === 'white') {
