@@ -7,7 +7,7 @@ import Button from '../components/Button'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
-import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, HeartIcon, ScrollIcon, BarChartIcon, ScaleIcon, WrenchIcon, BrainIcon } from '../components/Icons'
+import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, HeartIcon, ScrollIcon, BarChartIcon, ScaleIcon, WrenchIcon } from '../components/Icons'
 import './Shop.css'
 
 interface NarCoinPackage {
@@ -820,7 +820,7 @@ export default function Shop() {
 
                 <div className="shop-premium-modal-feature">
                   <div className="shop-premium-modal-feature-icon">
-                    <BrainIcon size={48} />
+                    <BarChartIcon size={32} style={{ color: '#FFD700' }} />
                   </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Анализ</div>

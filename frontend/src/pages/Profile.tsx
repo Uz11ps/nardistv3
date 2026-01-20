@@ -342,7 +342,7 @@ export default function Profile() {
               { 
                 id: 'economy' as const, 
                 name: 'Экономика', 
-                icon: <CoinIcon size={64} />, 
+                icon: <CoinIcon size={49} />, 
                 description: 'Снижение комиссии, пассивный доход и выгода в городе',
                 details: [
                   'Снижение комиссии в играх на NAR-coin (до -10%)',
@@ -434,7 +434,7 @@ export default function Profile() {
             className="profile-bottom-menu-item-v2"
           >
             <span className="profile-bottom-menu-icon-v2">
-              <BoxIcon size={20} style={{ color: '#FFF' }} />
+              <BoxIcon size={30} style={{ color: '#FFD700' }} />
             </span>
             <span className="profile-bottom-menu-title-v2">Инвентарь</span>
             <span className="profile-bottom-menu-arrow-v2">
@@ -446,7 +446,7 @@ export default function Profile() {
             className="profile-bottom-menu-item-v2"
           >
             <span className="profile-bottom-menu-icon-v2">
-              <BarChartIcon size={20} style={{ color: '#FFF' }} />
+              <BarChartIcon size={30} style={{ color: '#FFD700' }} />
             </span>
             <span className="profile-bottom-menu-title-v2">Аналитика</span>
             <span className="profile-bottom-menu-arrow-v2">
@@ -458,7 +458,7 @@ export default function Profile() {
             className="profile-bottom-menu-item-v2"
           >
             <span className="profile-bottom-menu-icon-v2">
-              <SettingsIcon size={20} style={{ color: '#FFF' }} />
+              <SettingsIcon size={30} style={{ color: '#FFD700' }} />
             </span>
             <span className="profile-bottom-menu-title-v2">Настройки</span>
             <span className="profile-bottom-menu-arrow-v2">

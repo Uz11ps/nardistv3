@@ -5,7 +5,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
-import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, ScrollIcon, BrainIcon } from '../components/Icons'
+import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, ScrollIcon, BarChartIcon } from '../components/Icons'
 import './Subscription.css'
 
 interface SubscriptionPlan {
@@ -31,7 +31,7 @@ const subscriptionFeatures = [
   {
     title: 'Анализ',
     description: 'Разбор ошибок и лучших ходов',
-    icon: <BrainIcon size={48} />,
+    icon: <BarChartIcon size={24} style={{ color: '#FFD700' }} />,
     iconBg: 'rgba(255, 215, 0, 0.15)',
   },
   {

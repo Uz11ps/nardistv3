@@ -4,6 +4,8 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  align-items: center;
+  width: 100%;
 }
 
 /* Новый дизайн V2 */
@@ -11,8 +13,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   padding: 20px 0;
+  width: 100%;
 }
 
 .profile-avatar-v2 {
