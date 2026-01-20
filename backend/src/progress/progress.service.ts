@@ -892,4 +892,3 @@ export class ProgressService {
     return user;
   }
 }
-

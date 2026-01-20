@@ -100,9 +100,9 @@ export default function Academy() {
   const location = useLocation()
   const { materialId } = useParams<{ materialId?: string }>()
   const { user, updateUser } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'training' | 'my-materials'>('my-materials')
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'my-materials'>('my-materials')
   const [activeFilter, setActiveFilter] = useState<'long' | 'short'>('long')
-  const [myMaterialsFilter, setMyMaterialsFilter] = useState<'all' | 'training' | 'courses' | 'articles'>('all')
+  const [myMaterialsFilter, setMyMaterialsFilter] = useState<'all' | 'courses' | 'articles'>('all')
   
   // Сбрасываем фильтр при переключении вкладок
   useEffect(() => {
@@ -196,7 +196,7 @@ export default function Academy() {
         const response = await apiClient.get('/academy/onboarding')
         console.log('[Academy] Loaded onboarding:', response.data?.length || 0, 'items')
         setOnboarding(response.data || [])
-      } else if (activeTab === 'courses' || activeTab === 'training') {
+      } else if (activeTab === 'courses') {
         const response = await apiClient.get('/academy/courses')
         console.log('[Academy] Loaded courses:', response.data?.length || 0, 'items', response.data)
         setCourses(response.data || [])
@@ -235,7 +235,7 @@ export default function Academy() {
       if (activeTab === 'onboarding') {
         const response = await apiClient.get('/academy/onboarding')
         setOnboarding(response.data || [])
-      } else if (activeTab === 'courses' || activeTab === 'training') {
+      } else if (activeTab === 'courses') {
         const response = await apiClient.get('/academy/courses')
         setCourses(response.data || [])
       } else if (activeTab === 'articles') {
@@ -271,13 +271,13 @@ export default function Academy() {
   const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean; title?: string; gameMode?: string; type?: 'course' | 'article' | 'onboarding' }>(items: T[]): T[] => {
     let filtered = items
 
-    // Исключаем купленные материалы из списков курсов, статей и обучения
-    if (activeTab === 'courses' || activeTab === 'articles' || activeTab === 'training') {
+    // Исключаем купленные материалы из списков курсов и статей
+    if (activeTab === 'courses' || activeTab === 'articles') {
       filtered = filtered.filter(item => !item.purchased)
     }
 
     // Фильтрация по типу нард (только для курсов и статей)
-    if (activeTab === 'courses' || activeTab === 'articles' || activeTab === 'training') {
+    if (activeTab === 'courses' || activeTab === 'articles') {
       filtered = filtered.filter(item => {
         const titleLower = (item.title || '').toLowerCase()
         const isLongKeyword = titleLower.includes('длинн')
@@ -303,20 +303,11 @@ export default function Academy() {
     
     // Фильтрация по типу материалов для моих материалов
     if (activeTab === 'my-materials') {
-      // Фильтр по типу материала (обучение/курсы/статьи)
+      // Фильтр по типу материала (курсы/статьи)
       if (myMaterialsFilter !== 'all') {
-        if (myMaterialsFilter === 'training') {
-          // Обучение - только курсы с квестами
-          filtered = filtered.filter(item => {
-            const course = item as any
-            return course.assignment?.quiz || course.quiz
-          })
-        } else if (myMaterialsFilter === 'courses') {
-          // Курсы - только курсы без квестов
-          filtered = filtered.filter(item => {
-            const course = item as any
-            return (item.type === 'course' || item.type === 'onboarding') && !course.assignment?.quiz && !course.quiz
-          })
+        if (myMaterialsFilter === 'courses') {
+          // Курсы
+          filtered = filtered.filter(item => item.type === 'course' || item.type === 'onboarding')
         } else if (myMaterialsFilter === 'articles') {
           // Статьи
           filtered = filtered.filter(item => item.type === 'article')
@@ -695,7 +686,6 @@ export default function Academy() {
       subtitle="Повышай мастерство в нардах. Все материалы доступны к покупке"
       tabs={[
         { id: 'my-materials', label: 'Мои материалы', active: activeTab === 'my-materials', onClick: () => setActiveTab('my-materials') },
-        { id: 'training', label: 'Обучение', active: activeTab === 'training', onClick: () => setActiveTab('training') },
         { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
         { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
       ]}
@@ -785,49 +775,6 @@ export default function Academy() {
           </div>
         )}
 
-        {activeTab === 'training' && (
-          <div className="academy-training">
-            <div className="academy-grid">
-              {/* Курсы с квестами - используем getFilteredAndSortedItems для фильтрации купленных */}
-              {getFilteredAndSortedItems(courses.filter(course => course.assignment?.quiz || (course as any).quiz)).map((course) => {
-                const courseWithQuiz = course as Course & { assignment?: { quiz?: any }, quiz?: any }
-                const quiz = courseWithQuiz.assignment?.quiz || courseWithQuiz.quiz
-                const questionsCount = quiz?.questions?.length || 0
-                // quizPassed может быть в course или нужно загрузить из деталей
-                const quizPassed = course.quizPassed || false
-                const passedCount = quizPassed ? questionsCount : 0
-                const progressPercentage = questionsCount > 0 ? (passedCount / questionsCount) * 100 : 0
-                
-                return (
-                  <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
-                    <div className="academy-grid-card-icon">
-                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
-                        <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
-                      </svg>
-                    </div>
-                    <div className="academy-grid-card-title">{course.title}</div>
-                    <div className="academy-grid-card-author">{course.author}</div>
-                    {/* Шкала прогресса квеста */}
-                    {questionsCount > 0 && (
-                      <div className="academy-training-progress">
-                        <div className="academy-training-progress-bar">
-                          <div 
-                            className="academy-training-progress-fill"
-                            style={{ width: `${progressPercentage}%` }}
-                          />
-                        </div>
-                        <div className="academy-training-progress-text">
-                          {passedCount}/{questionsCount}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
         {activeTab === 'my-materials' && (
           <div className="academy-my-materials">
@@ -842,12 +789,6 @@ export default function Academy() {
                 onClick={() => setMyMaterialsFilter('all')}
               >
                 Все
-              </button>
-              <button 
-                className={`academy-filter-btn ${myMaterialsFilter === 'training' ? 'active' : ''}`}
-                onClick={() => setMyMaterialsFilter('training')}
-              >
-                Обучение
               </button>
               <button 
                 className={`academy-filter-btn ${myMaterialsFilter === 'courses' ? 'active' : ''}`}

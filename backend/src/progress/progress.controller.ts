@@ -128,4 +128,3 @@ export class ProgressController {
     return this.progressService.getShopBarInfo(user.id);
   }
 }
-
