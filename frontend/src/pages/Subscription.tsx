@@ -288,7 +288,7 @@ export default function Subscription() {
               boxSizing: 'border-box',
             }}
           >
-            Tribute ⭐
+            Tribute <StarIcon size={16} style={{ color: '#FFD700', verticalAlign: 'middle' }} />
           </button>
           <button
             onClick={() => setPaymentMethod('STARS')}

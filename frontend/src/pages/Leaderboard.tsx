@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
+import { CrownIcon } from '../components/Icons'
 import './Leaderboard.css'
 
 interface LeaderboardEntry {
@@ -139,7 +140,9 @@ export default function Leaderboard() {
 
                   {/* Корона для топ-3 */}
                   {entry.rank <= 3 && (
-                    <span className="leaderboard-crown">👑</span>
+                    <span className="leaderboard-crown">
+                      <CrownIcon size={20} style={{ color: '#FFD700' }} />
+                    </span>
                   )}
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { apiClient } from '../api/client'
-import { StarIcon } from './Icons'
+import { StarIcon, RobotIcon } from './Icons'
 import './GameAnalytics.css'
 
 interface GameAnalyticsProps {
@@ -68,7 +68,9 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
           <div className="analysis-icons">
             <div className="analysis-icon" onClick={handleExportMat} title="Экспорт в .mat">M</div>
             <div className="analysis-icon" onClick={loadAnalysis} title="Обновить">↻</div>
-            <div className="analysis-icon balance">⚖️</div>
+            <div className="analysis-icon balance">
+              <ScaleIcon size={18} style={{ color: '#707579' }} />
+            </div>
           </div>
           <div className="analysis-game-selector">
             Game 1 of 1
@@ -110,7 +112,11 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                     onClick={() => setSelectedMoveIndex(idx * 2 + 1)}
                     title={move2.isBestMove ? 'Лучший ход!' : (move2.isError ? move2.errorDescription : '')}
                   >
-                    {move2.isBestMove && <span className="best-move-badge">⭐</span>}
+                    {move2.isBestMove && (
+                      <span className="best-move-badge">
+                        <StarIcon size={14} style={{ color: '#FFD700' }} />
+                      </span>
+                    )}
                     <span className="move-dice">({move2.move.dice?.join('')})</span>
                     <span className="move-text">
                       {move2.move.moves?.map((m: any, i: number) => (
@@ -145,8 +151,12 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                     <button className="analysis-tab-btn active">Move</button>
                     <button className="analysis-tab-btn">Cube</button>
                     <div className="analysis-action-icons">
-                      <span className="action-icon">🤖</span>
-                      <span className="action-icon">⭐</span>
+                      <span className="action-icon">
+                        <RobotIcon size={16} style={{ color: '#707579' }} />
+                      </span>
+                      <span className="action-icon">
+                        <StarIcon size={16} style={{ color: '#FFD700' }} />
+                      </span>
                     </div>
                   </div>
 

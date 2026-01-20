@@ -7,7 +7,7 @@ import Button from '../components/Button'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
-import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, HeartIcon } from '../components/Icons'
+import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, HeartIcon, ScrollIcon, BarChartIcon, ScaleIcon, WrenchIcon } from '../components/Icons'
 import './Shop.css'
 
 interface NarCoinPackage {
@@ -406,7 +406,9 @@ export default function Shop() {
             <div className="shop-skin-name-group">
               <div className="shop-skin-name">{skin.name}</div>
               <div className="shop-skin-stats-inline">
-                <span className="shop-skin-stat-item">⚖️ {skin.weight || 0}</span>
+                <span className="shop-skin-stat-item" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <ScaleIcon size={14} style={{ color: '#707579' }} /> {skin.weight || 0}
+                </span>
                 {skin.xpBonusPercent > 0 && <span className="shop-skin-stat-item bonus-xp">+{skin.xpBonusPercent}% XP</span>}
                 {skin.moneyBonusPercent > 0 && <span className="shop-skin-stat-item bonus-money">+{skin.moneyBonusPercent}% NAR</span>}
               </div>
@@ -809,7 +811,9 @@ export default function Shop() {
 
               <div className="shop-premium-modal-features">
                 <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">📜</div>
+                  <div className="shop-premium-modal-feature-icon">
+                    <ScrollIcon size={24} style={{ color: '#FFD700' }} />
+                  </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">История игр</div>
                     <div className="shop-premium-modal-feature-description">Полный список твоих матчей</div>
@@ -817,7 +821,9 @@ export default function Shop() {
                 </div>
 
                 <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">📊</div>
+                  <div className="shop-premium-modal-feature-icon">
+                    <BarChartIcon size={24} style={{ width: 24, height: 24 }} />
+                  </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Анализ</div>
                     <div className="shop-premium-modal-feature-description">Разбор ошибок и лучших ходов</div>
@@ -897,7 +903,9 @@ export default function Shop() {
                 <div className="preview-stats">
                   <div className="preview-stat">
                     <span className="label">Вес:</span>
-                    <span className="value">⚖️ {previewSkin.weight || 0} ед.</span>
+                    <span className="value" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <ScaleIcon size={14} style={{ color: '#707579' }} /> {previewSkin.weight || 0} ед.
+                    </span>
                   </div>
                   {previewSkin.xpBonusPercent > 0 && (
                     <div className="preview-stat">
@@ -913,7 +921,9 @@ export default function Shop() {
                   )}
                   <div className="preview-stat">
                     <span className="label">Прочность:</span>
-                    <span className="value">🛠️ {previewSkin.maxDurability || 100}</span>
+                    <span className="value" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <WrenchIcon size={14} style={{ color: '#707579' }} /> {previewSkin.maxDurability || 100}
+                    </span>
                   </div>
                   {previewSkin.type === 'board' && (
                     <div className="preview-stat">

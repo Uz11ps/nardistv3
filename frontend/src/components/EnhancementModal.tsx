@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import apiClient from '../api/client'
-import { CoinIcon, EnergyIcon, HeartIcon } from './Icons'
+import { CoinIcon, EnergyIcon, HeartIcon, MuscleIcon, ArrowRightIcon } from './Icons'
 import './EnhancementModal.css'
 
 interface EnhancementModalProps {
@@ -57,7 +57,7 @@ export default function EnhancementModal({
     {
       id: 'power' as const,
       name: 'Сила',
-      icon: '💪',
+      icon: <MuscleIcon size={24} />,
       description: 'Увеличение лимита веса скинов',
     },
   ]
@@ -110,7 +110,9 @@ export default function EnhancementModal({
                 {choosing ? (
                   <div className="enhancement-option-loading">...</div>
                 ) : (
-                  <div className="enhancement-option-arrow">→</div>
+                  <div className="enhancement-option-arrow">
+                    <ArrowRightIcon size={16} style={{ color: '#707579' }} />
+                  </div>
                 )}
               </div>
             ))}

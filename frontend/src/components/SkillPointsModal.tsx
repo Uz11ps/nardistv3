@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import apiClient from '../api/client'
-import { CoinIcon, EnergyIcon, HeartIcon } from './Icons'
+import { CoinIcon, EnergyIcon, HeartIcon, MuscleIcon } from './Icons'
 import './SkillPointsModal.css'
 
 interface SkillPointsModalProps {
@@ -118,7 +118,7 @@ export default function SkillPointsModal({
     {
       id: 'power' as const,
       name: 'Сила',
-      icon: '💪',
+      icon: <MuscleIcon size={24} />,
       description: 'Лимит веса скинов',
       current: localPoints.power,
     },

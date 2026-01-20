@@ -6,7 +6,7 @@ import BackgammonBoard from '../components/BackgammonBoard'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { formatRelativeTime } from '../utils/dateUtils'
-import { StarIcon } from '../components/Icons'
+import { StarIcon, RobotIcon, DownloadIcon, RefreshIcon, BookIcon, ScaleIcon, WarningIcon } from '../components/Icons'
 import './History.css'
 
 interface GameHistory {
@@ -330,7 +330,11 @@ export default function History() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                       <span className="card-title">
-                        {game.type === 'vs_bot' ? '🤖 Бот' : game.opponent.username}
+                        {game.type === 'vs_bot' ? (
+                          <>
+                            <RobotIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Бот
+                          </>
+                        ) : game.opponent.username}
                       </span>
                       <span className="mode-badge">{game.mode === 'long' ? 'Длинные' : 'Короткие'}</span>
                     </div>
@@ -390,10 +394,18 @@ export default function History() {
               <div className="analysis-title-row">
                 <h2>Analysis</h2>
                 <div className="analysis-icons">
-                  <span className="analysis-icon" onClick={handleExportMAT} title="Скачать MAT">⬇️</span>
-                  <span className="analysis-icon" onClick={() => handleAnalyze(selectedGame!.id)}>🔄</span>
-                  <span className="analysis-icon">📚</span>
-                  <span className="analysis-icon balance">⚖️</span>
+                  <span className="analysis-icon" onClick={handleExportMAT} title="Скачать MAT">
+                    <DownloadIcon size={18} style={{ color: '#707579' }} />
+                  </span>
+                  <span className="analysis-icon" onClick={() => handleAnalyze(selectedGame!.id)}>
+                    <RefreshIcon size={18} style={{ color: '#707579' }} />
+                  </span>
+                  <span className="analysis-icon">
+                    <BookIcon size={18} style={{ color: '#707579' }} />
+                  </span>
+                  <span className="analysis-icon balance">
+                    <ScaleIcon size={18} style={{ color: '#707579' }} />
+                  </span>
                 </div>
                 <div className="analysis-game-selector">
                   Game 1 ▾
@@ -464,7 +476,9 @@ export default function History() {
                           <button className="analysis-tab-btn active">Move</button>
                           <button className="analysis-tab-btn">Cube</button>
                           <div className="analysis-action-icons">
-                            <span className="action-icon">🤖</span>
+                            <span className="action-icon">
+                              <RobotIcon size={16} style={{ color: '#707579' }} />
+                            </span>
                             <span className="action-icon">
                               <StarIcon size={16} style={{ color: '#FFD700' }} />
                             </span>
@@ -675,8 +689,11 @@ export default function History() {
                             color: error.errorType === 'blunder' ? '#ff3333' :
                                    error.errorType === 'mistake' ? '#ff8833' : '#ffaa33'
                           }}>
-                            {error.errorType === 'blunder' ? '⚠️ Грубая ошибка' :
-                             error.errorType === 'mistake' ? '⚠️ Ошибка' : '⚠️ Неточность'}
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <WarningIcon size={14} style={{ color: 'inherit' }} />
+                              {error.errorType === 'blunder' ? 'Грубая ошибка' :
+                               error.errorType === 'mistake' ? 'Ошибка' : 'Неточность'}
+                            </span>
                           </div>
                           <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.9 }}>
                             {error.errorDescription}

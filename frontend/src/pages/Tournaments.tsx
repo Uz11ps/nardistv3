@@ -5,6 +5,7 @@ import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { formatDateTime } from '../utils/dateUtils'
+import { TicketIcon } from '../components/Icons'
 import './Tournaments.css'
 
 interface Tournament {
@@ -146,8 +147,8 @@ export default function Tournaments() {
                 <div className="tournament-detail">
                   Взнос: {tournament.entryFee} NAR
                   {availableTickets > 0 && (
-                    <span style={{ marginLeft: '8px', color: '#4CAF50', fontSize: '12px' }}>
-                      или 🎫 {availableTickets} билет{availableTickets > 1 ? 'ов' : ''}
+                    <span style={{ marginLeft: '8px', color: '#4CAF50', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      или <TicketIcon size={14} style={{ color: '#4CAF50' }} /> {availableTickets} билет{availableTickets > 1 ? 'ов' : ''}
                     </span>
                   )}
                 </div>
@@ -230,8 +231,8 @@ export default function Tournaments() {
                   <span className="tournament-modal-value">
                     {tournamentDetail.entryFee} NAR
                     {availableTickets > 0 && (
-                      <span style={{ marginLeft: '8px', color: '#4CAF50', fontSize: '12px' }}>
-                        или 🎫 {availableTickets} билет{availableTickets > 1 ? 'ов' : ''}
+                      <span style={{ marginLeft: '8px', color: '#4CAF50', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        или <TicketIcon size={14} style={{ color: '#4CAF50' }} /> {availableTickets} билет{availableTickets > 1 ? 'ов' : ''}
                       </span>
                     )}
                   </span>

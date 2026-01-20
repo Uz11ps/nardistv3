@@ -6,7 +6,7 @@ import SkillPointsModal from '../components/SkillPointsModal'
 import EnhancementDetailModal from '../components/EnhancementDetailModal'
 import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
-import { CoinIcon, EnergyIcon, HeartIcon, CrownIcon, StarIcon, MuscleIcon, BoxIcon, BarChartIcon, SettingsIcon, ArrowRightIcon } from '../components/Icons'
+import { CoinIcon, EnergyIcon, HeartIcon, CrownIcon, StarIcon, MuscleIcon, BoxIcon, BarChartIcon, SettingsIcon, ArrowRightIcon, RocketIcon, EditIcon } from '../components/Icons'
 import './Profile.css'
 
 export default function Profile() {
@@ -273,7 +273,7 @@ export default function Profile() {
       showBack={true}
       rightAction={
         <button className="profile-edit-button" onClick={handleOpenEdit}>
-          ✏️
+          <EditIcon size={20} style={{ color: '#fff' }} />
         </button>
       }
     >
@@ -599,7 +599,9 @@ export default function Profile() {
 
             <div className="premium-features-list">
               <div className="premium-feature-item">
-                <div className="premium-feature-icon">📊</div>
+                <div className="premium-feature-icon">
+                  <BarChartIcon size={24} style={{ width: 24, height: 24 }} />
+                </div>
                 <div className="premium-feature-info">
                   <div className="premium-feature-title">История и Анализ</div>
                   <div className="premium-feature-description">
@@ -608,7 +610,9 @@ export default function Profile() {
                 </div>
               </div>
               <div className="premium-feature-item">
-                <div className="premium-feature-icon">🚀</div>
+                <div className="premium-feature-icon">
+                  <RocketIcon size={24} style={{ color: '#FFD700' }} />
+                </div>
                 <div className="premium-feature-info">
                   <div className="premium-feature-title">Приоритет в матчах</div>
                   <div className="premium-feature-description">
@@ -617,7 +621,9 @@ export default function Profile() {
                 </div>
               </div>
               <div className="premium-feature-item">
-                <div className="premium-feature-icon">👑</div>
+                <div className="premium-feature-icon">
+                  <CrownIcon size={24} style={{ color: '#FFD700' }} />
+                </div>
                 <div className="premium-feature-info">
                   <div className="premium-feature-title">Премиум-значок</div>
                   <div className="premium-feature-description">
