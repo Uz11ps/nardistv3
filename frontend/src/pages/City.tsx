@@ -67,6 +67,16 @@ export default function City() {
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null)
   const [skillPoints, setSkillPoints] = useState({ economy: 0 })
   const [showUpgradeModal, setShowUpgradeModal] = useState<{ buildingId: string; buildingName: string; currentLevel: number; newLevel: number; currentIncome: number; newIncome: number; price: number } | null>(null)
+  // Проверяем, в клане ли пользователь (хуки должны быть ДО условных рендеров!)
+  const [userClan, setUserClan] = useState<{ clan: any; member: any } | null>(null)
+  
+  useEffect(() => {
+    apiClient.get('/clans/my').then(res => {
+      setUserClan(res.data)
+    }).catch(() => {
+      setUserClan(null)
+    })
+  }, [])
 
   const loadData = useCallback(async () => {
     try {
@@ -173,6 +183,7 @@ export default function City() {
   }
 
   const currentDistrict = cityData.find(d => d.id === selectedDistrictId)
+  const isInClan = !!userClan?.clan
 
   if (loading && cityData.length === 0) {
     return (
@@ -181,19 +192,6 @@ export default function City() {
       </PageLayout>
     )
   }
-
-  // Проверяем, в клане ли пользователь
-  const [userClan, setUserClan] = useState<{ clan: any; member: any } | null>(null)
-  
-  useEffect(() => {
-    apiClient.get('/clans/my').then(res => {
-      setUserClan(res.data)
-    }).catch(() => {
-      setUserClan(null)
-    })
-  }, [])
-
-  const isInClan = !!userClan?.clan
 
   // Ограничиваем доступ к городу без лицензии предпринимателя (только для игроков без клана)
   if (!isInClan && !user?.hasBusinessLicense) {
