@@ -489,8 +489,8 @@ export default function Shop() {
 
   const tabs = [
     { id: 'coin', label: 'NAR-coin', active: activeTab === 'coin', onClick: () => setActiveTab('coin') },
-    { id: 'bar', label: 'Бар', active: activeTab === 'bar', onClick: () => setActiveTab('bar') },
     { id: 'subscription', label: 'Подписка', active: activeTab === 'subscription', onClick: () => setActiveTab('subscription') },
+    { id: 'bar', label: 'Бар', active: activeTab === 'bar', onClick: () => setActiveTab('bar') },
     { id: 'skins', label: 'Скины', active: activeTab === 'skins', onClick: () => setActiveTab('skins') },
   ]
 
@@ -603,7 +603,7 @@ export default function Shop() {
                     onClick={handleBuyEnergy}
                     disabled={loading || (shopBarInfo ? shopBarInfo.energy.current >= shopBarInfo.energy.max : false)}
                   >
-                    Купить энергию
+                    Купить
                   </Button>
                 </div>
                 <div className="shop-nar-coin-icon">
@@ -633,7 +633,7 @@ export default function Shop() {
                     onClick={handleBuyLives}
                     disabled={loading || (shopBarInfo ? shopBarInfo.lives.current >= shopBarInfo.lives.max : false)}
                   >
-                    Купить жизни
+                    Купить
                   </Button>
                 </div>
                 <div className="shop-nar-coin-icon">
