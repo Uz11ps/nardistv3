@@ -158,7 +158,7 @@ export default function ClanManage() {
           <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/members`)}>
             Участники
           </button>
-          <button className="clan-manage-button" onClick={() => navigate('/city', { state: { clanMode: true, clanId } })}>
+          <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/districts`)}>
             Районы
           </button>
           {isLeader ? (
