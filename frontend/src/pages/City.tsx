@@ -168,13 +168,13 @@ export default function City() {
 
   // Ограничиваем доступ к городу без лицензии предпринимателя
   if (!user?.hasBusinessLicense) {
-    return (
-      <PageLayout title="Районы" showBack={true}>
+  return (
+    <PageLayout title="Районы" showBack={true}>
         <div className="city-loading">
           <p style={{ marginBottom: 12 }}>
             Доступ к городу ограничен. Для входа нужна лицензия предпринимателя.
           </p>
-          <button
+            <button
             className="city-buy-license-btn"
             onClick={() => navigate('/shop', { state: { tab: 'bar' } })}
           >
@@ -195,7 +195,7 @@ export default function City() {
         active: selectedDistrictId === district.id,
         onClick: () => setSelectedDistrictId(district.id)
       }))}
-    >
+            >
       <div className="city-content-v3">
         {/* Информация о районе */}
         {selectedDistrictId && currentDistrict && (
@@ -214,13 +214,13 @@ export default function City() {
                 </div>
               )}
             </div>
-          </div>
+        </div>
         )}
 
         {/* Сетка строений для выбранного района */}
         {selectedDistrictId && currentDistrict && currentDistrict.isUnlocked && (
           <div className="city-buildings-section">
-            <div className="city-grid-v3">
+        <div className="city-grid-v3">
               {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map((buildingData) => {
                 const { config, userBuilding } = buildingData
                 const incomeMultiplier = config.incomeMultiplier || 0.07
@@ -237,18 +237,18 @@ export default function City() {
                   : 0
                 
                 return (
-                  <div 
-                    key={config.id} 
+            <div 
+              key={config.id} 
                     className="city-card-v3-complete"
-                  >
+            >
                     {/* Иконка здания */}
                     <div className="city-card-v3-icon-wrapper">
-                      <img
-                        src={getImageUrl(config.icon) || config.icon || '/img/building_placeholder.png'}
-                        alt={config.name}
-                        onError={(e) => { e.currentTarget.src = '/img/building_placeholder.png' }}
-                      />
-                    </div>
+                <img
+                  src={getImageUrl(config.icon) || config.icon || '/img/building_placeholder.png'}
+                  alt={config.name}
+                  onError={(e) => { e.currentTarget.src = '/img/building_placeholder.png' }}
+                />
+              </div>
                     
                     {/* Название и уровень */}
                     <div className="city-card-v3-title">
@@ -265,13 +265,13 @@ export default function City() {
                           {(typeof userBuilding.incomePerHour === 'string' 
                             ? Number(userBuilding.incomePerHour) 
                             : (userBuilding.incomePerHour || 0)).toLocaleString('ru-RU')} NAR/час
-                        </div>
+            </div>
                         {accumulatedIncome > 0 && (
                           <div className="city-card-v3-accumulated">
                             Накоплено: {accumulatedIncome.toLocaleString('ru-RU')} NAR
-                          </div>
+        </div>
                         )}
-                      </div>
+      </div>
                     )}
                     
                     {/* Кнопки действий */}
@@ -331,22 +331,22 @@ export default function City() {
                           disabled={purchasing === config.id || (user?.narCoin || 0) < config.basePrice}
                         >
                           {purchasing === config.id ? '...' : (
-                            <>
+                      <>
                               <ShoppingCartIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
                               Купить {config.basePrice.toLocaleString('ru-RU')} NAR
                             </>
                           )}
                         </button>
                       )}
+                        </div>
                     </div>
-                  </div>
-                )
+                  )
               })}
             </div>
           </div>
         )}
-      </div>
-
+              </div>
+              
       {/* Модальное окно улучшения */}
       {showUpgradeModal && (
         <div className="city-upgrade-modal-overlay" onClick={() => setShowUpgradeModal(null)}>
@@ -395,9 +395,9 @@ export default function City() {
               >
                 {purchasing === showUpgradeModal.buildingId ? 'Улучшение...' : 'Улучшить'}
               </button>
+              </div>
             </div>
           </div>
-        </div>
       )}
     </PageLayout>
   )
