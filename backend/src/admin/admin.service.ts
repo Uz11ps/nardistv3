@@ -1712,15 +1712,6 @@ export class AdminService implements OnModuleInit {
     return this.usersRepository.save(user);
   }
 
-  async setAdminByTelegramId(telegramId: string) {
-    const user = await this.usersService.findByTelegramId(telegramId);
-    if (!user) {
-      throw new NotFoundException(`Пользователь с telegramId ${telegramId} не найден`);
-    }
-    user.isAdmin = true;
-    return this.usersRepository.save(user);
-  }
-
   async resetUserProgress(userId: string) {
     const user = await this.usersService.findOne(userId);
     user.xp = BigInt(0);
