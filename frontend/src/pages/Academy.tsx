@@ -142,12 +142,14 @@ export default function Academy() {
   const isMaterialPage = !!materialId
 
   useEffect(() => {
+    console.log('[Academy] useEffect triggered - activeTab:', activeTab, 'isMaterialPage:', isMaterialPage, 'materialId:', materialId)
     if (isMaterialPage && materialId) {
       loadMaterialDetail(materialId)
-    } else {
+    } else if (!isMaterialPage) {
       loadData()
     }
-  }, [activeTab, materialId, isMaterialPage, activeFilter])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, materialId, isMaterialPage])
 
   // Сбрасываем скролл в начало при открытии материала
   useEffect(() => {
@@ -189,14 +191,18 @@ export default function Academy() {
 
   const loadData = async () => {
     try {
+      console.log('[Academy] loadData called for tab:', activeTab, 'isMaterialPage:', isMaterialPage)
       if (activeTab === 'onboarding') {
         const response = await apiClient.get('/academy/onboarding')
+        console.log('[Academy] Loaded onboarding:', response.data?.length || 0, 'items')
         setOnboarding(response.data || [])
       } else if (activeTab === 'courses' || activeTab === 'training') {
         const response = await apiClient.get('/academy/courses')
+        console.log('[Academy] Loaded courses:', response.data?.length || 0, 'items', response.data)
         setCourses(response.data || [])
       } else if (activeTab === 'articles') {
         const response = await apiClient.get('/academy/articles')
+        console.log('[Academy] Loaded articles:', response.data?.length || 0, 'items', response.data)
         setArticles(response.data || [])
       } else if (activeTab === 'my-materials') {
         // Загружаем все материалы для "Мои материалы"
@@ -205,12 +211,13 @@ export default function Academy() {
           apiClient.get('/academy/articles').catch(() => ({ data: [] })),
           apiClient.get('/academy/onboarding').catch(() => ({ data: [] }))
         ])
+        console.log('[Academy] Loaded for my-materials - courses:', coursesRes.data?.length || 0, 'articles:', articlesRes.data?.length || 0)
         setCourses(coursesRes.data || [])
         setArticles(articlesRes.data || [])
         setOnboarding(onboardingRes.data || [])
       }
     } catch (error) {
-      console.error('Failed to load academy data:', error)
+      console.error('[Academy] Failed to load academy data:', error)
     }
   }
 
@@ -730,7 +737,15 @@ export default function Academy() {
 
         {activeTab === 'courses' && (
           <div className="academy-grid">
-            {getFilteredAndSortedItems(courses).map((course) => (
+            {(() => {
+              console.log('[Academy] Rendering courses tab - courses state:', courses.length, 'courses:', courses)
+              const filtered = getFilteredAndSortedItems(courses)
+              console.log('[Academy] Rendering courses tab - total:', courses.length, 'filtered:', filtered.length, 'filtered items:', filtered)
+              if (filtered.length === 0 && courses.length > 0) {
+                console.warn('[Academy] All courses are filtered out (likely all purchased)')
+              }
+              return filtered
+            })().map((course) => (
               <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
                 <div className="academy-grid-card-icon">
                   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -747,7 +762,15 @@ export default function Academy() {
 
         {activeTab === 'articles' && (
           <div className="academy-grid">
-            {getFilteredAndSortedItems(articles).map((article) => (
+            {(() => {
+              console.log('[Academy] Rendering articles tab - articles state:', articles.length, 'articles:', articles)
+              const filtered = getFilteredAndSortedItems(articles)
+              console.log('[Academy] Rendering articles tab - total:', articles.length, 'filtered:', filtered.length, 'filtered items:', filtered)
+              if (filtered.length === 0 && articles.length > 0) {
+                console.warn('[Academy] All articles are filtered out (likely all purchased)')
+              }
+              return filtered
+            })().map((article) => (
               <div key={article.id} className="academy-grid-card" onClick={() => handleOpen(article)}>
                 <div className="academy-grid-card-icon">
                   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
