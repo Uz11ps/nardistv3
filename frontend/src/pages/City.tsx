@@ -208,19 +208,29 @@ export default function City() {
                 // Рассчитываем актуальный накопленный доход на основе времени
                 let accumulatedIncome = 0
                 if (userBuilding) {
+                  // ВАЖНО: Используем значение из БД как основу, но пересчитываем на основе времени
+                  // для отображения актуального состояния
                   const baseAccumulated = Number(userBuilding.accumulatedIncome || 0)
+                  
                   // Используем lastIncomeCollection или текущее время, если его нет
                   const lastCollection = userBuilding.lastIncomeCollection 
                     ? new Date(userBuilding.lastIncomeCollection) 
                     : (userBuilding.createdAt ? new Date(userBuilding.createdAt) : new Date())
                   const now = new Date()
                   const hoursPassed = Math.max(0, (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60))
+                  
                   // incomePerHour может быть строкой (bigint) или числом
                   const incomePerHour = typeof userBuilding.incomePerHour === 'string' 
                     ? Number(userBuilding.incomePerHour) 
                     : (userBuilding.incomePerHour || 0)
-                  const newIncome = Math.floor(incomePerHour * hoursPassed)
-                  accumulatedIncome = baseAccumulated + newIncome
+                  
+                  // Рассчитываем новый доход только если прошло достаточно времени (больше 1 минуты)
+                  // Это предотвращает показ дохода сразу после сбора
+                  const newIncome = hoursPassed > 0.017 ? Math.floor(incomePerHour * hoursPassed) : 0
+                  
+                  // Если в БД уже есть накопленный доход, используем его (бэкенд уже рассчитал)
+                  // Иначе используем пересчитанный на фронтенде
+                  accumulatedIncome = baseAccumulated > 0 ? baseAccumulated : newIncome
                   
                   // Ограничиваем максимальным накоплением
                   const maxAccumulation = Number(config.maxAccumulation || 0)
@@ -288,7 +298,7 @@ export default function City() {
                           </button>
                           
                           {/* Кнопка улучшения */}
-                          {userBuilding.level < config.maxLevel ? (
+                          {userBuilding.level < config.maxLevel && upgradePrice > 0 ? (
                             <button
                               className="city-card-v3-btn city-card-v3-btn-upgrade"
                               onClick={(e) => {

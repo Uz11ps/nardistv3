@@ -278,7 +278,38 @@ export class CityService {
     // Рассчитываем накопленный доход
     const now = new Date();
     const lastCollection = building.lastIncomeCollection || building.createdAt;
-    const hoursPassed = (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60);
+    const hoursPassed = Math.max(0, (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60));
+
+    // Если прошло меньше 0.01 часа (36 секунд), не добавляем новый доход
+    // Это предотвращает повторный сбор сразу после предыдущего
+    if (hoursPassed < 0.01) {
+      // Если накопленный доход уже есть, собираем его
+      const existingAccumulated = Number(building.accumulatedIncome);
+      if (existingAccumulated > 0) {
+        const config = await this.buildingConfigsRepository.findOne({
+          where: { type: building.type },
+        });
+        const maxAccumulation = config ? Number(config.maxAccumulation) : Infinity;
+        const finalIncome = Math.min(existingAccumulated, maxAccumulation);
+        
+        // Добавляем доход игроку
+        const newBalance = Number(user.narCoin) + finalIncome;
+        await this.usersService.update(userId, { narCoin: newBalance });
+
+        // Сбрасываем накопленный доход и обновляем время сбора
+        building.accumulatedIncome = '0';
+        building.lastIncomeCollection = now;
+        await this.buildingsRepository.save(building);
+
+        return {
+          collected: finalIncome,
+          newBalance: newBalance,
+          passiveIncomeBonus: '0%',
+        };
+      }
+      
+      throw new BadRequestException('Нет накопленного дохода для сбора');
+    }
 
     // Если строение захвачено кланом, доход уменьшается на 50%
     const captureMultiplier = building.capturedByClanId ? 0.5 : 1.0;
@@ -302,17 +333,14 @@ export class CityService {
     const maxAccumulation = config ? Number(config.maxAccumulation) : Infinity;
     const finalIncome = Math.min(newAccumulated, maxAccumulation);
 
-    // Обновляем строение
-    building.accumulatedIncome = finalIncome.toString();
-    building.lastIncomeCollection = now;
-    await this.buildingsRepository.save(building);
-
     // Добавляем доход игроку
     const newBalance = Number(user.narCoin) + finalIncome;
     await this.usersService.update(userId, { narCoin: newBalance });
 
-    // Сбрасываем накопленный доход
+    // ВАЖНО: Сбрасываем накопленный доход И обновляем время сбора ОДНОВРЕМЕННО
+    // Это предотвращает повторный сбор сразу после предыдущего
     building.accumulatedIncome = '0';
+    building.lastIncomeCollection = now;
     await this.buildingsRepository.save(building);
 
     return {
