@@ -230,7 +230,6 @@
 }
 
 .profile-enhancement-item {
-  aspect-ratio: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -242,6 +241,9 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   transition: transform 0.2s, box-shadow 0.2s;
   min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .profile-enhancement-item:hover {
@@ -329,10 +331,11 @@
   font-size: 13px;
   font-weight: 600;
   width: 100%;
-  align-self: flex-end;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  box-sizing: border-box;
+  margin-top: auto;
 }
 
 .profile-enhancement-upgrade-btn.active {

@@ -12,6 +12,7 @@ interface PageLayoutProps {
   tabs?: Array<{ id: string; label: string; active?: boolean; onClick?: () => void }>
   rightAction?: ReactNode
   showBottomNav?: boolean
+  className?: string
 }
 
 export default function PageLayout({ 
@@ -21,7 +22,8 @@ export default function PageLayout({
   showBack = true, 
   tabs, 
   rightAction,
-  showBottomNav = true 
+  showBottomNav = true,
+  className = ''
 }: PageLayoutProps) {
   const navigate = useNavigate()
   const tabsRef = useRef<HTMLDivElement>(null)
@@ -101,7 +103,7 @@ export default function PageLayout({
   }, [tabs])
 
   return (
-    <div className="page-layout">
+    <div className={`page-layout ${className}`}>
       <div className="page-layout-background" />
       <div className="page-layout-content">
         {/* Header */}

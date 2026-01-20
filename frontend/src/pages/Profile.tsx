@@ -276,6 +276,7 @@ export default function Profile() {
           <EditIcon size={20} style={{ color: '#fff' }} />
         </button>
       }
+      className="page-layout-profile"
     >
       <div className="profile-content">
         {/* Табы */}
