@@ -409,37 +409,6 @@ export const DebugPanel = memo(({
           <button 
             onClick={async () => {
               try {
-                // Принудительно применяем текущий конфиг ко ВСЕМ размерам ГЛОБАЛЬНО (для всех пользователей)
-                const configToSave = { ...configRef.current }
-                console.log(`💾 Сохраняю ГЛОБАЛЬНЫЙ конфиг ко ВСЕМ размерам (для всех пользователей):`, configToSave)
-                console.log(`📐 Размеры для сохранения: ${DEBUG_SIZES.join(', ')}px`)
-                
-                // Сохраняем конфиг для КАЖДОГО размера глобально
-                let savedCount = 0
-                for (const size of DEBUG_SIZES) {
-                  console.log(`💾 Сохраняю конфиг для размера ${size}px...`)
-                  await apiClient.put('/admin/board-configs', {
-                    size: size,
-                    config: configToSave
-                  })
-                  savedCount++
-                  console.log(`✅ Конфиг для ${size}px сохранен (${savedCount}/${DEBUG_SIZES.length})`)
-                }
-                
-                alert(`✅ Глобальный конфиг применен ко ВСЕМ ${savedCount} размерам (${DEBUG_SIZES.join(', ')}px)! Теперь он работает для ВСЕХ пользователей!`)
-              } catch (e) {
-                console.error('❌ Ошибка:', e)
-                alert('Ошибка: ' + ((e as any).response?.data?.message || (e as any).message))
-              }
-            }}
-            style={{ fontSize: '12px', padding: '5px 10px', background: '#a94', border: '1px solid #bb6', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
-            title="Принудительно применить текущий конфиг ко всем размерам (включая мобильные)"
-          >
-            🔄 Применить ко всем
-          </button>
-          <button 
-            onClick={async () => {
-              try {
                 // Используем актуальный конфиг из ref
                 const configToSave = { ...configRef.current }
                 console.log(`💾 Сохраняю ГЛОБАЛЬНЫЙ конфиг ТОЛЬКО для размера ${selectedSize}px:`, configToSave)
