@@ -3,30 +3,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 30px;
+  gap: 24px;
   padding: 20px;
   text-align: center;
   min-height: 60vh;
   justify-content: center;
-}
-
-.federations-welcome-shield {
-  width: 140px;
-  height: 140px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 30px;
-  padding: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.federations-welcome-shield img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
 }
 
 .federations-welcome-buttons {
@@ -34,31 +15,38 @@
   flex-direction: column;
   gap: 12px;
   width: 100%;
-  max-width: 280px;
+  max-width: 400px;
 }
 
 .federations-welcome-btn {
   width: 100%;
-  max-width: 280px;
-  height: 54px;
-  background: linear-gradient(180deg, #A32E2E 0%, #681C1C 100%);
-  border: none;
-  border-radius: 14px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  border: 0.1px solid #C93C3D;
   color: #FFF;
-  font-size: 18px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(163, 46, 46, 0.2);
-  transition: all 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .federations-welcome-btn-create {
-  background: linear-gradient(180deg, #E84142 0%, #C93C3D 100%);
-  box-shadow: 0 4px 15px rgba(232, 65, 66, 0.3);
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  border: 0.1px solid #C93C3D;
 }
 
-.federations-welcome-btn:active {
-  transform: scale(0.98);
+.federations-welcome-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+}
+
+.federations-welcome-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .clans-loading {
@@ -83,12 +71,6 @@
   min-height: 60vh;
 }
 
-.clans-unavailable-icon {
-  width: 120px;
-  height: 120px;
-  opacity: 0.5;
-  margin-bottom: 10px;
-}
 
 .clans-unavailable-title {
   color: #FFF;
@@ -106,13 +88,26 @@
 .clans-play-button {
   margin-top: 10px;
   width: 100%;
-  max-width: 240px;
-  height: 50px;
-  background: #2a2a2a;
-  border: none;
-  border-radius: 12px;
+  max-width: 400px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  border: 0.1px solid #C93C3D;
   color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.clans-play-button:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+}
+
+.clans-play-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

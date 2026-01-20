@@ -47,7 +47,6 @@ export default function Clans() {
     return (
       <PageLayout title="Федерации" showBack={true}>
         <div className="clans-unavailable">
-          <img src="/img/кланы.png" alt="Federations" className="clans-unavailable-icon" />
           <h2 className="clans-unavailable-title">Федерации недоступны</h2>
           <p className="clans-unavailable-text">
             Федерации открываются с 10 уровня, прокачайся, играй в турнирах и зарабатывай очки
@@ -79,10 +78,6 @@ export default function Clans() {
       showBack={true}
     >
       <div className="federations-welcome">
-        <div className="federations-welcome-shield">
-          <img src="/img/кланы.png" alt="Federations" />
-        </div>
-        
         <div className="federations-welcome-buttons">
           {canJoin && (
             <button className="federations-welcome-btn" onClick={() => navigate('/clans/search')}>

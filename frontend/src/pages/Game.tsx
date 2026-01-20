@@ -797,8 +797,15 @@ export default function Game() {
         // ВАЖНО: Проверяем овертайм при загрузке игры на основе общего времени игрока
         // Овертайм = когда общее время игрока <= 0 И игра уже началась (lastMoveAt !== null)
         // Если игра еще не началась (lastMoveAt === null), овертайма быть не может
+        // ВАЖНО: При загрузке игры овертайм должен быть false, если игра только началась
+        // Овертайм возможен только если прошло больше 15 секунд на ход И общее время <= 0
         const currentPlayerTime = game.currentPlayer === 0 ? initialTotalTime.player1 : initialTotalTime.player2
-        const isInOvertimeOnLoad = game.lastMoveAt !== null && currentPlayerTime <= 0
+        // Овертайм при загрузке возможен только если:
+        // 1. Есть lastMoveAt (игра началась)
+        // 2. Общее время игрока <= 0 (использовано)
+        // 3. И прошло больше 15 секунд с последнего хода
+        const isInOvertimeOnLoad = game.lastMoveAt !== null && currentPlayerTime <= 0 && 
+          (Date.now() - new Date(game.lastMoveAt).getTime()) > 15000
         
         if (socket && socket.connected) {
           // Таймеры обновятся через событие timer_update от сервера
@@ -3557,7 +3564,10 @@ export default function Game() {
                   // Если я player2, то мой таймер = player2Timer
                   const myTimer = isPlayer1 ? player1Timer : player2Timer
                   const myTotalTime = isPlayer1 ? totalTimeRemaining.player1 : totalTimeRemaining.player2
-                  const isOvertime = myTimer <= 0 || isInOvertime
+                  // ВАЖНО: Овертайм определяется ТОЛЬКО через isInOvertime из состояния
+                  // и только если это действительно ход текущего игрока
+                  const isMyTurn = (isPlayer1 && gameState?.currentPlayer === 0) || (!isPlayer1 && gameState?.currentPlayer === 1)
+                  const isOvertime = isMyTurn && isInOvertime
                   // Используем константы: 15 секунд на ход, 60 секунд овертайм
                   const MOVE_TIME_LIMIT = 15
                   const TOTAL_TIME_LIMIT = 60
