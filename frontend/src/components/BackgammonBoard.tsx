@@ -3585,6 +3585,8 @@ export default function BackgammonBoard({
           MOBILE_CONFIG={MOBILE_CONFIG}
           DESKTOP_CONFIG={DESKTOP_CONFIG}
           containerRef={containerRef}
+          showHitboxes={showHitboxes}
+          setShowHitboxes={setShowHitboxes}
         />
       ) : (
         <button 

@@ -11,6 +11,8 @@ interface DebugPanelProps {
   MOBILE_CONFIG: any
   DESKTOP_CONFIG: any
   containerRef?: React.RefObject<HTMLDivElement>
+  showHitboxes?: boolean
+  setShowHitboxes?: (show: boolean) => void
 }
 
 const DEBUG_SIZES = [368, 512, 768, 1024, 1440, 1920] as const
@@ -28,7 +30,9 @@ export const DebugPanel = memo(({
   isMobile,
   MOBILE_CONFIG,
   DESKTOP_CONFIG,
-  containerRef
+  containerRef,
+  showHitboxes,
+  setShowHitboxes
 }: DebugPanelProps) => {
   const [position, setPosition] = useState({ x: 50, y: 50 })
   const [isDragging, setIsDragging] = useState(false)
@@ -326,6 +330,20 @@ export const DebugPanel = memo(({
         <div style={{ marginBottom: '10px', fontSize: '10px', color: '#aaa' }}>
           Current Width: {containerWidth}px
         </div>
+        
+        {/* Чекбокс показа хитбоксов */}
+        {showHitboxes !== undefined && setShowHitboxes && (
+          <div style={{ marginBottom: '10px', padding: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px' }}>
+              <input 
+                type="checkbox" 
+                checked={showHitboxes}
+                onChange={(e) => setShowHitboxes(e.target.checked)}
+              />
+              <span>🎯 Показать хитбоксы</span>
+            </label>
+          </div>
+        )}
         
         {/* Переключатель размеров */}
         <div style={{ marginBottom: '15px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
