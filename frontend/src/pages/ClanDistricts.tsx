@@ -36,13 +36,26 @@ export default function ClanDistricts() {
   const [districts, setDistricts] = useState<DistrictData[]>([])
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null)
 
+  useEffect(() => {
+    console.log('ClanDistricts component mounted, clanId:', clanId)
+    if (!clanId) {
+      console.error('ClanDistricts: No clanId in params, redirecting to clans')
+      navigate('/clans', { replace: true })
+    }
+  }, [clanId, navigate])
+
   const loadData = useCallback(async () => {
-    if (!clanId) return
+    if (!clanId) {
+      console.error('ClanDistricts: No clanId provided')
+      return
+    }
     
     try {
       setLoading(true)
+      console.log('ClanDistricts: Loading districts for clan:', clanId)
       // Загружаем данные о районах для клана
       const response = await apiClient.get(`/clans/${clanId}/districts`)
+      console.log('ClanDistricts: Response:', response.data)
       const districtsData = Array.isArray(response.data) ? response.data : []
       setDistricts(districtsData)
       
@@ -50,8 +63,10 @@ export default function ClanDistricts() {
         const firstUnlocked = districtsData.find((d: DistrictData) => d.isUnlocked) || districtsData[0]
         setSelectedDistrictId(firstUnlocked.id)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load clan districts:', error)
+      console.error('Error response:', error.response?.data)
+      alert(`Ошибка загрузки районов: ${error.response?.data?.message || error.message}`)
       setDistricts([])
     } finally {
       setLoading(false)
