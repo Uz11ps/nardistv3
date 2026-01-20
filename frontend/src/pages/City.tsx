@@ -81,9 +81,9 @@ export default function City() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      // Проверяем, в клане ли пользователь
+      // Проверяем, в клане ли пользователь и обновляем userClan
       const clanRes = await apiClient.get('/clans/my').catch(() => ({ data: { clan: null, member: null } }))
-      const isInClan = !!clanRes.data.clan
+      setUserClan(clanRes.data)
       
       const [cityRes, spResponse] = await Promise.all([
         apiClient.get('/city/data'),
@@ -247,7 +247,7 @@ export default function City() {
         {/* Для кланов - отображение захватов районов */}
         {isInClan && selectedDistrictId && currentDistrict && currentDistrict.isUnlocked && (
           <div className="city-clan-section">
-            {currentDistrict.capture ? (
+            {currentDistrict.isCapturedByMyClan && currentDistrict.capture ? (
               <div className="city-clan-capture-card">
                 <div className="city-clan-capture-header">
                   <h3>Район захвачен</h3>
@@ -302,6 +302,9 @@ export default function City() {
                     try {
                       await apiClient.post(`/clans/${userClan.clan.id}/territories/capture`, { districtCode: currentDistrict.code })
                       alert('Район успешно захвачен!')
+                      // Обновляем данные клана и города
+                      const clanRes = await apiClient.get('/clans/my').catch(() => ({ data: { clan: null, member: null } }))
+                      setUserClan(clanRes.data)
                       await loadData()
                     } catch (error: any) {
                       alert(error.response?.data?.message || 'Ошибка захвата района')
