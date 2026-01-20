@@ -6,6 +6,7 @@ import { ClanMember, ClanRole } from './clan-member.entity';
 import { ClanTreasuryTransaction, TreasuryTransactionType } from './clan-treasury-transaction.entity';
 import { UsersService } from '../users/users.service';
 import { DistrictConfig } from '../city/district-config.entity';
+import { DistrictCapture } from '../city/district-capture.entity';
 import { Building } from '../city/building.entity';
 import { BuildingConfig } from '../city/building-config.entity';
 import { CityService } from '../city/city.service';
