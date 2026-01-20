@@ -1177,7 +1177,17 @@ export default function BackgammonBoard({
       y: yPos,
       size: diceSize,
     })
-  }, [currentPlayer, getPointCoordinates, debugConfig])
+  }, [currentPlayer, getPointCoordinates, effectiveDebugConfig])
+
+  // Отдельный эффект для обновления позиции кубиков при изменении конфига
+  useEffect(() => {
+    // Небольшая задержка, чтобы контейнер успел обновиться после изменения размера
+    const timeoutId = setTimeout(() => {
+      updateDicePosition()
+    }, 50)
+    
+    return () => clearTimeout(timeoutId)
+  }, [effectiveDebugConfig, updateDicePosition])
 
   useEffect(() => {
     updateDicePosition()
@@ -1192,7 +1202,10 @@ export default function BackgammonBoard({
     // Также используем ResizeObserver для отслеживания изменения размера контейнера
     if (containerRef.current) {
       const resizeObserver = new ResizeObserver(() => {
-        updateDicePosition()
+        // Небольшая задержка для стабилизации размера
+        setTimeout(() => {
+          updateDicePosition()
+        }, 50)
       })
       resizeObserver.observe(containerRef.current)
       
