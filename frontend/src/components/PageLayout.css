@@ -70,10 +70,12 @@
   flex-shrink: 0;
   position: absolute;
   left: 16px;
+  z-index: 10;
 }
 
 .page-layout.page-layout-profile .page-layout-back-button {
   position: static;
+  z-index: auto;
 }
 
 .page-layout-title-section {
@@ -87,6 +89,7 @@
   text-align: center;
   width: auto;
   max-width: calc(100% - 120px);
+  z-index: 5;
 }
 
 .page-layout.page-layout-profile .page-layout-title-section {
@@ -94,6 +97,7 @@
   transform: none;
   flex: 1;
   max-width: none;
+  z-index: auto;
 }
 
 .page-layout-right-action {
@@ -103,10 +107,12 @@
   justify-content: center;
   position: absolute;
   right: 16px;
+  z-index: 10;
 }
 
 .page-layout.page-layout-profile .page-layout-right-action {
   position: static;
+  z-index: auto;
 }
 
 .page-layout-title {
