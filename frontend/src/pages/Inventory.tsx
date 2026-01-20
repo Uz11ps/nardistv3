@@ -316,7 +316,7 @@ export default function Inventory() {
                   borderRadius: '12px',
                   color: '#FFD700'
                 }}>
-                  <img src="/img/crown.png" alt="premium" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                  <img src="/img/crown.png" alt="premium" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
                 </div>
                 <div className="inventory-other-info" style={{ flex: 1 }}>
                   <div className="inventory-other-title" style={{ fontSize: '16px', fontWeight: '600', color: '#FFF', marginBottom: '4px' }}>Премиум подписка</div>
