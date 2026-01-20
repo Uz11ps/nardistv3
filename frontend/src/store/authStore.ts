@@ -23,6 +23,7 @@ interface User {
   isAdmin?: boolean
   isGuest?: boolean
   timezone?: string
+  hasBusinessLicense?: boolean
 }
 
 interface AuthState {
