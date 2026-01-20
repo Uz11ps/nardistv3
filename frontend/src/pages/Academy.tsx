@@ -261,7 +261,7 @@ export default function Academy() {
   }
 
   // Функция фильтрации и сортировки элементов
-  const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean; title?: string; gameMode?: string }>(items: T[]): T[] => {
+  const getFilteredAndSortedItems = <T extends { purchased: boolean; isCompleted?: boolean; title?: string; gameMode?: string; type?: 'course' | 'article' | 'onboarding' }>(items: T[]): T[] => {
     let filtered = items
 
     // Исключаем купленные материалы из списков курсов, статей и обучения
