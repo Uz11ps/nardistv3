@@ -132,44 +132,90 @@ export default function ClanManage() {
   }
 
   return (
-    <PageLayout title="" showBack={true}>
-      <div className="clan-manage-content">
-        {/* Эмблема клана */}
-        <div className="clan-manage-emblem">
-          <img src="/img/кланы.png" alt="Clan" className="clan-manage-emblem-icon" />
+    <PageLayout title="" showBack={false}>
+      <div className="clan-manage-wrapper">
+        {/* Фоновые изображения */}
+        <div className="clan-manage-bg-container">
+          <div className="clan-manage-bg-image-1">
+            <img 
+              src="/img/clan-bg-1.png" 
+              alt="" 
+              className="clan-manage-bg-img"
+              onError={(e) => {
+                e.currentTarget.src = "https://www.figma.com/api/mcp/asset/2adbf5b9-64f0-4a93-898d-c216732d57dc"
+              }}
+            />
+          </div>
+          <div className="clan-manage-bg-image-2">
+            <img 
+              src="/img/clan-bg-2.png" 
+              alt="" 
+              className="clan-manage-bg-img"
+              onError={(e) => {
+                e.currentTarget.src = "https://www.figma.com/api/mcp/asset/7393722a-ae84-47af-a5a7-06b4cc0c2418"
+              }}
+            />
+          </div>
         </div>
 
-        {/* Название клана */}
-        <div className="clan-manage-name">{clan.name}</div>
+        {/* Кнопка назад (кастомная позиция) */}
+        <button className="clan-manage-back-btn" onClick={() => navigate(-1)}>
+          <img 
+            src="/img/back-arrow.svg" 
+            alt="Back" 
+            className="clan-manage-back-icon"
+            onError={(e) => {
+              e.currentTarget.src = "https://www.figma.com/api/mcp/asset/01f5fbef-654f-4689-9825-a2d26bb3bd7d"
+            }}
+          />
+        </button>
 
-        {/* Информация о клане */}
-        <div className="clan-manage-info">
-          Уровень {clan.level} · {clan.memberCount} участника{clan.ownedDistricts && clan.ownedDistricts.length > 0 && ` · Владеет, ${getDistrictName(clan.ownedDistricts[0])}`}
-        </div>
+        {/* Основной контент */}
+        <div className="clan-manage-content">
+          {/* Эмблема клана */}
+          <div className="clan-manage-emblem">
+            <img 
+              src="/img/clan-emblem.png" 
+              alt="Clan" 
+              className="clan-manage-emblem-icon"
+              onError={(e) => {
+                e.currentTarget.src = "https://www.figma.com/api/mcp/asset/87bd5be0-21be-489a-bcf8-8697846680fa"
+              }} 
+            />
+          </div>
 
-        {/* Кнопки управления */}
-        <div className="clan-manage-buttons">
-          <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/treasury`)}>
-            Казна
-          </button>
-          <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/upgrades`)}>
-            Улучшить федерацию
-          </button>
-          <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/members`)}>
-            Участники
-          </button>
-          <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/districts`)}>
-            Районы
-          </button>
-          {isLeader ? (
-            <button className="clan-manage-button clan-manage-button-disband" onClick={handleDisband}>
-              Распустить федерацию
+          {/* Название клана */}
+          <div className="clan-manage-name">{clan.name}</div>
+
+          {/* Информация о клане */}
+          <div className="clan-manage-info">
+            Уровень {clan.level} · {clan.memberCount} участника{clan.ownedDistricts && clan.ownedDistricts.length > 0 && ` · Владеет, ${getDistrictName(clan.ownedDistricts[0])}`}
+          </div>
+
+          {/* Кнопки управления */}
+          <div className="clan-manage-buttons">
+            <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/treasury`)}>
+              Казна
             </button>
-          ) : (
-            <button className="clan-manage-button clan-manage-button-leave" onClick={handleLeave}>
-              Покинуть федерацию
+            <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/upgrades`)}>
+              Улучшить клан
             </button>
-          )}
+            <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/members`)}>
+              Участники
+            </button>
+            <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/districts`)}>
+              Районы
+            </button>
+            {isLeader ? (
+              <button className="clan-manage-button clan-manage-button-disband" onClick={handleDisband}>
+                Распустить федерацию
+              </button>
+            ) : (
+              <button className="clan-manage-button clan-manage-button-leave" onClick={handleLeave}>
+                Покинуть федерацию
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </PageLayout>
