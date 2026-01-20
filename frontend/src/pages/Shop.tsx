@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -17,10 +17,32 @@ interface NarCoinPackage {
   currency: string
 }
 
+interface ShopBarInfo {
+  energy: {
+    amount: number
+    costNar: number
+    current: number
+    max: number
+  }
+  lives: {
+    amount: number
+    costNar: number
+    current: number
+    max: number
+  }
+  license: {
+    requiredLevel: number
+    costNar: number
+    hasLicense: boolean
+    level: number
+  }
+}
+
 export default function Shop() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'skins'>('coin')
+  const [activeTab, setActiveTab] = useState<'coin' | 'subscription' | 'skins' | 'bar'>('coin')
   const [skinFilter, setSkinFilter] = useState<'all' | 'board' | 'dice' | 'checkers'>('all')
   const [narCoinPackages, setNarCoinPackages] = useState<NarCoinPackage[]>([])
   const [allSkins, setAllSkins] = useState<Skin[]>([])
@@ -33,12 +55,23 @@ export default function Shop() {
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [showSkinPreview, setShowSkinPreview] = useState(false)
   const [previewSkin, setPreviewSkin] = useState<Skin | null>(null)
+  const [shopBarInfo, setShopBarInfo] = useState<ShopBarInfo | null>(null)
+
+  // Инициализация активной вкладки из navigation state (например, из города -> "бар")
+  useEffect(() => {
+    const state = location.state as { tab?: string } | null
+    if (state?.tab === 'bar') {
+      setActiveTab('bar')
+    }
+  }, [location.state])
 
   useEffect(() => {
     if (activeTab === 'coin') {
       loadNarCoinPackages()
     } else if (activeTab === 'skins') {
       loadSkins()
+    } else if (activeTab === 'bar') {
+      loadShopBar()
     }
   }, [activeTab])
 
@@ -94,6 +127,18 @@ export default function Shop() {
       setSelectedSkinIds(selectedIds)
     } catch (error) {
       console.error('Failed to load skins:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadShopBar = async () => {
+    try {
+      setLoading(true)
+      const response = await apiClient.get('/progress/shop-bar')
+      setShopBarInfo(response.data || null)
+    } catch (error) {
+      console.error('Failed to load shop bar info:', error)
     } finally {
       setLoading(false)
     }
@@ -244,6 +289,45 @@ export default function Shop() {
       await loadNarCoinPackages()
     } catch (error) {
       console.error('Failed to update user:', error)
+    }
+  }
+
+  const handleBuyEnergy = async () => {
+    try {
+      await apiClient.post('/progress/energy/buy')
+      const userResponse = await apiClient.get('/users/me')
+      useAuthStore.setState({ user: userResponse.data })
+      await loadShopBar()
+      alert('Энергия куплена')
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка покупки энергии')
+      console.error('Buy energy failed:', error)
+    }
+  }
+
+  const handleBuyLives = async () => {
+    try {
+      await apiClient.post('/progress/lives/buy')
+      const userResponse = await apiClient.get('/users/me')
+      useAuthStore.setState({ user: userResponse.data })
+      await loadShopBar()
+      alert('Жизни куплены')
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка покупки жизней')
+      console.error('Buy lives failed:', error)
+    }
+  }
+
+  const handleBuyBusinessLicense = async () => {
+    try {
+      await apiClient.post('/progress/business-license/buy')
+      const userResponse = await apiClient.get('/users/me')
+      useAuthStore.setState({ user: userResponse.data })
+      await loadShopBar()
+      alert('Лицензия предпринимателя приобретена')
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ошибка покупки лицензии')
+      console.error('Buy license failed:', error)
     }
   }
 
@@ -402,6 +486,7 @@ export default function Shop() {
 
   const tabs = [
     { id: 'coin', label: 'NAR-coin', active: activeTab === 'coin', onClick: () => setActiveTab('coin') },
+    { id: 'bar', label: 'Бар', active: activeTab === 'bar', onClick: () => setActiveTab('bar') },
     { id: 'subscription', label: 'Подписка', active: activeTab === 'subscription', onClick: () => setActiveTab('subscription') },
     { id: 'skins', label: 'Скины', active: activeTab === 'skins', onClick: () => setActiveTab('skins') },
   ]
@@ -489,6 +574,90 @@ export default function Shop() {
             )}
           </div>
           </>
+        )}
+
+        {/* Бар нардистов */}
+        {activeTab === 'bar' && (
+          <div className="shop-list">
+            <Card className="shop-bar-card">
+              <div className="shop-bar-item">
+                <div className="shop-bar-item-info">
+                  <div className="shop-bar-item-title">Энергия</div>
+                  {shopBarInfo && (
+                    <div className="shop-bar-item-subtitle">
+                      +{shopBarInfo.energy.amount} энергии · сейчас {shopBarInfo.energy.current}/{shopBarInfo.energy.max}
+                    </div>
+                  )}
+                  {shopBarInfo && (
+                    <div className="shop-bar-item-price">
+                      Цена: {shopBarInfo.energy.costNar.toLocaleString('ru-RU')} NAR
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="primary"
+                  className="shop-buy-btn"
+                  onClick={handleBuyEnergy}
+                  disabled={loading || (shopBarInfo ? shopBarInfo.energy.current >= shopBarInfo.energy.max : false)}
+                >
+                  Купить энергию
+                </Button>
+              </div>
+
+              <div className="shop-bar-item">
+                <div className="shop-bar-item-info">
+                  <div className="shop-bar-item-title">Жизни</div>
+                  {shopBarInfo && (
+                    <div className="shop-bar-item-subtitle">
+                      +{shopBarInfo.lives.amount} жизней · сейчас {shopBarInfo.lives.current}/{shopBarInfo.lives.max}
+                    </div>
+                  )}
+                  {shopBarInfo && (
+                    <div className="shop-bar-item-price">
+                      Цена: {shopBarInfo.lives.costNar.toLocaleString('ru-RU')} NAR
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="primary"
+                  className="shop-buy-btn"
+                  onClick={handleBuyLives}
+                  disabled={loading || (shopBarInfo ? shopBarInfo.lives.current >= shopBarInfo.lives.max : false)}
+                >
+                  Купить жизни
+                </Button>
+              </div>
+
+              <div className="shop-bar-item">
+                <div className="shop-bar-item-info">
+                  <div className="shop-bar-item-title">Лицензия предпринимателя</div>
+                  {shopBarInfo && (
+                    <div className="shop-bar-item-subtitle">
+                      Доступно с {shopBarInfo.license.requiredLevel} уровня · сейчас уровень {shopBarInfo.license.level}
+                    </div>
+                  )}
+                  {shopBarInfo && (
+                    <div className="shop-bar-item-price">
+                      Цена: {shopBarInfo.license.costNar.toLocaleString('ru-RU')} NAR
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="primary"
+                  className="shop-buy-btn"
+                  onClick={handleBuyBusinessLicense}
+                  disabled={
+                    loading ||
+                    (shopBarInfo
+                      ? shopBarInfo.license.hasLicense || shopBarInfo.license.level < shopBarInfo.license.requiredLevel
+                      : false)
+                  }
+                >
+                  {shopBarInfo?.license.hasLicense ? 'Уже куплена' : 'Купить лицензию'}
+                </Button>
+              </div>
+            </Card>
+          </div>
         )}
 
         {/* Подписка */}

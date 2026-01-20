@@ -272,7 +272,7 @@ export const DebugPanel = memo(({
   }, [isDragging, dragOffset])
 
   return (
-    <div
+    <div 
       ref={panelRef}
       style={{
         position: 'fixed',
@@ -336,21 +336,21 @@ export const DebugPanel = memo(({
       <div 
         ref={scrollContainerRef}
         style={{
-          overflowY: 'auto',
-          overflowX: 'hidden',
+        overflowY: 'auto',
+        overflowX: 'hidden',
           padding: '15px',
           flex: 1,
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehavior: 'contain',
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-        onMouseMove={(e) => e.stopPropagation()}
-        onMouseUp={(e) => e.stopPropagation()}
-        onWheel={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        onTouchMove={(e) => e.stopPropagation()}
-        onTouchEnd={(e) => e.stopPropagation()}
-      >
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain',
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onMouseMove={(e) => e.stopPropagation()}
+      onMouseUp={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
         <div style={{ marginBottom: '10px', fontSize: '10px', color: '#aaa' }}>
           Current Width: {containerWidth}px
         </div>
@@ -376,7 +376,7 @@ export const DebugPanel = memo(({
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {DEBUG_SIZES.map(size => (
-              <button
+           <button 
                 key={size}
                 onClick={() => setSelectedSize(size)}
                 style={{
@@ -391,11 +391,11 @@ export const DebugPanel = memo(({
                 }}
               >
                 {size}px
-              </button>
+           </button>
             ))}
-          </div>
         </div>
-        
+      </div>
+      
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '5px', flexWrap: 'wrap' }}>
           <button 
             onClick={async () => {
@@ -678,8 +678,8 @@ export const DebugPanel = memo(({
                 {cat.label}
               </button>
             ))}
-          </div>
-          
+      </div>
+      
           {/* Фильтр сторон (только для BearOff) */}
           {activeCategory === 'bearoff' && (
             <div>
@@ -794,75 +794,75 @@ export const DebugPanel = memo(({
           })
           
           return filteredItems.map(item => (
-          <div key={item.key} style={{ marginBottom: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-              <label style={{ flex: 1 }}>{item.label}</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <button
-                  onClick={() => handleIncrement(item.key, -1)}
-                  style={{ fontSize: '14px', padding: '2px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
-                  title={`Уменьшить на ${item.step}`}
-                >
-                  −
-                </button>
+        <div key={item.key} style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+            <label style={{ flex: 1 }}>{item.label}</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <button
+                onClick={() => handleIncrement(item.key, -1)}
+                style={{ fontSize: '14px', padding: '2px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
+                title={`Уменьшить на ${item.step}`}
+              >
+                −
+              </button>
                 <span style={{ minWidth: '80px', textAlign: 'center' }}>
                   {debugConfig[item.key] !== null && debugConfig[item.key] !== undefined 
                     ? (typeof debugConfig[item.key] === 'number' ? debugConfig[item.key].toFixed(3) : debugConfig[item.key])
                     : 'null'}
                 </span>
-                <button
-                  onClick={() => handleIncrement(item.key, 1)}
-                  style={{ fontSize: '14px', padding: '2px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
-                  title={`Увеличить на ${item.step}`}
-                >
-                  +
-                </button>
-              </div>
+              <button
+                onClick={() => handleIncrement(item.key, 1)}
+                style={{ fontSize: '14px', padding: '2px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
+                title={`Увеличить на ${item.step}`}
+              >
+                +
+              </button>
             </div>
-            <input
-              type="range"
-              min={item.min}
-              max={item.max}
-              step={item.step}
-              value={debugConfig[item.key]}
-              onChange={(e) => {
-                handleChange(item.key, parseFloat(e.target.value))
-              }}
-              style={{ width: '100%' }}
-            />
           </div>
+          <input
+            type="range"
+            min={item.min}
+            max={item.max}
+            step={item.step}
+            value={debugConfig[item.key]}
+            onChange={(e) => {
+              handleChange(item.key, parseFloat(e.target.value))
+            }}
+            style={{ width: '100%' }}
+          />
+        </div>
           ))
         })()}
-        
-        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #444' }}>
-          <div style={{ marginBottom: '10px' }}>
-            <label style={{ display: 'flex', alignItems: 'center' }}>
-              <input 
-                type="checkbox" 
-                checked={!!debugDice}
-                onChange={(e) => setDebugDice(e.target.checked ? [3, 4] : null)}
-              />
-              <span style={{ marginLeft: '5px' }}>Show Test Dice</span>
-            </label>
-          </div>
+      
+      <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #444' }}>
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ display: 'flex', alignItems: 'center' }}>
+            <input 
+              type="checkbox" 
+              checked={!!debugDice}
+              onChange={(e) => setDebugDice(e.target.checked ? [3, 4] : null)}
+            />
+            <span style={{ marginLeft: '5px' }}>Show Test Dice</span>
+          </label>
+        </div>
 
-          <div style={{ marginBottom: '5px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-               onClick={() => {
-                 navigator.clipboard.writeText(JSON.stringify(debugConfig, null, 2))
-                 alert('Config copied to clipboard!')
-               }}
-               style={{ fontSize: '12px', padding: '3px 8px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
-            >
-              Copy Config
-            </button>
-          </div>
+        <div style={{ marginBottom: '5px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+             onClick={() => {
+               navigator.clipboard.writeText(JSON.stringify(debugConfig, null, 2))
+               alert('Config copied to clipboard!')
+             }}
+             style={{ fontSize: '12px', padding: '3px 8px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
+          >
+            Copy Config
+          </button>
+        </div>
 
-           <textarea 
-             readOnly 
-             value={JSON.stringify(debugConfig, null, 2)}
-             style={{ width: '100%', height: '150px', fontSize: '10px', background: '#222', color: '#ddd', border: '1px solid #555' }}
-           />
+         <textarea 
+           readOnly 
+           value={JSON.stringify(debugConfig, null, 2)}
+           style={{ width: '100%', height: '150px', fontSize: '10px', background: '#222', color: '#ddd', border: '1px solid #555' }}
+         />
         </div>
       </div>
     </div>

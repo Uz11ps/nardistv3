@@ -631,6 +631,57 @@ export class ProgressService {
   }
 
   /**
+   * Данные для "Бара нардистов" в магазине:
+   * - покупка жизней
+   * - покупка энергии
+   * - покупка лицензии предпринимателя
+   *
+   * Цены и количества берутся из конфигурации progression_config
+   */
+  async getShopBarInfo(userId: string) {
+    const user = await this.usersService.findOne(userId);
+    const config = this.branchesService.getConfig();
+
+    // Энергия
+    const energyCfg = config.energyBranch;
+    const energyPurchasesToday = await this.getEnergyPurchasesToday(userId);
+    const energyCost = Math.floor(
+      energyCfg.refill.baseCostNar * Math.pow(energyCfg.refill.growth, energyPurchasesToday),
+    );
+
+    // Жизни
+    const livesCfg = config.livesBranch;
+    const lifePurchasesToday = await this.getLifePurchasesToday(userId);
+    const livesCost = Math.floor(
+      livesCfg.refill.baseCostNar * Math.pow(livesCfg.refill.growth, lifePurchasesToday),
+    );
+
+    // Лицензия предпринимателя
+    const licenseCfg = config.license;
+
+    return {
+      energy: {
+        amount: energyCfg.refill.amount,
+        costNar: energyCost,
+        current: user.energy,
+        max: user.maxEnergy,
+      },
+      lives: {
+        amount: livesCfg.refill.amount,
+        costNar: livesCost,
+        current: user.lives,
+        max: user.maxLives,
+      },
+      license: {
+        requiredLevel: licenseCfg.requiredLevel,
+        costNar: licenseCfg.costNar,
+        hasLicense: user.hasBusinessLicense,
+        level: user.level,
+      },
+    };
+  }
+
+  /**
    * Получить количество покупок жизней сегодня
    */
   private async getLifePurchasesToday(userId: string): Promise<number> {
@@ -722,16 +773,20 @@ export class ProgressService {
    */
   async buyBusinessLicense(userId: string): Promise<void> {
     const user = await this.usersService.findOne(userId);
-    
+    const config = this.branchesService.getConfig();
+    const licenseCfg = config.license;
+
     if (user.hasBusinessLicense) {
       throw new BadRequestException('У вас уже есть лицензия предпринимателя');
     }
     
-    if (user.level < 5) {
-      throw new BadRequestException('Лицензия предпринимателя доступна только с уровня 5');
+    if (user.level < licenseCfg.requiredLevel) {
+      throw new BadRequestException(
+        `Лицензия предпринимателя доступна только с уровня ${licenseCfg.requiredLevel}`,
+      );
     }
     
-    const licenseCost = 10000;
+    const licenseCost = licenseCfg.costNar;
     
     if (Number(user.narCoin) < licenseCost) {
       throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${licenseCost}`);

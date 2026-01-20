@@ -118,5 +118,14 @@ export class ProgressController {
     await this.progressService.buyBusinessLicense(user.id);
     return { message: 'Лицензия предпринимателя приобретена' };
   }
+
+  /**
+   * Данные для "Бара нардистов" в магазине
+   */
+  @Get('shop-bar')
+  @UseGuards(JwtAuthGuard)
+  async getShopBar(@CurrentUser() user: any) {
+    return this.progressService.getShopBarInfo(user.id);
+  }
 }
 

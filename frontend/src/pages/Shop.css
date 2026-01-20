@@ -158,6 +158,51 @@
   padding: 40px 20px;
 }
 
+/* Бар нардистов */
+.shop-bar-card {
+  padding: 16px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.shop-bar-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.shop-bar-item:last-child {
+  border-bottom: none;
+}
+
+.shop-bar-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shop-bar-item-title {
+  color: #fff;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.shop-bar-item-subtitle {
+  color: #b6b6b6;
+  font-size: 13px;
+}
+
+.shop-bar-item-price {
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 /* NAR-coin карточки - горизонтальный layout с монетой справа */
 .shop-nar-coin-card {
   padding: 16px;

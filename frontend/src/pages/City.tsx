@@ -165,6 +165,25 @@ export default function City() {
     )
   }
 
+  // Ограничиваем доступ к городу без лицензии предпринимателя
+  if (!user?.hasBusinessLicense) {
+    return (
+      <PageLayout title="Районы" showBack={true}>
+        <div className="city-loading">
+          <p style={{ marginBottom: 12 }}>
+            Доступ к городу ограничен. Для входа нужна лицензия предпринимателя.
+          </p>
+          <button
+            className="city-buy-license-btn"
+            onClick={() => navigate('/shop', { state: { tab: 'bar' } })}
+          >
+            Открыть магазин и купить лицензию
+          </button>
+        </div>
+      </PageLayout>
+    )
+  }
+
   return (
     <PageLayout 
       title="Районы" 
