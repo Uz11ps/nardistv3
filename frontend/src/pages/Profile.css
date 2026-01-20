@@ -6,7 +6,6 @@
   gap: 20px;
   align-items: center;
   width: 100%;
-  margin-top: -20px; /* Компенсируем padding-top от page-layout-body */
 }
 
 /* Новый дизайн V2 */

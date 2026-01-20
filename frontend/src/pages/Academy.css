@@ -421,7 +421,7 @@
   line-height: 1.6;
   max-width: 800px;
   margin: 0 auto;
-  padding: 24px 16px 40px;
+  padding: 0 16px 20px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -444,7 +444,7 @@
 }
 
 .academy-material-content-text p {
-  margin: 0 0 24px 0;
+  margin: 0 0 20px 0;
   color: #FFF;
   font-size: 16px;
   line-height: 1.8;
@@ -462,7 +462,7 @@
 .academy-material-content-text h5,
 .academy-material-content-text h6 {
   color: #FFF;
-  margin: 40px 0 20px 0;
+  margin: 32px 0 16px 0;
   font-weight: 600;
   line-height: 1.4;
   text-align: left;
@@ -496,13 +496,13 @@
 
 .academy-material-content-text ul,
 .academy-material-content-text ol {
-  margin: 24px 0;
+  margin: 20px 0;
   padding-left: 32px;
   color: #FFF;
 }
 
 .academy-material-content-text li {
-  margin: 12px 0;
+  margin: 10px 0;
   color: #FFF;
   font-size: 16px;
   line-height: 1.8;
@@ -619,7 +619,7 @@
 }
 
 .academy-material-section {
-  margin-bottom: 48px;
+  margin-bottom: 40px;
   padding: 0;
 }
 
@@ -627,7 +627,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .academy-material-section-icon {
@@ -648,12 +648,10 @@
   text-align: left;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  padding: 0;
-  margin: 0;
 }
 
 .academy-material-section-content p {
-  margin: 0 0 24px 0;
+  margin: 0 0 20px 0;
   color: #FFF;
   font-size: 16px;
   line-height: 1.8;
@@ -671,7 +669,7 @@
 .academy-material-section-content h5,
 .academy-material-section-content h6 {
   color: #FFF;
-  margin: 40px 0 20px 0;
+  margin: 32px 0 16px 0;
   font-weight: 600;
   line-height: 1.4;
   text-align: left;
@@ -705,13 +703,13 @@
 
 .academy-material-section-content ul,
 .academy-material-section-content ol {
-  margin: 24px 0;
+  margin: 20px 0;
   padding-left: 32px;
   color: #FFF;
 }
 
 .academy-material-section-content li {
-  margin: 12px 0;
+  margin: 10px 0;
   color: #FFF;
   font-size: 16px;
   line-height: 1.8;

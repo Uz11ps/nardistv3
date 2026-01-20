@@ -68,21 +68,15 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  position: absolute;
-  left: 16px;
 }
 
 .page-layout-title-section {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
   align-items: center;
   text-align: center;
-  width: auto;
-  max-width: calc(100% - 120px);
 }
 
 .page-layout-right-action {
@@ -90,8 +84,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  position: absolute;
-  right: 16px;
 }
 
 .page-layout-title {
@@ -185,7 +177,7 @@
 /* Body */
 .page-layout-body {
   flex: 1;
-  padding: 20px 16px 90px; /* Отступ сверху от header, увеличен padding-bottom для нижней панели навигации (70px высота + 20px отступ) */
+  padding: 0 16px 90px; /* Увеличен padding-bottom для нижней панели навигации (70px высота + 20px отступ) */
   position: relative;
   z-index: 10; /* Выше чем bottom-nav (z-index: 1) */
 }
