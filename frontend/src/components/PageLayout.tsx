@@ -117,11 +117,13 @@ export default function PageLayout({
             <h1 className="page-layout-title">{title}</h1>
             {subtitle && <p className="page-layout-subtitle">{subtitle}</p>}
           </div>
-          {rightAction && (
+          {rightAction ? (
             <div className="page-layout-right-action">
               {rightAction}
             </div>
-          )}
+          ) : showBack ? (
+            <div className="page-layout-right-action" style={{ visibility: 'hidden', pointerEvents: 'none' }} />
+          ) : null}
         </div>
 
         {/* Tabs */}

@@ -300,26 +300,31 @@
 }
 
 .profile-enhancement-info-btn {
-  background: none;
-  border: 1px solid rgba(74, 144, 226, 0.5);
+  background: rgba(74, 144, 226, 0.15);
+  border: 1.5px solid #4a90e2;
   color: #4a90e2;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   padding: 0;
   transition: all 0.2s;
   line-height: 1;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.2);
 }
 
 .profile-enhancement-info-btn:hover {
   background: #4a90e2;
   color: #fff;
   border-color: #4a90e2;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.4);
 }
 
 .profile-enhancement-progress {

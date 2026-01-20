@@ -129,3 +129,67 @@
   background: #357abd;
 }
 
+.enhancement-buffs-section {
+  margin-top: 24px;
+  padding: 16px;
+  background: rgba(74, 144, 226, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(74, 144, 226, 0.2);
+}
+
+.enhancement-buffs-title {
+  color: #4a90e2;
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.enhancement-buffs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.enhancement-buff-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.enhancement-buff-label {
+  color: #B6B6B6;
+  font-size: 14px;
+  font-weight: 400;
+  flex: 1;
+}
+
+.enhancement-buff-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.enhancement-buff-current {
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.enhancement-buff-arrow {
+  color: #4a90e2;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.enhancement-buff-next {
+  color: #4CAF50;
+  font-size: 14px;
+  font-weight: 600;
+}
+

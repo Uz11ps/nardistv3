@@ -404,7 +404,7 @@ export default function Profile() {
                         <button 
                           className="profile-enhancement-info-btn"
                           onClick={() => {
-                            setSelectedEnhancement(enh)
+                            setSelectedEnhancement({ ...enh, currentSp })
                             setShowDetailModal(true)
                           }}
                         >
