@@ -227,6 +227,24 @@ export const MuscleIcon: React.FC<IconProps> = ({ className, style, size = 20 })
   </svg>
 )
 
+export const ShieldIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+    style={style}
+  >
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+    <path d="M12 2v20"></path>
+  </svg>
+)
+
 export const ScrollIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
   <svg 
     width={size} 
@@ -254,15 +272,21 @@ export const BrainIcon: React.FC<IconProps> = ({ className, style, size = 20 }) 
     height={size} 
     viewBox="0 0 24 24" 
     fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
+    xmlns="http://www.w3.org/2000/svg"
     className={className}
     style={style}
   >
-    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44L6.5 20.5a2.5 2.5 0 0 1-4.96-.44v-15A2.5 2.5 0 0 1 3.5 2h6z"></path>
-    <path d="M14 2a2.5 2.5 0 0 1 2.5 2.5v15a2.5 2.5 0 0 1-4.96.44L11.5 20.5a2.5 2.5 0 0 1-4.96-.44v-15A2.5 2.5 0 0 1 9.5 2h4.5z"></path>
+    <defs>
+      <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#FFD700" stopOpacity="1"/>
+        <stop offset="50%" stopColor="#FFA500" stopOpacity="1"/>
+        <stop offset="100%" stopColor="#FFD700" stopOpacity="1"/>
+      </linearGradient>
+    </defs>
+    <path d="M12 2C10 2 8 3 8 5C8 6 9 7 10 7C9 8 8 9 8 11C8 13 9 14 11 14C10 15 9 16 9 18C9 20 11 21 13 21C15 21 17 20 17 18C17 16 16 15 15 14C17 14 18 13 18 11C18 9 17 8 16 7C17 7 18 6 18 5C18 3 16 2 14 2C13 2 12.5 2.5 12 2Z" fill="url(#brainGradient)"/>
+    <circle cx="10" cy="6" r="1" fill="#FFF" opacity="0.8"/>
+    <circle cx="14" cy="6" r="1" fill="#FFF" opacity="0.8"/>
+    <path d="M10 10C10 10.5 10.5 11 11 11C11.5 11 12 10.5 12 10" stroke="#FFF" strokeWidth="1" fill="none"/>
   </svg>
 )
 

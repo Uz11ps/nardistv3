@@ -266,11 +266,9 @@ export default function City() {
                             ? Number(userBuilding.incomePerHour) 
                             : (userBuilding.incomePerHour || 0)).toLocaleString('ru-RU')} NAR/час
             </div>
-                        {accumulatedIncome > 0 && (
-                          <div className="city-card-v3-accumulated">
-                            Накоплено: {accumulatedIncome.toLocaleString('ru-RU')} NAR
-        </div>
-                        )}
+                        <div className="city-card-v3-accumulated">
+                          Накоплено: {accumulatedIncome.toLocaleString('ru-RU')} NAR
+                        </div>
       </div>
                     )}
                     

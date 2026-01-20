@@ -7,7 +7,7 @@ import Button from '../components/Button'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
-import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, HeartIcon, ScrollIcon, BarChartIcon, ScaleIcon, WrenchIcon } from '../components/Icons'
+import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, HeartIcon, ScrollIcon, BarChartIcon, ScaleIcon, WrenchIcon, BrainIcon } from '../components/Icons'
 import './Shop.css'
 
 interface NarCoinPackage {
@@ -685,7 +685,7 @@ export default function Shop() {
             <Card className="shop-subscription-card">
               <div className="shop-subscription-content">
                 <div className="shop-subscription-info">
-                  <div className="shop-subscription-title">Премиум доступ</div>
+                  <div className="shop-subscription-title">Премиум</div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       className="shop-subscription-buy-btn"
@@ -703,7 +703,7 @@ export default function Shop() {
                   <div className="shop-subscription-price">от 199 руб.</div>
                 </div>
                 <div className="shop-subscription-icon">
-                  <img src="/img/crown.png" alt="premium" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+                  <img src="/img/crown.png" alt="premium" className="shop-subscription-crown-img" />
                 </div>
               </div>
             </Card>
@@ -810,7 +810,7 @@ export default function Shop() {
               <div className="shop-premium-modal-features">
                 <div className="shop-premium-modal-feature">
                   <div className="shop-premium-modal-feature-icon">
-                    <ScrollIcon size={24} style={{ color: '#FFD700' }} />
+                    <ScrollIcon size={48} style={{ color: '#FFD700' }} />
                   </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">История игр</div>
@@ -820,7 +820,7 @@ export default function Shop() {
 
                 <div className="shop-premium-modal-feature">
                   <div className="shop-premium-modal-feature-icon">
-                    <BarChartIcon size={24} style={{ width: 24, height: 24 }} />
+                    <BrainIcon size={48} />
                   </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Анализ</div>
@@ -830,7 +830,7 @@ export default function Shop() {
 
                 <div className="shop-premium-modal-feature">
                   <div className="shop-premium-modal-feature-icon">
-                    <TargetIcon size={32} style={{ color: '#FFF' }} />
+                    <TargetIcon size={48} style={{ color: '#FFF' }} />
                   </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Тренажёр</div>
@@ -840,7 +840,7 @@ export default function Shop() {
 
                 <div className="shop-premium-modal-feature">
                   <div className="shop-premium-modal-feature-icon">
-                    <EnergyIcon size={32} style={{ color: '#FFF' }} />
+                    <EnergyIcon size={48} style={{ color: '#FF4444' }} />
                   </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Приоритет</div>
@@ -850,7 +850,7 @@ export default function Shop() {
 
                 <div className="shop-premium-modal-feature">
                   <div className="shop-premium-modal-feature-icon">
-                    <CrownIcon size={32} style={{ color: '#FFF' }} />
+                    <CrownIcon size={48} style={{ color: '#FFF' }} />
                   </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Премиум-значок</div>

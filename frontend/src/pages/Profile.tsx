@@ -6,7 +6,7 @@ import SkillPointsModal from '../components/SkillPointsModal'
 import EnhancementDetailModal from '../components/EnhancementDetailModal'
 import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
-import { CoinIcon, EnergyIcon, HeartIcon, CrownIcon, StarIcon, MuscleIcon, BoxIcon, BarChartIcon, SettingsIcon, ArrowRightIcon, RocketIcon, EditIcon } from '../components/Icons'
+import { CoinIcon, EnergyIcon, HeartIcon, CrownIcon, StarIcon, MuscleIcon, ShieldIcon, BoxIcon, BarChartIcon, SettingsIcon, ArrowRightIcon, RocketIcon, EditIcon } from '../components/Icons'
 import './Profile.css'
 
 export default function Profile() {
@@ -342,7 +342,7 @@ export default function Profile() {
               { 
                 id: 'economy' as const, 
                 name: 'Экономика', 
-                icon: <CoinIcon size={32} />, 
+                icon: <CoinIcon size={64} />, 
                 description: 'Снижение комиссии, пассивный доход и выгода в городе',
                 details: [
                   'Снижение комиссии в играх на NAR-coin (до -10%)',
@@ -354,7 +354,7 @@ export default function Profile() {
               { 
                 id: 'energy' as const, 
                 name: 'Энергия', 
-                icon: <EnergyIcon size={24} />, 
+                icon: <EnergyIcon size={36} />, 
                 description: 'Лимит боев, скорость восстановления и выносливость',
                 details: [
                   'Увеличение максимального запаса энергии (до 200 ед.)',
@@ -366,7 +366,7 @@ export default function Profile() {
               { 
                 id: 'lives' as const, 
                 name: 'Жизни', 
-                icon: <HeartIcon size={24} />, 
+                icon: <HeartIcon size={32} style={{ color: '#E84142', filter: 'drop-shadow(0 0 12px rgba(232, 65, 66, 0.6))' }} />, 
                 description: 'Запас поражений, регенерация и защита рейтинга',
                 details: [
                   'Увеличение количества доступных жизней (до 10)',
@@ -378,7 +378,7 @@ export default function Profile() {
               { 
                 id: 'power' as const, 
                 name: 'Сила', 
-                icon: <MuscleIcon size={32} style={{ color: '#FFF' }} />, 
+                icon: <ShieldIcon size={32} style={{ color: '#FFF' }} />, 
                 description: 'Лимит веса скинов и бонусы от экипировки',
                 details: [
                   'Позволяет использовать более тяжелые и редкие скины',
@@ -438,7 +438,7 @@ export default function Profile() {
             </span>
             <span className="profile-bottom-menu-title-v2">Инвентарь</span>
             <span className="profile-bottom-menu-arrow-v2">
-              <ArrowRightIcon size={24} style={{ color: '#B6B6B6' }} />
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
             </span>
           </div>
           <div
@@ -450,7 +450,7 @@ export default function Profile() {
             </span>
             <span className="profile-bottom-menu-title-v2">Аналитика</span>
             <span className="profile-bottom-menu-arrow-v2">
-              <ArrowRightIcon size={24} style={{ color: '#B6B6B6' }} />
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
             </span>
           </div>
           <div
@@ -462,7 +462,7 @@ export default function Profile() {
             </span>
             <span className="profile-bottom-menu-title-v2">Настройки</span>
             <span className="profile-bottom-menu-arrow-v2">
-              <ArrowRightIcon size={24} style={{ color: '#B6B6B6' }} />
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
             </span>
           </div>
         </div>

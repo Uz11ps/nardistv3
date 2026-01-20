@@ -189,6 +189,8 @@
   font-size: 10px;
   color: #FFD700;
   font-weight: 600;
+  min-height: 14px;
+  display: block;
 }
 
 .city-card-v3-actions {
@@ -220,33 +222,42 @@
 }
 
 .city-card-v3-btn-collect {
-  background: #4CAF50;
+  background: linear-gradient(180deg, #4CAF50 0%, #388E3C 100%);
   color: #FFF;
+  border: 0.1px solid #4CAF50;
+  box-shadow: 0 2px 8px 0 rgba(76, 175, 80, 0.3);
 }
 
 .city-card-v3-btn-collect:hover:not(:disabled) {
-  background: #45a049;
+  background: linear-gradient(180deg, #45a049 0%, #2E7D32 100%);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px 0 rgba(76, 175, 80, 0.4);
 }
 
 .city-card-v3-btn-upgrade {
-  background: #C93C3D;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
   color: #FFF;
+  border: 0.1px solid #C93C3D;
+  box-shadow: 0 2px 8px 0 rgba(232, 65, 66, 0.3);
 }
 
 .city-card-v3-btn-upgrade:hover:not(:disabled) {
-  background: #b83536;
+  background: linear-gradient(180deg, #D32F2F -144.23%, #5A1616 105.77%);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
 }
 
 .city-card-v3-btn-purchase {
-  background: #2196F3;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
   color: #FFF;
+  border: 0.1px solid #C93C3D;
+  box-shadow: 0 2px 8px 0 rgba(232, 65, 66, 0.3);
 }
 
 .city-card-v3-btn-purchase:hover:not(:disabled) {
-  background: #1976D2;
+  background: linear-gradient(180deg, #D32F2F -144.23%, #5A1616 105.77%);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
 }
 
 .city-card-v3-max-level {
