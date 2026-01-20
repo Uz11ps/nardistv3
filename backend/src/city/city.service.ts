@@ -39,68 +39,7 @@ export class CityService {
    * Для кланов возвращает данные о захватах районов
    */
   async getCityData(userId: string) {
-    // Проверяем, в клане ли пользователь
-    const userClan = await this.clansService.getUserClan(userId);
-    const isInClan = !!userClan.clan;
-    
-    // Если пользователь в клане, возвращаем данные о захватах районов
-    if (isInClan && userClan.clan) {
-      const districts = await this.districtConfigsRepository.find({
-        where: { isActive: true },
-        order: { order: 'ASC' },
-      });
-
-      const captures = await this.districtCapturesRepository.find({
-        where: { capturedByClanId: userClan.clan.id },
-      });
-
-      const allCaptures = await this.districtCapturesRepository.find({
-        order: { capturedAt: 'DESC' },
-      });
-
-      const now = new Date();
-      const activeCaptures = allCaptures.filter(
-        (c) => !c.expiresAt || c.expiresAt > now,
-      );
-
-      const user = await this.usersService.findOne(userId);
-      const userLevel = user ? user.level || 1 : 1;
-
-      return districts.map(district => {
-        const myCapture = captures.find(c => c.districtCode === district.code);
-        const activeCapture = activeCaptures.find(c => c.districtCode === district.code);
-        const isCapturedByMyClan = myCapture && (!myCapture.expiresAt || myCapture.expiresAt > now);
-        const isCapturedByOther = activeCapture && activeCapture.capturedByClanId !== userClan.clan.id;
-
-        const requiredLevel = district.requiredLevel ?? 1;
-        const isUnlocked = userLevel >= requiredLevel;
-
-        return {
-          id: district.id,
-          code: district.code,
-          name: district.name,
-          description: district.description,
-          icon: district.icon,
-          image: district.image,
-          requiredLevel: requiredLevel,
-          isUnlocked: isUnlocked,
-          // Для кланов возвращаем информацию о захвате
-          capture: myCapture ? {
-            capturedAt: myCapture.capturedAt,
-            expiresAt: myCapture.expiresAt,
-            totalIncomeCollected: Number(myCapture.totalIncomeCollected),
-            lastIncomeCollection: myCapture.lastIncomeCollection,
-            baseIncomePerDay: Number(district.baseIncomePerDay || 0),
-          } : null,
-          isCapturedByMyClan,
-          isCapturedByOther,
-          capturedBy: activeCapture?.capturedByClanId || null,
-          buildings: [], // Для кланов здания не показываем
-        };
-      });
-    }
-
-    // Обычная логика для игроков без клана
+    // Страница "Город" - только для игрока со зданиями, без логики захвата
     const districts = await this.districtConfigsRepository.find({
       where: { isActive: true },
       order: { order: 'ASC' },
@@ -112,6 +51,7 @@ export class CityService {
     });
 
     const user = await this.usersService.findOne(userId);
+    const userLevel = user ? user.level || 1 : 1;
 
     return districts.map(district => {
       const buildingsInDistrict = buildingConfigs.filter(bc => bc.districtId === district.id);
