@@ -298,27 +298,19 @@ export default function BackgammonBoard({
     setDebugConfig(freshConfig)
   }, [debugMode]) // Перезагружаем при изменении режима дебага
   
-  // Слушаем изменения localStorage (чтобы конфиг применялся сразу после сохранения)
+  // Слушаем изменения localStorage только из других вкладок (storage event)
+  // В текущем окне изменения применяются через setDebugConfig в DebugPanel
   useEffect(() => {
-    const checkConfigUpdate = () => {
-      const freshConfig = loadConfigFromStorage()
-      setDebugConfig(freshConfig)
-    }
-    
-    // Проверяем изменения каждые 500мс (на случай если сохранение произошло в том же окне)
-    const interval = setInterval(checkConfigUpdate, 500)
-    
-    // Также слушаем события storage (для изменений из других вкладок)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key?.startsWith('backgammon-debug-config-v16')) {
-        checkConfigUpdate()
+        const freshConfig = loadConfigFromStorage()
+        setDebugConfig(freshConfig)
       }
     }
     
     window.addEventListener('storage', handleStorageChange)
     
     return () => {
-      clearInterval(interval)
       window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
