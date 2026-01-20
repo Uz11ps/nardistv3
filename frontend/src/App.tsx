@@ -41,6 +41,7 @@ import ClanManage from './pages/ClanManage'
 import ClanTreasury from './pages/ClanTreasury'
 import ClanUpgrades from './pages/ClanUpgrades'
 import ClanMembers from './pages/ClanMembers'
+import ClanDistricts from './pages/ClanDistricts'
 import Policy from './pages/Policy'
 import Referrals from './pages/Referrals'
 import FairPlayVerification from './pages/FairPlayVerification'
@@ -281,6 +282,7 @@ function App() {
               <Route path="/clans/:clanId/treasury" element={<ClanTreasury />} />
               <Route path="/clans/:clanId/upgrades" element={<ClanUpgrades />} />
               <Route path="/clans/:clanId/members" element={<ClanMembers />} />
+              <Route path="/clans/:clanId/districts" element={<ClanDistricts />} />
               <Route path="/clans/:clanId" element={<ClanDetail />} />
               <Route path="/policy/:type" element={<Policy />} />
               <Route path="/business" element={<Business />} />

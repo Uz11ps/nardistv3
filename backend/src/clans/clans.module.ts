@@ -6,6 +6,7 @@ import { Clan } from './clan.entity';
 import { ClanMember } from './clan-member.entity';
 import { ClanTreasuryTransaction } from './clan-treasury-transaction.entity';
 import { DistrictConfig } from '../city/district-config.entity';
+import { DistrictCapture } from '../city/district-capture.entity';
 import { Building } from '../city/building.entity';
 import { BuildingConfig } from '../city/building-config.entity';
 import { UsersModule } from '../users/users.module';
@@ -14,7 +15,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Clan, ClanMember, ClanTreasuryTransaction, DistrictConfig, Building, BuildingConfig]),
+    TypeOrmModule.forFeature([Clan, ClanMember, ClanTreasuryTransaction, DistrictConfig, DistrictCapture, Building, BuildingConfig]),
     UsersModule,
     forwardRef(() => CityModule),
     NotificationsModule,

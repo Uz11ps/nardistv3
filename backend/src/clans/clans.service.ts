@@ -24,6 +24,8 @@ export class ClansService {
     private transactionsRepository: Repository<ClanTreasuryTransaction>,
     @InjectRepository(DistrictConfig)
     private districtConfigsRepository: Repository<DistrictConfig>,
+    @InjectRepository(DistrictCapture)
+    private districtCapturesRepository: Repository<DistrictCapture>,
     @InjectRepository(Building)
     private buildingsRepository: Repository<Building>,
     @InjectRepository(BuildingConfig)
@@ -587,6 +589,60 @@ export class ClansService {
    */
   async getClanDistricts(clanId: string) {
     return this.cityService.getClanDistricts(clanId);
+  }
+
+  /**
+   * Получить данные о районах с захватами для клана (для фронтенда)
+   */
+  async getClanDistrictsData(clanId: string) {
+    // Используем метод из CityService для получения данных о районах с захватами
+    // Но нужно получить все районы, а не только захваченные
+    const districts = await this.districtConfigsRepository.find({
+      where: { isActive: true },
+      order: { order: 'ASC' },
+    });
+
+    // Получаем захваты напрямую из репозитория
+    const captures = await this.districtCapturesRepository.find({
+      where: { capturedByClanId: clanId },
+    });
+
+    const allCaptures = await this.districtCapturesRepository.find({
+      order: { capturedAt: 'DESC' },
+    });
+
+    const now = new Date();
+    const activeCaptures = allCaptures.filter(
+      (c) => !c.expiresAt || c.expiresAt > now,
+    );
+
+    return districts.map(district => {
+      const myCapture = captures.find(c => c.districtCode === district.code);
+      const activeCapture = activeCaptures.find(c => c.districtCode === district.code);
+      const isCapturedByMyClan = myCapture && (!myCapture.expiresAt || myCapture.expiresAt > now);
+      const isCapturedByOther = activeCapture && activeCapture.capturedByClanId !== clanId;
+
+      return {
+        id: district.id,
+        code: district.code,
+        name: district.name,
+        description: district.description,
+        icon: district.icon,
+        image: district.image,
+        requiredLevel: district.requiredLevel ?? 1,
+        isUnlocked: true, // Для кланов все районы доступны
+        capture: myCapture ? {
+          capturedAt: myCapture.capturedAt,
+          expiresAt: myCapture.expiresAt,
+          totalIncomeCollected: Number(myCapture.totalIncomeCollected),
+          lastIncomeCollection: myCapture.lastIncomeCollection,
+          baseIncomePerDay: Number(district.baseIncomePerDay || 0),
+        } : null,
+        isCapturedByMyClan,
+        isCapturedByOther,
+        capturedBy: activeCapture?.capturedByClanId || null,
+      };
+    });
   }
 
   /**

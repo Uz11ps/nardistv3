@@ -136,6 +136,22 @@ export class ClansController {
     return { message: 'Район успешно захвачен' };
   }
 
+  @Get(':id/districts')
+  @UseGuards(JwtAuthGuard)
+  async getClanDistricts(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+  ) {
+    // Проверяем что пользователь состоит в этом клане
+    const userClan = await this.clansService.getUserClan(user.id);
+    if (!userClan || !userClan.clan || userClan.clan.id !== id) {
+      throw new BadRequestException('Вы должны состоять в этом клане');
+    }
+
+    // Используем метод из CityService для получения данных о районах с захватами
+    return this.clansService.getClanDistrictsData(id);
+  }
+
   @Post(':id/districts/:districtCode/collect')
   @UseGuards(JwtAuthGuard)
   async collectDistrictIncome(
