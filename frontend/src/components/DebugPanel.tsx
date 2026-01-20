@@ -99,6 +99,7 @@ export const DebugPanel = memo(({
       // ВСЕГДА загружаем свежий конфиг из localStorage, не используем кэш
       const config = loadConfigForSize(selectedSize)
       setDebugConfig(config)
+      savedConfigRef.current = { ...config } // Сохраняем как базовый при загрузке
       configLoadedForSizeRef.current = selectedSize
     }
     
@@ -300,7 +301,13 @@ export const DebugPanel = memo(({
       >
         <div style={{ fontWeight: 'bold', fontSize: '14px' }}>⚙️ Debug Panel ({isMobile ? 'Mobile' : 'Desktop'})</div>
         <button
-          onClick={() => setDebugMode(false)}
+          onClick={() => {
+            // При выходе из дебага без сохранения - откатываем к сохраненному конфигу
+            if (savedConfigRef.current) {
+              setDebugConfig(savedConfigRef.current)
+            }
+            setDebugMode(false)
+          }}
           style={{
             background: 'rgba(200,50,50,0.8)',
             border: 'none',
@@ -408,7 +415,10 @@ export const DebugPanel = memo(({
                 // Также сохраняем в общий ключ для совместимости с BackgammonBoard
                 localStorage.setItem('backgammon-debug-config-v16', jsonString)
                 
-                // Обновляем конфиг в родительском компоненте (чтобы изменения применились сразу в игре)
+                // Обновляем сохраненный конфиг как базовый
+                savedConfigRef.current = configToSave
+                
+                // Обновляем конфиг в родительском компоненте (чтобы изменения применились в игре)
                 setDebugConfig(configToSave)
                 
                 // Проверяем, что сохранилось
