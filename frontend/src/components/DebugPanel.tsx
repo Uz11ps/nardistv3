@@ -69,37 +69,47 @@ export const DebugPanel = memo(({
     savedConfigRef.current = debugConfig
   }, [selectedSize]) // При смене размера сохраняем текущий как "базовый"
   
-  // Загружаем конфиг для выбранного размера
-  const loadConfigForSize = (size: DebugSize) => {
+  // Загружаем конфиг для выбранного размера С СЕРВЕРА
+  const loadConfigForSize = async (size: DebugSize) => {
     try {
-      const saved = localStorage.getItem(getConfigKey(size))
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (parsed.sideMarginLeftPct !== undefined) {
-          // Возвращаем сохраненный конфиг как есть - он полный и независимый
-          return parsed
-        }
+      // Загружаем ГЛОБАЛЬНЫЕ настройки системы (доступны всем, без авторизации)
+      const response = await apiClient.get('/admin/board-configs')
+      const globalConfigs = response.data || {}
+      
+      const sizeKey = size.toString()
+      
+      if (globalConfigs[sizeKey] && globalConfigs[sizeKey].sideMarginLeftPct !== undefined) {
+        console.log(`📥 Загружен конфиг с сервера для ${size}px:`, globalConfigs[sizeKey])
+        return globalConfigs[sizeKey]
       }
     } catch (e) {
-      console.warn('Failed to load config for size:', size, e)
+      console.warn('Failed to load config from server for size:', size, e)
     }
-    // Если нет сохраненного конфига - используем дефолтный (MOBILE или DESKTOP)
-    // Но это только при первом создании, потом каждый размер живет своей жизнью
+    // Если нет сохраненного конфига на сервере - используем дефолтный
+    console.log(`📥 Используется дефолтный конфиг для ${size}px`)
     return getDefaultConfig(size < 768)
   }
   
   // Флаг для отслеживания, был ли конфиг загружен для текущего размера
   const configLoadedForSizeRef = useRef<DebugSize | null>(null)
   
-  // При изменении размера загружаем соответствующий конфиг из localStorage (всегда свежий)
+  // При изменении размера загружаем соответствующий конфиг С СЕРВЕРА (всегда свежий)
   useEffect(() => {
     // Загружаем конфиг только если размер изменился
     if (configLoadedForSizeRef.current !== selectedSize) {
-      // ВСЕГДА загружаем свежий конфиг из localStorage, не используем кэш
-      const config = loadConfigForSize(selectedSize)
-      setDebugConfig(config)
-      savedConfigRef.current = { ...config } // Сохраняем как базовый при загрузке
-      configLoadedForSizeRef.current = selectedSize
+      // ВСЕГДА загружаем свежий конфиг С СЕРВЕРА
+      loadConfigForSize(selectedSize).then(config => {
+        console.log(`🔄 Переключение на размер ${selectedSize}px, загружен конфиг:`, config)
+        setDebugConfig(config)
+        savedConfigRef.current = { ...config } // Сохраняем как базовый при загрузке
+        configLoadedForSizeRef.current = selectedSize
+      }).catch(e => {
+        console.error('Ошибка загрузки конфига для размера:', selectedSize, e)
+        const defaultConfig = getDefaultConfig(selectedSize < 768)
+        setDebugConfig(defaultConfig)
+        savedConfigRef.current = { ...defaultConfig }
+        configLoadedForSizeRef.current = selectedSize
+      })
     }
     
     // Изменяем размер контейнера для тестирования
@@ -426,6 +436,13 @@ export const DebugPanel = memo(({
                 
                 // Обновляем конфиг в родительском компоненте (чтобы изменения применились в игре)
                 setDebugConfig(configToSave)
+                
+                // Также сохраняем в localStorage для быстрого доступа (но приоритет у сервера)
+                try {
+                  localStorage.setItem(getConfigKey(selectedSize), JSON.stringify(configToSave))
+                } catch (e) {
+                  console.warn('Не удалось сохранить в localStorage:', e)
+                }
                 
                 alert(`✅ Глобальный конфиг для ${selectedSize}px сохранен! Теперь он работает для ВСЕХ пользователей!`)
               } catch (e) {
