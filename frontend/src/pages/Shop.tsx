@@ -7,6 +7,7 @@ import Button from '../components/Button'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
+import { StarIcon, TargetIcon, EnergyIcon, CrownIcon } from '../components/Icons'
 import './Shop.css'
 
 interface NarCoinPackage {
@@ -521,7 +522,7 @@ export default function Shop() {
                   transition: 'all 0.2s',
                 }}
               >
-                Tribute ⭐
+                Tribute <StarIcon size={16} style={{ verticalAlign: 'middle', marginLeft: '4px' }} />
               </button>
               <button
                 onClick={() => setPaymentMethod('STARS')}
@@ -540,7 +541,7 @@ export default function Shop() {
                   transition: 'all 0.2s',
                 }}
               >
-                Stars ⭐
+                Stars <StarIcon size={16} style={{ verticalAlign: 'middle', marginLeft: '4px' }} />
               </button>
             </div>
 
@@ -579,82 +580,89 @@ export default function Shop() {
         {/* Бар нардистов */}
         {activeTab === 'bar' && (
           <div className="shop-list">
-            <Card className="shop-bar-card">
-              <div className="shop-bar-item">
-                <div className="shop-bar-item-info">
-                  <div className="shop-bar-item-title">Энергия</div>
+            {/* Энергия */}
+            <Card className="shop-nar-coin-card">
+              <div className="shop-nar-coin-content">
+                <div className="shop-nar-coin-info">
+                  <div className="shop-nar-coin-amount">Энергия</div>
                   {shopBarInfo && (
-                    <div className="shop-bar-item-subtitle">
+                    <div className="shop-nar-coin-price">
                       +{shopBarInfo.energy.amount} энергии · сейчас {shopBarInfo.energy.current}/{shopBarInfo.energy.max}
                     </div>
                   )}
                   {shopBarInfo && (
-                    <div className="shop-bar-item-price">
+                    <div className="shop-nar-coin-price" style={{ color: '#ffd700', fontWeight: '600' }}>
                       Цена: {shopBarInfo.energy.costNar.toLocaleString('ru-RU')} NAR
                     </div>
                   )}
+                  <Button
+                    variant="primary"
+                    className="shop-buy-btn"
+                    onClick={handleBuyEnergy}
+                    disabled={loading || (shopBarInfo ? shopBarInfo.energy.current >= shopBarInfo.energy.max : false)}
+                  >
+                    Купить энергию
+                  </Button>
                 </div>
-                <Button
-                  variant="primary"
-                  className="shop-buy-btn"
-                  onClick={handleBuyEnergy}
-                  disabled={loading || (shopBarInfo ? shopBarInfo.energy.current >= shopBarInfo.energy.max : false)}
-                >
-                  Купить энергию
-                </Button>
               </div>
+            </Card>
 
-              <div className="shop-bar-item">
-                <div className="shop-bar-item-info">
-                  <div className="shop-bar-item-title">Жизни</div>
+            {/* Жизни */}
+            <Card className="shop-nar-coin-card">
+              <div className="shop-nar-coin-content">
+                <div className="shop-nar-coin-info">
+                  <div className="shop-nar-coin-amount">Жизни</div>
                   {shopBarInfo && (
-                    <div className="shop-bar-item-subtitle">
+                    <div className="shop-nar-coin-price">
                       +{shopBarInfo.lives.amount} жизней · сейчас {shopBarInfo.lives.current}/{shopBarInfo.lives.max}
                     </div>
                   )}
                   {shopBarInfo && (
-                    <div className="shop-bar-item-price">
+                    <div className="shop-nar-coin-price" style={{ color: '#ffd700', fontWeight: '600' }}>
                       Цена: {shopBarInfo.lives.costNar.toLocaleString('ru-RU')} NAR
                     </div>
                   )}
+                  <Button
+                    variant="primary"
+                    className="shop-buy-btn"
+                    onClick={handleBuyLives}
+                    disabled={loading || (shopBarInfo ? shopBarInfo.lives.current >= shopBarInfo.lives.max : false)}
+                  >
+                    Купить жизни
+                  </Button>
                 </div>
-                <Button
-                  variant="primary"
-                  className="shop-buy-btn"
-                  onClick={handleBuyLives}
-                  disabled={loading || (shopBarInfo ? shopBarInfo.lives.current >= shopBarInfo.lives.max : false)}
-                >
-                  Купить жизни
-                </Button>
               </div>
+            </Card>
 
-              <div className="shop-bar-item">
-                <div className="shop-bar-item-info">
-                  <div className="shop-bar-item-title">Лицензия предпринимателя</div>
+            {/* Лицензия предпринимателя */}
+            <Card className="shop-nar-coin-card">
+              <div className="shop-nar-coin-content">
+                <div className="shop-nar-coin-info">
+                  <div className="shop-nar-coin-amount">Лицензия предпринимателя</div>
                   {shopBarInfo && (
-                    <div className="shop-bar-item-subtitle">
+                    <div className="shop-nar-coin-price">
                       Доступно с {shopBarInfo.license.requiredLevel} уровня · сейчас уровень {shopBarInfo.license.level}
                     </div>
                   )}
                   {shopBarInfo && (
-                    <div className="shop-bar-item-price">
+                    <div className="shop-nar-coin-price" style={{ color: '#ffd700', fontWeight: '600' }}>
                       Цена: {shopBarInfo.license.costNar.toLocaleString('ru-RU')} NAR
                     </div>
                   )}
+                  <Button
+                    variant="primary"
+                    className="shop-buy-btn"
+                    onClick={handleBuyBusinessLicense}
+                    disabled={
+                      loading ||
+                      (shopBarInfo
+                        ? shopBarInfo.license.hasLicense || shopBarInfo.license.level < shopBarInfo.license.requiredLevel
+                        : false)
+                    }
+                  >
+                    {shopBarInfo?.license.hasLicense ? 'Уже куплена' : 'Купить лицензию'}
+                  </Button>
                 </div>
-                <Button
-                  variant="primary"
-                  className="shop-buy-btn"
-                  onClick={handleBuyBusinessLicense}
-                  disabled={
-                    loading ||
-                    (shopBarInfo
-                      ? shopBarInfo.license.hasLicense || shopBarInfo.license.level < shopBarInfo.license.requiredLevel
-                      : false)
-                  }
-                >
-                  {shopBarInfo?.license.hasLicense ? 'Уже куплена' : 'Купить лицензию'}
-                </Button>
               </div>
             </Card>
           </div>
@@ -808,7 +816,9 @@ export default function Shop() {
                 </div>
 
                 <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">🎯</div>
+                  <div className="shop-premium-modal-feature-icon">
+                    <TargetIcon size={32} style={{ color: '#FFF' }} />
+                  </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Тренажёр</div>
                     <div className="shop-premium-modal-feature-description">Разбирай позиции и стратегии</div>
@@ -816,7 +826,9 @@ export default function Shop() {
                 </div>
 
                 <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">⚡</div>
+                  <div className="shop-premium-modal-feature-icon">
+                    <EnergyIcon size={32} style={{ color: '#FFF' }} />
+                  </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Приоритет</div>
                     <div className="shop-premium-modal-feature-description">Попадай к соперникам быстрее</div>
@@ -824,7 +836,9 @@ export default function Shop() {
                 </div>
 
                 <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">👑</div>
+                  <div className="shop-premium-modal-feature-icon">
+                    <CrownIcon size={32} style={{ color: '#FFF' }} />
+                  </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Премиум-значок</div>
                     <div className="shop-premium-modal-feature-description">Отметь свой статус в таблице</div>

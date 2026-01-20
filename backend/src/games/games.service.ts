@@ -3243,4 +3243,47 @@ ${formattedMoves.join('\n')}
       },
     };
   }
+
+  async getPlayerStatistics(userId: string): Promise<any> {
+    // Получаем все игры только с игроками (не с ботами)
+    const playerGames = await this.gamesRepository.find({
+      where: [
+        { player1Id: userId, type: GameType.VS_PLAYER },
+        { player2Id: userId, type: GameType.VS_PLAYER },
+      ],
+      relations: ['player1', 'player2'],
+    });
+
+    // Фильтруем игры по режиму
+    const shortGames = playerGames.filter(g => g.mode === GameMode.SHORT);
+    const longGames = playerGames.filter(g => g.mode === GameMode.LONG);
+
+    // Подсчитываем победы
+    const shortWins = shortGames.filter(g => g.winnerId === userId && g.status === GameStatus.FINISHED).length;
+    const longWins = longGames.filter(g => g.winnerId === userId && g.status === GameStatus.FINISHED).length;
+
+    // Подсчитываем только завершенные игры
+    const shortFinished = shortGames.filter(g => g.status === GameStatus.FINISHED).length;
+    const longFinished = longGames.filter(g => g.status === GameStatus.FINISHED).length;
+
+    // Вычисляем винрейт
+    const shortWinrate = shortFinished > 0 ? (shortWins / shortFinished) * 100 : 0;
+    const longWinrate = longFinished > 0 ? (longWins / longFinished) * 100 : 0;
+
+    return {
+      totalMatches: playerGames.length,
+      short: {
+        matches: shortFinished,
+        wins: shortWins,
+        losses: shortFinished - shortWins,
+        winrate: Math.round(shortWinrate * 10) / 10, // Округляем до 1 знака после запятой
+      },
+      long: {
+        matches: longFinished,
+        wins: longWins,
+        losses: longFinished - longWins,
+        winrate: Math.round(longWinrate * 10) / 10, // Округляем до 1 знака после запятой
+      },
+    };
+  }
 }

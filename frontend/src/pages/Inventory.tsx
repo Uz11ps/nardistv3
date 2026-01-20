@@ -4,6 +4,7 @@ import PageLayout from '../components/PageLayout'
 import Card from '../components/Card'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
+import { StarIcon } from '../components/Icons'
 import './Inventory.css'
 
 interface Skin {
@@ -314,7 +315,9 @@ export default function Inventory() {
                   justifyContent: 'center',
                   borderRadius: '12px',
                   color: '#FFD700'
-                }}>⭐</div>
+                }}>
+                  <StarIcon size={24} style={{ color: '#FFD700' }} />
+                </div>
                 <div className="inventory-other-info" style={{ flex: 1 }}>
                   <div className="inventory-other-title" style={{ fontSize: '16px', fontWeight: '600', color: '#FFF', marginBottom: '4px' }}>Премиум подписка</div>
                   <div className="inventory-other-status">

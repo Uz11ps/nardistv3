@@ -6,6 +6,7 @@ import Button from '../components/Button'
 import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
+import { CoinIcon, FireIcon } from '../components/Icons'
 
 export default function GameResult() {
   const navigate = useNavigate()
@@ -194,10 +195,12 @@ export default function GameResult() {
             <div style={{ marginTop: '16px', padding: '12px', background: '#3a3a3a', borderRadius: '8px' }}>
               <div style={{ fontSize: '14px', color: '#aaaaaa', marginBottom: '4px' }}>Награды:</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ color: '#ff3333', fontWeight: 600 }}>🔥 +{rewards.xp} XP</span>
+                <span style={{ color: '#ff3333', fontWeight: 600 }}>
+                  <FireIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> +{rewards.xp} XP
+                </span>
                 {rewards.narCoin && rewards.narCoin > 0 && (
                   <span className="gold" style={{ fontWeight: 600 }}>
-                    💰 +{rewards.narCoin} NAR
+                    <CoinIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> +{rewards.narCoin} NAR
                   </span>
                 )}
               </div>

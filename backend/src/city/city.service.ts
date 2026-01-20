@@ -66,6 +66,44 @@ export class CityService {
             buildingsOfType[0])
           : null;
         
+        // Рассчитываем накопленный доход для существующего строения
+        let calculatedAccumulatedIncome = 0;
+        if (userBuilding) {
+          const now = new Date();
+          const lastCollection = userBuilding.lastIncomeCollection || userBuilding.createdAt || now;
+          const hoursPassed = Math.max(0, (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60));
+          
+          // Если прошло меньше 0.01 часа (36 секунд), не накапливаем новый доход
+          // Это предотвращает накопление при частых запросах
+          if (hoursPassed >= 0.01) {
+            // Проверяем захват кланом
+            const captureMultiplier = userBuilding.capturedByClanId && 
+              userBuilding.captureExpiresAt && 
+              new Date() < userBuilding.captureExpiresAt
+              ? 0.5 // Доход снижается на 50% при захвате
+              : 1;
+            
+            // Бонус от пассивного дохода (используем тот же метод, что и в collectIncome)
+            const passiveIncomeMultiplier = this.branchesService.calculatePassiveIncomeMultiplier(
+              user.economySp || 0
+            );
+            
+            const baseIncomePerHour = Number(userBuilding.incomePerHour);
+            const incomePerHour = baseIncomePerHour * captureMultiplier * passiveIncomeMultiplier;
+            
+            const incomeToAdd = Math.floor(incomePerHour * hoursPassed);
+            const existingAccumulated = Number(userBuilding.accumulatedIncome || 0);
+            const newAccumulated = existingAccumulated + incomeToAdd;
+            
+            // Ограничиваем максимальным накоплением
+            const maxAccumulation = Number(config.maxAccumulation) || Infinity;
+            calculatedAccumulatedIncome = Math.min(newAccumulated, maxAccumulation);
+          } else {
+            // Если прошло мало времени, используем существующий накопленный доход
+            calculatedAccumulatedIncome = Number(userBuilding.accumulatedIncome || 0);
+          }
+        }
+        
         return {
           config: {
             id: config.id,
@@ -78,11 +116,12 @@ export class CityService {
             maxAccumulation: Number(config.maxAccumulation),
             maxLevel: config.maxLevel,
             upgradeMultiplier: config.upgradeMultiplier || 1.15,
+            incomeMultiplier: config.incomeMultiplier || 0.07,
           },
           userBuilding: userBuilding ? {
             id: userBuilding.id,
             level: userBuilding.level,
-            accumulatedIncome: Number(userBuilding.accumulatedIncome),
+            accumulatedIncome: calculatedAccumulatedIncome,
             incomePerHour: Number(userBuilding.incomePerHour),
             lastIncomeCollection: userBuilding.lastIncomeCollection,
           } : null,

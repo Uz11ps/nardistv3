@@ -5,6 +5,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
+import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, ScrollIcon, BrainIcon } from '../components/Icons'
 import './Subscription.css'
 
 interface SubscriptionPlan {
@@ -24,27 +25,27 @@ const subscriptionFeatures = [
   {
     title: 'История игр',
     description: 'Полный список твоих матчей',
-    icon: '📜',
+    icon: <ScrollIcon size={24} style={{ color: '#FFF' }} />,
   },
   {
     title: 'Анализ',
     description: 'Разбор ошибок и лучших ходов',
-    icon: '🧠',
+    icon: <BrainIcon size={24} style={{ color: '#FFF' }} />,
   },
   {
     title: 'Тренажёр',
     description: 'Разбирай позиции и стратегии',
-    icon: '🎯',
+    icon: <TargetIcon size={24} style={{ color: '#FFF' }} />,
   },
   {
     title: 'Приоритет',
     description: 'Попадай к соперникам быстрее',
-    icon: '⚡',
+    icon: <EnergyIcon size={24} style={{ color: '#FFF' }} />,
   },
   {
     title: 'Премиум-значок',
     description: 'Отметь свой статус в таблице',
-    icon: '👑',
+    icon: <CrownIcon size={24} style={{ color: '#FFF' }} />,
   },
 ]
 
@@ -311,7 +312,7 @@ export default function Subscription() {
               boxSizing: 'border-box',
             }}
           >
-            Stars ⭐
+            Stars <StarIcon size={16} style={{ verticalAlign: 'middle', marginLeft: '4px' }} />
           </button>
         </div>
 

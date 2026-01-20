@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { apiClient } from '../api/client'
+import { StarIcon } from './Icons'
 import './GameAnalytics.css'
 
 interface GameAnalyticsProps {
@@ -95,7 +96,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                   onClick={() => setSelectedMoveIndex(idx * 2)}
                   title={move1.isBestMove ? 'Лучший ход!' : (move1.isError ? move1.errorDescription : '')}
                 >
-                  {move1.isBestMove && <span className="best-move-badge">⭐</span>}
+                  {move1.isBestMove && <span className="best-move-badge"><StarIcon size={16} style={{ color: '#FFD700' }} /></span>}
                   <span className="move-dice">({move1.move.dice?.join('')})</span>
                   <span className="move-text">
                     {move1.move.moves?.map((m: any, i: number) => (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import apiClient from '../api/client'
+import { CoinIcon, EnergyIcon, HeartIcon } from './Icons'
 import './EnhancementModal.css'
 
 interface EnhancementModalProps {
@@ -38,19 +39,19 @@ export default function EnhancementModal({
     {
       id: 'economy' as const,
       name: 'Экономика',
-      icon: '💰',
+      icon: <CoinIcon size={24} />,
       description: 'Снижение комиссии в играх, бонус к пассивному доходу',
     },
     {
       id: 'energy' as const,
       name: 'Энергия',
-      icon: '⚡',
+      icon: <EnergyIcon size={24} />,
       description: 'Увеличение лимита энергии и скорости восстановления',
     },
     {
       id: 'lives' as const,
       name: 'Жизни',
-      icon: '❤️',
+      icon: <HeartIcon size={24} />,
       description: 'Увеличение запаса жизней и защиты от потери',
     },
     {

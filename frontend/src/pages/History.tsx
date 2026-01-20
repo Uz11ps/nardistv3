@@ -6,6 +6,7 @@ import BackgammonBoard from '../components/BackgammonBoard'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { formatRelativeTime } from '../utils/dateUtils'
+import { StarIcon } from '../components/Icons'
 import './History.css'
 
 interface GameHistory {
@@ -464,7 +465,9 @@ export default function History() {
                           <button className="analysis-tab-btn">Cube</button>
                           <div className="analysis-action-icons">
                             <span className="action-icon">🤖</span>
-                            <span className="action-icon">⭐</span>
+                            <span className="action-icon">
+                              <StarIcon size={16} style={{ color: '#FFD700' }} />
+                            </span>
                           </div>
                         </div>
 

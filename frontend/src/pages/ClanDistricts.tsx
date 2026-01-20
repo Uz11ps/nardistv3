@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
+import { LockIcon } from '../components/Icons'
 import './City.css'
 
 interface DistrictCapture {
@@ -130,7 +131,7 @@ export default function ClanDistricts() {
               <h2 className="city-district-name">{currentDistrict.name}</h2>
               {!currentDistrict.isUnlocked && (
                 <div className="city-district-lock">
-                  <span className="lock-icon">🔒</span>
+                  <LockIcon className="lock-icon" size={18} />
                   <span className="lock-text">LVL: {currentDistrict.requiredLevel}</span>
                 </div>
               )}

@@ -6,6 +6,7 @@ import SkillPointsModal from '../components/SkillPointsModal'
 import EnhancementDetailModal from '../components/EnhancementDetailModal'
 import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
+import { CoinIcon, EnergyIcon, HeartIcon, CrownIcon, StarIcon, MuscleIcon } from '../components/Icons'
 import './Profile.css'
 
 export default function Profile() {
@@ -32,10 +33,12 @@ export default function Profile() {
     avatarUrl: '',
   })
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'stats' | 'premium' | 'analytics'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'statistics' | 'analytics'>('stats')
   const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null)
   const [gameHistory, setGameHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [playerStatistics, setPlayerStatistics] = useState<any>(null)
+  const [loadingStatistics, setLoadingStatistics] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -46,6 +49,7 @@ export default function Profile() {
       })
       checkPremium()
       loadSkillPoints()
+      loadPlayerStatistics()
       
       // Проверяем, завершена ли настройка профиля (первичное создание)
       // Если нет - перенаправляем на создание профиля
@@ -81,6 +85,19 @@ export default function Profile() {
       setSkillPoints(response.data || skillPoints)
     } catch (error) {
       console.error('Failed to load skill points:', error)
+    }
+  }
+
+  const loadPlayerStatistics = async () => {
+    try {
+      setLoadingStatistics(true)
+      const response = await apiClient.get('/games/statistics/me').catch(() => ({ data: null }))
+      setPlayerStatistics(response.data || null)
+    } catch (error) {
+      console.error('Failed to load player statistics:', error)
+      setPlayerStatistics(null)
+    } finally {
+      setLoadingStatistics(false)
     }
   }
 
@@ -270,10 +287,10 @@ export default function Profile() {
             Характеристики
           </button>
           <button 
-            className={`profile-tab ${activeTab === 'premium' ? 'active' : ''}`}
-            onClick={() => setActiveTab('premium')}
+            className={`profile-tab ${activeTab === 'statistics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('statistics')}
           >
-            Премиум
+            Статистика
           </button>
         </div>
 
@@ -325,7 +342,7 @@ export default function Profile() {
               { 
                 id: 'economy' as const, 
                 name: 'Экономика', 
-                icon: '💰', 
+                icon: <CoinIcon size={32} />, 
                 description: 'Снижение комиссии, пассивный доход и выгода в городе',
                 details: [
                   'Снижение комиссии в играх на NAR-coin (до -10%)',
@@ -337,7 +354,7 @@ export default function Profile() {
               { 
                 id: 'energy' as const, 
                 name: 'Энергия', 
-                icon: '⚡', 
+                icon: <EnergyIcon size={24} />, 
                 description: 'Лимит боев, скорость восстановления и выносливость',
                 details: [
                   'Увеличение максимального запаса энергии (до 200 ед.)',
@@ -349,7 +366,7 @@ export default function Profile() {
               { 
                 id: 'lives' as const, 
                 name: 'Жизни', 
-                icon: '❤️', 
+                icon: <HeartIcon size={24} />, 
                 description: 'Запас поражений, регенерация и защита рейтинга',
                 details: [
                   'Увеличение количества доступных жизней (до 10)',
@@ -361,7 +378,7 @@ export default function Profile() {
               { 
                 id: 'power' as const, 
                 name: 'Сила', 
-                icon: '💪', 
+                icon: <MuscleIcon size={32} style={{ color: '#FFF' }} />, 
                 description: 'Лимит веса скинов и бонусы от экипировки',
                 details: [
                   'Позволяет использовать более тяжелые и редкие скины',
@@ -438,6 +455,71 @@ export default function Profile() {
           </div>
         </div>
       </>
+    ) : activeTab === 'statistics' ? (
+          <div className="profile-statistics-tab">
+            {loadingStatistics ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#B6B6B6' }}>Загрузка...</div>
+            ) : playerStatistics ? (
+              <>
+                <div className="profile-statistics-card">
+                  <div className="profile-statistics-title">Общая статистика</div>
+                  <div className="profile-statistics-total">
+                    Всего матчей: <span style={{ color: '#FFD700', fontWeight: '600' }}>{playerStatistics.totalMatches}</span>
+                  </div>
+                </div>
+
+                <div className="profile-statistics-card">
+                  <div className="profile-statistics-title">Короткие нарды</div>
+                  <div className="profile-statistics-details">
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Матчей:</span>
+                      <span className="profile-statistics-value">{playerStatistics.short.matches}</span>
+                    </div>
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Побед:</span>
+                      <span className="profile-statistics-value" style={{ color: '#4CAF50' }}>{playerStatistics.short.wins}</span>
+                    </div>
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Поражений:</span>
+                      <span className="profile-statistics-value" style={{ color: '#E84142' }}>{playerStatistics.short.losses}</span>
+                    </div>
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Винрейт:</span>
+                      <span className="profile-statistics-value" style={{ color: '#FFD700', fontWeight: '600', fontSize: '18px' }}>
+                        {playerStatistics.short.winrate}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="profile-statistics-card">
+                  <div className="profile-statistics-title">Длинные нарды</div>
+                  <div className="profile-statistics-details">
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Матчей:</span>
+                      <span className="profile-statistics-value">{playerStatistics.long.matches}</span>
+                    </div>
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Побед:</span>
+                      <span className="profile-statistics-value" style={{ color: '#4CAF50' }}>{playerStatistics.long.wins}</span>
+                    </div>
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Поражений:</span>
+                      <span className="profile-statistics-value" style={{ color: '#E84142' }}>{playerStatistics.long.losses}</span>
+                    </div>
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Винрейт:</span>
+                      <span className="profile-statistics-value" style={{ color: '#FFD700', fontWeight: '600', fontSize: '18px' }}>
+                        {playerStatistics.long.winrate}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#B6B6B6' }}>Нет данных</div>
+            )}
+          </div>
     ) : activeTab === 'analytics' ? (
           <div className="profile-analytics-tab">
             {loadingHistory ? (
@@ -482,7 +564,9 @@ export default function Profile() {
           <div className="profile-premium-tab">
             <div className={`premium-status-card ${hasPremium ? 'active' : 'inactive'}`}>
               <div className="premium-status-header">
-                <div className="premium-status-icon">{hasPremium ? '👑' : '⭐'}</div>
+                <div className="premium-status-icon">
+                  {hasPremium ? <CrownIcon size={32} style={{ color: '#FFD700' }} /> : <StarIcon size={32} style={{ color: '#FFD700' }} />}
+                </div>
                 <div className="premium-status-info">
                   <div className="premium-status-title">
                     {hasPremium ? 'Премиум активен' : 'Премиум не активен'}

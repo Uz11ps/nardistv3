@@ -4,6 +4,7 @@ import apiClient, { getImageUrl } from '../api/client'
 import BackgammonBoard from '../components/BackgammonBoard'
 import { formatDateTime, formatDateOnly } from '../utils/dateUtils'
 import { utcToLocalDateTime, localDateTimeToUtc } from '../utils/datetimeLocalUtils'
+import { CoinIcon, DiamondIcon } from '../components/Icons'
 import './Admin.css'
 
 interface Prize {
@@ -6383,7 +6384,15 @@ export default function Admin() {
                         )}
                       </td>
                       <td>
-                        <div>{tx.type === 'nar_coin' ? '💰 NAR' : '💎 Sub'}</div>
+                        <div>{tx.type === 'nar_coin' ? (
+                          <>
+                            <CoinIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> NAR
+                          </>
+                        ) : (
+                          <>
+                            <DiamondIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Sub
+                          </>
+                        )}</div>
                         <div style={{ fontSize: '12px', color: '#aaa' }}>{tx.method.toUpperCase()}</div>
                       </td>
                       <td>

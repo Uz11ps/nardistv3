@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
+import { PaintBrushIcon, TicketIcon } from '../components/Icons'
 import './Quests.css'
 
 interface Quest {
@@ -164,13 +165,17 @@ export default function Quests() {
                       {quest.rewardSkin && (
                         <>
                           {(quest.rewardNarCoin > 0 || quest.rewardXP > 0) && ' • '}
-                          <span style={{ color: '#00aaff' }}>🎨 Скин</span>
+                          <span style={{ color: '#00aaff' }}>
+                            <PaintBrushIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Скин
+                          </span>
                         </>
                       )}
                       {quest.rewardTickets && quest.rewardTickets > 0 && (
                         <>
                           {(quest.rewardNarCoin > 0 || quest.rewardXP > 0 || quest.rewardSkin) && ' • '}
-                          <span style={{ color: '#ff6b6b' }}>🎫 {quest.rewardTickets} билет{quest.rewardTickets > 1 ? 'ов' : ''}</span>
+                          <span style={{ color: '#ff6b6b' }}>
+                            <TicketIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {quest.rewardTickets} билет{quest.rewardTickets > 1 ? 'ов' : ''}
+                          </span>
                         </>
                       )}
                     </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
 import { apiClient, getImageUrl } from '../api/client'
+import { CoinIcon, ShoppingCartIcon, ArrowUpIcon, LockIcon } from '../components/Icons'
 import './City.css'
 
 interface Building {
@@ -203,7 +204,7 @@ export default function City() {
               <h2 className="city-district-name">{currentDistrict.name}</h2>
               {!currentDistrict.isUnlocked && (
                 <div className="city-district-lock">
-                  <span className="lock-icon">🔒</span>
+                  <LockIcon className="lock-icon" size={18} />
                   <span className="lock-text">LVL: {currentDistrict.requiredLevel}</span>
                 </div>
               )}
@@ -286,7 +287,17 @@ export default function City() {
                             }}
                             disabled={collecting === userBuilding.id || accumulatedIncome <= 0}
                           >
-                            {collecting === userBuilding.id ? 'Сбор...' : accumulatedIncome > 0 ? `💰 Собрать ${accumulatedIncome.toLocaleString('ru-RU')}` : '💰 Нет дохода'}
+                            {collecting === userBuilding.id ? 'Сбор...' : accumulatedIncome > 0 ? (
+                              <>
+                                <CoinIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                                Собрать {accumulatedIncome.toLocaleString('ru-RU')}
+                              </>
+                            ) : (
+                              <>
+                                <CoinIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                                Нет дохода
+                              </>
+                            )}
                           </button>
                           
                           {/* Кнопка улучшения */}
@@ -299,7 +310,12 @@ export default function City() {
                               }}
                               disabled={purchasing === userBuilding.id || (user?.narCoin || 0) < upgradePrice}
                             >
-                              {purchasing === userBuilding.id ? '...' : `⬆️ Улучшить ${upgradePrice.toLocaleString('ru-RU')} NAR`}
+                              {purchasing === userBuilding.id ? '...' : (
+                                <>
+                                  <ArrowUpIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                                  Улучшить {upgradePrice.toLocaleString('ru-RU')} NAR
+                                </>
+                              )}
                             </button>
                           ) : (
                             <div className="city-card-v3-max-level">МАКС. УРОВЕНЬ</div>
@@ -314,7 +330,12 @@ export default function City() {
                           }}
                           disabled={purchasing === config.id || (user?.narCoin || 0) < config.basePrice}
                         >
-                          {purchasing === config.id ? '...' : `🛒 Купить ${config.basePrice.toLocaleString('ru-RU')} NAR`}
+                          {purchasing === config.id ? '...' : (
+                            <>
+                              <ShoppingCartIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                              Купить {config.basePrice.toLocaleString('ru-RU')} NAR
+                            </>
+                          )}
                         </button>
                       )}
                     </div>

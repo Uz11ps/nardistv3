@@ -324,6 +324,7 @@ export class AcademyService {
         views: article.views,
         isCompleted,
         gameMode: article.gameMode,
+        type: article.type, // Добавляем type для фильтрации
       });
     }
 

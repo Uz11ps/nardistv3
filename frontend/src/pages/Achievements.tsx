@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
+import { CoinIcon, FireIcon, PaintBrushIcon } from '../components/Icons'
 import './Achievements.css'
 
 interface Achievement {
@@ -110,17 +111,17 @@ export default function Achievements() {
                     <div className="achievement-reward">
                       {achievement.reward.type === 'narCoin' && (
                         <span style={{ color: '#FFD700', fontSize: '12px', fontWeight: 600 }}>
-                          💰 {achievement.reward.amount} NAR
+                          <CoinIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {achievement.reward.amount} NAR
                         </span>
                       )}
                       {achievement.reward.type === 'xp' && (
                         <span style={{ color: '#E84142', fontSize: '12px', fontWeight: 600 }}>
-                          🔥 {achievement.reward.amount} XP
+                          <FireIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {achievement.reward.amount} XP
                         </span>
                       )}
                       {achievement.reward.type === 'skin' && (
                         <span style={{ color: '#00aaff', fontSize: '12px', fontWeight: 600 }}>
-                          🎨 Скин
+                          <PaintBrushIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Скин
                         </span>
                       )}
                     </div>
