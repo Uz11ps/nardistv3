@@ -268,7 +268,8 @@ export default function BackgammonBoard({
   
   // Текущий загруженный размер для отслеживания изменений
   const currentLoadedSizeRef = useRef<number | null>(null)
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // Используем number | null, т.к. в браузере setTimeout возвращает number
+  const resizeTimeoutRef = useRef<number | null>(null)
   
   // Загружаем конфиг с сервера при монтировании и при изменении размера
   useEffect(() => {
