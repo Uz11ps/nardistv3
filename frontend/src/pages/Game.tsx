@@ -1572,6 +1572,10 @@ export default function Game() {
         if (moveTimeRemaining >= 14.5 && moveTimeRemaining <= 15.5) {
           moveTimeRemaining = 15
         }
+        // ВАЖНО: При начале игры или если moveTimeRemaining некорректный, устанавливаем 15
+        if (moveTimeRemaining < 0 || moveTimeRemaining > 15) {
+          moveTimeRemaining = 15
+        }
         const totalTime1 = data.player1TimeRemaining !== undefined ? data.player1TimeRemaining : 60
         const totalTime2 = data.player2TimeRemaining !== undefined ? data.player2TimeRemaining : 60
         
@@ -1581,7 +1585,8 @@ export default function Game() {
         
         // ВАЖНО: Используем isOvertime ТОЛЬКО из сервера, не пересчитываем локально
         // Сервер уже правильно вычисляет овертайм на основе времени
-        const isOvertime = data.isOvertime || false
+        // ВАЖНО: При начале игры (moveTimeRemaining >= 15) овертайм должен быть false
+        const isOvertime = (data.isOvertime || false) && moveTimeRemaining < 15
         
         lastTimerUpdateRef.current = Date.now() // Обновляем время последнего синхронизации
         
