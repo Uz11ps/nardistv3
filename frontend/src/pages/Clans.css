@@ -29,6 +29,14 @@
   object-fit: contain;
 }
 
+.federations-welcome-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
 .federations-welcome-btn {
   width: 100%;
   max-width: 280px;
@@ -42,6 +50,11 @@
   cursor: pointer;
   box-shadow: 0 4px 15px rgba(163, 46, 46, 0.2);
   transition: all 0.2s;
+}
+
+.federations-welcome-btn-create {
+  background: linear-gradient(180deg, #E84142 0%, #C93C3D 100%);
+  box-shadow: 0 4px 15px rgba(232, 65, 66, 0.3);
 }
 
 .federations-welcome-btn:active {

@@ -82,6 +82,7 @@ export default function ClanSearch() {
     )
   }
 
+  return (
     <PageLayout
       title="Поиск клана"
       subtitle="Выбирай по духу, рейтингу или числу участников - и присоединяйся"

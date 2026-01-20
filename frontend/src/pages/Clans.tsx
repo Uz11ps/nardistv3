@@ -69,10 +69,8 @@ export default function Clans() {
   }
 
   const userLevel = user?.level || 0
-  // Для всех уровней >= 10 показываем кнопку "Вступить в федерацию"
-  // Игроки с уровнем >= 15 могут также создать федерацию через другой путь, но основное действие - вступление
-  const buttonText = 'Вступить в федерацию'
-  const buttonRoute = '/clans/search'
+  const canCreate = userLevel >= 15
+  const canJoin = userLevel >= 10
 
   return (
     <PageLayout 
@@ -85,9 +83,21 @@ export default function Clans() {
           <img src="/img/кланы.png" alt="Federations" />
         </div>
         
-        <button className="federations-welcome-btn" onClick={() => navigate(buttonRoute)}>
-          {buttonText}
-        </button>
+        <div className="federations-welcome-buttons">
+          {canJoin && (
+            <button className="federations-welcome-btn" onClick={() => navigate('/clans/search')}>
+              Вступить в федерацию
+            </button>
+          )}
+          {canCreate && (
+            <button 
+              className="federations-welcome-btn federations-welcome-btn-create" 
+              onClick={() => navigate('/clans/create')}
+            >
+              Создать федерацию
+            </button>
+          )}
+        </div>
       </div>
     </PageLayout>
   )
