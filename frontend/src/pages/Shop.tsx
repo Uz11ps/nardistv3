@@ -15,7 +15,9 @@ interface NarCoinPackage {
   price: number
   priceTon?: number
   priceUsdt?: number
+  priceRub?: number
   currency: string
+  tributeLink?: string
 }
 
 interface ShopBarInfo {
@@ -558,7 +560,11 @@ export default function Shop() {
                   <div className="shop-nar-coin-content">
                     <div className="shop-nar-coin-info">
                       <div className="shop-nar-coin-amount">{pkg.amount.toLocaleString('ru-RU')} NAR</div>
-                      <div className="shop-nar-coin-price">Цена: {pkg.price} {pkg.currency}</div>
+                      <div className="shop-nar-coin-price">
+                        {paymentMethod === 'TRIBUTE' && pkg.priceRub 
+                          ? `Цена: ${pkg.priceRub.toLocaleString('ru-RU')} руб.`
+                          : `Цена: ${pkg.price} ${pkg.currency}`}
+                      </div>
                       <Button 
                         variant="primary" 
                         className="shop-buy-btn"

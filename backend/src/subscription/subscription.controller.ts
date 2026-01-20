@@ -120,7 +120,9 @@ export class SubscriptionController {
         amount: pkg.amount,
         price,
         priceStars: Number(pkg.priceStars || 0),
-        currency
+        priceRub: Number(pkg.priceRub || 0),
+        currency,
+        tributeLink: pkg.tributeLink || ''
       };
     });
   }

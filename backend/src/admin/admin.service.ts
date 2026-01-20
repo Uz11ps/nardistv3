@@ -2552,6 +2552,7 @@ export class AdminService implements OnModuleInit {
         const result = {
           amount: pkg.amount || 0,
           priceStars: priceStars,
+          priceRub: pkg.priceRub || 0,
           tributeLink: pkg.tributeLink || '',
         };
         console.log(`📦 Нормализация:`, { original: pkg, result });
@@ -2565,7 +2566,7 @@ export class AdminService implements OnModuleInit {
     return [];
   }
 
-  async updateNarCoinPrices(packages: Array<{ amount: number; priceStars?: number; tributeLink?: string }>) {
+  async updateNarCoinPrices(packages: Array<{ amount: number; priceStars?: number; priceRub?: number; tributeLink?: string }>) {
     console.log('💾 Сохранение пакетов NAR-coin:', JSON.stringify(packages, null, 2));
     
     let setting = await this.systemSettingsRepository.findOne({ where: { key: 'nar_coin_packages' } });
@@ -2575,6 +2576,7 @@ export class AdminService implements OnModuleInit {
       const normalized = {
         amount: pkg.amount || 0,
         priceStars: pkg.priceStars ?? 0,
+        priceRub: pkg.priceRub || 0,
         tributeLink: pkg.tributeLink || '',
       };
       console.log(`📦 Нормализация пакета:`, { original: pkg, normalized });

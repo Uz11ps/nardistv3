@@ -259,7 +259,7 @@ export default function Admin() {
     month_3?: { tribute?: number; stars?: number; tributeLink?: string }; 
     month_12?: { tribute?: number; stars?: number; tributeLink?: string } 
   } | null>(null)
-  const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; priceTon?: number; priceUsdt?: number; priceStars?: number; tributeLink?: string }>>([])
+  const [narCoinPackages, setNarCoinPackages] = useState<Array<{ amount: number; priceTon?: number; priceUsdt?: number; priceStars?: number; priceRub?: number; tributeLink?: string }>>([])
   const [editingSetting, setEditingSetting] = useState<{ key: string; value: any } | null>(null)
   const [districts, setDistricts] = useState<any[]>([])
   const [editingDistrict, setEditingDistrict] = useState<any>(null)
@@ -5596,6 +5596,23 @@ export default function Admin() {
                     />
                   </div>
                   <div style={{ marginTop: '8px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Цена TRIBUTE (руб.)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Цена в рублях"
+                      value={pkg.priceRub ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? 0 : parseFloat(e.target.value)
+                        const newPackages = [...narCoinPackages]
+                        newPackages[idx].priceRub = isNaN(value) ? 0 : value
+                        setNarCoinPackages(newPackages)
+                      }}
+                      style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+                    />
+                  </div>
+                  <div style={{ marginTop: '8px' }}>
                     <label style={{ display: 'block', marginBottom: '8px', color: '#aaa', fontSize: '12px' }}>Ссылка TRIBUTE</label>
                     <input
                       type="text"
@@ -5612,7 +5629,7 @@ export default function Admin() {
                 </div>
               ))}
               <button
-                onClick={() => setNarCoinPackages([...narCoinPackages, { amount: 0, priceStars: 0, tributeLink: '' }])}
+                onClick={() => setNarCoinPackages([...narCoinPackages, { amount: 0, priceStars: 0, priceRub: 0, tributeLink: '' }])}
                 style={{ padding: '8px 16px', background: '#4a9eff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}
               >
                 + Добавить пакет
