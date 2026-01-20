@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { apiClient } from '../api/client'
-import { StarIcon, RobotIcon } from './Icons'
+import { StarIcon, RobotIcon, ScaleIcon } from './Icons'
 import './GameAnalytics.css'
 
 interface GameAnalyticsProps {
