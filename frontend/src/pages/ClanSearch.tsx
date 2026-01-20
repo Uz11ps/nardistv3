@@ -111,7 +111,11 @@ export default function ClanSearch() {
         ) : (
           <div className="clan-search-grid">
             {clans.map((clan) => (
-              <div key={clan.id} className="clan-search-card" onClick={() => handleClanClick(clan.id)}>
+              <div
+                key={clan.id}
+                className="clan-search-card"
+                onClick={() => handleClanClick(clan.id)}
+              >
                 <div className="clan-search-card-icon">
                   <img src="/img/кланы.png" alt="Clan" />
                 </div>
@@ -123,4 +127,5 @@ export default function ClanSearch() {
         )}
       </div>
     </PageLayout>
+  )
 }
