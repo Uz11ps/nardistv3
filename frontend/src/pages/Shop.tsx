@@ -826,7 +826,7 @@ export default function Shop() {
 
                 <div className="shop-premium-modal-feature">
                   <div className="shop-premium-modal-feature-icon">
-                    <img src="/img/зарик.png" alt="analysis" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+                    <img src="/img/зарик.png" alt="analysis" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
                   </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Анализ</div>
