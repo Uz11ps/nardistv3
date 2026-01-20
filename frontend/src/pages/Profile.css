@@ -4,8 +4,9 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  align-items: center;
+  align-items: stretch;
   width: 100%;
+  box-sizing: border-box;
 }
 
 /* Новый дизайн V2 */
@@ -105,6 +106,8 @@
   flex-direction: column;
   gap: 12px;
   margin-top: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-bottom-menu-item-v2 {
@@ -115,6 +118,8 @@
   cursor: pointer;
   transition: background 0.2s;
   border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-bottom-menu-item-v2:hover {

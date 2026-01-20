@@ -32,12 +32,13 @@
 .page-layout-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 20px 16px;
   padding-top: 30px;
   gap: 12px;
   position: relative;
   width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 480px) {
@@ -81,7 +82,8 @@
 .page-layout-title-section {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -90,6 +92,11 @@
   width: auto;
   max-width: calc(100% - 120px);
   z-index: 5;
+  pointer-events: none;
+}
+
+.page-layout-title-section * {
+  pointer-events: auto;
 }
 
 .page-layout.page-layout-profile .page-layout-title-section {
