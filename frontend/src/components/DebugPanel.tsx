@@ -637,7 +637,6 @@ export const DebugPanel = memo(({
               }
             }}  
             style={{ fontSize: '12px', padding: '5px 10px', background: '#4a9', border: '1px solid #6bb', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
-            title={`Сохранить конфиг для ${selectedSize}px`}
           >
             💾 Save ({selectedSize}px)
           </button>
