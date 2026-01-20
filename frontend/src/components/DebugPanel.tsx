@@ -92,14 +92,16 @@ export const DebugPanel = memo(({
   
   // Флаг для отслеживания, был ли конфиг загружен для текущего размера
   const configLoadedForSizeRef = useRef<DebugSize | null>(null)
+  const isInitialLoadRef = useRef(true)
   
   // При изменении размера загружаем соответствующий конфиг С СЕРВЕРА (всегда свежий)
   useEffect(() => {
-    // Загружаем конфиг только если размер изменился
-    if (configLoadedForSizeRef.current !== selectedSize) {
+    // Загружаем конфиг только если размер изменился или это первая загрузка
+    if (configLoadedForSizeRef.current !== selectedSize || isInitialLoadRef.current) {
+      isInitialLoadRef.current = false
       // ВСЕГДА загружаем свежий конфиг С СЕРВЕРА
       loadConfigForSize(selectedSize).then(config => {
-        console.log(`🔄 Переключение на размер ${selectedSize}px, загружен конфиг:`, config)
+        console.log(`🔄 ${configLoadedForSizeRef.current === null ? 'Первая загрузка' : 'Переключение'} на размер ${selectedSize}px, загружен конфиг с сервера:`, config)
         setDebugConfig(config)
         savedConfigRef.current = { ...config } // Сохраняем как базовый при загрузке
         configLoadedForSizeRef.current = selectedSize
