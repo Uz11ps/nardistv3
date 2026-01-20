@@ -228,6 +228,7 @@ export class AcademyService {
         isCompleted,
         quizPassed,
         gameMode: article.gameMode,
+        type: article.type, // Добавляем type для фильтрации
         assignment: article.assignment, // Добавляем assignment для проверки наличия quiz
       });
     }
@@ -265,6 +266,7 @@ export class AcademyService {
       views: article.views,
       isCompleted: false, // Статьи нельзя выполнить
       gameMode: article.gameMode,
+      type: article.type, // Добавляем type для фильтрации
       isApproved: article.isApproved,
       isVerified: article.isVerified,
     }));

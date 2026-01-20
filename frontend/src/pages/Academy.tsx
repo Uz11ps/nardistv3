@@ -737,11 +737,33 @@ export default function Academy() {
           <div className="academy-grid">
             {(() => {
               console.log('[Academy] Rendering courses tab - courses state:', courses.length, 'courses:', courses)
-              const filtered = getFilteredAndSortedItems(courses)
+              // Фильтруем только по типу материала (course) и gameMode, НЕ исключаем купленные
+              const filtered = courses.filter(course => {
+                // Проверяем тип материала
+                if (course.type !== 'course' && course.type !== 'onboarding') {
+                  return false
+                }
+                
+                // Фильтрация по типу нард
+                const titleLower = (course.title || '').toLowerCase()
+                const isLongKeyword = titleLower.includes('длинн')
+                const isShortKeyword = titleLower.includes('коротк')
+                
+                if (isLongKeyword && !isShortKeyword) {
+                  return activeFilter === 'long'
+                }
+                if (isShortKeyword && !isLongKeyword) {
+                  return activeFilter === 'short'
+                }
+                
+                if (course.gameMode && (course.gameMode === 'long' || course.gameMode === 'short')) {
+                  return course.gameMode === activeFilter
+                }
+                
+                return activeFilter === 'long'
+              }).filter(course => !course.purchased) // Исключаем купленные только в конце
+              
               console.log('[Academy] Rendering courses tab - total:', courses.length, 'filtered:', filtered.length, 'filtered items:', filtered)
-              if (filtered.length === 0 && courses.length > 0) {
-                console.warn('[Academy] All courses are filtered out (likely all purchased)')
-              }
               return filtered
             })().map((course) => (
               <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
@@ -762,11 +784,33 @@ export default function Academy() {
           <div className="academy-grid">
             {(() => {
               console.log('[Academy] Rendering articles tab - articles state:', articles.length, 'articles:', articles)
-              const filtered = getFilteredAndSortedItems(articles)
+              // Фильтруем только по типу материала (article) и gameMode, НЕ исключаем купленные
+              const filtered = articles.filter(article => {
+                // Проверяем тип материала
+                if (article.type !== 'article') {
+                  return false
+                }
+                
+                // Фильтрация по типу нард
+                const titleLower = (article.title || '').toLowerCase()
+                const isLongKeyword = titleLower.includes('длинн')
+                const isShortKeyword = titleLower.includes('коротк')
+                
+                if (isLongKeyword && !isShortKeyword) {
+                  return activeFilter === 'long'
+                }
+                if (isShortKeyword && !isLongKeyword) {
+                  return activeFilter === 'short'
+                }
+                
+                if (article.gameMode && (article.gameMode === 'long' || article.gameMode === 'short')) {
+                  return article.gameMode === activeFilter
+                }
+                
+                return activeFilter === 'long'
+              }).filter(article => !article.purchased) // Исключаем купленные только в конце
+              
               console.log('[Academy] Rendering articles tab - total:', articles.length, 'filtered:', filtered.length, 'filtered items:', filtered)
-              if (filtered.length === 0 && articles.length > 0) {
-                console.warn('[Academy] All articles are filtered out (likely all purchased)')
-              }
               return filtered
             })().map((article) => (
               <div key={article.id} className="academy-grid-card" onClick={() => handleOpen(article)}>
