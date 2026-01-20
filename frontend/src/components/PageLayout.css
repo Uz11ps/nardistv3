@@ -150,6 +150,20 @@
   align-items: center;
   justify-content: center;
   margin-top: 0;
+  width: 32px;
+  height: 32px;
+}
+
+@media (max-width: 480px) {
+  .page-layout-right-action {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.page-layout.page-layout-profile .page-layout-right-action {
+  width: auto;
+  height: auto;
 }
 
 
