@@ -29,6 +29,14 @@ interface BuildingConfig {
   incomeMultiplier?: number
 }
 
+interface DistrictCapture {
+  capturedAt: string
+  expiresAt: string | null
+  totalIncomeCollected: number
+  lastIncomeCollection: string | null
+  baseIncomePerDay: number
+}
+
 interface DistrictData {
   id: string
   code: string
@@ -42,6 +50,11 @@ interface DistrictData {
     config: BuildingConfig
     userBuilding: Building | null
   }[]
+  // Для кланов
+  capture?: DistrictCapture | null
+  isCapturedByMyClan?: boolean
+  isCapturedByOther?: boolean
+  capturedBy?: string | null
 }
 
 export default function City() {
@@ -58,6 +71,10 @@ export default function City() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
+      // Проверяем, в клане ли пользователь
+      const clanRes = await apiClient.get('/clans/my').catch(() => ({ data: { clan: null, member: null } }))
+      const isInClan = !!clanRes.data.clan
+      
       const [cityRes, spResponse] = await Promise.all([
         apiClient.get('/city/data'),
         apiClient.get('/progress/skill-points').catch(() => ({ data: { economy: 0 } }))
@@ -165,8 +182,21 @@ export default function City() {
     )
   }
 
-  // Ограничиваем доступ к городу без лицензии предпринимателя
-  if (!user?.hasBusinessLicense) {
+  // Проверяем, в клане ли пользователь
+  const [userClan, setUserClan] = useState<{ clan: any; member: any } | null>(null)
+  
+  useEffect(() => {
+    apiClient.get('/clans/my').then(res => {
+      setUserClan(res.data)
+    }).catch(() => {
+      setUserClan(null)
+    })
+  }, [])
+
+  const isInClan = !!userClan?.clan
+
+  // Ограничиваем доступ к городу без лицензии предпринимателя (только для игроков без клана)
+  if (!isInClan && !user?.hasBusinessLicense) {
     return (
       <PageLayout title="Районы" showBack={true}>
         <div className="city-loading">
@@ -216,8 +246,79 @@ export default function City() {
           </div>
         )}
 
-        {/* Сетка строений для выбранного района */}
-        {selectedDistrictId && currentDistrict && currentDistrict.isUnlocked && (
+        {/* Для кланов - отображение захватов районов */}
+        {isInClan && selectedDistrictId && currentDistrict && currentDistrict.isUnlocked && (
+          <div className="city-clan-section">
+            {currentDistrict.capture ? (
+              <div className="city-clan-capture-card">
+                <div className="city-clan-capture-header">
+                  <h3>Район захвачен</h3>
+                  {currentDistrict.capture.expiresAt && (
+                    <div className="city-clan-capture-time">
+                      Истекает: {new Date(currentDistrict.capture.expiresAt).toLocaleString('ru-RU')}
+                    </div>
+                  )}
+                </div>
+                <div className="city-clan-capture-info">
+                  <div>Доход в день: {currentDistrict.capture.baseIncomePerDay.toLocaleString('ru-RU')} NAR</div>
+                  <div>Всего собрано: {currentDistrict.capture.totalIncomeCollected.toLocaleString('ru-RU')} NAR</div>
+                </div>
+                <button
+                  className="city-clan-capture-btn"
+                  onClick={async () => {
+                    if (!userClan?.clan?.id) return
+                    try {
+                      await apiClient.post(`/clans/${userClan.clan.id}/districts/${currentDistrict.code}/collect`)
+                      alert('Доход собран!')
+                      await loadData()
+                    } catch (error: any) {
+                      alert(error.response?.data?.message || 'Ошибка сбора дохода')
+                    }
+                  }}
+                >
+                  Собрать доход
+                </button>
+              </div>
+            ) : currentDistrict.isCapturedByOther ? (
+              <div className="city-clan-capture-card city-clan-capture-other">
+                <div className="city-clan-capture-header">
+                  <h3>Район захвачен другим кланом</h3>
+                </div>
+                <div className="city-clan-capture-info">
+                  <div>Этот район уже захвачен другим кланом</div>
+                </div>
+              </div>
+            ) : (
+              <div className="city-clan-capture-card city-clan-capture-available">
+                <div className="city-clan-capture-header">
+                  <h3>Район свободен</h3>
+                </div>
+                <div className="city-clan-capture-info">
+                  <div>Этот район можно захватить</div>
+                  <div>Захват на 24 часа</div>
+                </div>
+                <button
+                  className="city-clan-capture-btn"
+                  onClick={async () => {
+                    if (!userClan?.clan?.id) return
+                    try {
+                      await apiClient.post(`/clans/${userClan.clan.id}/territories/capture`, { districtCode: currentDistrict.code })
+                      alert('Район успешно захвачен!')
+                      await loadData()
+                    } catch (error: any) {
+                      alert(error.response?.data?.message || 'Ошибка захвата района')
+                    }
+                  }}
+                >
+                  Захватить район
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Сетка строений для выбранного района (только для игроков без клана) */}
+        {!isInClan && selectedDistrictId && currentDistrict && currentDistrict.isUnlocked && (
           <div className="city-buildings-section">
             <div className="city-grid-v3">
               {currentDistrict.buildings && Array.isArray(currentDistrict.buildings) && currentDistrict.buildings.map((buildingData) => {
