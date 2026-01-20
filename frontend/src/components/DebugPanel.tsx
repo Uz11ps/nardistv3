@@ -400,7 +400,7 @@ export const DebugPanel = memo(({
             Reset ({selectedSize}px)
           </button>
           <button 
-            onClick={() => {
+            onClick={(e) => {
               try {
                 // Используем актуальный конфиг из ref
                 const configToSave = { ...configRef.current }
@@ -409,10 +409,24 @@ export const DebugPanel = memo(({
                 
                 const jsonString = JSON.stringify(configToSave, null, 2)
                 
-                // Сохраняем для конкретного размера
-                localStorage.setItem(configKey, jsonString)
+                // Если зажат Shift - сохраняем только для текущего размера
+                // Иначе - применяем ко всем размерам
+                const applyToAll = !e.shiftKey
                 
-                // Также сохраняем в общий ключ для совместимости с BackgammonBoard
+                if (applyToAll) {
+                  // Применяем ко всем размерам
+                  DEBUG_SIZES.forEach(size => {
+                    const key = getConfigKey(size)
+                    localStorage.setItem(key, jsonString)
+                  })
+                  console.log(`✅ Конфиг применен ко всем размерам: ${DEBUG_SIZES.join(', ')}px`)
+                } else {
+                  // Сохраняем только для текущего размера
+                  localStorage.setItem(configKey, jsonString)
+                  console.log(`✅ Конфиг сохранен только для ${selectedSize}px`)
+                }
+                
+                // Всегда сохраняем в общий ключ для совместимости с BackgammonBoard
                 localStorage.setItem('backgammon-debug-config-v16', jsonString)
                 
                 // Обновляем сохраненный конфиг как базовый
@@ -425,9 +439,200 @@ export const DebugPanel = memo(({
                 const saved = localStorage.getItem(configKey)
                 console.log('✅ Проверка сохранения:', saved ? 'СОХРАНЕНО' : 'НЕ СОХРАНЕНО')
                 
-                alert(`Конфиг для ${selectedSize}px сохранен и применен!`)
+                alert(applyToAll 
+                  ? `Конфиг применен ко всем размерам и сохранен!` 
+                  : `Конфиг для ${selectedSize}px сохранен и применен!`)
               } catch (e) {
                 console.error('❌ Ошибка при сохранении:', e)
+                alert('Ошибка при сохранении: ' + e)
+              }
+            }}
+            title="Обычный клик - применить ко всем размерам. Shift+клик - только для текущего размера"
+            onContextMenu={(e) => {
+              // Правый клик для массового сохранения всех конфигов
+              e.preventDefault()
+              const configs = {
+                368: {
+                  "sideMarginLeftPct": 0.04,
+                  "sideMarginRightPct": 0.05,
+                  "barMarginLeftPct": 0.03,
+                  "barMarginRightPct": 0.012,
+                  "barWidthPct": 0.025,
+                  "topMarginPct": 0.058,
+                  "bearOffHeightPct": 0.134,
+                  "checkerWidthRatio": 1.5,
+                  "checkerHeightRatio": 0.252,
+                  "checkerDrawScale": 1.28,
+                  "diceP1X": 0.5,
+                  "diceP1Y": 0.6,
+                  "diceP2X": 0.16,
+                  "diceP2Y": 0.24,
+                  "checkerTopOffset": -349,
+                  "checkerBottomOffset": 349,
+                  "textTopOffset": -15,
+                  "textBottomOffset": 15,
+                  "highlightWidthScale": 1,
+                  "highlightHeightScale": 1,
+                  "highlightXOffset": 0,
+                  "highlightYOffset": -31,
+                  "validHighlightWidthScale": 1,
+                  "validHighlightHeightScale": 1,
+                  "validHighlightXOffset": 0,
+                  "validHighlightYOffset": -31,
+                  "bearOffValidWidthScale": 1,
+                  "bearOffValidHeightScale": 1,
+                  "bearOffValidWhiteXOffset": 0,
+                  "bearOffValidWhiteYOffset": 0,
+                  "bearOffValidBlackXOffset": 0,
+                  "bearOffValidBlackYOffset": 0,
+                  "highlightBottomYOffset": 26,
+                  "validHighlightBottomYOffset": 26,
+                  "dragCheckerSizeScale": 1,
+                  "dragCheckerXOffset": 0,
+                  "dragCheckerYOffset": 0,
+                  "bearOffCheckerScale": 0.9,
+                  "bearOffWhiteXOffset": 2,
+                  "bearOffWhiteYOffset": 0,
+                  "bearOffBlackXOffset": 2,
+                  "bearOffBlackYOffset": 0,
+                  "textTopRightY": -316,
+                  "textTopLeftY": -316,
+                  "textBottomLeftY": 316,
+                  "textBottomRightY": 316,
+                  "pointHitboxPadding": 2,
+                  "barHitboxTopPct": 0,
+                  "barHitboxBottomPct": 0.92,
+                  "barHitboxWidthPct": 0.063,
+                  "bearOffHitboxPaddingX": 1,
+                  "bearOffHitboxPaddingY": 47,
+                  "checkerHitboxPadding": -3
+                },
+                512: {
+                  "sideMarginLeftPct": 0.04,
+                  "sideMarginRightPct": 0.05,
+                  "barMarginLeftPct": 0.03,
+                  "barMarginRightPct": 0.012,
+                  "barWidthPct": 0.025,
+                  "topMarginPct": 0.058,
+                  "bearOffHeightPct": 0.134,
+                  "checkerWidthRatio": 1.5,
+                  "checkerHeightRatio": 0.252,
+                  "checkerDrawScale": 1.28,
+                  "diceP1X": 0.5,
+                  "diceP1Y": 0.6,
+                  "diceP2X": 0.16,
+                  "diceP2Y": 0.24,
+                  "checkerTopOffset": -349,
+                  "checkerBottomOffset": 349,
+                  "textTopOffset": -15,
+                  "textBottomOffset": 15,
+                  "highlightWidthScale": 1,
+                  "highlightHeightScale": 1,
+                  "highlightXOffset": 0,
+                  "highlightYOffset": -31,
+                  "validHighlightWidthScale": 1,
+                  "validHighlightHeightScale": 1,
+                  "validHighlightXOffset": 0,
+                  "validHighlightYOffset": -31,
+                  "bearOffValidWidthScale": 1,
+                  "bearOffValidHeightScale": 1,
+                  "bearOffValidWhiteXOffset": 0,
+                  "bearOffValidWhiteYOffset": 0,
+                  "bearOffValidBlackXOffset": 0,
+                  "bearOffValidBlackYOffset": 0,
+                  "highlightBottomYOffset": 26,
+                  "validHighlightBottomYOffset": 26,
+                  "dragCheckerSizeScale": 1,
+                  "dragCheckerXOffset": 0,
+                  "dragCheckerYOffset": 0,
+                  "bearOffCheckerScale": 0.9,
+                  "bearOffWhiteXOffset": 2,
+                  "bearOffWhiteYOffset": 0,
+                  "bearOffBlackXOffset": 2,
+                  "bearOffBlackYOffset": 0,
+                  "textTopRightY": -316,
+                  "textTopLeftY": -316,
+                  "textBottomLeftY": 316,
+                  "textBottomRightY": 316,
+                  "pointHitboxPadding": 1,
+                  "barHitboxTopPct": 0,
+                  "barHitboxBottomPct": 0.91,
+                  "barHitboxWidthPct": 0.06,
+                  "bearOffHitboxPaddingX": 0,
+                  "bearOffHitboxPaddingY": 52,
+                  "checkerHitboxPadding": -6
+                },
+                768: {
+                  "sideMarginLeftPct": 0.04,
+                  "sideMarginRightPct": 0.05,
+                  "barMarginLeftPct": 0.03,
+                  "barMarginRightPct": 0.012,
+                  "barWidthPct": 0.025,
+                  "topMarginPct": 0.058,
+                  "bearOffHeightPct": 0.134,
+                  "checkerWidthRatio": 1.5,
+                  "checkerHeightRatio": 0.252,
+                  "checkerDrawScale": 1.28,
+                  "diceP1X": 0.5,
+                  "diceP1Y": 0.6,
+                  "diceP2X": 0.16,
+                  "diceP2Y": 0.24,
+                  "checkerTopOffset": -349,
+                  "checkerBottomOffset": 349,
+                  "textTopOffset": -15,
+                  "textBottomOffset": 15,
+                  "highlightWidthScale": 1,
+                  "highlightHeightScale": 1,
+                  "highlightXOffset": 0,
+                  "highlightYOffset": -31,
+                  "validHighlightWidthScale": 1,
+                  "validHighlightHeightScale": 1,
+                  "validHighlightXOffset": 0,
+                  "validHighlightYOffset": -31,
+                  "bearOffValidWidthScale": 1,
+                  "bearOffValidHeightScale": 1,
+                  "bearOffValidWhiteXOffset": 0,
+                  "bearOffValidWhiteYOffset": 0,
+                  "bearOffValidBlackXOffset": 0,
+                  "bearOffValidBlackYOffset": 0,
+                  "highlightBottomYOffset": 26,
+                  "validHighlightBottomYOffset": 26,
+                  "dragCheckerSizeScale": 1,
+                  "dragCheckerXOffset": 0,
+                  "dragCheckerYOffset": 0,
+                  "bearOffCheckerScale": 0.9,
+                  "bearOffWhiteXOffset": 2,
+                  "bearOffWhiteYOffset": 0,
+                  "bearOffBlackXOffset": 2,
+                  "bearOffBlackYOffset": 0,
+                  "textTopRightY": -316,
+                  "textTopLeftY": -316,
+                  "textBottomLeftY": 316,
+                  "textBottomRightY": 316,
+                  "pointHitboxPadding": 1,
+                  "barHitboxTopPct": 0,
+                  "barHitboxBottomPct": 0.91,
+                  "barHitboxWidthPct": 0.06,
+                  "bearOffHitboxPaddingX": 0,
+                  "bearOffHitboxPaddingY": 52,
+                  "checkerHitboxPadding": -6
+                }
+              }
+              
+              try {
+                let savedCount = 0
+                Object.entries(configs).forEach(([size, config]) => {
+                  const sizeNum = parseInt(size)
+                  const configKey = getConfigKey(sizeNum as DebugSize)
+                  const jsonString = JSON.stringify(config, null, 2)
+                  localStorage.setItem(configKey, jsonString)
+                  savedCount++
+                })
+                // Также сохраняем последний (768) в общий ключ
+                localStorage.setItem('backgammon-debug-config-v16', JSON.stringify(configs[768], null, 2))
+                alert(`✅ Сохранено ${savedCount} конфигов (368, 512, 768px)`)
+              } catch (e) {
+                console.error('❌ Ошибка при массовом сохранении:', e)
                 alert('Ошибка при сохранении: ' + e)
               }
             }}  

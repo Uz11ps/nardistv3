@@ -254,27 +254,26 @@ export default function BackgammonBoard({
       const getConfigKey = (size: number) => `backgammon-debug-config-v16-${size}px`
       
       const currentWidth = containerRef.current?.offsetWidth || window.innerWidth
+      const defaultConfig = currentWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+      
+      // ПРИОРИТЕТ 1: Сначала пытаемся загрузить конфиг для текущего размера (размерные конфиги имеют приоритет!)
       const closestSize = DEBUG_SIZES.reduce((prev, curr) => 
         Math.abs(curr - currentWidth) < Math.abs(prev - currentWidth) ? curr : prev
       )
-      
-      // Пытаемся загрузить конфиг для текущего размера
       const sizeKey = getConfigKey(closestSize)
       const savedForSize = localStorage.getItem(sizeKey)
       if (savedForSize) {
         const parsed = JSON.parse(savedForSize)
         if (parsed.sideMarginLeftPct !== undefined) {
-          const defaultConfig = currentWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
           return { ...defaultConfig, ...parsed }
         }
       }
       
-      // Если нет конфига для размера, пытаемся загрузить общий
+      // ПРИОРИТЕТ 2: Если размерного конфига нет, используем общий как fallback
       const saved = localStorage.getItem('backgammon-debug-config-v16')
       if (saved) {
         const parsed = JSON.parse(saved)
         if (parsed.sideMarginLeftPct !== undefined) {
-          const defaultConfig = currentWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
           return { ...defaultConfig, ...parsed }
         }
       }
