@@ -2673,6 +2673,68 @@ export default function BackgammonBoard({
               } else if (targetPoint === -3) {
                 // Удаление в мусорку - ничего не добавляем
               } else if (targetPoint >= 0 && targetPoint < 24) {
+                const targetValue = currentPoints[targetPoint] || 0
+                
+                // Проверка правил в зависимости от режима игры
+                if (gameMode === 'long') {
+                  // В длинных нардах нельзя ставить на точку противника
+                  if (isWhite && targetValue < 0) {
+                    // Нельзя ставить белую шашку на точку с черными шашками
+                    // Возвращаем шашку обратно
+                    if (fromPoint >= 0 && fromPoint < 24) {
+                      currentPoints[fromPoint] = isWhite ? currentPoints[fromPoint] + 1 : currentPoints[fromPoint] - 1
+                    } else if (fromPoint === 24) {
+                      currentBar.white++
+                    } else if (fromPoint === 25) {
+                      currentBar.black++
+                    }
+                    setDragging(null)
+                    setDragPosition(null)
+                    setHoveredPoint(null)
+                    return
+                  } else if (!isWhite && targetValue > 0) {
+                    // Нельзя ставить черную шашку на точку с белыми шашками
+                    // Возвращаем шашку обратно
+                    if (fromPoint >= 0 && fromPoint < 24) {
+                      currentPoints[fromPoint] = isWhite ? currentPoints[fromPoint] + 1 : currentPoints[fromPoint] - 1
+                    } else if (fromPoint === 24) {
+                      currentBar.white++
+                    } else if (fromPoint === 25) {
+                      currentBar.black++
+                    }
+                    setDragging(null)
+                    setDragPosition(null)
+                    setHoveredPoint(null)
+                    return
+                  }
+                } else if (gameMode === 'short') {
+                  // В коротких нардах при попадании на одиночную шашку противника (blot) отправляем её на бар
+                  if (isWhite && targetValue === -1) {
+                    // Белая шашка попадает на одиночную черную - отправляем черную на бар
+                    currentBar.black++
+                    currentPoints[targetPoint] = 0 // Очищаем точку
+                  } else if (!isWhite && targetValue === 1) {
+                    // Черная шашка попадает на одиночную белую - отправляем белую на бар
+                    currentBar.white++
+                    currentPoints[targetPoint] = 0 // Очищаем точку
+                  } else if ((isWhite && targetValue < -1) || (!isWhite && targetValue > 1)) {
+                    // Нельзя ставить на точку с 2+ шашками противника
+                    // Возвращаем шашку обратно
+                    if (fromPoint >= 0 && fromPoint < 24) {
+                      currentPoints[fromPoint] = isWhite ? currentPoints[fromPoint] + 1 : currentPoints[fromPoint] - 1
+                    } else if (fromPoint === 24) {
+                      currentBar.white++
+                    } else if (fromPoint === 25) {
+                      currentBar.black++
+                    }
+                    setDragging(null)
+                    setDragPosition(null)
+                    setHoveredPoint(null)
+                    return
+                  }
+                }
+                
+                // Добавляем шашку на точку
                 if (isWhite) {
                   currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
                 } else {

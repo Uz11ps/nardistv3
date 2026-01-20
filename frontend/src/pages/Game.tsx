@@ -3345,13 +3345,41 @@ export default function Game() {
                     // При перемещении из bearOff мы просто перемещаем существующую шашку,
                     // общее количество шашек не меняется, поэтому проверка на 15 шашек не нужна
                     
+                    // Проверка правил в зависимости от режима игры
+                    const gameMode = gameInfo?.mode || 'long'
+                    
+                    if (gameMode === 'long') {
+                      // В длинных нардах нельзя ставить на точку противника
+                      if (checkerColor === 'white' && currentValue < 0) {
+                        alert('Нельзя ставить белую шашку на точку с черными шашками')
+                        return
+                      } else if (checkerColor === 'black' && currentValue > 0) {
+                        alert('Нельзя ставить черную шашку на точку с белыми шашками')
+                        return
+                      }
+                    } else if (gameMode === 'short') {
+                      // В коротких нардах при попадании на одиночную шашку противника (blot) отправляем её на бар
+                      if (checkerColor === 'white' && currentValue === -1) {
+                        // Белая шашка попадает на одиночную черную - отправляем черную на бар
+                        currentBar.black++
+                        currentPoints[pointIndex] = 0 // Очищаем точку
+                      } else if (checkerColor === 'black' && currentValue === 1) {
+                        // Черная шашка попадает на одиночную белую - отправляем белую на бар
+                        currentBar.white++
+                        currentPoints[pointIndex] = 0 // Очищаем точку
+                      } else if ((checkerColor === 'white' && currentValue < -1) || (checkerColor === 'black' && currentValue > 1)) {
+                        alert('Нельзя ставить шашку на точку с двумя или более шашками противника')
+                        return
+                      }
+                    }
+                    
                     // Уменьшаем bearOff и добавляем шашку на точку
                     if (checkerColor === 'white') {
                       currentBearOff.white = currentBearOff.white - 1
-                      currentPoints[pointIndex] = currentValue + 1
+                      currentPoints[pointIndex] = (currentPoints[pointIndex] || 0) + 1
                     } else {
                       currentBearOff.black = currentBearOff.black - 1
-                      currentPoints[pointIndex] = currentValue - 1
+                      currentPoints[pointIndex] = (currentPoints[pointIndex] || 0) - 1
                     }
                     
                     await apiClient.post(`/games/${gameId}/sandbox/setup-board`, {
