@@ -40,11 +40,21 @@
   
   .shop-nar-coin-content {
     gap: 12px;
+    flex-wrap: nowrap; /* На мелких экранах тоже не переносим */
+    align-items: center; /* Выравниваем по центру вертикально */
   }
   
   .shop-nar-coin-icon {
     width: 80px;
     height: 80px;
+    flex-shrink: 0; /* Не сжимаем иконку */
+    order: 2; /* Иконка всегда справа */
+  }
+  
+  .shop-nar-coin-info {
+    order: 1; /* Информация всегда слева */
+    flex: 1;
+    min-width: 0; /* Позволяем сжиматься при необходимости */
   }
   
   .shop-nar-coin-amount {
@@ -173,7 +183,7 @@
   gap: 16px;
   width: 100%;
   min-height: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Не переносим элементы на новую строку */
 }
 
 .shop-nar-coin-info {
@@ -259,7 +269,7 @@
   justify-content: space-between;
   gap: 24px;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Не переносим элементы на новую строку */
 }
 
 .shop-subscription-info {
@@ -1015,8 +1025,27 @@
   }
 
   .shop-subscription-content {
-    flex-direction: column;
-    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: nowrap; /* На мелких экранах тоже не переносим */
+    align-items: center; /* Выравниваем по центру вертикально */
+  }
+
+  .shop-subscription-icon {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0; /* Не сжимаем иконку */
+    order: 2; /* Иконка всегда справа */
+  }
+
+  .shop-subscription-info {
+    order: 1; /* Информация всегда слева */
+    flex: 1;
+    min-width: 0; /* Позволяем сжиматься при необходимости */
+  }
+
+  .shop-subscription-title {
+    font-size: 20px;
+  }
   }
 
   .shop-subscription-icon {

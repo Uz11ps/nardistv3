@@ -21,7 +21,8 @@
 }
 
 .city-card-v3-complete {
-  aspect-ratio: 1;
+  /* Убираем aspect-ratio: 1, чтобы карточка могла быть выше при необходимости */
+  min-height: 240px; /* Увеличиваем минимальную высоту */
   background: #2a2a2a;
   border-radius: 12px;
   display: flex;
@@ -75,8 +76,9 @@
   
   .city-card-v3-complete {
     width: calc((100% - 10px) / 2);
-    min-width: 120px;
-    max-width: 180px;
+    min-width: 140px; /* Увеличиваем минимальную ширину */
+    max-width: 200px; /* Увеличиваем максимальную ширину */
+    min-height: 260px; /* Увеличиваем минимальную высоту на мелких экранах */
     padding: 10px;
   }
   
@@ -127,11 +129,11 @@
 
 /* Новые стили для квадратных карточек с кнопками */
 .city-card-v3-icon-wrapper {
-  flex: 1;
+  flex: 0 0 auto; /* Не растягиваем иконку, фиксированный размер */
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 60px;
+  height: 60px; /* Фиксированная высота для иконки */
   margin-bottom: 8px;
 }
 
@@ -175,10 +177,11 @@
   font-size: 11px;
   color: #4CAF50;
   margin-bottom: 8px;
-  text-align: center;
+  text-align: left; /* Выравниваем по левому краю */
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex-shrink: 0; /* Не сжимаем блок дохода */
 }
 
 .city-card-v3-accumulated {
@@ -192,6 +195,7 @@
   flex-direction: column;
   gap: 6px;
   margin-top: auto;
+  flex-shrink: 0; /* Не сжимаем блок кнопок */
 }
 
 .city-card-v3-btn {
@@ -199,14 +203,14 @@
   padding: 8px 12px;
   border: none;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 10px; /* Немного уменьшаем шрифт */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal; /* Разрешаем перенос текста */
+  word-wrap: break-word; /* Переносим длинные слова */
+  line-height: 1.3; /* Улучшаем читаемость при переносе */
 }
 
 .city-card-v3-btn:disabled {
