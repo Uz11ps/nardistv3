@@ -68,7 +68,6 @@ export default function ClanTreasury() {
       setAllTransactions(response.data || [])
     } catch (error) {
       console.error('Failed to load all transactions:', error)
-      alert('Ошибка при загрузке транзакций')
     } finally {
       setLoadingAllTransactions(false)
     }
@@ -101,20 +100,17 @@ export default function ClanTreasury() {
   const handleContribute = async () => {
     const amount = parseInt(contributeAmount)
     if (!amount || amount <= 0) {
-      alert('Введите корректную сумму')
       return
     }
 
     const userBalance = Number(user?.narCoin || 0)
     if (userBalance < amount) {
-      alert(`Недостаточно NAR-coin. У вас: ${userBalance}`)
       return
     }
 
     try {
       setContributing(true)
       await apiClient.post(`/clans/${clanId}/contribute`, { amount })
-      alert('Вклад успешно внесен!')
       setShowContributeModal(false)
       setContributeAmount('')
       await loadData()
@@ -122,7 +118,6 @@ export default function ClanTreasury() {
       const userResponse = await apiClient.get('/users/me')
       useAuthStore.setState({ user: userResponse.data })
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при внесении вклада')
       console.error('Failed to contribute:', error)
     } finally {
       setContributing(false)
@@ -132,7 +127,6 @@ export default function ClanTreasury() {
   const quickContribute = (amount: number) => {
     const userBalance = Number(user?.narCoin || 0)
     if (userBalance < amount) {
-      alert(`Недостаточно NAR-coin. У вас: ${userBalance}`)
       return
     }
     setContributeAmount(amount.toString())

@@ -77,10 +77,9 @@ export default function ClanManage() {
 
     try {
       await apiClient.post(`/clans/${clanId}/leave`)
-      alert('Вы покинули федерацию')
       navigate('/', { replace: true })
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при выходе из федерации')
+      console.error('Failed to leave clan:', error)
     }
   }
 
@@ -95,10 +94,9 @@ export default function ClanManage() {
 
     try {
       await apiClient.post(`/clans/${clanId}/disband`)
-      alert('Федерация распущена')
       navigate('/', { replace: true })
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при распускании федерации')
+      console.error('Failed to disband clan:', error)
     }
   }
 

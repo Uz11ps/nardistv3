@@ -29,6 +29,10 @@ interface DistrictData {
   capturedBy?: string | null
 }
 
+interface ClanMember {
+  role: string
+}
+
 export default function ClanDistricts() {
   const navigate = useNavigate()
   const { clanId } = useParams<{ clanId: string }>()
@@ -36,6 +40,7 @@ export default function ClanDistricts() {
   const [loading, setLoading] = useState(true)
   const [districts, setDistricts] = useState<DistrictData[]>([])
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null)
+  const [member, setMember] = useState<ClanMember | null>(null)
 
   useEffect(() => {
     console.log('ClanDistricts component mounted, clanId:', clanId)
@@ -54,11 +59,19 @@ export default function ClanDistricts() {
     try {
       setLoading(true)
       console.log('ClanDistricts: Loading districts for clan:', clanId)
-      // Загружаем данные о районах для клана
-      const response = await apiClient.get(`/clans/${clanId}/districts`)
-      console.log('ClanDistricts: Response:', response.data)
-      const districtsData = Array.isArray(response.data) ? response.data : []
+      // Загружаем данные о районах для клана и информацию о членстве
+      const [districtsResponse, membershipResponse] = await Promise.all([
+        apiClient.get(`/clans/${clanId}/districts`).catch(() => ({ data: [] })),
+        apiClient.get('/clans/my').catch(() => ({ data: null }))
+      ])
+      console.log('ClanDistricts: Response:', districtsResponse.data)
+      const districtsData = Array.isArray(districtsResponse.data) ? districtsResponse.data : []
       setDistricts(districtsData)
+      
+      // Сохраняем информацию о членстве для проверки прав
+      if (membershipResponse.data?.member) {
+        setMember(membershipResponse.data.member)
+      }
       
       if (districtsData.length > 0 && !selectedDistrictId) {
         const firstUnlocked = districtsData.find((d: DistrictData) => d.isUnlocked) || districtsData[0]
@@ -67,7 +80,6 @@ export default function ClanDistricts() {
     } catch (error: any) {
       console.error('Failed to load clan districts:', error)
       console.error('Error response:', error.response?.data)
-      alert(`Ошибка загрузки районов: ${error.response?.data?.message || error.message}`)
       setDistricts([])
     } finally {
       setLoading(false)
@@ -83,10 +95,9 @@ export default function ClanDistricts() {
     
     try {
       await apiClient.post(`/clans/${clanId}/territories/capture`, { districtCode })
-      alert('Район успешно захвачен!')
       await loadData()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка захвата района')
+      console.error('Failed to capture district:', error)
     }
   }
 
@@ -95,10 +106,9 @@ export default function ClanDistricts() {
     
     try {
       await apiClient.post(`/clans/${clanId}/districts/${districtCode}/collect`)
-      alert('Доход собран!')
       await loadData()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка сбора дохода')
+      console.error('Failed to collect income:', error)
     }
   }
 
@@ -185,10 +195,16 @@ export default function ClanDistricts() {
                 <div className="city-clan-capture-info">
                   <div>Этот район можно захватить</div>
                   <div>Захват на 24 часа</div>
+                  {member?.role !== 'leader' && (
+                    <div style={{ color: '#FFD700', marginTop: '8px', fontSize: '14px' }}>
+                      Только лидер может захватывать районы
+                    </div>
+                  )}
                 </div>
                 <button
                   className="city-clan-capture-btn"
                   onClick={() => handleCaptureDistrict(currentDistrict.code)}
+                  disabled={member?.role !== 'leader'}
                 >
                   Захватить район
                 </button>

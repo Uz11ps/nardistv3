@@ -46,16 +46,16 @@ export class Clan {
   @Column({ type: 'bigint', default: 0 })
   weeklyIncome: string;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int', default: 1 })
   clanLevel: number;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int', default: 1 })
   districtStrength: number;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int', default: 1 })
   economy: number;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int', default: 1 })
   fortLevel: number;
 
   @Column({ type: 'jsonb', nullable: true })

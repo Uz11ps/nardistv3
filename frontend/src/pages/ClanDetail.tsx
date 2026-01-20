@@ -58,10 +58,9 @@ export default function ClanDetail() {
   const handleJoin = async () => {
     try {
       await apiClient.post(`/clans/${clanId}/join`)
-      alert('Вы успешно вступили в федерацию!')
       navigate(`/clans/${clanId}/manage`)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при вступлении в федерацию')
+      console.error('Failed to join clan:', error)
     }
   }
 

@@ -15,7 +15,6 @@ export default function ClanCreate() {
     e.preventDefault()
     
     if (!form.name.trim()) {
-      alert('Введите название федерации')
       return
     }
 
@@ -25,10 +24,8 @@ export default function ClanCreate() {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
       })
-      alert('Федерация успешно создана!')
       navigate(`/clans/${response.data.id}/manage`)
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Ошибка при создании федерации')
       console.error('Failed to create federation:', error)
     } finally {
       setLoading(false)

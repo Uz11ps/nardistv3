@@ -37,6 +37,18 @@ export class ClansService {
     private notificationsService: NotificationsService,
   ) {}
 
+  /**
+   * Рассчитать уровень клана на основе суммы улучшений
+   * Всего улучшений: 4 (clanLevel, districtStrength, economy, fortLevel)
+   * Максимальный уровень каждого: 10
+   * Максимальная сумма: 40
+   * Формула: level = Math.min(10, Math.floor(sumOfUpgrades / 4))
+   */
+  private calculateClanLevel(clan: Clan): number {
+    const sumOfUpgrades = (clan.clanLevel || 1) + (clan.districtStrength || 1) + (clan.economy || 1) + (clan.fortLevel || 1);
+    return Math.min(10, Math.floor(sumOfUpgrades / 4));
+  }
+
   async create(userId: string, name: string, description?: string): Promise<Clan> {
     const existing = await this.clansRepository.findOne({ where: { name } });
     if (existing) {
@@ -54,7 +66,14 @@ export class ClansService {
       leaderId: userId,
       memberCount: 1,
       maxMembers: 10,
+      clanLevel: 1, // Дефолтный уровень улучшения
+      districtStrength: 1, // Дефолтный уровень улучшения
+      economy: 1, // Дефолтный уровень улучшения
+      fortLevel: 1, // Дефолтный уровень улучшения
     });
+
+    // Рассчитываем уровень клана на основе суммы улучшений
+    clan.level = this.calculateClanLevel(clan);
 
     const savedClan = await this.clansRepository.save(clan);
 
@@ -336,11 +355,16 @@ export class ClansService {
     }
 
     const clan = member.clan;
+    
+    // Улучшение "level" больше не существует, уровень рассчитывается автоматически
+    if (upgradeType === 'level') {
+      throw new BadRequestException('Уровень клана рассчитывается автоматически на основе суммы улучшений');
+    }
+
     const costs: Record<string, number> = {
-      level: (clan.clanLevel + 1) * 1000,
-      districtStrength: (clan.districtStrength + 1) * 500,
-      economy: (clan.economy + 1) * 800,
-      fort: (clan.fortLevel + 1) * 1200,
+      districtStrength: (clan.districtStrength || 1) * 500,
+      economy: (clan.economy || 1) * 800,
+      fort: (clan.fortLevel || 1) * 1200,
     };
 
     const cost = costs[upgradeType];
@@ -355,7 +379,6 @@ export class ClansService {
     clan.treasury = (BigInt(clan.treasury || 0) - BigInt(cost)).toString();
 
     const upgradeNames: Record<string, string> = {
-      level: 'Уровень клана',
       districtStrength: 'Сила районов',
       economy: 'Экономика',
       fort: 'Форт клана',
@@ -363,24 +386,32 @@ export class ClansService {
     const upgradeName = upgradeNames[upgradeType] || 'Улучшение';
 
     switch (upgradeType) {
-      case 'level':
-        clan.clanLevel++;
-        clan.maxMembers += 5;
-        break;
       case 'districtStrength':
-        clan.districtStrength++;
+        if ((clan.districtStrength || 1) >= 10) {
+          throw new BadRequestException('Сила районов достигла максимального уровня');
+        }
+        clan.districtStrength = (clan.districtStrength || 1) + 1;
         break;
       case 'economy':
-        clan.economy++;
+        if ((clan.economy || 1) >= 10) {
+          throw new BadRequestException('Экономика достигла максимального уровня');
+        }
+        clan.economy = (clan.economy || 1) + 1;
         clan.weeklyIncome = (BigInt(clan.weeklyIncome || 0) * BigInt(120) / BigInt(100)).toString();
         break;
       case 'fort':
-        if (clan.fortLevel >= 10) {
+        if ((clan.fortLevel || 1) >= 10) {
           throw new BadRequestException('Форт достиг максимального уровня');
         }
-        clan.fortLevel++;
+        clan.fortLevel = (clan.fortLevel || 1) + 1;
         break;
     }
+
+    // Пересчитываем уровень клана на основе суммы улучшений
+    clan.level = this.calculateClanLevel(clan);
+    
+    // Обновляем maxMembers на основе уровня клана
+    clan.maxMembers = 10 + (clan.level - 1) * 5;
 
     const savedClan = await this.clansRepository.save(clan);
 
@@ -407,37 +438,166 @@ export class ClansService {
   }
 
   async getClanUpgrades(clanId: string): Promise<{
-    level: { current: number; max: number; cost: number };
     districtStrength: { current: number; max: number; cost: number };
     economy: { current: number; max: number; cost: number };
     fort: { current: number; max: number; cost: number };
+    clanLevel: number; // Общий уровень клана (рассчитывается автоматически)
   }> {
     const clan = await this.clansRepository.findOne({ where: { id: clanId } });
     if (!clan) {
       throw new NotFoundException('Клан не найден');
     }
 
+    const districtStrength = clan.districtStrength || 1;
+    const economy = clan.economy || 1;
+    const fortLevel = clan.fortLevel || 1;
+
     return {
-      level: {
-        current: clan.clanLevel,
-        max: 10,
-        cost: (clan.clanLevel + 1) * 1000,
-      },
       districtStrength: {
-        current: clan.districtStrength,
+        current: districtStrength,
         max: 10,
-        cost: (clan.districtStrength + 1) * 500,
+        cost: districtStrength >= 10 ? 0 : districtStrength * 500,
       },
       economy: {
-        current: clan.economy,
+        current: economy,
         max: 10,
-        cost: (clan.economy + 1) * 800,
+        cost: economy >= 10 ? 0 : economy * 800,
       },
       fort: {
-        current: clan.fortLevel,
+        current: fortLevel,
         max: 10,
-        cost: clan.fortLevel >= 10 ? 0 : (clan.fortLevel + 1) * 1200,
+        cost: fortLevel >= 10 ? 0 : fortLevel * 1200,
       },
+      clanLevel: this.calculateClanLevel(clan), // Общий уровень клана
+    };
+  }
+
+  /**
+   * Получить предварительную информацию об улучшении
+   */
+  async getUpgradePreview(clanId: string, upgradeType: string): Promise<{
+    upgradeType: string;
+    upgradeName: string;
+    currentLevel: number;
+    newLevel: number;
+    cost: number;
+    currentTreasury: number;
+    newTreasury: number;
+    effects: Array<{ label: string; current: string; new: string }>;
+    currentClanLevel: number;
+    newClanLevel: number;
+  }> {
+    const clan = await this.clansRepository.findOne({ where: { id: clanId } });
+    if (!clan) {
+      throw new NotFoundException('Клан не найден');
+    }
+
+    const costs: Record<string, number> = {
+      districtStrength: (clan.districtStrength || 1) * 500,
+      economy: (clan.economy || 1) * 800,
+      fort: (clan.fortLevel || 1) * 1200,
+    };
+
+    const cost = costs[upgradeType];
+    if (!cost) {
+      throw new BadRequestException('Неверный тип улучшения');
+    }
+
+    const upgradeNames: Record<string, string> = {
+      districtStrength: 'Сила районов',
+      economy: 'Экономика',
+      fort: 'Форт клана',
+    };
+    const upgradeName = upgradeNames[upgradeType] || 'Улучшение';
+
+    const currentTreasury = Number(clan.treasury || 0);
+    const newTreasury = currentTreasury - cost;
+
+    let currentLevel = 1;
+    let newLevel = 1;
+    const effects: Array<{ label: string; current: string; new: string }> = [];
+
+    switch (upgradeType) {
+      case 'districtStrength':
+        currentLevel = clan.districtStrength || 1;
+        newLevel = currentLevel + 1;
+        effects.push({
+          label: 'Сила районов',
+          current: `${currentLevel}/10`,
+          new: `${newLevel}/10`,
+        });
+        break;
+      case 'economy':
+        currentLevel = clan.economy || 1;
+        newLevel = currentLevel + 1;
+        const currentWeeklyIncome = Number(clan.weeklyIncome || 0);
+        const newWeeklyIncome = Math.floor(currentWeeklyIncome * 1.2);
+        effects.push({
+          label: 'Экономика',
+          current: `${currentLevel}/10`,
+          new: `${newLevel}/10`,
+        });
+        effects.push({
+          label: 'Недельный доход',
+          current: `${currentWeeklyIncome.toLocaleString('ru-RU')} NAR`,
+          new: `${newWeeklyIncome.toLocaleString('ru-RU')} NAR (+20%)`,
+        });
+        break;
+      case 'fort':
+        currentLevel = clan.fortLevel || 1;
+        newLevel = currentLevel + 1;
+        effects.push({
+          label: 'Форт федерации',
+          current: `${currentLevel}/10`,
+          new: `${newLevel}/10`,
+        });
+        break;
+    }
+
+    // Рассчитываем текущий и новый уровень клана
+    const currentClanLevel = this.calculateClanLevel(clan);
+    
+    // Создаем временный объект для расчета нового уровня
+    const tempClan = { ...clan };
+    switch (upgradeType) {
+      case 'districtStrength':
+        tempClan.districtStrength = newLevel;
+        break;
+      case 'economy':
+        tempClan.economy = newLevel;
+        break;
+      case 'fort':
+        tempClan.fortLevel = newLevel;
+        break;
+    }
+    const newClanLevel = this.calculateClanLevel(tempClan);
+
+    if (currentClanLevel !== newClanLevel) {
+      const currentMaxMembers = 10 + (currentClanLevel - 1) * 5;
+      const newMaxMembers = 10 + (newClanLevel - 1) * 5;
+      effects.push({
+        label: 'Уровень федерации',
+        current: `${currentClanLevel}/10`,
+        new: `${newClanLevel}/10`,
+      });
+      effects.push({
+        label: 'Максимум участников',
+        current: `${currentMaxMembers}`,
+        new: `${newMaxMembers}`,
+      });
+    }
+
+    return {
+      upgradeType,
+      upgradeName,
+      currentLevel,
+      newLevel,
+      cost,
+      currentTreasury,
+      newTreasury,
+      effects,
+      currentClanLevel,
+      newClanLevel,
     };
   }
 

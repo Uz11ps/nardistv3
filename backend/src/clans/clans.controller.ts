@@ -95,6 +95,15 @@ export class ClansController {
     return this.clansService.getClanUpgrades(id);
   }
 
+  @Get(':id/upgrades/preview/:upgradeType')
+  @UseGuards(JwtAuthGuard)
+  async getUpgradePreview(
+    @Param('id') id: string,
+    @Param('upgradeType') upgradeType: string,
+  ) {
+    return this.clansService.getUpgradePreview(id, upgradeType);
+  }
+
   @Get(':id/territories')
   @UseGuards(JwtAuthGuard)
   async getClanTerritories(@Param('id') id: string) {
@@ -126,9 +135,9 @@ export class ClansController {
       throw new BadRequestException('Вы должны состоять в этом клане');
     }
 
-    // Проверяем права
-    if (!userClan.member || (userClan.member.role !== 'leader' && userClan.member.role !== 'officer')) {
-      throw new BadRequestException('Только лидер и офицеры могут захватывать территории');
+    // Проверяем права - только лидер может захватывать районы
+    if (!userClan.member || userClan.member.role !== 'leader') {
+      throw new BadRequestException('Только лидер может захватывать районы');
     }
 
     // Используем новую логику захвата районов

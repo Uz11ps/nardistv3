@@ -563,6 +563,34 @@ export default function Game() {
     : ((gameState?.canMove || false) && (gameStatus === 'in_progress'))
   const myPlayer = isPlayer1 ? gameInfo?.player1 : gameInfo?.player2
   const opponentPlayer = isPlayer1 ? gameInfo?.player2 : gameInfo?.player1
+  
+  // Модальное окно с информацией об игроке
+  const [showPlayerModal, setShowPlayerModal] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
+  const [playerStats, setPlayerStats] = useState<any>(null)
+  const [loadingPlayerStats, setLoadingPlayerStats] = useState(false)
+  
+  const handleAvatarClick = async (player: any) => {
+    if (!player?.id) return
+    
+    setSelectedPlayer(player)
+    setShowPlayerModal(true)
+    setLoadingPlayerStats(true)
+    
+    try {
+      const [userResponse, statsResponse] = await Promise.all([
+        apiClient.get(`/users/${player.id}`).catch(() => ({ data: null })),
+        apiClient.get(`/games/statistics/${player.id}`).catch(() => ({ data: null }))
+      ])
+      
+      setSelectedPlayer(userResponse.data || player)
+      setPlayerStats(statsResponse.data)
+    } catch (error) {
+      console.error('Failed to load player info:', error)
+    } finally {
+      setLoadingPlayerStats(false)
+    }
+  }
 
   // Функция автолуза
   const handleAutoMove = useCallback(async () => {
@@ -2962,7 +2990,7 @@ export default function Game() {
                     )}
                   </div>
                 </div>
-              <div className="game-player-avatar">
+              <div className="game-player-avatar" onClick={() => opponentPlayer && handleAvatarClick(opponentPlayer)} style={{ cursor: 'pointer' }}>
                   {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
                   {gameStatus === 'in_progress' && (() => {
                     // Таймер противника (всегда слева)
@@ -3020,7 +3048,7 @@ export default function Game() {
               {/* Противник слева */}
               <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
-                <div className="game-player-avatar">
+                <div className="game-player-avatar" onClick={() => opponentPlayer && handleAvatarClick(opponentPlayer)} style={{ cursor: 'pointer' }}>
                   {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
                   {gameStatus === 'in_progress' && (() => {
                     // Таймер противника (всегда слева)
@@ -3561,7 +3589,7 @@ export default function Game() {
                   )}
               </div>
             </div>
-              <div className="game-player-avatar">
+              <div className="game-player-avatar" onClick={() => myPlayer && handleAvatarClick(myPlayer)} style={{ cursor: 'pointer' }}>
                 {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
                 {gameStatus === 'in_progress' && (() => {
                   // Мой таймер (всегда справа)
@@ -3728,6 +3756,111 @@ export default function Game() {
                 style={{ background: 'linear-gradient(180deg, #2C2D31 0%, #1C1D21 100%)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
               >
                 На главную
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Модальное окно с информацией об игроке */}
+      {showPlayerModal && selectedPlayer && createPortal(
+        <div className="game-player-modal-overlay" onClick={() => setShowPlayerModal(false)}>
+          <div className="game-player-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="game-player-modal-header">
+              <h3 className="game-player-modal-title">Профиль игрока</h3>
+              <button className="game-player-modal-close" onClick={() => setShowPlayerModal(false)}>×</button>
+            </div>
+            
+            <div className="game-player-modal-content">
+              {/* Аватар и основная информация */}
+              <div className="game-player-modal-profile">
+                <div className="game-player-modal-avatar">
+                  {selectedPlayer?.avatarUrl ? (
+                    <img src={selectedPlayer.avatarUrl} alt={selectedPlayer.username} />
+                  ) : (
+                    <Icon name="user" size={80} />
+                  )}
+                </div>
+                <div className="game-player-modal-name">
+                  {selectedPlayer?.nickname || selectedPlayer?.username || 'Игрок'}
+                </div>
+                {selectedPlayer?.username && selectedPlayer?.nickname && (
+                  <div className="game-player-modal-username">@{selectedPlayer.username}</div>
+                )}
+                <div className="game-player-modal-level">
+                  Уровень {selectedPlayer?.level || 0}
+                </div>
+              </div>
+
+              {/* Статистика */}
+              {loadingPlayerStats ? (
+                <div className="game-player-modal-loading">Загрузка статистики...</div>
+              ) : playerStats ? (
+                <div className="game-player-modal-stats">
+                  <div className="game-player-modal-stats-section">
+                    <div className="game-player-modal-stats-title">Общая статистика</div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Всего матчей:</span>
+                      <span className="game-player-modal-stats-value">{playerStats.totalMatches || 0}</span>
+                    </div>
+                  </div>
+
+                  <div className="game-player-modal-stats-section">
+                    <div className="game-player-modal-stats-title">Короткие нарды</div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Матчей:</span>
+                      <span className="game-player-modal-stats-value">{playerStats.short?.matches || 0}</span>
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Побед:</span>
+                      <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.short?.wins || 0}</span>
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Поражений:</span>
+                      <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.short?.losses || 0}</span>
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Винрейт:</span>
+                      <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
+                        {playerStats.short?.winrate || 0}%
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="game-player-modal-stats-section">
+                    <div className="game-player-modal-stats-title">Длинные нарды</div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Матчей:</span>
+                      <span className="game-player-modal-stats-value">{playerStats.long?.matches || 0}</span>
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Побед:</span>
+                      <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.long?.wins || 0}</span>
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Поражений:</span>
+                      <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.long?.losses || 0}</span>
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Винрейт:</span>
+                      <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
+                        {playerStats.long?.winrate || 0}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="game-player-modal-no-stats">Статистика недоступна</div>
+              )}
+            </div>
+
+            <div className="game-player-modal-footer">
+              <button
+                className="game-player-modal-btn"
+                onClick={() => setShowPlayerModal(false)}
+              >
+                Закрыть
               </button>
             </div>
           </div>
