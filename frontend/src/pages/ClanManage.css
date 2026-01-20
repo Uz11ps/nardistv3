@@ -14,11 +14,13 @@
 .clan-manage-wrapper {
   position: relative;
   width: 100%;
-  min-height: 100vh;
+  min-height: calc(100vh - 200px);
   background: #0e0e0e;
   border: 1px solid rgba(0, 0, 0, 0.05);
   overflow: hidden;
   border-radius: 44px;
+  margin: 0;
+  padding: 0;
 }
 
 /* Фоновые изображения */
@@ -71,65 +73,37 @@
   width: 455.58%;
 }
 
-/* Кнопка назад (кастомная позиция из Figma) */
-.clan-manage-back-btn {
-  position: absolute;
-  left: 24px;
-  top: 58px;
-  width: 7px;
-  height: 14px;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  z-index: 10;
+/* Основной контент */
+.clan-manage-content {
+  position: relative;
+  width: 100%;
+  padding: 92px 0 40px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Эмблема клана - точные размеры из Figma */
+.clan-manage-emblem {
+  width: 111px;
+  height: 143px;
+  margin: 0 auto 9px;
+  overflow: hidden;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.clan-manage-back-icon {
-  display: block;
+.clan-manage-emblem-icon {
   width: 100%;
   height: 100%;
-  transform: rotate(180deg);
-}
-
-/* Основной контент */
-.clan-manage-content {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
-  z-index: 1;
-}
-
-/* Эмблема клана - точные размеры из Figma */
-.clan-manage-emblem {
-  position: absolute;
-  left: 50%;
-  top: 92px;
-  transform: translateX(-50%);
-  width: 111px;
-  height: 143px;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.clan-manage-emblem-icon {
-  position: absolute;
-  height: 154.11%;
-  left: -49.56%;
-  max-width: none;
-  top: -26.71%;
-  width: 199.12%;
+  object-fit: contain;
 }
 
 /* Название клана - точные размеры из Figma */
 .clan-manage-name {
-  position: absolute;
-  left: 50%;
-  top: 252px;
-  transform: translateX(-50%);
   color: #FFF;
   font-family: "SF Pro Expanded Medium", "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 32px;
@@ -137,18 +111,14 @@
   font-style: normal;
   line-height: normal;
   text-align: center;
-  white-space: nowrap;
-  width: 100%;
+  margin: 0 0 8px;
   padding: 0 20px;
+  width: 100%;
   box-sizing: border-box;
 }
 
 /* Информация о клане - точные размеры из Figma */
 .clan-manage-info {
-  position: absolute;
-  left: 50%;
-  top: 301px;
-  transform: translateX(-50%) translateY(-50%);
   width: 341px;
   max-width: calc(100% - 40px);
   color: #B6B6B6;
@@ -159,21 +129,21 @@
   line-height: 22px;
   letter-spacing: -0.4px;
   text-align: center;
-  white-space: pre-wrap;
+  margin: 0 0 42px;
+  padding: 0 20px;
+  box-sizing: border-box;
 }
 
 /* Кнопки управления - точные размеры из Figma */
 .clan-manage-buttons {
-  position: absolute;
-  left: 14px;
-  top: 343px;
-  width: calc(100% - 28px);
+  width: 100%;
   max-width: 362px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px;
+  padding: 0 14px;
   box-sizing: border-box;
+  margin: 0 auto;
 }
 
 .clan-manage-button {
@@ -203,6 +173,8 @@
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .clan-manage-button::before {

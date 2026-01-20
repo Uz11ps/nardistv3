@@ -132,7 +132,7 @@ export default function ClanManage() {
   }
 
   return (
-    <PageLayout title="" showBack={false}>
+    <PageLayout title="" showBack={true}>
       <div className="clan-manage-wrapper">
         {/* Фоновые изображения */}
         <div className="clan-manage-bg-container">
@@ -157,18 +157,6 @@ export default function ClanManage() {
             />
           </div>
         </div>
-
-        {/* Кнопка назад (кастомная позиция) */}
-        <button className="clan-manage-back-btn" onClick={() => navigate(-1)}>
-          <img 
-            src="/img/back-arrow.svg" 
-            alt="Back" 
-            className="clan-manage-back-icon"
-            onError={(e) => {
-              e.currentTarget.src = "https://www.figma.com/api/mcp/asset/01f5fbef-654f-4689-9825-a2d26bb3bd7d"
-            }}
-          />
-        </button>
 
         {/* Основной контент */}
         <div className="clan-manage-content">
