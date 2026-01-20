@@ -134,30 +134,6 @@ export default function ClanManage() {
   return (
     <PageLayout title="" showBack={true}>
       <div className="clan-manage-wrapper">
-        {/* Фоновые изображения */}
-        <div className="clan-manage-bg-container">
-          <div className="clan-manage-bg-image-1">
-            <img 
-              src="/img/clan-bg-1.png" 
-              alt="" 
-              className="clan-manage-bg-img"
-              onError={(e) => {
-                e.currentTarget.src = "https://www.figma.com/api/mcp/asset/2adbf5b9-64f0-4a93-898d-c216732d57dc"
-              }}
-            />
-          </div>
-          <div className="clan-manage-bg-image-2">
-            <img 
-              src="/img/clan-bg-2.png" 
-              alt="" 
-              className="clan-manage-bg-img"
-              onError={(e) => {
-                e.currentTarget.src = "https://www.figma.com/api/mcp/asset/7393722a-ae84-47af-a5a7-06b4cc0c2418"
-              }}
-            />
-          </div>
-        </div>
-
         {/* Основной контент */}
         <div className="clan-manage-content">
           {/* Эмблема клана */}
