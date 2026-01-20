@@ -320,7 +320,6 @@ export default function SandboxControls({
               <span>✓</span> Подтвердить ход
             </button>
           </div>
-          </div>
         </div>
       </div>
     </>

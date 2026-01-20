@@ -34,7 +34,6 @@ export default function Profile() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'stats' | 'premium' | 'analytics'>('stats')
   const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null)
-  const [achievements, setAchievements] = useState<any[]>([])
   const [gameHistory, setGameHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
@@ -47,7 +46,6 @@ export default function Profile() {
       })
       checkPremium()
       loadSkillPoints()
-      loadAchievements()
       
       // Проверяем, завершена ли настройка профиля (первичное создание)
       // Если нет - перенаправляем на создание профиля
@@ -63,15 +61,6 @@ export default function Profile() {
         })
     }
   }, [user, navigate])
-
-  const loadAchievements = async () => {
-    try {
-      const response = await apiClient.get('/achievements').catch(() => ({ data: [] }))
-      setAchievements(response.data || [])
-    } catch (error) {
-      console.error('Failed to load achievements:', error)
-    }
-  }
 
   const loadGameHistory = async () => {
     try {
@@ -313,22 +302,19 @@ export default function Profile() {
               <div className="profile-divider-v2" />
             </div>
 
-            {/* Карточки достижений и бонусов */}
-            <div className="profile-cards-grid-v2">
-              {/* Показываем достижения и бонусы */}
-              {achievements.filter(a => a.isUnlocked || a.unlocked).length > 0 ? (
-                achievements.filter(a => a.isUnlocked || a.unlocked).slice(0, 12).map((achievement) => (
-                  <div key={achievement.id} className="profile-card-v2" title={achievement.description}>
-                    <div className="profile-card-text-v2" style={{ fontSize: '10px' }}>
-                      {achievement.title}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="profile-card-v2 empty" style={{ width: '100%', gridColumn: '1 / -1', background: 'transparent', border: '1px dashed #444' }}>
-                  <div className="profile-card-text-v2" style={{ color: '#888' }}>Нет достижений</div>
+            {/* Валюта */}
+            <div className="profile-currency-card">
+              <div className="profile-currency-content">
+                <div className="profile-currency-left">
+                  <img src="/img/narcoin.png" alt="NAR" className="profile-currency-icon" />
+                  <span className="profile-currency-amount">
+                    {stats.narCoin.toLocaleString('ru-RU')} NAR
+                  </span>
                 </div>
-              )}
+                <button className="profile-topup-btn" onClick={() => navigate('/shop')}>
+                  Пополнить
+                </button>
+              </div>
             </div>
 
         {/* Усиления */}
@@ -421,21 +407,6 @@ export default function Profile() {
                 </div>
               )
             })}
-          </div>
-        </div>
-
-        {/* Валюта */}
-        <div className="profile-currency-card">
-          <div className="profile-currency-content">
-            <div className="profile-currency-left">
-              <img src="/img/narcoin.png" alt="NAR" className="profile-currency-icon" />
-              <span className="profile-currency-amount">
-                {stats.narCoin.toLocaleString('ru-RU')} NAR
-              </span>
-            </div>
-            <button className="profile-topup-btn" onClick={() => navigate('/shop')}>
-              Пополнить
-            </button>
           </div>
         </div>
 
