@@ -56,12 +56,19 @@ export const DebugPanel = memo(({
   const isScrollingRef = useRef<boolean>(false)
   // Храним актуальный конфиг в ref для сохранения
   const configRef = useRef(debugConfig)
+  // Храним сохраненный конфиг (из localStorage) для отката при выходе без сохранения
+  const savedConfigRef = useRef(debugConfig)
   
   // Обновляем ref при изменении конфига
   useEffect(() => {
     configRef.current = debugConfig
     console.log('📝 Конфиг обновлен в ref:', configRef.current)
   }, [debugConfig])
+  
+  // При загрузке конфига для размера - сохраняем его как "сохраненный"
+  useEffect(() => {
+    savedConfigRef.current = debugConfig
+  }, [selectedSize]) // При смене размера сохраняем текущий как "базовый"
   
   // Загружаем конфиг для выбранного размера
   const loadConfigForSize = (size: DebugSize) => {
