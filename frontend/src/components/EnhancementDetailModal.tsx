@@ -55,14 +55,6 @@ const calculateLivesRegenPerHour = (livesSp: number): number => {
   return Math.round((regenBasePerH + regenBonus) * 100) / 100
 }
 
-const calculateLivesRegenPerHour = (livesSp: number): number => {
-  const regenBasePerH = 0.25
-  const regenSpCap = 30
-  const regenSpStep = 10
-  const regenBonus = Math.floor(Math.min(livesSp, regenSpCap) / regenSpStep) * 0.25
-  return regenBasePerH + regenBonus
-}
-
 const calculateEconomyCommissionReduction = (econSp: number): number => {
   const step1Sp = 20
   const step1K = 0.0025
