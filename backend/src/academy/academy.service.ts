@@ -186,8 +186,6 @@ export class AcademyService {
     for (const article of visibleCourses) {
       const purchased = purchasedArticleIds.includes(article.id);
       let isCompleted = false;
-
-      let isCompleted = false;
       let quizPassed = false;
 
       if (purchased && userId) {
