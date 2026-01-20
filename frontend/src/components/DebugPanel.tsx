@@ -412,16 +412,21 @@ export const DebugPanel = memo(({
                 // Принудительно применяем текущий конфиг ко ВСЕМ размерам ГЛОБАЛЬНО (для всех пользователей)
                 const configToSave = { ...configRef.current }
                 console.log(`💾 Сохраняю ГЛОБАЛЬНЫЙ конфиг ко ВСЕМ размерам (для всех пользователей):`, configToSave)
+                console.log(`📐 Размеры для сохранения: ${DEBUG_SIZES.join(', ')}px`)
                 
-                // Сохраняем конфиг для каждого размера глобально
+                // Сохраняем конфиг для КАЖДОГО размера глобально
+                let savedCount = 0
                 for (const size of DEBUG_SIZES) {
+                  console.log(`💾 Сохраняю конфиг для размера ${size}px...`)
                   await apiClient.put('/admin/board-configs', {
                     size: size,
                     config: configToSave
                   })
+                  savedCount++
+                  console.log(`✅ Конфиг для ${size}px сохранен (${savedCount}/${DEBUG_SIZES.length})`)
                 }
                 
-                alert(`✅ Глобальный конфиг применен ко ВСЕМ размерам (${DEBUG_SIZES.join(', ')}px)! Теперь он работает для ВСЕХ пользователей!`)
+                alert(`✅ Глобальный конфиг применен ко ВСЕМ ${savedCount} размерам (${DEBUG_SIZES.join(', ')}px)! Теперь он работает для ВСЕХ пользователей!`)
               } catch (e) {
                 console.error('❌ Ошибка:', e)
                 alert('Ошибка: ' + ((e as any).response?.data?.message || (e as any).message))
@@ -437,23 +442,15 @@ export const DebugPanel = memo(({
               try {
                 // Используем актуальный конфиг из ref
                 const configToSave = { ...configRef.current }
-                console.log(`💾 Сохраняю конфиг ТОЛЬКО для размера ${selectedSize}px на сервер:`, configToSave)
+                console.log(`💾 Сохраняю ГЛОБАЛЬНЫЙ конфиг ТОЛЬКО для размера ${selectedSize}px:`, configToSave)
                 
-                // Загружаем текущие настройки пользователя
-                const settingsResponse = await apiClient.get('/users/settings')
-                const currentSettings = settingsResponse.data || {}
-                
-                // Обновляем конфиг для текущего размера
-                const boardConfigs = currentSettings.boardConfigs || {}
-                boardConfigs[selectedSize.toString()] = configToSave
-                
-                // Сохраняем на сервер
-                await apiClient.put('/users/settings', {
-                  ...currentSettings,
-                  boardConfigs
+                // Сохраняем ГЛОБАЛЬНЫЙ конфиг ТОЛЬКО для выбранного размера
+                await apiClient.put('/admin/board-configs', {
+                  size: selectedSize,
+                  config: configToSave
                 })
                 
-                console.log(`✅ Конфиг сохранен на сервер для ${selectedSize}px`)
+                console.log(`✅ Глобальный конфиг сохранен ТОЛЬКО для ${selectedSize}px`)
                 
                 // Обновляем сохраненный конфиг как базовый
                 savedConfigRef.current = configToSave
@@ -461,7 +458,7 @@ export const DebugPanel = memo(({
                 // Обновляем конфиг в родительском компоненте (чтобы изменения применились в игре)
                 setDebugConfig(configToSave)
                 
-                alert(`Конфиг для ${selectedSize}px сохранен на сервер и применен!`)
+                alert(`✅ Глобальный конфиг для ${selectedSize}px сохранен! Теперь он работает для ВСЕХ пользователей!`)
               } catch (e) {
                 console.error('❌ Ошибка при сохранении:', e)
                 alert('Ошибка при сохранении: ' + (e as any).response?.data?.message || (e as any).message)
