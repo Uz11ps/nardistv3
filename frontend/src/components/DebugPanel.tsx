@@ -400,6 +400,32 @@ export const DebugPanel = memo(({
             Reset ({selectedSize}px)
           </button>
           <button 
+            onClick={() => {
+              try {
+                // Принудительно применяем текущий конфиг ко ВСЕМ размерам
+                const configToSave = { ...configRef.current }
+                const jsonString = JSON.stringify(configToSave, null, 2)
+                
+                DEBUG_SIZES.forEach(size => {
+                  const key = getConfigKey(size)
+                  localStorage.setItem(key, jsonString)
+                })
+                
+                // Также сохраняем в общий ключ
+                localStorage.setItem('backgammon-debug-config-v16', jsonString)
+                
+                alert(`✅ Конфиг принудительно применен ко ВСЕМ размерам (${DEBUG_SIZES.join(', ')}px)!`)
+              } catch (e) {
+                console.error('❌ Ошибка:', e)
+                alert('Ошибка: ' + e)
+              }
+            }}
+            style={{ fontSize: '12px', padding: '5px 10px', background: '#a94', border: '1px solid #bb6', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
+            title="Принудительно применить текущий конфиг ко всем размерам (включая мобильные)"
+          >
+            🔄 Применить ко всем
+          </button>
+          <button 
             onClick={(e) => {
               try {
                 // Используем актуальный конфиг из ref
