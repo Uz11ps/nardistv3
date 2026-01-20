@@ -250,7 +250,7 @@ export default function BackgammonBoard({
   // Функция для загрузки конфига из localStorage (всегда свежий, без кэша)
   const loadConfigFromStorage = () => {
     try {
-      const DEBUG_SIZES = [368, 512, 768, 1024, 1440, 1920] as const
+      const DEBUG_SIZES = [368, 512, 768, 1024, 1440] as const
       const getConfigKey = (size: number) => `backgammon-debug-config-v16-${size}px`
       
       const currentWidth = containerRef.current?.offsetWidth || window.innerWidth

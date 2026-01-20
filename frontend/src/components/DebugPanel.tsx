@@ -15,7 +15,7 @@ interface DebugPanelProps {
   setShowHitboxes?: (show: boolean) => void
 }
 
-const DEBUG_SIZES = [368, 512, 768, 1024, 1440, 1920] as const
+const DEBUG_SIZES = [368, 512, 768, 1024, 1440] as const
 type DebugSize = typeof DEBUG_SIZES[number]
 
 const getConfigKey = (size: number) => `backgammon-debug-config-v16-${size}px`
