@@ -292,15 +292,38 @@ export default function BackgammonBoard({
     return loadConfigFromStorage()
   })
   
-  // При открытии дебага ВСЕГДА загружаем свежий конфиг из localStorage
+  // ВСЕГДА загружаем свежий конфиг из localStorage (и в игре, и в дебаге)
   useEffect(() => {
-    if (debugMode) {
+    const freshConfig = loadConfigFromStorage()
+    setDebugConfig(freshConfig)
+  }, [debugMode]) // Перезагружаем при изменении режима дебага
+  
+  // Слушаем изменения localStorage (чтобы конфиг применялся сразу после сохранения)
+  useEffect(() => {
+    const checkConfigUpdate = () => {
       const freshConfig = loadConfigFromStorage()
       setDebugConfig(freshConfig)
     }
-  }, [debugMode])
+    
+    // Проверяем изменения каждые 500мс (на случай если сохранение произошло в том же окне)
+    const interval = setInterval(checkConfigUpdate, 500)
+    
+    // Также слушаем события storage (для изменений из других вкладок)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.startsWith('backgammon-debug-config-v16')) {
+        checkConfigUpdate()
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
   
-  // Используем текущий конфиг
+  // Используем текущий конфиг - он применяется ВСЕГДА (и в игре, и в дебаге)
   const effectiveDebugConfig = debugConfig
 
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига

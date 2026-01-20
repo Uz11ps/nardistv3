@@ -401,11 +401,14 @@ export const DebugPanel = memo(({
                 // Также сохраняем в общий ключ для совместимости с BackgammonBoard
                 localStorage.setItem('backgammon-debug-config-v16', jsonString)
                 
+                // Обновляем конфиг в родительском компоненте (чтобы изменения применились сразу в игре)
+                setDebugConfig(configToSave)
+                
                 // Проверяем, что сохранилось
                 const saved = localStorage.getItem(configKey)
                 console.log('✅ Проверка сохранения:', saved ? 'СОХРАНЕНО' : 'НЕ СОХРАНЕНО')
                 
-                alert(`Конфиг для ${selectedSize}px сохранен!`)
+                alert(`Конфиг для ${selectedSize}px сохранен и применен!`)
               } catch (e) {
                 console.error('❌ Ошибка при сохранении:', e)
                 alert('Ошибка при сохранении: ' + e)
