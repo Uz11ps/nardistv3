@@ -86,13 +86,12 @@
 
 @media (min-width: 769px) and (max-width: 1024px) {
   .shop-content {
-    max-width: 900px;
-    margin: 0;
+    width: 100%;
     padding: 0 24px;
   }
   
   .shop-list {
-    max-width: 100%;
+    width: 100%;
   }
   
   .shop-nar-coin-card,
@@ -104,13 +103,12 @@
 
 @media (min-width: 1025px) {
   .shop-content {
-    max-width: 1000px;
-    margin: 0;
+    width: 100%;
     padding: 0 32px;
   }
   
   .shop-list {
-    max-width: 100%;
+    width: 100%;
   }
   
   /* На очень больших экранах можно сделать grid для скинов */
@@ -122,7 +120,7 @@
   
   .shop-nar-coin-card,
   .shop-subscription-card {
-    max-width: 600px;
+    width: 100%;
   }
 }
 

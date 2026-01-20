@@ -302,10 +302,8 @@ export const DebugPanel = memo(({
         <div style={{ fontWeight: 'bold', fontSize: '14px' }}>⚙️ Debug Panel ({isMobile ? 'Mobile' : 'Desktop'})</div>
         <button
           onClick={() => {
-            // При выходе из дебага без сохранения - откатываем к сохраненному конфигу
-            if (savedConfigRef.current) {
-              setDebugConfig(savedConfigRef.current)
-            }
+            // Просто закрываем дебаг, не откатываем конфиг
+            // Конфиг остается в состоянии и применяется в игре
             setDebugMode(false)
           }}
           style={{
@@ -426,34 +424,20 @@ export const DebugPanel = memo(({
             🔄 Применить ко всем
           </button>
           <button 
-            onClick={(e) => {
+            onClick={() => {
               try {
                 // Используем актуальный конфиг из ref
                 const configToSave = { ...configRef.current }
                 const configKey = getConfigKey(selectedSize)
-                console.log(`💾 Сохраняю конфиг для размера ${selectedSize}px:`, configToSave)
+                console.log(`💾 Сохраняю конфиг ТОЛЬКО для размера ${selectedSize}px:`, configToSave)
                 
                 const jsonString = JSON.stringify(configToSave, null, 2)
                 
-                // Если зажат Shift - сохраняем только для текущего размера
-                // Иначе - применяем ко всем размерам
-                const applyToAll = !e.shiftKey
+                // Сохраняем ТОЛЬКО для текущего размера
+                localStorage.setItem(configKey, jsonString)
+                console.log(`✅ Конфиг сохранен только для ${selectedSize}px`)
                 
-                if (applyToAll) {
-                  // Применяем ко всем размерам
-                  DEBUG_SIZES.forEach(size => {
-                    const key = getConfigKey(size)
-                    localStorage.setItem(key, jsonString)
-                  })
-                  console.log(`✅ Конфиг применен ко всем размерам: ${DEBUG_SIZES.join(', ')}px`)
-                } else {
-                  // Сохраняем только для текущего размера
-                  localStorage.setItem(configKey, jsonString)
-                  console.log(`✅ Конфиг сохранен только для ${selectedSize}px`)
-                }
-                
-                // Всегда сохраняем в общий ключ для совместимости с BackgammonBoard
-                localStorage.setItem('backgammon-debug-config-v16', jsonString)
+                // НЕ сохраняем в общий ключ - каждый размер живет отдельно
                 
                 // Обновляем сохраненный конфиг как базовый
                 savedConfigRef.current = configToSave
@@ -465,15 +449,13 @@ export const DebugPanel = memo(({
                 const saved = localStorage.getItem(configKey)
                 console.log('✅ Проверка сохранения:', saved ? 'СОХРАНЕНО' : 'НЕ СОХРАНЕНО')
                 
-                alert(applyToAll 
-                  ? `Конфиг применен ко всем размерам и сохранен!` 
-                  : `Конфиг для ${selectedSize}px сохранен и применен!`)
+                alert(`Конфиг для ${selectedSize}px сохранен и применен!`)
               } catch (e) {
                 console.error('❌ Ошибка при сохранении:', e)
                 alert('Ошибка при сохранении: ' + e)
               }
             }}
-            title="Обычный клик - применить ко всем размерам. Shift+клик - только для текущего размера"
+            title={`Сохранить конфиг только для ${selectedSize}px`}
             onContextMenu={(e) => {
               // Правый клик для массового сохранения всех конфигов
               e.preventDefault()

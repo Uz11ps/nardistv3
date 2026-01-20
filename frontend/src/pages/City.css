@@ -12,11 +12,12 @@
 }
 
 .city-grid-v3 {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
-  max-width: 600px;
-  margin: 0 auto;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 .city-card-v3-complete {
@@ -31,6 +32,10 @@
   border: 2px solid rgba(255, 255, 255, 0.1);
   position: relative;
   overflow: hidden;
+  width: calc((100% - 16px) / 2);
+  min-width: 140px;
+  max-width: 200px;
+  flex-shrink: 0;
 }
 
 .city-card-v3-complete:hover {
@@ -52,19 +57,39 @@
 }
 
 @media (min-width: 768px) {
+  .city-card-v3-complete {
+    width: calc((100% - 32px) / 3);
+    min-width: 160px;
+    max-width: 220px;
+  }
+  
   .city-grid-v3 {
-    max-width: 400px;
+    gap: 16px;
   }
 }
 
 @media (max-width: 480px) {
   .city-grid-v3 {
-    max-width: 100%;
     gap: 10px;
+  }
+  
+  .city-card-v3-complete {
+    width: calc((100% - 10px) / 2);
+    min-width: 120px;
+    max-width: 180px;
+    padding: 10px;
   }
   
   .city-card-v3 {
     padding: 10px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .city-card-v3-complete {
+    width: calc((100% - 48px) / 4);
+    min-width: 160px;
+    max-width: 200px;
   }
 }
 

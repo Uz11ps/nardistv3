@@ -291,11 +291,8 @@ export default function BackgammonBoard({
     return loadConfigFromStorage()
   })
   
-  // ВСЕГДА загружаем свежий конфиг из localStorage (и в игре, и в дебаге)
-  useEffect(() => {
-    const freshConfig = loadConfigFromStorage()
-    setDebugConfig(freshConfig)
-  }, [debugMode]) // Перезагружаем при изменении режима дебага
+  // Загружаем конфиг из localStorage только при первом монтировании
+  // При открытии/закрытии дебага НЕ перезагружаем - используем текущий конфиг
   
   // Слушаем изменения localStorage только из других вкладок (storage event)
   // В текущем окне изменения применяются через setDebugConfig в DebugPanel
