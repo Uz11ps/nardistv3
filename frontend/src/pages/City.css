@@ -176,11 +176,11 @@
 .city-card-v3-income {
   font-size: 11px;
   color: #4CAF50;
-  margin-bottom: 4px; /* Уменьшили отступ снизу */
+  margin-bottom: 2px; /* Еще меньше отступ снизу */
   text-align: left; /* Выравниваем по левому краю */
   display: flex;
   flex-direction: column;
-  gap: 2px; /* Уменьшили отступ между строками дохода */
+  gap: 1px; /* Минимальный отступ между строками дохода */
   flex-shrink: 0; /* Не сжимаем блок дохода */
 }
 
@@ -194,7 +194,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 4px; /* Уменьшили отступ сверху вместо auto */
+  margin-top: 2px; /* Еще меньше отступ сверху */
   flex-shrink: 0; /* Не сжимаем блок кнопок */
 }
 

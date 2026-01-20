@@ -102,44 +102,44 @@ export default function BackgammonBoard({
   const getDefaultConfig = (isMobile: boolean) => {
     if (isMobile) {
       return {
-        sideMarginLeftPct: 0.04,
-        sideMarginRightPct: 0.05,
-        barMarginLeftPct: 0.03,
-        barMarginRightPct: 0.012,
-        barWidthPct: 0.025,
-        topMarginPct: 0.058,
-        bearOffHeightPct: 0.134,
-        checkerWidthRatio: 1.5,
-        checkerHeightRatio: 0.252,
-        checkerDrawScale: 1.28,
-        diceP1X: 0.5,
-        diceP1Y: 0.6,
-        diceP2X: 0.16,
-        diceP2Y: 0.24, 
-        checkerTopOffset: -349, 
-        checkerBottomOffset: 349,
-        textTopOffset: -15,
-        textBottomOffset: 15,
-        highlightWidthScale: 1,
-        highlightHeightScale: 1,
-        highlightXOffset: 0,
-        highlightYOffset: -31,
-        validHighlightWidthScale: 1,
-        validHighlightHeightScale: 1,
-        validHighlightXOffset: 0,
-        validHighlightYOffset: -31,
-        bearOffValidWidthScale: 1,
-        bearOffValidHeightScale: 1,
+      sideMarginLeftPct: 0.04,
+      sideMarginRightPct: 0.05,
+      barMarginLeftPct: 0.03,
+      barMarginRightPct: 0.012,
+      barWidthPct: 0.025,
+      topMarginPct: 0.058,
+      bearOffHeightPct: 0.134,
+      checkerWidthRatio: 1.5,
+      checkerHeightRatio: 0.252,
+      checkerDrawScale: 1.28,
+      diceP1X: 0.5,
+      diceP1Y: 0.6,
+      diceP2X: 0.16,
+      diceP2Y: 0.24,
+      checkerTopOffset: -349,
+      checkerBottomOffset: 349,
+      textTopOffset: -15,
+      textBottomOffset: 15,
+      highlightWidthScale: 1,
+      highlightHeightScale: 1,
+      highlightXOffset: 0,
+      highlightYOffset: -31,
+      validHighlightWidthScale: 1,
+      validHighlightHeightScale: 1,
+      validHighlightXOffset: 0,
+      validHighlightYOffset: -31,
+      bearOffValidWidthScale: 1,
+      bearOffValidHeightScale: 1,
         bearOffValidWhiteXOffset: 0,
         bearOffValidWhiteYOffset: 0,
         bearOffValidBlackXOffset: 0,
         bearOffValidBlackYOffset: 0,
-        highlightBottomYOffset: 26,
-        validHighlightBottomYOffset: 26,
-        dragCheckerSizeScale: 1,
-        dragCheckerXOffset: 0,
-        dragCheckerYOffset: 0,
-        bearOffCheckerScale: 0.9,
+      highlightBottomYOffset: 26,
+      validHighlightBottomYOffset: 26,
+      dragCheckerSizeScale: 1,
+      dragCheckerXOffset: 0,
+      dragCheckerYOffset: 0,
+      bearOffCheckerScale: 0.9,
         bearOffWhiteXOffset: 2,
         bearOffWhiteYOffset: 0,
         bearOffBlackXOffset: 2,
@@ -161,52 +161,52 @@ export default function BackgammonBoard({
       }
     } else {
       return {
-        sideMarginLeftPct: 0.04,
-        sideMarginRightPct: 0.05,
-        barMarginLeftPct: 0.03,
-        barMarginRightPct: 0.012,
-        barWidthPct: 0.025,
-        topMarginPct: 0.058,
-        bearOffHeightPct: 0.134,
-        checkerWidthRatio: 1.5,
-        checkerHeightRatio: 0.252,
-        checkerDrawScale: 1.28,
+    sideMarginLeftPct: 0.04,
+    sideMarginRightPct: 0.05,
+    barMarginLeftPct: 0.03,
+    barMarginRightPct: 0.012,
+    barWidthPct: 0.025,
+    topMarginPct: 0.058,
+    bearOffHeightPct: 0.134,
+    checkerWidthRatio: 1.5,
+    checkerHeightRatio: 0.252,
+    checkerDrawScale: 1.28,
         diceP1X: 0.550,
         diceP1Y: 0.530,
         diceP2X: 0.210,
         diceP2Y: 0.390,
-        checkerTopOffset: -349,
-        checkerBottomOffset: 349,
-        textTopOffset: -15,
-        textBottomOffset: 15,
-        highlightWidthScale: 1,
-        highlightHeightScale: 1,
-        highlightXOffset: 0,
-        highlightYOffset: -31,
-        validHighlightWidthScale: 1,
-        validHighlightHeightScale: 1,
-        validHighlightXOffset: 0,
-        validHighlightYOffset: -31,
-        bearOffValidWidthScale: 1,
-        bearOffValidHeightScale: 1,
+    checkerTopOffset: -349, 
+    checkerBottomOffset: 349,
+    textTopOffset: -15,
+    textBottomOffset: 15,
+    highlightWidthScale: 1,
+    highlightHeightScale: 1,
+    highlightXOffset: 0,
+    highlightYOffset: -31,
+    validHighlightWidthScale: 1,
+    validHighlightHeightScale: 1,
+    validHighlightXOffset: 0,
+    validHighlightYOffset: -31,
+    bearOffValidWidthScale: 1,
+    bearOffValidHeightScale: 1,
         bearOffValidWhiteXOffset: 0,
         bearOffValidWhiteYOffset: 0,
         bearOffValidBlackXOffset: 0,
         bearOffValidBlackYOffset: 0,
-        highlightBottomYOffset: 26,
-        validHighlightBottomYOffset: 26,
-        dragCheckerSizeScale: 1,
-        dragCheckerXOffset: 0,
-        dragCheckerYOffset: 0,
-        bearOffCheckerScale: 0.9,
+    highlightBottomYOffset: 26,
+    validHighlightBottomYOffset: 26,
+    dragCheckerSizeScale: 1,
+    dragCheckerXOffset: 0,
+    dragCheckerYOffset: 0,
+    bearOffCheckerScale: 0.9,
         bearOffWhiteXOffset: 5,
         bearOffWhiteYOffset: 5,
         bearOffBlackXOffset: -5,
         bearOffBlackYOffset: 5,
-        textTopRightY: -316,
-        textTopLeftY: -316,
-        textBottomLeftY: 316,
-        textBottomRightY: 316,
+    textTopRightY: -316,
+    textTopLeftY: -316, 
+    textBottomLeftY: 316, 
+    textBottomRightY: 316,
         pointHitboxPadding: 5,
         barHitboxTopPct: 0.2,
         barHitboxBottomPct: 0.8,
@@ -323,7 +323,7 @@ export default function BackgammonBoard({
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current)
     }
-    
+
     window.addEventListener('resize', handleResize)
     
     return () => {
@@ -480,15 +480,15 @@ export default function BackgammonBoard({
     // ВАЖНО: Применяем только если анимация еще идет (есть animatingChecker или serverMoveQueue не пуста)
     // Это предотвращает двойное применение ходов, когда gameState уже обновлен с финальным состоянием
     if (animatingChecker || serverMoveQueue.length > 0) {
-      completedServerMoves.forEach(move => {
-        // Определяем цвет шашки бота/другого игрока
-        const isWhiteMove = move.isWhite !== undefined ? move.isWhite : (isPlayer1 ? false : true)
-        if ((move as any).steps) {
-          (move as any).steps.forEach((s: any) => applyStep(s, isWhiteMove))
-        } else {
-          applyStep(move, isWhiteMove)
-        }
-      })
+    completedServerMoves.forEach(move => {
+      // Определяем цвет шашки бота/другого игрока
+      const isWhiteMove = move.isWhite !== undefined ? move.isWhite : (isPlayer1 ? false : true)
+      if ((move as any).steps) {
+        (move as any).steps.forEach((s: any) => applyStep(s, isWhiteMove))
+      } else {
+        applyStep(move, isWhiteMove)
+      }
+    })
     }
     
     // ВАЖНО: Анимируемая шашка должна быть ВРЕМЕННО удалена из точки 'from', 
@@ -1204,7 +1204,7 @@ export default function BackgammonBoard({
       const resizeObserver = new ResizeObserver(() => {
         // Небольшая задержка для стабилизации размера
         setTimeout(() => {
-          updateDicePosition()
+        updateDicePosition()
         }, 50)
       })
       resizeObserver.observe(containerRef.current)
@@ -2123,7 +2123,7 @@ export default function BackgammonBoard({
         ctx.fillRect(bearOffValidHX, bearOffValidHY, bearOffValidHW, bearOffValidHH)
       }
     }
-    
+
     // Визуализация хитбоксов
     if (showHitboxes) {
       drawHitboxes(ctx, width, height, scaleX, scaleY)
@@ -2200,16 +2200,16 @@ export default function BackgammonBoard({
           // Используем setTimeout, чтобы проверить состояние после обновления очереди
           setTimeout(() => {
             setServerMoveQueue(prev => {
-              // Если это был последний серверный ход из очереди
+          // Если это был последний серверный ход из очереди
               if (prev.length === 0 && onServerMovesFinished) {
-                console.log('🤖 All server moves finished')
+            console.log('🤖 All server moves finished')
                 // ВАЖНО: Очищаем завершенные ходы только после завершения ВСЕХ анимаций
                 // Это предотвращает визуальный "откат" при обновлении gameState
-                setTimeout(() => {
-                  setCompletedServerMoves([])
+            setTimeout(() => {
+              setCompletedServerMoves([]) 
                 }, 50) // Небольшая задержка для завершения всех обновлений состояния
-                onServerMovesFinished()
-              }
+              onServerMovesFinished()
+          }
               return prev
             })
           }, 0)
@@ -3218,7 +3218,7 @@ export default function BackgammonBoard({
           const points = virtualGameState?.points || []
           const currentBar = { ...(virtualGameState.bar || { white: 0, black: 0 }) }
           const currentBearOff = { ...(virtualGameState.bearOff || { white: 0, black: 0 }) }
-          const currentPoints = [...points]
+            const currentPoints = [...points]
           
           let isWhite = false
           let hasChecker = false
@@ -3258,9 +3258,9 @@ export default function BackgammonBoard({
               // Удаление в мусорку - ничего не добавляем
             } else if (targetPoint >= 0 && targetPoint < 24) {
               if (isWhite) {
-                currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
+              currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) + 1
               } else {
-                currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) - 1
+              currentPoints[targetPoint] = (currentPoints[targetPoint] || 0) - 1
               }
             }
             
@@ -3947,7 +3947,7 @@ export default function BackgammonBoard({
                   return (
                     <div
                       style={{
-                        position: 'absolute',
+                      position: 'absolute',
                         top: 0,
                         left: 0,
                         right: 0,
@@ -3967,14 +3967,14 @@ export default function BackgammonBoard({
                     {!d1FullyUsed && (
                       <div style={{ position: 'relative', transition: 'opacity 0.3s ease' }}>
                         {renderTriangleOverlay(d1Progress)}
-                        <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
-                      </div>
+                      <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
+                    </div>
                     )}
                     {!d2FullyUsed && (
                       <div style={{ position: 'relative', transition: 'opacity 0.3s ease' }}>
                         {renderTriangleOverlay(d2Progress)}
-                        <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
-                      </div>
+                      <Dice3D values={[dieValue]} animating={false} diceColor={currentPlayer === 0 ? diceColorPlayer1 : diceColorPlayer2} />
+                    </div>
                     )}
                   </>
                 );

@@ -2654,8 +2654,8 @@ export default function Game() {
                     // ВАЖНО: Нельзя менять настройку во время активного хода
                     if (pendingMoves.length > 0) {
                       console.log('⚠️ Cannot change requireConfirmMove during active move')
-                      return
-                    }
+      return
+    }
                     const newValue = !requireConfirmMove
                     console.log('✓ Требовать подтверждение хода clicked, newValue:', newValue, 'oldValue:', requireConfirmMove)
                     setRequireConfirmMove(newValue)
@@ -2837,7 +2837,7 @@ export default function Game() {
               </button>
 
               {/* 3. Установка кубиков */}
-              <button
+            <button
                 onClick={() => {
                   setShowSandboxDiceModal(true)
                   setSandboxDiceModalMode('set')
@@ -2866,7 +2866,7 @@ export default function Game() {
                   <div style={{ fontWeight: 600, marginBottom: '4px' }}>Установка кубиков</div>
                   <div style={{ fontSize: '12px', color: '#B6B6B6' }}>Установить кубики для черных или белых</div>
                 </div>
-              </button>
+            </button>
 
               {/* 4. Подтверждение хода (только в режиме игры) */}
               {sandboxMode === 'play' && (
@@ -2896,7 +2896,7 @@ export default function Game() {
                   <div>
                     <div style={{ fontWeight: 600, marginBottom: '4px' }}>
                       {sandboxRequireConfirmMove ? 'Отключить подтверждение' : 'Включить подтверждение'}
-                    </div>
+          </div>
                     <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
                       {sandboxRequireConfirmMove ? 'Ходы будут применяться сразу' : 'Требовать подтверждение перед применением хода'}
                     </div>
@@ -2926,7 +2926,7 @@ export default function Game() {
                   }}
                 >
                   <span>✓</span> Подтвердить ход
-                </button>
+            </button>
               )}
             </div>
           </div>

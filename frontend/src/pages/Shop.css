@@ -1009,16 +1009,7 @@
     padding: 12px;
   }
 
-  .shop-nar-coin-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .shop-nar-coin-icon {
-    width: 80px;
-    height: 80px;
-    align-self: center;
-  }
+  /* Удалено: дублирующий стиль, который переводил иконку вниз */
 
   .shop-nar-coin-amount {
     font-size: 20px;

@@ -205,38 +205,11 @@ export default function City() {
                 const { config, userBuilding } = buildingData
                 const incomeMultiplier = config.incomeMultiplier || 0.07
                 
-                // Рассчитываем актуальный накопленный доход на основе времени
+                // Накопленный доход берем ТОЛЬКО из БД, без пересчета на фронтенде,
+                // чтобы полностью совпадать с логикой бэкенда
                 let accumulatedIncome = 0
                 if (userBuilding) {
-                  // ВАЖНО: Используем значение из БД как основу, но пересчитываем на основе времени
-                  // для отображения актуального состояния
-                  const baseAccumulated = Number(userBuilding.accumulatedIncome || 0)
-                  
-                  // Используем lastIncomeCollection или текущее время, если его нет
-                  const lastCollection = userBuilding.lastIncomeCollection 
-                    ? new Date(userBuilding.lastIncomeCollection) 
-                    : (userBuilding.createdAt ? new Date(userBuilding.createdAt) : new Date())
-                  const now = new Date()
-                  const hoursPassed = Math.max(0, (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60))
-                  
-                  // incomePerHour может быть строкой (bigint) или числом
-                  const incomePerHour = typeof userBuilding.incomePerHour === 'string' 
-                    ? Number(userBuilding.incomePerHour) 
-                    : (userBuilding.incomePerHour || 0)
-                  
-                  // Рассчитываем новый доход только если прошло достаточно времени (больше 1 минуты)
-                  // Это предотвращает показ дохода сразу после сбора
-                  const newIncome = hoursPassed > 0.017 ? Math.floor(incomePerHour * hoursPassed) : 0
-                  
-                  // Если в БД уже есть накопленный доход, используем его (бэкенд уже рассчитал)
-                  // Иначе используем пересчитанный на фронтенде
-                  accumulatedIncome = baseAccumulated > 0 ? baseAccumulated : newIncome
-                  
-                  // Ограничиваем максимальным накоплением
-                  const maxAccumulation = Number(config.maxAccumulation || 0)
-                  if (maxAccumulation > 0) {
-                    accumulatedIncome = Math.min(accumulatedIncome, maxAccumulation)
-                  }
+                  accumulatedIncome = Number(userBuilding.accumulatedIncome || 0)
                 }
                 
                 const upgradePrice = userBuilding && userBuilding.level < config.maxLevel
