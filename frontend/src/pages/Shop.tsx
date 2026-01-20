@@ -7,7 +7,7 @@ import Button from '../components/Button'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
-import { StarIcon, TargetIcon, EnergyIcon, CrownIcon } from '../components/Icons'
+import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, HeartIcon } from '../components/Icons'
 import './Shop.css'
 
 interface NarCoinPackage {
@@ -604,6 +604,9 @@ export default function Shop() {
                     Купить энергию
                   </Button>
                 </div>
+                <div className="shop-nar-coin-icon">
+                  <img src="/img/молния.png" alt="energy" className="shop-nar-coin-icon-img" />
+                </div>
               </div>
             </Card>
 
@@ -630,6 +633,9 @@ export default function Shop() {
                   >
                     Купить жизни
                   </Button>
+                </div>
+                <div className="shop-nar-coin-icon">
+                  <HeartIcon size={120} style={{ color: '#E84142', filter: 'drop-shadow(0 0 12px rgba(232, 65, 66, 0.6))' }} />
                 </div>
               </div>
             </Card>
@@ -662,6 +668,9 @@ export default function Shop() {
                   >
                     {shopBarInfo?.license.hasLicense ? 'Уже куплена' : 'Купить лицензию'}
                   </Button>
+                </div>
+                <div className="shop-nar-coin-icon">
+                  <CrownIcon size={120} style={{ color: '#FFD700', filter: 'drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))' }} />
                 </div>
               </div>
             </Card>

@@ -6,7 +6,7 @@ import SkillPointsModal from '../components/SkillPointsModal'
 import EnhancementDetailModal from '../components/EnhancementDetailModal'
 import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
-import { CoinIcon, EnergyIcon, HeartIcon, CrownIcon, StarIcon, MuscleIcon } from '../components/Icons'
+import { CoinIcon, EnergyIcon, HeartIcon, CrownIcon, StarIcon, MuscleIcon, BoxIcon, BarChartIcon, SettingsIcon, ArrowRightIcon } from '../components/Icons'
 import './Profile.css'
 
 export default function Profile() {
@@ -433,25 +433,37 @@ export default function Profile() {
             onClick={() => navigate('/inventory')}
             className="profile-bottom-menu-item-v2"
           >
-            <span className="profile-bottom-menu-icon-v2">📦</span>
+            <span className="profile-bottom-menu-icon-v2">
+              <BoxIcon size={20} style={{ color: '#FFF' }} />
+            </span>
             <span className="profile-bottom-menu-title-v2">Инвентарь</span>
-            <span className="profile-bottom-menu-arrow-v2">→</span>
+            <span className="profile-bottom-menu-arrow-v2">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
           </div>
           <div
             onClick={() => navigate('/history')}
             className="profile-bottom-menu-item-v2"
           >
-            <span className="profile-bottom-menu-icon-v2">📊</span>
+            <span className="profile-bottom-menu-icon-v2">
+              <BarChartIcon size={20} style={{ color: '#FFF' }} />
+            </span>
             <span className="profile-bottom-menu-title-v2">Аналитика</span>
-            <span className="profile-bottom-menu-arrow-v2">→</span>
+            <span className="profile-bottom-menu-arrow-v2">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
           </div>
           <div
             onClick={() => navigate('/settings')}
             className="profile-bottom-menu-item-v2"
           >
-            <span className="profile-bottom-menu-icon-v2">⚙️</span>
+            <span className="profile-bottom-menu-icon-v2">
+              <SettingsIcon size={20} style={{ color: '#FFF' }} />
+            </span>
             <span className="profile-bottom-menu-title-v2">Настройки</span>
-            <span className="profile-bottom-menu-arrow-v2">→</span>
+            <span className="profile-bottom-menu-arrow-v2">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
           </div>
         </div>
       </>

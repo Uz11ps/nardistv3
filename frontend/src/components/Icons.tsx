@@ -286,3 +286,58 @@ export const TicketIcon: React.FC<IconProps> = ({ className, style, size = 20 })
   </svg>
 )
 
+export const BoxIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <img 
+    src="/img/инв.png" 
+    alt="inventory" 
+    className={className}
+    style={{ width: size, height: size, ...style }}
+  />
+)
+
+export const BarChartIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+    style={style}
+  >
+    <line x1="12" y1="20" x2="12" y2="10"></line>
+    <line x1="18" y1="20" x2="18" y2="4"></line>
+    <line x1="6" y1="20" x2="6" y2="16"></line>
+  </svg>
+)
+
+export const SettingsIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <img 
+    src="/img/settings.png" 
+    alt="settings" 
+    className={className}
+    style={{ width: size, height: size, ...style }}
+  />
+)
+
+export const ArrowRightIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+    style={style}
+  >
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+    <polyline points="12 5 19 12 12 19"></polyline>
+  </svg>
+)
+
