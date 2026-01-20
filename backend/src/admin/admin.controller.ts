@@ -968,8 +968,7 @@ export class AdminController {
   }
 
   @Put('board-configs')
-  @UseGuards(AdminAuthGuard)
-  async updateBoardConfig(@CurrentUser() user: any, @Body() body: { size: number; config: any }) {
+  async updateBoardConfig(@Body() body: { size: number; config: any }) {
     return this.adminService.updateBoardConfig(body.size, body.config)
   }
 
