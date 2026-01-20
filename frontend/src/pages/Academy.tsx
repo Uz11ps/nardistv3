@@ -721,10 +721,7 @@ export default function Academy() {
             {getFilteredAndSortedItems(onboarding).map((item) => (
               <div key={item.id} className="academy-grid-card" onClick={() => handleOpen(item)}>
                 <div className="academy-grid-card-icon">
-                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
-                    <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
-                  </svg>
+                  <img src="/img/шляпа.png" alt="course" className="academy-hat-icon" />
                 </div>
                 <div className="academy-grid-card-title">{item.title}</div>
                 <div className="academy-grid-card-author">{item.author}</div>
@@ -768,17 +765,7 @@ export default function Academy() {
             })().map((course) => (
               <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
                 <div className="academy-grid-card-icon">
-                  <img 
-                    src="/img/шляпа.png" 
-                    alt="course" 
-                    style={{ 
-                      width: '78px',
-                      height: '58px',
-                      flexShrink: 0,
-                      aspectRatio: '39/29',
-                      objectFit: 'contain'
-                    }} 
-                  />
+                  <img src="/img/шляпа.png" alt="course" className="academy-hat-icon" />
                 </div>
                 <div className="academy-grid-card-title">{course.title}</div>
                 <div className="academy-grid-card-author">{course.author}</div>
@@ -822,10 +809,7 @@ export default function Academy() {
             })().map((article) => (
               <div key={article.id} className="academy-grid-card" onClick={() => handleOpen(article)}>
                 <div className="academy-grid-card-icon">
-                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
-                    <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
-                  </svg>
+                  <img src="/img/шляпа.png" alt="article" className="academy-hat-icon" />
                 </div>
                 <div className="academy-grid-card-title">{article.title}</div>
                 <div className="academy-grid-card-author">{article.author}</div>
@@ -881,10 +865,7 @@ export default function Academy() {
                 .map((item) => (
                 <div key={item.id} className="academy-grid-card" onClick={() => handleOpen(item)}>
                   <div className="academy-grid-card-icon">
-                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M20 5L5 13L20 21L35 13L20 5Z" fill="#B6B6B6"/>
-                      <path d="M5 13V25L20 33L35 25V13L20 21L5 13Z" fill="#B6B6B6" fillOpacity="0.5"/>
-                    </svg>
+                    <img src="/img/шляпа.png" alt="material" className="academy-hat-icon" />
                   </div>
                   <div className="academy-grid-card-title">{item.title}</div>
                   <div className="academy-grid-card-author">{item.author}</div>

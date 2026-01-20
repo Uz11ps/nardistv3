@@ -577,7 +577,7 @@ export default function Profile() {
             <div className={`premium-status-card ${hasPremium ? 'active' : 'inactive'}`}>
               <div className="premium-status-header">
                 <div className="premium-status-icon">
-                  {hasPremium ? <CrownIcon size={32} style={{ color: '#FFD700' }} /> : <StarIcon size={32} style={{ color: '#FFD700' }} />}
+                  {hasPremium ? <CrownIcon size={32} style={{ color: '#FFD700' }} /> : <img src="/img/crown.png" alt="premium" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />}
                 </div>
                 <div className="premium-status-info">
                   <div className="premium-status-title">

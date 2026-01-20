@@ -480,7 +480,7 @@ export default function History() {
                               <RobotIcon size={16} style={{ color: '#707579' }} />
                             </span>
                             <span className="action-icon">
-                              <StarIcon size={16} style={{ color: '#FFD700' }} />
+                              <img src="/img/crown.png" alt="best" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
                             </span>
                           </div>
                         </div>

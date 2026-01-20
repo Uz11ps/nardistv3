@@ -98,7 +98,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                   onClick={() => setSelectedMoveIndex(idx * 2)}
                   title={move1.isBestMove ? 'Лучший ход!' : (move1.isError ? move1.errorDescription : '')}
                 >
-                  {move1.isBestMove && <span className="best-move-badge"><StarIcon size={16} style={{ color: '#FFD700' }} /></span>}
+                  {move1.isBestMove && <span className="best-move-badge"><img src="/img/crown.png" alt="best" style={{ width: '16px', height: '16px', objectFit: 'contain' }} /></span>}
                   <span className="move-dice">({move1.move.dice?.join('')})</span>
                   <span className="move-text">
                     {move1.move.moves?.map((m: any, i: number) => (
@@ -114,7 +114,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                   >
                     {move2.isBestMove && (
                       <span className="best-move-badge">
-                        <StarIcon size={14} style={{ color: '#FFD700' }} />
+                        <img src="/img/crown.png" alt="best" style={{ width: '14px', height: '14px', objectFit: 'contain' }} />
                       </span>
                     )}
                     <span className="move-dice">({move2.move.dice?.join('')})</span>
@@ -155,7 +155,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                         <RobotIcon size={16} style={{ color: '#707579' }} />
                       </span>
                       <span className="action-icon">
-                        <StarIcon size={16} style={{ color: '#FFD700' }} />
+                        <img src="/img/crown.png" alt="best" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
                       </span>
                     </div>
                   </div>

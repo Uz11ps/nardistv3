@@ -72,6 +72,16 @@
   justify-content: center;
 }
 
+.academy-hat-icon {
+  width: 78px !important;
+  height: 58px !important;
+  flex-shrink: 0 !important;
+  aspect-ratio: 39/29 !important;
+  object-fit: contain !important;
+  max-width: 78px !important;
+  max-height: 58px !important;
+}
+
 .academy-grid-card-title {
   color: #FFF;
   font-size: 13px;

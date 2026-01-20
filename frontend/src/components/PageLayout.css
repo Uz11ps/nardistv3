@@ -31,10 +31,27 @@
 /* Header */
 .page-layout-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   padding: 20px 16px;
   padding-top: 30px;
   gap: 12px;
+  position: relative;
+}
+
+@media (max-width: 480px) {
+  .page-layout-header {
+    padding: 16px 12px;
+    padding-top: 24px;
+  }
+  
+  .page-layout-title {
+    font-size: 20px;
+  }
+  
+  .page-layout-subtitle {
+    font-size: 13px;
+  }
 }
 
 .page-layout-back-button {
@@ -50,6 +67,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: absolute;
+  left: 16px;
 }
 
 .page-layout-title-section {
@@ -57,6 +76,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  align-items: center;
+  text-align: center;
 }
 
 .page-layout-right-action {
@@ -74,6 +95,8 @@
   font-weight: 600;
   line-height: 1.2;
   margin: 0;
+  text-align: center;
+  width: 100%;
 }
 
 .page-layout-subtitle {
@@ -84,6 +107,8 @@
   font-weight: 400;
   line-height: 1.4;
   margin: 0;
+  text-align: center;
+  width: 100%;
 }
 
 /* Tabs */
