@@ -184,6 +184,7 @@ export class UsersService {
       language: user.languageCode === 'ru' ? 'Русский' : user.languageCode,
       timezone: user.timezone ?? 'Europe/Moscow',
       requireConfirmMove: user.requireConfirmMove ?? true,
+      boardConfigs: user.boardConfigs || {},
     };
   }
 
@@ -196,6 +197,7 @@ export class UsersService {
     language?: string;
     timezone?: string;
     requireConfirmMove?: boolean;
+    boardConfigs?: any; // Конфиги доски для разных размеров экрана
   }) {
     const user = await this.findOne(userId);
     
@@ -223,6 +225,9 @@ export class UsersService {
     }
     if (settings.requireConfirmMove !== undefined) {
       user.requireConfirmMove = settings.requireConfirmMove;
+    }
+    if (settings.boardConfigs !== undefined) {
+      user.boardConfigs = settings.boardConfigs;
     }
     
     return this.usersRepository.save(user);

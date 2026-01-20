@@ -961,6 +961,18 @@ export class AdminController {
     return this.adminService.getSystemSettings();
   }
 
+  // Глобальные конфиги доски (для всех пользователей) - ПУБЛИЧНЫЙ endpoint
+  @Get('board-configs')
+  async getBoardConfigs() {
+    return this.adminService.getBoardConfigs()
+  }
+
+  @Put('board-configs')
+  @UseGuards(AdminAuthGuard)
+  async updateBoardConfig(@CurrentUser() user: any, @Body() body: { size: number; config: any }) {
+    return this.adminService.updateBoardConfig(body.size, body.config)
+  }
+
   @Put('system-settings')
   @UseGuards(AdminAuthGuard)
   async updateSystemSettings(

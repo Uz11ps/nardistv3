@@ -97,149 +97,128 @@ export default function BackgammonBoard({
 
   const [dice3DPosition, setDice3DPosition] = useState<{ x: number; y: number; size: number } | null>(null)
 
-  // --- CONFIGURATIONS ---
-    // Large Screen (Desktop) - Optimized
-    const DESKTOP_CONFIG = {
-      sideMarginLeftPct: 0.04,
-      sideMarginRightPct: 0.05,
-      barMarginLeftPct: 0.03,
-      barMarginRightPct: 0.012,
-      barWidthPct: 0.025,
-      topMarginPct: 0.058,
-      bearOffHeightPct: 0.134,
-      checkerWidthRatio: 1.5,
-      checkerHeightRatio: 0.252,
-      checkerDrawScale: 1.28,
-      diceP1X: 0.550,
-      diceP1Y: 0.530,
-      diceP2X: 0.210,
-      diceP2Y: 0.390,
-      checkerTopOffset: -349,
-      checkerBottomOffset: 349,
-      // Legacy text offsets (for fallback)
-      textTopOffset: -15,
-      textBottomOffset: 15,
-      // New parameters for advanced highlight and text control
-      highlightWidthScale: 1,
-      highlightHeightScale: 1,
-      highlightXOffset: 0,
-      highlightYOffset: -31,
-      // Valid moves highlight parameters
-      validHighlightWidthScale: 1,
-      validHighlightHeightScale: 1,
-      validHighlightXOffset: 0,
-      validHighlightYOffset: -31,
-      // Dedicated bear-off valid highlight
-      bearOffValidWidthScale: 1,
-      bearOffValidHeightScale: 1,
-      bearOffValidWhiteXOffset: 0,
-      bearOffValidWhiteYOffset: 0,
-      bearOffValidBlackXOffset: 0,
-      bearOffValidBlackYOffset: 0,
-      // Bottom row specific highlight offset (if needed separately, otherwise shared)
-      highlightBottomYOffset: 26,
-      validHighlightBottomYOffset: 26,
-
-      // Dragging checker parameters
-      dragCheckerSizeScale: 1,
-      dragCheckerXOffset: 0,
-      dragCheckerYOffset: 0,
-      // Bear-off (lot) customization
-      bearOffCheckerScale: 0.9,
-      bearOffWhiteXOffset: 5,
-      bearOffWhiteYOffset: 5,
-      bearOffBlackXOffset: -5,
-      bearOffBlackYOffset: 5,
-      // Advanced text offsets (quadrants)
-      textTopRightY: -316, // Points 19-24 (Indices 0-5)
-      textTopLeftY: -316,  // Points 13-18 (Indices 6-11)
-      textBottomLeftY: 316, // Points 7-12 (Indices 12-17)
-      textBottomRightY: 316, // Points 1-6 (Indices 18-23)
-      // Hitbox parameters
-      pointHitboxPadding: 5,
-      barHitboxTopPct: 0.2,
-      barHitboxBottomPct: 0.8,
-      barHitboxWidthPct: 0.088,
-      bearOffHitboxPaddingX: 0,
-      bearOffHitboxPaddingY: 0,
-      // Checker hitbox parameters
-      checkerHitboxPadding: 5,
-      checkerHitboxSizeScale: 1.0,
-      // Point hitbox heights (top and bottom rows)
-      pointHitboxHeightTop: null as number | null,
-      pointHitboxHeightBottom: null as number | null,
+  // Дефолтные конфиги используются ТОЛЬКО для создания начального конфига в localStorage
+  // ВСЕ значения всегда берутся из сохраненного конфига в localStorage
+  const getDefaultConfig = (isMobile: boolean) => {
+    if (isMobile) {
+      return {
+        sideMarginLeftPct: 0.04,
+        sideMarginRightPct: 0.05,
+        barMarginLeftPct: 0.03,
+        barMarginRightPct: 0.012,
+        barWidthPct: 0.025,
+        topMarginPct: 0.058,
+        bearOffHeightPct: 0.134,
+        checkerWidthRatio: 1.5,
+        checkerHeightRatio: 0.252,
+        checkerDrawScale: 1.28,
+        diceP1X: 0.5,
+        diceP1Y: 0.6,
+        diceP2X: 0.16,
+        diceP2Y: 0.24, 
+        checkerTopOffset: -349, 
+        checkerBottomOffset: 349,
+        textTopOffset: -15,
+        textBottomOffset: 15,
+        highlightWidthScale: 1,
+        highlightHeightScale: 1,
+        highlightXOffset: 0,
+        highlightYOffset: -31,
+        validHighlightWidthScale: 1,
+        validHighlightHeightScale: 1,
+        validHighlightXOffset: 0,
+        validHighlightYOffset: -31,
+        bearOffValidWidthScale: 1,
+        bearOffValidHeightScale: 1,
+        bearOffValidWhiteXOffset: 0,
+        bearOffValidWhiteYOffset: 0,
+        bearOffValidBlackXOffset: 0,
+        bearOffValidBlackYOffset: 0,
+        highlightBottomYOffset: 26,
+        validHighlightBottomYOffset: 26,
+        dragCheckerSizeScale: 1,
+        dragCheckerXOffset: 0,
+        dragCheckerYOffset: 0,
+        bearOffCheckerScale: 0.9,
+        bearOffWhiteXOffset: 2,
+        bearOffWhiteYOffset: 0,
+        bearOffBlackXOffset: 2,
+        bearOffBlackYOffset: 0,
+        textTopRightY: -316,
+        textTopLeftY: -316, 
+        textBottomLeftY: 316, 
+        textBottomRightY: 316,
+        pointHitboxPadding: 5,
+        barHitboxTopPct: 0.2,
+        barHitboxBottomPct: 0.8,
+        barHitboxWidthPct: 0.088,
+        bearOffHitboxPaddingX: 0,
+        bearOffHitboxPaddingY: 0,
+        checkerHitboxPadding: 5,
+        checkerHitboxSizeScale: 1.0,
+        pointHitboxHeightTop: null as number | null,
+        pointHitboxHeightBottom: null as number | null,
+      }
+    } else {
+      return {
+        sideMarginLeftPct: 0.04,
+        sideMarginRightPct: 0.05,
+        barMarginLeftPct: 0.03,
+        barMarginRightPct: 0.012,
+        barWidthPct: 0.025,
+        topMarginPct: 0.058,
+        bearOffHeightPct: 0.134,
+        checkerWidthRatio: 1.5,
+        checkerHeightRatio: 0.252,
+        checkerDrawScale: 1.28,
+        diceP1X: 0.550,
+        diceP1Y: 0.530,
+        diceP2X: 0.210,
+        diceP2Y: 0.390,
+        checkerTopOffset: -349,
+        checkerBottomOffset: 349,
+        textTopOffset: -15,
+        textBottomOffset: 15,
+        highlightWidthScale: 1,
+        highlightHeightScale: 1,
+        highlightXOffset: 0,
+        highlightYOffset: -31,
+        validHighlightWidthScale: 1,
+        validHighlightHeightScale: 1,
+        validHighlightXOffset: 0,
+        validHighlightYOffset: -31,
+        bearOffValidWidthScale: 1,
+        bearOffValidHeightScale: 1,
+        bearOffValidWhiteXOffset: 0,
+        bearOffValidWhiteYOffset: 0,
+        bearOffValidBlackXOffset: 0,
+        bearOffValidBlackYOffset: 0,
+        highlightBottomYOffset: 26,
+        validHighlightBottomYOffset: 26,
+        dragCheckerSizeScale: 1,
+        dragCheckerXOffset: 0,
+        dragCheckerYOffset: 0,
+        bearOffCheckerScale: 0.9,
+        bearOffWhiteXOffset: 5,
+        bearOffWhiteYOffset: 5,
+        bearOffBlackXOffset: -5,
+        bearOffBlackYOffset: 5,
+        textTopRightY: -316,
+        textTopLeftY: -316,
+        textBottomLeftY: 316,
+        textBottomRightY: 316,
+        pointHitboxPadding: 5,
+        barHitboxTopPct: 0.2,
+        barHitboxBottomPct: 0.8,
+        barHitboxWidthPct: 0.088,
+        bearOffHitboxPaddingX: 0,
+        bearOffHitboxPaddingY: 0,
+        checkerHitboxPadding: 5,
+        checkerHitboxSizeScale: 1.0,
+        pointHitboxHeightTop: null as number | null,
+        pointHitboxHeightBottom: null as number | null,
+      }
     }
-
-  // Small Screen (Mobile) - Optimized
-  const MOBILE_CONFIG = {
-    sideMarginLeftPct: 0.04,
-    sideMarginRightPct: 0.05,
-    barMarginLeftPct: 0.03,
-    barMarginRightPct: 0.012,
-    barWidthPct: 0.025,
-    topMarginPct: 0.058,
-    bearOffHeightPct: 0.134,
-    checkerWidthRatio: 1.5,
-    checkerHeightRatio: 0.252,
-    checkerDrawScale: 1.28,
-    diceP1X: 0.5,
-    diceP1Y: 0.6,
-    diceP2X: 0.16,
-    diceP2Y: 0.24, 
-    checkerTopOffset: -349, 
-    checkerBottomOffset: 349,
-    // Legacy text offsets
-    textTopOffset: -15,
-    textBottomOffset: 15,
-    // New parameters for advanced highlight and text control
-    highlightWidthScale: 1,
-    highlightHeightScale: 1,
-    highlightXOffset: 0,
-    highlightYOffset: -31,
-    // Valid moves highlight parameters
-    validHighlightWidthScale: 1,
-    validHighlightHeightScale: 1,
-    validHighlightXOffset: 0,
-    validHighlightYOffset: -31,
-    // Dedicated bear-off valid highlight
-    bearOffValidWidthScale: 1,
-    bearOffValidHeightScale: 1,
-    bearOffValidWhiteXOffset: 0,
-    bearOffValidWhiteYOffset: 0,
-    bearOffValidBlackXOffset: 0,
-    bearOffValidBlackYOffset: 0,
-    // Bottom row specific highlight offset (if needed separately, otherwise shared)
-    highlightBottomYOffset: 26,
-    validHighlightBottomYOffset: 26,
-
-    // Dragging checker parameters
-    dragCheckerSizeScale: 1,
-    dragCheckerXOffset: 0,
-    dragCheckerYOffset: 0,
-    // Bear-off (lot) customization
-    bearOffCheckerScale: 0.9,
-    bearOffWhiteXOffset: 2,
-    bearOffWhiteYOffset: 0,
-    bearOffBlackXOffset: 2,
-    bearOffBlackYOffset: 0,
-    // Advanced text offsets (quadrants)
-    textTopRightY: -316,
-    textTopLeftY: -316, 
-    textBottomLeftY: 316, 
-    textBottomRightY: 316,
-    // Hitbox parameters
-    pointHitboxPadding: 5,
-    barHitboxTopPct: 0.2,
-    barHitboxBottomPct: 0.8,
-    barHitboxWidthPct: 0.088,
-    bearOffHitboxPaddingX: 0,
-    bearOffHitboxPaddingY: 0,
-    // Checker hitbox parameters
-    checkerHitboxPadding: 5,
-    checkerHitboxSizeScale: 1.0,
-    // Point hitbox heights (top and bottom rows)
-    pointHitboxHeightTop: null as number | null,
-    pointHitboxHeightBottom: null as number | null,
   }
 
   // --- DEBUG / ADJUSTMENT MODE ---
@@ -247,69 +226,57 @@ export default function BackgammonBoard({
   const [showHitboxes, setShowHitboxes] = useState(false)
   
   // Загружаем конфиг из localStorage или используем дефолтный
-  // Функция для загрузки конфига из localStorage (всегда свежий, без кэша)
-  const loadConfigFromStorage = () => {
+  // Функция для загрузки ГЛОБАЛЬНОГО конфига с сервера для текущего размера (для всех пользователей)
+  const loadConfigFromServer = async () => {
     try {
       const DEBUG_SIZES = [368, 512, 768, 1024, 1440] as const
-      const getConfigKey = (size: number) => `backgammon-debug-config-v16-${size}px`
-      
       const currentWidth = containerRef.current?.offsetWidth || window.innerWidth
-      const defaultConfig = currentWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+      const isMobile = currentWidth < 768
+      const defaultConfig = getDefaultConfig(isMobile)
       
-      // ПРИОРИТЕТ 1: Сначала пытаемся загрузить конфиг для текущего размера (размерные конфиги имеют приоритет!)
+      // Загружаем ГЛОБАЛЬНЫЕ настройки системы (доступны всем, без авторизации)
+      const response = await apiClient.get('/admin/board-configs')
+      const globalConfigs = response.data || {}
+      
+      // ПРИОРИТЕТ 1: Сначала пытаемся загрузить конфиг для текущего размера
       const closestSize = DEBUG_SIZES.reduce((prev, curr) => 
         Math.abs(curr - currentWidth) < Math.abs(prev - currentWidth) ? curr : prev
       )
-      const sizeKey = getConfigKey(closestSize)
-      const savedForSize = localStorage.getItem(sizeKey)
-      if (savedForSize) {
-        const parsed = JSON.parse(savedForSize)
-        if (parsed.sideMarginLeftPct !== undefined) {
-          return { ...defaultConfig, ...parsed }
-        }
+      
+      const sizeKey = closestSize.toString()
+      
+      if (globalConfigs[sizeKey] && globalConfigs[sizeKey].sideMarginLeftPct !== undefined) {
+        // ВСЕГДА используем сохраненный глобальный конфиг
+        return globalConfigs[sizeKey]
       }
       
-      // ПРИОРИТЕТ 2: Если размерного конфига нет, используем общий как fallback
-      const saved = localStorage.getItem('backgammon-debug-config-v16')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (parsed.sideMarginLeftPct !== undefined) {
-          return { ...defaultConfig, ...parsed }
-        }
-      }
+      // Если ничего не найдено - возвращаем дефолтный конфиг
+      return defaultConfig
     } catch (e) {
-      console.warn('Failed to load debug config from localStorage:', e)
+      console.warn('Failed to load global board config from server:', e)
+      // В случае ошибки возвращаем дефолтный конфиг
+      const currentWidth = containerRef.current?.offsetWidth || window.innerWidth
+      return getDefaultConfig(currentWidth < 768)
     }
-    
-    // Если ничего не найдено, возвращаем дефолтный конфиг
-    const defaultConfig = containerRef.current && containerRef.current.offsetWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
-    return defaultConfig
   }
   
   const [debugConfig, setDebugConfig] = useState(() => {
-    // При инициализации загружаем из localStorage
-    return loadConfigFromStorage()
+    // При инициализации используем дефолтный конфиг, потом загрузим с сервера
+    const currentWidth = typeof window !== 'undefined' ? window.innerWidth : 768
+    return getDefaultConfig(currentWidth < 768)
   })
   
-  // Загружаем конфиг из localStorage только при первом монтировании
-  // При открытии/закрытии дебага НЕ перезагружаем - используем текущий конфиг
-  
-  // Слушаем изменения localStorage только из других вкладок (storage event)
-  // В текущем окне изменения применяются через setDebugConfig в DebugPanel
+  // Загружаем конфиг с сервера при монтировании (когда containerRef готов)
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith('backgammon-debug-config-v16')) {
-        const freshConfig = loadConfigFromStorage()
+    if (containerRef.current) {
+      loadConfigFromServer().then(freshConfig => {
         setDebugConfig(freshConfig)
-      }
+      })
     }
-    
-    window.addEventListener('storage', handleStorageChange)
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-    }
-  }, [])
+  }, []) // Только при монтировании
+  
+  // Перезагружаем конфиг с сервера при изменении (можно добавить polling или websocket)
+  // В текущем окне изменения применяются через setDebugConfig в DebugPanel
   
   // Используем текущий конфиг - он применяется ВСЕГДА (и в игре, и в дебаге)
   const effectiveDebugConfig = debugConfig
@@ -323,11 +290,8 @@ export default function BackgammonBoard({
     const handleResize = () => {
         if (containerRef.current) {
             const width = containerRef.current.offsetWidth
-            if (width < 768) {
-                setDebugConfig(MOBILE_CONFIG)
-            } else {
-                setDebugConfig(DESKTOP_CONFIG)
-            }
+            const isMobile = width < 768
+            setDebugConfig(getDefaultConfig(isMobile))
         }
     }
 
@@ -978,8 +942,8 @@ export default function BackgammonBoard({
     const barMarginRight = width * (config.barMarginRightPct ?? 0)
 
     // Уменьшаем отступы сбоку и ширину бара, чтобы треугольники стали шире
-    const sideMarginLeft = width * (config.sideMarginLeftPct ?? config.sideMarginPct ?? 0.032)
-    const sideMarginRight = width * (config.sideMarginRightPct ?? config.sideMarginPct ?? 0.047)
+    const sideMarginLeft = width * (config.sideMarginLeftPct ?? 0.032)
+    const sideMarginRight = width * (config.sideMarginRightPct ?? 0.047)
     
     // Рабочая область доски (без лотка и рамки)
     const playAreaHeight = height - bearOffHeight - topMargin
@@ -1252,10 +1216,10 @@ export default function BackgammonBoard({
     const blackCenterX = width * 0.25
     
     // Белая половина (правая)
-    const bearOffHitboxPaddingX = config.bearOffHitboxPaddingX !== undefined ? config.bearOffHitboxPaddingX : 0
-    const bearOffHitboxPaddingY = config.bearOffHitboxPaddingY !== undefined ? config.bearOffHitboxPaddingY : 0
-    const bearOffValidWhiteXOffset = config.bearOffValidWhiteXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
-    const bearOffValidWhiteYOffset = config.bearOffValidWhiteYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
+    const bearOffHitboxPaddingX = config.bearOffHitboxPaddingX ?? 0
+    const bearOffHitboxPaddingY = config.bearOffHitboxPaddingY ?? 0
+    const bearOffValidWhiteXOffset = config.bearOffValidWhiteXOffset ?? config.validHighlightXOffset ?? 0
+    const bearOffValidWhiteYOffset = config.bearOffValidWhiteYOffset ?? config.validHighlightYOffset ?? 0
     const bearOffValidWhiteHX = whiteCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidWhiteXOffset + bearOffHitboxPaddingX)
     const bearOffValidWhiteHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidWhiteYOffset + bearOffHitboxPaddingY
     
@@ -1270,8 +1234,8 @@ export default function BackgammonBoard({
     }
     
     // Черная половина (левая)
-    const bearOffValidBlackXOffset = config.bearOffValidBlackXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
-    const bearOffValidBlackYOffset = config.bearOffValidBlackYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
+    const bearOffValidBlackXOffset = config.bearOffValidBlackXOffset ?? config.validHighlightXOffset ?? 0
+    const bearOffValidBlackYOffset = config.bearOffValidBlackYOffset ?? config.validHighlightYOffset ?? 0
     const bearOffValidBlackHX = blackCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidBlackXOffset + bearOffHitboxPaddingX)
     const bearOffValidBlackHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidBlackYOffset + bearOffHitboxPaddingY
     
@@ -1288,7 +1252,7 @@ export default function BackgammonBoard({
     // Проверяем все точки
     // Прямой расчет попадания в точку на основе логики getPointCoordinates
     // Добавляем небольшой отступ (padding) для более легкого попадания
-    const padding = config.pointHitboxPadding !== undefined ? config.pointHitboxPadding : 5;
+    const padding = config.pointHitboxPadding ?? 5;
     // Определяем размер шашки для расширения хитбокса
     // Берем приблизительный размер на основе ширины точки
     const pW_approx = (width / 2) / 6; 
@@ -1373,9 +1337,9 @@ export default function BackgammonBoard({
     
     // Проверяем бар (упрощенно - центр экрана)
     // В sandbox режиме проверяем наличие шашек на баре, а не isPlayer1
-    const barHitboxWidthPct = config.barHitboxWidthPct !== undefined ? config.barHitboxWidthPct : 0.088
-    const barHitboxTopPct = config.barHitboxTopPct !== undefined ? config.barHitboxTopPct : 0.2
-    const barHitboxBottomPct = config.barHitboxBottomPct !== undefined ? config.barHitboxBottomPct : 0.8
+    const barHitboxWidthPct = config.barHitboxWidthPct ?? 0.088
+    const barHitboxTopPct = config.barHitboxTopPct ?? 0.2
+    const barHitboxBottomPct = config.barHitboxBottomPct ?? 0.8
     const barWidth = width * barHitboxWidthPct
     const barX = (width - barWidth) / 2
     if (actualX >= barX && actualX <= barX + barWidth) {
@@ -1419,11 +1383,11 @@ export default function BackgammonBoard({
     
     // Параметры хитбоксов
     const padding = config.pointHitboxPadding !== undefined ? config.pointHitboxPadding : 5
-    const barHitboxWidthPct = config.barHitboxWidthPct !== undefined ? config.barHitboxWidthPct : 0.088
-    const barHitboxTopPct = config.barHitboxTopPct !== undefined ? config.barHitboxTopPct : 0.2
-    const barHitboxBottomPct = config.barHitboxBottomPct !== undefined ? config.barHitboxBottomPct : 0.8
-    const bearOffHitboxPaddingX = config.bearOffHitboxPaddingX !== undefined ? config.bearOffHitboxPaddingX : 0
-    const bearOffHitboxPaddingY = config.bearOffHitboxPaddingY !== undefined ? config.bearOffHitboxPaddingY : 0
+    const barHitboxWidthPct = config.barHitboxWidthPct ?? 0.088
+    const barHitboxTopPct = config.barHitboxTopPct ?? 0.2
+    const barHitboxBottomPct = config.barHitboxBottomPct ?? 0.8
+    const bearOffHitboxPaddingX = config.bearOffHitboxPaddingX ?? 0
+    const bearOffHitboxPaddingY = config.bearOffHitboxPaddingY ?? 0
     
     // 1. Хитбоксы точек (красные пунктирные линии)
     ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)'
@@ -1494,23 +1458,23 @@ export default function BackgammonBoard({
     
     // Белая половина (правая)
     const whiteCenterX = width * 0.75
-    const bearOffValidWhiteXOffset = config.bearOffValidWhiteXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
-    const bearOffValidWhiteYOffset = config.bearOffValidWhiteYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
+    const bearOffValidWhiteXOffset = config.bearOffValidWhiteXOffset ?? config.validHighlightXOffset ?? 0
+    const bearOffValidWhiteYOffset = config.bearOffValidWhiteYOffset ?? config.validHighlightYOffset ?? 0
     const bearOffValidWhiteHX = whiteCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidWhiteXOffset + bearOffHitboxPaddingX)
     const bearOffValidWhiteHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidWhiteYOffset + bearOffHitboxPaddingY
     ctx.strokeRect(bearOffValidWhiteHX, bearOffValidWhiteHY, bearOffValidHW, bearOffValidHH)
     
     // Черная половина (левая)
     const blackCenterX = width * 0.25
-    const bearOffValidBlackXOffset = config.bearOffValidBlackXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
-    const bearOffValidBlackYOffset = config.bearOffValidBlackYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
+    const bearOffValidBlackXOffset = config.bearOffValidBlackXOffset ?? config.validHighlightXOffset ?? 0
+    const bearOffValidBlackYOffset = config.bearOffValidBlackYOffset ?? config.validHighlightYOffset ?? 0
     const bearOffValidBlackHX = blackCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidBlackXOffset + bearOffHitboxPaddingX)
     const bearOffValidBlackHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidBlackYOffset + bearOffHitboxPaddingY
     ctx.strokeRect(bearOffValidBlackHX, bearOffValidBlackHY, bearOffValidHW, bearOffValidHH)
     
     // 4. Хитбоксы шашек (желтые пунктирные линии вокруг каждой шашки)
-    const checkerHitboxPadding = config.checkerHitboxPadding !== undefined ? config.checkerHitboxPadding : 5
-    const checkerHitboxSizeScale = config.checkerHitboxSizeScale !== undefined ? config.checkerHitboxSizeScale : 1.0
+    const checkerHitboxPadding = config.checkerHitboxPadding ?? 5
+    const checkerHitboxSizeScale = config.checkerHitboxSizeScale ?? 1.0
     ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)'
     ctx.lineWidth = 1.5
     ctx.setLineDash([3, 3])
@@ -1974,9 +1938,11 @@ export default function BackgammonBoard({
       if (whiteBarCount > 0) {
         const isAnimatingFromWhiteBar = animatingChecker && animatingChecker.from === 24
         const countToDraw = isAnimatingFromWhiteBar ? whiteBarCount - 1 : whiteBarCount
-        // Позиционируем в центре хитбокса бара (от height * 0.2 до height * 0.8)
-        const barHitboxTop = height * 0.2
-        const barHitboxBottom = height * 0.8
+        // Позиционируем в центре хитбокса бара (используем значения из конфига)
+        const barHitboxTopPct = effectiveDebugConfig.barHitboxTopPct ?? 0.2
+        const barHitboxBottomPct = effectiveDebugConfig.barHitboxBottomPct ?? 0.8
+        const barHitboxTop = height * barHitboxTopPct
+        const barHitboxBottom = height * barHitboxBottomPct
         const barHitboxCenter = (barHitboxTop + barHitboxBottom) / 2
         // Начинаем от центра и идем вниз
         const barStartY = barHitboxCenter
@@ -1996,9 +1962,11 @@ export default function BackgammonBoard({
       if (blackBarCount > 0) {
         const isAnimatingFromBlackBar = animatingChecker && animatingChecker.from === 25
         const countToDraw = isAnimatingFromBlackBar ? blackBarCount - 1 : blackBarCount
-        // Позиционируем в центре хитбокса бара (от height * 0.2 до height * 0.8)
-        const barHitboxTop = height * 0.2
-        const barHitboxBottom = height * 0.8
+        // Позиционируем в центре хитбокса бара (используем значения из конфига)
+        const barHitboxTopPct = effectiveDebugConfig.barHitboxTopPct ?? 0.2
+        const barHitboxBottomPct = effectiveDebugConfig.barHitboxBottomPct ?? 0.8
+        const barHitboxTop = height * barHitboxTopPct
+        const barHitboxBottom = height * barHitboxBottomPct
         const barHitboxCenter = (barHitboxTop + barHitboxBottom) / 2
         // Начинаем от центра и идем вверх
         const barStartY = barHitboxCenter
@@ -2082,11 +2050,11 @@ export default function BackgammonBoard({
       
       // Используем отдельные offset'ы для белых и черных
       const bearOffValidXOffset = isRightSide 
-        ? (config.bearOffValidWhiteXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0)
-        : (config.bearOffValidBlackXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0)
+        ? (config.bearOffValidWhiteXOffset ?? config.validHighlightXOffset ?? 0)
+        : (config.bearOffValidBlackXOffset ?? config.validHighlightXOffset ?? 0)
       const bearOffValidYOffset = isRightSide
-        ? (config.bearOffValidWhiteYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0)
-        : (config.bearOffValidBlackYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0)
+        ? (config.bearOffValidWhiteYOffset ?? config.validHighlightYOffset ?? 0)
+        : (config.bearOffValidBlackYOffset ?? config.validHighlightYOffset ?? 0)
       
       const bearOffValidHX = centerX - (bearOffValidHW / 2) + scaleX(bearOffValidXOffset)
       const bearOffValidHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidYOffset
@@ -3537,9 +3505,8 @@ export default function BackgammonBoard({
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
              <button 
                onClick={() => {
-                 const defaultConfig = isMobile ? MOBILE_CONFIG : DESKTOP_CONFIG
+                 const defaultConfig = getDefaultConfig(isMobile)
                  setDebugConfig(defaultConfig)
-                 localStorage.removeItem('backgammon-debug-config')
                }} 
                style={{ fontSize: '12px', padding: '3px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
                title="Сбросить на дефолт"
@@ -3682,8 +3649,7 @@ export default function BackgammonBoard({
           setDebugDice={setDebugDice}
           containerWidth={containerRef.current?.offsetWidth || 0}
           isMobile={containerRef.current ? containerRef.current.offsetWidth < 768 : false}
-          MOBILE_CONFIG={MOBILE_CONFIG}
-          DESKTOP_CONFIG={DESKTOP_CONFIG}
+          getDefaultConfig={getDefaultConfig}
           containerRef={containerRef}
           showHitboxes={showHitboxes}
           setShowHitboxes={setShowHitboxes}

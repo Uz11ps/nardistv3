@@ -314,7 +314,51 @@ export default function Game() {
   const [offsetConfirmed, setOffsetConfirmed] = useState<boolean>(false)
   const offsetConfirmedRef = useRef<boolean>(false)
   const [showGameMenu, setShowGameMenu] = useState<boolean>(false)
+  const [showSandboxMenu, setShowSandboxMenu] = useState<boolean>(false)
   const [requireConfirmMove, setRequireConfirmMove] = useState<boolean>((user as any)?.requireConfirmMove ?? true)
+  
+  // Sandbox menu states
+  const [showSandboxDiceModal, setShowSandboxDiceModal] = useState(false)
+  const [sandboxDiceModalMode, setSandboxDiceModalMode] = useState<'set' | 'queue' | 'random'>('set')
+  const [sandboxDiceTargetPlayer, setSandboxDiceTargetPlayer] = useState<number | null>(null)
+  const [sandboxDice1, setSandboxDice1] = useState(1)
+  const [sandboxDice2, setSandboxDice2] = useState(1)
+  const [sandboxDiceQueue, setSandboxDiceQueue] = useState<number[][]>([])
+  
+  // Sandbox dice functions
+  const handleSandboxApplyDice = async (d1: number, d2: number, playerIndex?: number | null) => {
+    if (!gameId) return
+    try {
+      await apiClient.post(`/games/${gameId}/sandbox/set-dice`, {
+        dice: [d1, d2],
+        player: playerIndex !== null && playerIndex !== undefined ? playerIndex : (gameState?.currentPlayer || 0),
+      })
+      setShowSandboxDiceModal(false)
+      loadGame()
+    } catch (e) {
+      alert('Ошибка при установке кубиков')
+    }
+  }
+  
+  const handleSandboxSetDice = () => {
+    if (sandboxDiceModalMode === 'set') {
+      handleSandboxApplyDice(sandboxDice1, sandboxDice2, sandboxDiceTargetPlayer)
+    } else if (sandboxDiceModalMode === 'queue') {
+      setSandboxDiceQueue(prev => [...prev, [sandboxDice1, sandboxDice2]])
+      setShowSandboxDiceModal(false)
+    } else if (sandboxDiceModalMode === 'random') {
+      const d1 = Math.floor(Math.random() * 6) + 1
+      const d2 = Math.floor(Math.random() * 6) + 1
+      handleSandboxApplyDice(d1, d2, sandboxDiceTargetPlayer)
+    }
+  }
+  
+  const handleSandboxRandomDice = () => {
+    const d1 = Math.floor(Math.random() * 6) + 1
+    const d2 = Math.floor(Math.random() * 6) + 1
+    setSandboxDice1(d1)
+    setSandboxDice2(d2)
+  }
   const [serverMovesForBoard, setServerMovesForBoard] = useState<any[] | undefined>(undefined)
   const pendingGameStateRef = useRef<any>(null)
   const isServerAnimatingRef = useRef<boolean>(false)
@@ -2520,7 +2564,13 @@ export default function Game() {
         rightAction={
           <div style={{ position: 'relative' }} data-game-menu>
             <button
-              onClick={() => setShowGameMenu(!showGameMenu)}
+              onClick={() => {
+                if (isSandbox) {
+                  setShowSandboxMenu(!showSandboxMenu)
+                } else {
+                  setShowGameMenu(!showGameMenu)
+                }
+              }}
               style={{
                 width: '32px',
                 height: '32px',
@@ -2650,6 +2700,235 @@ export default function Game() {
                   {requireConfirmMove ? '✓ Требовать подтверждение хода' : '✗ Не требовать подтверждение хода'}
                   {pendingMoves.length > 0 && ' (недоступно во время хода)'}
             </button>
+          </div>
+        </div>,
+        document.body
+      )}
+      
+      {/* Модальное окно sandbox меню */}
+      {isSandbox && showSandboxMenu && createPortal(
+        <div
+          className="offset-modal-overlay modal-visible"
+          onClick={() => setShowSandboxMenu(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 2147483646,
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            className="sandbox-menu"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(20, 20, 20, 0.98)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '12px',
+              width: '90%',
+              maxWidth: '500px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
+              overflow: 'hidden',
+            }}
+          >
+            <div className="sandbox-menu-header" style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 20px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'white', fontWeight: 600 }}>Песочница</h3>
+              <button 
+                onClick={() => setShowSandboxMenu(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#ccc',
+                  fontSize: '20px',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                  e.currentTarget.style.color = 'white'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = '#ccc'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="sandbox-menu-content" style={{ padding: '16px', overflowY: 'auto' }}>
+              {/* 1. Свободное перемещение */}
+              <button
+                onClick={() => {
+                  setSandboxMode('setup')
+                  setShowSandboxMenu(false)
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: sandboxMode === 'setup' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = sandboxMode === 'setup' ? 'rgba(255, 255, 255, 0.1)' : 'transparent'}
+              >
+                <span style={{ fontSize: '24px' }}>🆓</span>
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Свободное перемещение</div>
+                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>Перемещайте шашки без ограничений</div>
+                </div>
+              </button>
+
+              {/* 2. Игра */}
+              <button
+                onClick={() => {
+                  setSandboxMode('play')
+                  setShowSandboxMenu(false)
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: sandboxMode === 'play' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = sandboxMode === 'play' ? 'rgba(255, 255, 255, 0.1)' : 'transparent'}
+              >
+                <span style={{ fontSize: '24px' }}>🎮</span>
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Игра</div>
+                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>Имитация игры со всеми правилами и ограничениями</div>
+                </div>
+              </button>
+
+              {/* 3. Установка кубиков */}
+              <button
+                onClick={() => {
+                  setShowSandboxDiceModal(true)
+                  setSandboxDiceModalMode('set')
+                  setSandboxDiceTargetPlayer(null)
+                  setShowSandboxMenu(false)
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: 'transparent',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <span style={{ fontSize: '24px' }}>🎲</span>
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Установка кубиков</div>
+                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>Установить кубики для черных или белых</div>
+                </div>
+              </button>
+
+              {/* 4. Подтверждение хода (только в режиме игры) */}
+              {sandboxMode === 'play' && (
+                <button
+                  onClick={() => {
+                    setSandboxRequireConfirmMove(!sandboxRequireConfirmMove)
+                    setShowSandboxMenu(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: 'white',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span style={{ fontSize: '24px' }}>{sandboxRequireConfirmMove ? '✓' : '✗'}</span>
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                      {sandboxRequireConfirmMove ? 'Отключить подтверждение' : 'Включить подтверждение'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
+                      {sandboxRequireConfirmMove ? 'Ходы будут применяться сразу' : 'Требовать подтверждение перед применением хода'}
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {/* Кнопка подтверждения хода (если есть pending moves и включено подтверждение) */}
+              {sandboxMode === 'play' && sandboxRequireConfirmMove && gameState?.canMove && gameState?.dice && (
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('sandbox-confirm-move'))
+                    setShowSandboxMenu(false)
+                  }}
+                  disabled={!gameState?.canMove || (gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length === 0)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
+                    border: '0.1px solid #C93C3D',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    marginTop: '8px',
+                    opacity: (!gameState?.canMove || (gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length === 0)) ? 0.5 : 1,
+                  }}
+                >
+                  <span>✓</span> Подтвердить ход
+                </button>
+              )}
+            </div>
           </div>
         </div>,
         document.body

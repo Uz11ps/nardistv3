@@ -183,6 +183,9 @@ export class User {
   @Column({ default: true })
   requireConfirmMove: boolean; // Требовать подтверждение хода
 
+  @Column({ type: 'jsonb', nullable: true })
+  boardConfigs: any; // Конфиги доски для разных размеров экрана: { "368": {...}, "512": {...}, ... }
+
   @CreateDateColumn()
   createdAt: Date;
 

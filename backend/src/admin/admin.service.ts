@@ -2611,6 +2611,32 @@ export class AdminService implements OnModuleInit {
     return result;
   }
 
+  // Глобальные конфиги доски (для всех пользователей)
+  async getBoardConfigs() {
+    const DEBUG_SIZES = [368, 512, 768, 1024, 1440]
+    const configs: Record<string, any> = {}
+    
+    for (const size of DEBUG_SIZES) {
+      const key = `board_config_${size}`
+      const setting = await this.systemSettingsRepository.findOne({ where: { key } })
+      if (setting) {
+        try {
+          configs[size.toString()] = JSON.parse(setting.value)
+        } catch {
+          // Если не JSON, пропускаем
+        }
+      }
+    }
+    
+    return configs
+  }
+
+  async updateBoardConfig(size: number, config: any) {
+    const key = `board_config_${size}`
+    const value = JSON.stringify(config)
+    return this.setSystemSetting(key, value, `Глобальный конфиг доски для размера ${size}px`)
+  }
+
   async updateSystemSettings(settings: Record<string, any>) {
     for (const [key, value] of Object.entries(settings)) {
       let setting = await this.systemSettingsRepository.findOne({ where: { key } });

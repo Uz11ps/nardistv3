@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, memo, useState } from 'react'
+import { apiClient } from '../api/client'
 
 interface DebugPanelProps {
   debugConfig: any
@@ -8,8 +9,7 @@ interface DebugPanelProps {
   setDebugDice: (dice: number[] | null) => void
   containerWidth: number
   isMobile: boolean
-  MOBILE_CONFIG: any
-  DESKTOP_CONFIG: any
+  getDefaultConfig: (isMobile: boolean) => any
   containerRef?: React.RefObject<HTMLDivElement>
   showHitboxes?: boolean
   setShowHitboxes?: (show: boolean) => void
@@ -28,8 +28,7 @@ export const DebugPanel = memo(({
   setDebugDice,
   containerWidth,
   isMobile,
-  MOBILE_CONFIG,
-  DESKTOP_CONFIG,
+  getDefaultConfig,
   containerRef,
   showHitboxes,
   setShowHitboxes
@@ -86,7 +85,7 @@ export const DebugPanel = memo(({
     }
     // Если нет сохраненного конфига - используем дефолтный (MOBILE или DESKTOP)
     // Но это только при первом создании, потом каждый размер живет своей жизнью
-    return size < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+    return getDefaultConfig(size < 768)
   }
   
   // Флаг для отслеживания, был ли конфиг загружен для текущего размера
@@ -387,10 +386,20 @@ export const DebugPanel = memo(({
         
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', gap: '5px', flexWrap: 'wrap' }}>
           <button 
-            onClick={() => {
-              const defaultConfig = selectedSize < 768 ? { ...MOBILE_CONFIG } : { ...DESKTOP_CONFIG }
+            onClick={async () => {
+              const defaultConfig = { ...getDefaultConfig(selectedSize < 768) }
               setDebugConfig(defaultConfig)
-              localStorage.removeItem(getConfigKey(selectedSize))
+              // Сбрасываем глобальный конфиг на дефолтный
+              try {
+                await apiClient.put('/admin/board-configs', {
+                  size: selectedSize,
+                  config: defaultConfig
+                })
+                alert(`✅ Глобальный конфиг для ${selectedSize}px сброшен на дефолтный!`)
+              } catch (e) {
+                console.error('Ошибка сброса конфига:', e)
+                alert('Ошибка: ' + ((e as any).response?.data?.message || (e as any).message))
+              }
             }}  
             style={{ fontSize: '12px', padding: '5px 10px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
             title={`Сбросить конфиг для ${selectedSize}px на дефолт`}
@@ -398,24 +407,24 @@ export const DebugPanel = memo(({
             Reset ({selectedSize}px)
           </button>
           <button 
-            onClick={() => {
+            onClick={async () => {
               try {
-                // Принудительно применяем текущий конфиг ко ВСЕМ размерам
+                // Принудительно применяем текущий конфиг ко ВСЕМ размерам ГЛОБАЛЬНО (для всех пользователей)
                 const configToSave = { ...configRef.current }
-                const jsonString = JSON.stringify(configToSave, null, 2)
+                console.log(`💾 Сохраняю ГЛОБАЛЬНЫЙ конфиг ко ВСЕМ размерам (для всех пользователей):`, configToSave)
                 
-                DEBUG_SIZES.forEach(size => {
-                  const key = getConfigKey(size)
-                  localStorage.setItem(key, jsonString)
-                })
+                // Сохраняем конфиг для каждого размера глобально
+                for (const size of DEBUG_SIZES) {
+                  await apiClient.put('/admin/board-configs', {
+                    size: size,
+                    config: configToSave
+                  })
+                }
                 
-                // Также сохраняем в общий ключ
-                localStorage.setItem('backgammon-debug-config-v16', jsonString)
-                
-                alert(`✅ Конфиг принудительно применен ко ВСЕМ размерам (${DEBUG_SIZES.join(', ')}px)!`)
+                alert(`✅ Глобальный конфиг применен ко ВСЕМ размерам (${DEBUG_SIZES.join(', ')}px)! Теперь он работает для ВСЕХ пользователей!`)
               } catch (e) {
                 console.error('❌ Ошибка:', e)
-                alert('Ошибка: ' + e)
+                alert('Ошибка: ' + ((e as any).response?.data?.message || (e as any).message))
               }
             }}
             style={{ fontSize: '12px', padding: '5px 10px', background: '#a94', border: '1px solid #bb6', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
@@ -424,20 +433,27 @@ export const DebugPanel = memo(({
             🔄 Применить ко всем
           </button>
           <button 
-            onClick={() => {
+            onClick={async () => {
               try {
                 // Используем актуальный конфиг из ref
                 const configToSave = { ...configRef.current }
-                const configKey = getConfigKey(selectedSize)
-                console.log(`💾 Сохраняю конфиг ТОЛЬКО для размера ${selectedSize}px:`, configToSave)
+                console.log(`💾 Сохраняю конфиг ТОЛЬКО для размера ${selectedSize}px на сервер:`, configToSave)
                 
-                const jsonString = JSON.stringify(configToSave, null, 2)
+                // Загружаем текущие настройки пользователя
+                const settingsResponse = await apiClient.get('/users/settings')
+                const currentSettings = settingsResponse.data || {}
                 
-                // Сохраняем ТОЛЬКО для текущего размера
-                localStorage.setItem(configKey, jsonString)
-                console.log(`✅ Конфиг сохранен только для ${selectedSize}px`)
+                // Обновляем конфиг для текущего размера
+                const boardConfigs = currentSettings.boardConfigs || {}
+                boardConfigs[selectedSize.toString()] = configToSave
                 
-                // НЕ сохраняем в общий ключ - каждый размер живет отдельно
+                // Сохраняем на сервер
+                await apiClient.put('/users/settings', {
+                  ...currentSettings,
+                  boardConfigs
+                })
+                
+                console.log(`✅ Конфиг сохранен на сервер для ${selectedSize}px`)
                 
                 // Обновляем сохраненный конфиг как базовый
                 savedConfigRef.current = configToSave
@@ -445,18 +461,14 @@ export const DebugPanel = memo(({
                 // Обновляем конфиг в родительском компоненте (чтобы изменения применились в игре)
                 setDebugConfig(configToSave)
                 
-                // Проверяем, что сохранилось
-                const saved = localStorage.getItem(configKey)
-                console.log('✅ Проверка сохранения:', saved ? 'СОХРАНЕНО' : 'НЕ СОХРАНЕНО')
-                
-                alert(`Конфиг для ${selectedSize}px сохранен и применен!`)
+                alert(`Конфиг для ${selectedSize}px сохранен на сервер и применен!`)
               } catch (e) {
                 console.error('❌ Ошибка при сохранении:', e)
-                alert('Ошибка при сохранении: ' + e)
+                alert('Ошибка при сохранении: ' + (e as any).response?.data?.message || (e as any).message)
               }
             }}
             title={`Сохранить конфиг только для ${selectedSize}px`}
-            onContextMenu={(e) => {
+            onContextMenu={async (e) => {
               // Правый клик для массового сохранения всех конфигов
               e.preventDefault()
               const configs = {
@@ -628,20 +640,18 @@ export const DebugPanel = memo(({
               }
               
               try {
-                let savedCount = 0
-                Object.entries(configs).forEach(([size, config]) => {
-                  const sizeNum = parseInt(size)
-                  const configKey = getConfigKey(sizeNum as DebugSize)
-                  const jsonString = JSON.stringify(config, null, 2)
-                  localStorage.setItem(configKey, jsonString)
-                  savedCount++
-                })
-                // Также сохраняем последний (768) в общий ключ
-                localStorage.setItem('backgammon-debug-config-v16', JSON.stringify(configs[768], null, 2))
-                alert(`✅ Сохранено ${savedCount} конфигов (368, 512, 768px)`)
+                // Сохраняем конфиги ГЛОБАЛЬНО для всех пользователей
+                for (const [size, config] of Object.entries(configs)) {
+                  await apiClient.put('/admin/board-configs', {
+                    size: parseInt(size),
+                    config: config
+                  })
+                }
+                
+                alert(`✅ Сохранено ${Object.keys(configs).length} ГЛОБАЛЬНЫХ конфигов (368, 512, 768px)! Теперь они работают для ВСЕХ пользователей!`)
               } catch (e) {
                 console.error('❌ Ошибка при массовом сохранении:', e)
-                alert('Ошибка при сохранении: ' + e)
+                alert('Ошибка при сохранении: ' + ((e as any).response?.data?.message || (e as any).message))
               }
             }}  
             style={{ fontSize: '12px', padding: '5px 10px', background: '#4a9', border: '1px solid #6bb', color: '#fff', cursor: 'pointer', borderRadius: '5px', flex: 1 }}
