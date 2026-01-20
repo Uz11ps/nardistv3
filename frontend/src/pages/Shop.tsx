@@ -925,3 +925,4 @@ export default function Shop() {
       )}
     </PageLayout>
   )
+}
