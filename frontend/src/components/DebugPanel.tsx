@@ -85,10 +85,11 @@ export const DebugPanel = memo(({
   // Флаг для отслеживания, был ли конфиг загружен для текущего размера
   const configLoadedForSizeRef = useRef<DebugSize | null>(null)
   
-  // При изменении размера загружаем соответствующий конфиг (только при переключении размера)
+  // При изменении размера загружаем соответствующий конфиг из localStorage (всегда свежий)
   useEffect(() => {
     // Загружаем конфиг только если размер изменился
     if (configLoadedForSizeRef.current !== selectedSize) {
+      // ВСЕГДА загружаем свежий конфиг из localStorage, не используем кэш
       const config = loadConfigForSize(selectedSize)
       setDebugConfig(config)
       configLoadedForSizeRef.current = selectedSize
@@ -391,8 +392,14 @@ export const DebugPanel = memo(({
                 const configToSave = { ...configRef.current }
                 const configKey = getConfigKey(selectedSize)
                 console.log(`💾 Сохраняю конфиг для размера ${selectedSize}px:`, configToSave)
+                
                 const jsonString = JSON.stringify(configToSave, null, 2)
+                
+                // Сохраняем для конкретного размера
                 localStorage.setItem(configKey, jsonString)
+                
+                // Также сохраняем в общий ключ для совместимости с BackgammonBoard
+                localStorage.setItem('backgammon-debug-config-v16', jsonString)
                 
                 // Проверяем, что сохранилось
                 const saved = localStorage.getItem(configKey)

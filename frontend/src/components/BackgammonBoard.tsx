@@ -247,40 +247,61 @@ export default function BackgammonBoard({
   const [showHitboxes, setShowHitboxes] = useState(false)
   
   // Загружаем конфиг из localStorage или используем дефолтный
-  const loadDebugConfig = () => {
+  // Функция для загрузки конфига из localStorage (всегда свежий, без кэша)
+  const loadConfigFromStorage = () => {
     try {
+      const DEBUG_SIZES = [368, 512, 768, 1024, 1440, 1920] as const
+      const getConfigKey = (size: number) => `backgammon-debug-config-v16-${size}px`
+      
+      const currentWidth = containerRef.current?.offsetWidth || window.innerWidth
+      const closestSize = DEBUG_SIZES.reduce((prev, curr) => 
+        Math.abs(curr - currentWidth) < Math.abs(prev - currentWidth) ? curr : prev
+      )
+      
+      // Пытаемся загрузить конфиг для текущего размера
+      const sizeKey = getConfigKey(closestSize)
+      const savedForSize = localStorage.getItem(sizeKey)
+      if (savedForSize) {
+        const parsed = JSON.parse(savedForSize)
+        if (parsed.sideMarginLeftPct !== undefined) {
+          const defaultConfig = currentWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+          return { ...defaultConfig, ...parsed }
+        }
+      }
+      
+      // Если нет конфига для размера, пытаемся загрузить общий
       const saved = localStorage.getItem('backgammon-debug-config-v16')
       if (saved) {
         const parsed = JSON.parse(saved)
-        // Check if config has new properties (e.g. sideMarginLeftPct). If not, it's legacy - ignore it.
         if (parsed.sideMarginLeftPct !== undefined) {
-             // Возвращаем сохраненный конфиг как есть - он имеет приоритет
-             // Мержим только для добавления новых полей, которых может не быть в старом конфиге
-             const defaultConfig = containerRef.current && containerRef.current.offsetWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
-             // Сначала дефолтный (для новых полей), потом сохраненный поверх (приоритет)
-             return { ...defaultConfig, ...parsed }
-        } else {
-             console.log('Detected legacy config in localStorage, ignoring to enforce new defaults.')
+          const defaultConfig = currentWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
+          return { ...defaultConfig, ...parsed }
         }
-      }
-      // Если есть старый конфиг v15, удаляем его чтобы использовать новые дефолты
-      if (localStorage.getItem('backgammon-debug-config-v15')) {
-        localStorage.removeItem('backgammon-debug-config-v15')
       }
     } catch (e) {
       console.warn('Failed to load debug config from localStorage:', e)
     }
+    
+    // Если ничего не найдено, возвращаем дефолтный конфиг
     const defaultConfig = containerRef.current && containerRef.current.offsetWidth < 768 ? MOBILE_CONFIG : DESKTOP_CONFIG
     return defaultConfig
   }
   
-  const [debugConfig, setDebugConfig] = useState(loadDebugConfig)
+  const [debugConfig, setDebugConfig] = useState(() => {
+    // При инициализации загружаем из localStorage
+    return loadConfigFromStorage()
+  })
   
-  // Используем текущий конфиг без автоматического обновления
-  // Пользователь может менять значения, они сохраняются только при нажатии кнопки Save
+  // При открытии дебага ВСЕГДА загружаем свежий конфиг из localStorage
+  useEffect(() => {
+    if (debugMode) {
+      const freshConfig = loadConfigFromStorage()
+      setDebugConfig(freshConfig)
+    }
+  }, [debugMode])
+  
+  // Используем текущий конфиг
   const effectiveDebugConfig = debugConfig
-  
-  // НЕ сохраняем автоматически - только по кнопке Save в дебаг-панели
 
   // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
   useEffect(() => {
