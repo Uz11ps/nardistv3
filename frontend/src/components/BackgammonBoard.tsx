@@ -155,6 +155,13 @@ export default function BackgammonBoard({
       textTopLeftY: -316,  // Points 13-18 (Indices 6-11)
       textBottomLeftY: 316, // Points 7-12 (Indices 12-17)
       textBottomRightY: 316, // Points 1-6 (Indices 18-23)
+      // Hitbox parameters
+      pointHitboxPadding: 5,
+      barHitboxTopPct: 0.2,
+      barHitboxBottomPct: 0.8,
+      barHitboxWidthPct: 0.088,
+      bearOffHitboxPaddingX: 0,
+      bearOffHitboxPaddingY: 0,
     }
 
   // Small Screen (Mobile) - Optimized
@@ -214,10 +221,18 @@ export default function BackgammonBoard({
     textTopLeftY: -316, 
     textBottomLeftY: 316, 
     textBottomRightY: 316,
+    // Hitbox parameters
+    pointHitboxPadding: 5,
+    barHitboxTopPct: 0.2,
+    barHitboxBottomPct: 0.8,
+    barHitboxWidthPct: 0.088,
+    bearOffHitboxPaddingX: 0,
+    bearOffHitboxPaddingY: 0,
   }
 
   // --- DEBUG / ADJUSTMENT MODE ---
   const [debugMode, setDebugMode] = useState(false)
+  const [showHitboxes, setShowHitboxes] = useState(false)
   
   // Загружаем конфиг из localStorage или используем дефолтный
   const loadDebugConfig = () => {
@@ -1193,10 +1208,12 @@ export default function BackgammonBoard({
     const blackCenterX = width * 0.25
     
     // Белая половина (правая)
+    const bearOffHitboxPaddingX = config.bearOffHitboxPaddingX !== undefined ? config.bearOffHitboxPaddingX : 0
+    const bearOffHitboxPaddingY = config.bearOffHitboxPaddingY !== undefined ? config.bearOffHitboxPaddingY : 0
     const bearOffValidWhiteXOffset = config.bearOffValidWhiteXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
     const bearOffValidWhiteYOffset = config.bearOffValidWhiteYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
-    const bearOffValidWhiteHX = whiteCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidWhiteXOffset)
-    const bearOffValidWhiteHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidWhiteYOffset
+    const bearOffValidWhiteHX = whiteCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidWhiteXOffset + bearOffHitboxPaddingX)
+    const bearOffValidWhiteHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidWhiteYOffset + bearOffHitboxPaddingY
     
     if (actualX >= bearOffValidWhiteHX && 
         actualX <= bearOffValidWhiteHX + bearOffValidHW &&
@@ -1211,8 +1228,8 @@ export default function BackgammonBoard({
     // Черная половина (левая)
     const bearOffValidBlackXOffset = config.bearOffValidBlackXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
     const bearOffValidBlackYOffset = config.bearOffValidBlackYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
-    const bearOffValidBlackHX = blackCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidBlackXOffset)
-    const bearOffValidBlackHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidBlackYOffset
+    const bearOffValidBlackHX = blackCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidBlackXOffset + bearOffHitboxPaddingX)
+    const bearOffValidBlackHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidBlackYOffset + bearOffHitboxPaddingY
     
     if (actualX >= bearOffValidBlackHX && 
         actualX <= bearOffValidBlackHX + bearOffValidHW &&
@@ -1227,7 +1244,7 @@ export default function BackgammonBoard({
     // Проверяем все точки
     // Прямой расчет попадания в точку на основе логики getPointCoordinates
     // Добавляем небольшой отступ (padding) для более легкого попадания
-    const padding = 5;
+    const padding = config.pointHitboxPadding !== undefined ? config.pointHitboxPadding : 5;
     // Определяем размер шашки для расширения хитбокса
     // Берем приблизительный размер на основе ширины точки
     const pW_approx = (width / 2) / 6; 
@@ -1302,10 +1319,13 @@ export default function BackgammonBoard({
     
     // Проверяем бар (упрощенно - центр экрана)
     // В sandbox режиме проверяем наличие шашек на баре, а не isPlayer1
-    const barWidth = width * 0.088
+    const barHitboxWidthPct = config.barHitboxWidthPct !== undefined ? config.barHitboxWidthPct : 0.088
+    const barHitboxTopPct = config.barHitboxTopPct !== undefined ? config.barHitboxTopPct : 0.2
+    const barHitboxBottomPct = config.barHitboxBottomPct !== undefined ? config.barHitboxBottomPct : 0.8
+    const barWidth = width * barHitboxWidthPct
     const barX = (width - barWidth) / 2
     if (actualX >= barX && actualX <= barX + barWidth) {
-      if (actualY >= height * 0.2 && actualY <= height * 0.8) {
+      if (actualY >= height * barHitboxTopPct && actualY <= height * barHitboxBottomPct) {
         // Проверяем наличие шашек на баре для определения какой бар (24 для белых, 25 для черных)
         const bar = gameState?.bar || { white: 0, black: 0 }
         // Если есть белые на баре - возвращаем 24, если черные - 25
@@ -1335,7 +1355,98 @@ export default function BackgammonBoard({
     }
     
     return null
-  }, [gameState, isPlayer1, gameMode, isSandbox, getPointCoordinates])
+  }, [gameState, isPlayer1, gameMode, isSandbox, getPointCoordinates, effectiveDebugConfig])
+  
+  // Функция визуализации хитбоксов
+  const drawHitboxes = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, scaleX: (val: number) => number, scaleY: (val: number) => number) => {
+    if (!canvasRef.current) return
+    
+    const config = effectiveDebugConfig
+    
+    // Параметры хитбоксов
+    const padding = config.pointHitboxPadding !== undefined ? config.pointHitboxPadding : 5
+    const barHitboxWidthPct = config.barHitboxWidthPct !== undefined ? config.barHitboxWidthPct : 0.088
+    const barHitboxTopPct = config.barHitboxTopPct !== undefined ? config.barHitboxTopPct : 0.2
+    const barHitboxBottomPct = config.barHitboxBottomPct !== undefined ? config.barHitboxBottomPct : 0.8
+    const bearOffHitboxPaddingX = config.bearOffHitboxPaddingX !== undefined ? config.bearOffHitboxPaddingX : 0
+    const bearOffHitboxPaddingY = config.bearOffHitboxPaddingY !== undefined ? config.bearOffHitboxPaddingY : 0
+    
+    // 1. Хитбоксы точек (красные пунктирные линии)
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)'
+    ctx.lineWidth = 2
+    ctx.setLineDash([5, 5])
+    
+    const pW_approx = (width / 2) / 6
+    const checkerSize_approx = pW_approx * config.checkerWidthRatio
+    
+    for (let pointIndex = 0; pointIndex < 24; pointIndex++) {
+      const { x: pX, y: pY, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvasRef.current)
+      
+      const xStart = pX - pW / 2 - padding
+      const xEnd = pX + pW / 2 + padding
+      
+      let yStart, yEnd
+      
+      if (isTopRow) {
+        const triangleBase = pY - pH
+        const triangleTip = pY
+        const visualBase = pY + scaleY(config.checkerTopOffset)
+        const visualTop = visualBase - (checkerSize_approx / 2)
+        const visualBottom = visualBase + (4 * (checkerSize_approx - 8)) + (checkerSize_approx / 2)
+        
+        yStart = Math.min(triangleBase, visualTop) - padding
+        yEnd = Math.max(triangleTip, visualBottom) + padding
+      } else {
+        const triangleTip = pY
+        const triangleBase = pY + pH
+        const visualBase = pY + scaleY(config.checkerBottomOffset)
+        const visualBottom = visualBase + (checkerSize_approx / 2)
+        const visualTop = visualBase - (4 * (checkerSize_approx - 8)) - (checkerSize_approx / 2)
+        
+        yStart = Math.min(triangleTip, visualTop) - padding
+        yEnd = Math.max(triangleBase, visualBottom) + padding
+      }
+      
+      ctx.strokeRect(xStart, yStart, xEnd - xStart, yEnd - yStart)
+    }
+    
+    // 2. Хитбокс бара (голубая пунктирная линия)
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.6)'
+    ctx.lineWidth = 2
+    const barWidth = width * barHitboxWidthPct
+    const barX = (width - barWidth) / 2
+    const barTop = height * barHitboxTopPct
+    const barBottom = height * barHitboxBottomPct
+    ctx.strokeRect(barX, barTop, barWidth, barBottom - barTop)
+    
+    // 3. Хитбоксы bear off (зеленые пунктирные линии)
+    ctx.strokeStyle = 'rgba(0, 255, 0, 0.6)'
+    ctx.lineWidth = 2
+    const bearOffHeight = height * config.bearOffHeightPct
+    const bearOffAreaY = height - bearOffHeight
+    const halfWidth = width / 2
+    const bearOffValidHW = halfWidth * (config.bearOffValidWidthScale || config.validHighlightWidthScale || 1.0)
+    const bearOffValidHH = bearOffHeight * (config.bearOffValidHeightScale || config.validHighlightHeightScale || 1.0)
+    
+    // Белая половина (правая)
+    const whiteCenterX = width * 0.75
+    const bearOffValidWhiteXOffset = config.bearOffValidWhiteXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
+    const bearOffValidWhiteYOffset = config.bearOffValidWhiteYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
+    const bearOffValidWhiteHX = whiteCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidWhiteXOffset + bearOffHitboxPaddingX)
+    const bearOffValidWhiteHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidWhiteYOffset + bearOffHitboxPaddingY
+    ctx.strokeRect(bearOffValidWhiteHX, bearOffValidWhiteHY, bearOffValidHW, bearOffValidHH)
+    
+    // Черная половина (левая)
+    const blackCenterX = width * 0.25
+    const bearOffValidBlackXOffset = config.bearOffValidBlackXOffset || config.bearOffValidXOffset || config.validHighlightXOffset || 0
+    const bearOffValidBlackYOffset = config.bearOffValidBlackYOffset || config.bearOffValidYOffset || config.validHighlightYOffset || 0
+    const bearOffValidBlackHX = blackCenterX - (bearOffValidHW / 2) + scaleX(bearOffValidBlackXOffset + bearOffHitboxPaddingX)
+    const bearOffValidBlackHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidBlackYOffset + bearOffHitboxPaddingY
+    ctx.strokeRect(bearOffValidBlackHX, bearOffValidBlackHY, bearOffValidHW, bearOffValidHH)
+    
+    // Сбрасываем пунктирную линию
+    ctx.setLineDash([])
+  }, [effectiveDebugConfig, getPointCoordinates])
   
   // Отрисовка доски
   const drawBoard = useCallback(() => {
@@ -1892,8 +2003,13 @@ export default function BackgammonBoard({
         ctx.fillRect(bearOffValidHX, bearOffValidHY, bearOffValidHW, bearOffValidHH)
       }
     }
+    
+    // Визуализация хитбоксов
+    if (showHitboxes) {
+      drawHitboxes(ctx, width, height, scaleX, scaleY)
+    }
 
-  }, [virtualGameState, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, animatingChecker, currentPlayer, getPointCoordinates, boardSkinPlayer1, boardSkinPlayer2, checkerSkinPlayer1, checkerSkinPlayer2, opponentBoardColors, myBoardColors, checkerColorsPlayer1, checkerColorsPlayer2, isSandbox, effectiveDebugConfig])
+  }, [virtualGameState, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, animatingChecker, currentPlayer, getPointCoordinates, boardSkinPlayer1, boardSkinPlayer2, checkerSkinPlayer1, checkerSkinPlayer2, opponentBoardColors, myBoardColors, checkerColorsPlayer1, checkerColorsPlayer2, isSandbox, effectiveDebugConfig, debugMode, drawHitboxes])
   
   // Перерисовка при изменении состояния
   useEffect(() => {
@@ -1926,7 +2042,7 @@ export default function BackgammonBoard({
       canvasRef.current.height = canvasHeight
       drawBoard()
     }
-  }, [drawBoard])
+  }, [drawBoard, effectiveDebugConfig])
   
   // Обработка анимации
   useEffect(() => {
@@ -3338,6 +3454,17 @@ export default function BackgammonBoard({
         
         <div style={{ marginBottom: '10px', fontSize: '10px', color: '#aaa' }}>
             Current Width: {containerRef.current?.offsetWidth}px
+        </div>
+        
+        <div style={{ marginBottom: '10px', padding: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px' }}>
+            <input 
+              type="checkbox" 
+              checked={showHitboxes}
+              onChange={(e) => setShowHitboxes(e.target.checked)}
+            />
+            <span>🎯 Показать хитбоксы</span>
+          </label>
         </div>
         
         {[

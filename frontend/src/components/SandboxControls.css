@@ -1,3 +1,367 @@
+/* Кнопка с тремя точками */
+.sandbox-menu-toggle {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+}
+
+.sandbox-three-dots-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.sandbox-three-dots-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.sandbox-three-dots-btn:active {
+  transform: scale(0.95);
+}
+
+/* Модальное окно меню */
+.sandbox-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.sandbox-menu {
+  background: rgba(20, 20, 20, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.sandbox-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sandbox-menu-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: white;
+  font-weight: 600;
+}
+
+.sandbox-menu-close {
+  background: transparent;
+  border: none;
+  color: #ccc;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.sandbox-menu-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.sandbox-menu-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+/* Элементы меню */
+.sandbox-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.sandbox-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(4px);
+}
+
+.sandbox-menu-item.active {
+  background: rgba(74, 144, 226, 0.2);
+  border-color: #4a90e2;
+}
+
+.sandbox-menu-item span {
+  font-size: 24px;
+  min-width: 32px;
+  text-align: center;
+}
+
+.sandbox-menu-item-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.sandbox-menu-item-desc {
+  font-size: 13px;
+  color: #aaa;
+}
+
+/* Кнопка подтверждения хода */
+.sandbox-confirm-move-btn {
+  margin-top: 8px;
+  padding: 14px 20px;
+  background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.sandbox-confirm-move-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.sandbox-confirm-move-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Модальное окно установки кубиков */
+.sandbox-dice-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  backdrop-filter: blur(4px);
+}
+
+.sandbox-dice-modal {
+  background: rgba(20, 20, 20, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.sandbox-dice-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sandbox-dice-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: white;
+  font-weight: 600;
+}
+
+.sandbox-dice-modal-close {
+  background: transparent;
+  border: none;
+  color: #ccc;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.sandbox-dice-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.sandbox-dice-modal-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sandbox-dice-player-select,
+.sandbox-dice-mode-select {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sandbox-dice-player-select label,
+.sandbox-dice-mode-select label {
+  font-size: 14px;
+  color: #aaa;
+  font-weight: 500;
+}
+
+.sandbox-dice-player-buttons,
+.sandbox-dice-mode-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sandbox-dice-player-buttons button,
+.sandbox-dice-mode-buttons button {
+  flex: 1;
+  min-width: 80px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sandbox-dice-player-buttons button:hover,
+.sandbox-dice-mode-buttons button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.sandbox-dice-player-buttons button.active,
+.sandbox-dice-mode-buttons button.active {
+  background: rgba(74, 144, 226, 0.3);
+  border-color: #4a90e2;
+  color: #4a90e2;
+}
+
+.sandbox-dice-values {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sandbox-dice-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sandbox-dice-input-group label {
+  font-size: 14px;
+  color: #aaa;
+  min-width: 80px;
+}
+
+.sandbox-dice-input-group input {
+  flex: 1;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: white;
+  font-size: 16px;
+  text-align: center;
+}
+
+.sandbox-dice-input-group input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sandbox-dice-input-group button {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sandbox-dice-input-group button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(180deg);
+}
+
+.sandbox-dice-apply-btn {
+  margin-top: 8px;
+  padding: 14px 20px;
+  background: linear-gradient(180deg, #f39c12 0%, #e67e22 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sandbox-dice-apply-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+}
+
+/* Старые стили для совместимости */
 .sandbox-modal-overlay {
   position: fixed;
   top: 0;
@@ -53,7 +417,6 @@
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s;
-  padding: 0;
 }
 
 .modal-close-btn:hover {
@@ -63,55 +426,19 @@
 
 .sandbox-modal-content {
   padding: 20px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.sandbox-studio-menu-toggle {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  z-index: 1000;
-}
-
-.menu-toggle-btn {
-  background: rgba(0, 0, 0, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 20px;
-  line-height: 1;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.menu-toggle-btn:hover {
-  background: rgba(0, 0, 0, 0.9);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.menu-toggle-btn span {
-  display: block;
-  transform: rotate(90deg);
-  letter-spacing: 2px;
+  overflow-y: auto;
 }
 
 .sandbox-confirm-btn {
-  width: 100%;
-  padding: 16px 24px;
+  padding: 14px 20px;
   background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
   border: none;
   border-radius: 8px;
   color: white;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -119,443 +446,47 @@
   justify-content: center;
   gap: 8px;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 .sandbox-confirm-btn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #5cbf60 0%, #3e8d42 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
-}
-
-.sandbox-confirm-btn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
 }
 
 .sandbox-confirm-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: linear-gradient(180deg, #666 0%, #444 100%);
 }
 
-.studio-toolbar {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.mode-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ccc;
-  padding: 12px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s;
-  text-align: center;
-}
-
-.mode-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.mode-btn:hover, .panel-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.mode-btn.active {
-  background: #4a90e2;
-  color: white;
-}
-
-.studio-panel {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow-y: auto;
-  max-height: 60vh;
-}
-
-.studio-section h3 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
-  color: #aaa;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.section-header h3 {
-  margin-bottom: 0;
-}
-
-.section-header button {
-  background: #27ae60;
-  border: none;
-  color: white;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chapters-list, .moves-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  padding: 4px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.move-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-  color: #eee;
-}
-
-.move-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.move-item.active {
-  background: rgba(74, 144, 226, 0.3);
-  border-left: 3px solid #4a90e2;
-}
-
-.move-num {
-  color: #888;
-  font-weight: bold;
-  min-width: 20px;
-}
-
-.move-dice {
-  color: #f1c40f;
-  font-family: monospace;
-}
-
-.move-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  flex: 1;
-}
-
-.move-step {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 1px 4px;
-  border-radius: 2px;
-  font-size: 11px;
-}
-
-.chapter-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #eee;
-}
-
-.chapter-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.chapter-item button {
-  background: transparent;
-  border: none;
-  color: #ff5e5e;
-  font-size: 18px;
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-.chapter-item button:hover {
-  opacity: 1;
-}
-
-.move-item {
-  display: flex;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #ddd;
-}
-
-.move-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.move-item.active {
-  background: rgba(74, 144, 226, 0.3);
-  border-left: 3px solid #4a90e2;
-}
-
-.move-num {
-  color: #888;
-  min-width: 20px;
-}
-
-.move-dice {
-  color: #f1c40f;
-  font-weight: bold;
-}
-
-.move-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.move-step {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 1px 4px;
-  border-radius: 2px;
-  font-family: monospace;
-}
-
-.interactive-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.dice-btn {
-  background: #f39c12;
-  border: none;
-  color: white;
-  padding: 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.turn-info {
-  font-size: 14px;
-  color: #ccc;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 8px 12px;
-  border-radius: 6px;
-}
-
-.skip-turn-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: white;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.skip-turn-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: rotate(180deg);
-}
-
-.empty-msg {
-  padding: 12px;
-  text-align: center;
-  color: #666;
-  font-style: italic;
-  font-size: 13px;
-}
-
-/* Dice Modal */
-.dice-modal-overlay {
+.sandbox-studio-menu-toggle {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+}
+
+.menu-toggle-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
-}
-
-.dice-modal {
-  background: #2c3e50;
-  padding: 24px;
-  border-radius: 12px;
-  width: 300px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.dice-modal h3 {
-  margin: 0;
-  text-align: center;
-  color: white;
-}
-
-.modal-section-label {
-  font-size: 13px;
-  color: #bdc3c7;
-  margin-bottom: -10px;
-}
-
-.player-selector {
-  display: flex;
-  gap: 8px;
-}
-
-.player-selector button {
-  flex: 1;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #bdc3c7;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   transition: all 0.2s;
+  backdrop-filter: blur(4px);
 }
 
-.player-selector button.active {
-  background: #3498db;
-  color: white;
-  border-color: #3498db;
+.menu-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
 }
 
-.dice-inputs {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.dice-inputs button {
-  flex: 1;
-  aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border-radius: 4px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.dice-inputs button:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.dice-inputs button.active {
-  background: #f1c40f;
-  color: #2c3e50;
-  border-color: #f1c40f;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.modal-actions button {
-  flex: 1;
-  padding: 10px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.modal-actions .confirm-btn {
-  background: #27ae60;
-  color: white;
-}
-
-.modal-actions .queue-btn {
-  background: #2980b9;
-  color: white;
-}
-
-.dice-queue {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 8px;
-  border-radius: 4px;
-}
-
-.queue-label {
-  font-size: 12px;
-  color: #888;
-  width: 100%;
-}
-
-.queue-item {
-  background: rgba(41, 128, 185, 0.5);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.queue-item button {
-  background: transparent;
-  border: none;
-  color: #eee;
-  padding: 0;
-  cursor: pointer;
-  line-height: 1;
+.menu-toggle-btn:active {
+  transform: scale(0.95);
 }

@@ -511,6 +511,7 @@ export default function Game() {
   const isPlayer1 = gameInfo?.player1Id === user?.id
   const isSandbox = gameInfo?.type === 'sandbox'
   const [sandboxMode, setSandboxMode] = useState<'setup' | 'play'>('setup')
+  const [sandboxRequireConfirmMove, setSandboxRequireConfirmMove] = useState(false)
   // В Sandbox режиме isMyTurn определяется по наличию кубиков (в Sandbox можно ходить за обе стороны)
   // В обычной игре - по canMove и статусу игры
   const isMyTurn = isSandbox 
@@ -3169,6 +3170,8 @@ export default function Game() {
                     gameState={gameState}
                     currentPlayer={gameState?.currentPlayer || 0}
                     onModeChange={(mode) => setSandboxMode(mode)}
+                    requireConfirmMove={sandboxRequireConfirmMove}
+                    onToggleConfirmMove={() => setSandboxRequireConfirmMove(prev => !prev)}
                     onBoardUpdate={() => {
                       // Перезагружаем состояние игры
                       if (gameId) {

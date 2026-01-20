@@ -33,7 +33,7 @@ export const DebugPanel = memo(({
   const [position, setPosition] = useState({ x: 50, y: 50 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [activeCategory, setActiveCategory] = useState<'dice' | 'bearoff' | 'board' | 'text'>('dice')
+  const [activeCategory, setActiveCategory] = useState<'dice' | 'bearoff' | 'board' | 'text' | 'hitbox'>('dice')
   const [activeSide, setActiveSide] = useState<'all' | 'white' | 'black'>('all')
   // Инициализируем размер на основе текущей ширины
   const getInitialSize = (): DebugSize => {
@@ -400,10 +400,11 @@ export const DebugPanel = memo(({
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
             {[
-              { id: 'dice', label: '🎲 Кости' },
-              { id: 'bearoff', label: '📦 Скид' },
-              { id: 'board', label: '🎯 Доска' },
-              { id: 'text', label: '🔢 Индексы' },
+            { id: 'dice', label: '🎲 Кости' },
+            { id: 'bearoff', label: '📦 Скид' },
+            { id: 'board', label: '🎯 Доска' },
+            { id: 'text', label: '🔢 Индексы' },
+            { id: 'hitbox', label: '🎯 Хитбоксы' },
             ].map(cat => (
               <button
                 key={cat.id}
@@ -518,6 +519,14 @@ export const DebugPanel = memo(({
             { key: 'textTopRightY', label: 'Text Top Right Y', min: -1000, max: 1000, step: 1, category: 'text', side: 'all' },
             { key: 'textBottomLeftY', label: 'Text Bottom Left Y', min: -1000, max: 1000, step: 1, category: 'text', side: 'all' },
             { key: 'textBottomRightY', label: 'Text Bottom Right Y', min: -1000, max: 1000, step: 1, category: 'text', side: 'all' },
+            
+            // Хитбоксы
+            { key: 'pointHitboxPadding', label: 'Point Hitbox Padding (px)', min: -50, max: 100, step: 1, category: 'hitbox', side: 'all' },
+            { key: 'barHitboxTopPct', label: 'Bar Hitbox Top (%)', min: 0, max: 1, step: 0.01, category: 'hitbox', side: 'all' },
+            { key: 'barHitboxBottomPct', label: 'Bar Hitbox Bottom (%)', min: 0, max: 1, step: 0.01, category: 'hitbox', side: 'all' },
+            { key: 'barHitboxWidthPct', label: 'Bar Hitbox Width (%)', min: 0, max: 1, step: 0.001, category: 'hitbox', side: 'all' },
+            { key: 'bearOffHitboxPaddingX', label: 'BearOff Hitbox Padding X (px)', min: -200, max: 200, step: 1, category: 'hitbox', side: 'all' },
+            { key: 'bearOffHitboxPaddingY', label: 'BearOff Hitbox Padding Y (px)', min: -200, max: 200, step: 1, category: 'hitbox', side: 'all' },
           ]
           
           const filteredItems = allItems.filter(item => {
