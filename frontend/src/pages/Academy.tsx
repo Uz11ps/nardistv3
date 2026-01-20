@@ -691,7 +691,15 @@ export default function Academy() {
       ]}
     >
       <div className="academy-content">
+        {/* Кнопка "Опубликовать свое" - в самом верху для всех вкладок */}
         {(activeTab === 'courses' || activeTab === 'articles' || activeTab === 'my-materials') && (
+          <button className="academy-publish-own-btn" onClick={() => navigate('/academy/publish')}>
+            Опубликовать свое
+          </button>
+        )}
+
+        {/* Фильтр по типу нард для курсов и статей */}
+        {(activeTab === 'courses' || activeTab === 'articles') && (
           <div className="academy-filters">
             <button 
               className={`academy-filter-btn ${activeFilter === 'long' ? 'active' : ''}`}
@@ -778,9 +786,21 @@ export default function Academy() {
 
         {activeTab === 'my-materials' && (
           <div className="academy-my-materials">
-            <button className="academy-publish-own-btn" onClick={() => navigate('/academy/publish')}>
-              Опубликовать свое
-            </button>
+            {/* Фильтр по типу нард - над фильтром по типу материала */}
+            <div className="academy-filters">
+              <button 
+                className={`academy-filter-btn ${activeFilter === 'long' ? 'active' : ''}`}
+                onClick={() => setActiveFilter('long')}
+              >
+                длинные нарды
+              </button>
+              <button 
+                className={`academy-filter-btn ${activeFilter === 'short' ? 'active' : ''}`}
+                onClick={() => setActiveFilter('short')}
+              >
+                короткие нарды
+              </button>
+            </div>
             
             {/* Фильтр по типу материалов */}
             <div className="academy-filters">
