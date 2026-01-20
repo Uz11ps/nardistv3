@@ -16,7 +16,8 @@ interface Upgrades {
   districtStrength: Upgrade
   economy: Upgrade
   fort: Upgrade
-  clanLevel: number // Общий уровень клана (рассчитывается автоматически)
+  maxMembers: Upgrade
+  clanLevel: number // Общий уровень клана (рассчитывается автоматически, только для визуала)
 }
 
 interface Clan {
@@ -114,12 +115,17 @@ export default function ClanUpgrades() {
     {
       key: 'economy' as const,
       title: 'Экономика',
-      description: 'Увеличивает доход клана от налогов',
+      description: 'Улучшает экономические показатели федерации',
     },
     {
       key: 'fort' as const,
       title: 'Форт федерации',
-      description: 'Уменьшает потери при сражениях за районы',
+      description: 'Укрепляет оборону федерации',
+    },
+    {
+      key: 'maxMembers' as const,
+      title: 'Максимум участников',
+      description: 'Увеличивает максимальное количество участников',
     },
   ]
 

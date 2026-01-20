@@ -43,6 +43,7 @@ export class ClansService {
    * Максимальный уровень каждого: 10
    * Максимальная сумма: 40
    * Формула: level = Math.min(10, Math.floor(sumOfUpgrades / 4))
+   * Уровень клана - это просто визуальное значение, не влияет на функциональность
    */
   private calculateClanLevel(clan: Clan): number {
     const sumOfUpgrades = (clan.clanLevel || 1) + (clan.districtStrength || 1) + (clan.economy || 1) + (clan.fortLevel || 1);
@@ -382,6 +383,7 @@ export class ClansService {
       districtStrength: 'Сила районов',
       economy: 'Экономика',
       fort: 'Форт клана',
+      maxMembers: 'Максимум участников',
     };
     const upgradeName = upgradeNames[upgradeType] || 'Улучшение';
 
@@ -397,21 +399,25 @@ export class ClansService {
           throw new BadRequestException('Экономика достигла максимального уровня');
         }
         clan.economy = (clan.economy || 1) + 1;
-        clan.weeklyIncome = (BigInt(clan.weeklyIncome || 0) * BigInt(120) / BigInt(100)).toString();
+        // Убираем weeklyIncome - он не используется
         break;
       case 'fort':
         if ((clan.fortLevel || 1) >= 10) {
           throw new BadRequestException('Форт достиг максимального уровня');
         }
         clan.fortLevel = (clan.fortLevel || 1) + 1;
+        // Форт не дает реальных эффектов, только для визуала
+        break;
+      case 'maxMembers':
+        if ((clan.maxMembers || 10) >= 100) {
+          throw new BadRequestException('Максимум участников достиг максимального значения');
+        }
+        clan.maxMembers = (clan.maxMembers || 10) + 5;
         break;
     }
 
-    // Пересчитываем уровень клана на основе суммы улучшений
+    // Пересчитываем уровень клана на основе суммы улучшений (только для визуала)
     clan.level = this.calculateClanLevel(clan);
-    
-    // Обновляем maxMembers на основе уровня клана
-    clan.maxMembers = 10 + (clan.level - 1) * 5;
 
     const savedClan = await this.clansRepository.save(clan);
 
@@ -441,7 +447,8 @@ export class ClansService {
     districtStrength: { current: number; max: number; cost: number };
     economy: { current: number; max: number; cost: number };
     fort: { current: number; max: number; cost: number };
-    clanLevel: number; // Общий уровень клана (рассчитывается автоматически)
+    maxMembers: { current: number; max: number; cost: number };
+    clanLevel: number; // Общий уровень клана (рассчитывается автоматически, только для визуала)
   }> {
     const clan = await this.clansRepository.findOne({ where: { id: clanId } });
     if (!clan) {
@@ -451,6 +458,7 @@ export class ClansService {
     const districtStrength = clan.districtStrength || 1;
     const economy = clan.economy || 1;
     const fortLevel = clan.fortLevel || 1;
+    const maxMembers = clan.maxMembers || 10;
 
     return {
       districtStrength: {
@@ -468,7 +476,12 @@ export class ClansService {
         max: 10,
         cost: fortLevel >= 10 ? 0 : fortLevel * 1200,
       },
-      clanLevel: this.calculateClanLevel(clan), // Общий уровень клана
+      maxMembers: {
+        current: maxMembers,
+        max: 100,
+        cost: maxMembers >= 100 ? 0 : maxMembers * 1000,
+      },
+      clanLevel: this.calculateClanLevel(clan), // Общий уровень клана (только для визуала)
     };
   }
 
@@ -496,6 +509,7 @@ export class ClansService {
       districtStrength: (clan.districtStrength || 1) * 500,
       economy: (clan.economy || 1) * 800,
       fort: (clan.fortLevel || 1) * 1200,
+      maxMembers: (clan.maxMembers || 10) * 1000,
     };
 
     const cost = costs[upgradeType];
@@ -507,6 +521,7 @@ export class ClansService {
       districtStrength: 'Сила районов',
       economy: 'Экономика',
       fort: 'Форт клана',
+      maxMembers: 'Максимум участников',
     };
     const upgradeName = upgradeNames[upgradeType] || 'Улучшение';
 
@@ -530,17 +545,20 @@ export class ClansService {
       case 'economy':
         currentLevel = clan.economy || 1;
         newLevel = currentLevel + 1;
-        const currentWeeklyIncome = Number(clan.weeklyIncome || 0);
-        const newWeeklyIncome = Math.floor(currentWeeklyIncome * 1.2);
+        // Каждый уровень экономики дает +10% к доходу от захватов
+        const currentEconomyMultiplier = 1 + (currentLevel - 1) * 0.1;
+        const newEconomyMultiplier = 1 + (newLevel - 1) * 0.1;
+        const currentEconomyPercent = Math.round((currentEconomyMultiplier - 1) * 100);
+        const newEconomyPercent = Math.round((newEconomyMultiplier - 1) * 100);
         effects.push({
           label: 'Экономика',
           current: `${currentLevel}/10`,
           new: `${newLevel}/10`,
         });
         effects.push({
-          label: 'Недельный доход',
-          current: `${currentWeeklyIncome.toLocaleString('ru-RU')} NAR`,
-          new: `${newWeeklyIncome.toLocaleString('ru-RU')} NAR (+20%)`,
+          label: 'Доход от захватов',
+          current: currentEconomyPercent === 0 ? 'Базовый' : `+${currentEconomyPercent}%`,
+          new: `+${newEconomyPercent}%`,
         });
         break;
       case 'fort':
@@ -551,10 +569,20 @@ export class ClansService {
           current: `${currentLevel}/10`,
           new: `${newLevel}/10`,
         });
+        // Форт не дает реальных эффектов, только для визуала
+        break;
+      case 'maxMembers':
+        currentLevel = clan.maxMembers || 10;
+        newLevel = currentLevel + 5;
+        effects.push({
+          label: 'Максимум участников',
+          current: `${currentLevel}`,
+          new: `${newLevel}`,
+        });
         break;
     }
 
-    // Рассчитываем текущий и новый уровень клана
+    // Рассчитываем текущий и новый уровень клана (только для визуала)
     const currentClanLevel = this.calculateClanLevel(clan);
     
     // Создаем временный объект для расчета нового уровня
@@ -569,21 +597,19 @@ export class ClansService {
       case 'fort':
         tempClan.fortLevel = newLevel;
         break;
+      case 'maxMembers':
+        tempClan.maxMembers = newLevel;
+        break;
     }
     const newClanLevel = this.calculateClanLevel(tempClan);
 
-    if (currentClanLevel !== newClanLevel) {
-      const currentMaxMembers = 10 + (currentClanLevel - 1) * 5;
-      const newMaxMembers = 10 + (newClanLevel - 1) * 5;
+    // Показываем изменение уровня федерации только если он изменился (только для визуала)
+    // Уровень федерации не влияет на функциональность, только для отображения
+    if (currentClanLevel !== newClanLevel && upgradeType !== 'maxMembers') {
       effects.push({
         label: 'Уровень федерации',
         current: `${currentClanLevel}/10`,
         new: `${newClanLevel}/10`,
-      });
-      effects.push({
-        label: 'Максимум участников',
-        current: `${currentMaxMembers}`,
-        new: `${newMaxMembers}`,
       });
     }
 
@@ -763,6 +789,12 @@ export class ClansService {
       order: { order: 'ASC' },
     });
 
+    // Получаем клан для расчета множителя экономики
+    const clan = await this.clansRepository.findOne({ where: { id: clanId } });
+    const economyLevel = clan?.economy || 1;
+    // Каждый уровень экономики дает +10% к доходу от захватов
+    const economyMultiplier = 1 + (economyLevel - 1) * 0.1;
+
     // Получаем захваты напрямую из репозитория
     const captures = await this.districtCapturesRepository.find({
       where: { capturedByClanId: clanId },
@@ -783,6 +815,10 @@ export class ClansService {
       const isCapturedByMyClan = myCapture && (!myCapture.expiresAt || myCapture.expiresAt > now);
       const isCapturedByOther = activeCapture && activeCapture.capturedByClanId !== clanId;
 
+      // Рассчитываем доход с учетом экономики (только для захваченных районов)
+      const baseIncomePerDay = Number(district.baseIncomePerDay || 0);
+      const incomePerDayWithEconomy = myCapture ? Math.floor(baseIncomePerDay * economyMultiplier) : baseIncomePerDay;
+
       return {
         id: district.id,
         code: district.code,
@@ -797,7 +833,7 @@ export class ClansService {
           expiresAt: myCapture.expiresAt,
           totalIncomeCollected: Number(myCapture.totalIncomeCollected),
           lastIncomeCollection: myCapture.lastIncomeCollection,
-          baseIncomePerDay: Number(district.baseIncomePerDay || 0),
+          baseIncomePerDay: incomePerDayWithEconomy, // Показываем доход с учетом экономики
         } : null,
         isCapturedByMyClan,
         isCapturedByOther,

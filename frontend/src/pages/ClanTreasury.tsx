@@ -22,7 +22,6 @@ interface Transaction {
 interface Clan {
   id: string
   treasury: number | string
-  weeklyIncome: number | string
 }
 
 export default function ClanTreasury() {
@@ -145,12 +144,11 @@ export default function ClanTreasury() {
   }
 
   const treasury = typeof clan.treasury === 'string' ? parseInt(clan.treasury) : clan.treasury
-  const weeklyIncome = typeof clan.weeklyIncome === 'string' ? parseInt(clan.weeklyIncome) : clan.weeklyIncome
 
   return (
     <PageLayout
       title="Казна федерации"
-      subtitle="Общий фонд федерации. Средства поступают из налогов и вкладов участников"
+      subtitle="Общий фонд федерации. Средства поступают из захватов районов и вкладов участников"
       showBack={true}
     >
       <div className="clan-treasury-content">
@@ -158,9 +156,6 @@ export default function ClanTreasury() {
         <div className="clan-treasury-balance">
           <img src="/img/narcoin.png" alt="NAR" className="clan-treasury-coin-icon" />
           <div className="clan-treasury-balance-amount">{treasury.toLocaleString()} NAR</div>
-          <div className="clan-treasury-weekly-income">
-            +{weeklyIncome.toLocaleString()} NAR / неделя (поступления)
-          </div>
         </div>
 
         {/* Последние операции */}

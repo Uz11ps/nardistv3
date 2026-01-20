@@ -538,8 +538,15 @@ export class CityService {
     const lastCollection = capture.lastIncomeCollection || capture.capturedAt;
     const daysPassed = (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60 * 24);
 
+    // Получаем уровень экономики клана для расчета множителя дохода
+    const clan = await this.clansService.findOne(clanId);
+    const economyLevel = clan.economy || 1;
+    // Каждый уровень экономики дает +10% к доходу от захватов (уровень 1 = базовый, уровень 10 = +90%)
+    const economyMultiplier = 1 + (economyLevel - 1) * 0.1;
+
     const baseIncomePerDay = Number(districtConfig.baseIncomePerDay);
-    const incomeToAdd = Math.floor(baseIncomePerDay * daysPassed);
+    const incomePerDayWithEconomy = baseIncomePerDay * economyMultiplier;
+    const incomeToAdd = Math.floor(incomePerDayWithEconomy * daysPassed);
 
     if (incomeToAdd <= 0) {
       return {
@@ -553,8 +560,7 @@ export class CityService {
     capture.lastIncomeCollection = now;
     await this.districtCapturesRepository.save(capture);
 
-    // Добавляем доход в казну клана
-    const clan = await this.clansService.findOne(clanId);
+    // Добавляем доход в казну клана (clan уже получен выше для расчета множителя)
     const currentTreasury = Number(clan.treasury || 0);
     clan.treasury = (currentTreasury + incomeToAdd).toString();
     await this.clansRepository.save(clan);
