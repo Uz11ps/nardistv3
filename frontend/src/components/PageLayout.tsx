@@ -1,6 +1,7 @@
 import { ReactNode, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from './BottomNav'
+import arrowBackIcon from '../assets/arrow-back.svg'
 import './PageLayout.css'
 
 interface PageLayoutProps {
@@ -107,7 +108,7 @@ export default function PageLayout({
         <div className="page-layout-header">
           {showBack && (
             <button className="page-layout-back-button" onClick={() => navigate(-1)}>
-              ←
+              <img src={arrowBackIcon} alt="back" style={{ width: '9px', height: '16px' }} />
             </button>
           )}
           <div className="page-layout-title-section">

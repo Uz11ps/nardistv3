@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import arrowBackIcon from '../assets/arrow-back.svg'
 
 interface PageHeaderProps {
   title: string
@@ -22,7 +23,7 @@ export default function PageHeader({ title, showBack = true, rightAction, onBack
     <div className="page-header">
       {showBack && (
         <button className="back-button page-header-back-btn" onClick={handleBack}>
-          ←
+          <img src={arrowBackIcon} alt="back" style={{ width: '9px', height: '16px' }} />
         </button>
       )}
       <div className="page-header-title">{title}</div>

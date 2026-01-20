@@ -313,14 +313,22 @@ export const SettingsIcon: React.FC<IconProps> = ({ className, style, size = 20 
   />
 )
 
-export const ArrowRightIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
-  <img 
-    src="/img/arrow-right-icon.png" 
-    alt="arrow right" 
-    className={className}
-    style={{ width: size, height: size, ...style }}
-  />
-)
+export const ArrowRightIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => {
+  const strokeColor = style?.color || style?.stroke || "#707579"
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 7 12" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      style={{ ...style, color: undefined, stroke: undefined }}
+    >
+      <path d="M1 1L6 6L1 11" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
 
 export const RocketIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
   <svg 

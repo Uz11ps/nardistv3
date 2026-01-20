@@ -72,6 +72,28 @@
 }
 
 /* Результаты */
+.tournament-results-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tournament-results-round-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tournament-results-round-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  padding: 8px 0;
+  border-bottom: 2px solid var(--color-border);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .tournament-results-list {
   display: flex;
   flex-direction: column;
@@ -82,48 +104,96 @@
   background: var(--color-background-secondary);
   border-radius: var(--radius-lg);
   padding: 16px;
+  border: 1px solid var(--color-border);
+  transition: all 0.2s ease;
 }
 
-.tournament-result-round {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.tournament-result-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tournament-result-players {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
 }
 
 .tournament-result-player {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px;
+  gap: 12px;
+  padding: 12px;
   background: var(--color-background);
   border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-primary);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  min-height: 60px;
 }
 
 .tournament-result-player.winner {
-  background: rgba(255, 215, 0, 0.1);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
   border: 1px solid var(--color-gold);
+  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.2);
+}
+
+.tournament-result-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-border);
+}
+
+.tournament-result-player.winner .tournament-result-avatar {
+  border-color: var(--color-gold);
+}
+
+.tournament-result-player-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tournament-result-player-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tournament-result-player.winner .tournament-result-player-name {
   color: var(--color-gold);
+}
+
+.tournament-result-player-username {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tournament-result-winner-badge {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .tournament-result-vs {
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text-secondary);
-  padding: 0 8px;
+  padding: 0 12px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 

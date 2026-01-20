@@ -243,49 +243,84 @@ export default function TournamentDetail() {
                 )
               }
               
+              // Группируем матчи по раундам
+              const matchesByRound = finishedMatches.reduce((acc, match) => {
+                const round = match.round
+                if (!acc[round]) {
+                  acc[round] = []
+                }
+                acc[round].push(match)
+                return acc
+              }, {} as Record<number, typeof finishedMatches>)
+              
+              // Сортируем раунды от финала к началу
+              const sortedRounds = Object.keys(matchesByRound)
+                .map(Number)
+                .sort((a, b) => b - a)
+              
               return (
-                <div className="tournament-results-list">
-                  {finishedMatches
-                    .sort((a, b) => b.round - a.round || a.matchNumber - b.matchNumber)
-                    .map((match) => {
-                    const getStatusText = (status: string) => {
-                      switch (status) {
-                        case 'finished': return 'Завершен'
-                        case 'in_progress': return 'В процессе'
-                        case 'scheduled': return 'Запланирован'
-                        case 'bye': return 'Автопроход'
-                        default: return status
-                      }
-                    }
-                    
+                <div className="tournament-results-container">
+                  {sortedRounds.map((round) => {
+                    const roundMatches = matchesByRound[round].sort((a, b) => a.matchNumber - b.matchNumber)
                     return (
-                      <Card key={match.id} className="tournament-result-card">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                          <div className="tournament-result-round">
-                            {getRoundName(match.round, totalRounds)}
-                          </div>
-                          <div style={{ 
-                            fontSize: '12px', 
-                            fontWeight: '500',
-                            color: match.status === 'finished' ? 'var(--color-success)' : 
-                                   match.status === 'in_progress' ? 'var(--color-primary)' : 
-                                   'var(--color-text-secondary)'
-                          }}>
-                            {getStatusText(match.status)}
-                          </div>
+                      <div key={round} className="tournament-results-round-group">
+                        <div className="tournament-results-round-header">
+                          {getRoundName(round, totalRounds)}
                         </div>
-                        <div className="tournament-result-players">
-                          <div className={`tournament-result-player ${match.winnerId === match.player1?.id ? 'winner' : ''}`}>
-                            {match.player1?.nickname || match.player1?.username || '-'}
-                            {match.winnerId === match.player1?.id && ' 🏆'}
-                          </div>
-                          <div className="tournament-result-vs">VS</div>
-                          <div className={`tournament-result-player ${match.winnerId === match.player2?.id ? 'winner' : ''}`}>
-                            {match.player2?.nickname || match.player2?.username || '-'}
-                            {match.winnerId === match.player2?.id && ' 🏆'}
-                          </div>
+                        <div className="tournament-results-list">
+                          {roundMatches.map((match) => (
+                            <Card key={match.id} className="tournament-result-card">
+                              <div className="tournament-result-players">
+                                <div className={`tournament-result-player ${match.winnerId === match.player1?.id ? 'winner' : ''}`}>
+                                  {match.player1?.avatarUrl && (
+                                    <img 
+                                      src={match.player1.avatarUrl} 
+                                      alt={match.player1.username}
+                                      className="tournament-result-avatar"
+                                    />
+                                  )}
+                                  <div className="tournament-result-player-info">
+                                    <div className="tournament-result-player-name">
+                                      {match.player1?.nickname || match.player1?.username || '-'}
+                                    </div>
+                                    {match.player1?.username && match.player1?.nickname && (
+                                      <div className="tournament-result-player-username">
+                                        @{match.player1.username}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {match.winnerId === match.player1?.id && (
+                                    <div className="tournament-result-winner-badge">🏆</div>
+                                  )}
+                                </div>
+                                <div className="tournament-result-vs">VS</div>
+                                <div className={`tournament-result-player ${match.winnerId === match.player2?.id ? 'winner' : ''}`}>
+                                  {match.winnerId === match.player2?.id && (
+                                    <div className="tournament-result-winner-badge">🏆</div>
+                                  )}
+                                  <div className="tournament-result-player-info">
+                                    <div className="tournament-result-player-name">
+                                      {match.player2?.nickname || match.player2?.username || '-'}
+                                    </div>
+                                    {match.player2?.username && match.player2?.nickname && (
+                                      <div className="tournament-result-player-username">
+                                        @{match.player2.username}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {match.player2?.avatarUrl && (
+                                    <img 
+                                      src={match.player2.avatarUrl} 
+                                      alt={match.player2.username}
+                                      className="tournament-result-avatar"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
                         </div>
-                      </Card>
+                      </div>
                     )
                   })}
                 </div>

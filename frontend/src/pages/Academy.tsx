@@ -768,7 +768,17 @@ export default function Academy() {
             })().map((course) => (
               <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
                 <div className="academy-grid-card-icon">
-                  <img src="/img/шляпа.png" alt="course" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <img 
+                    src="/img/шляпа.png" 
+                    alt="course" 
+                    style={{ 
+                      width: '78px',
+                      height: '58px',
+                      flexShrink: 0,
+                      aspectRatio: '39/29',
+                      objectFit: 'contain'
+                    }} 
+                  />
                 </div>
                 <div className="academy-grid-card-title">{course.title}</div>
                 <div className="academy-grid-card-author">{course.author}</div>
