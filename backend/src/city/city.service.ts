@@ -63,14 +63,15 @@ export class CityService {
         (c) => !c.expiresAt || c.expiresAt > now,
       );
 
+      const user = await this.usersService.findOne(userId);
+      const userLevel = user ? user.level || 1 : 1;
+
       return districts.map(district => {
         const myCapture = captures.find(c => c.districtCode === district.code);
         const activeCapture = activeCaptures.find(c => c.districtCode === district.code);
         const isCapturedByMyClan = myCapture && (!myCapture.expiresAt || myCapture.expiresAt > now);
         const isCapturedByOther = activeCapture && activeCapture.capturedByClanId !== userClan.clan.id;
 
-        const user = await this.usersService.findOne(userId);
-        const userLevel = user ? user.level || 1 : 1;
         const requiredLevel = district.requiredLevel ?? 1;
         const isUnlocked = userLevel >= requiredLevel;
 
