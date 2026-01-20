@@ -973,18 +973,6 @@ export class AdminController {
     return this.adminService.updateBoardConfig(body.size, body.config)
   }
 
-  // Временный endpoint для установки админа по telegramId (БЕЗ авторизации, удалить после использования!)
-  @Post('set-admin/:telegramId')
-  async setAdminByTelegramId(
-    @Param('telegramId') telegramId: string,
-    @Query('secret') secret: string
-  ) {
-    if (secret !== 'SETUP_ADMIN_KEY_2024') {
-      throw new UnauthorizedException('Неверный секретный ключ')
-    }
-    return this.adminService.setAdminByTelegramId(telegramId)
-  }
-
   @Put('system-settings')
   @UseGuards(AdminAuthGuard)
   async updateSystemSettings(
