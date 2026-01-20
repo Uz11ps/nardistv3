@@ -266,41 +266,79 @@ export default function BackgammonBoard({
     return getDefaultConfig(currentWidth < 768)
   })
   
-  // Загружаем конфиг с сервера при монтировании (когда containerRef готов)
+  // Текущий загруженный размер для отслеживания изменений
+  const currentLoadedSizeRef = useRef<number | null>(null)
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Загружаем конфиг с сервера при монтировании и при изменении размера
   useEffect(() => {
-    if (containerRef.current) {
-      loadConfigFromServer().then(freshConfig => {
+    if (!containerRef.current) return
+    
+    const loadConfig = async () => {
+      const currentWidth = containerRef.current?.offsetWidth || window.innerWidth
+      const DEBUG_SIZES = [368, 512, 768, 1024, 1440] as const
+      
+      // Определяем ближайший размер из списка
+      const closestSize = DEBUG_SIZES.reduce((prev, curr) => 
+        Math.abs(curr - currentWidth) < Math.abs(prev - currentWidth) ? curr : prev
+      )
+      
+      // Загружаем конфиг только если размер изменился или это первая загрузка
+      if (currentLoadedSizeRef.current !== closestSize) {
+        currentLoadedSizeRef.current = closestSize
+        console.log(`📐 Размер окна: ${currentWidth}px, ближайший конфиг: ${closestSize}px`)
+        
+        const freshConfig = await loadConfigFromServer()
         setDebugConfig(freshConfig)
-      })
+      }
     }
-  }, []) // Только при монтировании
+    
+    // Загружаем при монтировании
+    loadConfig()
+    
+    // Обработчик изменения размера окна с debounce
+    const handleResize = () => {
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current)
+      }
+      resizeTimeoutRef.current = setTimeout(() => {
+        loadConfig()
+      }, 150) // Debounce 150ms
+    }
+    
+    // Используем ResizeObserver для отслеживания изменения размера контейнера
+    const resizeObserver = new ResizeObserver(() => {
+      // В дебаг-режиме размер фиксируется через DebugPanel, не перезагружаем
+      if (debugMode) return
+      
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current)
+      }
+      resizeTimeoutRef.current = setTimeout(() => {
+        loadConfig()
+      }, 150) // Debounce 150ms
+    })
+    
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+    
+    window.addEventListener('resize', handleResize)
+    
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      resizeObserver.disconnect()
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current)
+      }
+    }
+  }, [debugMode]) // Перезагружаем при изменении debugMode
   
   // Перезагружаем конфиг с сервера при изменении (можно добавить polling или websocket)
   // В текущем окне изменения применяются через setDebugConfig в DebugPanel
   
   // Используем текущий конфиг - он применяется ВСЕГДА (и в игре, и в дебаге)
   const effectiveDebugConfig = debugConfig
-
-  // Responsive Config Switcher - ТОЛЬКО если нет сохраненного конфига
-  useEffect(() => {
-    // Если есть сохраненный конфиг - не переключаем автоматически
-    const hasSavedConfig = localStorage.getItem('backgammon-debug-config-v12')
-    if (hasSavedConfig || debugMode) return
-    
-    const handleResize = () => {
-        if (containerRef.current) {
-            const width = containerRef.current.offsetWidth
-            const isMobile = width < 768
-            setDebugConfig(getDefaultConfig(isMobile))
-        }
-    }
-
-    // Call on mount
-    handleResize()
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [debugMode])
 
   // Test dice for debug mode
   const [debugDice, setDebugDice] = useState<number[] | null>(null)
