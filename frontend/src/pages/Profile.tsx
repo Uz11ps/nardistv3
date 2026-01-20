@@ -446,7 +446,7 @@ export default function Profile() {
             className="profile-bottom-menu-item-v2"
           >
             <span className="profile-bottom-menu-icon-v2">
-              <BarChartIcon size={30} style={{ color: '#FFD700' }} />
+              <img src="/img/зарик.png" alt="analytics" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
             </span>
             <span className="profile-bottom-menu-title-v2">Аналитика</span>
             <span className="profile-bottom-menu-arrow-v2">

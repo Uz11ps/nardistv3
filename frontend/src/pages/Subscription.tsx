@@ -31,7 +31,7 @@ const subscriptionFeatures = [
   {
     title: 'Анализ',
     description: 'Разбор ошибок и лучших ходов',
-    icon: <BarChartIcon size={24} style={{ color: '#FFD700' }} />,
+    icon: <img src="/img/зарик.png" alt="analysis" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />,
     iconBg: 'rgba(255, 215, 0, 0.15)',
   },
   {

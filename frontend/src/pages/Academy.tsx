@@ -691,8 +691,8 @@ export default function Academy() {
       ]}
     >
       <div className="academy-content">
-        {/* Кнопка "Опубликовать свое" - в самом верху для всех вкладок */}
-        {(activeTab === 'courses' || activeTab === 'articles' || activeTab === 'my-materials') && (
+        {/* Кнопка "Опубликовать свое" - только во вкладке "Купленные материалы" */}
+        {activeTab === 'my-materials' && (
           <button className="academy-publish-own-btn" onClick={() => navigate('/academy/publish')}>
             Опубликовать свое
           </button>

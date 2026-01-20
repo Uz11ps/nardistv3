@@ -820,7 +820,7 @@ export default function Shop() {
 
                 <div className="shop-premium-modal-feature">
                   <div className="shop-premium-modal-feature-icon">
-                    <BarChartIcon size={32} style={{ color: '#FFD700' }} />
+                    <img src="/img/зарик.png" alt="analysis" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
                   </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Анализ</div>
