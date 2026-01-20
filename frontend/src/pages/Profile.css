@@ -1069,6 +1069,39 @@
   gap: 16px;
 }
 
+.profile-statistics-mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.profile-statistics-mode-tab {
+  flex: 1;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.profile-statistics-mode-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.profile-statistics-mode-tab.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #C93C3D;
+  color: #FFF;
+  font-weight: 500;
+}
+
 .profile-statistics-card {
   padding: 20px;
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);

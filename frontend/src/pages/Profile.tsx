@@ -34,6 +34,7 @@ export default function Profile() {
   })
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'stats' | 'statistics' | 'analytics'>('stats')
+  const [statisticsMode, setStatisticsMode] = useState<'all' | 'long' | 'short'>('all')
   const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null)
   const [gameHistory, setGameHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -470,64 +471,118 @@ export default function Profile() {
       </>
     ) : activeTab === 'statistics' ? (
           <div className="profile-statistics-tab">
+            {/* Вкладки статистики */}
+            <div className="profile-statistics-mode-tabs">
+              <button 
+                className={`profile-statistics-mode-tab ${statisticsMode === 'all' ? 'active' : ''}`}
+                onClick={() => setStatisticsMode('all')}
+              >
+                Все
+              </button>
+              <button 
+                className={`profile-statistics-mode-tab ${statisticsMode === 'long' ? 'active' : ''}`}
+                onClick={() => setStatisticsMode('long')}
+              >
+                Длинные
+              </button>
+              <button 
+                className={`profile-statistics-mode-tab ${statisticsMode === 'short' ? 'active' : ''}`}
+                onClick={() => setStatisticsMode('short')}
+              >
+                Короткие
+              </button>
+            </div>
+
             {loadingStatistics ? (
               <div style={{ textAlign: 'center', padding: '40px', color: '#B6B6B6' }}>Загрузка...</div>
             ) : playerStatistics ? (
               <>
-                <div className="profile-statistics-card">
-                  <div className="profile-statistics-title">Общая статистика</div>
-                  <div className="profile-statistics-total">
-                    Всего матчей: <span style={{ color: '#FFD700', fontWeight: '600' }}>{playerStatistics.totalMatches}</span>
+                {statisticsMode === 'all' && (
+                  <div className="profile-statistics-card">
+                    <div className="profile-statistics-title">Общая статистика</div>
+                    <div className="profile-statistics-details">
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Всего матчей:</span>
+                        <span className="profile-statistics-value">{playerStatistics.totalMatches || 0}</span>
+                      </div>
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Всего побед:</span>
+                        <span className="profile-statistics-value" style={{ color: '#4CAF50' }}>
+                          {(playerStatistics.short?.wins || 0) + (playerStatistics.long?.wins || 0)}
+                        </span>
+                      </div>
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Всего поражений:</span>
+                        <span className="profile-statistics-value" style={{ color: '#E84142' }}>
+                          {(playerStatistics.short?.losses || 0) + (playerStatistics.long?.losses || 0)}
+                        </span>
+                      </div>
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Общий винрейт:</span>
+                        <span className="profile-statistics-value" style={{ color: '#FFD700', fontWeight: '600', fontSize: '18px' }}>
+                          {(() => {
+                            const totalWins = (playerStatistics.short?.wins || 0) + (playerStatistics.long?.wins || 0)
+                            const totalLosses = (playerStatistics.short?.losses || 0) + (playerStatistics.long?.losses || 0)
+                            const totalMatches = totalWins + totalLosses
+                            return totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0
+                          })()}%
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="profile-statistics-card">
-                  <div className="profile-statistics-title">Короткие нарды</div>
-                  <div className="profile-statistics-details">
-                    <div className="profile-statistics-item">
-                      <span className="profile-statistics-label">Матчей:</span>
-                      <span className="profile-statistics-value">{playerStatistics.short.matches}</span>
-                    </div>
-                    <div className="profile-statistics-item">
-                      <span className="profile-statistics-label">Побед:</span>
-                      <span className="profile-statistics-value" style={{ color: '#4CAF50' }}>{playerStatistics.short.wins}</span>
-                    </div>
-                    <div className="profile-statistics-item">
-                      <span className="profile-statistics-label">Поражений:</span>
-                      <span className="profile-statistics-value" style={{ color: '#E84142' }}>{playerStatistics.short.losses}</span>
-                    </div>
-                    <div className="profile-statistics-item">
-                      <span className="profile-statistics-label">Винрейт:</span>
-                      <span className="profile-statistics-value" style={{ color: '#FFD700', fontWeight: '600', fontSize: '18px' }}>
-                        {playerStatistics.short.winrate}%
-                      </span>
+                {statisticsMode === 'long' && (
+                  <div className="profile-statistics-card">
+                    <div className="profile-statistics-title">Длинные нарды</div>
+                    <div className="profile-statistics-details">
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Матчей:</span>
+                        <span className="profile-statistics-value">{playerStatistics.long?.matches || 0}</span>
+                      </div>
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Побед:</span>
+                        <span className="profile-statistics-value" style={{ color: '#4CAF50' }}>{playerStatistics.long?.wins || 0}</span>
+                      </div>
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Поражений:</span>
+                        <span className="profile-statistics-value" style={{ color: '#E84142' }}>{playerStatistics.long?.losses || 0}</span>
+                      </div>
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Винрейт:</span>
+                        <span className="profile-statistics-value" style={{ color: '#FFD700', fontWeight: '600', fontSize: '18px' }}>
+                          {playerStatistics.long?.winrate || 0}%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
-                <div className="profile-statistics-card">
-                  <div className="profile-statistics-title">Длинные нарды</div>
-                  <div className="profile-statistics-details">
-                    <div className="profile-statistics-item">
-                      <span className="profile-statistics-label">Матчей:</span>
-                      <span className="profile-statistics-value">{playerStatistics.long.matches}</span>
-                    </div>
-                    <div className="profile-statistics-item">
-                      <span className="profile-statistics-label">Побед:</span>
-                      <span className="profile-statistics-value" style={{ color: '#4CAF50' }}>{playerStatistics.long.wins}</span>
-                    </div>
-                    <div className="profile-statistics-item">
-                      <span className="profile-statistics-label">Поражений:</span>
-                      <span className="profile-statistics-value" style={{ color: '#E84142' }}>{playerStatistics.long.losses}</span>
-                    </div>
-                    <div className="profile-statistics-item">
-                      <span className="profile-statistics-label">Винрейт:</span>
-                      <span className="profile-statistics-value" style={{ color: '#FFD700', fontWeight: '600', fontSize: '18px' }}>
-                        {playerStatistics.long.winrate}%
-                      </span>
+                {statisticsMode === 'short' && (
+                  <div className="profile-statistics-card">
+                    <div className="profile-statistics-title">Короткие нарды</div>
+                    <div className="profile-statistics-details">
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Матчей:</span>
+                        <span className="profile-statistics-value">{playerStatistics.short?.matches || 0}</span>
+                      </div>
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Побед:</span>
+                        <span className="profile-statistics-value" style={{ color: '#4CAF50' }}>{playerStatistics.short?.wins || 0}</span>
+                      </div>
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Поражений:</span>
+                        <span className="profile-statistics-value" style={{ color: '#E84142' }}>{playerStatistics.short?.losses || 0}</span>
+                      </div>
+                      <div className="profile-statistics-item">
+                        <span className="profile-statistics-label">Винрейт:</span>
+                        <span className="profile-statistics-value" style={{ color: '#FFD700', fontWeight: '600', fontSize: '18px' }}>
+                          {playerStatistics.short?.winrate || 0}%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px', color: '#B6B6B6' }}>Нет данных</div>
