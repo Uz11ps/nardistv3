@@ -194,3 +194,95 @@ export const PaintBrushIcon: React.FC<IconProps> = ({ className, style, size = 2
   </svg>
 )
 
+export const FireIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
+    className={className}
+    style={style}
+  >
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+  </svg>
+)
+
+export const MuscleIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+    style={style}
+  >
+    <path d="M6.5 6.5h11l-1 7h-9z"></path>
+    <path d="M9.5 13.5l-2 4"></path>
+    <path d="M14.5 13.5l2 4"></path>
+    <path d="M12 2v4"></path>
+  </svg>
+)
+
+export const ScrollIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+    style={style}
+  >
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+    <polyline points="14 2 14 8 20 8"></polyline>
+    <line x1="16" y1="13" x2="8" y2="13"></line>
+    <line x1="16" y1="17" x2="8" y2="17"></line>
+    <polyline points="10 9 9 9 8 9"></polyline>
+  </svg>
+)
+
+export const BrainIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+    style={style}
+  >
+    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44L6.5 20.5a2.5 2.5 0 0 1-4.96-.44v-15A2.5 2.5 0 0 1 3.5 2h6z"></path>
+    <path d="M14 2a2.5 2.5 0 0 1 2.5 2.5v15a2.5 2.5 0 0 1-4.96.44L11.5 20.5a2.5 2.5 0 0 1-4.96-.44v-15A2.5 2.5 0 0 1 9.5 2h4.5z"></path>
+  </svg>
+)
+
+export const TicketIcon: React.FC<IconProps> = ({ className, style, size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+    style={style}
+  >
+    <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path>
+    <path d="M13 5v2"></path>
+    <path d="M13 17v2"></path>
+    <path d="M13 11v2"></path>
+  </svg>
+)
+
