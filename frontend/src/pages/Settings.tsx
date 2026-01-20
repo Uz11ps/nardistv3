@@ -146,7 +146,7 @@ export default function Settings() {
           <span className="settings-label">Система координат</span>
           <div className="settings-item-value">
             <span className="settings-value-text">{settings.coordinateSystem === '1-24' ? '1-24' : 'A, B, C, D/1-24'}</span>
-            <ArrowRightIcon size={16} style={{ color: '#707579' }} />
+            <ArrowRightIcon size={24} style={{ color: '#707579' }} />
           </div>
         </div>
 
@@ -156,7 +156,7 @@ export default function Settings() {
           <span className="settings-label">Язык</span>
           <div className="settings-item-value">
             <span className="settings-value-text">{settings.language}</span>
-            <ArrowRightIcon size={16} style={{ color: '#707579' }} />
+            <ArrowRightIcon size={24} style={{ color: '#707579' }} />
           </div>
         </div>
 
@@ -169,7 +169,7 @@ export default function Settings() {
           <span className="settings-label">Часовой пояс</span>
           <div className="settings-item-value">
             <span className="settings-value-text">{getTimezoneLabel(settings.timezone)}</span>
-            <ArrowRightIcon size={16} style={{ color: '#707579' }} />
+            <ArrowRightIcon size={24} style={{ color: '#707579' }} />
           </div>
         </div>
 

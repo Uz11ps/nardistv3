@@ -111,7 +111,7 @@ export default function EnhancementModal({
                   <div className="enhancement-option-loading">...</div>
                 ) : (
                   <div className="enhancement-option-arrow">
-                    <ArrowRightIcon size={16} style={{ color: '#707579' }} />
+                    <ArrowRightIcon size={24} style={{ color: '#707579' }} />
                   </div>
                 )}
               </div>

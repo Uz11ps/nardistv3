@@ -637,7 +637,7 @@ export default function Shop() {
                   </Button>
                 </div>
                 <div className="shop-nar-coin-icon">
-                  <HeartIcon size={120} style={{ color: '#E84142', filter: 'drop-shadow(0 0 12px rgba(232, 65, 66, 0.6))' }} />
+                  <HeartIcon size={80} style={{ color: '#E84142', filter: 'drop-shadow(0 0 12px rgba(232, 65, 66, 0.6))' }} />
                 </div>
               </div>
             </Card>
@@ -672,7 +672,7 @@ export default function Shop() {
                   </Button>
                 </div>
                 <div className="shop-nar-coin-icon">
-                  <CrownIcon size={120} style={{ color: '#FFD700', filter: 'drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))' }} />
+                  <CrownIcon size={80} style={{ color: '#FFD700', filter: 'drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))' }} />
                 </div>
               </div>
             </Card>

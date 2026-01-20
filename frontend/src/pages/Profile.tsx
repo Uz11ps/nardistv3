@@ -438,7 +438,7 @@ export default function Profile() {
             </span>
             <span className="profile-bottom-menu-title-v2">Инвентарь</span>
             <span className="profile-bottom-menu-arrow-v2">
-              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+              <ArrowRightIcon size={24} style={{ color: '#B6B6B6' }} />
             </span>
           </div>
           <div
@@ -450,7 +450,7 @@ export default function Profile() {
             </span>
             <span className="profile-bottom-menu-title-v2">Аналитика</span>
             <span className="profile-bottom-menu-arrow-v2">
-              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+              <ArrowRightIcon size={24} style={{ color: '#B6B6B6' }} />
             </span>
           </div>
           <div
@@ -462,7 +462,7 @@ export default function Profile() {
             </span>
             <span className="profile-bottom-menu-title-v2">Настройки</span>
             <span className="profile-bottom-menu-arrow-v2">
-              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+              <ArrowRightIcon size={24} style={{ color: '#B6B6B6' }} />
             </span>
           </div>
         </div>
