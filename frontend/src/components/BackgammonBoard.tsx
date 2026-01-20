@@ -162,6 +162,12 @@ export default function BackgammonBoard({
       barHitboxWidthPct: 0.088,
       bearOffHitboxPaddingX: 0,
       bearOffHitboxPaddingY: 0,
+      // Checker hitbox parameters
+      checkerHitboxPadding: 5,
+      checkerHitboxSizeScale: 1.0,
+      // Point hitbox heights (top and bottom rows)
+      pointHitboxHeightTop: null as number | null,
+      pointHitboxHeightBottom: null as number | null,
     }
 
   // Small Screen (Mobile) - Optimized
@@ -228,6 +234,12 @@ export default function BackgammonBoard({
     barHitboxWidthPct: 0.088,
     bearOffHitboxPaddingX: 0,
     bearOffHitboxPaddingY: 0,
+    // Checker hitbox parameters
+    checkerHitboxPadding: 5,
+    checkerHitboxSizeScale: 1.0,
+    // Point hitbox heights (top and bottom rows)
+    pointHitboxHeightTop: null as number | null,
+    pointHitboxHeightBottom: null as number | null,
   }
 
   // --- DEBUG / ADJUSTMENT MODE ---
@@ -1264,7 +1276,17 @@ export default function BackgammonBoard({
       // которые могут быть смещены через checkerTopOffset/checkerBottomOffset
       let yStart, yEnd;
       
-      if (isTopRow) {
+      // Проверяем, есть ли кастомная высота хитбокса для верхних или нижних точек
+      const customHeight = isTopRow 
+        ? (config.pointHitboxHeightTop !== null && config.pointHitboxHeightTop !== undefined ? config.pointHitboxHeightTop : null)
+        : (config.pointHitboxHeightBottom !== null && config.pointHitboxHeightBottom !== undefined ? config.pointHitboxHeightBottom : null);
+      
+      if (customHeight !== null && customHeight > 0) {
+        // Используем кастомную высоту хитбокса
+        const centerY = pY;
+        yStart = centerY - (customHeight / 2) - padding;
+        yEnd = centerY + (customHeight / 2) + padding;
+      } else if (isTopRow) {
           // Top Row: Triangle goes from (pY - pH) down to pY (tip)
           // Visual checkers start at: pY + scaleY(config.checkerTopOffset)
           // And go downwards.
@@ -1387,7 +1409,17 @@ export default function BackgammonBoard({
       
       let yStart, yEnd
       
-      if (isTopRow) {
+      // Проверяем, есть ли кастомная высота хитбокса для верхних или нижних точек
+      const customHeight = isTopRow 
+        ? (config.pointHitboxHeightTop !== null && config.pointHitboxHeightTop !== undefined ? config.pointHitboxHeightTop : null)
+        : (config.pointHitboxHeightBottom !== null && config.pointHitboxHeightBottom !== undefined ? config.pointHitboxHeightBottom : null);
+      
+      if (customHeight !== null && customHeight > 0) {
+        // Используем кастомную высоту хитбокса
+        const centerY = pY;
+        yStart = centerY - (customHeight / 2) - padding;
+        yEnd = centerY + (customHeight / 2) + padding;
+      } else if (isTopRow) {
         const triangleBase = pY - pH
         const triangleTip = pY
         const visualBase = pY + scaleY(config.checkerTopOffset)
@@ -1444,9 +1476,45 @@ export default function BackgammonBoard({
     const bearOffValidBlackHY = bearOffAreaY + (bearOffHeight - bearOffValidHH) / 2 + bearOffValidBlackYOffset + bearOffHitboxPaddingY
     ctx.strokeRect(bearOffValidBlackHX, bearOffValidBlackHY, bearOffValidHW, bearOffValidHH)
     
+    // 4. Хитбоксы шашек (желтые пунктирные линии вокруг каждой шашки)
+    const checkerHitboxPadding = config.checkerHitboxPadding !== undefined ? config.checkerHitboxPadding : 5
+    const checkerHitboxSizeScale = config.checkerHitboxSizeScale !== undefined ? config.checkerHitboxSizeScale : 1.0
+    ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)'
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([3, 3])
+    
+    const checkersPoints = virtualGameState?.points && virtualGameState.points.length === 24 
+      ? virtualGameState.points 
+      : []
+    
+    checkersPoints.forEach((pointValue: number, pointIndex: number) => {
+      if (pointValue === 0 || pointIndex >= 24) return
+      
+      const { x, y, isTopRow, pointWidth: pW, pointHeight: pH } = getPointCoordinates(pointIndex, canvasRef.current)
+      const checkerCount = Math.abs(pointValue)
+      
+      const checkerSize = Math.min(pW * config.checkerWidthRatio, pH * config.checkerHeightRatio) * checkerHitboxSizeScale
+      const checkerBaseY = isTopRow 
+        ? y + checkerSize/2 + scaleY(config.checkerTopOffset)
+        : y - checkerSize/2 + scaleY(config.checkerBottomOffset)
+      
+      const checkersToDraw = Math.min(checkerCount, 5)
+      
+      for (let i = 0; i < checkersToDraw; i++) {
+        const overlap = checkerSize - 8
+        const yOffset = i * overlap
+        const checkerY = isTopRow 
+          ? checkerBaseY + yOffset 
+          : checkerBaseY - yOffset
+        
+        const hitboxSize = checkerSize + (checkerHitboxPadding * 2)
+        ctx.strokeRect(x - hitboxSize/2, checkerY - hitboxSize/2, hitboxSize, hitboxSize)
+      }
+    })
+    
     // Сбрасываем пунктирную линию
     ctx.setLineDash([])
-  }, [effectiveDebugConfig, getPointCoordinates])
+  }, [effectiveDebugConfig, getPointCoordinates, virtualGameState])
   
   // Отрисовка доски
   const drawBoard = useCallback(() => {

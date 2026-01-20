@@ -545,6 +545,12 @@ export const DebugPanel = memo(({
             { key: 'barHitboxWidthPct', label: 'Bar Hitbox Width (%)', min: 0, max: 1, step: 0.001, category: 'hitbox', side: 'all' },
             { key: 'bearOffHitboxPaddingX', label: 'BearOff Hitbox Padding X (px)', min: -200, max: 200, step: 1, category: 'hitbox', side: 'all' },
             { key: 'bearOffHitboxPaddingY', label: 'BearOff Hitbox Padding Y (px)', min: -200, max: 200, step: 1, category: 'hitbox', side: 'all' },
+            // Высота хитбоксов точек
+            { key: 'pointHitboxHeightTop', label: 'Point Hitbox Height Top (px)', min: 0, max: 2000, step: 1, category: 'hitbox', side: 'all' },
+            { key: 'pointHitboxHeightBottom', label: 'Point Hitbox Height Bottom (px)', min: 0, max: 2000, step: 1, category: 'hitbox', side: 'all' },
+            // Хитбоксы шашек
+            { key: 'checkerHitboxPadding', label: 'Checker Hitbox Padding (px)', min: -50, max: 100, step: 1, category: 'hitbox', side: 'all' },
+            { key: 'checkerHitboxSizeScale', label: 'Checker Hitbox Size Scale', min: 0.1, max: 3, step: 0.01, category: 'hitbox', side: 'all' },
           ]
           
           const filteredItems = allItems.filter(item => {
@@ -565,7 +571,11 @@ export const DebugPanel = memo(({
                 >
                   −
                 </button>
-                <span style={{ minWidth: '80px', textAlign: 'center' }}>{(debugConfig[item.key] ?? 0).toFixed(3)}</span>
+                <span style={{ minWidth: '80px', textAlign: 'center' }}>
+                  {debugConfig[item.key] !== null && debugConfig[item.key] !== undefined 
+                    ? (typeof debugConfig[item.key] === 'number' ? debugConfig[item.key].toFixed(3) : debugConfig[item.key])
+                    : 'null'}
+                </span>
                 <button
                   onClick={() => handleIncrement(item.key, 1)}
                   style={{ fontSize: '14px', padding: '2px 6px', background: '#444', border: '1px solid #666', color: '#fff', cursor: 'pointer', borderRadius: '3px' }}
