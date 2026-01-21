@@ -130,9 +130,11 @@ export class RatingsService {
     if (period === 'weekly') {
       periodStart = new Date();
       periodStart.setDate(periodStart.getDate() - 7);
+      periodStart.setHours(0, 0, 0, 0); // Начало дня недели назад
     } else if (period === 'monthly') {
       periodStart = new Date();
       periodStart.setMonth(periodStart.getMonth() - 1);
+      periodStart.setHours(0, 0, 0, 0); // Начало дня месяц назад
     }
 
     // Если период указан, всегда считаем статистику из игр (для всех типов сортировки)
@@ -213,6 +215,8 @@ export class RatingsService {
     limit: number
   ): Promise<any[]> {
     // Получаем все игры за период (только vs_player)
+    // Используем createdAt для фильтрации, так как это дата начала игры
+    // Игра считается за период, если она была создана в этот период
     const games = await this.gamesRepository
       .createQueryBuilder('game')
       .leftJoinAndSelect('game.player1', 'player1')
@@ -220,8 +224,13 @@ export class RatingsService {
       .where('game.mode = :mode', { mode })
       .andWhere('game.type = :type', { type: GameType.VS_PLAYER })
       .andWhere('game.status = :status', { status: GameStatus.FINISHED })
-      .andWhere('game.updatedAt >= :periodStart', { periodStart })
+      .andWhere('game.createdAt >= :periodStart', { periodStart })
       .getMany();
+
+    // Если игр нет, возвращаем пустой массив
+    if (games.length === 0) {
+      return [];
+    }
 
     // Собираем статистику по пользователям
     const userStats = new Map<string, {
