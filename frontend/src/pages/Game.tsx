@@ -57,9 +57,10 @@ export default function Game() {
   const timerIntervalRef = useRef<number | null>(null)
   const [preparationCountdown, setPreparationCountdown] = useState<number | null>(null) // Отсчет подготовки (5 секунд)
   const preparationCountdownRef = useRef<number | null>(null)
-  const [offsetSelectionTimer, setOffsetSelectionTimer] = useState<number | null>(null) // Таймер выбора смещения (10 секунд)
+  const [offsetSelectionTimer, setOffsetSelectionTimer] = useState<number | null>(null) // Таймер выбора смещения (15 секунд)
   const offsetSelectionTimerRef = useRef<number | null>(null)
   const offsetSelectionTimerIntervalRef = useRef<number | null>(null)
+  const [showMatchCancelledModal, setShowMatchCancelledModal] = useState(false)
 
   // Отключаем вертикальный свайп в Telegram Web App при монтировании компонента игры
   useEffect(() => {
@@ -177,7 +178,7 @@ export default function Game() {
     }
   }, [preparationCountdown])
 
-  // Таймер выбора смещения (10 секунд) - если не выбрано, ставится 1 по умолчанию
+  // Таймер выбора смещения (15 секунд) - если не выбрано, матч отменяется
   useEffect(() => {
     // Запускаем таймер только для vs_player игр, когда игра в статусе 'waiting' и смещение еще не выбрано
     const isBotGameType = gameInfo?.type === 'vs_bot'
@@ -187,9 +188,9 @@ export default function Game() {
       
       // Если смещение еще не выбрано и таймер не запущен
       if (!myOffsetChosenAt && offsetSelectionTimer === null && offsetSelectionTimerIntervalRef.current === null) {
-        console.log('⏱️ Запускаем таймер выбора смещения (10 секунд)')
-        setOffsetSelectionTimer(10)
-        offsetSelectionTimerRef.current = 10
+        console.log('⏱️ Запускаем таймер выбора смещения (15 секунд)')
+        setOffsetSelectionTimer(15)
+        offsetSelectionTimerRef.current = 15
         
         const interval = setInterval(() => {
           setOffsetSelectionTimer((prev) => {
@@ -204,13 +205,20 @@ export default function Game() {
               // Проверяем, не выбрано ли уже смещение
               const currentOffsetChosenAt = isP1 ? gameInfo.p1OffsetChosenAt : gameInfo.p2OffsetChosenAt
               if (!currentOffsetChosenAt && gameId) {
-                console.log('⏱️ Время выбора смещения истекло, устанавливаем 1 по умолчанию')
-                // Отправляем смещение 1 по умолчанию
-                setMyOffset(1)
-                lastSentOffsetRef.current = 1
-                apiClient.post(`/games/${gameId}/offset`, { offset: 1 }).catch((error) => {
-                  console.error('Failed to set default offset:', error)
-                  lastSentOffsetRef.current = null
+                console.log('⏱️ Время выбора смещения истекло, отменяем матч')
+                // Отменяем матч
+                apiClient.post(`/games/${gameId}/resign`).then(() => {
+                  setShowMatchCancelledModal(true)
+                  setTimeout(() => {
+                    navigate('/', { replace: true })
+                  }, 2000)
+                }).catch((error) => {
+                  console.error('Failed to cancel match:', error)
+                  // В любом случае показываем уведомление и перенаправляем
+                  setShowMatchCancelledModal(true)
+                  setTimeout(() => {
+                    navigate('/', { replace: true })
+                  }, 2000)
                 })
               }
               
@@ -569,26 +577,43 @@ export default function Game() {
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
   const [playerStats, setPlayerStats] = useState<any>(null)
   const [loadingPlayerStats, setLoadingPlayerStats] = useState(false)
+  const [statsFilter, setStatsFilter] = useState<'all' | 'wins' | 'losses'>('all')
+  const [statsModeFilter, setStatsModeFilter] = useState<'all' | 'short' | 'long'>('all')
+  
+  const loadPlayerStats = async (playerId: string) => {
+    setLoadingPlayerStats(true)
+    try {
+      const params = new URLSearchParams()
+      if (statsFilter !== 'all') {
+        params.append('result', statsFilter)
+      }
+      if (statsModeFilter !== 'all') {
+        params.append('mode', statsModeFilter)
+      }
+      
+      const statsResponse = await apiClient.get(`/games/statistics/${playerId}${params.toString() ? '?' + params.toString() : ''}`).catch(() => ({ data: null }))
+      setPlayerStats(statsResponse.data)
+    } catch (error) {
+      console.error('Failed to load player stats:', error)
+    } finally {
+      setLoadingPlayerStats(false)
+    }
+  }
   
   const handleAvatarClick = async (player: any) => {
     if (!player?.id) return
     
     setSelectedPlayer(player)
     setShowPlayerModal(true)
-    setLoadingPlayerStats(true)
+    setStatsFilter('all')
+    setStatsModeFilter('all')
     
     try {
-      const [userResponse, statsResponse] = await Promise.all([
-        apiClient.get(`/users/${player.id}`).catch(() => ({ data: null })),
-        apiClient.get(`/games/statistics/${player.id}`).catch(() => ({ data: null }))
-      ])
-      
+      const userResponse = await apiClient.get(`/users/${player.id}`).catch(() => ({ data: null }))
       setSelectedPlayer(userResponse.data || player)
-      setPlayerStats(statsResponse.data)
+      await loadPlayerStats(player.id)
     } catch (error) {
       console.error('Failed to load player info:', error)
-    } finally {
-      setLoadingPlayerStats(false)
     }
   }
 
@@ -3198,6 +3223,11 @@ export default function Game() {
                   
                   <div className="offset-selector">
                     <label>Ваше смещение (1-5):</label>
+                    {offsetSelectionTimer !== null && offsetSelectionTimer > 0 && (
+                      <div style={{ color: offsetSelectionTimer <= 5 ? '#FF4444' : '#FFD700', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>
+                        ⏱️ Осталось {offsetSelectionTimer} секунд
+                      </div>
+                    )}
                     <p className="offset-hint">Каждый игрок выбирает свое смещение независимо</p>
                     <div className="offset-buttons">
                       {[1, 2, 3, 4, 5].map((value) => (
@@ -3781,6 +3811,44 @@ export default function Game() {
       )}
 
       {/* Модальное окно с информацией об игроке */}
+      {/* Модальное окно "Матч отменен" */}
+      {showMatchCancelledModal && createPortal(
+        <div 
+          className="offset-modal-overlay modal-visible" 
+          style={{
+            position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px',
+            width: '100vw', height: '100vh', minWidth: '100vw', minHeight: '100vh',
+            background: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 2147483647, padding: '12px', margin: '0',
+            border: 'none', outline: 'none', touchAction: 'none', overflow: 'hidden',
+            overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <div 
+            className="offset-modal-content" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              padding: '24px',
+              borderRadius: '16px',
+              textAlign: 'center',
+              maxWidth: '400px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+            }}
+          >
+            <h2 style={{ fontSize: '24px', margin: '0 0 16px 0', color: '#FFF', fontWeight: 600 }}>
+              Матч отменен
+            </h2>
+            <p style={{ fontSize: '14px', color: '#B6B6B6', margin: '0 0 24px 0', lineHeight: '1.5' }}>
+              Время на выбор смещения истекло. Матч был отменен.
+            </p>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {showPlayerModal && selectedPlayer && createPortal(
         <div className="game-player-modal-overlay" onClick={() => setShowPlayerModal(false)}>
           <div className="game-player-modal" onClick={(e) => e.stopPropagation()}>
@@ -3807,6 +3875,63 @@ export default function Game() {
                 )}
                 <div className="game-player-modal-level">
                   Уровень {selectedPlayer?.level || 0}
+                </div>
+              </div>
+
+              {/* Фильтры статистики */}
+              <div className="game-player-modal-filters" style={{ marginBottom: '16px', padding: '12px', background: '#2a2a2a', borderRadius: '8px' }}>
+                <div className="filter-group" style={{ marginBottom: '12px' }}>
+                  <div className="filter-label" style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '6px' }}>Результат:</div>
+                  <div className="filter-buttons" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <button
+                      className={`filter-btn ${statsFilter === 'all' ? 'active' : ''}`}
+                      onClick={() => { setStatsFilter('all'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                      style={{ padding: '6px 12px', fontSize: '12px', background: statsFilter === 'all' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsFilter === 'all' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsFilter === 'all' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
+                    >
+                      Все
+                    </button>
+                    <button
+                      className={`filter-btn ${statsFilter === 'wins' ? 'active' : ''}`}
+                      onClick={() => { setStatsFilter('wins'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                      style={{ padding: '6px 12px', fontSize: '12px', background: statsFilter === 'wins' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsFilter === 'wins' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsFilter === 'wins' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
+                    >
+                      Победы
+                    </button>
+                    <button
+                      className={`filter-btn ${statsFilter === 'losses' ? 'active' : ''}`}
+                      onClick={() => { setStatsFilter('losses'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                      style={{ padding: '6px 12px', fontSize: '12px', background: statsFilter === 'losses' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsFilter === 'losses' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsFilter === 'losses' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
+                    >
+                      Поражения
+                    </button>
+                  </div>
+                </div>
+
+                <div className="filter-group">
+                  <div className="filter-label" style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '6px' }}>Режим:</div>
+                  <div className="filter-buttons" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <button
+                      className={`filter-btn ${statsModeFilter === 'all' ? 'active' : ''}`}
+                      onClick={() => { setStatsModeFilter('all'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                      style={{ padding: '6px 12px', fontSize: '12px', background: statsModeFilter === 'all' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'all' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsModeFilter === 'all' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
+                    >
+                      Все
+                    </button>
+                    <button
+                      className={`filter-btn ${statsModeFilter === 'short' ? 'active' : ''}`}
+                      onClick={() => { setStatsModeFilter('short'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                      style={{ padding: '6px 12px', fontSize: '12px', background: statsModeFilter === 'short' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'short' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsModeFilter === 'short' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
+                    >
+                      Короткие
+                    </button>
+                    <button
+                      className={`filter-btn ${statsModeFilter === 'long' ? 'active' : ''}`}
+                      onClick={() => { setStatsModeFilter('long'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                      style={{ padding: '6px 12px', fontSize: '12px', background: statsModeFilter === 'long' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'long' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsModeFilter === 'long' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
+                    >
+                      Длинные
+                    </button>
+                  </div>
                 </div>
               </div>
 

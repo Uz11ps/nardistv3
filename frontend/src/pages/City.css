@@ -23,25 +23,43 @@
 .city-card-v3-complete {
   /* Убираем aspect-ratio: 1, чтобы карточка могла быть выше при необходимости */
   min-height: 240px; /* Увеличиваем минимальную высоту */
-  background: #2a2a2a;
-  border-radius: 12px;
+  background: linear-gradient(180deg, #1C1D21 0%, #0B0C0E 100%);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  padding: 12px;
+  padding: 14px;
   cursor: pointer;
-  transition: all 0.2s;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(232, 65, 66, 0.2);
   position: relative;
   overflow: hidden;
   width: calc((100% - 16px) / 2);
   min-width: 140px;
   max-width: 200px;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.city-card-v3-complete::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(232, 65, 66, 0.5), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
 .city-card-v3-complete:hover {
-  border-color: rgba(201, 60, 61, 0.5);
-  box-shadow: 0 4px 12px rgba(201, 60, 61, 0.2);
+  border-color: rgba(232, 65, 66, 0.6);
+  box-shadow: 0 8px 24px rgba(232, 65, 66, 0.3);
+  transform: translateY(-2px);
+}
+
+.city-card-v3-complete:hover::before {
+  opacity: 1;
 }
 
 .city-card-v3 {
@@ -134,7 +152,16 @@
   align-items: center;
   justify-content: center;
   height: 120px; /* Увеличиваем высоту для иконки, чтобы перекрыть отступ */
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 8px;
+  transition: all 0.3s;
+}
+
+.city-card-v3-complete:hover .city-card-v3-icon-wrapper {
+  background: rgba(232, 65, 66, 0.1);
+  transform: scale(1.02);
 }
 
 .city-card-v3-icon-wrapper img {
@@ -143,6 +170,7 @@
   max-width: 120px;
   max-height: 120px;
   object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .city-card-v3-title {
@@ -166,31 +194,46 @@
 
 .city-card-v3-level {
   font-size: 10px;
-  color: #888;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+  color: #FFD700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
+  padding: 4px 8px;
+  border-radius: 6px;
   white-space: nowrap;
+  font-weight: 600;
+  border: 1px solid rgba(255, 215, 0, 0.3);
 }
 
 .city-card-v3-income {
   font-size: 11px;
   color: #FFF;
-  margin-bottom: 0px; /* Убираем отступ снизу */
-  margin-top: -8px; /* Негативный отступ сверху, чтобы приблизить к иконке */
-  text-align: left; /* Выравниваем по левому краю */
+  margin-bottom: 8px;
+  text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 0px; /* Убираем отступ между строками дохода */
-  flex-shrink: 0; /* Не сжимаем блок дохода */
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.city-card-v3-income-per-hour {
+  font-size: 11px;
+  color: #4CAF50;
+  font-weight: 600;
 }
 
 .city-card-v3-accumulated {
   font-size: 10px;
-  color: #FFF;
+  color: #FFD700;
   font-weight: 600;
   min-height: 14px;
   display: block;
+}
+
+.city-card-v3-max-accumulation {
+  font-size: 9px;
+  color: #B6B6B6;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-top: 2px;
 }
 
 .city-card-v3-actions {
@@ -222,23 +265,48 @@
 }
 
 .city-card-v3-btn-collect {
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  background: linear-gradient(135deg, #E84142 0%, #C93C3D 50%, #681C1C 100%);
   color: #FFF;
-  border: 0.1px solid #C93C3D;
-  box-shadow: 0 2px 8px 0 rgba(232, 65, 66, 0.3);
+  border: none;
+  box-shadow: 0 4px 12px rgba(232, 65, 66, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.city-card-v3-btn-collect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.city-card-v3-btn-collect:hover:not(:disabled)::before {
+  left: 100%;
 }
 
 .city-card-v3-btn-collect:hover:not(:disabled) {
-  background: linear-gradient(180deg, #D32F2F -144.23%, #5A1616 105.77%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px 0 rgba(232, 65, 66, 0.4);
+  background: linear-gradient(135deg, #F44336 0%, #D32F2F 50%, #7A1E1E 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(232, 65, 66, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .city-card-v3-btn-upgrade {
-  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  background: linear-gradient(135deg, #424242 0%, #2a2a2a 100%);
   color: #FFF;
-  border: 0.1px solid #C93C3D;
-  box-shadow: 0 2px 8px 0 rgba(232, 65, 66, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s;
+}
+
+.city-card-v3-btn-upgrade:hover:not(:disabled) {
+  background: linear-gradient(135deg, #525252 0%, #3a3a3a 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .city-card-v3-btn-upgrade:hover:not(:disabled) {

@@ -158,9 +158,29 @@ export class AdminService implements OnModuleInit {
       .getCount();
     
     // Исключаем sandbox игры из статистики
-    const totalGames = await this.gamesRepository.count({ where: { type: Not(GameType.SANDBOX) } });
-    const finishedGames = await this.gamesRepository.count({ where: { status: GameStatus.FINISHED, type: Not(GameType.SANDBOX) } });
-    const inProgressGames = await this.gamesRepository.count({ where: { status: GameStatus.IN_PROGRESS, type: Not(GameType.SANDBOX) } });
+    // Свободные столы учитываются только если оба игрока присоединились (player2Id не null)
+    const totalGamesQuery = this.gamesRepository
+      .createQueryBuilder('game')
+      .where('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING });
+    
+    const totalGamesCount = await totalGamesQuery.getCount();
+    
+    const finishedGamesQuery = this.gamesRepository
+      .createQueryBuilder('game')
+      .where('game.status = :finishedStatus', { finishedStatus: GameStatus.FINISHED })
+      .andWhere('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING });
+    
+    const finishedGamesCount = await finishedGamesQuery.getCount();
+    
+    const inProgressGamesQuery = this.gamesRepository
+      .createQueryBuilder('game')
+      .where('game.status = :inProgressStatus', { inProgressStatus: GameStatus.IN_PROGRESS })
+      .andWhere('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING });
+    
+    const inProgressGamesCount = await inProgressGamesQuery.getCount();
     
     const totalMoves = await this.movesRepository.count();
     
@@ -211,10 +231,12 @@ export class AdminService implements OnModuleInit {
     }
 
     // Получаем данные из БД (исключаем sandbox игры)
+    // Свободные столы учитываются только если оба игрока присоединились (player2Id не null)
     const gamesLast7DaysRaw = await this.gamesRepository
       .createQueryBuilder('game')
       .where('game.createdAt >= :date', { date: sevenDaysAgo })
       .andWhere('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING })
       .select("TO_CHAR(game.createdAt, 'YYYY-MM-DD')", 'date')
       .addSelect('COUNT(*)', 'count')
       .groupBy("TO_CHAR(game.createdAt, 'YYYY-MM-DD')")
@@ -243,9 +265,9 @@ export class AdminService implements OnModuleInit {
         levelDistribution: levelStats,
       },
       games: {
-        total: totalGames,
-        finished: finishedGames,
-        inProgress: inProgressGames,
+        total: totalGamesCount,
+        finished: finishedGamesCount,
+        inProgress: inProgressGamesCount,
         totalMoves,
         last7Days: gamesLast7Days,
       },
@@ -269,21 +291,25 @@ export class AdminService implements OnModuleInit {
       throw new NotFoundException('Пользователь не найден');
     }
 
-    const userGames = await this.gamesRepository.find({
-      where: [
-        { player1Id: id },
-        { player2Id: id },
-      ],
-      order: { createdAt: 'DESC' },
-      take: 50,
-    });
+    // Исключаем sandbox игры из списка игр пользователя
+    // Свободные столы учитываются только если оба игрока присоединились (player2Id не null)
+    const userGames = await this.gamesRepository
+      .createQueryBuilder('game')
+      .where('(game.player1Id = :userId OR game.player2Id = :userId)', { userId: id })
+      .andWhere('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING })
+      .orderBy('game.createdAt', 'DESC')
+      .take(50)
+      .getMany();
 
-    const wins = await this.gamesRepository.count({
-      where: [
-        { player1Id: id, winnerId: id },
-        { player2Id: id, winnerId: id },
-      ],
-    });
+    // Исключаем sandbox игры из подсчета побед
+    // Свободные столы учитываются только если оба игрока присоединились (player2Id не null)
+    const wins = await this.gamesRepository
+      .createQueryBuilder('game')
+      .where('((game.player1Id = :userId AND game.winnerId = :userId) OR (game.player2Id = :userId AND game.winnerId = :userId))', { userId: id })
+      .andWhere('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING })
+      .getCount();
 
     return {
       ...user,
@@ -297,11 +323,17 @@ export class AdminService implements OnModuleInit {
   }
 
   async getAllGames() {
-    return this.gamesRepository.find({
-      relations: ['player1', 'player2'],
-      order: { createdAt: 'DESC' },
-      take: 100,
-    });
+    // Исключаем sandbox игры
+    // Свободные столы учитываются только если оба игрока присоединились (player2Id не null)
+    return this.gamesRepository
+      .createQueryBuilder('game')
+      .leftJoinAndSelect('game.player1', 'player1')
+      .leftJoinAndSelect('game.player2', 'player2')
+      .where('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING })
+      .orderBy('game.createdAt', 'DESC')
+      .take(100)
+      .getMany();
   }
 
   async getGameDetails(id: string) {
@@ -2669,6 +2701,19 @@ export class AdminService implements OnModuleInit {
 
   // ========== СТАТИСТИКА ==========
   async getStatistics() {
+    // Исключаем sandbox игры из статистики
+    // Свободные столы учитываются только если оба игрока присоединились (player2Id не null)
+    const totalGamesQuery = this.gamesRepository
+      .createQueryBuilder('game')
+      .where('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING });
+    
+    const finishedGamesQuery = this.gamesRepository
+      .createQueryBuilder('game')
+      .where('game.status = :finishedStatus', { finishedStatus: GameStatus.FINISHED })
+      .andWhere('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING });
+    
     const [
       totalUsers,
       activeUsers,
@@ -2686,8 +2731,8 @@ export class AdminService implements OnModuleInit {
     ] = await Promise.all([
       this.usersRepository.count(),
       this.usersRepository.count({ where: { isBanned: false } }),
-      this.gamesRepository.count(),
-      this.gamesRepository.count({ where: { status: GameStatus.FINISHED } }),
+      totalGamesQuery.getCount(),
+      finishedGamesQuery.getCount(),
       this.tournamentsRepository.count(),
       this.tournamentsRepository.count({ where: { status: TournamentStatus.IN_PROGRESS } }),
       this.questsRepository.count(),

@@ -261,15 +261,20 @@ export default function City() {
                     {/* Информация о прибыли */}
                     {userBuilding && (
                       <div className="city-card-v3-income">
-                        <div>
+                        <div className="city-card-v3-income-per-hour">
                           {(typeof userBuilding.incomePerHour === 'string' 
                             ? Number(userBuilding.incomePerHour) 
                             : (userBuilding.incomePerHour || 0)).toLocaleString('ru-RU')} NAR/час
-            </div>
+                        </div>
                         <div className="city-card-v3-accumulated">
                           Накоплено: {accumulatedIncome.toLocaleString('ru-RU')} NAR
                         </div>
-      </div>
+                        {config.maxAccumulation > 0 && (
+                          <div className="city-card-v3-max-accumulation">
+                            Макс. накопление: {config.maxAccumulation.toLocaleString('ru-RU')} NAR
+                          </div>
+                        )}
+                      </div>
                     )}
                     
                     {/* Кнопки действий */}

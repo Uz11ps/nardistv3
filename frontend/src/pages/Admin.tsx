@@ -1610,6 +1610,10 @@ export default function Admin() {
                 </thead>
                 <tbody>
                   {games.filter((game) => {
+                    // Исключаем sandbox игры
+                    // Свободные столы учитываются только если оба игрока присоединились (player2Id не null)
+                    if (game.type === 'sandbox') return false
+                    if (game.status === 'waiting' && !game.player2Id) return false // Исключаем незаполненные столы
                     if (gameFilters.search && !game.id.toLowerCase().includes(gameFilters.search.toLowerCase()) && !(game.player1?.nickname || game.player1?.username || '').toLowerCase().includes(gameFilters.search.toLowerCase()) && !(game.player2?.nickname || game.player2?.username || '').toLowerCase().includes(gameFilters.search.toLowerCase())) return false
                     if (gameFilters.status && game.status !== gameFilters.status) return false
                     if (gameFilters.mode && game.mode !== gameFilters.mode) return false

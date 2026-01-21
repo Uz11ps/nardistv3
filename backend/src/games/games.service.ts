@@ -3260,34 +3260,66 @@ ${formattedMoves.join('\n')}
     };
   }
 
-  async getPlayerStatistics(userId: string): Promise<any> {
-    // Получаем все игры только с игроками (не с ботами)
-    const playerGames = await this.gamesRepository.find({
-      where: [
-        { player1Id: userId, type: GameType.VS_PLAYER },
-        { player2Id: userId, type: GameType.VS_PLAYER },
-      ],
-      relations: ['player1', 'player2'],
-    });
+  async getPlayerStatistics(userId: string, filters?: { mode?: string; result?: string }): Promise<any> {
+    // Используем QueryBuilder для исключения sandbox игр и игр с ботами
+    // Свободные столы учитываются только если оба игрока присоединились (player2Id не null)
+    const queryBuilder = this.gamesRepository
+      .createQueryBuilder('game')
+      .leftJoinAndSelect('game.player1', 'player1')
+      .leftJoinAndSelect('game.player2', 'player2')
+      .where('(game.player1Id = :userId OR game.player2Id = :userId)', { userId })
+      .andWhere('game.type != :sandboxType', { sandboxType: GameType.SANDBOX })
+      .andWhere('game.type != :botType', { botType: GameType.VS_BOT })
+      .andWhere('(game.player2Id IS NOT NULL OR game.status != :waitingStatus)', { waitingStatus: GameStatus.WAITING });
 
-    // Фильтруем игры по режиму
-    const shortGames = playerGames.filter(g => g.mode === GameMode.SHORT);
-    const longGames = playerGames.filter(g => g.mode === GameMode.LONG);
+    // Фильтр по типу игры (игры с ботами всегда исключены)
+    if (filters?.result && filters.result !== 'wins' && filters.result !== 'losses' && filters.result !== 'bot') {
+      // Для фильтров "wins" и "losses" включаем только игры с игроками (боты уже исключены)
+      queryBuilder.andWhere('game.type = :playerType', { playerType: GameType.VS_PLAYER });
+    }
+    // Фильтр "bot" больше не поддерживается, так как игры с ботами исключены
 
-    // Подсчитываем победы
-    const shortWins = shortGames.filter(g => g.winnerId === userId && g.status === GameStatus.FINISHED).length;
-    const longWins = longGames.filter(g => g.winnerId === userId && g.status === GameStatus.FINISHED).length;
+    // Фильтр по режиму на уровне запроса
+    if (filters?.mode === 'short') {
+      queryBuilder.andWhere('game.mode = :shortMode', { shortMode: GameMode.SHORT });
+    } else if (filters?.mode === 'long') {
+      queryBuilder.andWhere('game.mode = :longMode', { longMode: GameMode.LONG });
+    }
 
-    // Подсчитываем только завершенные игры
-    const shortFinished = shortGames.filter(g => g.status === GameStatus.FINISHED).length;
-    const longFinished = longGames.filter(g => g.status === GameStatus.FINISHED).length;
+    const playerGames = await queryBuilder.getMany();
+
+    // Фильтр по результату (победы/поражения)
+    let filteredGames = playerGames;
+    if (filters?.result === 'wins') {
+      filteredGames = playerGames.filter(g => g.winnerId === userId && g.status === GameStatus.FINISHED);
+    } else if (filters?.result === 'losses') {
+      filteredGames = playerGames.filter(g => g.winnerId !== userId && g.winnerId !== null && g.status === GameStatus.FINISHED);
+    } else {
+      // Для остальных фильтров показываем только завершенные игры
+      filteredGames = playerGames.filter(g => g.status === GameStatus.FINISHED);
+    }
+
+    // Фильтруем игры по режиму (если фильтр по режиму не установлен, показываем оба)
+    const shortGames = filters?.mode === 'long' ? [] : filteredGames.filter(g => g.mode === GameMode.SHORT);
+    const longGames = filters?.mode === 'short' ? [] : filteredGames.filter(g => g.mode === GameMode.LONG);
+
+    // Подсчитываем победы (игры уже отфильтрованы по статусу выше)
+    const shortWins = shortGames.filter(g => g.winnerId === userId).length;
+    const longWins = longGames.filter(g => g.winnerId === userId).length;
+
+    // Подсчитываем завершенные игры (уже отфильтрованы)
+    const shortFinished = shortGames.length;
+    const longFinished = longGames.length;
 
     // Вычисляем винрейт
     const shortWinrate = shortFinished > 0 ? (shortWins / shortFinished) * 100 : 0;
     const longWinrate = longFinished > 0 ? (longWins / longFinished) * 100 : 0;
 
+    // Общее количество матчей (все игры, не только завершенные)
+    const totalMatches = filteredGames.length;
+
     return {
-      totalMatches: playerGames.length,
+      totalMatches,
       short: {
         matches: shortFinished,
         wins: shortWins,

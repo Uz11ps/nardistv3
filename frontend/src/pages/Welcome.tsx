@@ -9,8 +9,8 @@ export default function Welcome() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'url(/img/App2.png) no-repeat center center fixed',
-        backgroundSize: 'cover',
+        background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.95) 0%, rgba(11, 12, 14, 0.98) 100%), url(/img/App2.png) no-repeat center center fixed',
+        backgroundSize: '100% 100%, cover',
         backgroundColor: '#1a1a1a',
         display: 'flex',
         flexDirection: 'column',

@@ -743,6 +743,46 @@ export class ClansService {
    * Захват района кланом (новая логика)
    */
   async captureDistrictForClan(userId: string, clanId: string, districtCode: string): Promise<void> {
+    // Получаем клан и район
+    const clan = await this.findOne(clanId);
+    const clanLevel = clan?.level || 1;
+    
+    const district = await this.districtConfigsRepository.findOne({
+      where: { code: districtCode, isActive: true },
+    });
+    
+    if (!district) {
+      throw new BadRequestException('Район не найден');
+    }
+    
+    // Получаем все районы, отсортированные по requiredLevel
+    const allDistricts = await this.districtConfigsRepository.find({
+      where: { isActive: true },
+      order: { order: 'ASC' },
+    });
+    
+    // Сортируем по requiredLevel для определения порядка
+    const sortedDistricts = [...allDistricts].sort((a, b) => {
+      const levelA = a.requiredLevel ?? 1;
+      const levelB = b.requiredLevel ?? 1;
+      return levelA - levelB;
+    });
+    
+    // Находим порядковый номер района (начиная с 1)
+    const districtIndex = sortedDistricts.findIndex(d => d.code === districtCode);
+    if (districtIndex === -1) {
+      throw new BadRequestException('Район не найден');
+    }
+    
+    const districtOrder = districtIndex + 1;
+    
+    // Проверяем, доступен ли район для захвата данным кланом
+    if (districtOrder > clanLevel) {
+      throw new BadRequestException(
+        `Для захвата этого района требуется уровень федерации ${districtOrder}. Текущий уровень: ${clanLevel}`
+      );
+    }
+    
     // Проверяем права на захват
     const canCapture = await this.canClanCaptureTerritory(clanId);
     if (!canCapture.canCapture) {
@@ -757,7 +797,6 @@ export class ClansService {
     await this.cityService.captureDistrict(clanId, districtCode);
 
     // Обновляем время последнего захвата
-    const clan = await this.findOne(clanId);
     clan.lastTerritoryCaptureAt = new Date();
     await this.clansRepository.save(clan);
   }
@@ -831,7 +870,22 @@ export class ClansService {
       (c) => !c.expiresAt || c.expiresAt > now,
     );
 
-    return districts.map(district => {
+    // Получаем уровень клана
+    const clanLevel = clan?.level || 1;
+    
+    // Сортируем районы по requiredLevel для определения порядка
+    const sortedDistricts = [...districts].sort((a, b) => {
+      const levelA = a.requiredLevel ?? 1;
+      const levelB = b.requiredLevel ?? 1;
+      return levelA - levelB;
+    });
+
+    return sortedDistricts.map((district, index) => {
+      // Район доступен для захвата, если его порядковый номер (начиная с 1) <= уровня клана
+      // Первый район (index 0) доступен для клана уровня 1, второй (index 1) - для уровня 2 и т.д.
+      const districtOrder = index + 1;
+      const isUnlocked = districtOrder <= clanLevel;
+      
       const myCapture = captures.find(c => c.districtCode === district.code);
       const activeCapture = activeCaptures.find(c => c.districtCode === district.code);
       const isCapturedByMyClan = myCapture && (!myCapture.expiresAt || myCapture.expiresAt > now);
@@ -849,7 +903,8 @@ export class ClansService {
         icon: district.icon,
         image: district.image,
         requiredLevel: district.requiredLevel ?? 1,
-        isUnlocked: true, // Для кланов все районы доступны
+        requiredClanLevel: districtOrder, // Уровень клана, необходимый для захвата этого района
+        isUnlocked: isUnlocked, // Доступен ли район для захвата данным кланом
         capture: myCapture ? {
           capturedAt: myCapture.capturedAt,
           expiresAt: myCapture.expiresAt,

@@ -29,8 +29,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #1a1a1a url('/img/App2.png') no-repeat center center fixed;
-  background-size: cover;
+  background: linear-gradient(180deg, rgba(26, 26, 26, 0.95) 0%, rgba(11, 12, 14, 0.98) 100%),
+              #1a1a1a url('/img/App2.png') no-repeat center center fixed;
+  background-size: 100% 100%, cover;
   background-color: #1a1a1a;
   color: #ffffff;
   min-height: 100vh;
