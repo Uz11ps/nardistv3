@@ -19,6 +19,7 @@ import { QuestTarget } from '../quests/quest.entity';
 import { TrainingService } from '../training/training.service';
 import { TaskType } from '../training/training-task.entity';
 import { TournamentsService } from '../tournaments/tournaments.service';
+import { ClansService } from '../clans/clans.service';
 import { GamesGateway } from './games.gateway';
 import * as crypto from 'crypto';
 
@@ -56,6 +57,8 @@ export class GamesService {
     private branchesService: ProgressionBranchesService,
     @Inject(forwardRef(() => TournamentsService))
     private tournamentsService: TournamentsService,
+    @Inject(forwardRef(() => ClansService))
+    private clansService: ClansService,
     @Inject(forwardRef(() => GamesGateway))
     private gamesGateway: GamesGateway,
   ) {}
@@ -1976,6 +1979,19 @@ export class GamesService {
         
         // Обновляем историю матчей для анти-фарма
         await this.updateMatchHistory(game.winnerId, loserId);
+        
+        // Обрабатываем победу участника клана - передаем доход клану
+        try {
+          const winnerClan = await this.clansService.getUserClan(game.winnerId);
+          if (winnerClan && winnerClan.clan) {
+            const activeCapture = await this.clansService.getActiveDistrictCapture(winnerClan.clan.id);
+            if (activeCapture) {
+              await this.clansService.processClanMemberWin(game.winnerId, loserId, activeCapture.districtCode);
+            }
+          }
+        } catch (error) {
+          this.logger.error(`❌ Ошибка при обработке победы участника клана: ${error.message}`);
+        }
         
         this.logger.log(`⭐ XP начислен: победитель ${game.winnerId} +${winnerXP} XP (Марс: ${isMarsWin}, повторы: ${repeatMatchesCount}), проигравший ${loserId} +${loserXP} XP`);
         

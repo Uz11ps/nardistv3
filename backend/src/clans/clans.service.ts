@@ -9,6 +9,7 @@ import { DistrictConfig } from '../city/district-config.entity';
 import { DistrictCapture } from '../city/district-capture.entity';
 import { Building } from '../city/building.entity';
 import { BuildingConfig } from '../city/building-config.entity';
+import { PlayerCapture } from './player-capture.entity';
 import { CityService } from '../city/city.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -31,6 +32,8 @@ export class ClansService {
     private buildingsRepository: Repository<Building>,
     @InjectRepository(BuildingConfig)
     private buildingConfigsRepository: Repository<BuildingConfig>,
+    @InjectRepository(PlayerCapture)
+    private playerCapturesRepository: Repository<PlayerCapture>,
     private usersService: UsersService,
     @Inject(forwardRef(() => CityService))
     private cityService: CityService,
@@ -721,15 +724,15 @@ export class ClansService {
       return { canCapture: true };
     }
 
-    const daysSinceLastCapture = (Date.now() - new Date(clan.lastTerritoryCaptureAt).getTime()) / (1000 * 60 * 60 * 24);
-    const CAPTURE_COOLDOWN_DAYS = 3;
+    const hoursSinceLastCapture = (Date.now() - new Date(clan.lastTerritoryCaptureAt).getTime()) / (1000 * 60 * 60);
+    const CAPTURE_COOLDOWN_HOURS = 24;
     
-    if (daysSinceLastCapture < CAPTURE_COOLDOWN_DAYS) {
-      const remainingDays = Math.ceil(CAPTURE_COOLDOWN_DAYS - daysSinceLastCapture);
+    if (hoursSinceLastCapture < CAPTURE_COOLDOWN_HOURS) {
+      const remainingHours = Math.ceil(CAPTURE_COOLDOWN_HOURS - hoursSinceLastCapture);
       return {
         canCapture: false,
         reason: 'cooldown',
-        cooldownRemaining: remainingDays,
+        cooldownRemaining: remainingHours,
       };
     }
 
@@ -745,7 +748,7 @@ export class ClansService {
     if (!canCapture.canCapture) {
       throw new BadRequestException(
         canCapture.reason === 'cooldown'
-          ? `Клан может захватывать территории раз в день. Осталось: ${canCapture.cooldownRemaining} дней`
+          ? `Клан может захватывать территории раз в 24 часа. Осталось: ${canCapture.cooldownRemaining} часов`
           : 'Клан не может захватить территорию'
       );
     }
@@ -769,7 +772,7 @@ export class ClansService {
     if (!canCapture.canCapture) {
       throw new BadRequestException(
         canCapture.reason === 'cooldown'
-          ? `Клан может захватывать территории раз в день. Осталось: ${canCapture.cooldownRemaining} дней`
+          ? `Клан может захватывать территории раз в 24 часа. Осталось: ${canCapture.cooldownRemaining} часов`
           : 'Клан не может захватить территорию'
       );
     }
@@ -866,6 +869,224 @@ export class ClansService {
    */
   async collectDistrictIncome(clanId: string, districtCode: string) {
     return this.cityService.collectDistrictIncome(clanId, districtCode);
+  }
+
+  /**
+   * Проверяет, есть ли у клана активный захват района
+   */
+  async hasActiveDistrictCapture(clanId: string, districtCode: string): Promise<boolean> {
+    const capture = await this.districtCapturesRepository.findOne({
+      where: {
+        capturedByClanId: clanId,
+        districtCode,
+      },
+      order: { capturedAt: 'DESC' },
+    });
+
+    if (!capture) {
+      return false;
+    }
+
+    // Проверяем, не истек ли срок захвата
+    if (capture.expiresAt && capture.expiresAt < new Date()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Получает информацию об активном захвате района кланом
+   */
+  async getActiveDistrictCapture(clanId: string): Promise<DistrictCapture | null> {
+    const captures = await this.districtCapturesRepository.find({
+      where: {
+        capturedByClanId: clanId,
+      },
+      order: { capturedAt: 'DESC' },
+    });
+
+    const now = new Date();
+    for (const capture of captures) {
+      if (!capture.expiresAt || capture.expiresAt > now) {
+        return capture;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Проверяет, есть ли у участника клана активный захват района
+   */
+  async hasActiveCaptureForMember(userId: string): Promise<{ hasCapture: boolean; districtCode?: string; clanName?: string }> {
+    const userClan = await this.getUserClan(userId);
+    if (!userClan || !userClan.clan) {
+      return { hasCapture: false };
+    }
+
+    const activeCapture = await this.getActiveDistrictCapture(userClan.clan.id);
+    if (!activeCapture) {
+      return { hasCapture: false };
+    }
+
+    return {
+      hasCapture: true,
+      districtCode: activeCapture.districtCode,
+      clanName: userClan.clan.name,
+    };
+  }
+
+  /**
+   * Накладывает захват на игрока (действует 1 час)
+   */
+  async capturePlayer(playerId: string, capturingClanId: string, districtCode: string): Promise<PlayerCapture> {
+    // Удаляем старые захваты на этого игрока от этого клана
+    await this.playerCapturesRepository.delete({
+      playerId,
+      capturingClanId,
+    });
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 час
+
+    const capture = this.playerCapturesRepository.create({
+      playerId,
+      capturingClanId,
+      districtCode,
+      capturedAt: now,
+      expiresAt,
+    });
+
+    return await this.playerCapturesRepository.save(capture);
+  }
+
+  /**
+   * Получает случайного игрока с купленным районом
+   */
+  async getRandomPlayerWithDistrict(districtCode: string): Promise<string | null> {
+    // Находим DistrictConfig по code, чтобы получить id
+    const districtConfig = await this.districtConfigsRepository.findOne({
+      where: { code: districtCode },
+    });
+
+    if (!districtConfig) {
+      return null;
+    }
+
+    // Находим всех игроков, у которых есть строения в этом районе
+    const buildings = await this.buildingsRepository.find();
+
+    // Фильтруем строения по району через BuildingConfig
+    const buildingConfigs = await this.buildingConfigsRepository.find();
+    const districtBuildings = buildings.filter(building => {
+      const config = buildingConfigs.find(c => c.type === building.type);
+      return config && config.districtId === districtConfig.id;
+    });
+
+    if (districtBuildings.length === 0) {
+      return null;
+    }
+
+    // Выбираем случайного игрока
+    const randomIndex = Math.floor(Math.random() * districtBuildings.length);
+    return districtBuildings[randomIndex].userId;
+  }
+
+  /**
+   * Обрабатывает победу участника клана - накладывает захват на проигравшего и передает доход клану
+   */
+  async processClanMemberWin(winnerId: string, loserId: string, districtCode: string): Promise<void> {
+    // Проверяем, состоит ли победитель в клане
+    const winnerClan = await this.getUserClan(winnerId);
+    if (!winnerClan || !winnerClan.clan) {
+      return; // Победитель не в клане
+    }
+
+    const clanId = winnerClan.clan.id;
+
+    // Проверяем, есть ли у клана активный захват этого района
+    const hasActiveCapture = await this.hasActiveDistrictCapture(clanId, districtCode);
+    if (!hasActiveCapture) {
+      return; // У клана нет активного захвата этого района
+    }
+
+    // Проверяем, есть ли у проигравшего город (buildings)
+    const loserBuildings = await this.buildingsRepository.find({
+      where: { userId: loserId },
+    });
+
+    let targetPlayerId: string | null = null;
+
+    if (loserBuildings.length > 0) {
+      // У проигравшего есть город - накладываем захват на него
+      targetPlayerId = loserId;
+    } else {
+      // У проигравшего нет города - выбираем случайного игрока с этим районом
+      targetPlayerId = await this.getRandomPlayerWithDistrict(districtCode);
+      if (!targetPlayerId) {
+        this.logger.warn(`Не найден игрок с районом ${districtCode} для захвата`);
+        return;
+      }
+    }
+
+    // Накладываем захват на игрока (1 час)
+    await this.capturePlayer(targetPlayerId, clanId, districtCode);
+
+    // Вычисляем доход от игрока (базовый доход от его строений)
+    const targetBuildings = await this.buildingsRepository.find({
+      where: { userId: targetPlayerId },
+    });
+
+    // Находим DistrictConfig по code, чтобы получить id
+    const districtConfig = await this.districtConfigsRepository.findOne({
+      where: { code: districtCode },
+    });
+
+    if (!districtConfig) {
+      this.logger.warn(`Район ${districtCode} не найден`);
+      return;
+    }
+
+    let incomeToTransfer = 0;
+    for (const building of targetBuildings) {
+      // Получаем конфиг строения
+      const config = await this.buildingConfigsRepository.findOne({
+        where: { type: building.type },
+      });
+
+      if (config && config.districtId === districtConfig.id) {
+        // Берем 50% дохода за час (incomePerHour)
+        const buildingIncome = Number(building.incomePerHour || 0);
+        incomeToTransfer += Math.floor(buildingIncome * 0.5);
+      }
+    }
+
+    if (incomeToTransfer > 0) {
+      // Передаем доход в казну клана
+      const clan = await this.findOne(clanId);
+      const currentTreasury = Number(clan.treasury || 0);
+      clan.treasury = (currentTreasury + incomeToTransfer).toString();
+      await this.clansRepository.save(clan);
+
+      // Списываем доход у игрока
+      const targetUser = await this.usersService.findOne(targetPlayerId);
+      const currentBalance = Number(targetUser.narCoin || 0);
+      const newBalance = Math.max(0, currentBalance - incomeToTransfer);
+      await this.usersService.update(targetPlayerId, { narCoin: newBalance });
+
+      // Создаем транзакцию в казне
+      const transaction = this.transactionsRepository.create({
+        clanId: clanId,
+        userId: winnerId, // Победитель, который принес доход
+        type: TreasuryTransactionType.INCOME,
+        amount: incomeToTransfer.toString(),
+        description: `Доход от захвата игрока ${targetUser.username} (район ${districtCode})`,
+      });
+      await this.transactionsRepository.save(transaction);
+
+      this.logger.log(`💰 Клан ${clanId} получил ${incomeToTransfer} NAR от захвата игрока ${targetPlayerId}`);
+    }
   }
 }
 

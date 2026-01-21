@@ -22,6 +22,7 @@ import { SkinsModule } from '../skins/skins.module';
 import { QuestsModule } from '../quests/quests.module';
 import { TrainingModule } from '../training/training.module';
 import { TournamentsModule } from '../tournaments/tournaments.module';
+import { ClansModule } from '../clans/clans.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { TournamentsModule } from '../tournaments/tournaments.module';
     forwardRef(() => QuestsModule),
     forwardRef(() => TrainingModule),
     forwardRef(() => TournamentsModule),
+    forwardRef(() => ClansModule),
   ],
   controllers: [GamesController],
   providers: [GamesService, GamesGateway, GamesOffsetTimeoutService, BackgammonEngine, LongBackgammonEngine],

@@ -8,6 +8,7 @@ import { RedisModule } from '../config/redis.module';
 import { RatingsModule } from '../ratings/ratings.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { UsersModule } from '../users/users.module';
+import { ClansModule } from '../clans/clans.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UsersModule } from '../users/users.module';
     RatingsModule,
     UsersModule,
     forwardRef(() => SubscriptionModule),
+    forwardRef(() => ClansModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

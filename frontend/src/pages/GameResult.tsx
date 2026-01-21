@@ -97,12 +97,16 @@ export default function GameResult() {
     const xpReward = isPlayer1 ? (game.player1XP || 0) : (game.player2XP || 0)
     
     // Если была ставка, вычисляем выигрыш
+    // ВАЖНО: Точный расчет выигрыша зависит от комиссии и бонусов на бэкенде
+    // Здесь используем приблизительный расчет для отображения
     let narCoinReward = undefined
     if (game.stake && game.stake > 0 && isWinner && game.type !== 'vs_bot') {
       const stakeValue = Number(game.stake)
+      // Победитель получает обе ставки минус комиссия (приблизительно 15 NAR или динамическая)
       const totalPot = stakeValue * 2
-      const commission = 15 // Фиксированная комиссия 15 нар за игру
-      narCoinReward = totalPot - commission
+      // Используем приблизительную комиссию 15 NAR (реальная может быть меньше из-за прокачки Экономики)
+      const approximateCommission = 15
+      narCoinReward = totalPot - approximateCommission
     }
 
     setGameData({
@@ -198,9 +202,10 @@ export default function GameResult() {
                 <span style={{ color: '#ff3333', fontWeight: 600 }}>
                   <FireIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> +{rewards.xp} XP
                 </span>
-                {rewards.narCoin && rewards.narCoin > 0 && (
+                {rewards.narCoin !== undefined && rewards.narCoin > 0 && (
                   <span className="gold" style={{ fontWeight: 600 }}>
-                    <CoinIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> +{rewards.narCoin} NAR
+                    <CoinIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> 
+                    +{rewards.narCoin} NAR {gameData.stake > 0 && `(ставка: ${gameData.stake} NAR)`}
                   </span>
                 )}
               </div>

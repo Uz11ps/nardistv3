@@ -194,7 +194,10 @@ export default function ClanDistricts() {
                 </div>
                 <div className="city-clan-capture-info">
                   <div>Этот район можно захватить</div>
-                  <div>Захват на 24 часа</div>
+                  <div>Захват на 12 часов</div>
+                  <div style={{ color: '#FFD700', marginTop: '8px', fontSize: '14px' }}>
+                    Для успешного захвата участникам клана нужно играть и выигрывать против других игроков. За каждую победу клан получает доход от проигравшего.
+                  </div>
                   {member?.role !== 'leader' && (
                     <div style={{ color: '#FFD700', marginTop: '8px', fontSize: '14px' }}>
                       Только лидер может захватывать районы

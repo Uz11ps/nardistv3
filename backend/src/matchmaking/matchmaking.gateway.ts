@@ -12,9 +12,11 @@ import { UseGuards, Logger } from '@nestjs/common';
 import { MatchmakingService } from './matchmaking.service';
 import { GamesService } from '../games/games.service';
 import { UsersService } from '../users/users.service';
+import { ClansService } from '../clans/clans.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { GameMode } from '../games/game.entity';
+import { Inject, forwardRef } from '@nestjs/common';
 import axios from 'axios';
 
 @WebSocketGateway({
@@ -35,6 +37,8 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
     private matchmakingService: MatchmakingService,
     private gamesService: GamesService,
     private usersService: UsersService,
+    @Inject(forwardRef(() => ClansService))
+    private clansService: ClansService,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
@@ -249,6 +253,27 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
         // Удаляем стол из списка открытых, так как игра началась
         await this.matchmakingService.deleteTableFromRedis(data.gameId);
         
+        // Проверяем активные захваты кланов для обоих игроков и отправляем уведомления
+        try {
+          const player1Capture = await this.clansService.hasActiveCaptureForMember(game.player1Id);
+          if (player1Capture.hasCapture) {
+            this.server.to(`user:${game.player1Id}`).emit('clan_capture_notification', {
+              message: `Игра за захват кланом! Ваш клан "${player1Capture.clanName}" захватил район. Выигрывайте, чтобы клан получал доход.`,
+              districtCode: player1Capture.districtCode,
+            });
+          }
+
+          const player2Capture = await this.clansService.hasActiveCaptureForMember(game.player2Id);
+          if (player2Capture.hasCapture) {
+            this.server.to(`user:${game.player2Id}`).emit('clan_capture_notification', {
+              message: `Игра за захват кланом! Ваш клан "${player2Capture.clanName}" захватил район. Выигрывайте, чтобы клан получал доход.`,
+              districtCode: player2Capture.districtCode,
+            });
+          }
+        } catch (error) {
+          this.logger.error(`Ошибка при проверке захватов кланов: ${error.message}`);
+        }
+
         // Отправляем событие начала игры обоим игрокам
         this.server.to(`user:${game.player1Id}`).emit('game_started', { gameId: data.gameId, game });
         this.server.to(`user:${game.player2Id}`).emit('game_started', { gameId: data.gameId, game });

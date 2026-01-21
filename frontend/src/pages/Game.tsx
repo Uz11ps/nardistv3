@@ -1470,10 +1470,14 @@ export default function Game() {
 
       // Если есть серверные ходы (ход бота или другого игрока), 
       // откладываем обновление gameState до завершения анимации
-      // ВАЖНО: Проверяем, что это НЕ наш ход (чтобы не было двойной анимации)
+      // ВАЖНО: При дубле всегда используем анимацию, чтобы избежать двойной отрисовки
+      // Проверяем, что это НЕ наш ход (чтобы не было двойной анимации для наших ходов)
       // isMyMove уже определен выше в начале обработчика
-      if (data.serverMoves && data.serverMoves.length > 0 && !isMyMove) {
-        console.log('🤖 Saving pending gameState and starting animation:', data.serverMoves);
+      const isDoubles = remainingDice.length === 4 && remainingDice.every((d: number) => d === remainingDice[0]);
+      const shouldAnimate = data.serverMoves && data.serverMoves.length > 0 && (!isMyMove || isDoubles);
+      
+      if (shouldAnimate) {
+        console.log('🤖 Saving pending gameState and starting animation:', data.serverMoves, 'isDoubles:', isDoubles);
         isServerAnimatingRef.current = true;
         pendingGameStateRef.current = nextGameState;
         setServerMovesForBoard(data.serverMoves);
@@ -2998,7 +3002,10 @@ export default function Game() {
                     // Если я player2, то противник = player1
                     const opponentTimer = isPlayer1 ? player2Timer : player1Timer
                     const opponentTotalTime = isPlayer1 ? totalTimeRemaining.player2 : totalTimeRemaining.player1
-                    const isOvertime = opponentTimer <= 0 || isInOvertime
+                    // ВАЖНО: Овертайм определяется ТОЛЬКО через isInOvertime из состояния
+                    // и только если это действительно ход противника
+                    const isOpponentTurn = (isPlayer1 && gameState?.currentPlayer === 1) || (!isPlayer1 && gameState?.currentPlayer === 0)
+                    const isOvertime = isOpponentTurn && isInOvertime
                     // Используем константы: 15 секунд на ход, 60 секунд овертайм
                     const MOVE_TIME_LIMIT = 15
                     const TOTAL_TIME_LIMIT = 60
@@ -3036,6 +3043,11 @@ export default function Game() {
             </div>
             
             <div className="game-score-side">
+              {gameInfo?.stake && gameInfo.stake > 0 && (
+                <div className="game-stake-label" style={{ fontSize: '12px', color: '#FFD700', marginBottom: '4px', fontWeight: 600 }}>
+                  Ставка: {gameInfo.stake} NAR
+                </div>
+              )}
               <div className="game-score-label">до {gameInfo?.matchesToWin || 1}</div>
               <div className="game-score">{score.player1}:{score.player2}</div>
             </div>
@@ -3094,13 +3106,18 @@ export default function Game() {
               </div>
               {/* Счет в центре */}
               <div className="game-score-section">
+                {gameInfo?.stake && gameInfo.stake > 0 && (
+                  <div className="game-stake-label" style={{ fontSize: '12px', color: '#FFD700', marginBottom: '4px', fontWeight: 600 }}>
+                    Ставка: {gameInfo.stake} NAR
+                  </div>
+                )}
                 <div className="game-score-label">до {gameInfo?.matchesToWin || 1}</div>
                 <div className="game-score">{score.player1}:{score.player2}</div>
               </div>
               {/* Я справа */}
               <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
-                <div className="game-player-avatar">
+                <div className="game-player-avatar" onClick={() => myPlayer && handleAvatarClick(myPlayer)} style={{ cursor: 'pointer' }}>
                   {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
                   {gameStatus === 'in_progress' && (() => {
                     // Мой таймер (всегда справа)

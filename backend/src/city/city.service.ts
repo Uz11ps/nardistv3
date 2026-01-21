@@ -432,8 +432,8 @@ export class CityService {
     // Если район уже захвачен этим кланом, обновляем время захвата
     if (existingCapture && existingCapture.capturedByClanId === clanId) {
       const now = new Date();
-      // Захват на 24 часа
-      const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      // Захват на 12 часов
+      const expiresAt = new Date(now.getTime() + 12 * 60 * 60 * 1000);
       existingCapture.capturedAt = now;
       existingCapture.expiresAt = expiresAt;
       await this.districtCapturesRepository.save(existingCapture);
@@ -456,7 +456,7 @@ export class CityService {
 
     // Создаем новый захват
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 часа
+    const expiresAt = new Date(now.getTime() + 12 * 60 * 60 * 1000); // 12 часов
 
     const capture = this.districtCapturesRepository.create({
       districtCode,

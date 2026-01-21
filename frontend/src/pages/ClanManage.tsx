@@ -154,6 +154,24 @@ export default function ClanManage() {
             Уровень {clan.level} · {clan.memberCount} участника{clan.ownedDistricts && clan.ownedDistricts.length > 0 && ` · Владеет, ${getDistrictName(clan.ownedDistricts[0])}`}
           </div>
 
+          {/* Описание логики захватов */}
+          <div className="clan-manage-description" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#1a1a1a', borderRadius: '8px', fontSize: '14px', lineHeight: '1.6' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '10px', color: '#FFD700' }}>Захват районов</h3>
+            <p style={{ margin: '5px 0' }}>
+              <strong>Как это работает:</strong>
+            </p>
+            <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+              <li>Лидер клана может захватить район на <strong>12 часов</strong></li>
+              <li>Кулдаун на захват: <strong>24 часа</strong></li>
+              <li>Для успешного захвата участникам клана нужно <strong>играть и выигрывать</strong> против других игроков</li>
+              <li>За каждую победу проигравший (если у него есть город) или случайный игрок с этим районом теряет доход, который передается клану</li>
+              <li>Захват на игроке действует <strong>1 час</strong>, после чего сбрасывается</li>
+            </ul>
+            <p style={{ margin: '10px 0 0 0', color: '#FFD700', fontWeight: 'bold' }}>
+              ⚠️ Важно: Играйте и выигрывайте, чтобы клан получал пассивный доход!
+            </p>
+          </div>
+
           {/* Кнопки управления */}
           <div className="clan-manage-buttons">
             <button className="clan-manage-button" onClick={() => navigate(`/clans/${clanId}/treasury`)}>
