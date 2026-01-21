@@ -65,7 +65,7 @@ export default function Leaderboard() {
 
   const loadMyStats = async () => {
     try {
-      const response = await apiClient.get('/ratings/my-stats').catch(() => ({ data: null }))
+      const response = await apiClient.get(`/ratings/my-stats?period=${filter}`).catch(() => ({ data: null }))
       setMyStats(response.data)
     } catch (error) {
       console.error('Failed to load my stats:', error)
@@ -90,7 +90,18 @@ export default function Leaderboard() {
             <div className="leaderboard-my-stats-content">
               <div className="leaderboard-my-stats-item">
                 <div className="leaderboard-my-stats-label">Рейтинг</div>
-                <div className="leaderboard-my-stats-value">{myStats.overallRating}</div>
+                <div className="leaderboard-my-stats-value">
+                  {myStats.overallRating}
+                  {myStats.ratingChange !== undefined && myStats.ratingChange !== null && (
+                    <span style={{ 
+                      marginLeft: '8px', 
+                      color: myStats.ratingChange >= 0 ? '#4CAF50' : '#F44336',
+                      fontSize: '14px'
+                    }}>
+                      {myStats.ratingChange >= 0 ? '+' : ''}{myStats.ratingChange}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="leaderboard-my-stats-item">
                 <div className="leaderboard-my-stats-label">Матчей</div>

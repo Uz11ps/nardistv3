@@ -9,7 +9,9 @@ interface PlayerNameProps {
 }
 
 export default function PlayerName({ nickname, username, hasPremium, fallback, className }: PlayerNameProps) {
-  const displayName = nickname || username || fallback || 'Игрок'
+  const fullName = nickname || username || fallback || 'Игрок'
+  // Ограничиваем длину ника до 20 символов
+  const displayName = fullName.length > 20 ? fullName.substring(0, 20) + '...' : fullName
   
   return (
     <span className={className} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>

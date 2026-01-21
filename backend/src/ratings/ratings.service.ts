@@ -1,11 +1,12 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Rating } from './rating.entity';
 import { GameMode, GameStatus, GameType } from '../games/game.entity';
 import { SystemSettings } from '../admin/system-settings.entity';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { Game } from '../games/game.entity';
+import { User } from '../users/user.entity';
 
 @Injectable()
 export class RatingsService {
@@ -18,6 +19,8 @@ export class RatingsService {
     private systemSettingsRepository: Repository<SystemSettings>,
     @InjectRepository(Game)
     private gamesRepository: Repository<Game>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
     @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
   ) {}
@@ -154,7 +157,7 @@ export class RatingsService {
     // Получаем все игры за период (только vs_player)
     // Используем createdAt для фильтрации, так как это дата начала игры
     // Игра считается за период, если она была создана в этот период
-    const games = await this.gamesRepository
+    const queryBuilder = this.gamesRepository
       .createQueryBuilder('game')
       .leftJoinAndSelect('game.player1', 'player1')
       .leftJoinAndSelect('game.player2', 'player2')
@@ -162,7 +165,10 @@ export class RatingsService {
       .andWhere('game.type = :type', { type: GameType.VS_PLAYER })
       .andWhere('game.status = :status', { status: GameStatus.FINISHED })
       .andWhere('game.createdAt >= :periodStart', { periodStart })
-      .getMany();
+      .andWhere('game.player1Id IS NOT NULL')
+      .andWhere('game.player2Id IS NOT NULL');
+
+    const games = await queryBuilder.getMany();
 
     // Если игр нет, возвращаем пустой массив
     if (games.length === 0) {
@@ -179,45 +185,64 @@ export class RatingsService {
       xp: number;
     }>();
 
+    // Собираем уникальные ID пользователей для загрузки
+    const userIds = new Set<string>();
+    for (const game of games) {
+      if (game.player1Id) userIds.add(game.player1Id);
+      if (game.player2Id) userIds.add(game.player2Id);
+    }
+
+    // Загружаем всех пользователей одним запросом
+    const users = userIds.size > 0 ? await this.usersRepository.find({
+      where: { id: In(Array.from(userIds)) },
+    }) : [];
+    const usersMap = new Map(users.map(u => [u.id, u]));
+
     for (const game of games) {
       // Обрабатываем player1
-      if (game.player1) {
-        const stats = userStats.get(game.player1.id) || {
-          userId: game.player1.id,
-          user: game.player1,
-          matches: 0,
-          wins: 0,
-          losses: 0,
-          xp: 0,
-        };
-        stats.matches++;
-        if (game.winnerId === game.player1.id) {
-          stats.wins++;
-        } else if (game.winnerId) {
-          stats.losses++;
+      if (game.player1Id) {
+        const user = usersMap.get(game.player1Id) || game.player1;
+        if (user) {
+          const stats = userStats.get(user.id) || {
+            userId: user.id,
+            user: user,
+            matches: 0,
+            wins: 0,
+            losses: 0,
+            xp: 0,
+          };
+          stats.matches++;
+          if (game.winnerId === user.id) {
+            stats.wins++;
+          } else if (game.winnerId) {
+            stats.losses++;
+          }
+          stats.xp += Number(game.player1XP || 0);
+          userStats.set(user.id, stats);
         }
-        stats.xp += Number(game.player1XP || 0);
-        userStats.set(game.player1.id, stats);
       }
 
       // Обрабатываем player2
-      if (game.player2) {
-        const stats = userStats.get(game.player2.id) || {
-          userId: game.player2.id,
-          user: game.player2,
-          matches: 0,
-          wins: 0,
-          losses: 0,
-          xp: 0,
-        };
-        stats.matches++;
-        if (game.winnerId === game.player2.id) {
-          stats.wins++;
-        } else if (game.winnerId) {
-          stats.losses++;
+      if (game.player2Id) {
+        const user = usersMap.get(game.player2Id) || game.player2;
+        if (user) {
+          const stats = userStats.get(user.id) || {
+            userId: user.id,
+            user: user,
+            matches: 0,
+            wins: 0,
+            losses: 0,
+            xp: 0,
+          };
+          stats.matches++;
+          if (game.winnerId === user.id) {
+            stats.wins++;
+          } else if (game.winnerId) {
+            stats.losses++;
+          }
+          stats.xp += Number(game.player2XP || 0);
+          userStats.set(user.id, stats);
         }
-        stats.xp += Number(game.player2XP || 0);
-        userStats.set(game.player2.id, stats);
       }
     }
 
@@ -345,37 +370,64 @@ export class RatingsService {
     return 'Новичок';
   }
 
-  async getMyStats(userId: string): Promise<any> {
-    // Получаем рейтинги
+  async getMyStats(userId: string, period: string = 'all'): Promise<any> {
+    // Определяем период
+    let periodStart: Date | null = null;
+    if (period === 'weekly') {
+      periodStart = new Date();
+      periodStart.setDate(periodStart.getDate() - 7);
+      periodStart.setHours(0, 0, 0, 0);
+    } else if (period === 'monthly') {
+      periodStart = new Date();
+      periodStart.setMonth(periodStart.getMonth() - 1);
+      periodStart.setHours(0, 0, 0, 0);
+    } else if (period === 'all') {
+      periodStart = new Date(0); // 1970-01-01 для всех игр
+    }
+
+    // Получаем рейтинги (всегда общие)
     const shortRating = await this.getRating(userId, GameMode.SHORT) || 1000;
     const longRating = await this.getRating(userId, GameMode.LONG) || 1000;
     const overallRating = Math.round((shortRating + longRating) / 2);
 
-    // Получаем все игры пользователя (только vs_player)
-    const allGames = await this.gamesRepository
+    // Получаем игры пользователя за период (только vs_player)
+    const queryBuilder = this.gamesRepository
       .createQueryBuilder('game')
       .where('(game.player1Id = :userId OR game.player2Id = :userId)', { userId })
       .andWhere('game.type = :type', { type: GameType.VS_PLAYER })
       .andWhere('game.status = :status', { status: GameStatus.FINISHED })
-      .getMany();
+      .andWhere('game.createdAt >= :periodStart', { periodStart });
 
-    const totalMatches = allGames.length;
-    const wins = allGames.filter(g => g.winnerId === userId).length;
+    const periodGames = await queryBuilder.getMany();
+
+    const totalMatches = periodGames.length;
+    const wins = periodGames.filter(g => g.winnerId === userId).length;
     const losses = totalMatches - wins;
     const winRate = totalMatches > 0 ? Math.round((wins / totalMatches) * 100 * 10) / 10 : 0;
 
-    // Получаем общий XP пользователя
-    const rating = await this.ratingsRepository.findOne({
-      where: { userId, mode: GameMode.SHORT },
-      relations: ['user'],
-    });
-    const totalXP = rating?.user ? Number(rating.user.xp || 0) : 0;
+    // Для XP: для периода "all" берем общий XP, для других периодов - прирост из игр
+    let totalXP = 0;
+    if (period === 'all') {
+      // Получаем общий XP пользователя
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      totalXP = Number(user?.xp || 0);
+    } else {
+      // Считаем прирост XP из игр за период
+      for (const game of periodGames) {
+        if (game.player1Id === userId) {
+          totalXP += Number(game.player1XP || 0);
+        } else if (game.player2Id === userId) {
+          totalXP += Number(game.player2XP || 0);
+        }
+      }
+    }
 
-    // Получаем рейтинг неделю назад для изменения
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    // Упрощенно - считаем изменение как разницу от базового рейтинга
-    const ratingChange = overallRating - 1000; // Можно улучшить, сохраняя историю
+    // Для рейтинга считаем изменение за период (только если не период "all")
+    let ratingChange = undefined;
+    if (period !== 'all') {
+      // Упрощенно: победа +25, поражение -25
+      ratingChange = (wins * 25) - (losses * 25);
+    }
 
     return {
       overallRating,
