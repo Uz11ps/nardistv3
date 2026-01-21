@@ -100,7 +100,7 @@ export default function Academy() {
   const location = useLocation()
   const { materialId } = useParams<{ materialId?: string }>()
   const { user, updateUser } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'my-materials'>('my-materials')
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'courses' | 'articles' | 'my-materials' | 'publish'>('my-materials')
   const [activeFilter, setActiveFilter] = useState<'long' | 'short'>('long')
   const [myMaterialsFilter, setMyMaterialsFilter] = useState<'all' | 'courses' | 'articles'>('all')
   
@@ -137,20 +137,79 @@ export default function Academy() {
   const [publishing, setPublishing] = useState(false)
   const [materialDetail, setMaterialDetail] = useState<MaterialDetail | null>(null)
   const [hidePurchased, setHidePurchased] = useState(false)
-  const [showPublishModal, setShowPublishModal] = useState(false)
   
   const isPublishPage = location.pathname === '/academy/publish'
   const isMaterialPage = !!materialId
+
+  // Загружаем черновик при загрузке страницы публикации
+  useEffect(() => {
+    if (isPublishPage) {
+      const draft = localStorage.getItem('academy_publish_draft')
+      if (draft) {
+        try {
+          const parsedDraft = JSON.parse(draft)
+          if (parsedDraft.form) {
+            setPublishForm(parsedDraft.form)
+          }
+          if (parsedDraft.quizQuestions) {
+            setQuizQuestions(parsedDraft.quizQuestions)
+          }
+        } catch (e) {
+          console.error('Ошибка загрузки черновика:', e)
+        }
+      }
+      setActiveTab('publish')
+    }
+  }, [isPublishPage])
+
+  // Сохраняем черновик при изменении формы
+  useEffect(() => {
+    if (isPublishPage) {
+      const draft = {
+        form: publishForm,
+        quizQuestions: quizQuestions,
+        savedAt: new Date().toISOString()
+      }
+      localStorage.setItem('academy_publish_draft', JSON.stringify(draft))
+    }
+  }, [publishForm, quizQuestions, isPublishPage])
+
+  // Сохраняем черновик при выходе со страницы
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isPublishPage) {
+        const draft = {
+          form: publishForm,
+          quizQuestions: quizQuestions,
+          savedAt: new Date().toISOString()
+        }
+        localStorage.setItem('academy_publish_draft', JSON.stringify(draft))
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      // Сохраняем черновик при размонтировании компонента (выход со страницы)
+      if (isPublishPage) {
+        const draft = {
+          form: publishForm,
+          quizQuestions: quizQuestions,
+          savedAt: new Date().toISOString()
+        }
+        localStorage.setItem('academy_publish_draft', JSON.stringify(draft))
+      }
+    }
+  }, [publishForm, quizQuestions, isPublishPage])
 
   useEffect(() => {
     console.log('[Academy] useEffect triggered - activeTab:', activeTab, 'isMaterialPage:', isMaterialPage, 'materialId:', materialId)
     if (isMaterialPage && materialId) {
       loadMaterialDetail(materialId)
-    } else if (!isMaterialPage) {
+    } else if (!isMaterialPage && !isPublishPage) {
       loadData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, materialId, isMaterialPage])
+  }, [activeTab, materialId, isMaterialPage, isPublishPage])
 
   // Сбрасываем скролл в начало при открытии материала
   useEffect(() => {
@@ -417,8 +476,8 @@ export default function Academy() {
           assignment: publishData.quiz ? { quiz: publishData.quiz } : null
         })
         alert('Курс создан!')
-        // Закрываем модальное окно, если оно открыто
-        setShowPublishModal(false)
+        // Очищаем черновик
+        localStorage.removeItem('academy_publish_draft')
         // Очищаем форму
         setPublishForm({ 
           title: '', 
@@ -432,32 +491,28 @@ export default function Academy() {
         setQuizQuestions([])
         // Перезагружаем данные
         loadData()
-        // Если мы на странице публикации, перенаправляем на главную страницу академии
-        if (isPublishPage) {
-          navigate('/academy')
-        }
+        // Перенаправляем на главную страницу академии
+        navigate('/academy')
       } else {
         // Статьи создают игроки - требуют верификации
         await apiClient.post('/academy/publish', publishData)
         alert('Статья отправлена на верификацию администратором!')
-      }
-      // Закрываем модальное окно, если оно открыто
-      setShowPublishModal(false)
-      // Очищаем форму
-      setPublishForm({ 
-        title: '', 
-        description: '', 
-        type: 'article', 
-        price: 25, 
-        content: '',
-        gameMode: 'long',
-        quiz: null
-      })
-      setQuizQuestions([])
-      // Перезагружаем данные
-      loadData()
-      // Если мы на странице публикации, перенаправляем на главную страницу академии
-      if (isPublishPage) {
+        // Очищаем черновик
+        localStorage.removeItem('academy_publish_draft')
+        // Очищаем форму
+        setPublishForm({ 
+          title: '', 
+          description: '', 
+          type: 'article', 
+          price: 25, 
+          content: '',
+          gameMode: 'long',
+          quiz: null
+        })
+        setQuizQuestions([])
+        // Перезагружаем данные
+        loadData()
+        // Перенаправляем на главную страницу академии
         navigate('/academy')
       }
     } catch (error: any) {
@@ -537,7 +592,7 @@ export default function Academy() {
   // Страница публикации
   if (isPublishPage) {
     return (
-      <PageLayout title="" showBack={true}>
+      <PageLayout title="Опубликовать материал" subtitle="Создайте свою статью или курс" showBack={true}>
         <form className="academy-publish-form" onSubmit={handlePublish}>
           <div className="academy-publish-field">
             <label className="academy-publish-label">Название материала:</label>
@@ -724,29 +779,11 @@ export default function Academy() {
       title="Академия"
       subtitle="Повышай мастерство в нардах. Все материалы доступны к покупке"
       tabs={[
-        { id: 'my-materials', label: 'Купленные материалы', active: activeTab === 'my-materials', onClick: () => setActiveTab('my-materials') },
-        { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => setActiveTab('courses') },
-        { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => setActiveTab('articles') },
+        { id: 'my-materials', label: 'Купленные материалы', active: activeTab === 'my-materials', onClick: () => { setActiveTab('my-materials'); navigate('/academy') } },
+        { id: 'courses', label: 'Курсы', active: activeTab === 'courses', onClick: () => { setActiveTab('courses'); navigate('/academy') } },
+        { id: 'articles', label: 'Статьи', active: activeTab === 'articles', onClick: () => { setActiveTab('articles'); navigate('/academy') } },
+        { id: 'publish', label: 'Опубликовать свое', active: activeTab === 'publish' || isPublishPage, onClick: () => { setActiveTab('publish'); navigate('/academy/publish') } },
       ]}
-      tabsRightAction={
-        <button 
-          className="academy-publish-own-btn" 
-          onClick={() => setShowPublishModal(true)}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            background: 'linear-gradient(180deg, #4a9eff 0%, #2196F3 100%)',
-            border: 'none',
-            color: '#FFF',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          Опубликовать свое
-        </button>
-      }
     >
       <div className="academy-content">
         {/* Фильтр по типу нард для курсов и статей */}
@@ -1024,254 +1061,6 @@ export default function Academy() {
         </div>
       )}
 
-      {/* Модальное окно публикации */}
-      {showPublishModal && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px',
-            overflowY: 'auto'
-          }}
-          onClick={() => setShowPublishModal(false)}
-        >
-          <div 
-            style={{
-              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
-              borderRadius: '16px',
-              padding: '24px',
-              maxWidth: '800px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              border: '1px solid #3a3a3a',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <form className="academy-publish-form" onSubmit={(e) => {
-              e.preventDefault()
-              handlePublish(e)
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ color: '#FFF', margin: 0 }}>Опубликовать материал</h2>
-                <button 
-                  type="button"
-                  onClick={() => setShowPublishModal(false)}
-                  style={{ background: 'none', border: 'none', color: '#FFF', fontSize: '24px', cursor: 'pointer' }}
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="academy-publish-field">
-                <label className="academy-publish-label">Название материала:</label>
-                <input
-                  type="text"
-                  className="academy-publish-input"
-                  placeholder="Введите название..."
-                  value={publishForm.title}
-                  onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="academy-publish-field">
-                <label className="academy-publish-label">Краткое описание:</label>
-                <input
-                  type="text"
-                  className="academy-publish-input"
-                  placeholder="Описание материала"
-                  value={publishForm.description}
-                  onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
-                />
-              </div>
-
-              <div className="academy-publish-field">
-                <label className="academy-publish-label">Тип нард</label>
-                <div className="academy-publish-mode-selector">
-                  <button
-                    type="button"
-                    className={`academy-publish-mode-btn ${publishForm.gameMode === 'long' ? 'active' : ''}`}
-                    onClick={() => setPublishForm({ ...publishForm, gameMode: 'long' })}
-                  >
-                    Длинные
-                  </button>
-                  <button
-                    type="button"
-                    className={`academy-publish-mode-btn ${publishForm.gameMode === 'short' ? 'active' : ''}`}
-                    onClick={() => setPublishForm({ ...publishForm, gameMode: 'short' })}
-                  >
-                    Короткие
-                  </button>
-                </div>
-              </div>
-
-              <div className="academy-publish-field">
-                <label className="academy-publish-label">Тип контента</label>
-                {user?.isAdmin ? (
-                  <div className="academy-publish-type-buttons">
-                    <button
-                      type="button"
-                      className={`academy-publish-type-button ${publishForm.type === 'article' ? 'active' : ''}`}
-                      onClick={() => setPublishForm({ ...publishForm, type: 'article' })}
-                    >
-                      Статья
-                    </button>
-                    <button
-                      type="button"
-                      className={`academy-publish-type-button ${publishForm.type === 'course' ? 'active' : ''}`}
-                      onClick={() => setPublishForm({ ...publishForm, type: 'course' })}
-                    >
-                      Курс
-                    </button>
-                  </div>
-                ) : (
-                  <div className="academy-publish-info">
-                    Игроки могут создавать только <strong>статьи</strong>. 
-                    Курсы создаются администраторами.
-                  </div>
-                )}
-              </div>
-
-              <div className="academy-publish-field">
-                <label className="academy-publish-label">Стоимость (NAR)</label>
-                <input
-                  type="number"
-                  className="academy-publish-input"
-                  placeholder="25"
-                  value={publishForm.price}
-                  onChange={(e) => setPublishForm({ ...publishForm, price: parseInt(e.target.value) || 0 })}
-                  min="0"
-                />
-              </div>
-
-              <div className="academy-publish-field">
-                <label className="academy-publish-label">Контент</label>
-                <RichTextEditor
-                  value={publishForm.content}
-                  onChange={(content) => setPublishForm({ ...publishForm, content })}
-                  placeholder="Начните писать..."
-                />
-              </div>
-
-              <div className="academy-publish-field">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <label className="academy-publish-label">Тест/Опросник (без наград)</label>
-                  <button
-                    type="button"
-                    className="academy-card-button"
-                    onClick={() => {
-                      const newQuestion = {
-                        id: Date.now(),
-                        question: '',
-                        options: ['', '', '', ''],
-                        correctAnswer: 0
-                      }
-                      setQuizQuestions([...quizQuestions, newQuestion])
-                    }}
-                    style={{ padding: '8px 16px', fontSize: '14px' }}
-                  >
-                    + Добавить вопрос
-                  </button>
-                </div>
-                
-                {quizQuestions.map((q, qIndex) => (
-                  <div key={q.id} style={{ marginBottom: '20px', padding: '16px', background: '#2a2a2a', borderRadius: '12px', border: '1px solid #3a3a3a' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h4 style={{ color: '#FFF', fontSize: '16px', margin: 0 }}>Вопрос {qIndex + 1}</h4>
-                      <button
-                        type="button"
-                        onClick={() => setQuizQuestions(quizQuestions.filter((_, i) => i !== qIndex))}
-                        style={{ background: '#A32E2E', border: 'none', borderRadius: '8px', color: '#FFF', padding: '6px 12px', cursor: 'pointer' }}
-                      >
-                        Удалить
-                      </button>
-                    </div>
-                    
-                    <input
-                      type="text"
-                      className="academy-publish-input"
-                      placeholder="Введите вопрос..."
-                      value={q.question}
-                      onChange={(e) => {
-                        const updated = [...quizQuestions]
-                        updated[qIndex].question = e.target.value
-                        setQuizQuestions(updated)
-                      }}
-                      style={{ marginBottom: '12px' }}
-                    />
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {q.options.map((option, optIndex) => (
-                        <div key={optIndex} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <input
-                            type="radio"
-                            name={`correct-${q.id}`}
-                            checked={q.correctAnswer === optIndex}
-                            onChange={() => {
-                              const updated = [...quizQuestions]
-                              updated[qIndex].correctAnswer = optIndex
-                              setQuizQuestions(updated)
-                            }}
-                          />
-                          <input
-                            type="text"
-                            className="academy-publish-input"
-                            placeholder={`Вариант ${optIndex + 1}`}
-                            value={option}
-                            onChange={(e) => {
-                              const updated = [...quizQuestions]
-                              updated[qIndex].options[optIndex] = e.target.value
-                              setQuizQuestions(updated)
-                            }}
-                            style={{ flex: 1 }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                <button 
-                  type="button"
-                  onClick={() => setShowPublishModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    background: '#3a3a3a',
-                    color: '#FFF',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  Отмена
-                </button>
-                <button 
-                  type="submit" 
-                  className="academy-publish-submit-button" 
-                  disabled={publishing}
-                  style={{ flex: 1 }}
-                >
-                  {publishing ? 'Публикация...' : 'Опубликовать материал'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </PageLayout>
   )
 }

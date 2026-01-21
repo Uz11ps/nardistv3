@@ -685,18 +685,76 @@ export class ProgressService {
 
   /**
    * Получить количество покупок жизней сегодня
+   * "Сегодня" считается с 4:00 по московскому времени
    */
   private async getLifePurchasesToday(userId: string): Promise<number> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const now = new Date();
+    
+    // Получаем текущее время в московском часовом поясе
+    const moscowFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Moscow',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    const parts = moscowFormatter.formatToParts(now);
+    const year = parseInt(parts.find(p => p.type === 'year')!.value);
+    const month = parseInt(parts.find(p => p.type === 'month')!.value) - 1; // месяцы 0-11
+    const day = parseInt(parts.find(p => p.type === 'day')!.value);
+    const hour = parseInt(parts.find(p => p.type === 'hour')!.value);
+    
+    // Определяем начало "сегодня" (4:00 по Москве)
+    let targetDay = day;
+    let targetMonth = month;
+    let targetYear = year;
+    
+    if (hour < 4) {
+      // Если сейчас меньше 4:00 по Москве, "сегодня" началось в 4:00 вчера
+      targetDay = day - 1;
+      if (targetDay < 1) {
+        targetMonth = month - 1;
+        if (targetMonth < 0) {
+          targetMonth = 11;
+          targetYear = year - 1;
+        }
+        // Определяем количество дней в предыдущем месяце
+        const daysInPrevMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+        targetDay = daysInPrevMonth;
+      }
+    }
+    
+    // Создаем дату 4:00 по Москве в формате ISO с указанием timezone
+    // Москва = UTC+3, поэтому создаем дату как UTC+3
+    const moscowDateStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}T04:00:00+03:00`;
+    const todayStartUTC = new Date(moscowDateStr);
+    
+    // Конец "сегодня" - это 4:00 следующего дня по Москве
+    let tomorrowDay = targetDay + 1;
+    let tomorrowMonth = targetMonth;
+    let tomorrowYear = targetYear;
+    const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    if (tomorrowDay > daysInMonth) {
+      tomorrowDay = 1;
+      tomorrowMonth = targetMonth + 1;
+      if (tomorrowMonth > 11) {
+        tomorrowMonth = 0;
+        tomorrowYear = targetYear + 1;
+      }
+    }
+    
+    const tomorrowDateStr = `${tomorrowYear}-${String(tomorrowMonth + 1).padStart(2, '0')}-${String(tomorrowDay).padStart(2, '0')}T04:00:00+03:00`;
+    const tomorrowStartUTC = new Date(tomorrowDateStr);
     
     const count = await this.purchasesRepository.count({
       where: {
         userId,
         type: PurchaseType.LIVES,
-        purchaseDate: Between(today, tomorrow),
+        purchaseDate: Between(todayStartUTC, tomorrowStartUTC),
       },
     });
     
@@ -705,18 +763,76 @@ export class ProgressService {
 
   /**
    * Получить количество покупок энергии сегодня
+   * "Сегодня" считается с 4:00 по московскому времени
    */
   private async getEnergyPurchasesToday(userId: string): Promise<number> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const now = new Date();
+    
+    // Получаем текущее время в московском часовом поясе
+    const moscowFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Moscow',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    const parts = moscowFormatter.formatToParts(now);
+    const year = parseInt(parts.find(p => p.type === 'year')!.value);
+    const month = parseInt(parts.find(p => p.type === 'month')!.value) - 1; // месяцы 0-11
+    const day = parseInt(parts.find(p => p.type === 'day')!.value);
+    const hour = parseInt(parts.find(p => p.type === 'hour')!.value);
+    
+    // Определяем начало "сегодня" (4:00 по Москве)
+    let targetDay = day;
+    let targetMonth = month;
+    let targetYear = year;
+    
+    if (hour < 4) {
+      // Если сейчас меньше 4:00 по Москве, "сегодня" началось в 4:00 вчера
+      targetDay = day - 1;
+      if (targetDay < 1) {
+        targetMonth = month - 1;
+        if (targetMonth < 0) {
+          targetMonth = 11;
+          targetYear = year - 1;
+        }
+        // Определяем количество дней в предыдущем месяце
+        const daysInPrevMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+        targetDay = daysInPrevMonth;
+      }
+    }
+    
+    // Создаем дату 4:00 по Москве в формате ISO с указанием timezone
+    // Москва = UTC+3, поэтому создаем дату как UTC+3
+    const moscowDateStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}T04:00:00+03:00`;
+    const todayStartUTC = new Date(moscowDateStr);
+    
+    // Конец "сегодня" - это 4:00 следующего дня по Москве
+    let tomorrowDay = targetDay + 1;
+    let tomorrowMonth = targetMonth;
+    let tomorrowYear = targetYear;
+    const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    if (tomorrowDay > daysInMonth) {
+      tomorrowDay = 1;
+      tomorrowMonth = targetMonth + 1;
+      if (tomorrowMonth > 11) {
+        tomorrowMonth = 0;
+        tomorrowYear = targetYear + 1;
+      }
+    }
+    
+    const tomorrowDateStr = `${tomorrowYear}-${String(tomorrowMonth + 1).padStart(2, '0')}-${String(tomorrowDay).padStart(2, '0')}T04:00:00+03:00`;
+    const tomorrowStartUTC = new Date(tomorrowDateStr);
     
     const count = await this.purchasesRepository.count({
       where: {
         userId,
         type: PurchaseType.ENERGY,
-        purchaseDate: Between(today, tomorrow),
+        purchaseDate: Between(todayStartUTC, tomorrowStartUTC),
       },
     });
     
