@@ -89,19 +89,29 @@ export class RatingsService {
     const ratings = await query.getMany();
 
     // Форматируем ответ для фронтенда
-    return ratings.map((rating, index) => ({
-      rank: index + 1,
-      user: rating.user ? {
-        id: rating.user.id,
-        username: rating.user.username,
-        level: rating.user.level || 1,
-        rating: rating.elo,
-        badge: this.getBadge(rating.elo),
-      } : null,
-      wins: rating.wins || 0,
-      losses: rating.losses || 0,
-      draws: rating.draws || 0,
-    }));
+    return ratings.map((rating, index) => {
+      const totalMatches = (rating.wins || 0) + (rating.losses || 0) + (rating.draws || 0);
+      const winRate = totalMatches >= 100 && totalMatches > 0 
+        ? Math.round(((rating.wins || 0) / totalMatches) * 100 * 10) / 10 
+        : null;
+      
+      return {
+        rank: index + 1,
+        user: rating.user ? {
+          id: rating.user.id,
+          username: rating.user.username,
+          nickname: rating.user.nickname,
+          level: rating.user.level || 1,
+          rating: rating.elo,
+          badge: this.getBadge(rating.elo),
+        } : null,
+        wins: rating.wins || 0,
+        losses: rating.losses || 0,
+        draws: rating.draws || 0,
+        totalMatches,
+        winRate,
+      };
+    });
   }
 
   async getWeeklyLeaderboard(mode: GameMode, limit: number = 100): Promise<Rating[]> {

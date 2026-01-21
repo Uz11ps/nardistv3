@@ -438,23 +438,25 @@
 }
 
 .analysis-modal-v2 {
-  background: #f0f0f0; /* Светлый фон как на скрине */
-  color: #333;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  color: #FFF;
   width: 95%;
   max-width: 800px;
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   max-height: 90vh;
   position: relative;
   margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
 }
 
 .analysis-header-v2 {
-  background: #e0e0e0;
-  padding: 8px 16px;
-  border-bottom: 1px solid #ccc;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .analysis-title-row {
@@ -466,7 +468,9 @@
 .analysis-title-row h2 {
   font-size: 20px;
   margin: 0;
-  color: #222;
+  color: #FFF;
+  font-weight: 600;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 @media (max-width: 768px) {
@@ -539,31 +543,43 @@
 }
 
 .analysis-icon {
-  background: #6a8a4e;
-  color: white;
-  width: 24px;
-  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #B6B6B6;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.analysis-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFF;
 }
 
 .analysis-icon.balance {
-  background: #4a6a2e;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .analysis-game-selector {
   font-size: 14px;
-  color: #333;
+  color: #B6B6B6;
   cursor: pointer;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .analysis-main-content {
-  background: #fff;
-  padding: 16px;
+  background: transparent;
+  padding: 20px;
   overflow-y: auto;
   flex: 1;
 }
@@ -584,51 +600,106 @@
 }
 
 .move-num {
-  width: 24px;
-  color: #666;
+  width: 32px;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .move-item {
   flex: 1;
-  padding: 2px 4px;
+  padding: 8px 12px;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: 8px;
   display: flex;
-  gap: 4px;
+  gap: 8px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s;
 }
 
 .move-item:hover {
-  background: #eee;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .move-item.selected {
-  background: #d0e0ff;
+  background: rgba(232, 65, 66, 0.2) !important;
+  border-color: rgba(232, 65, 66, 0.4) !important;
 }
 
 .move-dice {
-  color: #444;
+  color: #B6B6B6;
+  font-family: monospace;
+  font-size: 13px;
 }
 
 .move-text {
   font-weight: 500;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
 }
 
-.move-item.error-blunder .move-text { color: #E84142; font-weight: bold; }
-.move-item.error-mistake .move-text { color: #FF9800; }
-.move-item.error-inaccuracy .move-text { color: #888; }
+.move-item.error-blunder {
+  background: rgba(232, 65, 66, 0.15);
+  border-color: rgba(232, 65, 66, 0.3);
+}
+
+.move-item.error-blunder .move-text { 
+  color: #E84142; 
+  font-weight: 700; 
+}
+
+.move-item.error-mistake {
+  background: rgba(255, 152, 0, 0.15);
+  border-color: rgba(255, 152, 0, 0.3);
+}
+
+.move-item.error-mistake .move-text { 
+  color: #FF9800; 
+  font-weight: 600;
+}
+
+.move-item.error-inaccuracy {
+  background: rgba(255, 214, 0, 0.15);
+  border-color: rgba(255, 214, 0, 0.3);
+}
+
+.move-item.error-inaccuracy .move-text { 
+  color: #FFD600; 
+}
+
+.move-item.best-move {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.5);
+}
+
+.move-item.best-move .move-text {
+  color: #FFD700;
+  font-weight: 700;
+}
+
+.move-item.best-move .move-dice {
+  color: #FFD700;
+  font-weight: 700;
+}
 
 .analysis-move-details-v2 {
-  border-top: 2px solid #ccc;
-  margin-top: 16px;
-  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 20px;
+  padding-top: 20px;
 }
 
 .probs-table {
   display: flex;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
 }
 
 .prob-col {
@@ -636,8 +707,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 4px;
-  border-right: 1px solid #eee;
+  padding: 12px 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 12px;
 }
 
@@ -646,37 +717,52 @@
 }
 
 .prob-col span {
-  color: #666;
+  color: #B6B6B6;
   font-size: 11px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .prob-col strong {
-  color: #222;
+  color: #FFF;
+  font-weight: 600;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .prob-col.equity {
-  background: #f9f9f9;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .analysis-actions-v2 {
   display: flex;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 16px;
   align-items: center;
 }
 
 .analysis-tab-btn {
-  padding: 4px 12px;
-  border: 1px solid #ccc;
-  background: #eee;
-  border-radius: 4px;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  transition: all 0.2s;
+}
+
+.analysis-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFF;
 }
 
 .analysis-tab-btn.active {
-  background: #fff;
-  border-bottom: 2px solid #6a8a4e;
+  background: rgba(232, 65, 66, 0.2);
+  border-color: rgba(232, 65, 66, 0.4);
+  color: #FFF;
+  font-weight: 600;
 }
 
 .analysis-action-icons {
@@ -686,67 +772,111 @@
 }
 
 .action-icon {
-  background: #6a8a4e;
-  color: white;
-  width: 24px;
-  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #B6B6B6;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s;
+}
+
+.action-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFF;
 }
 
 .alternatives-table-v2 {
   display: flex;
   flex-direction: column;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .alt-row {
   display: flex;
   justify-content: space-between;
-  padding: 4px 8px;
+  padding: 12px 16px;
   font-size: 13px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  transition: all 0.2s;
+}
+
+.alt-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.alt-row:last-child {
+  border-bottom: none;
 }
 
 .alt-row.current {
-  background: #e8f5e9;
-  font-weight: bold;
+  background: rgba(232, 65, 66, 0.15);
+  border-color: rgba(232, 65, 66, 0.3);
+  font-weight: 600;
 }
 
 .alt-move {
   display: flex;
   gap: 8px;
+  color: #FFF;
+  align-items: center;
 }
 
 .alt-dice {
-  color: #666;
+  color: #B6B6B6;
+  font-family: monospace;
 }
 
 .alt-equity {
   font-family: monospace;
+  color: #B6B6B6;
+  font-weight: 500;
 }
 
 .analysis-summary-v2 {
-  padding: 20px;
-  background: #f9f9f9;
-  border-radius: 8px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .summary-title {
   font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 12px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .summary-stats {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.summary-stat {
+  font-size: 14px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .summary-stat span {
-  color: #666;
+  color: #B6B6B6;
+}
+
+.summary-stat strong {
+  font-weight: 600;
+  font-size: 16px;
 }
 
 /* History Game Details Modal */

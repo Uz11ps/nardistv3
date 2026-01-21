@@ -17,6 +17,9 @@ interface LeaderboardEntry {
   }
   wins: number
   losses: number
+  draws?: number
+  totalMatches?: number
+  winRate?: number | null
 }
 
 export default function Leaderboard() {
@@ -134,7 +137,10 @@ export default function Leaderboard() {
                       )}
                     </div>
                     <div className="leaderboard-stats">
-                      Побед: {entry.wins} • Поражений: {entry.losses}
+                      Матчей: {entry.totalMatches || (entry.wins + entry.losses + (entry.draws || 0))}
+                      {entry.winRate !== null && entry.winRate !== undefined && (
+                        <> • Винрейт: {entry.winRate}%</>
+                      )}
                     </div>
                   </div>
 

@@ -161,6 +161,9 @@ export class TournamentsService {
         currentRound = Math.max(...Array.from(rounds), 0) + 1;
       }
 
+      // Рассчитываем время до начала следующего раунда
+      const nextRoundTime = await this.calculateNextRoundTime(tournament, currentRound);
+
       result.push({
         id: tournament.id,
         name: tournament.name,
@@ -180,6 +183,7 @@ export class TournamentsService {
         registered: registered,
         currentRound: currentRound > 0 ? currentRound : undefined,
         totalRounds: totalRounds > 0 ? totalRounds : undefined,
+        nextRoundTime: nextRoundTime ? nextRoundTime.toISOString() : undefined,
       });
     }
 
@@ -195,7 +199,7 @@ export class TournamentsService {
     if (!tournament) {
       throw new NotFoundException('Турнир не найден');
     }
-    
+
     // Если есть победитель, загружаем его данные
     let winner = null;
     if (tournament.winnerId) {
@@ -239,6 +243,9 @@ export class TournamentsService {
       currentRound = Math.max(...Array.from(rounds), 0) + 1;
     }
 
+    // Рассчитываем время до начала следующего раунда
+    const nextRoundTime = await this.calculateNextRoundTime(tournament, currentRound);
+
     return {
       ...tournament,
       registered,
@@ -251,7 +258,54 @@ export class TournamentsService {
       prizePool,
       currentRound: currentRound > 0 ? currentRound : undefined,
       totalRounds: totalRounds > 0 ? totalRounds : undefined,
+      nextRoundTime: nextRoundTime ? nextRoundTime.toISOString() : undefined,
     };
+  }
+
+  /**
+   * Рассчитывает время начала следующего раунда
+   */
+  private async calculateNextRoundTime(tournament: Tournament, currentRound: number): Promise<Date | null> {
+    if (tournament.status !== TournamentStatus.IN_PROGRESS) {
+      // Если турнир еще не начался, возвращаем время начала первого раунда
+      if (tournament.status === TournamentStatus.REGISTRATION || tournament.status === TournamentStatus.REGISTRATION_END) {
+        return tournament.startDate;
+      }
+      return null;
+    }
+
+    // Если турнир только начался (currentRound = 0 или 1), возвращаем время начала первого раунда
+    if (currentRound <= 1) {
+      return tournament.startDate;
+    }
+
+    try {
+      // Находим матчи предыдущего раунда
+      const matches = await this.matchesRepository.find({
+        where: {
+          tournamentId: tournament.id,
+          round: currentRound - 1,
+        },
+        take: 1,
+      });
+
+      if (matches.length === 0) {
+        // Если матчей нет, рассчитываем на основе startDate
+        return new Date(tournament.startDate.getTime() + (currentRound - 1) * 15 * 60 * 1000);
+      }
+
+      const match = matches[0];
+      if (!match.scheduledAt) {
+        // Если scheduledAt не установлен, рассчитываем на основе startDate
+        return new Date(tournament.startDate.getTime() + (currentRound - 1) * 15 * 60 * 1000);
+      }
+
+      // Время следующего раунда = время текущего раунда + 15 минут
+      return new Date(new Date(match.scheduledAt).getTime() + 15 * 60 * 1000);
+    } catch (error) {
+      // В случае ошибки возвращаем расчетное время
+      return new Date(tournament.startDate.getTime() + currentRound * 15 * 60 * 1000);
+    }
   }
 
   async closeRegistrations(): Promise<void> {
@@ -747,6 +801,8 @@ export class TournamentsService {
 
     for (let round = 1; round < rounds; round++) {
       const matchesInRound = Math.floor(participants.length / Math.pow(2, round + 1));
+      // Время начала раунда = startDate + 15 минут * номер раунда
+      const roundStartTime = new Date(tournament.startDate.getTime() + round * 15 * 60 * 1000);
       for (let matchNum = 0; matchNum < matchesInRound; matchNum++) {
         await this.matchesRepository.save({
           tournamentId: tournament.id,
@@ -755,6 +811,7 @@ export class TournamentsService {
           player1Id: null,
           player2Id: null,
           status: MatchStatus.SCHEDULED,
+          scheduledAt: roundStartTime,
         });
       }
     }
@@ -967,6 +1024,12 @@ export class TournamentsService {
         return (matchA?.matchNumber || 0) - (matchB?.matchNumber || 0);
       });
 
+    // Время начала следующего раунда = время начала предыдущего раунда + 15 минут
+    // Находим время начала предыдущего раунда из любого матча этого раунда
+    const previousRoundMatch = currentRoundMatches.find(m => m.scheduledAt);
+    const previousRoundStartTime = previousRoundMatch?.scheduledAt || tournament.startDate;
+    const roundStartTime = new Date(new Date(previousRoundStartTime).getTime() + 15 * 60 * 1000); // +15 минут
+    
     const matchesInNextRound = Math.floor(winners.length / 2);
     
     for (let matchNum = 0; matchNum < matchesInNextRound; matchNum++) {
@@ -986,7 +1049,8 @@ export class TournamentsService {
         nextMatch.player1Id = player1Id;
         nextMatch.player2Id = player2Id;
         nextMatch.status = MatchStatus.SCHEDULED;
-        nextMatch.scheduledAt = new Date(); // Матч следующего раунда начинается сразу после завершения предыдущего
+        // scheduledAt устанавливается на время начала раунда (игра может начаться через 20 минут)
+        nextMatch.scheduledAt = roundStartTime;
         await this.matchesRepository.save(nextMatch);
       } else {
         await this.matchesRepository.save({
@@ -996,7 +1060,8 @@ export class TournamentsService {
           player1Id,
           player2Id,
           status: MatchStatus.SCHEDULED,
-          scheduledAt: new Date(), // Матч следующего раунда начинается сразу после завершения предыдущего
+          // scheduledAt устанавливается на время начала раунда (игра может начаться через 20 минут)
+          scheduledAt: roundStartTime,
         });
       }
     }
@@ -1017,6 +1082,7 @@ export class TournamentsService {
         byeMatch.player2Id = null;
         byeMatch.status = MatchStatus.BYE;
         byeMatch.winnerId = byePlayerId;
+        byeMatch.scheduledAt = roundStartTime;
         await this.matchesRepository.save(byeMatch);
       } else {
         await this.matchesRepository.save({
@@ -1026,6 +1092,7 @@ export class TournamentsService {
           player1Id: byePlayerId,
           player2Id: null,
           status: MatchStatus.BYE,
+          scheduledAt: roundStartTime,
           winnerId: byePlayerId,
         });
       }
@@ -1121,19 +1188,16 @@ export class TournamentsService {
       throw new BadRequestException('Оба игрока должны быть назначены для старта матча');
     }
 
-    // Проверяем окно входа (3 минуты после scheduledAt)
+    // Проверяем, что прошло 15 минут с начала раунда (время подготовки)
     if (match.scheduledAt) {
       const now = new Date();
-      const entryWindowEnd = new Date(match.scheduledAt.getTime() + 3 * 60 * 1000);
+      const roundStartTime = new Date(match.scheduledAt);
+      const roundEndTime = new Date(roundStartTime.getTime() + 15 * 60 * 1000); // 15 минут с начала раунда
       
-      if (now > entryWindowEnd) {
-        // Время окна входа истекло, определяем победителя (тот, кто нажал)
-        match.winnerId = userId;
-        match.status = MatchStatus.FINISHED;
-        await this.matchesRepository.save(match);
-        
-        await this.advanceTournament(match.tournamentId);
-        throw new BadRequestException('Время входа в матч истекло');
+      // Игра может начаться только после окончания 15 минут подготовки раунда
+      if (now < roundEndTime) {
+        const minutesRemaining = Math.ceil((roundEndTime.getTime() - now.getTime()) / (60 * 1000));
+        throw new BadRequestException(`Раунд еще не начался. Осталось ${minutesRemaining} минут до начала раунда`);
       }
     }
 

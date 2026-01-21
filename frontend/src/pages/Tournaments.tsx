@@ -26,6 +26,7 @@ interface Tournament {
   currentRound?: number
   totalRounds?: number
   timeRemaining?: string
+  nextRoundTime?: string
   matches?: TournamentMatch[]
 }
 
@@ -51,6 +52,40 @@ interface TournamentMatch {
 }
 
 import { TournamentBracket } from '../components/TournamentBracket'
+
+// Компонент таймера до начала следующего раунда
+function RoundTimer({ nextRoundTime }: { nextRoundTime: string }) {
+  const [timeRemaining, setTimeRemaining] = useState<string>('')
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = new Date().getTime()
+      const targetTime = new Date(nextRoundTime).getTime()
+      const diff = targetTime - now
+
+      if (diff <= 0) {
+        setTimeRemaining('Началось')
+        return
+      }
+
+      const minutes = Math.floor(diff / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+      if (minutes > 0) {
+        setTimeRemaining(`${minutes}м ${seconds}с`)
+      } else {
+        setTimeRemaining(`${seconds}с`)
+      }
+    }
+
+    updateTimer()
+    const interval = setInterval(updateTimer, 1000)
+
+    return () => clearInterval(interval)
+  }, [nextRoundTime])
+
+  return <span style={{ color: '#4CAF50', fontWeight: 600, marginLeft: '8px' }}>• {timeRemaining}</span>
+}
 
 export default function Tournaments() {
   const navigate = useNavigate()
@@ -159,7 +194,14 @@ export default function Tournaments() {
                 {activeTab === 'active' && tournament.status === 'in_progress' && tournament.currentRound && tournament.totalRounds && (
                   <div className="tournament-detail">
                     Раунд {tournament.currentRound} из {tournament.totalRounds}
-                    {tournament.timeRemaining && ` • Осталось ${tournament.timeRemaining}`}
+                    {tournament.nextRoundTime && (
+                      <RoundTimer nextRoundTime={tournament.nextRoundTime} />
+                    )}
+                  </div>
+                )}
+                {activeTab === 'active' && (tournament.status === 'registration' || tournament.status === 'registration_end') && tournament.nextRoundTime && (
+                  <div className="tournament-detail">
+                    Начало турнира: <RoundTimer nextRoundTime={tournament.nextRoundTime} />
                   </div>
                 )}
                 {activeTab === 'active' && tournament.status === 'registration' && tournament.registrationEnd && (

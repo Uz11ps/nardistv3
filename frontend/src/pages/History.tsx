@@ -392,13 +392,16 @@ export default function History() {
                             game.opponent.username
                           )}
                         </span>
-                        <span className="mode-badge">{game.mode === 'long' ? 'Длинные' : 'Короткие'}</span>
                       </div>
                       <div className="card-subtitle">
                         {formatRelativeTime(game.createdAt, timezone)} • {formatDuration(game.duration)}
                       </div>
-                      <div className="card-subtitle" style={{ marginTop: '4px' }}>
-                        Счет: {game.score.player1}:{game.score.player2} • {game.moveCount} ходов
+                      <div className="card-subtitle" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span>Счет: {game.score.player1}:{game.score.player2}</span>
+                        <span>•</span>
+                        <span>{game.moveCount} ходов</span>
+                        <span>•</span>
+                        <span className="mode-badge" style={{ fontSize: '11px', padding: '2px 6px' }}>{game.mode === 'long' ? 'Длинные' : 'Короткие'}</span>
                       </div>
                     </div>
                     <div className="game-history-card-actions" onClick={(e) => e.stopPropagation()}>

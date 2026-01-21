@@ -98,6 +98,7 @@ export default function Home() {
         loadEnergy()
         loadLevelProgress()
         loadPlayerStats()
+        loadLeaderboard()
       } catch (error) {
         console.error('Ошибка при загрузке статистики:', error)
         setStats({ 
@@ -164,6 +165,15 @@ export default function Home() {
       }))
     } catch (error) {
       // Игнорируем ошибки
+    }
+  }
+
+  const loadLeaderboard = async () => {
+    try {
+      const response = await apiClient.get('/ratings/leaderboard?mode=short&period=all&limit=10').catch(() => ({ data: [] }))
+      setLeaderboard(response.data || [])
+    } catch (error) {
+      console.error('Failed to load leaderboard:', error)
     }
   }
 
@@ -361,30 +371,33 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Лидерборд */}
+        {leaderboard.length > 0 && (
+          <div className="home-leaderboard-section-v3">
+            <div className="home-leaderboard-header-v3" onClick={() => navigate('/leaderboard')}>
+              <span className="home-leaderboard-title-v3">Лидерборд</span>
+              <span className="home-leaderboard-more-v3">Все →</span>
+            </div>
+            <div className="home-leaderboard-list-v3">
+              {leaderboard.slice(0, 5).map((entry, index) => (
+                <div key={entry.user?.id || index} className="home-leaderboard-item-v3">
+                  <div className="home-leaderboard-rank-v3">#{entry.rank}</div>
+                  <div className="home-leaderboard-name-v3">{entry.user?.nickname || entry.user?.username || 'Игрок'}</div>
+                  <div className="home-leaderboard-stats-v3">
+                    <span>{entry.totalMatches || (entry.wins + entry.losses + (entry.draws || 0))} игр</span>
+                    {entry.winRate !== null && entry.winRate !== undefined && (
+                      <span> • {entry.winRate}%</span>
+                    )}
+                    <span> • Lvl {entry.user?.level || 1}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Меню под кнопкой "Игры" */}
         <div className="home-menu-panel-v3">
-          {/* Инвентарь */}
-          <div className="home-menu-panel-item-v3" onClick={() => navigate('/inventory')}>
-            <span className="home-menu-panel-icon-v3">
-              <BoxIcon size={30} style={{ color: '#FFD700' }} />
-            </span>
-            <span className="home-menu-panel-title-v3">Инвентарь</span>
-            <span className="home-menu-panel-arrow-v3">
-              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
-            </span>
-          </div>
-
-          {/* Аналитика */}
-          <div className="home-menu-panel-item-v3" onClick={() => navigate('/history')}>
-            <span className="home-menu-panel-icon-v3">
-              <img src="/img/зарик.png" alt="analytics" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-            </span>
-            <span className="home-menu-panel-title-v3">Аналитика</span>
-            <span className="home-menu-panel-arrow-v3">
-              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
-            </span>
-          </div>
-
           {/* Квесты */}
           <div className="home-menu-panel-item-v3" onClick={() => navigate('/quests')}>
             <span className="home-menu-panel-icon-v3" style={{ position: 'relative' }}>
@@ -399,6 +412,28 @@ export default function Home() {
             </span>
           </div>
 
+          {/* Лидерборд */}
+          <div className="home-menu-panel-item-v3" onClick={() => navigate('/leaderboard')}>
+            <span className="home-menu-panel-icon-v3">
+              <img src="/img/crown.png" alt="leaderboard" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            </span>
+            <span className="home-menu-panel-title-v3">Лидерборд</span>
+            <span className="home-menu-panel-arrow-v3">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
+          </div>
+
+          {/* Инвентарь */}
+          <div className="home-menu-panel-item-v3" onClick={() => navigate('/inventory')}>
+            <span className="home-menu-panel-icon-v3">
+              <BoxIcon size={30} style={{ color: '#FFD700' }} />
+            </span>
+            <span className="home-menu-panel-title-v3">Инвентарь</span>
+            <span className="home-menu-panel-arrow-v3">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
+          </div>
+
           {/* Уведомления */}
           <div className="home-menu-panel-item-v3" onClick={() => navigate('/notifications')}>
             <span className="home-menu-panel-icon-v3" style={{ position: 'relative' }}>
@@ -406,6 +441,17 @@ export default function Home() {
               {hasNotifications && <div className="home-menu-panel-notification-badge-v3" />}
             </span>
             <span className="home-menu-panel-title-v3">Уведомления</span>
+            <span className="home-menu-panel-arrow-v3">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
+          </div>
+
+          {/* Аналитика */}
+          <div className="home-menu-panel-item-v3" onClick={() => navigate('/history')}>
+            <span className="home-menu-panel-icon-v3">
+              <img src="/img/зарик.png" alt="analytics" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            </span>
+            <span className="home-menu-panel-title-v3">Аналитика</span>
             <span className="home-menu-panel-arrow-v3">
               <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
             </span>

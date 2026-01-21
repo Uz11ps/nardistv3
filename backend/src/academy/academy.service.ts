@@ -166,7 +166,30 @@ export class AcademyService {
   }
 
   async delete(id: string): Promise<void> {
+    const article = await this.articlesRepository.findOne({ where: { id } });
+    if (!article) {
+      throw new NotFoundException('Статья не найдена');
+    }
+
+    // Сохраняем информацию о статье перед удалением для уведомления
+    const authorId = article.authorId;
+    const title = article.title;
+
     await this.articlesRepository.delete(id);
+
+    // Создаем уведомление автору статьи об отклонении
+    if (authorId) {
+      try {
+        await this.notificationsService.createNotification(
+          authorId,
+          'Верификация статьи',
+          `Ваша статья "${title}" не прошла верификацию администратором`,
+          'warning',
+        );
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при создании уведомления об отклонении статьи: ${error.message}`);
+      }
+    }
   }
 
   async getCourses(userId?: string): Promise<any[]> {

@@ -198,14 +198,14 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
     if (match.player1.id !== currentUserId && match.player2.id !== currentUserId) return false
     if (match.gameId) return false // Матч уже начат
 
-    // Проверяем окно входа (3 минуты после scheduledAt)
+    // Проверяем, что прошло 15 минут с начала раунда (время подготовки)
     if (match.scheduledAt) {
       const now = new Date()
-      const scheduledAt = new Date(match.scheduledAt)
-      const entryWindowEnd = new Date(scheduledAt.getTime() + 3 * 60 * 1000)
+      const roundStartTime = new Date(match.scheduledAt)
+      const roundEndTime = new Date(roundStartTime.getTime() + 15 * 60 * 1000) // 15 минут с начала раунда
       
-      // Матч должен был начаться (scheduledAt в прошлом) и окно входа еще открыто
-      if (now >= scheduledAt && now <= entryWindowEnd) {
+      // Игра может начаться только после окончания 15 минут подготовки раунда
+      if (now >= roundEndTime) {
         return true
       }
     }
