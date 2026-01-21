@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { apiClient } from '../api/client'
 import BottomNav from '../components/BottomNav'
-import { BoxIcon, SettingsIcon, ArrowRightIcon, TrophyIcon } from '../components/Icons'
+import { BoxIcon, SettingsIcon, ArrowRightIcon } from '../components/Icons'
 import './Home.css'
 
 interface Stats {
@@ -382,7 +382,7 @@ export default function Home() {
           {/* Лидерборд */}
           <div className="home-menu-panel-item-v3" onClick={() => navigate('/leaderboard')}>
             <span className="home-menu-panel-icon-v3">
-              <TrophyIcon size={30} style={{ color: '#FFD700' }} />
+              <img src="/img/bc2f47f8e19b304a17797792349ca52f3fc27ad6.png" alt="leaderboard" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
             </span>
             <span className="home-menu-panel-title-v3">Лидерборд</span>
             <span className="home-menu-panel-arrow-v3">
