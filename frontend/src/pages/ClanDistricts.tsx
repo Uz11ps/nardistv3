@@ -171,18 +171,30 @@ export default function ClanDistricts() {
         {selectedDistrictId && currentDistrict && currentDistrict.isUnlocked && (
           <div className="city-clan-section">
             {currentDistrict.isCapturedByMyClan && currentDistrict.capture ? (
-              <div className="city-clan-capture-card">
+              <div className="city-clan-capture-card city-clan-capture-captured">
                 <div className="city-clan-capture-header">
                   <h3>Район захвачен</h3>
                   {currentDistrict.capture.expiresAt && (
                     <div className="city-clan-capture-time">
-                      Истекает: {new Date(currentDistrict.capture.expiresAt).toLocaleString('ru-RU')}
+                      Истекает: {new Date(currentDistrict.capture.expiresAt).toLocaleString('ru-RU', { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </div>
                   )}
                 </div>
                 <div className="city-clan-capture-info">
-                  <div>Доход в день: {currentDistrict.capture.baseIncomePerDay.toLocaleString('ru-RU')} NAR</div>
-                  <div>Всего собрано: {currentDistrict.capture.totalIncomeCollected.toLocaleString('ru-RU')} NAR</div>
+                  <div className="city-clan-capture-income-item">
+                    <span className="city-clan-capture-label">Пассивный доход в данный момент:</span>
+                    <span className="city-clan-capture-value">{currentDistrict.capture.baseIncomePerDay.toLocaleString('ru-RU')} NAR</span>
+                  </div>
+                  <div className="city-clan-capture-income-item">
+                    <span className="city-clan-capture-label">Всего собрано:</span>
+                    <span className="city-clan-capture-value">{currentDistrict.capture.totalIncomeCollected.toLocaleString('ru-RU')} NAR</span>
+                  </div>
                 </div>
                 <button
                   className="city-clan-capture-btn"
@@ -190,6 +202,9 @@ export default function ClanDistricts() {
                 >
                   Собрать доход
                 </button>
+                <div className="city-clan-capture-note">
+                  Если не собрать доход до истечения захвата, он автоматически перейдет в казну
+                </div>
               </div>
             ) : currentDistrict.isCapturedByOther ? (
               <div className="city-clan-capture-card city-clan-capture-other">

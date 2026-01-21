@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { apiClient } from '../api/client'
 import BottomNav from '../components/BottomNav'
-import { BoxIcon, SettingsIcon, ArrowRightIcon, StarIcon } from '../components/Icons'
+import { BoxIcon, SettingsIcon, ArrowRightIcon } from '../components/Icons'
 import './Home.css'
 
 interface Stats {
@@ -45,6 +46,7 @@ export default function Home() {
   })
   const [hasPremium, setHasPremium] = useState(false)
   const [hasNotifications, setHasNotifications] = useState(false)
+  const [hasUnclaimedQuests, setHasUnclaimedQuests] = useState(false)
   const [levelProgress, setLevelProgress] = useState<LevelProgress | null>(null)
   const [levelUpNotification, setLevelUpNotification] = useState<{ level: number; reward: number } | null>(null)
 
@@ -92,6 +94,7 @@ export default function Home() {
         })
         checkPremium()
         checkNotifications()
+        checkUnclaimedQuests()
         loadEnergy()
         loadLevelProgress()
         loadPlayerStats()
@@ -184,6 +187,40 @@ export default function Home() {
     }
   }
 
+  const checkUnclaimedQuests = async () => {
+    try {
+      // Загружаем все квесты (daily и weekly)
+      const [dailyResponse, weeklyResponse] = await Promise.all([
+        apiClient.get('/quests/daily').catch(() => ({ data: { quests: [] } })),
+        apiClient.get('/quests/weekly').catch(() => ({ data: { quests: [] } })),
+      ])
+      
+      const allQuests = [
+        ...(dailyResponse.data?.quests || []),
+        ...(weeklyResponse.data?.quests || []),
+      ]
+      
+      // Проверяем, есть ли квесты с completed === true и claimed === false
+      const hasUnclaimed = allQuests.some((quest: any) => 
+        quest.completed === true && quest.claimed === false
+      )
+      
+      setHasUnclaimedQuests(hasUnclaimed)
+    } catch (error) {
+      console.error('Failed to check unclaimed quests:', error)
+      setHasUnclaimedQuests(false)
+    }
+  }
+
+  // Периодическая проверка невыполненных квестов
+  useEffect(() => {
+    if (user) {
+      checkUnclaimedQuests()
+      const interval = setInterval(checkUnclaimedQuests, 30000) // Проверяем каждые 30 секунд
+      return () => clearInterval(interval)
+    }
+  }, [user])
+
   const handlePlayClick = async () => {
     try {
       // Проверяем наличие активной игры (включая бот-игры)
@@ -254,44 +291,26 @@ export default function Home() {
       </div>
 
       {/* Уведомление о повышении уровня */}
-      {levelUpNotification && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '12px',
-          padding: '20px 24px',
-          zIndex: 1000,
-          boxShadow: '0 6px 16px rgba(0, 0, 0, 0.5)',
-          maxWidth: '90%',
-          textAlign: 'center',
-          animation: 'fadeIn 0.3s ease-out'
-        }}>
-          <div style={{ fontSize: '18px', fontWeight: 600, color: '#FFF', marginBottom: '8px' }}>
-            Поздравляем, вы достигли уровня {levelUpNotification.level}!
+      {levelUpNotification && createPortal(
+        <div className="level-up-modal-overlay" onClick={() => setLevelUpNotification(null)}>
+          <div className="level-up-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="level-up-modal-content">
+              <div className="level-up-modal-title">
+                Поздравляем, вы достигли уровня {levelUpNotification.level}!
+              </div>
+              <div className="level-up-modal-reward">
+                Ваша награда {levelUpNotification.reward.toLocaleString()} NAR!
+              </div>
+              <button
+                className="level-up-modal-button"
+                onClick={() => setLevelUpNotification(null)}
+              >
+                Отлично!
+              </button>
+            </div>
           </div>
-          <div style={{ fontSize: '16px', color: '#FFD700', fontWeight: 500 }}>
-            Ваша награда {levelUpNotification.reward.toLocaleString()} NAR!
-          </div>
-          <button
-            onClick={() => setLevelUpNotification(null)}
-            style={{
-              marginTop: '12px',
-              padding: '8px 16px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '8px',
-              color: '#FFF',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            Закрыть
-          </button>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="home-level-section-v3">
@@ -368,8 +387,11 @@ export default function Home() {
 
           {/* Квесты */}
           <div className="home-menu-panel-item-v3" onClick={() => navigate('/quests')}>
-            <span className="home-menu-panel-icon-v3">
-              <StarIcon size={30} style={{ color: '#FFD700' }} />
+            <span className="home-menu-panel-icon-v3" style={{ position: 'relative' }}>
+              <img src="/img/2aebac90f55da8043a26d9cc37815475d23caca9.png" alt="quests" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+              {hasUnclaimedQuests && (
+                <span className="home-menu-panel-badge" />
+              )}
             </span>
             <span className="home-menu-panel-title-v3">Квесты</span>
             <span className="home-menu-panel-arrow-v3">
@@ -380,10 +402,7 @@ export default function Home() {
           {/* Уведомления */}
           <div className="home-menu-panel-item-v3" onClick={() => navigate('/notifications')}>
             <span className="home-menu-panel-icon-v3" style={{ position: 'relative' }}>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <img src="/img/увед.png" alt="notifications" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
               {hasNotifications && <div className="home-menu-panel-notification-badge-v3" />}
             </span>
             <span className="home-menu-panel-title-v3">Уведомления</span>

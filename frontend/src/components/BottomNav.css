@@ -73,6 +73,18 @@
   object-fit: contain;
 }
 
+.nav-item-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #E84142;
+  border-radius: 50%;
+  border: 1.5px solid #111;
+  z-index: 1;
+}
+
 /* Адаптивность для маленьких экранов */
 @media (max-width: 360px) {
   .bottom-nav {

@@ -505,8 +505,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 10001;
   padding: 20px;
+  padding-bottom: calc(20px + 70px + env(safe-area-inset-bottom, 0px));
 }
 
 .profile-edit-modal {

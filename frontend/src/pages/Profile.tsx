@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
@@ -35,7 +36,6 @@ export default function Profile() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'stats' | 'statistics' | 'analytics'>('stats')
   const [statisticsMode, setStatisticsMode] = useState<'all' | 'long' | 'short'>('all')
-  const [statisticsResult, setStatisticsResult] = useState<'all' | 'wins' | 'losses'>('all')
   const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null)
   const [gameHistory, setGameHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -94,9 +94,6 @@ export default function Profile() {
     try {
       setLoadingStatistics(true)
       const params = new URLSearchParams()
-      if (statisticsResult !== 'all') {
-        params.append('result', statisticsResult)
-      }
       if (statisticsMode !== 'all') {
         params.append('mode', statisticsMode)
       }
@@ -118,7 +115,7 @@ export default function Profile() {
       loadPlayerStatistics()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statisticsMode, statisticsResult, activeTab])
+  }, [statisticsMode, activeTab])
 
   const handleUpgrade = async (type: 'economy' | 'energy' | 'lives' | 'power') => {
     if (upgrading || skillPoints.free < 1) return
@@ -446,74 +443,11 @@ export default function Profile() {
             })}
           </div>
         </div>
-
-        {/* Нижнее меню */}
-        <div className="profile-bottom-menu-v2">
-          <div
-            onClick={() => navigate('/inventory')}
-            className="profile-bottom-menu-item-v2"
-          >
-            <span className="profile-bottom-menu-icon-v2">
-              <BoxIcon size={30} style={{ color: '#FFD700' }} />
-            </span>
-            <span className="profile-bottom-menu-title-v2">Инвентарь</span>
-            <span className="profile-bottom-menu-arrow-v2">
-              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
-            </span>
-          </div>
-          <div
-            onClick={() => navigate('/history')}
-            className="profile-bottom-menu-item-v2"
-          >
-            <span className="profile-bottom-menu-icon-v2">
-              <img src="/img/зарик.png" alt="analytics" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-            </span>
-            <span className="profile-bottom-menu-title-v2">Аналитика</span>
-            <span className="profile-bottom-menu-arrow-v2">
-              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
-            </span>
-          </div>
-          <div
-            onClick={() => navigate('/settings')}
-            className="profile-bottom-menu-item-v2"
-          >
-            <span className="profile-bottom-menu-icon-v2">
-              <SettingsIcon size={30} style={{ color: '#FFD700' }} />
-            </span>
-            <span className="profile-bottom-menu-title-v2">Настройки</span>
-            <span className="profile-bottom-menu-arrow-v2">
-              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
-            </span>
-          </div>
-        </div>
       </>
     ) : activeTab === 'statistics' ? (
           <div className="profile-statistics-tab">
             {/* Фильтры статистики */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-              {/* Фильтр по результату */}
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ color: '#B6B6B6', fontSize: '14px', marginRight: '8px' }}>Результат:</span>
-                <button 
-                  className={`profile-statistics-mode-tab ${statisticsResult === 'all' ? 'active' : ''}`}
-                  onClick={() => setStatisticsResult('all')}
-                >
-                  Все
-                </button>
-                <button 
-                  className={`profile-statistics-mode-tab ${statisticsResult === 'wins' ? 'active' : ''}`}
-                  onClick={() => setStatisticsResult('wins')}
-                >
-                  Победы
-                </button>
-                <button 
-                  className={`profile-statistics-mode-tab ${statisticsResult === 'losses' ? 'active' : ''}`}
-                  onClick={() => setStatisticsResult('losses')}
-                >
-                  Поражения
-                </button>
-              </div>
-              
               {/* Фильтр по режиму */}
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <span style={{ color: '#B6B6B6', fontSize: '14px', marginRight: '8px' }}>Режим:</span>
@@ -704,7 +638,7 @@ export default function Profile() {
       </div>
 
       {/* Модальное окно редактирования профиля */}
-      {showEditModal && (
+      {showEditModal && createPortal(
         <div className="profile-edit-modal-overlay" onClick={handleCloseEdit}>
           <div className="profile-edit-modal" onClick={(e) => e.stopPropagation()}>
             <div className="profile-edit-modal-header">
@@ -798,7 +732,8 @@ export default function Profile() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Модальное окно Skill Points */}

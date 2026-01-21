@@ -535,6 +535,14 @@ export class CityService {
     }
 
     const now = new Date();
+    
+    // Проверяем, не истек ли срок захвата
+    if (capture.expiresAt && capture.expiresAt < now) {
+      // Если захват истек, автоматически переводим весь неполученный доход в казну
+      await this.autoCollectExpiredCaptureIncome(clanId, districtCode, capture);
+      throw new BadRequestException('Срок захвата истек. Доход автоматически переведен в казну');
+    }
+
     const lastCollection = capture.lastIncomeCollection || capture.capturedAt;
     const daysPassed = (now.getTime() - lastCollection.getTime()) / (1000 * 60 * 60 * 24);
 
@@ -569,6 +577,46 @@ export class CityService {
       collected: incomeToAdd,
       newTreasury: Number(clan.treasury),
     };
+  }
+
+  /**
+   * Автоматически переводит неполученный доход в казну при истечении захвата
+   */
+  private async autoCollectExpiredCaptureIncome(clanId: string, districtCode: string, capture: DistrictCapture) {
+    const districtConfig = await this.districtConfigsRepository.findOne({
+      where: { code: districtCode },
+    });
+
+    if (!districtConfig || !capture.expiresAt) {
+      return;
+    }
+
+    const now = new Date();
+    const lastCollection = capture.lastIncomeCollection || capture.capturedAt;
+    const expirationTime = capture.expiresAt.getTime();
+    
+    // Рассчитываем доход до момента истечения захвата
+    const daysPassed = (expirationTime - lastCollection.getTime()) / (1000 * 60 * 60 * 24);
+
+    const clan = await this.clansService.findOne(clanId);
+    const economyLevel = clan.economy || 1;
+    const economyMultiplier = 1 + (economyLevel - 1) * 0.1;
+
+    const baseIncomePerDay = Number(districtConfig.baseIncomePerDay);
+    const incomePerDayWithEconomy = baseIncomePerDay * economyMultiplier;
+    const incomeToAdd = Math.floor(incomePerDayWithEconomy * daysPassed);
+
+    if (incomeToAdd > 0) {
+      // Обновляем захват
+      capture.totalIncomeCollected = (Number(capture.totalIncomeCollected) + incomeToAdd).toString();
+      capture.lastIncomeCollection = capture.expiresAt; // Устанавливаем время последнего сбора на момент истечения
+      await this.districtCapturesRepository.save(capture);
+
+      // Добавляем доход в казну клана
+      const currentTreasury = Number(clan.treasury || 0);
+      clan.treasury = (currentTreasury + incomeToAdd).toString();
+      await this.clansRepository.save(clan);
+    }
   }
 
   /**

@@ -21,7 +21,6 @@
   background-attachment: fixed;
   transform: rotate(180deg);
   z-index: 0;
-  opacity: 0.3;
 }
 
 .app-container.page-transition > * {
@@ -310,6 +309,96 @@
   }
 }
 
+/* Модальное окно поздравления с уровнем */
+.level-up-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.level-up-modal {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.level-up-modal-content {
+  padding: 32px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.level-up-modal-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.3;
+}
+
+.level-up-modal-reward {
+  font-size: 18px;
+  color: #FFD700;
+  font-weight: 500;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.level-up-modal-button {
+  margin-top: 8px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #FFF;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.level-up-modal-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.level-up-modal-button:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 480px) {
+  .level-up-modal {
+    max-width: 90%;
+  }
+
+  .level-up-modal-content {
+    padding: 24px 20px;
+  }
+
+  .level-up-modal-title {
+    font-size: 20px;
+  }
+
+  .level-up-modal-reward {
+    font-size: 16px;
+  }
+}
+
 /* Новый дизайн V2 */
 .home-header-v2 {
   display: flex;
@@ -589,7 +678,6 @@
   background-attachment: fixed;
   transform: rotate(180deg);
   z-index: 0;
-  opacity: 0.3;
   pointer-events: none;
 }
 
@@ -866,6 +954,18 @@
 }
 
 .home-menu-panel-notification-badge-v3 {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: #E84142;
+  border: 2px solid #1C1D21;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.home-menu-panel-badge {
   position: absolute;
   top: -2px;
   right: -2px;

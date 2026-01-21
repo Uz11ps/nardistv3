@@ -750,12 +750,17 @@
 
 .city-clan-capture-card {
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.city-clan-capture-card.city-clan-capture-captured {
+  border-color: rgba(255, 215, 0, 0.3);
 }
 
 .city-clan-capture-card.city-clan-capture-other {
@@ -790,10 +795,36 @@
 .city-clan-capture-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+}
+
+.city-clan-capture-income-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.city-clan-capture-label {
   color: #B6B6B6;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.city-clan-capture-value {
+  color: #FFD700;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.city-clan-capture-note {
+  color: #888;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-style: italic;
+  margin-top: -8px;
+  text-align: center;
 }
 
 .city-clan-capture-btn {

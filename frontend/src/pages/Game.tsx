@@ -180,9 +180,9 @@ export default function Game() {
 
   // Таймер выбора смещения (15 секунд) - если не выбрано, матч отменяется
   useEffect(() => {
-    // Запускаем таймер только для vs_player игр, когда игра в статусе 'waiting' и смещение еще не выбрано
+    // Запускаем таймер для всех типов игр (vs_player и vs_bot), когда игра в статусе 'waiting' и смещение еще не выбрано
     const isBotGameType = gameInfo?.type === 'vs_bot'
-    if (gameStatus === 'waiting' && gameInfo?.type === 'vs_player' && !isBotGameType && gameInfo) {
+    if (gameStatus === 'waiting' && (gameInfo?.type === 'vs_player' || gameInfo?.type === 'vs_bot') && gameInfo) {
       const isP1 = gameInfo.player1Id === user?.id
       const myOffsetChosenAt = isP1 ? gameInfo.p1OffsetChosenAt : gameInfo.p2OffsetChosenAt
       
@@ -3249,10 +3249,16 @@ export default function Game() {
                     {offsetSelectionTimer !== null && offsetSelectionTimer > 0 && (
                       <div style={{ 
                         color: offsetSelectionTimer <= 5 ? '#FF4444' : '#FFD700', 
-                        fontSize: '14px', 
-                        fontWeight: 600, 
-                        marginTop: '12px',
-                        textAlign: 'center'
+                        fontSize: '16px', 
+                        fontWeight: 700, 
+                        marginTop: '16px',
+                        marginBottom: '8px',
+                        textAlign: 'center',
+                        padding: '8px 12px',
+                        background: offsetSelectionTimer <= 5 ? 'rgba(255, 68, 68, 0.1)' : 'rgba(255, 215, 0, 0.1)',
+                        borderRadius: '8px',
+                        border: `1px solid ${offsetSelectionTimer <= 5 ? '#FF4444' : '#FFD700'}`,
+                        animation: offsetSelectionTimer <= 5 ? 'pulse 1s infinite' : 'none'
                       }}>
                         ⏱️ Осталось {offsetSelectionTimer} секунд
                       </div>

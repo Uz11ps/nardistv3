@@ -866,6 +866,41 @@ export class ClansService {
     });
 
     const now = new Date();
+    
+    // Проверяем и автоматически переводим доход для истекших захватов
+    for (const capture of captures) {
+      if (capture.expiresAt && capture.expiresAt <= now) {
+        // Если захват истек и доход еще не был переведен автоматически
+        const districtConfig = await this.districtConfigsRepository.findOne({
+          where: { code: capture.districtCode },
+        });
+        if (districtConfig) {
+          const lastCollection = capture.lastIncomeCollection || capture.capturedAt;
+          const expirationTime = capture.expiresAt.getTime();
+          const daysPassed = (expirationTime - lastCollection.getTime()) / (1000 * 60 * 60 * 24);
+          
+          if (daysPassed > 0) {
+            const economyLevel = clan?.economy || 1;
+            const economyMultiplier = 1 + (economyLevel - 1) * 0.1;
+            const baseIncomePerDay = Number(districtConfig.baseIncomePerDay);
+            const incomePerDayWithEconomy = baseIncomePerDay * economyMultiplier;
+            const incomeToAdd = Math.floor(incomePerDayWithEconomy * daysPassed);
+            
+            if (incomeToAdd > 0 && capture.lastIncomeCollection && capture.lastIncomeCollection < capture.expiresAt) {
+              // Переводим доход в казну
+              capture.totalIncomeCollected = (Number(capture.totalIncomeCollected) + incomeToAdd).toString();
+              capture.lastIncomeCollection = capture.expiresAt;
+              await this.districtCapturesRepository.save(capture);
+              
+              const currentTreasury = Number(clan.treasury || 0);
+              clan.treasury = (currentTreasury + incomeToAdd).toString();
+              await this.clansRepository.save(clan);
+            }
+          }
+        }
+      }
+    }
+    
     const activeCaptures = allCaptures.filter(
       (c) => !c.expiresAt || c.expiresAt > now,
     );

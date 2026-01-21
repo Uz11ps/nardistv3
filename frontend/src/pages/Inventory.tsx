@@ -50,6 +50,7 @@ export default function Inventory() {
   const [buildings, setBuildings] = useState<Array<{ id: string; type: string; name: string }>>([])
   const [savingSettings, setSavingSettings] = useState(false)
   const [hasPremium, setHasPremium] = useState(false)
+  const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null)
 
   useEffect(() => {
     loadInventory()
@@ -109,11 +110,13 @@ export default function Inventory() {
       // Явно проверяем, что hasActive существует и равен true
       const hasActive = response.data?.hasActive === true
       setHasPremium(hasActive)
+      setSubscriptionDetails(response.data)
       console.log('Premium status:', hasActive, response.data)
     } catch (error: any) {
       // При ошибке явно устанавливаем false
       console.error('Failed to check subscription:', error)
       setHasPremium(false)
+      setSubscriptionDetails(null)
     }
   }
 
@@ -322,7 +325,20 @@ export default function Inventory() {
                   <div className="inventory-other-title" style={{ fontSize: '16px', fontWeight: '600', color: '#FFF', marginBottom: '4px' }}>Премиум подписка</div>
                   <div className="inventory-other-status">
                     {hasPremium ? (
-                      <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>Активна</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>Активна</span>
+                        {subscriptionDetails?.expiresAt && (
+                          <span style={{ color: '#B6B6B6', fontSize: '12px' }}>
+                            До {new Date(subscriptionDetails.expiresAt).toLocaleDateString('ru-RU', { 
+                              day: 'numeric', 
+                              month: 'long', 
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span style={{ color: '#888', fontSize: '14px' }}>Неактивна</span>
                     )}
