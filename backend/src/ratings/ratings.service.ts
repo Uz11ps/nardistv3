@@ -135,84 +135,21 @@ export class RatingsService {
       periodStart = new Date();
       periodStart.setMonth(periodStart.getMonth() - 1);
       periodStart.setHours(0, 0, 0, 0); // Начало дня месяц назад
+    } else if (period === 'all') {
+      // Для "all" устанавливаем очень старую дату, чтобы получить все игры
+      periodStart = new Date(0); // 1970-01-01
     }
 
-    // Если период указан, всегда считаем статистику из игр (для всех типов сортировки)
-    if (period !== 'all') {
-      return this.getLeaderboardFromGames(mode, periodStart!, sortBy, limit);
-    }
-
-    // Для периода "all" используем старую логику из таблицы ratings
-    let query = this.ratingsRepository
-      .createQueryBuilder('rating')
-      .where('rating.mode = :mode', { mode })
-      .leftJoinAndSelect('rating.user', 'user');
-
-    const ratings = await query.getMany();
-
-    const entries = await Promise.all(ratings.map(async (rating) => {
-      let totalMatches = (rating.wins || 0) + (rating.losses || 0) + (rating.draws || 0);
-      let winRate = totalMatches >= 100 && totalMatches > 0 
-        ? Math.round(((rating.wins || 0) / totalMatches) * 100 * 10) / 10 
-        : null;
-      let xp = Number(rating.user.xp || 0);
-      let ratingChange = undefined; // Для "all" не показываем изменение рейтинга
-      
-      const hasPremium = rating.user ? await this.subscriptionService.hasActiveSubscription(rating.user.id) : false;
-      
-      return {
-        user: rating.user ? {
-          id: rating.user.id,
-          username: rating.user.username,
-          nickname: rating.user.nickname,
-          avatarUrl: rating.user.avatarUrl,
-          level: rating.user.level || 1,
-          rating: rating.elo,
-          xp,
-          badge: this.getBadge(rating.elo),
-          hasPremium,
-        } : null,
-        wins: rating.wins || 0,
-        losses: rating.losses || 0,
-        draws: rating.draws || 0,
-        totalMatches,
-        winRate,
-        ratingChange,
-      };
-    }));
-
-    // Сортируем
-    if (sortBy === 'xp') {
-      entries.sort((a, b) => (b.user?.xp || 0) - (a.user?.xp || 0));
-    } else if (sortBy === 'matches') {
-      entries.sort((a, b) => b.totalMatches - a.totalMatches);
-    } else if (sortBy === 'winrate') {
-      const filteredEntries = entries.filter(entry => entry.totalMatches >= 100 && entry.winRate !== null);
-      filteredEntries.sort((a, b) => {
-        const aWinRate = a.winRate || 0;
-        const bWinRate = b.winRate || 0;
-        if (Math.abs(aWinRate - bWinRate) > 0.01) {
-          return bWinRate - aWinRate;
-        }
-        return b.totalMatches - a.totalMatches;
-      });
-      entries.length = 0;
-      entries.push(...filteredEntries);
-    } else {
-      entries.sort((a, b) => (b.user?.rating || 0) - (a.user?.rating || 0));
-    }
-
-    return entries.slice(0, limit).map((entry, index) => ({
-      ...entry,
-      rank: index + 1,
-    }));
+    // Всегда считаем статистику из игр (для всех периодов и типов сортировки)
+    return this.getLeaderboardFromGames(mode, periodStart!, sortBy, limit, period === 'all');
   }
 
   private async getLeaderboardFromGames(
     mode: GameMode,
     periodStart: Date,
     sortBy: 'xp' | 'matches' | 'winrate' | 'rating',
-    limit: number
+    limit: number,
+    isAllPeriod: boolean = false
   ): Promise<any[]> {
     // Получаем все игры за период (только vs_player)
     // Используем createdAt для фильтрации, так как это дата начала игры
@@ -286,6 +223,7 @@ export class RatingsService {
 
     // Формируем entries
     const entries = await Promise.all(Array.from(userStats.values()).map(async (stats) => {
+      // Винрейт всегда считается из игр за период
       const winRate = stats.matches > 0 
         ? Math.round((stats.wins / stats.matches) * 100 * 10) / 10 
         : 0;
@@ -293,9 +231,17 @@ export class RatingsService {
       // Получаем рейтинг пользователя
       const rating = await this.getRating(stats.userId, mode) || 1000;
       
-      // Для рейтинга считаем изменение за период
-      let ratingChange = 0;
-      if (sortBy === 'rating') {
+      // Для периода "all" берем общий XP пользователя, для других периодов - прирост XP из игр за период
+      let xp = stats.xp; // Это уже сумма XP из игр за период для weekly/monthly
+      if (isAllPeriod) {
+        // Для периода "all" используем общий XP пользователя из базы
+        xp = Number(stats.user.xp || 0);
+      }
+      // Для weekly/monthly xp уже содержит прирост (сумму XP из игр за период)
+      
+      // Для рейтинга считаем изменение за период (только если не период "all")
+      let ratingChange = undefined;
+      if (sortBy === 'rating' && !isAllPeriod) {
         // Считаем изменение на основе игр за период
         // Упрощенно: победа +25, поражение -25
         ratingChange = (stats.wins * 25) - (stats.losses * 25);
@@ -311,7 +257,7 @@ export class RatingsService {
           avatarUrl: stats.user.avatarUrl,
           level: stats.user.level || 1,
           rating,
-          xp: stats.xp,
+          xp,
           badge: this.getBadge(rating),
           hasPremium,
         },
@@ -319,7 +265,8 @@ export class RatingsService {
         losses: stats.losses,
         draws: 0,
         totalMatches: stats.matches,
-        winRate: stats.matches >= 100 ? winRate : null,
+        // Винрейт показываем только если матчей >= 100 для периода "all", для weekly/monthly показываем всегда если есть матчи
+        winRate: isAllPeriod ? (stats.matches >= 100 ? winRate : null) : (stats.matches > 0 ? winRate : null),
         ratingChange,
       };
     }));
@@ -342,8 +289,13 @@ export class RatingsService {
       entries.length = 0;
       entries.push(...filteredEntries);
     } else if (sortBy === 'rating') {
-      // Сортируем по изменению рейтинга за период
-      entries.sort((a, b) => (b.ratingChange || 0) - (a.ratingChange || 0));
+      if (isAllPeriod) {
+        // Для периода "all" сортируем по текущему рейтингу
+        entries.sort((a, b) => (b.user?.rating || 0) - (a.user?.rating || 0));
+      } else {
+        // Для других периодов сортируем по изменению рейтинга за период
+        entries.sort((a, b) => (b.ratingChange || 0) - (a.ratingChange || 0));
+      }
     }
 
     return entries.slice(0, limit).map((entry, index) => ({
