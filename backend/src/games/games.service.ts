@@ -3322,8 +3322,11 @@ ${formattedMoves.join('\n')}
     const shortWinrate = shortFinished > 0 ? (shortWins / shortFinished) * 100 : 0;
     const longWinrate = longFinished > 0 ? (longWins / longFinished) * 100 : 0;
 
-    // Общее количество матчей (все игры, не только завершенные)
-    const totalMatches = filteredGames.length;
+    // Общее количество матчей (учитываем фильтр по режиму)
+    // Если фильтр по режиму установлен, считаем только матчи этого режима
+    const totalMatches = filters?.mode === 'short' ? shortFinished : 
+                        filters?.mode === 'long' ? longFinished : 
+                        filteredGames.length;
     
     // Получаем рейтинги игрока для обоих режимов
     const shortRating = await this.ratingsService.getRating(userId, GameMode.SHORT) || 1000;
@@ -3347,13 +3350,8 @@ ${formattedMoves.join('\n')}
           winrate: Math.round(shortWinrate * 10) / 10,
           rating: shortRating,
         },
-        long: {
-          matches: longFinished,
-          wins: longWins,
-          losses: longFinished - longWins,
-          winrate: Math.round(longWinrate * 10) / 10,
-          rating: longRating,
-        },
+        // Не возвращаем данные для длинных, когда фильтр по коротким
+        long: null,
       };
     } else if (filters?.mode === 'long') {
       return {
@@ -3364,13 +3362,8 @@ ${formattedMoves.join('\n')}
         winrate: Math.round(longWinrate * 10) / 10,
         rating: longRating,
         overallRating: overallRating,
-        short: {
-          matches: shortFinished,
-          wins: shortWins,
-          losses: shortFinished - shortWins,
-          winrate: Math.round(shortWinrate * 10) / 10,
-          rating: shortRating,
-        },
+        // Не возвращаем данные для коротких, когда фильтр по длинным
+        short: null,
         long: {
           matches: longFinished,
           wins: longWins,

@@ -4028,120 +4028,80 @@ export default function Game() {
                 <div className="game-player-modal-loading">Загрузка статистики...</div>
               ) : playerStats ? (
                 <div className="game-player-modal-stats">
-                  {/* Общая статистика - показываем только если фильтр "Все" */}
-                  {statsModeFilter === 'all' && (
-                    <div className="game-player-modal-stats-section">
-                      <div className="game-player-modal-stats-title">Общая статистика</div>
+                  <div className="game-player-modal-stats-section">
+                    <div className="game-player-modal-stats-title">
+                      {statsModeFilter === 'all' ? 'Общая статистика' : 
+                       statsModeFilter === 'long' ? 'Длинные нарды' : 
+                       'Короткие нарды'}
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Матчей:</span>
+                      <span className="game-player-modal-stats-value">{playerStats.totalMatches || playerStats.matches || 0}</span>
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Побед:</span>
+                      <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.wins || 0}</span>
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Поражений:</span>
+                      <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.losses || 0}</span>
+                    </div>
+                    <div className="game-player-modal-stats-item">
+                      <span className="game-player-modal-stats-label">Винрейт:</span>
+                      <span className="game-player-modal-stats-value" style={{ color: '#FFD700', fontWeight: '600', fontSize: '18px' }}>
+                        {(() => {
+                          const wins = playerStats.wins || 0
+                          const losses = playerStats.losses || 0
+                          const total = wins + losses
+                          return total > 0 ? Math.round((wins / total) * 100) : (playerStats.winrate || 0)
+                        })()}%
+                      </span>
+                    </div>
+                    {statsModeFilter === 'all' && playerStats.overallRating !== undefined && (
                       <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Матчей:</span>
-                        <span className="game-player-modal-stats-value">{playerStats.totalMatches || 0}</span>
-                      </div>
-                      <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Побед:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.wins || 0}</span>
-                      </div>
-                      <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Поражений:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.losses || 0}</span>
-                      </div>
-                      <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Винрейт:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
-                          {playerStats.winrate || 0}%
+                        <span className="game-player-modal-stats-label">Общий рейтинг:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
+                          {playerStats.overallRating}
                         </span>
                       </div>
-                      {playerStats.overallRating !== undefined && (
-                        <div className="game-player-modal-stats-item">
-                          <span className="game-player-modal-stats-label">Общий рейтинг:</span>
-                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                            {playerStats.overallRating}
-                          </span>
-                        </div>
-                      )}
-                      {playerStats.short?.rating !== undefined && (
-                        <div className="game-player-modal-stats-item">
-                          <span className="game-player-modal-stats-label">Рейтинг (короткие):</span>
-                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                            {playerStats.short.rating}
-                          </span>
-                        </div>
-                      )}
-                      {playerStats.long?.rating !== undefined && (
-                        <div className="game-player-modal-stats-item">
-                          <span className="game-player-modal-stats-label">Рейтинг (длинные):</span>
-                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                            {playerStats.long.rating}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Короткие нарды - показываем только если фильтр "Все" или "Короткие" */}
-                  {(statsModeFilter === 'all' || statsModeFilter === 'short') && (
-                    <div className="game-player-modal-stats-section">
-                      <div className="game-player-modal-stats-title">Короткие нарды</div>
+                    )}
+                    {statsModeFilter === 'short' && playerStats.short?.rating !== undefined && (
                       <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Матчей:</span>
-                        <span className="game-player-modal-stats-value">{playerStats.short?.matches || 0}</span>
-                      </div>
-                      <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Побед:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.short?.wins || 0}</span>
-                      </div>
-                      <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Поражений:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.short?.losses || 0}</span>
-                      </div>
-                      <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Винрейт:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
-                          {playerStats.short?.winrate || 0}%
+                        <span className="game-player-modal-stats-label">Рейтинг (короткие):</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
+                          {playerStats.short.rating}
                         </span>
                       </div>
-                      {playerStats.short?.rating !== undefined && (
-                        <div className="game-player-modal-stats-item">
-                          <span className="game-player-modal-stats-label">Рейтинг (короткие):</span>
-                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                            {playerStats.short.rating}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Длинные нарды - показываем только если фильтр "Все" или "Длинные" */}
-                  {(statsModeFilter === 'all' || statsModeFilter === 'long') && (
-                    <div className="game-player-modal-stats-section">
-                      <div className="game-player-modal-stats-title">Длинные нарды</div>
+                    )}
+                    {statsModeFilter === 'long' && playerStats.long?.rating !== undefined && (
                       <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Матчей:</span>
-                        <span className="game-player-modal-stats-value">{playerStats.long?.matches || 0}</span>
-                      </div>
-                      <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Побед:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.long?.wins || 0}</span>
-                      </div>
-                      <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Поражений:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.long?.losses || 0}</span>
-                      </div>
-                      <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Винрейт:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
-                          {playerStats.long?.winrate || 0}%
+                        <span className="game-player-modal-stats-label">Рейтинг (длинные):</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
+                          {playerStats.long.rating}
                         </span>
                       </div>
-                      {playerStats.long?.rating !== undefined && (
-                        <div className="game-player-modal-stats-item">
-                          <span className="game-player-modal-stats-label">Рейтинг (длинные):</span>
-                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                            {playerStats.long.rating}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                    {statsModeFilter === 'all' && (
+                      <>
+                        {playerStats.short?.rating !== undefined && (
+                          <div className="game-player-modal-stats-item">
+                            <span className="game-player-modal-stats-label">Рейтинг (короткие):</span>
+                            <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '16px' }}>
+                              {playerStats.short.rating}
+                            </span>
+                          </div>
+                        )}
+                        {playerStats.long?.rating !== undefined && (
+                          <div className="game-player-modal-stats-item">
+                            <span className="game-player-modal-stats-label">Рейтинг (длинные):</span>
+                            <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '16px' }}>
+                              {playerStats.long.rating}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="game-player-modal-no-stats">Статистика недоступна</div>

@@ -75,8 +75,12 @@ export class GamesController {
 
   @Get('statistics/me')
   @UseGuards(JwtAuthGuard)
-  async getMyStatistics(@CurrentUser() user: any) {
-    return this.gamesService.getPlayerStatistics(user.id);
+  async getMyStatistics(
+    @CurrentUser() user: any,
+    @Query('mode') mode?: string,
+    @Query('result') result?: string,
+  ) {
+    return this.gamesService.getPlayerStatistics(user.id, { mode, result });
   }
 
   @Get('statistics/:userId')
