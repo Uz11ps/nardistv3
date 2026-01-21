@@ -730,93 +730,153 @@ export default function Academy() {
           </div>
         )}
 
-        {activeTab === 'courses' && (
-          <div className="academy-grid">
-            {(() => {
-              console.log('[Academy] Rendering courses tab - courses state:', courses.length, 'courses:', courses)
-              // Фильтруем только по типу материала (course) и gameMode, НЕ исключаем купленные
-              const filtered = courses.filter(course => {
-                // Проверяем тип материала
-                if (course.type !== 'course' && course.type !== 'onboarding') {
-                  return false
-                }
-                
-                // Фильтрация по типу нард
-                const titleLower = (course.title || '').toLowerCase()
-                const isLongKeyword = titleLower.includes('длинн')
-                const isShortKeyword = titleLower.includes('коротк')
-                
-                if (isLongKeyword && !isShortKeyword) {
-                  return activeFilter === 'long'
-                }
-                if (isShortKeyword && !isLongKeyword) {
-                  return activeFilter === 'short'
-                }
-                
-                if (course.gameMode && (course.gameMode === 'long' || course.gameMode === 'short')) {
-                  return course.gameMode === activeFilter
-                }
-                
-                return activeFilter === 'long'
-              }).filter(course => !course.purchased) // Исключаем купленные только в конце
-              
-              console.log('[Academy] Rendering courses tab - total:', courses.length, 'filtered:', filtered.length, 'filtered items:', filtered)
-              return filtered
-            })().map((course) => (
-              <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
-                <div className="academy-grid-card-icon">
-                  <img src="/img/шляпа.png" alt="course" className="academy-hat-icon" />
+        {activeTab === 'courses' && (() => {
+          console.log('[Academy] Rendering courses tab - courses state:', courses.length, 'courses:', courses)
+          // Фильтруем только по типу материала (course) и gameMode, НЕ исключаем купленные
+          const filteredByType = courses.filter(course => {
+            // Проверяем тип материала
+            if (course.type !== 'course' && course.type !== 'onboarding') {
+              return false
+            }
+            
+            // Фильтрация по типу нард
+            const titleLower = (course.title || '').toLowerCase()
+            const isLongKeyword = titleLower.includes('длинн')
+            const isShortKeyword = titleLower.includes('коротк')
+            
+            if (isLongKeyword && !isShortKeyword) {
+              return activeFilter === 'long'
+            }
+            if (isShortKeyword && !isLongKeyword) {
+              return activeFilter === 'short'
+            }
+            
+            if (course.gameMode && (course.gameMode === 'long' || course.gameMode === 'short')) {
+              return course.gameMode === activeFilter
+            }
+            
+            return activeFilter === 'long'
+          })
+          
+          // Проверяем, все ли материалы куплены
+          const allPurchased = filteredByType.length > 0 && filteredByType.every(course => course.purchased)
+          
+          // Исключаем купленные только в конце
+          const filtered = filteredByType.filter(course => !course.purchased)
+          
+          console.log('[Academy] Rendering courses tab - total:', courses.length, 'filtered:', filtered.length, 'filtered items:', filtered)
+          
+          // Если все материалы куплены, показываем сообщение
+          if (allPurchased) {
+            return (
+              <div className="academy-grid">
+                <div style={{ 
+                  gridColumn: '1 / -1', 
+                  textAlign: 'center', 
+                  padding: '60px 20px',
+                  color: '#B6B6B6',
+                  fontSize: '16px',
+                  lineHeight: '1.6'
+                }}>
+                  <p style={{ marginBottom: '12px', fontSize: '18px', fontWeight: 500, color: '#fff' }}>
+                    Вы уже приобрели все курсы по этому разделу
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#999' }}>
+                    Ожидайте, возможно в будущем появятся еще материалы
+                  </p>
                 </div>
-                <div className="academy-grid-card-title">{course.title}</div>
-                <div className="academy-grid-card-author">{course.author}</div>
               </div>
-            ))}
-          </div>
-        )}
+            )
+          }
+          
+          return (
+            <div className="academy-grid">
+              {filtered.map((course) => (
+                <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
+                  <div className="academy-grid-card-icon">
+                    <img src="/img/шляпа.png" alt="course" className="academy-hat-icon" />
+                  </div>
+                  <div className="academy-grid-card-title">{course.title}</div>
+                  <div className="academy-grid-card-author">{course.author}</div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
 
-        {activeTab === 'articles' && (
-          <div className="academy-grid">
-            {(() => {
-              console.log('[Academy] Rendering articles tab - articles state:', articles.length, 'articles:', articles)
-              // Фильтруем только по типу материала (article) и gameMode, НЕ исключаем купленные
-              const filtered = articles.filter(article => {
-                // Проверяем тип материала
-                if (article.type !== 'article') {
-                  return false
-                }
-                
-                // Фильтрация по типу нард
-                const titleLower = (article.title || '').toLowerCase()
-                const isLongKeyword = titleLower.includes('длинн')
-                const isShortKeyword = titleLower.includes('коротк')
-                
-                if (isLongKeyword && !isShortKeyword) {
-                  return activeFilter === 'long'
-                }
-                if (isShortKeyword && !isLongKeyword) {
-                  return activeFilter === 'short'
-                }
-                
-                if (article.gameMode && (article.gameMode === 'long' || article.gameMode === 'short')) {
-                  return article.gameMode === activeFilter
-                }
-                
-                return activeFilter === 'long'
-              }).filter(article => !article.purchased) // Исключаем купленные только в конце
-              
-              console.log('[Academy] Rendering articles tab - total:', articles.length, 'filtered:', filtered.length, 'filtered items:', filtered)
-              return filtered
-            })().map((article) => (
-              <div key={article.id} className="academy-grid-card" onClick={() => handleOpen(article)}>
-                <div className="academy-grid-card-icon">
-                  <img src="/img/шляпа.png" alt="article" className="academy-hat-icon" />
+        {activeTab === 'articles' && (() => {
+          console.log('[Academy] Rendering articles tab - articles state:', articles.length, 'articles:', articles)
+          // Фильтруем только по типу материала (article) и gameMode, НЕ исключаем купленные
+          const filteredByType = articles.filter(article => {
+            // Проверяем тип материала
+            if (article.type !== 'article') {
+              return false
+            }
+            
+            // Фильтрация по типу нард
+            const titleLower = (article.title || '').toLowerCase()
+            const isLongKeyword = titleLower.includes('длинн')
+            const isShortKeyword = titleLower.includes('коротк')
+            
+            if (isLongKeyword && !isShortKeyword) {
+              return activeFilter === 'long'
+            }
+            if (isShortKeyword && !isLongKeyword) {
+              return activeFilter === 'short'
+            }
+            
+            if (article.gameMode && (article.gameMode === 'long' || article.gameMode === 'short')) {
+              return article.gameMode === activeFilter
+            }
+            
+            return activeFilter === 'long'
+          })
+          
+          // Проверяем, все ли материалы куплены
+          const allPurchased = filteredByType.length > 0 && filteredByType.every(article => article.purchased)
+          
+          // Исключаем купленные только в конце
+          const filtered = filteredByType.filter(article => !article.purchased)
+          
+          console.log('[Academy] Rendering articles tab - total:', articles.length, 'filtered:', filtered.length, 'filtered items:', filtered)
+          
+          // Если все материалы куплены, показываем сообщение
+          if (allPurchased) {
+            return (
+              <div className="academy-grid">
+                <div style={{ 
+                  gridColumn: '1 / -1', 
+                  textAlign: 'center', 
+                  padding: '60px 20px',
+                  color: '#B6B6B6',
+                  fontSize: '16px',
+                  lineHeight: '1.6'
+                }}>
+                  <p style={{ marginBottom: '12px', fontSize: '18px', fontWeight: 500, color: '#fff' }}>
+                    Вы уже приобрели все статьи по этому разделу
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#999' }}>
+                    Ожидайте, возможно в будущем появятся еще материалы
+                  </p>
                 </div>
-                <div className="academy-grid-card-title">{article.title}</div>
-                <div className="academy-grid-card-author">{article.author}</div>
               </div>
-            ))}
-          </div>
-        )}
+            )
+          }
+          
+          return (
+            <div className="academy-grid">
+              {filtered.map((article) => (
+                <div key={article.id} className="academy-grid-card" onClick={() => handleOpen(article)}>
+                  <div className="academy-grid-card-icon">
+                    <img src="/img/шляпа.png" alt="article" className="academy-hat-icon" />
+                  </div>
+                  <div className="academy-grid-card-title">{article.title}</div>
+                  <div className="academy-grid-card-author">{article.author}</div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
 
 
         {activeTab === 'my-materials' && (
