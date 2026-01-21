@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { apiClient } from '../api/client'
 import BottomNav from '../components/BottomNav'
+import { BoxIcon, SettingsIcon, ArrowRightIcon, StarIcon } from '../components/Icons'
 import './Home.css'
 
 interface Stats {
@@ -338,6 +339,68 @@ export default function Home() {
         <div className="home-central-logo-container-v3">
           <div className="home-central-logo-circle-v3" onClick={handlePlayClick} style={{ cursor: 'pointer' }}>
             <img src="/img/logo.png" alt="Nardis" className="home-central-logo-v3" />
+          </div>
+        </div>
+
+        {/* Меню под кнопкой "Игры" */}
+        <div className="home-menu-panel-v3">
+          {/* Инвентарь */}
+          <div className="home-menu-panel-item-v3" onClick={() => navigate('/inventory')}>
+            <span className="home-menu-panel-icon-v3">
+              <BoxIcon size={30} style={{ color: '#FFD700' }} />
+            </span>
+            <span className="home-menu-panel-title-v3">Инвентарь</span>
+            <span className="home-menu-panel-arrow-v3">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
+          </div>
+
+          {/* Аналитика */}
+          <div className="home-menu-panel-item-v3" onClick={() => navigate('/history')}>
+            <span className="home-menu-panel-icon-v3">
+              <img src="/img/зарик.png" alt="analytics" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            </span>
+            <span className="home-menu-panel-title-v3">Аналитика</span>
+            <span className="home-menu-panel-arrow-v3">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
+          </div>
+
+          {/* Квесты */}
+          <div className="home-menu-panel-item-v3" onClick={() => navigate('/quests')}>
+            <span className="home-menu-panel-icon-v3">
+              <StarIcon size={30} style={{ color: '#FFD700' }} />
+            </span>
+            <span className="home-menu-panel-title-v3">Квесты</span>
+            <span className="home-menu-panel-arrow-v3">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
+          </div>
+
+          {/* Уведомления */}
+          <div className="home-menu-panel-item-v3" onClick={() => navigate('/notifications')}>
+            <span className="home-menu-panel-icon-v3" style={{ position: 'relative' }}>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {hasNotifications && <div className="home-menu-panel-notification-badge-v3" />}
+            </span>
+            <span className="home-menu-panel-title-v3">Уведомления</span>
+            <span className="home-menu-panel-arrow-v3">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
+          </div>
+
+          {/* Настройки */}
+          <div className="home-menu-panel-item-v3" onClick={() => navigate('/settings')}>
+            <span className="home-menu-panel-icon-v3">
+              <SettingsIcon size={30} style={{ color: '#FFD700' }} />
+            </span>
+            <span className="home-menu-panel-title-v3">Настройки</span>
+            <span className="home-menu-panel-arrow-v3">
+              <ArrowRightIcon size={16} style={{ color: '#B6B6B6' }} />
+            </span>
           </div>
         </div>
       </div>
