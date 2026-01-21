@@ -586,16 +586,12 @@ export default function Game() {
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
   const [playerStats, setPlayerStats] = useState<any>(null)
   const [loadingPlayerStats, setLoadingPlayerStats] = useState(false)
-  const [statsFilter, setStatsFilter] = useState<'all' | 'wins' | 'losses'>('all')
   const [statsModeFilter, setStatsModeFilter] = useState<'all' | 'short' | 'long'>('all')
   
   const loadPlayerStats = async (playerId: string) => {
     setLoadingPlayerStats(true)
     try {
       const params = new URLSearchParams()
-      if (statsFilter !== 'all') {
-        params.append('result', statsFilter)
-      }
       if (statsModeFilter !== 'all') {
         params.append('mode', statsModeFilter)
       }
@@ -614,7 +610,6 @@ export default function Game() {
     
     setSelectedPlayer(player)
     setShowPlayerModal(true)
-    setStatsFilter('all')
     setStatsModeFilter('all')
     
     try {
@@ -3963,59 +3958,30 @@ export default function Game() {
               </div>
 
               {/* Фильтры статистики */}
-              <div className="game-player-modal-filters" style={{ marginBottom: '16px', padding: '12px', background: '#2a2a2a', borderRadius: '8px' }}>
-                <div className="filter-group" style={{ marginBottom: '12px' }}>
-                  <div className="filter-label" style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '6px' }}>Результат:</div>
-                  <div className="filter-buttons" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    <button
-                      className={`filter-btn ${statsFilter === 'all' ? 'active' : ''}`}
-                      onClick={() => { setStatsFilter('all'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
-                      style={{ padding: '6px 12px', fontSize: '12px', background: statsFilter === 'all' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsFilter === 'all' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsFilter === 'all' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
-                    >
-                      Все
-                    </button>
-                    <button
-                      className={`filter-btn ${statsFilter === 'wins' ? 'active' : ''}`}
-                      onClick={() => { setStatsFilter('wins'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
-                      style={{ padding: '6px 12px', fontSize: '12px', background: statsFilter === 'wins' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsFilter === 'wins' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsFilter === 'wins' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
-                    >
-                      Победы
-                    </button>
-                    <button
-                      className={`filter-btn ${statsFilter === 'losses' ? 'active' : ''}`}
-                      onClick={() => { setStatsFilter('losses'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
-                      style={{ padding: '6px 12px', fontSize: '12px', background: statsFilter === 'losses' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsFilter === 'losses' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsFilter === 'losses' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
-                    >
-                      Поражения
-                    </button>
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <div className="filter-label" style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '6px' }}>Режим:</div>
-                  <div className="filter-buttons" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    <button
-                      className={`filter-btn ${statsModeFilter === 'all' ? 'active' : ''}`}
-                      onClick={() => { setStatsModeFilter('all'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
-                      style={{ padding: '6px 12px', fontSize: '12px', background: statsModeFilter === 'all' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'all' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsModeFilter === 'all' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
-                    >
-                      Все
-                    </button>
-                    <button
-                      className={`filter-btn ${statsModeFilter === 'short' ? 'active' : ''}`}
-                      onClick={() => { setStatsModeFilter('short'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
-                      style={{ padding: '6px 12px', fontSize: '12px', background: statsModeFilter === 'short' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'short' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsModeFilter === 'short' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
-                    >
-                      Короткие
-                    </button>
-                    <button
-                      className={`filter-btn ${statsModeFilter === 'long' ? 'active' : ''}`}
-                      onClick={() => { setStatsModeFilter('long'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
-                      style={{ padding: '6px 12px', fontSize: '12px', background: statsModeFilter === 'long' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'long' ? '#FFF' : '#4a4a4a'}`, borderRadius: '6px', color: statsModeFilter === 'long' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
-                    >
-                      Длинные
-                    </button>
-                  </div>
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#FFF', fontSize: '16px', fontWeight: '600', marginBottom: '12px', marginTop: 0 }}>Режим:</h3>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button 
+                    className={`filter-btn ${statsModeFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => { setStatsModeFilter('all'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                    style={{ padding: '8px 16px', fontSize: '14px', background: statsModeFilter === 'all' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'all' ? '#FFF' : '#4a4a4a'}`, borderRadius: '8px', color: statsModeFilter === 'all' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
+                  >
+                    Все
+                  </button>
+                  <button 
+                    className={`filter-btn ${statsModeFilter === 'long' ? 'active' : ''}`}
+                    onClick={() => { setStatsModeFilter('long'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                    style={{ padding: '8px 16px', fontSize: '14px', background: statsModeFilter === 'long' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'long' ? '#FFF' : '#4a4a4a'}`, borderRadius: '8px', color: statsModeFilter === 'long' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
+                  >
+                    Длинные
+                  </button>
+                  <button 
+                    className={`filter-btn ${statsModeFilter === 'short' ? 'active' : ''}`}
+                    onClick={() => { setStatsModeFilter('short'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                    style={{ padding: '8px 16px', fontSize: '14px', background: statsModeFilter === 'short' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'short' ? '#FFF' : '#4a4a4a'}`, borderRadius: '8px', color: statsModeFilter === 'short' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
+                  >
+                    Короткие
+                  </button>
                 </div>
               </div>
 

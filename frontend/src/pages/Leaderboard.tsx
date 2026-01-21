@@ -70,6 +70,10 @@ export default function Leaderboard() {
     }
   }
 
+  // Находим место пользователя в лидерборде
+  const myRank = user ? leaderboard.findIndex(entry => entry.user.id === user.id) + 1 : null
+  const myRankClass = myRank === 1 ? 'rank-1' : myRank === 2 ? 'rank-2' : myRank === 3 ? 'rank-3' : ''
+
   return (
     <PageLayout
       title="Лидерборд"
@@ -78,8 +82,15 @@ export default function Leaderboard() {
       <div className="leaderboard-content">
         {/* Моя статистика */}
         {myStats && user && (
-          <div className="leaderboard-my-stats">
-            <div className="leaderboard-my-stats-header">Моя статистика</div>
+          <div className={`leaderboard-my-stats ${myRankClass}`}>
+            <div className="leaderboard-my-stats-header">
+              Моя статистика
+              {myRank !== null && myRank > 0 && (
+                <span style={{ marginLeft: '8px', color: '#B6B6B6', fontSize: '14px', fontWeight: '400' }}>
+                  Место: {myRank}
+                </span>
+              )}
+            </div>
             <div className="leaderboard-my-stats-content">
               {sortBy === 'rating' && (
                 <div className="leaderboard-my-stats-item">
@@ -144,10 +155,13 @@ export default function Leaderboard() {
           <div className="leaderboard-empty">Нет данных</div>
         ) : (
           <div className="leaderboard-list">
-            {leaderboard.map((entry) => (
+            {leaderboard.map((entry, index) => {
+              const rank = index + 1
+              const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : ''
+              return (
               <div
                 key={entry.user.id}
-                className="leaderboard-item"
+                className={`leaderboard-item ${rankClass}`}
               >
                 <div className="leaderboard-item-content">
                   {/* Аватар */}
@@ -172,10 +186,12 @@ export default function Leaderboard() {
                         hasPremium={entry.user.hasPremium}
                       />
                     </div>
-                    <div className="leaderboard-details">
-                      Уровень {entry.user.level}
-                      {sortBy === 'rating' && ` • Рейтинг: ${entry.user.rating}`}
-                    </div>
+                    {(sortBy === 'xp' || sortBy === 'rating') && (
+                      <div className="leaderboard-details">
+                        {sortBy === 'rating' && `Рейтинг: ${entry.user.rating}`}
+                        {sortBy === 'xp' && `Уровень ${entry.user.level}`}
+                      </div>
+                    )}
                     <div className="leaderboard-stats">
                       {sortBy === 'xp' && entry.user.xp !== undefined && (
                         <>XP: {entry.user.xp.toLocaleString()}</>
@@ -193,7 +209,7 @@ export default function Leaderboard() {
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>

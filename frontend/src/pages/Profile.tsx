@@ -367,8 +367,8 @@ export default function Profile() {
         {/* Фильтр режима для статистики */}
         {activeTab === 'statistics' && (
           <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ color: '#FFF', fontSize: '16px', fontWeight: '600', marginBottom: '12px', marginTop: 0 }}>Режим:</h3>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <h3 style={{ color: '#FFF', fontSize: '20px', fontWeight: '600', marginBottom: '12px', marginTop: 0, textAlign: 'center' }}>Режим:</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <button 
                 className={`profile-statistics-mode-tab ${statisticsMode === 'all' ? 'active' : ''}`}
                 onClick={() => setStatisticsMode('all')}
