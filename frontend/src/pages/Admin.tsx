@@ -159,8 +159,6 @@ export default function Admin() {
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments' | 'equipment-config' | 'business'>('stats')
-  const [onboardingTasks, setOnboardingTasks] = useState<any[]>([])
-  const [onboardingStats, setOnboardingStats] = useState<any>(null)
   const [selectedSkinType, setSelectedSkinType] = useState<string>('')
   const [progressionConfig, setProgressionConfig] = useState<any>(null)
   const [paymentStats, setPaymentStats] = useState<any>(null)
@@ -168,20 +166,6 @@ export default function Admin() {
   const [systemSettings, setSystemSettings] = useState<any>({})
   const [walletPrivateKeyModal, setWalletPrivateKeyModal] = useState<{ wallet: any; privateKey: string; address: string } | null>(null)
   const [isSavingProgression, setIsSavingProgression] = useState(false)
-  const [editingOnboardingTask, setEditingOnboardingTask] = useState<any>(null)
-  const [newOnboardingTask, setNewOnboardingTask] = useState({
-    type: 'train_with_bot',
-    title: '',
-    description: '',
-    order: 1,
-    requirements: {},
-    target: '', // Целевое действие (как в квестах)
-    targetValue: 0, // Целевое значение (как в квестах)
-    rewardNarCoin: 0,
-    rewardXP: 0,
-    isRequired: true,
-    isActive: true,
-  })
   const [tournaments, setTournaments] = useState<any[]>([])
   const [articles, setArticles] = useState<any[]>([])
   const [cityRewards, setCityRewards] = useState<any>(null)
@@ -363,7 +347,7 @@ export default function Admin() {
         return
       }
       
-      const [statsRes, statisticsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, buildingsRes, policiesRes, templatesRes, onboardingTasksRes, onboardingStatsRes, progressionRes] = await Promise.all([
+      const [statsRes, statisticsRes, usersRes, gamesRes, tournamentsRes, articlesRes, cityRes, skinsRes, questsRes, clansRes, buildingsRes, policiesRes, templatesRes, progressionRes] = await Promise.all([
         apiClient.get('/admin/stats').catch((err) => {
           if (err.response?.status === 401) {
             localStorage.removeItem('admin_token')
@@ -455,20 +439,6 @@ export default function Admin() {
           }
           return { data: [] }
         }),
-        apiClient.get('/admin/onboarding/tasks').catch((err) => {
-          if (err.response?.status === 401) {
-            localStorage.removeItem('admin_token')
-            setIsAuthenticated(false)
-          }
-          return { data: [] }
-        }),
-        apiClient.get('/admin/onboarding/tasks/stats').catch((err) => {
-          if (err.response?.status === 401) {
-            localStorage.removeItem('admin_token')
-            setIsAuthenticated(false)
-          }
-          return { data: null }
-        }),
         apiClient.get('/admin/progression/config').catch((err) => {
           if (err.response?.status === 401) {
             localStorage.removeItem('admin_token')
@@ -490,8 +460,6 @@ export default function Admin() {
       setClans(clansRes.data || [])
       setBuildings(buildingsRes.data || [])
       setNotificationTemplates(templatesRes.data || [])
-      setOnboardingTasks(onboardingTasksRes.data || [])
-      setOnboardingStats(onboardingStatsRes.data || null)
       setProgressionConfig(progressionRes.data?.config || progressionRes.data)
       
       // Загружаем политики
@@ -532,63 +500,6 @@ export default function Admin() {
     }
   }
 
-  const loadOnboardingTasks = async () => {
-    try {
-      const [tasksRes, statsRes] = await Promise.all([
-        apiClient.get('/admin/onboarding/tasks'),
-        apiClient.get('/admin/onboarding/tasks/stats'),
-      ])
-      setOnboardingTasks(tasksRes.data || [])
-      setOnboardingStats(statsRes.data || null)
-    } catch (error) {
-      console.error('Failed to load onboarding tasks:', error)
-    }
-  }
-
-  const handleCreateOnboardingTask = async () => {
-    try {
-      await apiClient.post('/admin/onboarding/tasks', newOnboardingTask)
-      setNewOnboardingTask({
-        type: 'train_with_bot',
-        title: '',
-        description: '',
-        order: onboardingTasks.length + 1,
-        requirements: {},
-        target: '',
-        targetValue: 0,
-        rewardNarCoin: 0,
-        rewardXP: 0,
-        isRequired: true,
-        isActive: true,
-      })
-      await loadOnboardingTasks()
-      alert('Задание создано')
-    } catch (error: any) {
-      alert('Ошибка: ' + (error.response?.data?.message || error.message))
-    }
-  }
-
-  const handleUpdateOnboardingTask = async (id: string, data: any) => {
-    try {
-      await apiClient.put(`/admin/onboarding/tasks/${id}`, data)
-      await loadOnboardingTasks()
-      setEditingOnboardingTask(null)
-      alert('Задание обновлено')
-    } catch (error: any) {
-      alert('Ошибка: ' + (error.response?.data?.message || error.message))
-    }
-  }
-
-  const handleDeleteOnboardingTask = async (id: string) => {
-    if (!confirm('Удалить задание?')) return
-    try {
-      await apiClient.delete(`/admin/onboarding/tasks/${id}`)
-      await loadOnboardingTasks()
-      alert('Задание удалено')
-    } catch (error: any) {
-      alert('Ошибка: ' + (error.response?.data?.message || error.message))
-    }
-  }
 
   const handleEditPolicy = (type: 'privacy' | 'agreement') => {
     setEditingPolicy(type)
@@ -949,7 +860,6 @@ export default function Admin() {
           className={`admin-tab-btn ${activeTab === 'academy' ? 'active' : ''}`}
           onClick={() => {
             setActiveTab('academy')
-            loadOnboardingTasks()
           }}
         >
           Обучение
@@ -2645,267 +2555,6 @@ export default function Admin() {
               }}>Создать курс</button>
             </div>
 
-            {/* Онбординговые задания */}
-            <div className="create-form" style={{ marginTop: '32px' }}>
-              <h3>Онбординговые задания</h3>
-              <p style={{ color: '#999', fontSize: '14px', marginBottom: '20px' }}>
-                Онбординговые задания доступны сразу без покупок и идут в "Мои материалы" автоматически.
-              </p>
-              <div className="form-group">
-                <label>Тип задания</label>
-                <select
-                  value={newOnboardingTask.type}
-                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, type: e.target.value })}
-                >
-                  <option value="train_with_bot">Тренировка с ботом</option>
-                  <option value="online_match">Онлайн-партия</option>
-                  <option value="view_city">Просмотр города</option>
-                  <option value="play_short_match">Быстрая партия</option>
-                  <option value="play_long_match">Длинная партия</option>
-                  <option value="win_match">Победа в матче</option>
-                  <option value="complete_training_position">Тренировочная позиция</option>
-                  <option value="join_clan">Вступить в клан</option>
-                  <option value="purchase_building">Купить строение</option>
-                  <option value="upgrade_building">Улучшить строение</option>
-                  <option value="custom">Кастомное</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Название</label>
-                <input
-                  type="text"
-                  value={newOnboardingTask.title}
-                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, title: e.target.value })}
-                  placeholder="Название задания"
-                />
-              </div>
-              <div className="form-group">
-                <label>Описание</label>
-                <textarea
-                  value={newOnboardingTask.description}
-                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, description: e.target.value })}
-                  rows={3}
-                  placeholder="Описание задания"
-                />
-              </div>
-              <div className="form-group">
-                <label>Порядок</label>
-                <input
-                  type="number"
-                  value={newOnboardingTask.order}
-                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, order: parseInt(e.target.value) || 1 })}
-                  min="1"
-                />
-              </div>
-              <div className="form-group">
-                <label>Целевое действие (как в квестах)</label>
-                <select
-                  value={newOnboardingTask.target}
-                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, target: e.target.value })}
-                >
-                  <option value="">Не выбрано</option>
-                  <option value="play_matches">Сыграть матчей</option>
-                  <option value="win_streak">Побед подряд</option>
-                  <option value="collect_income">Собрать дохода</option>
-                  <option value="tournament">Участие в турнире</option>
-                  <option value="subscribe_channel">Подписаться на канал</option>
-                </select>
-              </div>
-              {newOnboardingTask.target && (
-                <div className="form-group">
-                  <label>Целевое значение (например, количество матчей, побед и т.д.)</label>
-                  <input
-                    type="number"
-                    value={newOnboardingTask.targetValue}
-                    onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, targetValue: parseInt(e.target.value) || 0 })}
-                    min="0"
-                  />
-                </div>
-              )}
-              <div className="form-group">
-                <label>Награда NAR-coin</label>
-                <input
-                  type="number"
-                  value={newOnboardingTask.rewardNarCoin}
-                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, rewardNarCoin: parseInt(e.target.value) || 0 })}
-                  min="0"
-                />
-              </div>
-              <div className="form-group">
-                <label>Награда XP</label>
-                <input
-                  type="number"
-                  value={newOnboardingTask.rewardXP}
-                  onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, rewardXP: parseInt(e.target.value) || 0 })}
-                  min="0"
-                />
-              </div>
-              <div className="form-group checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={newOnboardingTask.isRequired}
-                    onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, isRequired: e.target.checked })}
-                  />
-                  Обязательное задание
-                </label>
-              </div>
-              <div className="form-group checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={newOnboardingTask.isActive}
-                    onChange={(e) => setNewOnboardingTask({ ...newOnboardingTask, isActive: e.target.checked })}
-                  />
-                  Активно
-                </label>
-              </div>
-              <button onClick={handleCreateOnboardingTask} className="btn btn-primary">Создать задание</button>
-            </div>
-
-            <div style={{ marginTop: '32px' }}>
-              <h3>Список онбординговых заданий</h3>
-              <div className="admin-table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Порядок</th>
-                      <th>Название</th>
-                      <th>Тип</th>
-                      <th>Награда NAR</th>
-                      <th>Награда XP</th>
-                      <th>Обязательное</th>
-                      <th>Активно</th>
-                      <th>Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {onboardingTasks.map((task) => (
-                      <tr key={task.id}>
-                        <td>{task.order}</td>
-                        <td>{task.title}</td>
-                        <td>{task.type}</td>
-                        <td>{Number(task.rewardNarCoin || 0).toLocaleString()}</td>
-                        <td>{task.rewardXP || 0}</td>
-                        <td>{task.isRequired ? 'Да' : 'Нет'}</td>
-                        <td>{task.isActive ? 'Да' : 'Нет'}</td>
-                        <td>
-                          <div className="btn-group">
-                            <button className="btn btn-secondary btn-sm" onClick={() => setEditingOnboardingTask({ ...task })}>Редактировать</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => handleDeleteOnboardingTask(task.id)}>Удалить</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {editingOnboardingTask && (
-              <div className="admin-modal-overlay" onClick={() => setEditingOnboardingTask(null)}>
-                <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-                  <div className="admin-modal-header">
-                    <h3>Редактировать онбординговое задание</h3>
-                    <button className="admin-modal-close" onClick={() => setEditingOnboardingTask(null)}>×</button>
-                  </div>
-                  <div className="admin-modal-content">
-                    <div className="form-group">
-                      <label>Название</label>
-                      <input
-                        type="text"
-                        value={editingOnboardingTask.title}
-                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, title: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Описание</label>
-                      <textarea
-                        value={editingOnboardingTask.description || ''}
-                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, description: e.target.value })}
-                        rows={3}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Порядок</label>
-                      <input
-                        type="number"
-                        value={editingOnboardingTask.order}
-                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, order: parseInt(e.target.value) || 1 })}
-                        min="1"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Целевое действие (как в квестах)</label>
-                      <select
-                        value={editingOnboardingTask.target || ''}
-                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, target: e.target.value })}
-                      >
-                        <option value="">Не выбрано</option>
-                        <option value="play_matches">Сыграть матчей</option>
-                        <option value="win_streak">Побед подряд</option>
-                        <option value="collect_income">Собрать дохода</option>
-                        <option value="tournament">Участие в турнире</option>
-                        <option value="subscribe_channel">Подписаться на канал</option>
-                      </select>
-                    </div>
-                    {editingOnboardingTask.target && (
-                      <div className="form-group">
-                        <label>Целевое значение (например, количество матчей, побед и т.д.)</label>
-                        <input
-                          type="number"
-                          value={editingOnboardingTask.targetValue || 0}
-                          onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, targetValue: parseInt(e.target.value) || 0 })}
-                          min="0"
-                        />
-                      </div>
-                    )}
-                    <div className="form-group">
-                      <label>Награда NAR-coin</label>
-                      <input
-                        type="number"
-                        value={editingOnboardingTask.rewardNarCoin || 0}
-                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, rewardNarCoin: parseInt(e.target.value) || 0 })}
-                        min="0"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Награда XP</label>
-                      <input
-                        type="number"
-                        value={editingOnboardingTask.rewardXP || 0}
-                        onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, rewardXP: parseInt(e.target.value) || 0 })}
-                        min="0"
-                      />
-                    </div>
-                    <div className="form-group checkbox-group">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={editingOnboardingTask.isRequired}
-                          onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, isRequired: e.target.checked })}
-                        />
-                        Обязательное
-                      </label>
-                    </div>
-                    <div className="form-group checkbox-group">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={editingOnboardingTask.isActive}
-                          onChange={(e) => setEditingOnboardingTask({ ...editingOnboardingTask, isActive: e.target.checked })}
-                        />
-                        Активно
-                      </label>
-                    </div>
-                    <div className="edit-form-actions">
-                      <button className="btn btn-primary" onClick={() => handleUpdateOnboardingTask(editingOnboardingTask.id, editingOnboardingTask)}>Сохранить</button>
-                      <button className="btn btn-secondary" onClick={() => setEditingOnboardingTask(null)}>Отмена</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="articles-list">
               <h3>Все материалы (Курсы и Статьи)</h3>
@@ -4238,6 +3887,7 @@ export default function Admin() {
                 <thead>
                   <tr>
                     <th>Название</th>
+                    <th>Категория</th>
                     <th>Тип</th>
                     <th>Цель</th>
                     <th>Целевое значение</th>
@@ -4257,6 +3907,9 @@ export default function Admin() {
                   }).map((quest) => (
                     <tr key={quest.id}>
                       <td>{quest.name}</td>
+                      <td>
+                        {quest.category === 'onboarding' ? 'Онбординг' : 'Обычный'}
+                      </td>
                       <td>
                         {quest.type === 'daily' ? 'Ежедневный' : 
                          quest.type === 'weekly' ? 'Еженедельный' : 
@@ -4313,6 +3966,35 @@ export default function Admin() {
                   <textarea placeholder="Описание" id="quest-description" rows={3}></textarea>
                 </div>
                 <div className="form-group">
+                  <label>Категория:</label>
+                  <select 
+                    id="quest-category"
+                    onChange={(e) => {
+                      const onboardingGroup = document.getElementById('quest-onboarding-text-group')
+                      const orderGroup = document.getElementById('quest-order-group')
+                      const requiredGroup = document.getElementById('quest-required-group')
+                      const typeGroup = document.getElementById('quest-type-group')
+                      if (e.target.value === 'onboarding') {
+                        if (onboardingGroup) onboardingGroup.style.display = 'block'
+                        if (orderGroup) orderGroup.style.display = 'block'
+                        if (requiredGroup) requiredGroup.style.display = 'block'
+                        if (typeGroup) typeGroup.style.display = 'none'
+                      } else {
+                        if (onboardingGroup) onboardingGroup.style.display = 'none'
+                        if (orderGroup) orderGroup.style.display = 'none'
+                        if (requiredGroup) requiredGroup.style.display = 'none'
+                        if (typeGroup) typeGroup.style.display = 'block'
+                      }
+                    }}
+                  >
+                    <option value="regular">Обычный квест</option>
+                    <option value="onboarding">Онбординг</option>
+                  </select>
+                  <small style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                    Онбординг - квест с текстом для новых игроков
+                  </small>
+                </div>
+                <div className="form-group" id="quest-type-group">
                   <label>Тип квеста:</label>
                   <select id="quest-type">
                     <option value="daily">Ежедневный</option>
@@ -4320,16 +4002,18 @@ export default function Admin() {
                     <option value="special">Особый</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Категория (для мини-квестов с текстом):</label>
-                  <select id="quest-category">
-                    <option value="">Обычный квест</option>
-                    <option value="course">Курс (мини-квест с текстом)</option>
-                    <option value="onboarding">Онбординг (мини-квест с текстом)</option>
-                  </select>
-                  <small style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                    Мини-квесты с текстом - это квесты с описанием, которые можно привязать к курсу или онбордингу
-                  </small>
+                <div className="form-group" id="quest-onboarding-text-group" style={{ display: 'none' }}>
+                  <label>Текст онбординга:</label>
+                  <textarea placeholder="Текст для онбордингового квеста" id="quest-onboarding-text" rows={4}></textarea>
+                </div>
+                <div className="form-group" id="quest-order-group" style={{ display: 'none' }}>
+                  <label>Порядок:</label>
+                  <input type="number" placeholder="Порядок выполнения" id="quest-order" min="1" defaultValue="1" />
+                </div>
+                <div className="form-group checkbox-group" id="quest-required-group" style={{ display: 'none' }}>
+                  <label className="checkbox-label">
+                    <input type="checkbox" id="quest-required" /> Обязательное задание
+                  </label>
                 </div>
                 <div className="form-group">
                   <label>Цель:</label>
@@ -4429,10 +4113,20 @@ export default function Admin() {
                       questData.rewardArticle = { id: rewardArticleId.trim() }
                     }
 
-                    // Добавляем категорию (для мини-квестов с текстом)
+                    // Добавляем категорию
                     const category = (document.getElementById('quest-category') as HTMLSelectElement).value
-                    if (category) {
-                      questData.category = category
+                    questData.category = category || 'regular'
+                    
+                    // Если онбординг, добавляем дополнительные поля
+                    if (category === 'onboarding') {
+                      questData.onboardingText = (document.getElementById('quest-onboarding-text') as HTMLTextAreaElement).value
+                      questData.order = parseInt((document.getElementById('quest-order') as HTMLInputElement).value || '1')
+                      questData.isRequired = (document.getElementById('quest-required') as HTMLInputElement).checked
+                      // Для онбординга устанавливаем дефолтные даты (очень долгий период)
+                      const now = new Date()
+                      questData.startDate = now.toISOString().slice(0, 16)
+                      questData.endDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+                      questData.type = 'special' // Онбординг всегда особый тип
                     }
                     
                     await apiClient.post('/admin/quests', questData)

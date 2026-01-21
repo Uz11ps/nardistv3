@@ -21,6 +21,11 @@ export enum QuestTarget {
   SUBSCRIBE_CHANNEL = 'subscribe_channel',
 }
 
+export enum QuestCategory {
+  REGULAR = 'regular', // Обычный квест
+  ONBOARDING = 'onboarding', // Онбординг
+}
+
 @Entity('quests')
 export class Quest {
   @PrimaryGeneratedColumn('uuid')
@@ -68,6 +73,22 @@ export class Quest {
 
   @Column({ default: false })
   isPremium: boolean; // Только для премиум пользователей
+
+  @Column({
+    type: 'enum',
+    enum: QuestCategory,
+    default: QuestCategory.REGULAR,
+  })
+  category: QuestCategory; // Категория квеста: обычный или онбординг
+
+  @Column({ type: 'text', nullable: true })
+  onboardingText: string; // Текст для онбординговых квестов
+
+  @Column({ type: 'int', default: 0 })
+  order: number; // Порядок для онбординговых квестов
+
+  @Column({ default: false })
+  isRequired: boolean; // Обязательный ли квест (для онбординга)
 
   @Column({ type: 'timestamp' })
   startDate: Date;

@@ -20,7 +20,7 @@ import { TournamentTicket } from '../tournaments/tournament-ticket.entity';
 import { Article, ArticleType } from '../academy/article.entity';
 import { Skin } from '../skins/skin.entity';
 import { UserSkin } from '../skins/user-skin.entity';
-import { Quest, QuestType, QuestTarget } from '../quests/quest.entity';
+import { Quest, QuestType, QuestTarget, QuestCategory } from '../quests/quest.entity';
 import { QuestProgress } from '../quests/quest-progress.entity';
 import { Clan } from '../clans/clan.entity';
 import { ClanMember } from '../clans/clan-member.entity';
@@ -1366,6 +1366,10 @@ export class AdminService implements OnModuleInit {
     isPremium: boolean;
     startDate: Date;
     endDate: Date;
+    category?: QuestCategory;
+    onboardingText?: string;
+    order?: number;
+    isRequired?: boolean;
   }) {
     const quest = this.questsRepository.create({
       name: data.name,
@@ -1379,6 +1383,10 @@ export class AdminService implements OnModuleInit {
       isPremium: data.isPremium,
       startDate: data.startDate,
       endDate: data.endDate,
+      category: data.category || QuestCategory.REGULAR,
+      onboardingText: data.onboardingText,
+      order: data.order || 0,
+      isRequired: data.isRequired || false,
     });
     return this.questsRepository.save(quest);
   }
@@ -1395,6 +1403,10 @@ export class AdminService implements OnModuleInit {
     isPremium: boolean;
     startDate: Date;
     endDate: Date;
+    category?: QuestCategory;
+    onboardingText?: string;
+    order?: number;
+    isRequired?: boolean;
   }>) {
     const quest = await this.questsRepository.findOne({ where: { id } });
     if (!quest) {

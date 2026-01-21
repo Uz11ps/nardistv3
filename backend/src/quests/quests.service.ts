@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { Quest, QuestType, QuestTarget } from './quest.entity';
+import { Quest, QuestType, QuestTarget, QuestCategory } from './quest.entity';
 import { QuestProgress } from './quest-progress.entity';
 import { ProgressService } from '../progress/progress.service';
 import { UsersService } from '../users/users.service';
