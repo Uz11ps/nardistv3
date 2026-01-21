@@ -3947,6 +3947,14 @@ export default function Game() {
                         {playerStats.short?.winrate || 0}%
                       </span>
                     </div>
+                    {playerStats.short?.rating !== undefined && (
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Рейтинг:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
+                          {playerStats.short.rating}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="game-player-modal-stats-section">
@@ -3969,6 +3977,14 @@ export default function Game() {
                         {playerStats.long?.winrate || 0}%
                       </span>
                     </div>
+                    {playerStats.long?.rating !== undefined && (
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Рейтинг:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
+                          {playerStats.long.rating}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

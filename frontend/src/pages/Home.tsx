@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { apiClient } from '../api/client'
 import BottomNav from '../components/BottomNav'
-import { BoxIcon, SettingsIcon, ArrowRightIcon } from '../components/Icons'
+import { BoxIcon, SettingsIcon, ArrowRightIcon, TrophyIcon } from '../components/Icons'
 import './Home.css'
 
 interface Stats {
@@ -49,7 +49,6 @@ export default function Home() {
   const [hasUnclaimedQuests, setHasUnclaimedQuests] = useState(false)
   const [levelProgress, setLevelProgress] = useState<LevelProgress | null>(null)
   const [levelUpNotification, setLevelUpNotification] = useState<{ level: number; reward: number } | null>(null)
-  const [leaderboard, setLeaderboard] = useState<any[]>([])
 
   useEffect(() => {
     if (user) {
@@ -99,7 +98,6 @@ export default function Home() {
         loadEnergy()
         loadLevelProgress()
         loadPlayerStats()
-        loadLeaderboard()
       } catch (error) {
         console.error('Ошибка при загрузке статистики:', error)
         setStats({ 
@@ -169,14 +167,6 @@ export default function Home() {
     }
   }
 
-  const loadLeaderboard = async () => {
-    try {
-      const response = await apiClient.get('/ratings/leaderboard?mode=short&period=all&limit=10').catch(() => ({ data: [] }))
-      setLeaderboard(response.data || [])
-    } catch (error) {
-      console.error('Failed to load leaderboard:', error)
-    }
-  }
 
 
   const checkPremium = async () => {
@@ -372,30 +362,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Лидерборд */}
-        {leaderboard.length > 0 && (
-          <div className="home-leaderboard-section-v3">
-            <div className="home-leaderboard-header-v3" onClick={() => navigate('/leaderboard')}>
-              <span className="home-leaderboard-title-v3">Лидерборд</span>
-              <span className="home-leaderboard-more-v3">Все →</span>
-            </div>
-            <div className="home-leaderboard-list-v3">
-              {leaderboard.slice(0, 5).map((entry, index) => (
-                <div key={entry.user?.id || index} className="home-leaderboard-item-v3">
-                  <div className="home-leaderboard-rank-v3">#{entry.rank}</div>
-                  <div className="home-leaderboard-name-v3">{entry.user?.nickname || entry.user?.username || 'Игрок'}</div>
-                  <div className="home-leaderboard-stats-v3">
-                    <span>{entry.totalMatches || (entry.wins + entry.losses + (entry.draws || 0))} игр</span>
-                    {entry.winRate !== null && entry.winRate !== undefined && (
-                      <span> • {entry.winRate}%</span>
-                    )}
-                    <span> • Lvl {entry.user?.level || 1}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Меню под кнопкой "Игры" */}
         <div className="home-menu-panel-v3">
@@ -416,7 +382,7 @@ export default function Home() {
           {/* Лидерборд */}
           <div className="home-menu-panel-item-v3" onClick={() => navigate('/leaderboard')}>
             <span className="home-menu-panel-icon-v3">
-              <img src="/img/crown.png" alt="leaderboard" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+              <TrophyIcon size={30} style={{ color: '#FFD700' }} />
             </span>
             <span className="home-menu-panel-title-v3">Лидерборд</span>
             <span className="home-menu-panel-arrow-v3">

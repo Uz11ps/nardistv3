@@ -555,6 +555,14 @@ export default function Profile() {
                       })()}%
                     </span>
                   </div>
+                  {playerStatistics.rating !== undefined && (
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Рейтинг:</span>
+                      <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
+                        {playerStatistics.rating}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

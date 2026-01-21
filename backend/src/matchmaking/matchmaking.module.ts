@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { MatchmakingService } from './matchmaking.service';
 import { MatchmakingGateway } from './matchmaking.gateway';
 import { GamesModule } from '../games/games.module';
@@ -9,6 +10,7 @@ import { RatingsModule } from '../ratings/ratings.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { UsersModule } from '../users/users.module';
 import { ClansModule } from '../clans/clans.module';
+import { SystemSettings } from '../admin/system-settings.entity';
 
 @Module({
   imports: [
@@ -18,6 +20,7 @@ import { ClansModule } from '../clans/clans.module';
     UsersModule,
     forwardRef(() => SubscriptionModule),
     forwardRef(() => ClansModule),
+    TypeOrmModule.forFeature([SystemSettings]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

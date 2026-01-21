@@ -1,4 +1,6 @@
 import { Injectable, Inject, forwardRef, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { GamesService } from '../games/games.service';
 import { GameMode, GameType, GameStatus } from '../games/game.entity';
 import { RatingsService } from '../ratings/ratings.service';
@@ -6,6 +8,7 @@ import { SubscriptionService } from '../subscription/subscription.service';
 import { UsersService } from '../users/users.service';
 import { TournamentMatch } from '../tournaments/tournament-match.entity';
 import { TournamentStatus } from '../tournaments/tournament.entity';
+import { SystemSettings } from '../admin/system-settings.entity';
 import Redis from 'ioredis';
 
 interface QueueEntry {
@@ -31,6 +34,8 @@ export class MatchmakingService {
     private subscriptionService: SubscriptionService,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
+    @InjectRepository(SystemSettings)
+    private systemSettingsRepository: Repository<SystemSettings>,
   ) {}
 
   /**
@@ -224,7 +229,11 @@ export class MatchmakingService {
     }
 
     const userEntry: QueueEntry = JSON.parse(userEntryStr);
-    const ratingRange = 200;
+    
+    // Получаем настройку разброса рейтинга из БД
+    const ratingRangeSetting = await this.systemSettingsRepository.findOne({ where: { key: 'matchmaking_rating_range' } });
+    const ratingRange = ratingRangeSetting ? parseInt(ratingRangeSetting.value) : 500;
+    
     const minRating = userEntry.rating - ratingRange;
     const maxRating = userEntry.rating + ratingRange;
 

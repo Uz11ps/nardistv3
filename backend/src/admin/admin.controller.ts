@@ -981,6 +981,22 @@ export class AdminController {
     return this.adminService.updateSystemSettings(body);
   }
 
+  // ========== НАСТРОЙКИ ПОДБОРА ==========
+  @Get('matchmaking-settings')
+  @UseGuards(AdminAuthGuard)
+  async getMatchmakingSettings(@CurrentUser() user: any) {
+    return this.adminService.getMatchmakingSettings();
+  }
+
+  @Put('matchmaking-settings')
+  @UseGuards(AdminAuthGuard)
+  async updateMatchmakingSettings(
+    @CurrentUser() user: any,
+    @Body() body: { ratingRange?: number; basePoints?: number; maxBonus?: number; maxPenalty?: number },
+  ) {
+    return this.adminService.updateMatchmakingSettings(body);
+  }
+
   // ========== КУРСЫ (ПОЛНОЕ РЕДАКТИРОВАНИЕ) ==========
   @Put('courses/:id/full')
   @UseGuards(AdminAuthGuard)

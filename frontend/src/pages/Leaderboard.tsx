@@ -13,6 +13,7 @@ interface LeaderboardEntry {
     avatarUrl?: string
     level: number
     rating: number
+    xp?: number
     badge?: string
   }
   wins: number
@@ -26,16 +27,16 @@ export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'weekly' | 'monthly'>('all')
-  const [mode, setMode] = useState<'short' | 'long'>('short')
+  const [sortBy, setSortBy] = useState<'xp' | 'matches' | 'winrate'>('xp')
 
   useEffect(() => {
     loadLeaderboard()
-  }, [filter, mode])
+  }, [filter, sortBy])
 
   const loadLeaderboard = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get(`/ratings/leaderboard?mode=${mode}&period=${filter}`).catch(() => ({ data: [] }))
+      const response = await apiClient.get(`/ratings/leaderboard?period=${filter}&sortBy=${sortBy}`).catch(() => ({ data: [] }))
       setLeaderboard(response.data || [])
     } catch (error) {
       console.error('Failed to load leaderboard:', error)
@@ -69,19 +70,25 @@ export default function Leaderboard() {
       ]}
     >
       <div className="leaderboard-content">
-        {/* Режим */}
+        {/* Фильтры по типу статистики */}
         <div className="leaderboard-mode-filters">
           <button
-            className={`leaderboard-mode-btn ${mode === 'short' ? 'active' : ''}`}
-            onClick={() => setMode('short')}
+            className={`leaderboard-mode-btn ${sortBy === 'xp' ? 'active' : ''}`}
+            onClick={() => setSortBy('xp')}
           >
-            Короткие
+            XP
           </button>
           <button
-            className={`leaderboard-mode-btn ${mode === 'long' ? 'active' : ''}`}
-            onClick={() => setMode('long')}
+            className={`leaderboard-mode-btn ${sortBy === 'matches' ? 'active' : ''}`}
+            onClick={() => setSortBy('matches')}
           >
-            Длинные
+            Матчи
+          </button>
+          <button
+            className={`leaderboard-mode-btn ${sortBy === 'winrate' ? 'active' : ''}`}
+            onClick={() => setSortBy('winrate')}
+          >
+            Винрейт
           </button>
         </div>
 
@@ -137,9 +144,20 @@ export default function Leaderboard() {
                       )}
                     </div>
                     <div className="leaderboard-stats">
-                      Матчей: {entry.totalMatches || (entry.wins + entry.losses + (entry.draws || 0))}
-                      {entry.winRate !== null && entry.winRate !== undefined && (
-                        <> • Винрейт: {entry.winRate}%</>
+                      {sortBy === 'xp' && entry.user.xp !== undefined && (
+                        <>XP: {entry.user.xp.toLocaleString()}</>
+                      )}
+                      {sortBy === 'matches' && (
+                        <>Матчей: {entry.totalMatches || (entry.wins + entry.losses + (entry.draws || 0))}</>
+                      )}
+                      {sortBy === 'winrate' && (
+                        <>
+                          {entry.winRate !== null && entry.winRate !== undefined ? (
+                            <>Винрейт: {entry.winRate}%</>
+                          ) : (
+                            <>Матчей: {entry.totalMatches || (entry.wins + entry.losses + (entry.draws || 0))} (меньше 100)</>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

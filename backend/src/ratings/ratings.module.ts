@@ -3,9 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RatingsService } from './ratings.service';
 import { RatingsController } from './ratings.controller';
 import { Rating } from './rating.entity';
+import { SystemSettings } from '../admin/system-settings.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Rating])],
+  imports: [TypeOrmModule.forFeature([Rating, SystemSettings])],
   controllers: [RatingsController],
   providers: [RatingsService],
   exports: [RatingsService],

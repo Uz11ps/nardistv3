@@ -12,11 +12,13 @@ export class RatingsController {
   async getLeaderboard(
     @Query('mode') mode: GameMode,
     @Query('period') period?: string,
+    @Query('sortBy') sortBy?: 'xp' | 'matches' | 'winrate' | 'rating',
     @Query('limit') limit?: string,
   ) {
     return this.ratingsService.getLeaderboard(
       mode || GameMode.SHORT,
       period || 'all',
+      sortBy || 'rating',
       limit ? parseInt(limit) : 100,
     );
   }

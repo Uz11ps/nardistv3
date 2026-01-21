@@ -3318,6 +3318,10 @@ ${formattedMoves.join('\n')}
     // Общее количество матчей (все игры, не только завершенные)
     const totalMatches = filteredGames.length;
     
+    // Получаем рейтинги игрока для обоих режимов
+    const shortRating = await this.ratingsService.getRating(userId, GameMode.SHORT) || 1000;
+    const longRating = await this.ratingsService.getRating(userId, GameMode.LONG) || 1000;
+
     // Если применен фильтр по режиму, возвращаем данные только для этого режима
     if (filters?.mode === 'short') {
       return {
@@ -3326,11 +3330,13 @@ ${formattedMoves.join('\n')}
         wins: shortWins,
         losses: shortFinished - shortWins,
         winrate: Math.round(shortWinrate * 10) / 10,
+        rating: shortRating,
         short: {
           matches: shortFinished,
           wins: shortWins,
           losses: shortFinished - shortWins,
           winrate: Math.round(shortWinrate * 10) / 10,
+          rating: shortRating,
         },
       };
     } else if (filters?.mode === 'long') {
@@ -3340,11 +3346,13 @@ ${formattedMoves.join('\n')}
         wins: longWins,
         losses: longFinished - longWins,
         winrate: Math.round(longWinrate * 10) / 10,
+        rating: longRating,
         long: {
           matches: longFinished,
           wins: longWins,
           losses: longFinished - longWins,
           winrate: Math.round(longWinrate * 10) / 10,
+          rating: longRating,
         },
       };
     }
@@ -3363,12 +3371,14 @@ ${formattedMoves.join('\n')}
           wins: shortWins,
           losses: 0,
           winrate: shortWins > 0 ? 100 : 0,
+          rating: shortRating,
         },
         long: {
           matches: longWins,
           wins: longWins,
           losses: 0,
           winrate: longWins > 0 ? 100 : 0,
+          rating: longRating,
         },
       };
     } else if (filters?.result === 'losses') {
@@ -3386,12 +3396,14 @@ ${formattedMoves.join('\n')}
           wins: 0,
           losses: shortLosses,
           winrate: 0,
+          rating: shortRating,
         },
         long: {
           matches: longLosses,
           wins: 0,
           losses: longLosses,
           winrate: 0,
+          rating: longRating,
         },
       };
     }
@@ -3408,12 +3420,14 @@ ${formattedMoves.join('\n')}
         wins: shortWins,
         losses: shortFinished - shortWins,
         winrate: Math.round(shortWinrate * 10) / 10,
+        rating: shortRating,
       },
       long: {
         matches: longFinished,
         wins: longWins,
         losses: longFinished - longWins,
         winrate: Math.round(longWinrate * 10) / 10,
+        rating: longRating,
       },
     };
   }

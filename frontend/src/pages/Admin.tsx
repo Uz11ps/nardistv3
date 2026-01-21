@@ -159,12 +159,18 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments' | 'equipment-config'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments' | 'equipment-config' | 'matchmaking'>('stats')
   const [selectedSkinType, setSelectedSkinType] = useState<string>('')
   const [progressionConfig, setProgressionConfig] = useState<any>(null)
   const [paymentStats, setPaymentStats] = useState<any>(null)
   const [wallets, setWallets] = useState<any[]>([])
   const [systemSettings, setSystemSettings] = useState<any>({})
+  const [matchmakingSettings, setMatchmakingSettings] = useState<any>({
+    ratingRange: 500,
+    basePoints: 25,
+    maxBonus: 10,
+    maxPenalty: 10,
+  })
   const [walletPrivateKeyModal, setWalletPrivateKeyModal] = useState<{ wallet: any; privateKey: string; address: string } | null>(null)
   const [isSavingProgression, setIsSavingProgression] = useState(false)
   const [tournaments, setTournaments] = useState<any[]>([])
@@ -539,6 +545,30 @@ export default function Admin() {
     }
   }
 
+  const loadMatchmakingSettings = async () => {
+    try {
+      const response = await apiClient.get('/admin/matchmaking-settings')
+      setMatchmakingSettings(response.data || {
+        ratingRange: 500,
+        basePoints: 25,
+        maxBonus: 10,
+        maxPenalty: 10,
+      })
+    } catch (error) {
+      console.error('Failed to load matchmaking settings:', error)
+    }
+  }
+
+  const saveMatchmakingSettings = async () => {
+    try {
+      await apiClient.put('/admin/matchmaking-settings', matchmakingSettings)
+      alert('Настройки подбора сохранены')
+      loadMatchmakingSettings()
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.response?.data?.message || error.message))
+    }
+  }
+
   const loadSystemSettings = async () => {
     try {
       const response = await apiClient.get('/admin/system-settings')
@@ -903,6 +933,15 @@ export default function Admin() {
           }}
         >
           Цены
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === 'matchmaking' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('matchmaking')
+            loadMatchmakingSettings()
+          }}
+        >
+          ПОДБОР
         </button>
         <button
           className={`admin-tab-btn ${activeTab === 'system-settings' ? 'active' : ''}`}
@@ -5106,6 +5145,92 @@ export default function Admin() {
                 Сохранить пакеты
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* РАЗДЕЛ НАСТРОЕК ПОДБОРА */}
+      {activeTab === 'matchmaking' && (
+        <div className="admin-section">
+          <h2>Настройки подбора соперников</h2>
+          
+          <div style={{ display: 'grid', gap: '20px', maxWidth: '600px' }}>
+            <div style={{ background: '#2a2a2a', padding: '20px', borderRadius: '8px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: 600 }}>
+                Разброс рейтинга (ratingRange)
+              </label>
+              <input
+                type="number"
+                value={matchmakingSettings.ratingRange}
+                onChange={(e) => setMatchmakingSettings({ ...matchmakingSettings, ratingRange: parseInt(e.target.value) || 500 })}
+                style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+              />
+              <div style={{ marginTop: '4px', fontSize: '12px', color: '#B6B6B6' }}>
+                Максимальная разница рейтинга для подбора соперников (по умолчанию: 500)
+              </div>
+            </div>
+
+            <div style={{ background: '#2a2a2a', padding: '20px', borderRadius: '8px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: 600 }}>
+                Базовые очки рейтинга (basePoints)
+              </label>
+              <input
+                type="number"
+                value={matchmakingSettings.basePoints}
+                onChange={(e) => setMatchmakingSettings({ ...matchmakingSettings, basePoints: parseInt(e.target.value) || 25 })}
+                style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+              />
+              <div style={{ marginTop: '4px', fontSize: '12px', color: '#B6B6B6' }}>
+                Базовое количество очков рейтинга при равном рейтинге (по умолчанию: 25)
+              </div>
+            </div>
+
+            <div style={{ background: '#2a2a2a', padding: '20px', borderRadius: '8px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: 600 }}>
+                Максимальный бонус (maxBonus)
+              </label>
+              <input
+                type="number"
+                value={matchmakingSettings.maxBonus}
+                onChange={(e) => setMatchmakingSettings({ ...matchmakingSettings, maxBonus: parseInt(e.target.value) || 10 })}
+                style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+              />
+              <div style={{ marginTop: '4px', fontSize: '12px', color: '#B6B6B6' }}>
+                Максимальный бонус для слабого игрока (по умолчанию: 10, итого слабый получает basePoints + maxBonus = 35)
+              </div>
+            </div>
+
+            <div style={{ background: '#2a2a2a', padding: '20px', borderRadius: '8px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#fff', fontWeight: 600 }}>
+                Максимальный штраф (maxPenalty)
+              </label>
+              <input
+                type="number"
+                value={matchmakingSettings.maxPenalty}
+                onChange={(e) => setMatchmakingSettings({ ...matchmakingSettings, maxPenalty: parseInt(e.target.value) || 10 })}
+                style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff' }}
+              />
+              <div style={{ marginTop: '4px', fontSize: '12px', color: '#B6B6B6' }}>
+                Максимальный штраф для сильного игрока (по умолчанию: 10, итого сильный получает basePoints - maxPenalty = 15)
+              </div>
+            </div>
+
+            <button
+              onClick={saveMatchmakingSettings}
+              style={{
+                padding: '12px 24px',
+                background: '#4CAF50',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: 600,
+                marginTop: '10px'
+              }}
+            >
+              Сохранить настройки
+            </button>
           </div>
         </div>
       )}

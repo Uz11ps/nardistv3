@@ -2660,6 +2660,37 @@ export class AdminService implements OnModuleInit {
     return result;
   }
 
+  // ========== НАСТРОЙКИ ПОДБОРА ==========
+  async getMatchmakingSettings() {
+    const ratingRange = await this.systemSettingsRepository.findOne({ where: { key: 'matchmaking_rating_range' } });
+    const basePoints = await this.systemSettingsRepository.findOne({ where: { key: 'matchmaking_base_points' } });
+    const maxBonus = await this.systemSettingsRepository.findOne({ where: { key: 'matchmaking_max_bonus' } });
+    const maxPenalty = await this.systemSettingsRepository.findOne({ where: { key: 'matchmaking_max_penalty' } });
+
+    return {
+      ratingRange: ratingRange ? parseInt(ratingRange.value) : 500,
+      basePoints: basePoints ? parseInt(basePoints.value) : 25,
+      maxBonus: maxBonus ? parseInt(maxBonus.value) : 10,
+      maxPenalty: maxPenalty ? parseInt(maxPenalty.value) : 10,
+    };
+  }
+
+  async updateMatchmakingSettings(settings: { ratingRange?: number; basePoints?: number; maxBonus?: number; maxPenalty?: number }) {
+    if (settings.ratingRange !== undefined) {
+      await this.setSystemSetting('matchmaking_rating_range', settings.ratingRange.toString(), 'Разброс рейтинга для подбора соперников');
+    }
+    if (settings.basePoints !== undefined) {
+      await this.setSystemSetting('matchmaking_base_points', settings.basePoints.toString(), 'Базовые очки рейтинга');
+    }
+    if (settings.maxBonus !== undefined) {
+      await this.setSystemSetting('matchmaking_max_bonus', settings.maxBonus.toString(), 'Максимальный бонус для слабого игрока');
+    }
+    if (settings.maxPenalty !== undefined) {
+      await this.setSystemSetting('matchmaking_max_penalty', settings.maxPenalty.toString(), 'Максимальный штраф для сильного игрока');
+    }
+    return this.getMatchmakingSettings();
+  }
+
   // Глобальные конфиги доски (для всех пользователей)
   async getBoardConfigs() {
     const DEBUG_SIZES = [368, 512, 768, 1024, 1440]
