@@ -59,6 +59,10 @@ export default function Shop() {
   const [showSkinPreview, setShowSkinPreview] = useState(false)
   const [previewSkin, setPreviewSkin] = useState<Skin | null>(null)
   const [shopBarInfo, setShopBarInfo] = useState<ShopBarInfo | null>(null)
+  const [showConfirmEnergyModal, setShowConfirmEnergyModal] = useState(false)
+  const [showConfirmLivesModal, setShowConfirmLivesModal] = useState(false)
+  const [showConfirmLicenseModal, setShowConfirmLicenseModal] = useState(false)
+  const [buyingItem, setBuyingItem] = useState<'energy' | 'lives' | 'license' | null>(null)
 
   // Инициализация активной вкладки из navigation state (например, из города -> "бар")
   useEffect(() => {
@@ -295,42 +299,66 @@ export default function Shop() {
     }
   }
 
-  const handleBuyEnergy = async () => {
+  const handleBuyEnergy = () => {
+    setShowConfirmEnergyModal(true)
+  }
+
+  const handleBuyLives = () => {
+    setShowConfirmLivesModal(true)
+  }
+
+  const handleBuyBusinessLicense = () => {
+    setShowConfirmLicenseModal(true)
+  }
+
+  const confirmBuyEnergy = async () => {
+    if (buyingItem) return
+    setBuyingItem('energy')
+    setShowConfirmEnergyModal(false)
     try {
       await apiClient.post('/progress/energy/buy')
       const userResponse = await apiClient.get('/users/me')
       useAuthStore.setState({ user: userResponse.data })
       await loadShopBar()
-      alert('Энергия куплена')
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка покупки энергии')
       console.error('Buy energy failed:', error)
+    } finally {
+      setBuyingItem(null)
     }
   }
 
-  const handleBuyLives = async () => {
+  const confirmBuyLives = async () => {
+    if (buyingItem) return
+    setBuyingItem('lives')
+    setShowConfirmLivesModal(false)
     try {
       await apiClient.post('/progress/lives/buy')
       const userResponse = await apiClient.get('/users/me')
       useAuthStore.setState({ user: userResponse.data })
       await loadShopBar()
-      alert('Жизни куплены')
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка покупки жизней')
       console.error('Buy lives failed:', error)
+    } finally {
+      setBuyingItem(null)
     }
   }
 
-  const handleBuyBusinessLicense = async () => {
+  const confirmBuyLicense = async () => {
+    if (buyingItem) return
+    setBuyingItem('license')
+    setShowConfirmLicenseModal(false)
     try {
       await apiClient.post('/progress/business-license/buy')
       const userResponse = await apiClient.get('/users/me')
       useAuthStore.setState({ user: userResponse.data })
       await loadShopBar()
-      alert('Лицензия предпринимателя приобретена')
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка покупки лицензии')
       console.error('Buy license failed:', error)
+    } finally {
+      setBuyingItem(null)
     }
   }
 
@@ -601,10 +629,6 @@ export default function Shop() {
                 gap: '12px'
               }}>
                 <div style={{
-                  fontSize: '20px',
-                  flexShrink: 0
-                }}>ℹ️</div>
-                <div style={{
                   color: '#FFF',
                   fontSize: '13px',
                   lineHeight: '1.5'
@@ -614,7 +638,7 @@ export default function Shop() {
                   </div>
                   <div style={{ color: '#B6B6B6' }}>
                     При каждой повторной покупке энергии или жизней базовая цена будет расти. 
-                    Цена обновляется для каждого игрока в 4:00 по МСК до базовой.
+                    Цена обновляется для каждого игрока в 5:30 по МСК до базовой.
                   </div>
                 </div>
               </div>
@@ -639,9 +663,9 @@ export default function Shop() {
                     variant="primary"
                     className="shop-buy-btn"
                     onClick={handleBuyEnergy}
-                    disabled={loading || (shopBarInfo ? shopBarInfo.energy.current >= shopBarInfo.energy.max : false)}
+                    disabled={loading || buyingItem !== null || (shopBarInfo ? shopBarInfo.energy.current >= shopBarInfo.energy.max : false)}
                   >
-                    Купить
+                    {buyingItem === 'energy' ? 'Покупка...' : 'Купить'}
                   </Button>
                 </div>
                 <div className="shop-nar-coin-icon">
@@ -669,9 +693,9 @@ export default function Shop() {
                     variant="primary"
                     className="shop-buy-btn"
                     onClick={handleBuyLives}
-                    disabled={loading || (shopBarInfo ? shopBarInfo.lives.current >= shopBarInfo.lives.max : false)}
+                    disabled={loading || buyingItem !== null || (shopBarInfo ? shopBarInfo.lives.current >= shopBarInfo.lives.max : false)}
                   >
-                    Купить
+                    {buyingItem === 'lives' ? 'Покупка...' : 'Купить'}
                   </Button>
                 </div>
                 <div className="shop-nar-coin-icon">
@@ -701,12 +725,13 @@ export default function Shop() {
                     onClick={handleBuyBusinessLicense}
                     disabled={
                       loading ||
+                      buyingItem !== null ||
                       (shopBarInfo
                         ? shopBarInfo.license.hasLicense || shopBarInfo.license.level < shopBarInfo.license.requiredLevel
                         : false)
                     }
                   >
-                    {shopBarInfo?.license.hasLicense ? 'Уже куплена' : 'Купить лицензию'}
+                    {buyingItem === 'license' ? 'Покупка...' : (shopBarInfo?.license.hasLicense ? 'Уже куплена' : 'Купить лицензию')}
                   </Button>
                 </div>
                 <div className="shop-nar-coin-icon">
@@ -977,16 +1002,277 @@ export default function Shop() {
                 <Button 
                   variant="primary" 
                   fullWidth 
+                  disabled={processingSkinId !== null || (previewSkin.price && (user?.narCoin || 0) < previewSkin.price)}
                   onClick={() => {
                     handleBuySkin(previewSkin.id)
                     setShowSkinPreview(false)
                   }}
                 >
-                  Купить за {previewSkin.price?.toLocaleString()} NAR
+                  {processingSkinId === previewSkin.id 
+                    ? 'Покупка...' 
+                    : (previewSkin.price && (user?.narCoin || 0) < previewSkin.price)
+                    ? 'Недостаточно средств'
+                    : `Купить за ${previewSkin.price?.toLocaleString()} NAR`}
                 </Button>
               ) : (
                 <Button variant="secondary" fullWidth disabled>Уже в коллекции</Button>
               )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Модальное окно подтверждения покупки энергии */}
+      {showConfirmEnergyModal && shopBarInfo && createPortal(
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px',
+          }}
+          onClick={() => setShowConfirmEnergyModal(false)}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ color: '#FFF', fontSize: '20px', fontWeight: '600', marginTop: 0, marginBottom: '16px' }}>
+              Подтверждение покупки
+            </h3>
+            <p style={{ color: '#B6B6B6', fontSize: '16px', marginBottom: '8px' }}>
+              Вы хотите купить <strong style={{ color: '#FFF' }}>+{shopBarInfo.energy.amount} энергии</strong>
+            </p>
+            <p style={{ color: '#FFD700', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+              Цена: {shopBarInfo.energy.costNar.toLocaleString('ru-RU')} NAR
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowConfirmEnergyModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#FFF',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={confirmBuyEnergy}
+                disabled={buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.energy.costNar)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: (buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.energy.costNar))
+                    ? 'rgba(255, 255, 255, 0.1)'
+                    : 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
+                  border: (buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.energy.costNar))
+                    ? '1px solid rgba(255, 255, 255, 0.2)'
+                    : '1px solid #C93C3D',
+                  borderRadius: '8px',
+                  color: '#FFF',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: (buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.energy.costNar)) ? 'not-allowed' : 'pointer',
+                  opacity: (buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.energy.costNar)) ? 0.5 : 1,
+                }}
+              >
+                {buyingItem === 'energy' 
+                  ? 'Покупка...' 
+                  : (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.energy.costNar)
+                  ? 'Недостаточно средств'
+                  : 'Подтвердить'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Модальное окно подтверждения покупки жизней */}
+      {showConfirmLivesModal && shopBarInfo && createPortal(
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px',
+          }}
+          onClick={() => setShowConfirmLivesModal(false)}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ color: '#FFF', fontSize: '20px', fontWeight: '600', marginTop: 0, marginBottom: '16px' }}>
+              Подтверждение покупки
+            </h3>
+            <p style={{ color: '#B6B6B6', fontSize: '16px', marginBottom: '8px' }}>
+              Вы хотите купить <strong style={{ color: '#FFF' }}>+{shopBarInfo.lives.amount} жизней</strong>
+            </p>
+            <p style={{ color: '#FFD700', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+              Цена: {shopBarInfo.lives.costNar.toLocaleString('ru-RU')} NAR
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowConfirmLivesModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#FFF',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={confirmBuyLives}
+                disabled={buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.lives.costNar)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: (buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.lives.costNar))
+                    ? 'rgba(255, 255, 255, 0.1)'
+                    : 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
+                  border: (buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.lives.costNar))
+                    ? '1px solid rgba(255, 255, 255, 0.2)'
+                    : '1px solid #C93C3D',
+                  borderRadius: '8px',
+                  color: '#FFF',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: (buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.lives.costNar)) ? 'not-allowed' : 'pointer',
+                  opacity: (buyingItem !== null || (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.lives.costNar)) ? 0.5 : 1,
+                }}
+              >
+                {buyingItem === 'lives' 
+                  ? 'Покупка...' 
+                  : (shopBarInfo && (user?.narCoin || 0) < shopBarInfo.lives.costNar)
+                  ? 'Недостаточно средств'
+                  : 'Подтвердить'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Модальное окно подтверждения покупки лицензии */}
+      {showConfirmLicenseModal && shopBarInfo && createPortal(
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px',
+          }}
+          onClick={() => setShowConfirmLicenseModal(false)}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ color: '#FFF', fontSize: '20px', fontWeight: '600', marginTop: 0, marginBottom: '16px' }}>
+              Подтверждение покупки
+            </h3>
+            <p style={{ color: '#B6B6B6', fontSize: '16px', marginBottom: '8px' }}>
+              Вы хотите купить <strong style={{ color: '#FFF' }}>Лицензию предпринимателя</strong>
+            </p>
+            <p style={{ color: '#FFD700', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+              Цена: {shopBarInfo.license.costNar.toLocaleString('ru-RU')} NAR
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowConfirmLicenseModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#FFF',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={confirmBuyLicense}
+                disabled={buyingItem !== null}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
+                  border: '1px solid #C93C3D',
+                  borderRadius: '8px',
+                  color: '#FFF',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: buyingItem !== null ? 'not-allowed' : 'pointer',
+                  opacity: buyingItem !== null ? 0.5 : 1,
+                }}
+              >
+                {buyingItem === 'license' ? 'Покупка...' : 'Подтвердить'}
+              </button>
             </div>
           </div>
         </div>,

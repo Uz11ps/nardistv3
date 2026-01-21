@@ -43,6 +43,7 @@ export class ProgressionConfig {
       reductionCap: number; // Максимальное снижение (0.08 = 8%)
       passiveK: number; // Коэффициент пассивного дохода (0.015)
       passiveSpCap: number; // Кап SP для пассивного дохода (40)
+      maxSp: number; // Максимальный уровень прокачки (10)
     };
     // Ветка Энергия
     energyBranch: {
@@ -55,6 +56,7 @@ export class ProgressionConfig {
       regenStep1K: number; // Коэффициент первого шага (1.0)
       regenStep2Sp: number; // Второй шаг для регенерации (20 SP)
       regenStep2K: number; // Коэффициент второго шага (0.5)
+      maxSp: number; // Максимальный уровень прокачки (10)
       refill: {
         amount: number; // Количество за покупку (50)
         baseCostNar: number; // Базовая цена (120)
@@ -72,6 +74,7 @@ export class ProgressionConfig {
       regenSpStep: number; // Шаг для регенерации (10 SP)
       lifeLossProtectCap: number; // Максимальная защита (0.25 = 25%)
       lifeLossProtectSpCap: number; // Кап SP для защиты (10)
+      maxSp: number; // Максимальный уровень прокачки (10)
       refill: {
         amount: number; // Количество за покупку (5)
         baseCostNar: number; // Базовая цена (200)
@@ -82,6 +85,7 @@ export class ProgressionConfig {
     powerBranch: {
       weightBase: number; // Базовый вес (10)
       weightK: number; // Коэффициент веса (2.5)
+      maxSp: number; // Максимальный уровень прокачки (10)
     };
     // Капы
     caps: {

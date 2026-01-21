@@ -41,6 +41,7 @@ export default function Profile() {
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [playerStatistics, setPlayerStatistics] = useState<any>(null)
   const [loadingStatistics, setLoadingStatistics] = useState(false)
+  const [progressionConfig, setProgressionConfig] = useState<any>(null)
 
   useEffect(() => {
     if (user) {
@@ -52,6 +53,7 @@ export default function Profile() {
       checkPremium()
       loadSkillPoints()
       loadPlayerStatistics()
+      loadProgressionConfig()
       
       // Проверяем, завершена ли настройка профиля (первичное создание)
       // Если нет - перенаправляем на создание профиля
@@ -109,6 +111,15 @@ export default function Profile() {
     }
   }
 
+  const loadProgressionConfig = async () => {
+    try {
+      const response = await apiClient.get('/progress/config').catch(() => ({ data: null }))
+      setProgressionConfig(response.data || null)
+    } catch (error) {
+      console.error('Failed to load progression config:', error)
+    }
+  }
+
   // Перезагружаем статистику при изменении фильтров
   useEffect(() => {
     if (activeTab === 'statistics' && user) {
@@ -120,10 +131,27 @@ export default function Profile() {
   const handleUpgrade = async (type: 'economy' | 'energy' | 'lives' | 'power') => {
     if (upgrading || skillPoints.free < 1) return
     
-    // Проверяем максимальный уровень (10)
+    // Проверяем максимальный уровень из конфигурации
     const currentSp = (skillPoints[type] as number) || 0
-    if (currentSp >= 10) {
-      alert('Достигнут максимальный уровень прокачки')
+    let maxSp = 10 // Значение по умолчанию
+    if (progressionConfig) {
+      switch (type) {
+        case 'economy':
+          maxSp = progressionConfig.economyBranch?.maxSp || 10
+          break
+        case 'energy':
+          maxSp = progressionConfig.energyBranch?.maxSp || 10
+          break
+        case 'lives':
+          maxSp = progressionConfig.livesBranch?.maxSp || 10
+          break
+        case 'power':
+          maxSp = progressionConfig.powerBranch?.maxSp || 10
+          break
+      }
+    }
+    if (currentSp >= maxSp) {
+      alert(`Достигнут максимальный уровень прокачки (${maxSp})`)
       return
     }
 
@@ -311,6 +339,31 @@ export default function Profile() {
           </button>
         </div>
 
+        {/* Фильтр режима для статистики */}
+        {activeTab === 'statistics' && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px', marginTop: '16px' }}>
+            <span style={{ color: '#B6B6B6', fontSize: '14px', marginRight: '8px' }}>Режим:</span>
+            <button 
+              className={`profile-statistics-mode-tab ${statisticsMode === 'all' ? 'active' : ''}`}
+              onClick={() => setStatisticsMode('all')}
+            >
+              Все
+            </button>
+            <button 
+              className={`profile-statistics-mode-tab ${statisticsMode === 'long' ? 'active' : ''}`}
+              onClick={() => setStatisticsMode('long')}
+            >
+              Длинные
+            </button>
+            <button 
+              className={`profile-statistics-mode-tab ${statisticsMode === 'short' ? 'active' : ''}`}
+              onClick={() => setStatisticsMode('short')}
+            >
+              Короткие
+            </button>
+          </div>
+        )}
+
         {activeTab === 'stats' ? (
           <>
             {/* Профиль пользователя */}
@@ -406,7 +459,23 @@ export default function Profile() {
               },
             ].map((enh) => {
               const currentSp = (skillPoints[enh.id] as number) || 0
-              const maxSp = 10
+              let maxSp = 10 // Значение по умолчанию
+              if (progressionConfig) {
+                switch (enh.id) {
+                  case 'economy':
+                    maxSp = progressionConfig.economyBranch?.maxSp || 10
+                    break
+                  case 'energy':
+                    maxSp = progressionConfig.energyBranch?.maxSp || 10
+                    break
+                  case 'lives':
+                    maxSp = progressionConfig.livesBranch?.maxSp || 10
+                    break
+                  case 'power':
+                    maxSp = progressionConfig.powerBranch?.maxSp || 10
+                    break
+                }
+              }
               const canUpgrade = skillPoints.free > 0 && currentSp < maxSp && !upgrading
               
               return (
@@ -446,32 +515,6 @@ export default function Profile() {
       </>
     ) : activeTab === 'statistics' ? (
           <div className="profile-statistics-tab">
-            {/* Фильтры статистики */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-              {/* Фильтр по режиму */}
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ color: '#B6B6B6', fontSize: '14px', marginRight: '8px' }}>Режим:</span>
-                <button 
-                  className={`profile-statistics-mode-tab ${statisticsMode === 'all' ? 'active' : ''}`}
-                  onClick={() => setStatisticsMode('all')}
-                >
-                  Все
-                </button>
-                <button 
-                  className={`profile-statistics-mode-tab ${statisticsMode === 'long' ? 'active' : ''}`}
-                  onClick={() => setStatisticsMode('long')}
-                >
-                  Длинные
-                </button>
-                <button 
-                  className={`profile-statistics-mode-tab ${statisticsMode === 'short' ? 'active' : ''}`}
-                  onClick={() => setStatisticsMode('short')}
-                >
-                  Короткие
-                </button>
-              </div>
-            </div>
-
             {loadingStatistics ? (
               <div style={{ textAlign: 'center', padding: '40px', color: '#B6B6B6' }}>Загрузка...</div>
             ) : playerStatistics ? (

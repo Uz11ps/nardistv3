@@ -10,6 +10,7 @@ import { User } from '../users/user.entity';
 import { GameType } from '../games/game.entity';
 import { XpCalculatorService } from './xp-calculator.service';
 import { ProgressionBranchesService } from './progression-branches.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ProgressService {
@@ -46,6 +47,7 @@ export class ProgressService {
     private usersService: UsersService,
     private xpCalculator: XpCalculatorService,
     private branchesService: ProgressionBranchesService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -154,19 +156,44 @@ export class ProgressService {
       throw new BadRequestException(`Недостаточно свободных Skill Points. Доступно: ${user.freeSkillPoints || 0}, требуется: ${amount}`);
     }
     
+    // Получаем текущее значение SP для ветки
+    let currentSp = 0;
+    switch (type) {
+      case EnhancementType.ECONOMY:
+        currentSp = user.economySp || 0;
+        break;
+      case EnhancementType.ENERGY:
+        currentSp = user.energySp || 0;
+        break;
+      case EnhancementType.LIVES:
+        currentSp = user.livesSp || 0;
+        break;
+      case EnhancementType.POWER:
+        currentSp = user.powerSp || 0;
+        break;
+      default:
+        throw new BadRequestException(`Неизвестный тип усиления: ${type}`);
+    }
+    
+    // Проверяем максимальный уровень прокачки
+    const maxSp = this.branchesService.getMaxSp(type);
+    if (currentSp + amount > maxSp) {
+      throw new BadRequestException(`Достигнут максимальный уровень прокачки (${maxSp}). Текущий уровень: ${currentSp}`);
+    }
+    
     // Распределяем SP по веткам
     switch (type) {
       case EnhancementType.ECONOMY:
-        user.economySp = (user.economySp || 0) + amount;
+        user.economySp = currentSp + amount;
         break;
       case EnhancementType.ENERGY:
-        user.energySp = (user.energySp || 0) + amount;
+        user.energySp = currentSp + amount;
         break;
       case EnhancementType.LIVES:
-        user.livesSp = (user.livesSp || 0) + amount;
+        user.livesSp = currentSp + amount;
         break;
       case EnhancementType.POWER:
-        user.powerSp = (user.powerSp || 0) + amount;
+        user.powerSp = currentSp + amount;
         break;
       default:
         throw new BadRequestException(`Неизвестный тип усиления: ${type}`);
@@ -599,12 +626,26 @@ export class ProgressService {
       throw new BadRequestException(`Недостаточно NAR-coin. Требуется: ${cost}`);
     }
 
+    const livesBefore = user.lives;
     user.narCoin = BigInt(user.narCoin) - BigInt(cost);
-    user.lives = Math.min(user.lives + config.refill.amount, user.maxLives); 
+    user.lives = Math.min(user.lives + config.refill.amount, user.maxLives);
+    const livesAdded = user.lives - livesBefore;
     await this.usersService['usersRepository'].save(user);
     
     // Сохраняем запись о покупке
     await this.recordLifePurchase(userId, cost);
+    
+    // Создаем уведомление о покупке
+    try {
+      await this.notificationsService.createNotification(
+        userId,
+        'Покупка в баре',
+        `Вы купили ${livesAdded} ${livesAdded === 1 ? 'жизнь' : livesAdded < 5 ? 'жизни' : 'жизней'} за ${cost.toLocaleString('ru-RU')} NAR`,
+        'info',
+      );
+    } catch (error) {
+      this.logger.error(`❌ Ошибка при создании уведомления о покупке жизней: ${error.message}`);
+    }
   }
 
   /**
@@ -691,7 +732,7 @@ export class ProgressService {
 
   /**
    * Получить количество покупок жизней сегодня
-   * "Сегодня" считается с 4:00 по московскому времени
+   * "Сегодня" считается с 5:30 по московскому времени
    */
   private async getLifePurchasesToday(userId: string): Promise<number> {
     const now = new Date();
@@ -713,14 +754,15 @@ export class ProgressService {
     const month = parseInt(parts.find(p => p.type === 'month')!.value) - 1; // месяцы 0-11
     const day = parseInt(parts.find(p => p.type === 'day')!.value);
     const hour = parseInt(parts.find(p => p.type === 'hour')!.value);
+    const minute = parseInt(parts.find(p => p.type === 'minute')!.value);
     
-    // Определяем начало "сегодня" (4:00 по Москве)
+    // Определяем начало "сегодня" (5:30 по Москве)
     let targetDay = day;
     let targetMonth = month;
     let targetYear = year;
     
-    if (hour < 4) {
-      // Если сейчас меньше 4:00 по Москве, "сегодня" началось в 4:00 вчера
+    if (hour < 5 || (hour === 5 && minute < 30)) {
+      // Если сейчас меньше 5:30 по Москве, "сегодня" началось в 5:30 вчера
       targetDay = day - 1;
       if (targetDay < 1) {
         targetMonth = month - 1;
@@ -734,12 +776,12 @@ export class ProgressService {
       }
     }
     
-    // Создаем дату 4:00 по Москве в формате ISO с указанием timezone
+    // Создаем дату 5:30 по Москве в формате ISO с указанием timezone
     // Москва = UTC+3, поэтому создаем дату как UTC+3
-    const moscowDateStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}T04:00:00+03:00`;
+    const moscowDateStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}T05:30:00+03:00`;
     const todayStartUTC = new Date(moscowDateStr);
     
-    // Конец "сегодня" - это 4:00 следующего дня по Москве
+    // Конец "сегодня" - это 5:30 следующего дня по Москве
     let tomorrowDay = targetDay + 1;
     let tomorrowMonth = targetMonth;
     let tomorrowYear = targetYear;
@@ -753,7 +795,7 @@ export class ProgressService {
       }
     }
     
-    const tomorrowDateStr = `${tomorrowYear}-${String(tomorrowMonth + 1).padStart(2, '0')}-${String(tomorrowDay).padStart(2, '0')}T04:00:00+03:00`;
+    const tomorrowDateStr = `${tomorrowYear}-${String(tomorrowMonth + 1).padStart(2, '0')}-${String(tomorrowDay).padStart(2, '0')}T05:30:00+03:00`;
     const tomorrowStartUTC = new Date(tomorrowDateStr);
     
     const count = await this.purchasesRepository.count({
@@ -769,7 +811,7 @@ export class ProgressService {
 
   /**
    * Получить количество покупок энергии сегодня
-   * "Сегодня" считается с 4:00 по московскому времени
+   * "Сегодня" считается с 5:30 по московскому времени
    */
   private async getEnergyPurchasesToday(userId: string): Promise<number> {
     const now = new Date();
@@ -791,14 +833,15 @@ export class ProgressService {
     const month = parseInt(parts.find(p => p.type === 'month')!.value) - 1; // месяцы 0-11
     const day = parseInt(parts.find(p => p.type === 'day')!.value);
     const hour = parseInt(parts.find(p => p.type === 'hour')!.value);
+    const minute = parseInt(parts.find(p => p.type === 'minute')!.value);
     
-    // Определяем начало "сегодня" (4:00 по Москве)
+    // Определяем начало "сегодня" (5:30 по Москве)
     let targetDay = day;
     let targetMonth = month;
     let targetYear = year;
     
-    if (hour < 4) {
-      // Если сейчас меньше 4:00 по Москве, "сегодня" началось в 4:00 вчера
+    if (hour < 5 || (hour === 5 && minute < 30)) {
+      // Если сейчас меньше 5:30 по Москве, "сегодня" началось в 5:30 вчера
       targetDay = day - 1;
       if (targetDay < 1) {
         targetMonth = month - 1;
@@ -812,12 +855,12 @@ export class ProgressService {
       }
     }
     
-    // Создаем дату 4:00 по Москве в формате ISO с указанием timezone
+    // Создаем дату 5:30 по Москве в формате ISO с указанием timezone
     // Москва = UTC+3, поэтому создаем дату как UTC+3
-    const moscowDateStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}T04:00:00+03:00`;
+    const moscowDateStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}T05:30:00+03:00`;
     const todayStartUTC = new Date(moscowDateStr);
     
-    // Конец "сегодня" - это 4:00 следующего дня по Москве
+    // Конец "сегодня" - это 5:30 следующего дня по Москве
     let tomorrowDay = targetDay + 1;
     let tomorrowMonth = targetMonth;
     let tomorrowYear = targetYear;
@@ -831,7 +874,7 @@ export class ProgressService {
       }
     }
     
-    const tomorrowDateStr = `${tomorrowYear}-${String(tomorrowMonth + 1).padStart(2, '0')}-${String(tomorrowDay).padStart(2, '0')}T04:00:00+03:00`;
+    const tomorrowDateStr = `${tomorrowYear}-${String(tomorrowMonth + 1).padStart(2, '0')}-${String(tomorrowDay).padStart(2, '0')}T05:30:00+03:00`;
     const tomorrowStartUTC = new Date(tomorrowDateStr);
     
     const count = await this.purchasesRepository.count({

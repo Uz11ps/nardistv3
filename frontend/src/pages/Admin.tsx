@@ -159,7 +159,7 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [games, setGames] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments' | 'equipment-config' | 'business'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'games' | 'notifications' | 'create-game' | 'tournaments' | 'academy' | 'city' | 'skins' | 'quests' | 'clans' | 'policy' | 'prices' | 'system-settings' | 'progression' | 'payments' | 'equipment-config'>('stats')
   const [selectedSkinType, setSelectedSkinType] = useState<string>('')
   const [progressionConfig, setProgressionConfig] = useState<any>(null)
   const [paymentStats, setPaymentStats] = useState<any>(null)
@@ -227,16 +227,6 @@ export default function Admin() {
   const [editingCourse, setEditingCourse] = useState<any>(null)
   const [selectedArticle, setSelectedArticle] = useState<any>(null)
   const [editingArticle, setEditingArticle] = useState<any>(null)
-  const [courseTasks, setCourseTasks] = useState<any[]>([])
-  const [newCourseTask, setNewCourseTask] = useState({
-    type: 'train_with_bot',
-    title: '',
-    description: '',
-    order: 1,
-    rewardNarCoin: 0,
-    rewardXP: 0,
-    isRequired: true,
-  })
   const [selectedTournament, setSelectedTournament] = useState<any>(null)
   const [editingUser, setEditingUser] = useState<any>(null)
   const [subscriptionPrices, setSubscriptionPrices] = useState<{ 
@@ -567,31 +557,6 @@ export default function Admin() {
     }
   }
 
-  const [businessData, setBusinessData] = useState<any>({
-    districts: [],
-    businesses: [],
-    materials: [],
-    licenses: [],
-  })
-
-  const loadBusinessData = async () => {
-    try {
-      const [districtsRes, businessesRes, materialsRes, licensesRes] = await Promise.all([
-        apiClient.get('/admin/business/districts').catch(() => ({ data: [] })),
-        apiClient.get('/admin/business/businesses').catch(() => ({ data: [] })),
-        apiClient.get('/admin/business/materials').catch(() => ({ data: [] })),
-        apiClient.get('/admin/business/licenses').catch(() => ({ data: [] })),
-      ])
-      setBusinessData({
-        districts: districtsRes.data || [],
-        businesses: businessesRes.data || [],
-        materials: materialsRes.data || [],
-        licenses: licensesRes.data || [],
-      })
-    } catch (error) {
-      console.error('Failed to load business data:', error)
-    }
-  }
 
   const loadPaymentStats = async () => {
     try {
@@ -928,15 +893,6 @@ export default function Admin() {
           }}
         >
           Экипировка (v2.0)
-        </button>
-        <button
-          className={`admin-tab-btn ${activeTab === 'business' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('business')
-            loadBusinessData()
-          }}
-        >
-          Бизнес
         </button>
         <button
           className={`admin-tab-btn ${activeTab === 'prices' ? 'active' : ''}`}
@@ -1630,67 +1586,6 @@ export default function Admin() {
               <button onClick={sendNotification}>Отправить</button>
             </div>
             
-            <div className="notification-management" style={{ marginTop: '32px' }}>
-              <h3>Управление уведомлениями</h3>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <button
-                  className="btn btn-danger"
-                  onClick={async () => {
-                    if (confirm('Удалить все сообщения бота? Это действие необратимо!')) {
-                      try {
-                        await apiClient.delete('/admin/notifications/bot/all')
-                        alert('Все сообщения бота удалены')
-                        loadStats()
-                      } catch (error: any) {
-                        alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                      }
-                    }
-                  }}
-                >
-                  Удалить все сообщения бота
-                </button>
-                <button
-                  className="btn btn-warning"
-                  onClick={async () => {
-                    if (confirm('Удалить последнее сообщение бота у каждого пользователя? Это действие необратимо!')) {
-                      try {
-                        await apiClient.delete('/admin/notifications/bot/last')
-                        alert('Последние сообщения бота удалены')
-                        loadStats()
-                      } catch (error: any) {
-                        alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                      }
-                    }
-                  }}
-                >
-                  Удалить последнее
-                </button>
-                {notificationUserId && (
-                  <button
-                    onClick={async () => {
-                      if (confirm(`Удалить все уведомления пользователя ${notificationUserId}?`)) {
-                        try {
-                          await apiClient.delete(`/admin/notifications/user/${notificationUserId}`)
-                          alert('Уведомления пользователя удалены')
-                        } catch (error: any) {
-                          alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                        }
-                      }
-                    }}
-                    style={{
-                      padding: '8px 16px',
-                      background: '#e67e22',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Удалить уведомления пользователя
-                  </button>
-                )}
-              </div>
-            </div>
 
             {/* Управление шаблонами уведомлений Telegram */}
             <div className="notification-templates" style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid #3a3a3a' }}>
@@ -2582,19 +2477,7 @@ export default function Admin() {
                       <td>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button 
-                            onClick={async () => {
-                              setSelectedArticle(a)
-                              // Загружаем задания курса, если это курс
-                              if (a.type === 'course') {
-                                try {
-                                  const tasksRes = await apiClient.get(`/academy/courses/${a.id}/tasks`)
-                                  setCourseTasks(tasksRes.data || [])
-                                } catch (error) {
-                                  console.error('Failed to load course tasks:', error)
-                                  setCourseTasks([])
-                                }
-                              }
-                            }}
+                            onClick={() => setSelectedArticle(a)}
                             style={{
                               padding: '4px 8px',
                               background: '#4a90e2',
@@ -2689,7 +2572,6 @@ export default function Admin() {
                 }}
                 onClick={() => {
                   setSelectedArticle(null)
-                  setCourseTasks([])
                 }}
               >
                 <div
@@ -2800,147 +2682,6 @@ export default function Admin() {
                     </div>
                   </div>
 
-                  {selectedArticle.type === 'course' && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <h3 style={{ color: '#FFF', fontSize: '18px', marginBottom: '12px' }}>Задания курса:</h3>
-                      <div style={{ marginBottom: '16px', background: '#2a2a2a', padding: '16px', borderRadius: '8px', border: '1px solid #3a3a3a' }}>
-                        <h4 style={{ color: '#FFF', fontSize: '14px', marginBottom: '12px' }}>Создать новое задание:</h4>
-                        <div className="form-group">
-                          <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Тип задания</label>
-                          <select
-                            value={newCourseTask.type}
-                            onChange={(e) => setNewCourseTask({ ...newCourseTask, type: e.target.value })}
-                            style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
-                          >
-                            <option value="train_with_bot">Тренировка с ботом</option>
-                            <option value="online_match">Онлайн-партия</option>
-                            <option value="view_city">Просмотр города</option>
-                            <option value="play_short_match">Быстрая партия</option>
-                            <option value="play_long_match">Длинная партия</option>
-                            <option value="win_match">Победа в матче</option>
-                            <option value="complete_training_position">Тренировочная позиция</option>
-                            <option value="join_clan">Вступить в клан</option>
-                            <option value="purchase_building">Купить строение</option>
-                            <option value="upgrade_building">Улучшить строение</option>
-                            <option value="custom">Кастомное</option>
-                          </select>
-                        </div>
-                        <div className="form-group">
-                          <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Название</label>
-                          <input
-                            type="text"
-                            value={newCourseTask.title}
-                            onChange={(e) => setNewCourseTask({ ...newCourseTask, title: e.target.value })}
-                            placeholder="Название задания"
-                            style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Описание</label>
-                          <textarea
-                            value={newCourseTask.description}
-                            onChange={(e) => setNewCourseTask({ ...newCourseTask, description: e.target.value })}
-                            rows={2}
-                            placeholder="Описание задания"
-                            style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
-                          />
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                          <div className="form-group">
-                            <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Порядок</label>
-                            <input
-                              type="number"
-                              value={newCourseTask.order}
-                              onChange={(e) => setNewCourseTask({ ...newCourseTask, order: parseInt(e.target.value) || 1 })}
-                              min="1"
-                              style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
-                            />
-                          </div>
-                          <div className="form-group">
-                            <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Награда NAR</label>
-                            <input
-                              type="number"
-                              value={newCourseTask.rewardNarCoin}
-                              onChange={(e) => setNewCourseTask({ ...newCourseTask, rewardNarCoin: parseInt(e.target.value) || 0 })}
-                              min="0"
-                              style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
-                            />
-                          </div>
-                          <div className="form-group">
-                            <label style={{ color: '#B6B6B6', fontSize: '12px', marginBottom: '4px', display: 'block' }}>Награда XP</label>
-                            <input
-                              type="number"
-                              value={newCourseTask.rewardXP}
-                              onChange={(e) => setNewCourseTask({ ...newCourseTask, rewardXP: parseInt(e.target.value) || 0 })}
-                              min="0"
-                              style={{ width: '100%', padding: '8px', background: '#1a1a1a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#FFF' }}
-                            />
-                          </div>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await apiClient.post(`/academy/courses/${selectedArticle.id}/tasks`, newCourseTask)
-                              alert('Задание создано!')
-                              setNewCourseTask({
-                                type: 'train_with_bot',
-                                title: '',
-                                description: '',
-                                order: courseTasks.length + 1,
-                                rewardNarCoin: 0,
-                                rewardXP: 0,
-                                isRequired: true,
-                              })
-                              // Загружаем задания курса
-                              const tasksRes = await apiClient.get(`/academy/courses/${selectedArticle.id}/tasks`)
-                              setCourseTasks(tasksRes.data || [])
-                            } catch (error: any) {
-                              alert('Ошибка: ' + (error.response?.data?.message || error.message))
-                            }
-                          }}
-                          style={{
-                            padding: '8px 16px',
-                            background: 'linear-gradient(180deg, #4CAF50 -144.23%, #2E7D32 105.77%)',
-                            color: '#FFF',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                          }}
-                        >
-                          Создать задание
-                        </button>
-                      </div>
-                      {courseTasks.length > 0 && (
-                        <div style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px', border: '1px solid #3a3a3a' }}>
-                          <h4 style={{ color: '#FFF', fontSize: '14px', marginBottom: '12px' }}>Существующие задания:</h4>
-                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                              <tr style={{ borderBottom: '1px solid #3a3a3a' }}>
-                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Порядок</th>
-                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Название</th>
-                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Тип</th>
-                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Награда NAR</th>
-                                <th style={{ padding: '8px', textAlign: 'left', color: '#B6B6B6', fontSize: '12px' }}>Награда XP</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {courseTasks.map((task) => (
-                                <tr key={task.id} style={{ borderBottom: '1px solid #3a3a3a' }}>
-                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{task.order}</td>
-                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{task.title}</td>
-                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{task.type}</td>
-                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{Number(task.rewardNarCoin || 0).toLocaleString()}</td>
-                                  <td style={{ padding: '8px', color: '#FFF', fontSize: '12px' }}>{task.rewardXP || 0}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                     {selectedArticle.type === 'article' && selectedArticle.authorId && !selectedArticle.isVerified && (
@@ -5859,6 +5600,11 @@ export default function Admin() {
                         onChange={(e) => setProgressionConfig({...progressionConfig, economyBranch: { ...progressionConfig.economyBranch, passiveSpCap: parseInt(e.target.value) || 0 }})} />
                     </div>
                   </div>
+                  <div>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Максимальный уровень прокачки (maxSp)</label>
+                    <input type="number" value={progressionConfig.economyBranch.maxSp || 10} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, economyBranch: { ...progressionConfig.economyBranch, maxSp: parseInt(e.target.value) || 10 }})} />
+                  </div>
                 </div>
               </div>
 
@@ -5922,6 +5668,11 @@ export default function Admin() {
                         onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, refill: { ...progressionConfig.energyBranch.refill, growth: parseFloat(e.target.value) || 0 } }})} />
                     </div>
                   </div>
+                  <div>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Максимальный уровень прокачки (maxSp)</label>
+                    <input type="number" value={progressionConfig.energyBranch.maxSp || 10} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, energyBranch: { ...progressionConfig.energyBranch, maxSp: parseInt(e.target.value) || 10 }})} />
+                  </div>
                 </div>
               </div>
 
@@ -5975,6 +5726,11 @@ export default function Admin() {
                         onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, refill: { ...progressionConfig.livesBranch.refill, growth: parseFloat(e.target.value) || 0 } }})} />
                     </div>
                   </div>
+                  <div>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Максимальный уровень прокачки (maxSp)</label>
+                    <input type="number" value={progressionConfig.livesBranch.maxSp || 10} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, livesBranch: { ...progressionConfig.livesBranch, maxSp: parseInt(e.target.value) || 10 }})} />
+                  </div>
                 </div>
               </div>
 
@@ -5991,6 +5747,11 @@ export default function Admin() {
                     <label style={{ fontSize: '14px', color: '#aaa' }}>Коэф. веса (на SP)</label>
                     <input type="number" step="0.1" value={progressionConfig.powerBranch.weightK} 
                       onChange={(e) => setProgressionConfig({...progressionConfig, powerBranch: { ...progressionConfig.powerBranch, weightK: parseFloat(e.target.value) || 0 }})} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '14px', color: '#aaa' }}>Максимальный уровень прокачки (maxSp)</label>
+                    <input type="number" value={progressionConfig.powerBranch.maxSp || 10} 
+                      onChange={(e) => setProgressionConfig({...progressionConfig, powerBranch: { ...progressionConfig.powerBranch, maxSp: parseInt(e.target.value) || 10 }})} />
                   </div>
                 </div>
               </div>
@@ -7357,76 +7118,6 @@ export default function Admin() {
         </div>
       )}
 
-      {/* РАЗДЕЛ БИЗНЕСА */}
-      {activeTab === 'business' && (
-        <div className="admin-section">
-          <h2>Управление бизнесом</h2>
-          
-          {/* Районы */}
-          <div style={{ marginBottom: '32px' }}>
-            <h3>Районы</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-              {businessData.districts.map((district: any) => (
-                <div key={district.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                  <div><strong>{district.displayName}</strong></div>
-                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>{district.name}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Бизнесы */}
-          <div style={{ marginBottom: '32px' }}>
-            <h3>Бизнесы</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-              {businessData.businesses.map((business: any) => (
-                <div key={business.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                  <div><strong>{business.name}</strong></div>
-                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
-                    Класс: {business.businessClass} | Район: {business.district?.displayName || business.districtId}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
-                    Мин. уровень: {business.minLevel} | Пакет материалов: {business.materialPackage}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Материалы */}
-          <div style={{ marginBottom: '32px' }}>
-            <h3>Материалы</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-              {businessData.materials.map((material: any) => (
-                <div key={material.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                  <div><strong>{material.name}</strong></div>
-                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
-                    Тип: {material.type} | Сорт: {material.sort}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Лицензии */}
-          <div>
-            <h3>Лицензии</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-              {businessData.licenses.map((license: any) => (
-                <div key={license.id} style={{ background: '#2a2a2a', padding: '16px', borderRadius: '8px' }}>
-                  <div><strong>{license.name}</strong></div>
-                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
-                    Код: {license.code} | Тип: {license.type}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#B6B6B6' }}>
-                    Мин. уровень: {license.minLevel} | Цена: {license.currency === 'NAR' ? `${license.priceNar} NAR` : `${license.priceUsdt} USDT`}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -1348,8 +1348,16 @@ export default function Game() {
       // Это работает для ВСЕХ типов игр: vs_player, vs_bot, tournament
       // Проверяем также, что игра еще не началась (нет кубиков)
       const hasNoDice = !data.gameState?.dice || (Array.isArray(data.gameState.dice) && data.gameState.dice.length === 0)
-      if (bothOffsetsChosen && (newStatus === 'waiting' || (newStatus === 'in_progress' && hasNoDice)) && preparationCountdown === null) {
-        console.log('⏱️ Запускаем отсчет подготовки к игре (5 секунд) для типа:', data.type)
+      
+      // Для ботов важно запустить таймер подготовки ДО того, как игра начнется
+      // Проверяем, что оба смещения выбраны, таймер еще не запущен, и кубиков еще нет
+      if (bothOffsetsChosen && preparationCountdown === null && hasNoDice) {
+        console.log('⏱️ Запускаем отсчет подготовки к игре (5 секунд) для типа:', data.type, {
+          newStatus,
+          hasNoDice,
+          p1OffsetChosenAt: data.p1OffsetChosenAt,
+          p2OffsetChosenAt: data.p2OffsetChosenAt
+        })
         setPreparationCountdown(5)
         preparationCountdownRef.current = 5
       }
@@ -1362,7 +1370,8 @@ export default function Game() {
       // Если это начало нашего хода и кубиков нет - бросаем их автоматически
       // НО ТОЛЬКО если оба игрока выбрали смещение
       // НО НЕ для sandbox игр - там пользователь сам управляет всем
-      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && gameInfo?.type !== 'sandbox' && bothOffsetsChosen) {
+      // НО НЕ во время таймера подготовки (preparationCountdown)
+      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && gameInfo?.type !== 'sandbox' && bothOffsetsChosen && preparationCountdown === null) {
         setTimeout(() => {
           const socket = getSocket()
           if (socket) {
@@ -1534,7 +1543,8 @@ export default function Game() {
         // Также проверяем, что ход переключился на нашего игрока
         const isNowMyTurn = data.currentPlayer === (gameInfo?.player1Id === user?.id ? 0 : 1);
         
-        if (hasNoDice && currentPlayerChanged && isNowMyTurn && bothOffsetsChosen && data.status === 'in_progress' && data.type !== 'sandbox') {
+        // Не бросаем кубики во время таймера подготовки
+        if (hasNoDice && currentPlayerChanged && isNowMyTurn && bothOffsetsChosen && data.status === 'in_progress' && data.type !== 'sandbox' && preparationCountdown === null) {
           console.log('🎲 Auto-rolling dice after turn change in move_made:', { 
             wasMyTurn, 
             isMyTurnNow, 
@@ -1584,7 +1594,8 @@ export default function Game() {
         setMoveTimer(15)
         
         const hasServerMoves = data.serverMoves && data.serverMoves.length > 0;
-        if (!formattedDice && data.status === 'in_progress' && data.type !== 'sandbox' && !hasServerMoves) {
+        // Не бросаем кубики во время таймера подготовки
+        if (!formattedDice && data.status === 'in_progress' && data.type !== 'sandbox' && !hasServerMoves && preparationCountdown === null) {
           // Автоматически бросаем кубики для следующего игрока (как в боте)
           setTimeout(() => {
             const socket = getSocket()
@@ -1882,7 +1893,8 @@ export default function Game() {
               // Небольшая задержка для обновления состояния
             setTimeout(() => {
                 const socket = getSocket()
-                if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1) && data.game.type !== 'sandbox') {
+                // Не бросаем кубики во время таймера подготовки
+                if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1) && data.game.type !== 'sandbox' && preparationCountdown === null) {
                   // Если это наш ход, бросаем кубики (но не для sandbox)
                   socket.emit('roll_dice', { gameId })
               }
@@ -3293,8 +3305,8 @@ export default function Game() {
             </div>
           )}
 
-          {/* Экран подготовки к игре (отсчет 10 секунд после выбора смещения) */}
-          {preparationCountdown !== null && preparationCountdown > 0 && gameStatus === 'waiting' && (
+          {/* Экран подготовки к игре (отсчет 5 секунд после выбора смещения) */}
+          {preparationCountdown !== null && preparationCountdown > 0 && (
             <div className="game-preparation-screen">
               <div className="preparation-content">
                 <div className="preparation-title">Подготовка к игре</div>
@@ -3426,7 +3438,8 @@ export default function Game() {
                     // 3. Оба игрока выбрали смещение (bothOffsetsChosen)
                     // 4. Игра в процессе (in_progress)
                     // 5. Не sandbox игра
-                    if (isMyTurnNowByPlayer && hasNoDice && bothOffsetsChosen && gameStatus === 'in_progress' && gameInfo?.type !== 'sandbox') {
+                    // 6. Не во время таймера подготовки
+                    if (isMyTurnNowByPlayer && hasNoDice && bothOffsetsChosen && gameStatus === 'in_progress' && gameInfo?.type !== 'sandbox' && preparationCountdown === null) {
                       console.log('🎲 Auto-rolling dice after server animation finished');
                       setTimeout(() => {
                         const socket = getSocket();

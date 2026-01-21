@@ -1,16 +1,21 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { Repository, In, DataSource } from 'typeorm';
 import { Article } from './article.entity';
 import { UserMaterial } from './user-material.entity';
 import { ArticleSlot } from './article-slot.entity';
 import { CourseTask } from './course-task.entity';
 import { CourseTaskProgress } from './course-task-progress.entity';
+import { User } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 import { AdminService } from '../admin/admin.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AcademyService {
+  private readonly logger = new Logger(AcademyService.name);
+
   constructor(
     @InjectRepository(Article)
     private articlesRepository: Repository<Article>,
@@ -22,9 +27,12 @@ export class AcademyService {
     private courseTasksRepository: Repository<CourseTask>,
     @InjectRepository(CourseTaskProgress)
     private courseTaskProgressRepository: Repository<CourseTaskProgress>,
+    @InjectDataSource()
+    private dataSource: DataSource,
     private usersService: UsersService,
     @Inject(forwardRef(() => AdminService))
     private adminService: AdminService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async findAll(): Promise<Article[]> {
@@ -362,44 +370,74 @@ export class AcademyService {
       throw new BadRequestException('Материал уже куплен');
     }
 
+    // Проверяем, не пытается ли автор купить свою статью
+    if (course.authorId === userId) {
+      throw new BadRequestException('Вы не можете купить свою собственную статью');
+    }
+
     const price = Number(course.price || 0);
     
-    // Если материал платный (цена > 0), проверяем баланс и списываем средства
-    if (price > 0) {
-      if (Number(user.narCoin) < price) {
-        throw new BadRequestException('Недостаточно NAR-coin');
-      }
+      // Используем транзакцию для атомарности операции
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
 
-      // Списываем средства
-      const userBalance = Number(user.narCoin);
-      const newBalance = userBalance - price;
-      await this.usersService.update(userId, { narCoin: newBalance });
+      try {
+        // Если материал платный (цена > 0), проверяем баланс и списываем средства
+        if (price > 0) {
+          // Перечитываем пользователя в рамках транзакции для проверки баланса
+          const userRepo = queryRunner.manager.getRepository(User);
+          const userInTransaction = await userRepo.findOne({ where: { id: userId } });
+          if (!userInTransaction) {
+            throw new NotFoundException('Пользователь не найден');
+          }
 
-      // Получаем процент роялти из настроек системы
-      const royaltyPercentStr = await this.adminService.getSystemSetting('course_royalty_percent', '20');
-      const royaltyPercentValue = parseInt(royaltyPercentStr) || 20;
+          if (Number(userInTransaction.narCoin) < price) {
+            throw new BadRequestException('Недостаточно NAR-coin');
+          }
 
-      // Вычисляем роялти для автора курса (если курс создан игроком)
-      if (course.authorId && course.authorId !== userId) {
-        const authorRoyalty = Math.floor(price * (royaltyPercentValue / 100));
-        const author = await this.usersService.findOne(course.authorId);
-        if (author) {
-          const authorBalance = Number(author.narCoin);
-          const newAuthorBalance = authorBalance + authorRoyalty;
-          await this.usersService.update(course.authorId, { narCoin: newAuthorBalance });
+          // Списываем средства
+          const userBalance = Number(userInTransaction.narCoin);
+          const newBalance = userBalance - price;
+          await userRepo.update({ id: userId }, { narCoin: newBalance });
+
+          // Получаем процент роялти из настроек системы
+          const royaltyPercentStr = await this.adminService.getSystemSetting('course_royalty_percent', '20');
+          const royaltyPercentValue = parseInt(royaltyPercentStr) || 20;
+
+          // Вычисляем роялти для автора курса (если курс создан игроком и автор не покупает сам)
+          if (course.authorId && course.authorId !== userId) {
+            const authorRoyalty = Math.floor(price * (royaltyPercentValue / 100));
+            const author = await userRepo.findOne({ where: { id: course.authorId } });
+            if (author) {
+              const authorBalance = Number(author.narCoin);
+              const newAuthorBalance = authorBalance + authorRoyalty;
+              await userRepo.update({ id: course.authorId }, { narCoin: newAuthorBalance });
+            }
+          }
+          // Остальные (100% - royaltyPercent) остаются в экономике проекта
         }
-      }
-      // Остальные (100% - royaltyPercent) остаются в экономике проекта
-    }
-    // Если материал бесплатный (price === 0), просто открываем доступ без списания средств
+        // Если материал бесплатный (price === 0), просто открываем доступ без списания средств
 
-    // Сохраняем покупку (или бесплатное получение)
-    const userMaterial = this.userMaterialsRepository.create({
-      userId,
-      articleId: courseId,
-      pricePaid: price,
-    });
-    await this.userMaterialsRepository.save(userMaterial);
+        // Сохраняем покупку (или бесплатное получение)
+        const userMaterialRepo = queryRunner.manager.getRepository(UserMaterial);
+        const userMaterial = userMaterialRepo.create({
+          userId,
+          articleId: courseId,
+          pricePaid: price,
+        });
+        await userMaterialRepo.save(userMaterial);
+
+        // Коммитим транзакцию
+        await queryRunner.commitTransaction();
+      } catch (error) {
+        // Откатываем транзакцию при ошибке
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        // Освобождаем query runner
+        await queryRunner.release();
+      }
   }
 
   async purchaseArticleSlot(userId: string, price: number = 100000): Promise<ArticleSlot> {
@@ -503,11 +541,50 @@ export class AcademyService {
     }
     course.verifiedBy = verifiedBy;
     course.verifiedAt = new Date();
-    return this.articlesRepository.save(course);
+    const savedCourse = await this.articlesRepository.save(course);
+
+    // Создаем уведомление автору статьи о успешной верификации
+    if (course.authorId) {
+      try {
+        await this.notificationsService.createNotification(
+          course.authorId,
+          'Верификация статьи',
+          `Ваша статья "${course.title}" прошла верификацию администратором`,
+          'success',
+        );
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при создании уведомления о верификации статьи: ${error.message}`);
+      }
+    }
+
+    return savedCourse;
   }
 
   async rejectCourse(courseId: string): Promise<void> {
+    const course = await this.articlesRepository.findOne({ where: { id: courseId } });
+    if (!course) {
+      throw new NotFoundException('Курс не найден');
+    }
+
+    // Сохраняем информацию о статье перед удалением для уведомления
+    const authorId = course.authorId;
+    const title = course.title;
+
     await this.articlesRepository.delete(courseId);
+
+    // Создаем уведомление автору статьи об отклонении
+    if (authorId) {
+      try {
+        await this.notificationsService.createNotification(
+          authorId,
+          'Верификация статьи',
+          `Ваша статья "${title}" не прошла верификацию администратором`,
+          'warning',
+        );
+      } catch (error) {
+        this.logger.error(`❌ Ошибка при создании уведомления об отклонении статьи: ${error.message}`);
+      }
+    }
   }
 
   async updateUserArticle(

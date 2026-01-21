@@ -915,7 +915,12 @@ export default function Academy() {
               return false
             }
             
-            // Фильтрация по типу нард
+            // Сначала проверяем gameMode если он установлен (приоритет)
+            if (article.gameMode) {
+              return article.gameMode === activeFilter
+            }
+            
+            // Если нет gameMode, проверяем ключевые слова в названии
             const titleLower = (article.title || '').toLowerCase()
             const isLongKeyword = titleLower.includes('длинн')
             const isShortKeyword = titleLower.includes('коротк')
@@ -925,11 +930,6 @@ export default function Academy() {
             }
             if (isShortKeyword && !isLongKeyword) {
               return activeFilter === 'short'
-            }
-            
-            // Проверяем gameMode если он установлен
-            if (article.gameMode) {
-              return article.gameMode === activeFilter
             }
             
             // Если нет gameMode и нет ключевых слов в названии, не включаем материал
@@ -944,7 +944,7 @@ export default function Academy() {
           // Если есть материалы по фильтру И все они куплены (т.е. filtered пустой), показываем сообщение
           const allPurchased = filteredByType.length > 0 && filtered.length === 0
           
-          console.log('[Academy] Rendering articles tab - total:', articles.length, 'filteredByType:', filteredByType.length, 'filtered (not purchased):', filtered.length, 'allPurchased:', allPurchased, 'activeFilter:', activeFilter)
+          console.log('[Academy] Rendering articles tab - total:', articles.length, 'filteredByType:', filteredByType.length, 'filteredByType items:', filteredByType.map(a => ({ id: a.id, title: a.title, purchased: a.purchased, gameMode: a.gameMode })), 'filtered (not purchased):', filtered.length, 'allPurchased:', allPurchased, 'activeFilter:', activeFilter)
           
           // Если все материалы куплены, показываем сообщение
           if (allPurchased) {
@@ -963,6 +963,26 @@ export default function Academy() {
                   </p>
                   <p style={{ fontSize: '14px', color: '#999' }}>
                     Ожидайте, возможно в будущем появятся новые материалы
+                  </p>
+                </div>
+              </div>
+            )
+          }
+          
+          // Если нет статей по фильтру, показываем пустую сетку
+          if (filteredByType.length === 0) {
+            return (
+              <div className="academy-grid">
+                <div style={{ 
+                  gridColumn: '1 / -1', 
+                  textAlign: 'center', 
+                  padding: '60px 20px',
+                  color: '#B6B6B6',
+                  fontSize: '16px',
+                  lineHeight: '1.6'
+                }}>
+                  <p style={{ marginBottom: '12px', fontSize: '18px', fontWeight: 500, color: '#fff' }}>
+                    Статей по этому разделу пока нет
                   </p>
                 </div>
               </div>
@@ -1043,36 +1063,109 @@ export default function Academy() {
       </div>
 
       {/* Модалка покупки */}
-      {showPurchaseModal && (
-        <div className="modal-overlay" onClick={() => setShowPurchaseModal(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">Покупка материала</h2>
-              <button className="modal-close" onClick={() => setShowPurchaseModal(null)}>×</button>
+      {showPurchaseModal && createPortal(
+        <div 
+          style={{
+            position: 'fixed',
+            top: '0px',
+            left: '0px',
+            right: '0px',
+            bottom: '0px',
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: '20px',
+            margin: '0',
+            touchAction: 'none',
+            overflow: 'hidden',
+            overscrollBehavior: 'contain',
+          }}
+          onClick={() => setShowPurchaseModal(null)}
+        >
+          <div 
+            className="modal-content" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+              position: 'relative',
+            }}
+          >
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 className="modal-title" style={{ margin: 0, color: '#FFF', fontSize: '20px', fontWeight: '600' }}>Покупка материала</h2>
+              <button 
+                className="modal-close" 
+                onClick={() => setShowPurchaseModal(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#B6B6B6',
+                  fontSize: '32px',
+                  cursor: 'pointer',
+                  lineHeight: 1,
+                  padding: 0,
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >×</button>
             </div>
             <div className="modal-body">
-              <p style={{ marginBottom: '20px', fontSize: '16px' }}>{showPurchaseModal.title}</p>
-              <p style={{ marginBottom: '20px', color: '#888' }}>
+              <p style={{ marginBottom: '20px', fontSize: '16px', color: '#FFF' }}>{showPurchaseModal.title}</p>
+              <p style={{ marginBottom: '20px', color: '#FFD700', fontSize: '18px', fontWeight: '600' }}>
                 Цена: <strong>{showPurchaseModal.price || 0} NAR</strong>
               </p>
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                 <button 
                   className="academy-card-button"
                   onClick={() => setShowPurchaseModal(null)}
-                  style={{ background: '#3a3a3a' }}
+                  style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#FFF', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer' }}
                 >
                   Отмена
                 </button>
                 <button 
                   className="academy-card-button academy-card-button-primary"
                   onClick={() => handlePurchase(showPurchaseModal)}
+                  disabled={showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price}
+                  style={{
+                    background: showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price
+                      ? 'rgba(255, 255, 255, 0.1)'
+                      : 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
+                    border: showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price
+                      ? '1px solid rgba(255, 255, 255, 0.2)'
+                      : '1px solid #C93C3D',
+                    color: '#FFF',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    cursor: showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price
+                      ? 'not-allowed'
+                      : 'pointer',
+                    fontWeight: '600',
+                    opacity: showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price ? 0.5 : 1,
+                  }}
                 >
-                  {showPurchaseModal.price === 0 ? 'Получить бесплатно' : `Купить за ${showPurchaseModal.price} NAR`}
+                  {showPurchaseModal.price === 0 
+                    ? 'Получить бесплатно' 
+                    : showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price
+                    ? 'Недостаточно средств'
+                    : `Купить за ${showPurchaseModal.price} NAR`}
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </PageLayout>

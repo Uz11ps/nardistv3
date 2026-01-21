@@ -9,7 +9,6 @@ interface SettingsState {
   matchNotifications: boolean
   economicEvents: boolean
   clanEvents: boolean
-  coordinateSystem: '1-24' | 'A-D/1-24'
 }
 
 export default function Settings() {
@@ -18,7 +17,6 @@ export default function Settings() {
     matchNotifications: true,
     economicEvents: true,
     clanEvents: true,
-    coordinateSystem: '1-24',
   })
 
   useEffect(() => {
@@ -33,7 +31,6 @@ export default function Settings() {
           matchNotifications: response.data.matchNotifications ?? true,
           economicEvents: response.data.economicEvents ?? true,
           clanEvents: response.data.clanEvents ?? true,
-          coordinateSystem: response.data.coordinateSystem ?? '1-24',
         })
       }
     } catch (error) {
@@ -108,22 +105,6 @@ export default function Settings() {
           </div>
           <div className={`settings-toggle ${settings.clanEvents ? 'active' : ''}`}>
             {settings.clanEvents && <div className="settings-toggle-dot" />}
-          </div>
-        </div>
-
-        <div className="settings-divider" />
-
-        <div 
-          className="settings-item settings-item-clickable" 
-          onClick={() => {
-            const nextVal = settings.coordinateSystem === '1-24' ? 'A-D/1-24' : '1-24';
-            updateSetting('coordinateSystem', nextVal);
-          }}
-        >
-          <span className="settings-label">Система координат</span>
-          <div className="settings-item-value">
-            <span className="settings-value-text">{settings.coordinateSystem === '1-24' ? '1-24' : 'A, B, C, D/1-24'}</span>
-            <ArrowRightIcon size={24} style={{ color: '#707579' }} />
           </div>
         </div>
 

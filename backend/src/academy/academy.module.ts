@@ -11,6 +11,7 @@ import { CourseTaskProgress } from './course-task-progress.entity';
 import { UsersModule } from '../users/users.module';
 import { AdminModule } from '../admin/admin.module';
 import { ProgressModule } from '../progress/progress.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ProgressModule } from '../progress/progress.module';
     UsersModule,
     forwardRef(() => AdminModule),
     forwardRef(() => ProgressModule),
+    NotificationsModule,
   ],
   controllers: [AcademyController],
   providers: [AcademyService, CourseTasksService],

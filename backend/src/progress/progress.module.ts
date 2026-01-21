@@ -10,11 +10,13 @@ import { ProgressionConfig } from './progression-config.entity';
 import { UsersModule } from '../users/users.module';
 import { XpCalculatorService } from './xp-calculator.service';
 import { ProgressionBranchesService } from './progression-branches.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Enhancement, UserPurchase, CityTreasury, UserRewardDebt, ProgressionConfig]),
     forwardRef(() => UsersModule),
+    NotificationsModule,
   ],
   controllers: [ProgressController],
   providers: [ProgressService, XpCalculatorService, ProgressionBranchesService],

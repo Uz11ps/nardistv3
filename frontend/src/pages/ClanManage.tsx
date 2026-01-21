@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PageLayout from '../components/PageLayout'
@@ -37,6 +38,8 @@ export default function ClanManage() {
   const [clan, setClan] = useState<Clan | null>(null)
   const [member, setMember] = useState<ClanMember | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showDisbandConfirm, setShowDisbandConfirm] = useState(false)
+  const [showDisbandFinalConfirm, setShowDisbandFinalConfirm] = useState(false)
 
   useEffect(() => {
     if (clanId) {
@@ -83,15 +86,17 @@ export default function ClanManage() {
     }
   }
 
-  const handleDisband = async () => {
-    if (!confirm('Вы уверены, что хотите распустить федерацию? Все участники потеряют федерацию, и федерация будет удалена навсегда.')) {
-      return
-    }
+  const handleDisband = () => {
+    setShowDisbandConfirm(true)
+  }
 
-    if (!confirm('Это действие необратимо! Вы действительно хотите распустить федерацию?')) {
-      return
-    }
+  const handleDisbandFirstConfirm = () => {
+    setShowDisbandConfirm(false)
+    setShowDisbandFinalConfirm(true)
+  }
 
+  const handleDisbandFinalConfirm = async () => {
+    setShowDisbandFinalConfirm(false)
     try {
       await apiClient.post(`/clans/${clanId}/disband`)
       navigate('/', { replace: true })
@@ -180,6 +185,204 @@ export default function ClanManage() {
           </div>
         </div>
       </div>
+
+      {/* Модальное окно первого подтверждения распуска федерации */}
+      {showDisbandConfirm && createPortal(
+        <div 
+          style={{
+            position: 'fixed',
+            top: '0px',
+            left: '0px',
+            right: '0px',
+            bottom: '0px',
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: '20px',
+            margin: '0',
+            touchAction: 'none',
+            overflow: 'hidden',
+            overscrollBehavior: 'contain',
+          }}
+          onClick={() => setShowDisbandConfirm(false)}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, color: '#FFF', fontSize: '20px', fontWeight: '600' }}>Подтверждение</h2>
+              <button 
+                onClick={() => setShowDisbandConfirm(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#B6B6B6',
+                  fontSize: '32px',
+                  cursor: 'pointer',
+                  lineHeight: 1,
+                  padding: 0,
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >×</button>
+            </div>
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ color: '#FFF', fontSize: '16px', lineHeight: '1.5', margin: 0 }}>
+                Вы уверены, что хотите распустить федерацию? Все участники потеряют федерацию, и федерация будет удалена навсегда.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={() => setShowDisbandConfirm(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFF',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                }}
+              >
+                Отмена
+              </button>
+              <button 
+                onClick={handleDisbandFirstConfirm}
+                style={{
+                  background: 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
+                  border: '1px solid #C93C3D',
+                  color: '#FFF',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                }}
+              >
+                Продолжить
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Модальное окно финального подтверждения распуска федерации */}
+      {showDisbandFinalConfirm && createPortal(
+        <div 
+          style={{
+            position: 'fixed',
+            top: '0px',
+            left: '0px',
+            right: '0px',
+            bottom: '0px',
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: '20px',
+            margin: '0',
+            touchAction: 'none',
+            overflow: 'hidden',
+            overscrollBehavior: 'contain',
+          }}
+          onClick={() => setShowDisbandFinalConfirm(false)}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              border: '1px solid rgba(255, 0, 0, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, color: '#FF4444', fontSize: '20px', fontWeight: '600' }}>Внимание!</h2>
+              <button 
+                onClick={() => setShowDisbandFinalConfirm(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#B6B6B6',
+                  fontSize: '32px',
+                  cursor: 'pointer',
+                  lineHeight: 1,
+                  padding: 0,
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >×</button>
+            </div>
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ color: '#FFF', fontSize: '16px', lineHeight: '1.5', margin: 0, fontWeight: '600' }}>
+                Это действие необратимо! Вы действительно хотите распустить федерацию?
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={() => setShowDisbandFinalConfirm(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFF',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                }}
+              >
+                Отмена
+              </button>
+              <button 
+                onClick={handleDisbandFinalConfirm}
+                style={{
+                  background: 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
+                  border: '1px solid #C93C3D',
+                  color: '#FFF',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                }}
+              >
+                Распустить
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </PageLayout>
   )
 }

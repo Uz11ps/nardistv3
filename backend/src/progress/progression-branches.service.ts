@@ -39,6 +39,7 @@ export class ProgressionBranchesService implements OnModuleInit {
       reductionCap: 0.08, // 8%
       passiveK: 0.015,
       passiveSpCap: 40,
+      maxSp: 10,
     },
     energyBranch: {
       baseMax: 100,
@@ -50,6 +51,7 @@ export class ProgressionBranchesService implements OnModuleInit {
       regenStep1K: 1.0,
       regenStep2Sp: 20,
       regenStep2K: 0.5,
+      maxSp: 10,
       refill: {
         amount: 50,
         baseCostNar: 120,
@@ -66,6 +68,7 @@ export class ProgressionBranchesService implements OnModuleInit {
       regenSpStep: 10,
       lifeLossProtectCap: 0.25, // 25%
       lifeLossProtectSpCap: 10,
+      maxSp: 10,
       refill: {
         amount: 5,
         baseCostNar: 200,
@@ -75,6 +78,7 @@ export class ProgressionBranchesService implements OnModuleInit {
     powerBranch: {
       weightBase: 10,
       weightK: 2.5,
+      maxSp: 10,
     },
     caps: {
       gearXpMultCap: 1.50,
@@ -154,6 +158,24 @@ export class ProgressionBranchesService implements OnModuleInit {
    */
   getMaxLevel(): number {
     return this.config.maxLevel || 50;
+  }
+
+  /**
+   * Получить максимальный уровень прокачки для ветки
+   */
+  getMaxSp(type: EnhancementType): number {
+    switch (type) {
+      case EnhancementType.ECONOMY:
+        return this.config.economyBranch.maxSp || 10;
+      case EnhancementType.ENERGY:
+        return this.config.energyBranch.maxSp || 10;
+      case EnhancementType.LIVES:
+        return this.config.livesBranch.maxSp || 10;
+      case EnhancementType.POWER:
+        return this.config.powerBranch.maxSp || 10;
+      default:
+        return 10;
+    }
   }
 
   /**

@@ -3,10 +3,14 @@ import { ProgressService } from './progress.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { EnhancementType } from './enhancement.entity';
+import { ProgressionBranchesService } from './progression-branches.service';
 
 @Controller('progress')
 export class ProgressController {
-  constructor(private readonly progressService: ProgressService) {}
+  constructor(
+    private readonly progressService: ProgressService,
+    private readonly branchesService: ProgressionBranchesService,
+  ) {}
 
   @Get('enhancements')
   @UseGuards(JwtAuthGuard)

@@ -326,17 +326,24 @@ export default function Inventory() {
                   <div className="inventory-other-status">
                     {hasPremium ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>Активна</span>
-                        {subscriptionDetails?.expiresAt && (
-                          <span style={{ color: '#B6B6B6', fontSize: '12px' }}>
-                            До {new Date(subscriptionDetails.expiresAt).toLocaleDateString('ru-RU', { 
-                              day: 'numeric', 
-                              month: 'long', 
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
+                        {subscriptionDetails?.expiresAt ? (
+                          <>
+                            <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>
+                              Активна до {new Date(subscriptionDetails.expiresAt).toLocaleDateString('ru-RU', { 
+                                day: 'numeric', 
+                                month: 'long', 
+                                year: 'numeric'
+                              })}
+                            </span>
+                            <span style={{ color: '#B6B6B6', fontSize: '12px' }}>
+                              {new Date(subscriptionDetails.expiresAt).toLocaleTimeString('ru-RU', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </>
+                        ) : (
+                          <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>Активна</span>
                         )}
                       </div>
                     ) : (
