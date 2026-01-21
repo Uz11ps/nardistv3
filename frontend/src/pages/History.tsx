@@ -407,30 +407,22 @@ export default function History() {
       {/* Модальное окно анализа */}
       {analysisData && createPortal(
         <div 
-          className="analysis-modal-overlay" 
           onClick={() => { setAnalysisData(null); setSelectedAnalysisMoveIndex(null); }}
           style={{
             position: 'fixed',
-            top: '0px',
-            left: '0px',
-            right: '0px',
-            bottom: '0px',
-            width: '100vw',
-            height: '100vh',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             background: 'rgba(0, 0, 0, 0.7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 2147483647,
+            zIndex: 10000,
             padding: '20px',
-            margin: '0',
-            touchAction: 'none',
-            overflow: 'hidden',
-            overscrollBehavior: 'contain',
-            boxSizing: 'border-box',
           }}
         >
-          <div className="modal analysis-modal-v2" onClick={(e) => e.stopPropagation()}>
+          <div className="analysis-modal-v2" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '90vh', overflow: 'auto' }}>
             <div className="analysis-header-v2">
               <div className="analysis-title-row">
                 <h2>Analysis</h2>

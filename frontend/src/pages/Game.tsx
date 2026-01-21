@@ -55,9 +55,6 @@ export default function Game() {
   const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight)
   const animationFrameRef = useRef<number | null>(null)
   const timerIntervalRef = useRef<number | null>(null)
-  const [preparationCountdown, setPreparationCountdown] = useState<number | null>(null) // Отсчет подготовки (5 секунд)
-  const preparationCountdownRef = useRef<number | null>(null)
-  const bothOffsetsChosenRef = useRef<boolean>(false) // Отслеживаем, были ли оба смещения выбраны ранее
   const [offsetSelectionTimer, setOffsetSelectionTimer] = useState<number | null>(null) // Таймер выбора смещения (15 секунд)
   const offsetSelectionTimerRef = useRef<number | null>(null)
   const offsetSelectionTimerIntervalRef = useRef<number | null>(null)
@@ -157,27 +154,6 @@ export default function Game() {
     loadGameRef.current = loadGameFunc
   }, [gameId, user?.id])
 
-  useEffect(() => {
-    if (preparationCountdown !== null && preparationCountdown > 0) {
-      const interval = setInterval(() => {
-        setPreparationCountdown((prev) => {
-          if (prev === null || prev <= 1) {
-            preparationCountdownRef.current = null
-            // После завершения отсчета загружаем игру
-            if (loadGameRef.current) {
-              loadGameRef.current()
-            }
-            return null
-          }
-          const newValue = prev - 1
-          preparationCountdownRef.current = newValue
-          return newValue
-        })
-      }, 1000)
-
-      return () => clearInterval(interval)
-    }
-  }, [preparationCountdown])
 
   // Таймер выбора смещения (15 секунд) - если не выбрано, матч отменяется
   useEffect(() => {
@@ -482,9 +458,6 @@ export default function Game() {
       setTotalTimeRemaining({ player1: 60, player2: 60 })
       setIsInOvertime(false)
       setMoveTimer(15)
-      setPreparationCountdown(null)
-      preparationCountdownRef.current = null
-      // ВАЖНО: НЕ сбрасываем bothOffsetsChosenRef здесь, чтобы таймер подготовки не запускался снова
       
       // Очищаем таймеры
       if (timerRef.current) {
@@ -824,10 +797,6 @@ export default function Game() {
       
       setMyOffset(myCurrentOffset)
       setOpponentOffset(opponentCurrentOffset)
-      
-      // Инициализируем ref для отслеживания выбора смещений
-      const bothOffsetsChosenOnLoad = game.p1OffsetChosenAt && game.p2OffsetChosenAt
-      bothOffsetsChosenRef.current = bothOffsetsChosenOnLoad
       
       // Показываем модальное окно выбора смещения ТОЛЬКО если смещение еще не было выбрано
       // Проверяем p1OffsetChosenAt и p2OffsetChosenAt - если они null, значит смещение еще не выбрано
@@ -1193,9 +1162,6 @@ export default function Game() {
         setTotalTimeRemaining({ player1: 60, player2: 60 })
         setIsInOvertime(false)
         setMoveTimer(15)
-        setPreparationCountdown(null)
-        preparationCountdownRef.current = null
-        // ВАЖНО: НЕ сбрасываем bothOffsetsChosenRef здесь, чтобы таймер подготовки не запускался снова
         
         // Очищаем таймеры
         if (timerRef.current) {
@@ -1350,41 +1316,6 @@ export default function Game() {
       
       // Проверяем, выбрали ли оба игрока смещение (для всех типов игр, включая ботов)
       const bothOffsetsChosen = data.p1OffsetChosenAt && data.p2OffsetChosenAt
-      
-      // ВАЖНО: Проверяем, были ли смещения выбраны ранее (до этого обновления)
-      const wasBothOffsetsChosenBefore = bothOffsetsChosenRef.current
-      const bothOffsetsJustChosen = bothOffsetsChosen && !wasBothOffsetsChosenBefore
-
-      // Если оба игрока выбрали смещение, но игра еще в WAITING - запускаем отсчет подготовки
-      // Это работает для ВСЕХ типов игр: vs_player, vs_bot, tournament
-      // Проверяем также, что игра еще не началась (нет кубиков)
-      const hasNoDice = !data.gameState?.dice || (Array.isArray(data.gameState.dice) && data.gameState.dice.length === 0)
-      
-      // ВАЖНО: Таймер подготовки должен запускаться ТОЛЬКО ОДИН РАЗ:
-      // 1. Когда оба игрока выбрали смещение в первый раз (bothOffsetsJustChosen)
-      // 2. Таймер еще не запущен (preparationCountdown === null)
-      // 3. Нет кубиков (hasNoDice) - игра еще не началась
-      // 4. Статус игры waiting или только что перешел в in_progress БЕЗ кубиков
-      // Это гарантирует, что таймер запустится ДО того, как игра начнется и кубики будут брошены
-      // И НЕ запустится после каждого хода
-      const isGameStarting = (newStatus === 'waiting' || (newStatus === 'in_progress' && hasNoDice))
-      if (bothOffsetsJustChosen && preparationCountdown === null && hasNoDice && isGameStarting) {
-        console.log('⏱️ Запускаем отсчет подготовки к игре (5 секунд) для типа:', data.type, {
-          newStatus,
-          hasNoDice,
-          isGameStarting,
-          p1OffsetChosenAt: data.p1OffsetChosenAt,
-          p2OffsetChosenAt: data.p2OffsetChosenAt,
-          bothOffsetsJustChosen
-        })
-        setPreparationCountdown(5)
-        preparationCountdownRef.current = 5
-        // ВАЖНО: Устанавливаем ref ТОЛЬКО после запуска таймера, чтобы предотвратить повторный запуск
-        bothOffsetsChosenRef.current = true
-      } else if (bothOffsetsChosen && !bothOffsetsJustChosen) {
-        // Если оба смещения уже были выбраны ранее, просто обновляем ref (но не запускаем таймер)
-        bothOffsetsChosenRef.current = true
-      }
 
       // Таймер и броски кубиков запускаются ТОЛЬКО после выбора смещения обоими игроками
       if (isMyTurnNow && !wasMyTurn && bothOffsetsChosen) {
@@ -1394,8 +1325,7 @@ export default function Game() {
       // Если это начало нашего хода и кубиков нет - бросаем их автоматически
       // НО ТОЛЬКО если оба игрока выбрали смещение
       // НО НЕ для sandbox игр - там пользователь сам управляет всем
-      // НО НЕ во время таймера подготовки (preparationCountdown)
-      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && gameInfo?.type !== 'sandbox' && bothOffsetsChosen && preparationCountdown === null) {
+      if (newStatus === 'in_progress' && isMyTurnNow && !wasMyTurn && !formattedDice && gameInfo?.type !== 'sandbox' && bothOffsetsChosen) {
         setTimeout(() => {
           const socket = getSocket()
           if (socket) {
@@ -1567,8 +1497,7 @@ export default function Game() {
         // Также проверяем, что ход переключился на нашего игрока
         const isNowMyTurn = data.currentPlayer === (gameInfo?.player1Id === user?.id ? 0 : 1);
         
-        // Не бросаем кубики во время таймера подготовки
-        if (hasNoDice && currentPlayerChanged && isNowMyTurn && bothOffsetsChosen && data.status === 'in_progress' && data.type !== 'sandbox' && preparationCountdown === null) {
+        if (hasNoDice && currentPlayerChanged && isNowMyTurn && bothOffsetsChosen && data.status === 'in_progress' && data.type !== 'sandbox') {
           console.log('🎲 Auto-rolling dice after turn change in move_made:', { 
             wasMyTurn, 
             isMyTurnNow, 
@@ -1618,8 +1547,7 @@ export default function Game() {
         setMoveTimer(15)
         
         const hasServerMoves = data.serverMoves && data.serverMoves.length > 0;
-        // Не бросаем кубики во время таймера подготовки
-        if (!formattedDice && data.status === 'in_progress' && data.type !== 'sandbox' && !hasServerMoves && preparationCountdown === null) {
+        if (!formattedDice && data.status === 'in_progress' && data.type !== 'sandbox' && !hasServerMoves) {
           // Автоматически бросаем кубики для следующего игрока (как в боте)
           setTimeout(() => {
             const socket = getSocket()
@@ -1917,8 +1845,7 @@ export default function Game() {
               // Небольшая задержка для обновления состояния
             setTimeout(() => {
                 const socket = getSocket()
-                // Не бросаем кубики во время таймера подготовки
-                if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1) && data.game.type !== 'sandbox' && preparationCountdown === null) {
+                if (socket && data.game.currentPlayer === (data.game.player1Id === user?.id ? 0 : 1) && data.game.type !== 'sandbox') {
                   // Если это наш ход, бросаем кубики (но не для sandbox)
                   socket.emit('roll_dice', { gameId })
               }
@@ -3329,16 +3256,6 @@ export default function Game() {
             </div>
           )}
 
-          {/* Экран подготовки к игре (отсчет 5 секунд после выбора смещения) */}
-          {preparationCountdown !== null && preparationCountdown > 0 && (
-            <div className="game-preparation-screen">
-              <div className="preparation-content">
-                <div className="preparation-title">Подготовка к игре</div>
-                <div className="preparation-countdown">{preparationCountdown}</div>
-                <div className="preparation-message">Генерация ходов...</div>
-                </div>
-                </div>
-          )}
 
           {/* Доска */}
           {(gameStatus === 'in_progress' || gameStatus === 'finished' || isSandbox) && (
@@ -3462,8 +3379,7 @@ export default function Game() {
                     // 3. Оба игрока выбрали смещение (bothOffsetsChosen)
                     // 4. Игра в процессе (in_progress)
                     // 5. Не sandbox игра
-                    // 6. Не во время таймера подготовки
-                    if (isMyTurnNowByPlayer && hasNoDice && bothOffsetsChosen && gameStatus === 'in_progress' && gameInfo?.type !== 'sandbox' && preparationCountdown === null) {
+                    if (isMyTurnNowByPlayer && hasNoDice && bothOffsetsChosen && gameStatus === 'in_progress' && gameInfo?.type !== 'sandbox') {
                       console.log('🎲 Auto-rolling dice after server animation finished');
                       setTimeout(() => {
                         const socket = getSocket();

@@ -1068,28 +1068,20 @@ export default function Academy() {
         <div 
           style={{
             position: 'fixed',
-            top: '0px',
-            left: '0px',
-            right: '0px',
-            bottom: '0px',
-            width: '100vw',
-            height: '100vh',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             background: 'rgba(0, 0, 0, 0.7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 2147483647,
+            zIndex: 10000,
             padding: '20px',
-            margin: '0',
-            touchAction: 'none',
-            overflow: 'hidden',
-            overscrollBehavior: 'contain',
-            boxSizing: 'border-box',
           }}
           onClick={() => setShowPurchaseModal(null)}
         >
           <div 
-            className="modal-content" 
             onClick={(e) => e.stopPropagation()}
             style={{
               background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
@@ -1099,71 +1091,60 @@ export default function Academy() {
               width: '100%',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-              position: 'relative',
             }}
           >
-            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 className="modal-title" style={{ margin: 0, color: '#FFF', fontSize: '20px', fontWeight: '600' }}>Покупка материала</h2>
-              <button 
-                className="modal-close" 
+            <h3 style={{ color: '#FFF', fontSize: '20px', fontWeight: '600', marginTop: 0, marginBottom: '16px' }}>
+              Покупка материала
+            </h3>
+            <p style={{ color: '#B6B6B6', fontSize: '16px', marginBottom: '8px' }}>
+              {showPurchaseModal.title}
+            </p>
+            <p style={{ color: '#FFD700', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+              Цена: {showPurchaseModal.price || 0} NAR
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
                 onClick={() => setShowPurchaseModal(null)}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#B6B6B6',
-                  fontSize: '32px',
+                  flex: 1,
+                  padding: '12px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#FFF',
+                  fontSize: '16px',
+                  fontWeight: '500',
                   cursor: 'pointer',
-                  lineHeight: 1,
-                  padding: 0,
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                 }}
-              >×</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ marginBottom: '20px', fontSize: '16px', color: '#FFF' }}>{showPurchaseModal.title}</p>
-              <p style={{ marginBottom: '20px', color: '#FFD700', fontSize: '18px', fontWeight: '600' }}>
-                Цена: <strong>{showPurchaseModal.price || 0} NAR</strong>
-              </p>
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button 
-                  className="academy-card-button"
-                  onClick={() => setShowPurchaseModal(null)}
-                  style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#FFF', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer' }}
-                >
-                  Отмена
-                </button>
-                <button 
-                  className="academy-card-button academy-card-button-primary"
-                  onClick={() => handlePurchase(showPurchaseModal)}
-                  disabled={showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price}
-                  style={{
-                    background: showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price
-                      ? 'rgba(255, 255, 255, 0.1)'
-                      : 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
-                    border: showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price
-                      ? '1px solid rgba(255, 255, 255, 0.2)'
-                      : '1px solid #C93C3D',
-                    color: '#FFF',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    cursor: showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price
-                      ? 'not-allowed'
-                      : 'pointer',
-                    fontWeight: '600',
-                    opacity: showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price ? 0.5 : 1,
-                  }}
-                >
-                  {showPurchaseModal.price === 0 
-                    ? 'Получить бесплатно' 
-                    : showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price
-                    ? 'Недостаточно средств'
-                    : `Купить за ${showPurchaseModal.price} NAR`}
-                </button>
-              </div>
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => handlePurchase(showPurchaseModal)}
+                disabled={showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: (showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price)
+                    ? 'rgba(255, 255, 255, 0.1)'
+                    : 'linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%)',
+                  border: (showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price)
+                    ? '1px solid rgba(255, 255, 255, 0.2)'
+                    : '1px solid #C93C3D',
+                  borderRadius: '8px',
+                  color: '#FFF',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: (showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price) ? 'not-allowed' : 'pointer',
+                  opacity: (showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price) ? 0.5 : 1,
+                }}
+              >
+                {showPurchaseModal.price === 0 
+                  ? 'Получить бесплатно' 
+                  : (showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price)
+                  ? 'Недостаточно средств'
+                  : `Купить за ${showPurchaseModal.price} NAR`}
+              </button>
             </div>
           </div>
         </div>,
