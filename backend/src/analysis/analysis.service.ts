@@ -1,7 +1,7 @@
 import { Injectable, Inject, forwardRef, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Game } from '../games/game.entity';
+import { Game, GameMode } from '../games/game.entity';
 import { GameMove } from '../games/game-move.entity';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { BackgammonEngine } from '../games/game-engine/backgammon-engine';
@@ -105,7 +105,9 @@ export class AnalysisService {
       relations: ['player'],
     });
 
-    const engine = game.mode === 'short' ? this.backgammonEngine : this.longBackgammonEngine;
+    // Определяем правильный движок в зависимости от режима игры
+    const isShortMode = game.mode === 'short' || game.mode === GameMode.SHORT;
+    const engine = isShortMode ? this.backgammonEngine : this.longBackgammonEngine;
     const errors: MoveAnalysis[] = [];
     const allMovesAnalysis: MoveAnalysis[] = [];
 
@@ -120,10 +122,20 @@ export class AnalysisService {
       const gameStateBefore = move.gameStateBefore;
       const gameStateAfter = move.gameStateAfter;
 
+      // Определяем, является ли это первым ходом игры
+      // Для длинных нард: первые 2 хода (по одному от каждого игрока)
+      // Для коротких нард: первый ход
+      const isFirstMoveOfGame = isShortMode 
+        ? move.moveNumber === 1 
+        : move.moveNumber <= 2;
+
       // Находим все возможные ходы для этой позиции, чтобы показать альтернативы
       // Используем состояние игры как seed для детерминированного перемешивания
+      // Для длинных нард передаем isFirstMoveOfGame для правильной обработки правил головы
       const stateSeed = JSON.stringify(gameStateBefore.points) + JSON.stringify(move.dice) + gameStateBefore.currentPlayer;
-      const allPossibleMovesSequences = engine.getAllValidMoves(gameStateBefore, move.dice, false, stateSeed);
+      const allPossibleMovesSequences = isShortMode
+        ? engine.getAllValidMoves(gameStateBefore, move.dice)
+        : engine.getAllValidMoves(gameStateBefore, move.dice, isFirstMoveOfGame, stateSeed);
       const evaluatedAlternatives: Array<{
         moves: Array<{ from: number; to: number; die: number }>;
         equity: number;
@@ -139,42 +151,78 @@ export class AnalysisService {
           moves: mSeq,
           equity: equity,
         };
-      }).sort((a, b) => b.equity - a.equity).slice(0, 6);
+      }).sort((a, b) => b.equity - a.equity);
+      
+      // Группируем по equity и оставляем только уникальные значения equity (берем первый вариант из каждой группы)
+      const uniqueEquityAlternatives: Array<{
+        moves: Array<{ from: number; to: number; die: number }>;
+        equity: number;
+        isCurrent?: boolean;
+        diff?: number;
+      }> = [];
+      const seenEquities = new Set<number>();
+      
+      for (const alt of evaluatedAlternatives) {
+        // Округляем equity до 3 знаков для сравнения
+        const equityKey = Math.round(alt.equity * 1000) / 1000;
+        if (!seenEquities.has(equityKey)) {
+          seenEquities.add(equityKey);
+          uniqueEquityAlternatives.push(alt);
+          // Ограничиваем максимум 6 уникальными вариантами
+          if (uniqueEquityAlternatives.length >= 6) break;
+        }
+      }
+      
+      const evaluatedAlternativesFiltered = uniqueEquityAlternatives;
 
       // Оцениваем позицию до и после хода
       const equityBefore = this.evaluatePosition(engine, gameStateBefore, userId === game.player1Id ? 0 : 1, game.mode);
       const equityAfter = this.evaluatePosition(engine, gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode);
       
       const equity = equityAfter;
-      const bestAlternative = evaluatedAlternatives[0];
+      const bestAlternative = evaluatedAlternativesFiltered[0];
       const bestEquity = bestAlternative ? bestAlternative.equity : equityBefore;
       
       // Добавляем текущий ход в альтернативы если его там нет (для сравнения)
-      const currentMoveInAlts = evaluatedAlternatives.find(alt => 
+      const currentMoveInAlts = evaluatedAlternativesFiltered.find(alt => 
         JSON.stringify(alt.moves) === JSON.stringify(move.moves)
       );
       
       if (!currentMoveInAlts) {
-        evaluatedAlternatives.push({
+        evaluatedAlternativesFiltered.push({
           moves: move.moves as any,
           equity: equity,
           isCurrent: true
         });
-        evaluatedAlternatives.sort((a, b) => b.equity - a.equity);
+        evaluatedAlternativesFiltered.sort((a, b) => b.equity - a.equity);
+        // После добавления текущего хода, снова фильтруем по уникальным equity
+        const reFiltered: typeof evaluatedAlternativesFiltered = [];
+        const reSeenEquities = new Set<number>();
+        for (const alt of evaluatedAlternativesFiltered) {
+          const equityKey = Math.round(alt.equity * 1000) / 1000;
+          if (!reSeenEquities.has(equityKey) || alt.isCurrent) {
+            reSeenEquities.add(equityKey);
+            reFiltered.push(alt);
+            if (reFiltered.length >= 6 && !alt.isCurrent) break;
+          }
+        }
+        evaluatedAlternativesFiltered.length = 0;
+        evaluatedAlternativesFiltered.push(...reFiltered);
+        evaluatedAlternativesFiltered.sort((a, b) => b.equity - a.equity);
       } else {
         currentMoveInAlts.isCurrent = true;
       }
 
       // Расчитываем разницу (diff) для каждой альтернативы относительно лучшей
-      const maxEquity = evaluatedAlternatives[0]?.equity || 0;
-      evaluatedAlternatives.forEach(alt => {
+      const maxEquity = evaluatedAlternativesFiltered[0]?.equity || 0;
+      evaluatedAlternativesFiltered.forEach(alt => {
         alt.diff = alt.equity - maxEquity;
       });
 
       const missedEquity = bestEquity - equity;
 
       // Определяем, является ли текущий ход лучшим (diff === 0 или очень близок, погрешность < 0.001)
-      const currentMoveDiff = evaluatedAlternatives.find(alt => alt.isCurrent)?.diff || 999;
+      const currentMoveDiff = evaluatedAlternativesFiltered.find(alt => alt.isCurrent)?.diff || 999;
       const isBestMove = Math.abs(currentMoveDiff) < 0.001;
 
       // Рассчитываем вероятности выигрыша на основе equity и позиционных факторов
@@ -196,14 +244,20 @@ export class AnalysisService {
 
       // Определяем тип ошибки на основе комбинации упущенной equity и качества хода
       // Используем более сложную систему оценки, как в шахматах
+      // НЕ показываем ошибки на первых ходах - там все ходы примерно равны
       let isError = false;
       let errorType: 'blunder' | 'mistake' | 'inaccuracy' | undefined;
       let errorDescription: string | undefined;
 
+      // Пропускаем анализ ошибок для первых ходов игры
+      // Для коротких нард: первый ход (moveNumber === 1)
+      // Для длинных нард: первые 2 хода (moveNumber <= 2)
+      const shouldAnalyzeErrors = !isFirstMoveOfGame && isUserMove;
+
       // Комбинированная оценка: equity + качество хода
       const combinedScore = missedEquity * 0.7 + (1 - moveQuality) * 0.3;
 
-      if (combinedScore > 0.12 || (missedEquity > 0.10 && moveQuality < 0.3)) {
+      if (shouldAnalyzeErrors && (combinedScore > 0.12 || (missedEquity > 0.10 && moveQuality < 0.3))) {
         isError = true;
         errorType = 'blunder';
         const reasons = this.getMoveQualityReasons(
@@ -216,7 +270,7 @@ export class AnalysisService {
           game.mode
         );
         errorDescription = `Грубая ошибка${reasons ? ': ' + reasons : ''}`;
-      } else if (combinedScore > 0.06 || (missedEquity > 0.05 && moveQuality < 0.5)) {
+      } else if (shouldAnalyzeErrors && (combinedScore > 0.06 || (missedEquity > 0.05 && moveQuality < 0.5))) {
         isError = true;
         errorType = 'mistake';
         const reasons = this.getMoveQualityReasons(
@@ -229,7 +283,7 @@ export class AnalysisService {
           game.mode
         );
         errorDescription = `Ошибка${reasons ? ': ' + reasons : ''}`;
-      } else if (combinedScore > 0.03 || (missedEquity > 0.02 && moveQuality < 0.7)) {
+      } else if (shouldAnalyzeErrors && (combinedScore > 0.03 || (missedEquity > 0.02 && moveQuality < 0.7))) {
         isError = true;
         errorType = 'inaccuracy';
         errorDescription = `Неточность`;
@@ -255,7 +309,7 @@ export class AnalysisService {
       };
 
       // Добавляем качество к альтернативам
-      evaluatedAlternatives.forEach((alt: any) => {
+      evaluatedAlternativesFiltered.forEach((alt: any) => {
         if (alt.moves) {
           // Упрощенная оценка качества альтернативы
           alt.quality = 0.7; // Базовое качество, можно улучшить
@@ -276,7 +330,7 @@ export class AnalysisService {
         moveQuality,
         positionType,
         moveMetrics,
-        alternatives: evaluatedAlternatives,
+        alternatives: evaluatedAlternativesFiltered,
       };
 
       allMovesAnalysis.push(analysis);
