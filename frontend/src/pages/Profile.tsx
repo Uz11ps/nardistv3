@@ -408,7 +408,7 @@ export default function Profile() {
                             setShowDetailModal(true)
                           }}
                         >
-                          ⓘ
+                          I
                         </button>
                       </div>
                       <div className="profile-enhancement-progress">

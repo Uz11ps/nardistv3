@@ -288,7 +288,7 @@
 /* Body */
 .page-layout-body {
   flex: 1;
-  padding: 20px 16px 90px; /* Отступ сверху от header, увеличен padding-bottom для нижней панели навигации (70px высота + 20px отступ) */
+  padding: 20px 16px calc(90px + env(safe-area-inset-bottom)); /* Отступ сверху от header, увеличен padding-bottom для нижней панели навигации (70px высота + 20px отступ) */
   position: relative;
   z-index: 10; /* Выше чем bottom-nav (z-index: 1) */
   box-sizing: border-box;

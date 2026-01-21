@@ -299,6 +299,17 @@
   letter-spacing: -0.4px;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* Новый дизайн V2 */
 .home-header-v2 {
   display: flex;

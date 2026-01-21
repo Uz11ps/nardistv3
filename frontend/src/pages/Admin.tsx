@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import apiClient, { getImageUrl } from '../api/client'
 import BackgammonBoard from '../components/BackgammonBoard'
+import RichTextEditor from '../components/RichTextEditor'
 import { formatDateTime, formatDateOnly } from '../utils/dateUtils'
 import { utcToLocalDateTime, localDateTimeToUtc } from '../utils/datetimeLocalUtils'
 import { CoinIcon, DiamondIcon } from '../components/Icons'
@@ -282,7 +283,6 @@ export default function Admin() {
     type: 'course', 
     isPaid: false, 
     price: 0,
-    rewards: '', // JSON строка с наградами (может быть несколько)
     gameMode: 'long',
   })
   const [login, setLogin] = useState('')
@@ -2468,10 +2468,9 @@ export default function Admin() {
               </div>
               <div className="form-group">
                 <label>Содержание</label>
-                <textarea
+                <RichTextEditor
                   value={newArticle.content}
-                  onChange={(e) => setNewArticle({ ...newArticle, content: e.target.value })}
-                  rows={10}
+                  onChange={(content) => setNewArticle({ ...newArticle, content })}
                   placeholder="Текст материала..."
                 />
               </div>
@@ -2507,33 +2506,13 @@ export default function Admin() {
                   />
                 </div>
               )}
-              <div className="form-group">
-                <label>Награды (JSON, может быть несколько, например: [{'{"narCoin": 1000, "xp": 500}'}, {'{"skinId": "uuid", "narCoin": 500}'}])</label>
-                <textarea
-                  value={newArticle.rewards}
-                  onChange={(e) => setNewArticle({ ...newArticle, rewards: e.target.value })}
-                  rows={4}
-                  placeholder='[{"narCoin": 1000, "xp": 500}, {"skinId": "uuid", "narCoin": 500}]'
-                  style={{ width: '100%', padding: '8px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '4px', color: '#fff', fontFamily: 'monospace' }}
-                />
-              </div>
               <button onClick={async () => {
                 try {
-                  let rewards = null;
-                  if (newArticle.rewards && newArticle.rewards.trim()) {
-                    try {
-                      rewards = JSON.parse(newArticle.rewards);
-                    } catch (e) {
-                      alert('Ошибка в формате наград. Используйте валидный JSON.');
-                      return;
-                    }
-                  }
-
                   await apiClient.post('/admin/academy/create', {
                     ...newArticle,
                     authorId: null, // null означает, что это материал от админа
                     isVerified: true, // Материалы от админов сразу верифицированы (и курсы, и статьи)
-                    rewards: rewards, // Награды (может быть массив)
+                    rewards: null, // Награды убраны - они только в онбординге
                   })
                   alert('Курс создан!')
                   setNewArticle({ 
@@ -2542,7 +2521,6 @@ export default function Admin() {
                     type: 'course', 
                     isPaid: false, 
                     price: 0,
-                    rewards: '',
                     gameMode: 'long',
                   })
                   // Перезагружаем данные
@@ -3074,12 +3052,11 @@ export default function Admin() {
                   </div>
 
                   <div className="form-group" style={{ marginBottom: '16px' }}>
-                    <label style={{ color: '#B6B6B6', display: 'block', marginBottom: '8px' }}>Контент (HTML)</label>
-                    <textarea
+                    <label style={{ color: '#B6B6B6', display: 'block', marginBottom: '8px' }}>Контент</label>
+                    <RichTextEditor
                       value={editingArticle.content}
-                      onChange={(e) => setEditingArticle({ ...editingArticle, content: e.target.value })}
-                      rows={10}
-                      style={{ width: '100%', padding: '10px', background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '8px', color: '#FFF', fontFamily: 'monospace' }}
+                      onChange={(content) => setEditingArticle({ ...editingArticle, content })}
+                      placeholder="Текст материала..."
                     />
                   </div>
 
@@ -4286,41 +4263,79 @@ export default function Admin() {
                   {selectedUser.members && selectedUser.members.length > 0 && (
                     <div className="mt-3">
                       <h4>Участники федерации:</h4>
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>ID пользователя</th>
-                            <th>Роль</th>
-                            <th>Действия</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedUser.members.map((member: any) => (
-                            <tr key={member.id}>
-                              <td>{member.userId?.substring(0, 8)}...</td>
-                              <td>{member.role}</td>
-                              <td>
-                                <button
-                                  className="btn btn-danger btn-sm"
-                                  onClick={() => {
-                                    if (confirm('Удалить участника из федерации?')) {
-                                      apiClient.delete(`/admin/clans/${selectedUser.id}/members/${member.userId}`).then(() => {
-                                        alert('Участник удален')
-                                        loadStats()
-                                        setSelectedUser(null)
-                                      }).catch((err) => {
-                                        alert('Ошибка: ' + (err.response?.data?.message || err.message))
-                                      })
-                                    }
-                                  }}
-                                >
-                                  Удалить
-                                </button>
-                              </td>
+                      <div className="admin-table-container">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Ник</th>
+                              <th>Уровень</th>
+                              <th>Роль</th>
+                              <th>Вклад</th>
+                              <th>Статус</th>
+                              <th>Действия</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {selectedUser.members.map((member: any) => {
+                              const user = member.user || {}
+                              const nickname = user.nickname || user.username || 'Без имени'
+                              const level = user.level || 1
+                              const roleName = member.role === 'leader' ? 'Глава' : member.role === 'officer' ? 'Офицер' : 'Участник'
+                              const contribution = Number(member.contribution || 0)
+                              const isOnline = member.isOnline || false
+                              
+                              return (
+                                <tr key={member.id}>
+                                  <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      {user.avatarUrl && (
+                                        <img 
+                                          src={user.avatarUrl} 
+                                          alt={nickname}
+                                          style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
+                                        />
+                                      )}
+                                      <span>{nickname}</span>
+                                    </div>
+                                  </td>
+                                  <td>Lvl {level}</td>
+                                  <td>{roleName}</td>
+                                  <td>{contribution.toLocaleString()} NAR</td>
+                                  <td>
+                                    <span style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '4px',
+                                      fontSize: '12px',
+                                      background: isOnline ? '#4CAF50' : '#666',
+                                      color: '#FFF'
+                                    }}>
+                                      {isOnline ? 'Онлайн' : 'Офлайн'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="btn btn-danger btn-sm"
+                                      onClick={() => {
+                                        if (confirm('Удалить участника из федерации?')) {
+                                          apiClient.delete(`/admin/clans/${selectedUser.id}/members/${member.userId}`).then(() => {
+                                            alert('Участник удален')
+                                            loadStats()
+                                            setSelectedUser(null)
+                                          }).catch((err) => {
+                                            alert('Ошибка: ' + (err.response?.data?.message || err.message))
+                                          })
+                                        }
+                                      }}
+                                    >
+                                      Удалить
+                                    </button>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
               </div>

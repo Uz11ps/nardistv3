@@ -815,9 +815,12 @@ export class AdminService implements OnModuleInit {
       data.rewardXP = 0;
       data.rewards = null;
     } else if (data.type === 'course') {
-      // Курс - с наградами, платный, создается админом
+      // Курс - без наград (награды только в онбординге), платный, создается админом
       data.authorId = null; // null означает, что это курс от админа
       data.isPaid = true; // Курсы платные
+      data.rewardNarCoin = 0;
+      data.rewardXP = 0;
+      data.rewards = null;
     } else if (data.type === 'onboarding') {
       // Онбординг - с наградами, бесплатный, единоразовый для новичков
       data.authorId = null;
@@ -1451,7 +1454,7 @@ export class AdminService implements OnModuleInit {
   async getClan(id: string) {
     const clan = await this.clansRepository.findOne({
       where: { id },
-      relations: ['members'],
+      relations: ['members', 'members.user'],
     });
     if (!clan) {
       throw new NotFoundException('Клан не найден');

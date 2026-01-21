@@ -102,12 +102,14 @@
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
   border-radius: 16px 16px 0 0;
   padding: 20px 16px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: auto;
   width: 100%;
   box-sizing: border-box;
+  margin-bottom: 0;
 }
 
 .profile-bottom-menu-item-v2 {
@@ -300,31 +302,31 @@
 }
 
 .profile-enhancement-info-btn {
-  background: rgba(74, 144, 226, 0.15);
-  border: 1.5px solid #4a90e2;
-  color: #4a90e2;
-  width: 22px;
-  height: 22px;
+  background: rgba(232, 65, 66, 0.15);
+  border: none;
+  color: #E84142;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
   transition: all 0.2s;
   line-height: 1;
   flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.2);
+  box-shadow: 0 2px 4px rgba(232, 65, 66, 0.2);
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .profile-enhancement-info-btn:hover {
-  background: #4a90e2;
-  color: #fff;
-  border-color: #4a90e2;
+  background: rgba(232, 65, 66, 0.25);
+  color: #E84142;
   transform: scale(1.1);
-  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.4);
+  box-shadow: 0 4px 8px rgba(232, 65, 66, 0.4);
 }
 
 .profile-enhancement-progress {

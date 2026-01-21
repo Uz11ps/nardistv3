@@ -235,7 +235,7 @@ export class ProgressService {
   /**
    * Получить награду NAR за уровень
    */
-  private getLevelRewardNAR(level: number): number {
+  getLevelRewardNAR(level: number): number {
     const config = this.branchesService.getConfig();
     
     // Используем таблицу наград за уровень, если она есть
@@ -579,8 +579,9 @@ export class ProgressService {
     
     const user = await this.usersService.findOne(userId);
     
+    // Если жизни уже на максимуме, просто возвращаемся без ошибки
     if (user.lives >= user.maxLives) {
-      throw new BadRequestException('У вас максимальное количество жизней');
+      return;
     }
 
     // Получаем количество покупок жизней сегодня
@@ -609,8 +610,9 @@ export class ProgressService {
     
     const user = await this.usersService.findOne(userId);
     
+    // Если энергия уже на максимуме, просто возвращаемся без ошибки
     if (user.energy >= user.maxEnergy) {
-      throw new BadRequestException('У вас максимальная энергия');
+      return;
     }
 
     // Получаем количество покупок энергии сегодня

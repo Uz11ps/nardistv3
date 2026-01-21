@@ -45,16 +45,42 @@ export default function Home() {
   const [hasPremium, setHasPremium] = useState(false)
   const [hasNotifications, setHasNotifications] = useState(false)
   const [levelProgress, setLevelProgress] = useState<LevelProgress | null>(null)
+  const [levelUpNotification, setLevelUpNotification] = useState<{ level: number; reward: number } | null>(null)
 
   useEffect(() => {
     if (user) {
       try {
         const narCoin = typeof user.narCoin === 'bigint' ? Number(user.narCoin) : (user.narCoin || 0)
         const xp = typeof user.xp === 'bigint' ? Number(user.xp) : (user.xp || 0)
+        const currentLevel = user.level !== undefined ? user.level : 0
+        
+        // Проверяем повышение уровня
+        const previousLevel = parseInt(localStorage.getItem('previousLevel') || '0')
+        if (currentLevel > previousLevel && currentLevel > 0) {
+          // Загружаем награду за уровень
+          apiClient.get(`/progress/level-reward/${currentLevel}`)
+            .then(response => {
+              setLevelUpNotification({
+                level: currentLevel,
+                reward: response.data.reward || 0
+              })
+              // Автоматически скрываем через 5 секунд
+              setTimeout(() => {
+                setLevelUpNotification(null)
+              }, 5000)
+            })
+            .catch(error => {
+              console.error('Ошибка при загрузке награды за уровень:', error)
+            })
+        }
+        
+        // Сохраняем текущий уровень для следующей проверки
+        localStorage.setItem('previousLevel', currentLevel.toString())
+        
         setStats({
           narCoin: Number(narCoin) || 0,
           xp: Number(xp) || 0,
-          level: user.level !== undefined ? user.level : 0,
+          level: currentLevel,
           energy: user.energy !== undefined ? user.energy : 100,
           maxEnergy: user.maxEnergy !== undefined ? user.maxEnergy : 100,
           lives: user.lives !== undefined ? user.lives : 5,
@@ -225,6 +251,47 @@ export default function Home() {
           Федерации
         </button>
       </div>
+
+      {/* Уведомление о повышении уровня */}
+      {levelUpNotification && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '12px',
+          padding: '20px 24px',
+          zIndex: 1000,
+          boxShadow: '0 6px 16px rgba(0, 0, 0, 0.5)',
+          maxWidth: '90%',
+          textAlign: 'center',
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          <div style={{ fontSize: '18px', fontWeight: 600, color: '#FFF', marginBottom: '8px' }}>
+            Поздравляем, вы достигли уровня {levelUpNotification.level}!
+          </div>
+          <div style={{ fontSize: '16px', color: '#FFD700', fontWeight: 500 }}>
+            Ваша награда {levelUpNotification.reward.toLocaleString()} NAR!
+          </div>
+          <button
+            onClick={() => setLevelUpNotification(null)}
+            style={{
+              marginTop: '12px',
+              padding: '8px 16px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '8px',
+              color: '#FFF',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            Закрыть
+          </button>
+        </div>
+      )}
 
       <div className="home-level-section-v3">
         <div className="home-level-info-v3">

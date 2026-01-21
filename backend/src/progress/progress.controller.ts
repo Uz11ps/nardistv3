@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { ProgressService } from './progress.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -126,5 +126,12 @@ export class ProgressController {
   @UseGuards(JwtAuthGuard)
   async getShopBar(@CurrentUser() user: any) {
     return this.progressService.getShopBarInfo(user.id);
+  }
+
+  @Get('level-reward/:level')
+  @UseGuards(JwtAuthGuard)
+  async getLevelReward(@Param('level') level: number) {
+    const reward = this.progressService.getLevelRewardNAR(level);
+    return { level: Number(level), reward };
   }
 }

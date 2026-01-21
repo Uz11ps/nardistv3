@@ -6,7 +6,7 @@ import BackgammonBoard from '../components/BackgammonBoard'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { formatRelativeTime } from '../utils/dateUtils'
-import { StarIcon, RobotIcon, DownloadIcon, RefreshIcon, BookIcon, ScaleIcon, WarningIcon } from '../components/Icons'
+import { StarIcon, RobotIcon, DownloadIcon, RefreshIcon, BookIcon, ScaleIcon, WarningIcon, TrophyIcon, XIcon } from '../components/Icons'
 import './History.css'
 
 interface GameHistory {
@@ -42,11 +42,18 @@ export default function History() {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false)
   const [hasPremium, setHasPremium] = useState(false)
   const [selectedAnalysisMoveIndex, setSelectedAnalysisMoveIndex] = useState<number | null>(null)
+  const [selectedGameDetails, setSelectedGameDetails] = useState<GameHistory | null>(null)
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
 
   useEffect(() => {
-    loadHistory()
     checkPremium()
-  }, [filter, modeFilter])
+  }, [])
+
+  useEffect(() => {
+    if (hasPremium !== undefined) {
+      loadHistory()
+    }
+  }, [filter, modeFilter, hasPremium])
 
   const checkPremium = async () => {
     try {
@@ -58,6 +65,11 @@ export default function History() {
   }
   
   const handleAnalyze = async (gameId: string) => {
+    if (!hasPremium) {
+      setShowPremiumModal(true)
+      return
+    }
+    
     try {
       setLoadingAnalysis(true)
       const game = games.find(g => g.id === gameId);
@@ -80,7 +92,14 @@ export default function History() {
       if (modeFilter !== 'all') params.append('mode', modeFilter)
 
       const response = await apiClient.get(`/history?${params.toString()}`)
-      setGames(response.data || [])
+      const allGames = response.data || []
+      
+      // Без премиума показываем только 5 последних матчей
+      if (!hasPremium) {
+        setGames(allGames.slice(0, 5))
+      } else {
+        setGames(allGames)
+      }
     } catch (error) {
       console.error('Failed to load history:', error)
     }
@@ -322,10 +341,20 @@ export default function History() {
             </div>
           ) : (
             games.map((game) => (
-              <div key={game.id} className="game-history-card">
+              <div 
+                key={game.id} 
+                className="game-history-card"
+                onClick={() => setSelectedGameDetails(game)}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div className={`result-badge ${game.result}`}>
-                    {game.result === 'win' ? '✓' : game.result === 'loss' ? '✗' : '='}
+                    {game.result === 'win' ? (
+                      <TrophyIcon size={24} style={{ color: '#FFD700' }} />
+                    ) : game.result === 'loss' ? (
+                      <XIcon size={24} style={{ color: '#E84142' }} />
+                    ) : (
+                      '='
+                    )}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -345,17 +374,28 @@ export default function History() {
                       Счет: {game.score.player1}:{game.score.player2} • {game.moveCount} ходов
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
                     <button className="history-action-btn history-action-btn-replay" onClick={() => handleReplay(game)}>
                       Реплей
                     </button>
-                    <button 
-                      className="history-action-btn history-action-btn-analyze"
-                      onClick={() => handleAnalyze(game.id)}
-                      disabled={loadingAnalysis}
-                    >
-                      Анализ
-                    </button>
+                    {hasPremium ? (
+                      <button 
+                        className="history-action-btn history-action-btn-analyze"
+                        onClick={() => handleAnalyze(game.id)}
+                        disabled={loadingAnalysis}
+                      >
+                        Анализ
+                      </button>
+                    ) : (
+                      <button 
+                        className="history-action-btn history-action-btn-analyze"
+                        onClick={() => setShowPremiumModal(true)}
+                        disabled={false}
+                        style={{ opacity: 0.5, cursor: 'pointer' }}
+                      >
+                        Анализ
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -378,7 +418,13 @@ export default function History() {
                   <span className="analysis-icon" onClick={handleExportMAT} title="Скачать MAT">
                     <DownloadIcon size={18} style={{ color: '#707579' }} />
                   </span>
-                  <span className="analysis-icon" onClick={() => handleAnalyze(selectedGame!.id)}>
+                  <span className="analysis-icon" onClick={() => {
+                    if (hasPremium) {
+                      handleAnalyze(selectedGame!.id)
+                    } else {
+                      setShowPremiumModal(true)
+                    }
+                  }}>
                     <RefreshIcon size={18} style={{ color: '#707579' }} />
                   </span>
                   <span className="analysis-icon">
@@ -700,6 +746,158 @@ export default function History() {
                 )}
               </div>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Модальное окно деталей игры */}
+      {selectedGameDetails && createPortal(
+        <div 
+          className="analysis-modal-overlay" 
+          onClick={() => setSelectedGameDetails(null)}
+        >
+          <div className="modal analysis-modal-v2" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="analysis-header-v2">
+              <div className="analysis-title-row">
+                <h2>Детали матча</h2>
+                <button 
+                  className="close-btn" 
+                  onClick={() => setSelectedGameDetails(null)}
+                  style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#333', fontSize: '24px', cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="analysis-main-content" style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Результат</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className={`result-badge ${selectedGameDetails.result}`} style={{ width: '32px', height: '32px' }}>
+                      {selectedGameDetails.result === 'win' ? (
+                        <TrophyIcon size={20} style={{ color: '#FFD700' }} />
+                      ) : selectedGameDetails.result === 'loss' ? (
+                        <XIcon size={20} style={{ color: '#E84142' }} />
+                      ) : (
+                        '='
+                      )}
+                    </div>
+                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#333' }}>
+                      {selectedGameDetails.result === 'win' ? 'Победа' : selectedGameDetails.result === 'loss' ? 'Поражение' : 'Ничья'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Против</div>
+                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
+                    {selectedGameDetails.type === 'vs_bot' ? (
+                      <>
+                        <RobotIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Бот
+                      </>
+                    ) : selectedGameDetails.opponent.username}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Режим</div>
+                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
+                    {selectedGameDetails.mode === 'long' ? 'Длинные нарды' : 'Короткие нарды'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Счет</div>
+                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
+                    {selectedGameDetails.score.player1}:{selectedGameDetails.score.player2}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Ходов</div>
+                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
+                    {selectedGameDetails.moveCount}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Длительность</div>
+                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
+                    {formatDuration(selectedGameDetails.duration)}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Дата и время</div>
+                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
+                    {formatRelativeTime(selectedGameDetails.createdAt, timezone)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions" style={{ padding: '16px' }}>
+              <button 
+                className="history-modal-close-btn"
+                onClick={() => setSelectedGameDetails(null)}
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#3a3a3a', color: '#FFF', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Модальное окно премиум */}
+      {showPremiumModal && createPortal(
+        <div 
+          className="analysis-modal-overlay" 
+          onClick={() => setShowPremiumModal(false)}
+        >
+          <div className="modal analysis-modal-v2" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="analysis-header-v2">
+              <div className="analysis-title-row">
+                <h2>Премиум функция</h2>
+                <button 
+                  className="close-btn" 
+                  onClick={() => setShowPremiumModal(false)}
+                  style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#333', fontSize: '24px', cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="analysis-main-content" style={{ padding: '20px', textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>👑</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', color: '#333', marginBottom: '12px' }}>
+                Анализ доступен только для премиум подписчиков
+              </div>
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '24px', lineHeight: '1.5' }}>
+                Оформите премиум подписку, чтобы получить доступ к детальному анализу ваших игр
+              </div>
+              <button 
+                onClick={() => {
+                  setShowPremiumModal(false)
+                  navigate('/shop', { state: { tab: 'subscription' } })
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)',
+                  color: '#FFF',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '16px'
+                }}
+              >
+                Перейти к подписке
+              </button>
+            </div>
           </div>
         </div>,
         document.body

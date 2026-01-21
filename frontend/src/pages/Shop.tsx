@@ -588,6 +588,38 @@ export default function Shop() {
         {/* Бар нардистов */}
         {activeTab === 'bar' && (
           <div className="shop-list">
+            {/* Информационное сообщение о динамике цен */}
+            <Card className="shop-nar-coin-card" style={{ 
+              background: 'rgba(255, 215, 0, 0.1)', 
+              border: '1px solid rgba(255, 215, 0, 0.3)',
+              marginBottom: '16px'
+            }}>
+              <div style={{ 
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
+              }}>
+                <div style={{
+                  fontSize: '20px',
+                  flexShrink: 0
+                }}>ℹ️</div>
+                <div style={{
+                  color: '#FFF',
+                  fontSize: '13px',
+                  lineHeight: '1.5'
+                }}>
+                  <div style={{ fontWeight: '600', marginBottom: '4px', color: '#FFD700' }}>
+                    Важная информация о ценах
+                  </div>
+                  <div style={{ color: '#B6B6B6' }}>
+                    При каждой повторной покупке энергии или жизней базовая цена будет расти. 
+                    Цена обновляется для каждого игрока в 4:00 до базовой.
+                  </div>
+                </div>
+              </div>
+            </Card>
+
             {/* Энергия */}
             <Card className="shop-nar-coin-card">
               <div className="shop-nar-coin-content">
