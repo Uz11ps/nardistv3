@@ -399,7 +399,7 @@ export class AcademyService {
           // Списываем средства
           const userBalance = Number(userInTransaction.narCoin);
           const newBalance = userBalance - price;
-          await userRepo.update({ id: userId }, { narCoin: newBalance });
+          await userRepo.update({ id: userId }, { narCoin: BigInt(newBalance) });
 
           // Получаем процент роялти из настроек системы
           const royaltyPercentStr = await this.adminService.getSystemSetting('course_royalty_percent', '20');
@@ -412,7 +412,7 @@ export class AcademyService {
             if (author) {
               const authorBalance = Number(author.narCoin);
               const newAuthorBalance = authorBalance + authorRoyalty;
-              await userRepo.update({ id: course.authorId }, { narCoin: newAuthorBalance });
+              await userRepo.update({ id: course.authorId }, { narCoin: BigInt(newAuthorBalance) });
             }
           }
           // Остальные (100% - royaltyPercent) остаются в экономике проекта
