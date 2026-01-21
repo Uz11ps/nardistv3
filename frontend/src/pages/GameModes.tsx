@@ -39,6 +39,9 @@ export default function GameModes() {
     },
   ]
 
+  const mainModes = gameModes.filter((mode) => mode.id === 'online' || mode.id === 'tables')
+  const trainingModes = gameModes.filter((mode) => mode.id === 'bot' || mode.id === 'sandbox')
+
   return (
     <PageLayout
       title="Выбор режима"
@@ -46,7 +49,8 @@ export default function GameModes() {
       showBack={true}
     >
       <div className="game-modes-list">
-        {gameModes.map((mode) => (
+        {/* Основные режимы */}
+        {mainModes.map((mode) => (
           <div
             key={mode.id}
             className="game-mode-card"
@@ -59,6 +63,26 @@ export default function GameModes() {
             </div>
           </div>
         ))}
+
+        {/* Раздел Тренировка */}
+        {trainingModes.length > 0 && (
+          <>
+            <div className="game-modes-section-title">Тренировка</div>
+            {trainingModes.map((mode) => (
+              <div
+                key={mode.id}
+                className="game-mode-card"
+                onClick={() => navigate(mode.path)}
+              >
+                <img src="/img/кланы.png" alt="Mode" className="game-mode-icon" />
+                <div className="game-mode-info">
+                  <div className="game-mode-title">{mode.name}</div>
+                  <div className="game-mode-description">{mode.description}</div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       <div className="game-modes-footer">

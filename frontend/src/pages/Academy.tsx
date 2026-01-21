@@ -218,6 +218,17 @@ export default function Academy() {
     }
   }, [materialId])
 
+  // Если мы не на странице публикации, а activeTab случайно остался 'publish' (например, после выхода) —
+  // принудительно возвращаемся на вкладку "Купленные материалы"
+  useEffect(() => {
+    if (!isPublishPage && activeTab === 'publish') {
+      setActiveTab('my-materials')
+      if (location.pathname !== '/academy') {
+        navigate('/academy', { replace: true })
+      }
+    }
+  }, [isPublishPage, activeTab, navigate, location.pathname])
+
   useEffect(() => {
     // Проверяем параметр type из URL
     const urlParams = new URLSearchParams(location.search)
@@ -665,7 +676,10 @@ export default function Academy() {
           </div>
 
           <div className="academy-publish-field">
-            <label className="academy-publish-label">Стоимость (NAR)</label>
+        <label className="academy-publish-label">Стоимость (NAR)</label>
+        <div style={{ fontSize: '12px', color: '#9FA3AE', marginTop: '4px', marginBottom: '6px' }}>
+          При каждой покупке вашей статьи вы получаете <strong>20% от указанной стоимости</strong> в NAR.
+        </div>
             <input
               type="number"
               className="academy-publish-input"

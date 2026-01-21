@@ -13,7 +13,7 @@ interface Tournament {
   name: string
   mode: 'short' | 'long'
   format: 'bracket' | 'round_robin'
-  status: 'upcoming' | 'registration' | 'in_progress' | 'finished'
+  status: 'upcoming' | 'registration' | 'registration_end' | 'in_progress' | 'finished'
   maxParticipants: number
   currentParticipants: number
   entryFee: number
@@ -78,7 +78,8 @@ export default function Tournaments() {
 
   const loadTournaments = async () => {
     try {
-      const status = activeTab === 'active' ? 'in_progress,registration' : 'upcoming'
+      // В активных показываем турниры в статусах: регистрация открыта, регистрация закрыта, турнир идет
+      const status = activeTab === 'active' ? 'in_progress,registration,registration_end' : 'upcoming'
       const response = await apiClient.get(`/tournaments?status=${status}`).catch(() => ({ data: [] }))
       setTournaments(response.data || [])
     } catch (error) {
