@@ -341,26 +341,28 @@ export default function Profile() {
 
         {/* Фильтр режима для статистики */}
         {activeTab === 'statistics' && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px', marginTop: '16px' }}>
-            <span style={{ color: '#B6B6B6', fontSize: '14px', marginRight: '8px' }}>Режим:</span>
-            <button 
-              className={`profile-statistics-mode-tab ${statisticsMode === 'all' ? 'active' : ''}`}
-              onClick={() => setStatisticsMode('all')}
-            >
-              Все
-            </button>
-            <button 
-              className={`profile-statistics-mode-tab ${statisticsMode === 'long' ? 'active' : ''}`}
-              onClick={() => setStatisticsMode('long')}
-            >
-              Длинные
-            </button>
-            <button 
-              className={`profile-statistics-mode-tab ${statisticsMode === 'short' ? 'active' : ''}`}
-              onClick={() => setStatisticsMode('short')}
-            >
-              Короткие
-            </button>
+          <div style={{ marginBottom: '20px', marginTop: '16px' }}>
+            <h3 style={{ color: '#FFF', fontSize: '16px', fontWeight: '600', marginBottom: '12px', marginTop: 0 }}>Режим:</h3>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button 
+                className={`profile-statistics-mode-tab ${statisticsMode === 'all' ? 'active' : ''}`}
+                onClick={() => setStatisticsMode('all')}
+              >
+                Все
+              </button>
+              <button 
+                className={`profile-statistics-mode-tab ${statisticsMode === 'long' ? 'active' : ''}`}
+                onClick={() => setStatisticsMode('long')}
+              >
+                Длинные
+              </button>
+              <button 
+                className={`profile-statistics-mode-tab ${statisticsMode === 'short' ? 'active' : ''}`}
+                onClick={() => setStatisticsMode('short')}
+              >
+                Короткие
+              </button>
+            </div>
           </div>
         )}
 

@@ -379,13 +379,13 @@ export default function History() {
                       Реплей
                     </button>
                     {hasPremium ? (
-                      <button 
-                        className="history-action-btn history-action-btn-analyze"
-                        onClick={() => handleAnalyze(game.id)}
-                        disabled={loadingAnalysis}
-                      >
-                        Анализ
-                      </button>
+                    <button 
+                      className="history-action-btn history-action-btn-analyze"
+                      onClick={() => handleAnalyze(game.id)}
+                      disabled={loadingAnalysis}
+                    >
+                      Анализ
+                    </button>
                     ) : (
                       <button 
                         className="history-action-btn history-action-btn-analyze"

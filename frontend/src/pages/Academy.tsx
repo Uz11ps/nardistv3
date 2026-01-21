@@ -1101,10 +1101,10 @@ export default function Academy() {
             </p>
             <p style={{ color: '#FFD700', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
               Цена: {showPurchaseModal.price || 0} NAR
-            </p>
+              </p>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => setShowPurchaseModal(null)}
+                <button 
+                  onClick={() => setShowPurchaseModal(null)}
                 style={{
                   flex: 1,
                   padding: '12px',
@@ -1116,11 +1116,11 @@ export default function Academy() {
                   fontWeight: '500',
                   cursor: 'pointer',
                 }}
-              >
-                Отмена
-              </button>
-              <button
-                onClick={() => handlePurchase(showPurchaseModal)}
+                >
+                  Отмена
+                </button>
+                <button 
+                  onClick={() => handlePurchase(showPurchaseModal)}
                 disabled={showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price}
                 style={{
                   flex: 1,
@@ -1144,9 +1144,9 @@ export default function Academy() {
                   : (showPurchaseModal.price > 0 && (user?.narCoin || 0) < showPurchaseModal.price)
                   ? 'Недостаточно средств'
                   : `Купить за ${showPurchaseModal.price} NAR`}
-              </button>
+                </button>
+              </div>
             </div>
-          </div>
         </div>,
         document.body
       )}

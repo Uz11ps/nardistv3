@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, memo } from 'react'
 import { apiClient } from '../api/client'
+import { useAuthStore } from '../store/authStore'
 import Dice3D from './Dice3D'
 import DiceGif from './DiceGif'
 import { DebugPanel } from './DebugPanel'
@@ -58,6 +59,7 @@ export default function BackgammonBoard({
   onServerMovesFinished,
   onNoMoves,
 }: BackgammonBoardProps) {
+  const { user } = useAuthStore()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   
@@ -3769,24 +3771,26 @@ export default function BackgammonBoard({
           setShowHitboxes={setShowHitboxes}
         />
       ) : (
-        <button 
-          onClick={() => setDebugMode(true)}
-          style={{
-            position: 'absolute',
-            bottom: '10px',
-            left: '10px',
-            zIndex: 100000,
-            background: 'rgba(0,0,0,0.5)',
-            color: 'white',
-            border: 'none',
-            padding: '5px',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          ⚙️
-        </button>
+        user?.isAdmin && (
+          <button 
+            onClick={() => setDebugMode(true)}
+            style={{
+              position: 'absolute',
+              bottom: '10px',
+              left: '10px',
+              zIndex: 100000,
+              background: 'rgba(0,0,0,0.5)',
+              color: 'white',
+              border: 'none',
+              padding: '5px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            ⚙️
+          </button>
+        )
       )}
       <canvas
         ref={canvasRef}
