@@ -65,6 +65,10 @@ export default function CreateProfile() {
       alert('Введите никнейм')
       return
     }
+    if (formData.nickname.length > 16) {
+      alert('Никнейм не должен превышать 16 символов')
+      return
+    }
 
     try {
       setLoading(true)
@@ -97,9 +101,13 @@ export default function CreateProfile() {
             <input
               type="text"
               value={formData.nickname}
-              onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value.slice(0, 16)
+                setFormData({ ...formData, nickname: value })
+              }}
               placeholder="Никнейм"
               className="create-profile-input"
+              maxLength={16}
             />
           </div>
 

@@ -245,6 +245,10 @@ export default function Profile() {
       alert('Введите никнейм')
       return
     }
+    if (editFormData.nickname.length > 16) {
+      alert('Никнейм не должен превышать 16 символов')
+      return
+    }
 
     try {
       setLoading(true)
@@ -404,7 +408,17 @@ export default function Profile() {
                 )}
               </div>
               <div className="profile-name-v2" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                {user?.nickname || user?.firstName || user?.username || 'Алексей'}
+                <span style={{
+                  fontSize: (() => {
+                    const nickname = user?.nickname || user?.firstName || user?.username || 'Алексей'
+                    const length = nickname.length
+                    if (length <= 8) return '32px'
+                    if (length <= 12) return '25.6px' // уменьшение на 20%
+                    return '21.76px' // еще уменьшение на 15% от предыдущего
+                  })()
+                }}>
+                  {user?.nickname || user?.firstName || user?.username || 'Алексей'}
+                </span>
                 {hasPremium && (
                   <img 
                     src="/img/crown.png" 
@@ -815,8 +829,12 @@ export default function Profile() {
                   type="text"
                   className="profile-edit-input"
                   value={editFormData.nickname}
-                  onChange={(e) => setEditFormData({ ...editFormData, nickname: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 16)
+                    setEditFormData({ ...editFormData, nickname: value })
+                  }}
                   placeholder="Введите никнейм"
+                  maxLength={16}
                 />
               </div>
 

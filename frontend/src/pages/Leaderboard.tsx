@@ -81,22 +81,30 @@ export default function Leaderboard() {
           <div className="leaderboard-my-stats">
             <div className="leaderboard-my-stats-header">Моя статистика</div>
             <div className="leaderboard-my-stats-content">
-              <div className="leaderboard-my-stats-item">
-                <div className="leaderboard-my-stats-label">Рейтинг</div>
-                <div className="leaderboard-my-stats-value">{myStats.overallRating}</div>
-              </div>
-              <div className="leaderboard-my-stats-item">
-                <div className="leaderboard-my-stats-label">Матчей</div>
-                <div className="leaderboard-my-stats-value">{myStats.totalMatches}</div>
-              </div>
-              <div className="leaderboard-my-stats-item">
-                <div className="leaderboard-my-stats-label">Винрейт</div>
-                <div className="leaderboard-my-stats-value">{myStats.winRate}%</div>
-              </div>
-              <div className="leaderboard-my-stats-item">
-                <div className="leaderboard-my-stats-label">XP</div>
-                <div className="leaderboard-my-stats-value">{myStats.totalXP.toLocaleString()}</div>
-              </div>
+              {sortBy === 'rating' && (
+                <div className="leaderboard-my-stats-item">
+                  <div className="leaderboard-my-stats-label">Рейтинг</div>
+                  <div className="leaderboard-my-stats-value">{myStats.overallRating}</div>
+                </div>
+              )}
+              {sortBy === 'matches' && (
+                <div className="leaderboard-my-stats-item">
+                  <div className="leaderboard-my-stats-label">Матчей</div>
+                  <div className="leaderboard-my-stats-value">{myStats.totalMatches}</div>
+                </div>
+              )}
+              {sortBy === 'winrate' && (
+                <div className="leaderboard-my-stats-item">
+                  <div className="leaderboard-my-stats-label">Винрейт</div>
+                  <div className="leaderboard-my-stats-value">{myStats.winRate}%</div>
+                </div>
+              )}
+              {sortBy === 'xp' && (
+                <div className="leaderboard-my-stats-item">
+                  <div className="leaderboard-my-stats-label">XP</div>
+                  <div className="leaderboard-my-stats-value">{myStats.totalXP.toLocaleString()}</div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -165,7 +173,8 @@ export default function Leaderboard() {
                       />
                     </div>
                     <div className="leaderboard-details">
-                      Уровень {entry.user.level} • Рейтинг: {entry.user.rating}
+                      Уровень {entry.user.level}
+                      {sortBy === 'rating' && ` • Рейтинг: ${entry.user.rating}`}
                     </div>
                     <div className="leaderboard-stats">
                       {sortBy === 'xp' && entry.user.xp !== undefined && (

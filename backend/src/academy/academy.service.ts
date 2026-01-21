@@ -393,11 +393,6 @@ export class AcademyService {
       throw new BadRequestException('Материал уже куплен');
     }
 
-    // Проверяем, не пытается ли автор купить свою статью
-    if (course.authorId === userId) {
-      throw new BadRequestException('Вы не можете купить свою собственную статью');
-    }
-
     const price = Number(course.price || 0);
     
       // Используем транзакцию для атомарности операции
