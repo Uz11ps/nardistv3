@@ -3029,7 +3029,7 @@ export default function Game() {
                       alt="premium" 
                       style={{ 
                         position: 'absolute',
-                        top: '-8px',
+                        top: '-12px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: '32px',
@@ -3118,7 +3118,7 @@ export default function Game() {
                       alt="premium" 
                       style={{ 
                         position: 'absolute',
-                        top: '-8px',
+                        top: '-12px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: '32px',
@@ -3198,7 +3198,7 @@ export default function Game() {
                       alt="premium" 
                       style={{ 
                         position: 'absolute',
-                        top: '-8px',
+                        top: '-12px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: '32px',
