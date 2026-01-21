@@ -603,7 +603,7 @@ export default function Profile() {
                   </div>
                   <div className="profile-statistics-item">
                     <span className="profile-statistics-label">Винрейт:</span>
-                    <span className="profile-statistics-value" style={{ color: '#FFD700', fontWeight: '600', fontSize: '18px' }}>
+                    <span className="profile-statistics-value" style={{ color: '#FFD700', fontWeight: '600' }}>
                       {(() => {
                         const wins = playerStatistics.wins || 0
                         const losses = playerStatistics.losses || 0
@@ -615,7 +615,7 @@ export default function Profile() {
                   {statisticsMode === 'all' && playerStatistics.overallRating !== undefined && (
                     <div className="profile-statistics-item">
                       <span className="profile-statistics-label">Общий рейтинг:</span>
-                      <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
+                      <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
                         {playerStatistics.overallRating}
                       </span>
                     </div>
@@ -623,7 +623,7 @@ export default function Profile() {
                   {statisticsMode === 'short' && playerStatistics.short?.rating !== undefined && (
                     <div className="profile-statistics-item">
                       <span className="profile-statistics-label">Рейтинг (короткие):</span>
-                      <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
+                      <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
                         {playerStatistics.short.rating}
                       </span>
                     </div>
@@ -631,7 +631,7 @@ export default function Profile() {
                   {statisticsMode === 'long' && playerStatistics.long?.rating !== undefined && (
                     <div className="profile-statistics-item">
                       <span className="profile-statistics-label">Рейтинг (длинные):</span>
-                      <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
+                      <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
                         {playerStatistics.long.rating}
                       </span>
                     </div>
@@ -641,7 +641,7 @@ export default function Profile() {
                       {playerStatistics.short?.rating !== undefined && (
                         <div className="profile-statistics-item">
                           <span className="profile-statistics-label">Рейтинг (короткие):</span>
-                          <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '16px' }}>
+                          <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
                             {playerStatistics.short.rating}
                           </span>
                         </div>
@@ -649,7 +649,7 @@ export default function Profile() {
                       {playerStatistics.long?.rating !== undefined && (
                         <div className="profile-statistics-item">
                           <span className="profile-statistics-label">Рейтинг (длинные):</span>
-                          <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '16px' }}>
+                          <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
                             {playerStatistics.long.rating}
                           </span>
                         </div>

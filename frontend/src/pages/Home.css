@@ -716,7 +716,7 @@
 .home-user-info-v3 {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   flex: 1;
   min-width: 0;
 }
@@ -746,13 +746,13 @@
 }
 
 .home-currency-img-v3 {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   object-fit: contain;
 }
 
 .home-currency-item-v3 span {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .home-federations-btn-v3 {
