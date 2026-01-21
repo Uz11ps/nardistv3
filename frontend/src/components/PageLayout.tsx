@@ -11,6 +11,7 @@ interface PageLayoutProps {
   showBack?: boolean
   tabs?: Array<{ id: string; label: string; active?: boolean; onClick?: () => void }>
   rightAction?: ReactNode
+  tabsRightAction?: ReactNode
   showBottomNav?: boolean
   className?: string
 }
@@ -22,6 +23,7 @@ export default function PageLayout({
   showBack = true, 
   tabs, 
   rightAction,
+  tabsRightAction,
   showBottomNav = true,
   className = ''
 }: PageLayoutProps) {
@@ -128,16 +130,23 @@ export default function PageLayout({
 
         {/* Tabs */}
         {tabs && tabs.length > 0 && (
-          <div className="page-layout-tabs" ref={tabsRef}>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                className={`page-layout-tab ${tab.active ? 'active' : ''}`}
-                onClick={tab.onClick}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="page-layout-tabs-wrapper">
+            <div className="page-layout-tabs" ref={tabsRef}>
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`page-layout-tab ${tab.active ? 'active' : ''}`}
+                  onClick={tab.onClick}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {tabsRightAction && (
+              <div className="page-layout-tabs-right-action">
+                {tabsRightAction}
+              </div>
+            )}
           </div>
         )}
 

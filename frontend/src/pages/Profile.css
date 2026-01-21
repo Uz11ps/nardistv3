@@ -100,7 +100,7 @@
 
 .profile-bottom-menu-v2 {
   background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 16px 16px 0 0;
+  border-radius: 16px;
   padding: 20px 16px;
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
   display: flex;
@@ -305,13 +305,13 @@
   background: rgba(232, 65, 66, 0.15);
   border: none;
   color: #E84142;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
