@@ -14,7 +14,7 @@ export default function PlayerName({ nickname, username, hasPremium, fallback, c
   const displayName = fullName.length > 20 ? fullName.substring(0, 20) + '...' : fullName
   
   return (
-    <span className={className} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+    <span className={className} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
       {displayName}
       {hasPremium && (
         <img 

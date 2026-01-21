@@ -717,12 +717,19 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 
 .home-username-v3 {
   font-size: 24px;
   font-weight: 700;
   color: #FFF;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  max-width: 100%;
 }
 
 .home-currencies-v3 {

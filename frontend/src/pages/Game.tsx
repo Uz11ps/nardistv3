@@ -3028,7 +3028,7 @@ export default function Game() {
                       alt="premium" 
                       style={{ 
                         position: 'absolute',
-                        top: '-12px',
+                        top: '-18px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: '32px',
@@ -3116,7 +3116,7 @@ export default function Game() {
                       alt="premium" 
                       style={{ 
                         position: 'absolute',
-                        top: '-12px',
+                        top: '-18px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: '32px',
@@ -3195,7 +3195,7 @@ export default function Game() {
                       alt="premium" 
                       style={{ 
                         position: 'absolute',
-                        top: '-12px',
+                        top: '-18px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: '32px',
@@ -3690,7 +3690,6 @@ export default function Game() {
                 <PlayerName 
                   nickname={myPlayer?.nickname}
                   username={myPlayer?.username}
-                  hasPremium={myPlayer?.hasPremium}
                   fallback="Вы"
                 />
                 <div className="pip-count-display">

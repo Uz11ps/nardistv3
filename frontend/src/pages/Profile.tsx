@@ -403,8 +403,21 @@ export default function Profile() {
                   </div>
                 )}
               </div>
-              <div className="profile-name-v2">
+              <div className="profile-name-v2" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 {user?.nickname || user?.firstName || user?.username || 'Алексей'}
+                {hasPremium && (
+                  <img 
+                    src="/img/crown.png" 
+                    alt="premium" 
+                    style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      objectFit: 'contain',
+                      verticalAlign: 'middle',
+                      display: 'inline-block'
+                    }} 
+                  />
+                )}
               </div>
               <div className="profile-level-v2">
                 Уровень {stats.level}
