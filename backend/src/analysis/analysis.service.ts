@@ -106,7 +106,7 @@ export class AnalysisService {
     });
 
     // Определяем правильный движок в зависимости от режима игры
-    const isShortMode = game.mode === 'short' || game.mode === GameMode.SHORT;
+    const isShortMode = game.mode === GameMode.SHORT;
     const engine = isShortMode ? this.backgammonEngine : this.longBackgammonEngine;
     const errors: MoveAnalysis[] = [];
     const allMovesAnalysis: MoveAnalysis[] = [];
