@@ -37,7 +37,7 @@ export class Clan {
   @Column({ type: 'int', default: 0 })
   memberCount: number;
 
-  @Column({ type: 'int', default: 10 })
+  @Column({ type: 'int', default: 5 })
   maxMembers: number;
 
   @Column({ type: 'bigint', default: 0 })

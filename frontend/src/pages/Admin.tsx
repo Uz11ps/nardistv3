@@ -4485,7 +4485,7 @@ export default function Admin() {
                       <td>{clan.name}</td>
                       <td>{clan.leaderId?.substring(0, 8) || 'N/A'}...</td>
                       <td>{clan.level || 1}</td>
-                      <td>{clan.memberCount || 0}/{clan.maxMembers || 10}</td>
+                      <td>{clan.memberCount || 0}/{clan.maxMembers || 5}</td>
                       <td>{Number(clan.treasury || 0).toLocaleString()}</td>
                       <td>{Number(clan.weeklyIncome || 0).toLocaleString()}</td>
                       <td>
@@ -4535,7 +4535,7 @@ export default function Admin() {
                   <input
                     type="number"
                     id="edit-clan-max-members"
-                    defaultValue={selectedUser.maxMembers || 10}
+                    defaultValue={selectedUser.maxMembers || 5}
                   />
                 </div>
                 <div className="form-group">

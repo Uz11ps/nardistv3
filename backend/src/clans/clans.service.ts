@@ -66,7 +66,7 @@ export class ClansService {
       description,
       leaderId: userId,
       memberCount: 1,
-      maxMembers: 10,
+      maxMembers: 5,
       clanLevel: 1, // Дефолтный уровень улучшения
       districtStrength: 1, // Дефолтный уровень улучшения
       economy: 1, // Дефолтный уровень улучшения
@@ -409,10 +409,14 @@ export class ClansService {
         // Форт не дает реальных эффектов, только для визуала
         break;
       case 'maxMembers':
-        if ((clan.maxMembers || 10) >= 100) {
-          throw new BadRequestException('Максимум участников достиг максимального значения');
+        const currentMaxMembers = clan.maxMembers || 5;
+        // Базовое количество: 5 (уровень 1), максимум уровней улучшения: 10, каждый уровень дает +5
+        // Максимум участников: 5 + 9 * 5 = 50
+        const maxMembersLevel = Math.floor((currentMaxMembers - 5) / 5) + 1; // Уровень от 1 до 10
+        if (maxMembersLevel >= 10 || currentMaxMembers >= 50) {
+          throw new BadRequestException('Максимум участников достиг максимального значения (50)');
         }
-        clan.maxMembers = (clan.maxMembers || 10) + 5;
+        clan.maxMembers = Math.min(currentMaxMembers + 5, 50);
         break;
     }
 
@@ -458,7 +462,7 @@ export class ClansService {
     const districtStrength = clan.districtStrength || 1;
     const economy = clan.economy || 1;
     const fortLevel = clan.fortLevel || 1;
-    const maxMembers = clan.maxMembers || 10;
+    const maxMembers = clan.maxMembers || 5;
 
     return {
       districtStrength: {
@@ -478,8 +482,14 @@ export class ClansService {
       },
       maxMembers: {
         current: maxMembers,
-        max: 100,
-        cost: maxMembers >= 100 ? 0 : maxMembers * 1000,
+        max: 50, // Максимум участников
+        // Рассчитываем уровень улучшения: базовое 10, каждый уровень +5
+        cost: (() => {
+          if (maxMembers >= 50) return 0;
+          // Уровень улучшения (1-10, где 1 = базовое 5, 10 = максимум 50)
+          const level = Math.floor((maxMembers - 5) / 5) + 1;
+          return level * 1000;
+        })(),
       },
       clanLevel: this.calculateClanLevel(clan), // Общий уровень клана (только для визуала)
     };
@@ -505,11 +515,16 @@ export class ClansService {
       throw new NotFoundException('Клан не найден');
     }
 
+    // Рассчитываем стоимость улучшения maxMembers на основе уровня улучшения
+    const currentMaxMembers = clan.maxMembers || 5;
+    const maxMembersLevel = Math.floor((currentMaxMembers - 5) / 5) + 1; // Уровень от 1 до 10
+    const maxMembersCost = currentMaxMembers >= 50 ? 0 : maxMembersLevel * 1000;
+
     const costs: Record<string, number> = {
       districtStrength: (clan.districtStrength || 1) * 500,
       economy: (clan.economy || 1) * 800,
       fort: (clan.fortLevel || 1) * 1200,
-      maxMembers: (clan.maxMembers || 10) * 1000,
+      maxMembers: maxMembersCost,
     };
 
     const cost = costs[upgradeType];
@@ -572,8 +587,12 @@ export class ClansService {
         // Форт не дает реальных эффектов, только для визуала
         break;
       case 'maxMembers':
-        currentLevel = clan.maxMembers || 10;
-        newLevel = currentLevel + 5;
+        currentLevel = clan.maxMembers || 5;
+        const currentMaxMembersLevel = Math.floor((currentLevel - 5) / 5) + 1; // Уровень от 1 до 10
+        if (currentMaxMembersLevel >= 10 || currentLevel >= 50) {
+          throw new BadRequestException('Максимум участников достиг максимального значения (50)');
+        }
+        newLevel = Math.min(currentLevel + 5, 50); // Не превышаем максимум 50
         effects.push({
           label: 'Максимум участников',
           current: `${currentLevel}`,
