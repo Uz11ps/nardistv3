@@ -168,16 +168,21 @@ export class RatingsService {
     } else if (sortBy === 'matches') {
       entries.sort((a, b) => b.totalMatches - a.totalMatches);
     } else if (sortBy === 'winrate') {
-      entries.sort((a, b) => {
-        // Сначала по винрейту (только для игроков с 100+ матчами)
-        const aWinRate = a.winRate !== null ? a.winRate : 0;
-        const bWinRate = b.winRate !== null ? b.winRate : 0;
+      // Фильтруем только игроков с 100+ матчами для сортировки по винрейту
+      const filteredEntries = entries.filter(entry => entry.totalMatches >= 100 && entry.winRate !== null);
+      filteredEntries.sort((a, b) => {
+        // Сначала по винрейту
+        const aWinRate = a.winRate || 0;
+        const bWinRate = b.winRate || 0;
         if (Math.abs(aWinRate - bWinRate) > 0.01) {
           return bWinRate - aWinRate;
         }
         // Затем по количеству матчей
         return b.totalMatches - a.totalMatches;
       });
+      // Заменяем entries на отфильтрованные
+      entries.length = 0;
+      entries.push(...filteredEntries);
     } else {
       // По умолчанию сортируем по рейтингу
       entries.sort((a, b) => (b.user?.rating || 0) - (a.user?.rating || 0));

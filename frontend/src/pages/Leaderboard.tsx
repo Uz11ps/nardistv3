@@ -151,13 +151,7 @@ export default function Leaderboard() {
                         <>Матчей: {entry.totalMatches || (entry.wins + entry.losses + (entry.draws || 0))}</>
                       )}
                       {sortBy === 'winrate' && (
-                        <>
-                          {entry.winRate !== null && entry.winRate !== undefined ? (
-                            <>Винрейт: {entry.winRate}%</>
-                          ) : (
-                            <>Матчей: {entry.totalMatches || (entry.wins + entry.losses + (entry.draws || 0))} (меньше 100)</>
-                          )}
-                        </>
+                        <>Винрейт: {entry.winRate || 0}%</>
                       )}
                     </div>
                   </div>
