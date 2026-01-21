@@ -3009,7 +3009,6 @@ export default function Game() {
                   <PlayerName 
                     nickname={opponentPlayer?.nickname}
                     username={opponentPlayer?.username}
-                    hasPremium={opponentPlayer?.hasPremium}
                     fallback="Соперник"
                   />
                   <div className="pip-count-display">
@@ -3106,7 +3105,6 @@ export default function Game() {
                   <PlayerName 
                     nickname={opponentPlayer?.nickname}
                     username={opponentPlayer?.username}
-                    hasPremium={opponentPlayer?.hasPremium}
                     fallback="Соперник"
                   />
                 </div>
@@ -3186,7 +3184,6 @@ export default function Game() {
                   <PlayerName 
                     nickname={myPlayer?.nickname}
                     username={myPlayer?.username}
-                    hasPremium={myPlayer?.hasPremium}
                     fallback="Вы"
                   />
                 </div>
