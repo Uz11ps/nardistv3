@@ -427,6 +427,7 @@ export default function History() {
             touchAction: 'none',
             overflow: 'hidden',
             overscrollBehavior: 'contain',
+            boxSizing: 'border-box',
           }}
         >
           <div className="modal analysis-modal-v2" onClick={(e) => e.stopPropagation()}>

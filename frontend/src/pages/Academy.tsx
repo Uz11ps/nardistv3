@@ -525,7 +525,7 @@ export default function Academy() {
         // Перезагружаем данные
         loadData()
         // Перенаправляем на главную страницу академии
-        navigate('/academy')
+      navigate('/academy')
       }
     } catch (error: any) {
       alert(error.response?.data?.message || 'Ошибка при публикации')
@@ -677,7 +677,7 @@ export default function Academy() {
           </div>
 
           <div className="academy-publish-field">
-        <label className="academy-publish-label">Стоимость (NAR)</label>
+            <label className="academy-publish-label">Стоимость (NAR)</label>
         <div style={{ fontSize: '12px', color: '#9FA3AE', marginTop: '4px', marginBottom: '6px' }}>
           При каждой покупке вашей статьи вы получаете <strong>20% от указанной стоимости</strong> в NAR.
         </div>
@@ -834,31 +834,31 @@ export default function Academy() {
         )}
 
         {activeTab === 'courses' && (() => {
-          console.log('[Academy] Rendering courses tab - courses state:', courses.length, 'courses:', courses)
-          // Фильтруем только по типу материала (course) и gameMode, НЕ исключаем купленные
+              console.log('[Academy] Rendering courses tab - courses state:', courses.length, 'courses:', courses)
+              // Фильтруем только по типу материала (course) и gameMode, НЕ исключаем купленные
           const filteredByType = courses.filter(course => {
-            // Проверяем тип материала
-            if (course.type !== 'course' && course.type !== 'onboarding') {
-              return false
-            }
-            
-            // Фильтрация по типу нард
-            const titleLower = (course.title || '').toLowerCase()
-            const isLongKeyword = titleLower.includes('длинн')
-            const isShortKeyword = titleLower.includes('коротк')
-            
-            if (isLongKeyword && !isShortKeyword) {
-              return activeFilter === 'long'
-            }
-            if (isShortKeyword && !isLongKeyword) {
-              return activeFilter === 'short'
-            }
-            
-            if (course.gameMode && (course.gameMode === 'long' || course.gameMode === 'short')) {
-              return course.gameMode === activeFilter
-            }
-            
-            return activeFilter === 'long'
+                // Проверяем тип материала
+                if (course.type !== 'course' && course.type !== 'onboarding') {
+                  return false
+                }
+                
+                // Фильтрация по типу нард
+                const titleLower = (course.title || '').toLowerCase()
+                const isLongKeyword = titleLower.includes('длинн')
+                const isShortKeyword = titleLower.includes('коротк')
+                
+                if (isLongKeyword && !isShortKeyword) {
+                  return activeFilter === 'long'
+                }
+                if (isShortKeyword && !isLongKeyword) {
+                  return activeFilter === 'short'
+                }
+                
+                if (course.gameMode && (course.gameMode === 'long' || course.gameMode === 'short')) {
+                  return course.gameMode === activeFilter
+                }
+                
+                return activeFilter === 'long'
           })
           
           // Проверяем, все ли материалы куплены
@@ -866,8 +866,8 @@ export default function Academy() {
           
           // Исключаем купленные только в конце
           const filtered = filteredByType.filter(course => !course.purchased)
-          
-          console.log('[Academy] Rendering courses tab - total:', courses.length, 'filtered:', filtered.length, 'filtered items:', filtered)
+              
+              console.log('[Academy] Rendering courses tab - total:', courses.length, 'filtered:', filtered.length, 'filtered items:', filtered)
           
           // Если все материалы куплены, показываем сообщение
           if (allPurchased) {
@@ -895,44 +895,44 @@ export default function Academy() {
           return (
             <div className="academy-grid">
               {filtered.map((course) => (
-                <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
-                  <div className="academy-grid-card-icon">
-                    <img src="/img/шляпа.png" alt="course" className="academy-hat-icon" />
-                  </div>
-                  <div className="academy-grid-card-title">{course.title}</div>
-                  <div className="academy-grid-card-author">{course.author}</div>
+              <div key={course.id} className="academy-grid-card" onClick={() => handleOpen(course)}>
+                <div className="academy-grid-card-icon">
+                  <img src="/img/шляпа.png" alt="course" className="academy-hat-icon" />
                 </div>
-              ))}
-            </div>
+                <div className="academy-grid-card-title">{course.title}</div>
+                <div className="academy-grid-card-author">{course.author}</div>
+              </div>
+            ))}
+          </div>
           )
         })()}
 
         {activeTab === 'articles' && (() => {
-          console.log('[Academy] Rendering articles tab - articles state:', articles.length, 'articles:', articles)
-          // Фильтруем только по типу материала (article) и gameMode, НЕ исключаем купленные
+              console.log('[Academy] Rendering articles tab - articles state:', articles.length, 'articles:', articles)
+              // Фильтруем только по типу материала (article) и gameMode, НЕ исключаем купленные
           const filteredByType = articles.filter(article => {
-            // Проверяем тип материала
-            if (article.type !== 'article') {
-              return false
-            }
-            
+                // Проверяем тип материала
+                if (article.type !== 'article') {
+                  return false
+                }
+                
             // Сначала проверяем gameMode если он установлен (приоритет)
             if (article.gameMode) {
               return article.gameMode === activeFilter
             }
             
             // Если нет gameMode, проверяем ключевые слова в названии
-            const titleLower = (article.title || '').toLowerCase()
-            const isLongKeyword = titleLower.includes('длинн')
-            const isShortKeyword = titleLower.includes('коротк')
-            
-            if (isLongKeyword && !isShortKeyword) {
-              return activeFilter === 'long'
-            }
-            if (isShortKeyword && !isLongKeyword) {
-              return activeFilter === 'short'
-            }
-            
+                const titleLower = (article.title || '').toLowerCase()
+                const isLongKeyword = titleLower.includes('длинн')
+                const isShortKeyword = titleLower.includes('коротк')
+                
+                if (isLongKeyword && !isShortKeyword) {
+                  return activeFilter === 'long'
+                }
+                if (isShortKeyword && !isLongKeyword) {
+                  return activeFilter === 'short'
+                }
+                
             // Если нет gameMode и нет ключевых слов в названии, не включаем материал
             // (материал должен иметь явное указание на тип нард)
             return false
@@ -944,7 +944,7 @@ export default function Academy() {
           // Проверяем, все ли материалы куплены
           // Если есть материалы по фильтру И все они куплены (т.е. filtered пустой), показываем сообщение
           const allPurchased = filteredByType.length > 0 && filtered.length === 0
-          
+              
           console.log('[Academy] Rendering articles tab - total:', articles.length, 'filteredByType:', filteredByType.length, 'filteredByType items:', filteredByType.map(a => ({ id: a.id, title: a.title, purchased: a.purchased, gameMode: a.gameMode })), 'filtered (not purchased):', filtered.length, 'allPurchased:', allPurchased, 'activeFilter:', activeFilter)
           
           // Если все материалы куплены, показываем сообщение
@@ -993,15 +993,15 @@ export default function Academy() {
           return (
             <div className="academy-grid">
               {filtered.map((article) => (
-                <div key={article.id} className="academy-grid-card" onClick={() => handleOpen(article)}>
-                  <div className="academy-grid-card-icon">
-                    <img src="/img/шляпа.png" alt="article" className="academy-hat-icon" />
-                  </div>
-                  <div className="academy-grid-card-title">{article.title}</div>
-                  <div className="academy-grid-card-author">{article.author}</div>
+              <div key={article.id} className="academy-grid-card" onClick={() => handleOpen(article)}>
+                <div className="academy-grid-card-icon">
+                  <img src="/img/шляпа.png" alt="article" className="academy-hat-icon" />
                 </div>
-              ))}
-            </div>
+                <div className="academy-grid-card-title">{article.title}</div>
+                <div className="academy-grid-card-author">{article.author}</div>
+              </div>
+            ))}
+          </div>
           )
         })()}
 
@@ -1084,6 +1084,7 @@ export default function Academy() {
             touchAction: 'none',
             overflow: 'hidden',
             overscrollBehavior: 'contain',
+            boxSizing: 'border-box',
           }}
           onClick={() => setShowPurchaseModal(null)}
         >

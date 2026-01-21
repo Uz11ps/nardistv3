@@ -1257,7 +1257,7 @@ export default function Shop() {
               </button>
               <button
                 onClick={confirmBuyLicense}
-                disabled={buyingItem !== null}
+                disabled={buyingItem !== null || (user && shopBarInfo.license.costNar > (Number(user.narCoin) || 0))}
                 style={{
                   flex: 1,
                   padding: '12px',
@@ -1267,11 +1267,11 @@ export default function Shop() {
                   color: '#FFF',
                   fontSize: '16px',
                   fontWeight: '600',
-                  cursor: buyingItem !== null ? 'not-allowed' : 'pointer',
-                  opacity: buyingItem !== null ? 0.5 : 1,
+                  cursor: (buyingItem !== null || (user && shopBarInfo.license.costNar > (Number(user.narCoin) || 0))) ? 'not-allowed' : 'pointer',
+                  opacity: (buyingItem !== null || (user && shopBarInfo.license.costNar > (Number(user.narCoin) || 0))) ? 0.5 : 1,
                 }}
               >
-                {buyingItem === 'license' ? 'Покупка...' : 'Подтвердить'}
+                {buyingItem === 'license' ? 'Покупка...' : (user && shopBarInfo.license.costNar > (Number(user.narCoin) || 0) ? 'Недостаточно средств' : 'Подтвердить')}
               </button>
             </div>
           </div>

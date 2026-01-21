@@ -57,6 +57,7 @@ export default function Game() {
   const timerIntervalRef = useRef<number | null>(null)
   const [preparationCountdown, setPreparationCountdown] = useState<number | null>(null) // Отсчет подготовки (5 секунд)
   const preparationCountdownRef = useRef<number | null>(null)
+  const bothOffsetsChosenRef = useRef<boolean>(false) // Отслеживаем, были ли оба смещения выбраны ранее
   const [offsetSelectionTimer, setOffsetSelectionTimer] = useState<number | null>(null) // Таймер выбора смещения (15 секунд)
   const offsetSelectionTimerRef = useRef<number | null>(null)
   const offsetSelectionTimerIntervalRef = useRef<number | null>(null)
@@ -483,6 +484,7 @@ export default function Game() {
       setMoveTimer(15)
       setPreparationCountdown(null)
       preparationCountdownRef.current = null
+      // ВАЖНО: НЕ сбрасываем bothOffsetsChosenRef здесь, чтобы таймер подготовки не запускался снова
       
       // Очищаем таймеры
       if (timerRef.current) {
@@ -822,6 +824,10 @@ export default function Game() {
       
       setMyOffset(myCurrentOffset)
       setOpponentOffset(opponentCurrentOffset)
+      
+      // Инициализируем ref для отслеживания выбора смещений
+      const bothOffsetsChosenOnLoad = game.p1OffsetChosenAt && game.p2OffsetChosenAt
+      bothOffsetsChosenRef.current = bothOffsetsChosenOnLoad
       
       // Показываем модальное окно выбора смещения ТОЛЬКО если смещение еще не было выбрано
       // Проверяем p1OffsetChosenAt и p2OffsetChosenAt - если они null, значит смещение еще не выбрано
@@ -1189,6 +1195,7 @@ export default function Game() {
         setMoveTimer(15)
         setPreparationCountdown(null)
         preparationCountdownRef.current = null
+        // ВАЖНО: НЕ сбрасываем bothOffsetsChosenRef здесь, чтобы таймер подготовки не запускался снова
         
         // Очищаем таймеры
         if (timerRef.current) {
@@ -1343,23 +1350,40 @@ export default function Game() {
       
       // Проверяем, выбрали ли оба игрока смещение (для всех типов игр, включая ботов)
       const bothOffsetsChosen = data.p1OffsetChosenAt && data.p2OffsetChosenAt
+      
+      // ВАЖНО: Проверяем, были ли смещения выбраны ранее (до этого обновления)
+      const wasBothOffsetsChosenBefore = bothOffsetsChosenRef.current
+      const bothOffsetsJustChosen = bothOffsetsChosen && !wasBothOffsetsChosenBefore
 
       // Если оба игрока выбрали смещение, но игра еще в WAITING - запускаем отсчет подготовки
       // Это работает для ВСЕХ типов игр: vs_player, vs_bot, tournament
       // Проверяем также, что игра еще не началась (нет кубиков)
       const hasNoDice = !data.gameState?.dice || (Array.isArray(data.gameState.dice) && data.gameState.dice.length === 0)
       
-      // Для ботов важно запустить таймер подготовки ДО того, как игра начнется
-      // Проверяем, что оба смещения выбраны, таймер еще не запущен, и кубиков еще нет
-      if (bothOffsetsChosen && preparationCountdown === null && hasNoDice) {
+      // ВАЖНО: Таймер подготовки должен запускаться ТОЛЬКО ОДИН РАЗ:
+      // 1. Когда оба игрока выбрали смещение в первый раз (bothOffsetsJustChosen)
+      // 2. Таймер еще не запущен (preparationCountdown === null)
+      // 3. Нет кубиков (hasNoDice) - игра еще не началась
+      // 4. Статус игры waiting или только что перешел в in_progress БЕЗ кубиков
+      // Это гарантирует, что таймер запустится ДО того, как игра начнется и кубики будут брошены
+      // И НЕ запустится после каждого хода
+      const isGameStarting = (newStatus === 'waiting' || (newStatus === 'in_progress' && hasNoDice))
+      if (bothOffsetsJustChosen && preparationCountdown === null && hasNoDice && isGameStarting) {
         console.log('⏱️ Запускаем отсчет подготовки к игре (5 секунд) для типа:', data.type, {
           newStatus,
           hasNoDice,
+          isGameStarting,
           p1OffsetChosenAt: data.p1OffsetChosenAt,
-          p2OffsetChosenAt: data.p2OffsetChosenAt
+          p2OffsetChosenAt: data.p2OffsetChosenAt,
+          bothOffsetsJustChosen
         })
         setPreparationCountdown(5)
         preparationCountdownRef.current = 5
+        // ВАЖНО: Устанавливаем ref ТОЛЬКО после запуска таймера, чтобы предотвратить повторный запуск
+        bothOffsetsChosenRef.current = true
+      } else if (bothOffsetsChosen && !bothOffsetsJustChosen) {
+        // Если оба смещения уже были выбраны ранее, просто обновляем ref (но не запускаем таймер)
+        bothOffsetsChosenRef.current = true
       }
 
       // Таймер и броски кубиков запускаются ТОЛЬКО после выбора смещения обоими игроками
