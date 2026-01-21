@@ -899,6 +899,31 @@
   border-color: #5a5a5a;
 }
 
+/* Кнопка инфо (как в профиле) */
+.profile-enhancement-info-btn {
+  background: rgba(232, 65, 66, 0.15);
+  border: none;
+  color: #E84142;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.profile-enhancement-info-btn:hover {
+  background: rgba(232, 65, 66, 0.25);
+  color: #E84142;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(232, 65, 66, 0.4);
+}
+
 /* Premium Modal */
 .shop-premium-modal-overlay {
   position: fixed;
@@ -1022,6 +1047,84 @@
   color: #B6B6B6;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
+}
+
+/* Стили для subscription-features в модалке (как на странице subscription) */
+.shop-premium-modal-content .subscription-features {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  margin-bottom: 24px;
+}
+
+.shop-premium-modal-content .subscription-feature-card {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  padding: 16px;
+  border: none;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  transition: transform 0.2s, box-shadow 0.2s;
+  min-height: 80px;
+}
+
+.shop-premium-modal-content .subscription-feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+}
+
+.shop-premium-modal-content .subscription-feature-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.shop-premium-modal-content .subscription-feature-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.shop-premium-modal-content .subscription-feature-icon img,
+.shop-premium-modal-content .subscription-feature-icon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.shop-premium-modal-content .subscription-feature-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 48px;
+}
+
+.shop-premium-modal-content .subscription-feature-title {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #FFF;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.shop-premium-modal-content .subscription-feature-description {
+  font-size: 13px;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.4;
   font-weight: 400;
   line-height: 1.4;
 }

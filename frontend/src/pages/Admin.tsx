@@ -251,6 +251,7 @@ export default function Admin() {
   const [tournamentFilters, setTournamentFilters] = useState({ search: '', status: '' })
   const [questFilters, setQuestFilters] = useState({ search: '', type: '' })
   const [clanFilters, setClanFilters] = useState({ search: '', level: '' })
+  const [onboardingText, setOnboardingText] = useState('')
   
   // Формы создания
   const [newGame, setNewGame] = useState({ 
@@ -3741,6 +3742,8 @@ export default function Admin() {
                         if (orderGroup) orderGroup.style.display = 'none'
                         if (requiredGroup) requiredGroup.style.display = 'none'
                         if (typeGroup) typeGroup.style.display = 'block'
+                        // Очищаем текст онбординга при переключении на обычный квест
+                        setOnboardingText('')
                       }
                     }}
                   >
@@ -3761,7 +3764,11 @@ export default function Admin() {
                 </div>
                 <div className="form-group" id="quest-onboarding-text-group" style={{ display: 'none' }}>
                   <label>Текст онбординга:</label>
-                  <textarea placeholder="Текст для онбордингового квеста" id="quest-onboarding-text" rows={4}></textarea>
+                  <RichTextEditor
+                    value={onboardingText}
+                    onChange={(content) => setOnboardingText(content)}
+                    placeholder="Текст для онбордингового квеста"
+                  />
                 </div>
                 <div className="form-group" id="quest-order-group" style={{ display: 'none' }}>
                   <label>Порядок:</label>
@@ -3876,7 +3883,7 @@ export default function Admin() {
                     
                     // Если онбординг, добавляем дополнительные поля
                     if (category === 'onboarding') {
-                      questData.onboardingText = (document.getElementById('quest-onboarding-text') as HTMLTextAreaElement).value
+                      questData.onboardingText = onboardingText
                       questData.order = parseInt((document.getElementById('quest-order') as HTMLInputElement).value || '1')
                       questData.isRequired = (document.getElementById('quest-required') as HTMLInputElement).checked
                       // Для онбординга устанавливаем дефолтные даты (очень долгий период)
@@ -3888,6 +3895,21 @@ export default function Admin() {
                     
                     await apiClient.post('/admin/quests', questData)
                     alert('Квест создан!')
+                    // Очищаем форму
+                    ;(document.getElementById('quest-name') as HTMLInputElement).value = ''
+                    ;(document.getElementById('quest-description') as HTMLTextAreaElement).value = ''
+                    ;(document.getElementById('quest-category') as HTMLSelectElement).value = 'regular'
+                    setOnboardingText('')
+                    ;(document.getElementById('quest-order') as HTMLInputElement).value = '1'
+                    ;(document.getElementById('quest-required') as HTMLInputElement).checked = false
+                    const onboardingGroup = document.getElementById('quest-onboarding-text-group')
+                    const orderGroup = document.getElementById('quest-order-group')
+                    const requiredGroup = document.getElementById('quest-required-group')
+                    const typeGroup = document.getElementById('quest-type-group')
+                    if (onboardingGroup) onboardingGroup.style.display = 'none'
+                    if (orderGroup) orderGroup.style.display = 'none'
+                    if (requiredGroup) requiredGroup.style.display = 'none'
+                    if (typeGroup) typeGroup.style.display = 'block'
                     loadStats()
                   } catch (error: any) {
                     alert('Ошибка: ' + (error.response?.data?.message || error.message))

@@ -53,5 +53,11 @@ export class RatingsController {
     const rank = await this.ratingsService.getUserRank(userId, mode || GameMode.SHORT);
     return { rank };
   }
+
+  @Get('my-stats')
+  @UseGuards(JwtAuthGuard)
+  async getMyStats(@CurrentUser() user: any) {
+    return this.ratingsService.getMyStats(user.id);
+  }
 }
 

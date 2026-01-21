@@ -49,7 +49,7 @@ const subscriptionFeatures = [
   {
     title: 'Премиум-значок',
     description: 'Отметь свой статус в таблице',
-    icon: <img src="/img/crown.png" alt="premium" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />,
+    icon: <img src="/img/crown.png" alt="premium" style={{ width: '56px', height: '56px', objectFit: 'contain', margin: '-4px' }} />,
     iconBg: 'rgba(255, 255, 255, 0.1)',
   },
 ]
@@ -299,7 +299,7 @@ export default function Subscription() {
               boxSizing: 'border-box',
             }}
           >
-            Tribute <img src="/img/crown.png" alt="tribute" style={{ width: '16px', height: '16px', objectFit: 'contain', verticalAlign: 'middle', display: 'inline-block' }} />
+            Tribute
           </button>
           <button
             onClick={() => setPaymentMethod('STARS')}

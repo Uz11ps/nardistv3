@@ -1,6 +1,8 @@
 ﻿import { useState, useEffect } from 'react'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
+import PlayerName from '../components/PlayerName'
+import { useAuthStore } from '../store/authStore'
 import './Leaderboard.css'
 
 interface LeaderboardEntry {
@@ -14,22 +16,39 @@ interface LeaderboardEntry {
     rating: number
     xp?: number
     badge?: string
+    hasPremium?: boolean
   }
   wins: number
   losses: number
   draws?: number
   totalMatches?: number
   winRate?: number | null
+  ratingChange?: number
+}
+
+interface MyStats {
+  overallRating: number
+  shortRating: number
+  longRating: number
+  totalMatches: number
+  wins: number
+  losses: number
+  winRate: number
+  totalXP: number
+  ratingChange: number
 }
 
 export default function Leaderboard() {
+  const { user } = useAuthStore()
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [myStats, setMyStats] = useState<MyStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'weekly' | 'monthly'>('all')
-  const [sortBy, setSortBy] = useState<'xp' | 'matches' | 'winrate'>('xp')
+  const [sortBy, setSortBy] = useState<'xp' | 'matches' | 'winrate' | 'rating'>('xp')
 
   useEffect(() => {
     loadLeaderboard()
+    loadMyStats()
   }, [filter, sortBy])
 
   const loadLeaderboard = async () => {
@@ -44,11 +63,13 @@ export default function Leaderboard() {
     }
   }
 
-  const getRankColor = (rank: number) => {
-    if (rank === 1) return '#FFD700' // Золото
-    if (rank === 2) return '#C0C0C0' // Серебро
-    if (rank === 3) return '#CD7F32' // Бронза
-    return '#aaaaaa'
+  const loadMyStats = async () => {
+    try {
+      const response = await apiClient.get('/ratings/my-stats').catch(() => ({ data: null }))
+      setMyStats(response.data)
+    } catch (error) {
+      console.error('Failed to load my stats:', error)
+    }
   }
 
   return (
@@ -62,6 +83,31 @@ export default function Leaderboard() {
       ]}
     >
       <div className="leaderboard-content">
+        {/* Моя статистика */}
+        {myStats && user && (
+          <div className="leaderboard-my-stats">
+            <div className="leaderboard-my-stats-header">Моя статистика</div>
+            <div className="leaderboard-my-stats-content">
+              <div className="leaderboard-my-stats-item">
+                <div className="leaderboard-my-stats-label">Рейтинг</div>
+                <div className="leaderboard-my-stats-value">{myStats.overallRating}</div>
+              </div>
+              <div className="leaderboard-my-stats-item">
+                <div className="leaderboard-my-stats-label">Матчей</div>
+                <div className="leaderboard-my-stats-value">{myStats.totalMatches}</div>
+              </div>
+              <div className="leaderboard-my-stats-item">
+                <div className="leaderboard-my-stats-label">Винрейт</div>
+                <div className="leaderboard-my-stats-value">{myStats.winRate}%</div>
+              </div>
+              <div className="leaderboard-my-stats-item">
+                <div className="leaderboard-my-stats-label">XP</div>
+                <div className="leaderboard-my-stats-value">{myStats.totalXP.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Фильтры по типу статистики */}
         <div className="leaderboard-mode-filters">
           <button
@@ -82,6 +128,12 @@ export default function Leaderboard() {
           >
             Винрейт
           </button>
+          <button
+            className={`leaderboard-mode-btn ${sortBy === 'rating' ? 'active' : ''}`}
+            onClick={() => setSortBy('rating')}
+          >
+            Рейтинг
+          </button>
         </div>
 
         {/* Лидерборд */}
@@ -95,20 +147,8 @@ export default function Leaderboard() {
               <div
                 key={entry.user.id}
                 className="leaderboard-item"
-                style={{ borderLeft: `4px solid ${getRankColor(entry.rank)}` }}
               >
                 <div className="leaderboard-item-content">
-                  {/* Ранг */}
-                  <div
-                    className="leaderboard-rank"
-                    style={{
-                      background: '#3a3a3a',
-                      color: '#ffffff',
-                    }}
-                  >
-                    #{entry.rank}
-                  </div>
-
                   {/* Аватар */}
                   <div className="leaderboard-avatar">
                     {entry.user.avatarUrl ? (
@@ -125,7 +165,11 @@ export default function Leaderboard() {
                   {/* Информация */}
                   <div className="leaderboard-info">
                     <div className="leaderboard-name">
-                      {entry.user.nickname || entry.user.username}
+                      <PlayerName 
+                        nickname={entry.user.nickname}
+                        username={entry.user.username}
+                        hasPremium={entry.user.hasPremium}
+                      />
                     </div>
                     <div className="leaderboard-details">
                       Уровень {entry.user.level} • Рейтинг: {entry.user.rating}
@@ -139,6 +183,16 @@ export default function Leaderboard() {
                       )}
                       {sortBy === 'winrate' && (
                         <>Винрейт: {entry.winRate || 0}%</>
+                      )}
+                      {sortBy === 'rating' && (
+                        <>
+                          Рейтинг: {entry.user.rating}
+                          {filter !== 'all' && entry.ratingChange !== undefined && entry.ratingChange !== 0 && (
+                            <span style={{ marginLeft: '8px', color: entry.ratingChange > 0 ? '#4CAF50' : '#F44336' }}>
+                              {entry.ratingChange > 0 ? '+' : ''}{entry.ratingChange}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

@@ -560,7 +560,24 @@ export default function Game() {
   const isMyTurn = isSandbox 
     ? (gameState?.dice && Array.isArray(gameState.dice) && gameState.dice.length > 0)
     : ((gameState?.canMove || false) && (gameStatus === 'in_progress'))
-  const myPlayer = isPlayer1 ? gameInfo?.player1 : gameInfo?.player2
+  // Получаем премиум статус текущего пользователя
+  const [myHasPremium, setMyHasPremium] = useState(false)
+  
+  useEffect(() => {
+    const checkMyPremium = async () => {
+      try {
+        const response = await apiClient.get('/subscription/status')
+        setMyHasPremium(response.data?.hasActive || false)
+      } catch (error) {
+        setMyHasPremium(false)
+      }
+    }
+    checkMyPremium()
+  }, [])
+  
+  const myPlayer = isPlayer1 
+    ? (gameInfo?.player1 ? { ...gameInfo.player1, hasPremium: myHasPremium } : null)
+    : (gameInfo?.player2 ? { ...gameInfo.player2, hasPremium: myHasPremium } : null)
   const opponentPlayer = isPlayer1 ? gameInfo?.player2 : gameInfo?.player1
   
   // Модальное окно с информацией об игроке
@@ -2988,7 +3005,12 @@ export default function Game() {
           <div className="game-side-panel left">
             <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
                 <div className="game-player-name">
-                  {opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}
+                  <PlayerName 
+                    nickname={opponentPlayer?.nickname}
+                    username={opponentPlayer?.username}
+                    hasPremium={opponentPlayer?.hasPremium}
+                    fallback="Соперник"
+                  />
                   <div className="pip-count-display">
                     {pipCounts.player2}
                     {pipDiff.player2 !== null && pipDiff.player2 !== 0 && (
@@ -3063,7 +3085,14 @@ export default function Game() {
             <div className="game-players-section">
               {/* Противник слева */}
               <div className={`game-player ${!isPlayer1 ? 'game-player-me' : ''}`}>
-                <div className="game-player-name">{opponentPlayer?.nickname || opponentPlayer?.username || 'Соперник'}</div>
+                <div className="game-player-name">
+                  <PlayerName 
+                    nickname={opponentPlayer?.nickname}
+                    username={opponentPlayer?.username}
+                    hasPremium={opponentPlayer?.hasPremium}
+                    fallback="Соперник"
+                  />
+                </div>
                 <div className="game-player-avatar" onClick={() => opponentPlayer && handleAvatarClick(opponentPlayer)} style={{ cursor: 'pointer' }}>
                   {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
                   {gameStatus === 'in_progress' && (() => {
@@ -3120,7 +3149,14 @@ export default function Game() {
               </div>
               {/* Я справа */}
               <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
-                <div className="game-player-name">{myPlayer?.nickname || myPlayer?.username || 'Вы'}</div>
+                <div className="game-player-name">
+                  <PlayerName 
+                    nickname={myPlayer?.nickname}
+                    username={myPlayer?.username}
+                    hasPremium={myPlayer?.hasPremium}
+                    fallback="Вы"
+                  />
+                </div>
                 <div className="game-player-avatar" onClick={() => myPlayer && handleAvatarClick(myPlayer)} style={{ cursor: 'pointer' }}>
                   {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
                   {gameStatus === 'in_progress' && (() => {
@@ -3605,7 +3641,12 @@ export default function Game() {
             
             <div className={`game-player ${isPlayer1 ? 'game-player-me' : ''}`}>
               <div className="game-player-name">
-                {myPlayer?.nickname || myPlayer?.username || 'Вы'}
+                <PlayerName 
+                  nickname={myPlayer?.nickname}
+                  username={myPlayer?.username}
+                  hasPremium={myPlayer?.hasPremium}
+                  fallback="Вы"
+                />
                 <div className="pip-count-display">
                   {pipCounts.player1}
                   {pipDiff.player1 !== null && pipDiff.player1 !== 0 && (
@@ -3847,7 +3888,12 @@ export default function Game() {
                   )}
                 </div>
                 <div className="game-player-modal-name">
-                  {selectedPlayer?.nickname || selectedPlayer?.username || 'Игрок'}
+                  <PlayerName 
+                    nickname={selectedPlayer?.nickname}
+                    username={selectedPlayer?.username}
+                    hasPremium={selectedPlayer?.hasPremium}
+                    fallback="Игрок"
+                  />
                 </div>
                 {selectedPlayer?.username && selectedPlayer?.nickname && (
                   <div className="game-player-modal-username">@{selectedPlayer.username}</div>

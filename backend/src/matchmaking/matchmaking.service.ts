@@ -222,6 +222,14 @@ export class MatchmakingService {
     };
   }
 
+  /**
+   * Вспомогательный метод для получения настройки из БД
+   */
+  private async getSystemSetting(key: string, defaultValue: number): Promise<number> {
+    const setting = await this.systemSettingsRepository.findOne({ where: { key } });
+    return setting ? parseInt(setting.value) : defaultValue;
+  }
+
   async findMatch(userId: string, mode: GameMode): Promise<{ opponentId: string; timeLimit: number; stake: number; matchesToWin: number } | null> {
     const userEntryStr = await this.redis.get(`queue:user:${userId}`);
     if (!userEntryStr) {
@@ -231,8 +239,7 @@ export class MatchmakingService {
     const userEntry: QueueEntry = JSON.parse(userEntryStr);
     
     // Получаем настройку разброса рейтинга из БД
-    const ratingRangeSetting = await this.systemSettingsRepository.findOne({ where: { key: 'matchmaking_rating_range' } });
-    const ratingRange = ratingRangeSetting ? parseInt(ratingRangeSetting.value) : 500;
+    const ratingRange = await this.getSystemSetting('matchmaking_rating_range', 500);
     
     const minRating = userEntry.rating - ratingRange;
     const maxRating = userEntry.rating + ratingRange;

@@ -20,6 +20,7 @@ import { TrainingService } from '../training/training.service';
 import { TaskType } from '../training/training-task.entity';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { ClansService } from '../clans/clans.service';
+import { SubscriptionService } from '../subscription/subscription.service';
 import { GamesGateway } from './games.gateway';
 import * as crypto from 'crypto';
 
@@ -59,6 +60,8 @@ export class GamesService {
     private tournamentsService: TournamentsService,
     @Inject(forwardRef(() => ClansService))
     private clansService: ClansService,
+    @Inject(forwardRef(() => SubscriptionService))
+    private subscriptionService: SubscriptionService,
     @Inject(forwardRef(() => GamesGateway))
     private gamesGateway: GamesGateway,
   ) {}
@@ -2557,6 +2560,10 @@ export class GamesService {
   async getGameState(gameId: string): Promise<any> {
     const game = await this.findOne(gameId);
     
+    // Проверяем премиум статус для игроков
+    const player1HasPremium = game.player1Id ? await this.subscriptionService.hasActiveSubscription(game.player1Id) : false;
+    const player2HasPremium = game.player2Id ? await this.subscriptionService.hasActiveSubscription(game.player2Id) : false;
+    
     // ВАЖНО: Включаем все данные для восстановления сессии с сервера
     return {
       id: game.id,
@@ -2567,8 +2574,8 @@ export class GamesService {
       currentPlayer: game.currentPlayer,
       player1Id: game.player1Id,
       player2Id: game.player2Id,
-      player1: game.player1,
-      player2: game.player2,
+      player1: game.player1 ? { ...game.player1, hasPremium: player1HasPremium } : null,
+      player2: game.player2 ? { ...game.player2, hasPremium: player2HasPremium } : null,
       player1Score: game.player1Score,
       player2Score: game.player2Score,
       player1Wins: game.player1Wins || 0,

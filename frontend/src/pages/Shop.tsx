@@ -757,10 +757,11 @@ export default function Shop() {
                       Купить
                     </button>
                     <button
-                      className="shop-subscription-details-btn"
+                      className="profile-enhancement-info-btn"
                       onClick={() => setShowPremiumModal(true)}
+                      style={{ marginLeft: '8px' }}
                     >
-                      Подробнее
+                      I
                     </button>
                   </div>
                   <div className="shop-subscription-price">от 199 руб.</div>
@@ -856,7 +857,7 @@ export default function Shop() {
         <div className="shop-premium-modal-overlay" onClick={() => setShowPremiumModal(false)}>
           <div className="shop-premium-modal" onClick={(e) => e.stopPropagation()}>
             <div className="shop-premium-modal-header">
-              <h3 className="shop-premium-modal-title">Премиум подписка</h3>
+              <h3 className="shop-premium-modal-title">Премиум</h3>
               <button 
                 className="shop-premium-modal-close"
                 onClick={() => setShowPremiumModal(false)}
@@ -870,56 +871,96 @@ export default function Shop() {
                 Для тех, кто хочет играть на уровне мастеров
               </div>
 
-              <div className="shop-premium-modal-features">
-                <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">
-                    <ScrollIcon size={48} style={{ color: '#FFD700' }} />
+              <div className="subscription-features">
+                <Card className="subscription-feature-card">
+                  <div className="subscription-feature-content">
+                    <div 
+                      className="subscription-feature-icon" 
+                      style={{ 
+                        fontSize: '24px',
+                        background: 'rgba(255, 215, 0, 0.15)'
+                      }}
+                    >
+                      <ScrollIcon size={24} style={{ color: '#FFD700' }} />
+                    </div>
+                    <div className="subscription-feature-info">
+                      <div className="subscription-feature-title">История игр</div>
+                      <div className="subscription-feature-description">Полный список твоих матчей</div>
+                    </div>
                   </div>
-                  <div className="shop-premium-modal-feature-info">
-                    <div className="shop-premium-modal-feature-title">История игр</div>
-                    <div className="shop-premium-modal-feature-description">Полный список твоих матчей</div>
-                  </div>
-                </div>
+                </Card>
 
-                <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">
-                    <img src="/img/зарик.png" alt="analysis" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+                <Card className="subscription-feature-card">
+                  <div className="subscription-feature-content">
+                    <div 
+                      className="subscription-feature-icon" 
+                      style={{ 
+                        fontSize: '24px',
+                        background: 'rgba(255, 215, 0, 0.15)'
+                      }}
+                    >
+                      <img src="/img/зарик.png" alt="analysis" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                    </div>
+                    <div className="subscription-feature-info">
+                      <div className="subscription-feature-title">Анализ</div>
+                      <div className="subscription-feature-description">Разбор ошибок и лучших ходов</div>
+                    </div>
                   </div>
-                  <div className="shop-premium-modal-feature-info">
-                    <div className="shop-premium-modal-feature-title">Анализ</div>
-                    <div className="shop-premium-modal-feature-description">Разбор ошибок и лучших ходов</div>
-                  </div>
-                </div>
+                </Card>
 
-                <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">
-                    <TargetIcon size={48} style={{ color: '#FFF' }} />
+                <Card className="subscription-feature-card">
+                  <div className="subscription-feature-content">
+                    <div 
+                      className="subscription-feature-icon" 
+                      style={{ 
+                        fontSize: '24px',
+                        background: 'rgba(255, 255, 255, 0.1)'
+                      }}
+                    >
+                      <TargetIcon size={24} style={{ color: '#FFF' }} />
+                    </div>
+                    <div className="subscription-feature-info">
+                      <div className="subscription-feature-title">Тренажёр</div>
+                      <div className="subscription-feature-description">Разбирай позиции и стратегии</div>
+                    </div>
                   </div>
-                  <div className="shop-premium-modal-feature-info">
-                    <div className="shop-premium-modal-feature-title">Тренажёр</div>
-                    <div className="shop-premium-modal-feature-description">Разбирай позиции и стратегии</div>
-                  </div>
-                </div>
+                </Card>
 
-                <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">
-                    <EnergyIcon size={48} style={{ color: '#FF4444' }} />
+                <Card className="subscription-feature-card">
+                  <div className="subscription-feature-content">
+                    <div 
+                      className="subscription-feature-icon" 
+                      style={{ 
+                        fontSize: '24px',
+                        background: 'rgba(255, 68, 68, 0.15)'
+                      }}
+                    >
+                      <EnergyIcon size={24} style={{ color: '#FF4444' }} />
+                    </div>
+                    <div className="subscription-feature-info">
+                      <div className="subscription-feature-title">Приоритет</div>
+                      <div className="subscription-feature-description">Попадай к соперникам быстрее</div>
+                    </div>
                   </div>
-                  <div className="shop-premium-modal-feature-info">
-                    <div className="shop-premium-modal-feature-title">Приоритет</div>
-                    <div className="shop-premium-modal-feature-description">Попадай к соперникам быстрее</div>
-                  </div>
-                </div>
+                </Card>
 
-                <div className="shop-premium-modal-feature">
-                  <div className="shop-premium-modal-feature-icon">
-                    <img src="/img/crown.png" alt="premium" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+                <Card className="subscription-feature-card">
+                  <div className="subscription-feature-content">
+                    <div 
+                      className="subscription-feature-icon" 
+                      style={{ 
+                        fontSize: '24px',
+                        background: 'rgba(255, 255, 255, 0.1)'
+                      }}
+                    >
+                      <img src="/img/crown.png" alt="premium" style={{ width: '56px', height: '56px', objectFit: 'contain', margin: '-4px' }} />
+                    </div>
+                    <div className="subscription-feature-info">
+                      <div className="subscription-feature-title">Премиум-значок</div>
+                      <div className="subscription-feature-description">Отметь свой статус в таблице</div>
+                    </div>
                   </div>
-                  <div className="shop-premium-modal-feature-info">
-                    <div className="shop-premium-modal-feature-title">Премиум-значок</div>
-                    <div className="shop-premium-modal-feature-description">Отметь свой статус в таблице</div>
-                  </div>
-                </div>
+                </Card>
               </div>
 
               <div className="shop-premium-modal-actions">
