@@ -25,7 +25,7 @@ const subscriptionFeatures = [
   {
     title: 'История игр',
     description: 'Полный список твоих матчей',
-    icon: <ScrollIcon size={48} style={{ color: '#FFD700' }} />,
+    icon: <ScrollIcon size={24} style={{ color: '#FFD700' }} />,
     iconBg: 'rgba(255, 215, 0, 0.15)',
   },
   {
@@ -37,19 +37,19 @@ const subscriptionFeatures = [
   {
     title: 'Тренажёр',
     description: 'Разбирай позиции и стратегии',
-    icon: <TargetIcon size={48} style={{ color: '#FFF' }} />,
+    icon: <TargetIcon size={24} style={{ color: '#FFF' }} />,
     iconBg: 'rgba(255, 255, 255, 0.1)',
   },
   {
     title: 'Приоритет',
     description: 'Попадай к соперникам быстрее',
-    icon: <EnergyIcon size={36} style={{ color: '#FF4444' }} />,
+    icon: <EnergyIcon size={24} style={{ color: '#FF4444' }} />,
     iconBg: 'rgba(255, 68, 68, 0.15)',
   },
   {
     title: 'Премиум-значок',
     description: 'Отметь свой статус в таблице',
-    icon: <CrownIcon size={48} style={{ color: '#FFF' }} />,
+    icon: <CrownIcon size={24} style={{ color: '#FFF' }} />,
     iconBg: 'rgba(255, 255, 255, 0.1)',
   },
 ]

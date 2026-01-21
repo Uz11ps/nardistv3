@@ -41,6 +41,11 @@ export class HistoryService {
       query.andWhere('game.type != :sandboxType', { sandboxType: 'sandbox' }); // Дополнительная проверка для sandbox
     }
 
+    // Фильтр "только с игроками" - исключаем игры с ботами
+    if (filters?.type === 'vs_player') {
+      query.andWhere('game.type = :playerType', { playerType: 'vs_player' });
+    }
+
     // Проверяем подписку для лимита истории
     const hasPremium = await this.subscriptionService.hasActiveSubscription(userId);
     const queryBuilder = query.orderBy('game.createdAt', 'DESC');

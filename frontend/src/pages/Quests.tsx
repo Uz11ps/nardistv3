@@ -5,6 +5,7 @@ import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { PaintBrushIcon, TicketIcon, CoinIcon, StarIcon } from '../components/Icons'
 import './Quests.css'
+import '../pages/Academy.css'
 
 interface Quest {
   id: string
@@ -20,17 +21,20 @@ interface Quest {
   claimed: boolean
   isPremium?: boolean
   channelUsername?: string | null
+  onboardingText?: string | null
+  order?: number
 }
 
 export default function Quests() {
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'special'>('daily')
+  const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'special' | 'training'>('daily')
   const [quests, setQuests] = useState<Quest[]>([])
   const [resetTime, setResetTime] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [claimingQuestId, setClaimingQuestId] = useState<string | null>(null)
   const [checkingSubscriptionId, setCheckingSubscriptionId] = useState<string | null>(null)
   const [showRewardModal, setShowRewardModal] = useState(false)
+  const [selectedTrainingQuest, setSelectedTrainingQuest] = useState<Quest | null>(null)
   const [rewardData, setRewardData] = useState<{
     narCoin?: number
     xp?: number
@@ -63,6 +67,10 @@ export default function Quests() {
           setQuests([])
           setResetTime('')
         }
+      } else if (activeTab === 'training') {
+        const response = await apiClient.get('/quests/onboarding/list').catch(() => ({ data: [] }))
+        setQuests(response.data || [])
+        setResetTime('')
       } else {
         const response = await apiClient.get(`/quests/${activeTab}`).catch(() => ({ data: { quests: [], resetTime: '' } }))
         setQuests(response.data.quests || [])
@@ -140,6 +148,7 @@ export default function Quests() {
         { id: 'daily', label: 'Ежедневные', active: activeTab === 'daily', onClick: () => setActiveTab('daily') },
         { id: 'weekly', label: 'Недельные', active: activeTab === 'weekly', onClick: () => setActiveTab('weekly') },
         { id: 'special', label: 'Особые', active: activeTab === 'special', onClick: () => setActiveTab('special') },
+        { id: 'training', label: 'Обучение', active: activeTab === 'training', onClick: () => setActiveTab('training') },
       ]}
     >
       {/* Таймер сброса */}
@@ -154,6 +163,46 @@ export default function Quests() {
         <div className="quests-empty">Загрузка...</div>
       ) : quests.length === 0 ? (
         <div className="quests-empty">Нет доступных заданий</div>
+      ) : activeTab === 'training' ? (
+        <div className="quests-training-grid">
+          {quests.map((quest) => {
+            const progressPercentage = getProgressPercentage(quest.progress, quest.target)
+            const canClaim = quest.completed && !quest.claimed
+
+            return (
+              <div 
+                key={quest.id} 
+                className="quests-training-card"
+                onClick={() => {
+                  // Загружаем полные данные квеста
+                  apiClient.get(`/quests/onboarding/${quest.id}`)
+                    .then(response => {
+                      setSelectedTrainingQuest(response.data)
+                    })
+                    .catch(error => {
+                      console.error('Failed to load training quest detail:', error)
+                      setSelectedTrainingQuest(quest)
+                    })
+                }}
+              >
+                <div className="quests-training-card-icon">
+                  <img src="/img/шляпа.png" alt="training" className="quests-training-hat-icon" />
+                </div>
+                <div className="quests-training-card-title">{quest.name}</div>
+                <div className="quests-training-card-reward">
+                  {quest.rewardNarCoin > 0 && (
+                    <span>{quest.rewardNarCoin.toLocaleString('ru-RU')} NAR</span>
+                  )}
+                  {quest.rewardNarCoin > 0 && quest.rewardXP > 0 && ' • '}
+                  {quest.rewardXP > 0 && <span>{quest.rewardXP} XP</span>}
+                </div>
+                {canClaim && (
+                  <div className="quests-training-card-badge">Готово</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       ) : (
         <div className="quests-list">
           {quests.map((quest) => {
@@ -382,6 +431,103 @@ export default function Quests() {
             >
               Отлично!
             </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Модальное окно деталей курса обучения */}
+      {selectedTrainingQuest && createPortal(
+        <div 
+          className="quests-training-modal-overlay"
+          onClick={() => setSelectedTrainingQuest(null)}
+        >
+          <div 
+            className="quests-training-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="quests-training-modal-header">
+              <h2 className="quests-training-modal-title">{selectedTrainingQuest.name}</h2>
+              <button 
+                className="quests-training-modal-close"
+                onClick={() => setSelectedTrainingQuest(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="quests-training-modal-content">
+              {selectedTrainingQuest.onboardingText && (
+                <div 
+                  className="academy-material-content-text"
+                  dangerouslySetInnerHTML={{ __html: selectedTrainingQuest.onboardingText }}
+                />
+              )}
+              
+              <div className="quests-training-modal-quest">
+                <div className="quests-training-modal-quest-title">Задание</div>
+                <div className="quest-card" style={{ marginBottom: 0 }}>
+                  <div className="quest-content">
+                    <div className="quest-info">
+                      <div className="quest-name">{selectedTrainingQuest.name}</div>
+                      {selectedTrainingQuest.description && (
+                        <div className="quest-description">{selectedTrainingQuest.description}</div>
+                      )}
+                      <div className="quest-reward">
+                        Награда:{' '}
+                        {selectedTrainingQuest.rewardNarCoin > 0 && (
+                          <span>{selectedTrainingQuest.rewardNarCoin.toLocaleString('ru-RU')} NAR</span>
+                        )}
+                        {selectedTrainingQuest.rewardNarCoin > 0 && selectedTrainingQuest.rewardXP > 0 && ' • '}
+                        {selectedTrainingQuest.rewardXP > 0 && <span>{selectedTrainingQuest.rewardXP} XP</span>}
+                        {selectedTrainingQuest.rewardSkin && (
+                          <>
+                            {(selectedTrainingQuest.rewardNarCoin > 0 || selectedTrainingQuest.rewardXP > 0) && ' • '}
+                            <span style={{ color: '#00aaff' }}>
+                              <PaintBrushIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Скин
+                            </span>
+                          </>
+                        )}
+                        {selectedTrainingQuest.rewardTickets && selectedTrainingQuest.rewardTickets > 0 && (
+                          <>
+                            {(selectedTrainingQuest.rewardNarCoin > 0 || selectedTrainingQuest.rewardXP > 0 || selectedTrainingQuest.rewardSkin) && ' • '}
+                            <span style={{ color: '#ff6b6b' }}>
+                              <TicketIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {selectedTrainingQuest.rewardTickets} билет{selectedTrainingQuest.rewardTickets > 1 ? 'ов' : ''}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <div className="quest-progress-section">
+                        <div className="quest-progress-bar">
+                          <div
+                            className="quest-progress-fill"
+                            style={{ width: `${getProgressPercentage(selectedTrainingQuest.progress, selectedTrainingQuest.target)}%` }}
+                          />
+                        </div>
+                        <div className="quest-progress-header">
+                          <span className="quest-progress-value">
+                            {selectedTrainingQuest.progress}/{selectedTrainingQuest.target}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {selectedTrainingQuest.completed && !selectedTrainingQuest.claimed && (
+                        <button
+                          className="quest-claim-btn"
+                          onClick={() => {
+                            handleClaim(selectedTrainingQuest.id)
+                            setSelectedTrainingQuest(null)
+                          }}
+                          disabled={claimingQuestId !== null}
+                        >
+                          {claimingQuestId === selectedTrainingQuest.id ? 'Получение...' : 'Забрать'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>,
         document.body

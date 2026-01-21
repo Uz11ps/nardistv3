@@ -838,18 +838,10 @@ export default function Game() {
           player2: game.player2TimeRemaining ? Math.max(0, game.player2TimeRemaining / 1000) : 60
         }
         
-        // ВАЖНО: Проверяем овертайм при загрузке игры на основе общего времени игрока
-        // Овертайм = когда общее время игрока <= 0 И игра уже началась (lastMoveAt !== null)
-        // Если игра еще не началась (lastMoveAt === null), овертайма быть не может
-        // ВАЖНО: При загрузке игры овертайм должен быть false, если игра только началась
-        // Овертайм возможен только если прошло больше 15 секунд на ход И общее время <= 0
-        const currentPlayerTime = game.currentPlayer === 0 ? initialTotalTime.player1 : initialTotalTime.player2
-        // Овертайм при загрузке возможен только если:
-        // 1. Есть lastMoveAt (игра началась)
-        // 2. Общее время игрока <= 0 (использовано)
-        // 3. И прошло больше 15 секунд с последнего хода
-        const isInOvertimeOnLoad = game.lastMoveAt !== null && currentPlayerTime <= 0 && 
-          (Date.now() - new Date(game.lastMoveAt).getTime()) > 15000
+        // ВАЖНО: При загрузке игры овертайм должен быть ВСЕГДА false
+        // Овертайм будет правильно установлен через событие timer_update от сервера
+        // Это предотвращает показ овертайма при начале игры
+        const isInOvertimeOnLoad = false
         
         if (socket && socket.connected) {
           // Таймеры обновятся через событие timer_update от сервера
@@ -1021,11 +1013,14 @@ export default function Game() {
         return;
       }
       
-      // Используем eventId для дедупликации, если он есть, иначе используем diceKey + timestamp
-      const eventId = data.eventId || `${JSON.stringify(data.dice)}_${Date.now()}`;
+      // Создаем уникальный идентификатор для этого броска кубиков
+      // Для дублей используем только первые два значения для идентификации броска
+      const diceArray = Array.isArray(data.dice) ? data.dice : [data.dice?.die1, data.dice?.die2].filter(Boolean);
+      const diceKeyForRoll = diceArray.length >= 2 ? `${diceArray[0]},${diceArray[1]}` : JSON.stringify(data.dice);
+      const eventId = data.eventId || `${diceKeyForRoll}_${Date.now()}`;
       const diceKey = JSON.stringify(data.dice);
       
-      console.log('🎲 dice_rolled received:', data, 'eventId:', eventId.substring(0, 80), 'diceAnimatingRef:', diceAnimatingRef.current);
+      console.log('🎲 dice_rolled received:', data, 'eventId:', eventId.substring(0, 80), 'diceKeyForRoll:', diceKeyForRoll, 'diceAnimatingRef:', diceAnimatingRef.current);
       
       // СТРОГАЯ защита от дублирования: проверяем через Set обработанных событий
       if (processedEventsRef.current.has(eventId)) {
@@ -1033,9 +1028,10 @@ export default function Game() {
         return;
       }
       
-      // Также проверяем по diceKey, если eventId нет
-      if (!data.eventId && lastDiceRollRef.current === diceKey) {
-        console.log('⚠️ Duplicate dice_rolled event detected (same dice key), skipping');
+      // Также проверяем по diceKeyForRoll (первые два значения), если eventId нет
+      // Это важно для дублей - один и тот же бросок не должен запускать анимацию дважды
+      if (!data.eventId && lastDiceRollRef.current === diceKeyForRoll) {
+        console.log('⚠️ Duplicate dice_rolled event detected (same dice key for roll), skipping');
         return;
       }
       
@@ -1053,9 +1049,9 @@ export default function Game() {
       
       // Добавляем eventId в Set обработанных событий СРАЗУ
       processedEventsRef.current.add(eventId);
-      lastDiceRollRef.current = diceKey;
+      lastDiceRollRef.current = diceKeyForRoll; // Сохраняем ключ для первых двух значений
       
-      console.log('✅ Processing dice_rolled event, eventId:', eventId.substring(0, 80));
+      console.log('✅ Processing dice_rolled event, eventId:', eventId.substring(0, 80), 'diceKeyForRoll:', diceKeyForRoll);
       
       // Обновляем состояние кубиков
       if (data.dice) {
@@ -1621,8 +1617,12 @@ export default function Game() {
         
         // ВАЖНО: Используем isOvertime ТОЛЬКО из сервера, не пересчитываем локально
         // Сервер уже правильно вычисляет овертайм на основе времени
-        // ВАЖНО: При начале игры (moveTimeRemaining >= 15) овертайм должен быть false
-        const isOvertime = (data.isOvertime || false) && moveTimeRemaining < 15
+        // ВАЖНО: При начале игры (moveTimeRemaining >= 15 или близко к 15) овертайм должен быть false
+        // Также проверяем, что общее время игрока > 0 (если время еще не использовано, овертайма быть не может)
+        const currentPlayerTotalTime = data.currentPlayer === 0 ? totalTime1 : totalTime2
+        const isOvertime = (data.isOvertime || false) && 
+          moveTimeRemaining < 15 && 
+          currentPlayerTotalTime <= 0 // Овертайм только если общее время <= 0
         
         lastTimerUpdateRef.current = Date.now() // Обновляем время последнего синхронизации
         

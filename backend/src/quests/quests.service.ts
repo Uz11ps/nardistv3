@@ -388,5 +388,89 @@ export class QuestsService {
       throw error;
     }
   }
+
+  async getOnboardingQuests(userId: string): Promise<any[]> {
+    const quests = await this.questsRepository.find({
+      where: { category: QuestCategory.ONBOARDING },
+      order: { order: 'ASC', createdAt: 'ASC' },
+    });
+
+    const result = [];
+    for (const quest of quests) {
+      let progress = await this.progressRepository.findOne({
+        where: { userId, questId: quest.id },
+      });
+
+      if (!progress) {
+        progress = this.progressRepository.create({
+          userId,
+          questId: quest.id,
+          progress: 0,
+          completed: false,
+          claimed: false,
+        });
+        progress = await this.progressRepository.save(progress);
+      }
+
+      result.push({
+        id: quest.id,
+        name: quest.name,
+        description: quest.description,
+        rewardNarCoin: Number(quest.rewardNarCoin),
+        rewardXP: quest.rewardXP,
+        rewardSkin: quest.rewardSkin || null,
+        rewardTickets: quest.rewardTickets || 0,
+        progress: progress.progress,
+        target: quest.targetValue,
+        completed: progress.completed,
+        claimed: progress.claimed || false,
+        onboardingText: quest.onboardingText || null,
+        order: quest.order || 0,
+      });
+    }
+
+    return result;
+  }
+
+  async getOnboardingQuestDetail(userId: string, questId: string): Promise<any> {
+    const quest = await this.questsRepository.findOne({
+      where: { id: questId, category: QuestCategory.ONBOARDING },
+    });
+
+    if (!quest) {
+      throw new BadRequestException('Обучающий квест не найден');
+    }
+
+    let progress = await this.progressRepository.findOne({
+      where: { userId, questId: quest.id },
+    });
+
+    if (!progress) {
+      progress = this.progressRepository.create({
+        userId,
+        questId: quest.id,
+        progress: 0,
+        completed: false,
+        claimed: false,
+      });
+      progress = await this.progressRepository.save(progress);
+    }
+
+    return {
+      id: quest.id,
+      name: quest.name,
+      description: quest.description,
+      rewardNarCoin: Number(quest.rewardNarCoin),
+      rewardXP: quest.rewardXP,
+      rewardSkin: quest.rewardSkin || null,
+      rewardTickets: quest.rewardTickets || 0,
+      progress: progress.progress,
+      target: quest.targetValue,
+      completed: progress.completed,
+      claimed: progress.claimed || false,
+      onboardingText: quest.onboardingText || null,
+      order: quest.order || 0,
+    };
+  }
 }
 

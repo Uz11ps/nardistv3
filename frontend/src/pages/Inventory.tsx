@@ -283,6 +283,20 @@ export default function Inventory() {
     const isSelected = selectedSkinIds.has(skin.id)
     const imageUrl = getImageUrl(skin.imageUrl)
 
+    // Определяем плейсхолдер в зависимости от типа скина
+    const getPlaceholder = () => {
+      switch (skin.type) {
+        case 'board':
+          return '🎯' // Доска
+        case 'checkers':
+          return '⚫' // Шашки
+        case 'dice':
+          return '🎲' // Кубики
+        default:
+          return '🎲'
+      }
+    }
+
     return (
       <div 
         key={skin.id} 
@@ -293,7 +307,7 @@ export default function Inventory() {
           {imageUrl ? (
             <img src={imageUrl} alt={skin.name} />
           ) : (
-            <div className="inventory-grid-card-placeholder">🎲</div>
+            <div className="inventory-grid-card-placeholder">{getPlaceholder()}</div>
           )}
         </div>
       </div>
@@ -325,27 +339,25 @@ export default function Inventory() {
                   <div className="inventory-other-title" style={{ fontSize: '16px', fontWeight: '600', color: '#FFF', marginBottom: '4px' }}>Премиум подписка</div>
                   <div className="inventory-other-status">
                     {hasPremium ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {subscriptionDetails?.expiresAt ? (
-                          <>
-                            <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>
-                              Активна до {new Date(subscriptionDetails.expiresAt).toLocaleDateString('ru-RU', { 
-                                day: 'numeric', 
-                                month: 'long', 
-                                year: 'numeric'
-                              })}
-                            </span>
-                            <span style={{ color: '#B6B6B6', fontSize: '12px' }}>
-                              {new Date(subscriptionDetails.expiresAt).toLocaleTimeString('ru-RU', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                          </>
-                        ) : (
-                          <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>Активна</span>
-                        )}
-                      </div>
+                      subscriptionDetails?.expiresAt ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>
+                            Активна до {new Date(subscriptionDetails.expiresAt).toLocaleDateString('ru-RU', { 
+                              day: 'numeric', 
+                              month: 'long', 
+                              year: 'numeric'
+                            })}
+                          </span>
+                          <span style={{ color: '#B6B6B6', fontSize: '12px' }}>
+                            {new Date(subscriptionDetails.expiresAt).toLocaleTimeString('ru-RU', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                      ) : (
+                        <span style={{ color: '#4CAF50', fontSize: '14px', fontWeight: '500' }}>Активна</span>
+                      )
                     ) : (
                       <span style={{ color: '#888', fontSize: '14px' }}>Неактивна</span>
                     )}

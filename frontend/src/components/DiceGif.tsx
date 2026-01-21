@@ -13,58 +13,78 @@ const activeAnimations = new Set<string>();
 const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, size = 50 }) => {
   const [gifKey, setGifKey] = React.useState(Date.now());
   const prevAnimatingRef = React.useRef(false);
-  const isAnimatingRef = React.useRef(false);
-  const lastDiceRef = React.useRef<string>('');
-  const gifStartedRef = React.useRef(false);
+  const lastDiceKeyRef = React.useRef<string>('');
+  const animationStartedRef = React.useRef(false);
   const componentIdRef = React.useRef<string>(`dicegif_${Date.now()}_${Math.random()}`);
 
-  // Перезапускаем гифку только при переходе из неактивного состояния в активное
-  // И только если кубики действительно изменились
+  // Упрощенная логика: анимация запускается только один раз при переходе animating с false на true
+  // И только если кубики действительно изменились (первые два значения)
   React.useEffect(() => {
-    const diceKey = dice ? dice.join(',') : '';
-    const animationId = `${diceKey}_${componentIdRef.current}`;
-    
-    // СТРОГАЯ защита: проверяем глобальный Set активных анимаций
-    if (activeAnimations.has(animationId)) {
-      console.log('🎬 DiceGif: Animation already active globally, skipping');
+    if (!dice || dice.length < 2) {
+      // Если кубиков нет, сбрасываем состояние только если анимация была активна
+      if (prevAnimatingRef.current && !animating) {
+        animationStartedRef.current = false;
+        lastDiceKeyRef.current = '';
+      }
+      prevAnimatingRef.current = animating;
       return;
     }
+
+    // Для идентификации броска используем ТОЛЬКО первые два значения (для дублей это критично)
+    // Это гарантирует, что один и тот же бросок не запустит анимацию дважды
+    const diceKeyForAnimation = `${dice[0]},${dice[1]}`;
+    const animationId = `${diceKeyForAnimation}_${componentIdRef.current}`;
     
-    // СТРОГАЯ защита: если анимация уже идет локально, НИКОГДА не перезапускаем
-    if (isAnimatingRef.current) {
-      console.log('🎬 DiceGif: Animation already in progress locally, skipping all restarts');
-      return;
-    }
+    // ВАЖНО: Анимация запускается ТОЛЬКО при переходе animating с false на true
+    // И только если это новый бросок (первые два значения кубиков изменились)
+    const isNewAnimation = animating && !prevAnimatingRef.current;
+    const diceChanged = lastDiceKeyRef.current !== diceKeyForAnimation;
     
-    // Если GIF уже запущен с теми же кубиками и анимация активна, не перезапускаем
-    if (gifStartedRef.current && lastDiceRef.current === diceKey && animating) {
-      console.log('🎬 DiceGif: GIF already started with same dice, skipping');
-      return;
-    }
-    
-    // Только при переходе с false на true - перезапускаем GIF
-    if (animating && !prevAnimatingRef.current) {
+    if (isNewAnimation && diceChanged) {
+      // Проверяем глобальный Set - если анимация уже идет для этих кубиков, пропускаем
+      if (activeAnimations.has(animationId)) {
+        console.log('🎬 DiceGif: Animation already active globally for this dice, skipping');
+        prevAnimatingRef.current = animating;
+        return;
+      }
+      
+      // Проверяем локальный флаг - если анимация уже запущена, не запускаем повторно
+      if (animationStartedRef.current) {
+        console.log('🎬 DiceGif: Animation already started locally, skipping');
+        prevAnimatingRef.current = animating;
+        return;
+      }
+      
       const newGifKey = Date.now();
-      console.log('🎬 DiceGif: Starting animation, diceKey:', diceKey, 'gifKey:', newGifKey, 'animationId:', animationId);
+      console.log('🎬 DiceGif: Starting NEW animation, diceKey:', diceKeyForAnimation, 'gifKey:', newGifKey);
       
-      // Добавляем в глобальный Set СРАЗУ
+      // Помечаем анимацию как запущенную СРАЗУ
       activeAnimations.add(animationId);
-      isAnimatingRef.current = true;
-      gifStartedRef.current = true;
-      lastDiceRef.current = diceKey;
+      animationStartedRef.current = true;
+      lastDiceKeyRef.current = diceKeyForAnimation;
       
-      // СРАЗУ обновляем ключ, чтобы гифка перезапустилась
+      // Обновляем ключ для перезапуска гифки
       setGifKey(newGifKey);
     }
     
+    // ВАЖНО: Если анимация уже идет (animating = true), НЕ реагируем на изменения dice
+    // Это предотвращает перезапуск анимации при использовании кубиков в дублях
+    if (animating && prevAnimatingRef.current && diceChanged) {
+      console.log('🎬 DiceGif: Animation in progress, ignoring dice changes');
+      prevAnimatingRef.current = animating;
+      return;
+    }
+    
+    // Когда анимация завершается (переход с true на false), полностью очищаем состояние
     if (!animating && prevAnimatingRef.current) {
-      // Когда анимация завершается (переход с true на false), сбрасываем флаги с задержкой
-      isAnimatingRef.current = false;
+      console.log('🎬 DiceGif: Animation finished, cleaning up');
       activeAnimations.delete(animationId);
+      
+      // Сбрасываем флаги после небольшой задержки для надежности
       setTimeout(() => {
-        gifStartedRef.current = false;
-        console.log('🎬 DiceGif: Animation finished, flags reset');
-      }, 500); // Увеличиваем задержку до 500мс для надежности
+        animationStartedRef.current = false;
+        lastDiceKeyRef.current = '';
+      }, 300);
     }
     
     prevAnimatingRef.current = animating;
@@ -73,7 +93,7 @@ const DiceGif: React.FC<DiceGifProps> = ({ dice, usedDiceIndices, animating, siz
     return () => {
       activeAnimations.delete(animationId);
     };
-  }, [animating, dice]); // Убрали gifKey из зависимостей, чтобы избежать повторных запусков
+  }, [animating, dice]); // dice в зависимостях нужен для проверки изменения первых двух значений
 
   if (!dice || dice.length < 2) return null;
 

@@ -2,6 +2,7 @@
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
+import Card from '../components/Card'
 import BackgammonBoard from '../components/BackgammonBoard'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
@@ -31,7 +32,7 @@ export default function History() {
   const { user } = useAuthStore()
   const timezone = user?.timezone || 'Europe/Moscow'
   const [games, setGames] = useState<GameHistory[]>([])
-  const [filter, setFilter] = useState<'all' | 'wins' | 'losses' | 'bot'>('all')
+  const [filter, setFilter] = useState<'all' | 'wins' | 'losses' | 'bot' | 'players_only'>('all')
   const [modeFilter, setModeFilter] = useState<'all' | 'short' | 'long'>('all')
   const [selectedGame, setSelectedGame] = useState<GameHistory | null>(null)
   const [replayData, setReplayData] = useState<any>(null)
@@ -88,11 +89,22 @@ export default function History() {
   const loadHistory = async () => {
     try {
       const params = new URLSearchParams()
-      if (filter !== 'all') params.append('result', filter)
+      if (filter !== 'all') {
+        if (filter === 'players_only') {
+          params.append('type', 'vs_player')
+        } else {
+          params.append('result', filter)
+        }
+      }
       if (modeFilter !== 'all') params.append('mode', modeFilter)
 
       const response = await apiClient.get(`/history?${params.toString()}`)
-      const allGames = response.data || []
+      let allGames = response.data || []
+      
+      // Если фильтр players_only, дополнительно фильтруем на клиенте (на случай если бэкенд не поддерживает)
+      if (filter === 'players_only') {
+        allGames = allGames.filter((game: GameHistory) => game.type === 'vs_player' || game.type === 'tournament')
+      }
       
       // Без премиума показываем только 5 последних матчей
       if (!hasPremium) {
@@ -305,6 +317,12 @@ export default function History() {
               >
                 С ботом
               </button>
+              <button
+                className={`filter-btn ${filter === 'players_only' ? 'active' : ''}`}
+                onClick={() => setFilter('players_only')}
+              >
+                Только с игроками
+              </button>
             </div>
           </div>
 
@@ -340,66 +358,75 @@ export default function History() {
               Нет сыгранных игр
             </div>
           ) : (
-            games.map((game) => (
-              <div 
-                key={game.id} 
-                className="game-history-card"
-                onClick={() => setSelectedGameDetails(game)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div className={`result-badge ${game.result}`}>
-                    {game.result === 'win' ? (
-                      <TrophyIcon size={24} style={{ color: '#FFD700' }} />
-                    ) : game.result === 'loss' ? (
-                      <XIcon size={24} style={{ color: '#E84142' }} />
-                    ) : (
-                      '='
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span className="card-title">
-                        {game.type === 'vs_bot' ? (
-                          <>
-                            <RobotIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Бот
-                          </>
-                        ) : game.opponent.username}
-                      </span>
-                      <span className="mode-badge">{game.mode === 'long' ? 'Длинные' : 'Короткие'}</span>
+            games.map((game) => {
+              // Исправляем логику результата: для игр с ботом, если winnerId null, это loss (бот победил)
+              const displayResult = game.result === 'draw' && game.type === 'vs_bot' && !game.winnerId 
+                ? 'loss' 
+                : game.result;
+              
+              return (
+                <Card
+                  key={game.id} 
+                  className="game-history-card"
+                  onClick={() => setSelectedGameDetails(game)}
+                >
+                  <div className="game-history-card-content">
+                    <div className={`result-badge ${displayResult}`}>
+                      {displayResult === 'win' ? (
+                        <TrophyIcon size={24} style={{ color: '#FFD700' }} />
+                      ) : displayResult === 'loss' ? (
+                        <span style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1' }}>✕</span>
+                      ) : (
+                        <span style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1' }}>＝</span>
+                      )}
                     </div>
-                    <div className="card-subtitle">
-                      {formatRelativeTime(game.createdAt, timezone)} • {formatDuration(game.duration)}
+                    <div className="game-history-card-main">
+                      <div className="game-history-card-header">
+                        <span className="card-title game-history-opponent-name">
+                          {game.type === 'vs_bot' ? (
+                            <>
+                              <RobotIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle', flexShrink: 0 }} /> Бот
+                            </>
+                          ) : (
+                            game.opponent.username
+                          )}
+                        </span>
+                        <span className="mode-badge">{game.mode === 'long' ? 'Длинные' : 'Короткие'}</span>
+                      </div>
+                      <div className="card-subtitle">
+                        {formatRelativeTime(game.createdAt, timezone)} • {formatDuration(game.duration)}
+                      </div>
+                      <div className="card-subtitle" style={{ marginTop: '4px' }}>
+                        Счет: {game.score.player1}:{game.score.player2} • {game.moveCount} ходов
+                      </div>
                     </div>
-                    <div className="card-subtitle" style={{ marginTop: '4px' }}>
-                      Счет: {game.score.player1}:{game.score.player2} • {game.moveCount} ходов
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
-                    <button className="history-action-btn history-action-btn-replay" onClick={() => handleReplay(game)}>
-                      Реплей
-                    </button>
-                    {hasPremium ? (
-                    <button 
-                      className="history-action-btn history-action-btn-analyze"
-                      onClick={() => handleAnalyze(game.id)}
-                      disabled={loadingAnalysis}
-                    >
-                      Анализ
-                    </button>
-                    ) : (
+                    <div className="game-history-card-actions" onClick={(e) => e.stopPropagation()}>
+                      <button className="history-action-btn history-action-btn-replay" onClick={() => handleReplay(game)}>
+                        Реплей
+                      </button>
+                      {hasPremium ? (
                       <button 
                         className="history-action-btn history-action-btn-analyze"
-                        onClick={() => setShowPremiumModal(true)}
-                        disabled={false}
-                        style={{ opacity: 0.5, cursor: 'pointer' }}
+                        onClick={() => handleAnalyze(game.id)}
+                        disabled={loadingAnalysis}
                       >
                         Анализ
                       </button>
-                    )}
+                      ) : (
+                        <button 
+                          className="history-action-btn history-action-btn-analyze"
+                          onClick={() => setShowPremiumModal(true)}
+                          disabled={false}
+                          style={{ opacity: 0.5, cursor: 'pointer' }}
+                        >
+                          Анализ
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))
+                </Card>
+              );
+            })
           )}
         </div>
       </div>
@@ -766,94 +793,97 @@ export default function History() {
       {/* Модальное окно деталей игры */}
       {selectedGameDetails && createPortal(
         <div 
-          className="analysis-modal-overlay" 
+          className="history-game-details-overlay" 
           onClick={() => setSelectedGameDetails(null)}
         >
-          <div className="modal analysis-modal-v2" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <div className="analysis-header-v2">
-              <div className="analysis-title-row">
-                <h2>Детали матча</h2>
-                <button 
-                  className="close-btn" 
-                  onClick={() => setSelectedGameDetails(null)}
-                  style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#333', fontSize: '24px', cursor: 'pointer' }}
-                >
-                  ×
-                </button>
-              </div>
+          <div className="history-game-details-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="history-game-details-header">
+              <h3>Детали матча</h3>
+              <button 
+                className="history-game-details-close" 
+                onClick={() => setSelectedGameDetails(null)}
+              >
+                ×
+              </button>
             </div>
-            <div className="analysis-main-content" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Результат</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className={`result-badge ${selectedGameDetails.result}`} style={{ width: '32px', height: '32px' }}>
-                      {selectedGameDetails.result === 'win' ? (
-                        <TrophyIcon size={20} style={{ color: '#FFD700' }} />
-                      ) : selectedGameDetails.result === 'loss' ? (
-                        <XIcon size={20} style={{ color: '#E84142' }} />
+            <div className="history-game-details-content">
+              <div className="history-game-details-section">
+                <div className="history-game-details-item">
+                  <div className="history-game-details-label">Результат</div>
+                  <div className="history-game-details-value">
+                    <div className={`result-badge ${selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result}`} style={{ width: '40px', height: '40px', marginRight: '12px' }}>
+                      {(selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'win' ? (
+                        <TrophyIcon size={24} style={{ color: '#FFD700' }} />
+                      ) : (selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'loss' ? (
+                        <span style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1' }}>✕</span>
                       ) : (
-                        '='
+                        <span style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1' }}>＝</span>
                       )}
                     </div>
-                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#333' }}>
-                      {selectedGameDetails.result === 'win' ? 'Победа' : selectedGameDetails.result === 'loss' ? 'Поражение' : 'Ничья'}
+                    <span className="card-title" style={{ fontSize: '18px' }}>
+                      {(selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'win' ? 'Победа' : (selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'loss' ? 'Поражение' : 'Ничья'}
                     </span>
                   </div>
                 </div>
                 
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Против</div>
-                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
+                <div className="history-game-details-item">
+                  <div className="history-game-details-label">Против</div>
+                  <div className="history-game-details-value">
                     {selectedGameDetails.type === 'vs_bot' ? (
                       <>
-                        <RobotIcon size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Бот
+                        <RobotIcon size={18} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                        <span className="card-title">Бот</span>
                       </>
-                    ) : selectedGameDetails.opponent.username}
+                    ) : (
+                      <span className="card-title">{selectedGameDetails.opponent.username}</span>
+                    )}
                   </div>
                 </div>
 
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Режим</div>
-                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
-                    {selectedGameDetails.mode === 'long' ? 'Длинные нарды' : 'Короткие нарды'}
+                <div className="history-game-details-item">
+                  <div className="history-game-details-label">Режим</div>
+                  <div className="history-game-details-value">
+                    <span className="mode-badge" style={{ fontSize: '14px', padding: '6px 12px' }}>
+                      {selectedGameDetails.mode === 'long' ? 'Длинные нарды' : 'Короткие нарды'}
+                    </span>
                   </div>
                 </div>
 
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Счет</div>
-                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
-                    {selectedGameDetails.score.player1}:{selectedGameDetails.score.player2}
+                <div className="history-game-details-item">
+                  <div className="history-game-details-label">Счет</div>
+                  <div className="history-game-details-value">
+                    <span className="card-title" style={{ fontSize: '20px', fontWeight: '700' }}>
+                      {selectedGameDetails.score.player1}:{selectedGameDetails.score.player2}
+                    </span>
                   </div>
                 </div>
 
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Ходов</div>
-                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
-                    {selectedGameDetails.moveCount}
+                <div className="history-game-details-item">
+                  <div className="history-game-details-label">Ходов</div>
+                  <div className="history-game-details-value">
+                    <span className="card-title">{selectedGameDetails.moveCount}</span>
                   </div>
                 </div>
 
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Длительность</div>
-                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
-                    {formatDuration(selectedGameDetails.duration)}
+                <div className="history-game-details-item">
+                  <div className="history-game-details-label">Длительность</div>
+                  <div className="history-game-details-value">
+                    <span className="card-title">{formatDuration(selectedGameDetails.duration)}</span>
                   </div>
                 </div>
 
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Дата и время</div>
-                  <div style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>
-                    {formatRelativeTime(selectedGameDetails.createdAt, timezone)}
+                <div className="history-game-details-item">
+                  <div className="history-game-details-label">Дата и время</div>
+                  <div className="history-game-details-value">
+                    <span className="card-subtitle">{formatRelativeTime(selectedGameDetails.createdAt, timezone)}</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="modal-actions" style={{ padding: '16px' }}>
+            <div className="history-game-details-actions">
               <button 
                 className="history-modal-close-btn"
                 onClick={() => setSelectedGameDetails(null)}
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#3a3a3a', color: '#FFF', border: 'none', cursor: 'pointer', fontWeight: 600 }}
               >
                 Закрыть
               </button>

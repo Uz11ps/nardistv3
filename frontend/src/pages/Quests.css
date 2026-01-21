@@ -130,3 +130,168 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Training Quests Grid */
+.quests-training-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.quests-training-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 12px;
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.quests-training-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.35);
+}
+
+.quests-training-card-icon {
+  margin-bottom: 4px;
+  opacity: 0.8;
+  width: 78px;
+  height: 58px;
+  flex-shrink: 0;
+  aspect-ratio: 39/29;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quests-training-hat-icon {
+  width: 78px !important;
+  height: 58px !important;
+  flex-shrink: 0 !important;
+  aspect-ratio: 39/29 !important;
+  object-fit: contain !important;
+  max-width: 78px !important;
+  max-height: 58px !important;
+}
+
+.quests-training-card-title {
+  color: #FFF;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.quests-training-card-reward {
+  color: #666;
+  font-size: 11px;
+}
+
+.quests-training-card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(180deg, #E84142 -144.23%, #681C1C 105.77%);
+  color: #FFF;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Training Quest Detail Modal */
+.quests-training-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.quests-training-modal {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+}
+
+.quests-training-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quests-training-modal-title {
+  color: #FFF;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.quests-training-modal-close {
+  background: none;
+  border: none;
+  color: #FFF;
+  font-size: 28px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.quests-training-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.quests-training-modal-content {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.quests-training-modal-text {
+  color: #B6B6B6;
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.quests-training-modal-quest {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.quests-training-modal-quest-title {
+  color: #FFF;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}

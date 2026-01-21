@@ -25,4 +25,16 @@ export class QuestsController {
     const isSubscribed = await this.questsService.checkChannelSubscription(user.id, id);
     return { subscribed: isSubscribed };
   }
+
+  @Get('onboarding/list')
+  @UseGuards(JwtAuthGuard)
+  async getOnboardingQuests(@CurrentUser() user: any) {
+    return this.questsService.getOnboardingQuests(user.id);
+  }
+
+  @Get('onboarding/:id')
+  @UseGuards(JwtAuthGuard)
+  async getOnboardingQuestDetail(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.questsService.getOnboardingQuestDetail(user.id, id);
+  }
 }

@@ -72,8 +72,47 @@
 }
 
 .game-history-card {
+  width: 100%;
   transition: all 0.3s;
   cursor: pointer;
+}
+
+.game-history-card-content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0; /* Позволяет flex элементам сжиматься */
+}
+
+.game-history-card-main {
+  flex: 1;
+  min-width: 0; /* Позволяет тексту обрезаться */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.game-history-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  min-width: 0;
+}
+
+.game-history-opponent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.game-history-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0; /* Кнопки не сжимаются */
 }
 
 .game-history-card:hover {
@@ -111,6 +150,9 @@
 .result-badge.draw {
   background: rgba(255, 255, 0, 0.2);
   color: #ffd700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mode-badge {
@@ -705,6 +747,162 @@
 
 .summary-stat span {
   color: #666;
+}
+
+/* History Game Details Modal */
+.history-game-details-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  animation: fadeIn 0.3s;
+}
+
+.history-game-details-modal {
+  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s;
+}
+
+.history-game-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.history-game-details-header h3 {
+  margin: 0;
+  color: #FFF;
+  font-size: 20px;
+  font-weight: 600;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.history-game-details-close {
+  background: none;
+  border: none;
+  color: #FFF;
+  font-size: 28px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.history-game-details-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.history-game-details-content {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.history-game-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.history-game-details-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-game-details-label {
+  font-size: 12px;
+  color: #B6B6B6;
+  font-weight: 500;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.history-game-details-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.history-game-details-actions {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.history-game-details-actions .history-modal-close-btn {
+  width: 100%;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: #3a3a3a;
+  color: #FFF;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  transition: all 0.2s;
+}
+
+.history-game-details-actions .history-modal-close-btn:hover {
+  background: #4a4a4a;
+  transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+  .history-game-details-overlay {
+    padding: 12px;
+  }
+  
+  .history-game-details-modal {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  
+  .history-game-details-header {
+    padding: 16px;
+  }
+  
+  .history-game-details-header h3 {
+    font-size: 18px;
+  }
+  
+  .history-game-details-content {
+    padding: 16px;
+  }
+  
+  .history-game-details-section {
+    gap: 16px;
+  }
+  
+  .history-game-details-actions {
+    padding: 16px;
+  }
 }
 
 

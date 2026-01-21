@@ -28,7 +28,14 @@ export class SubscriptionController {
         return { hasActive: false };
       }
       const hasActive = await this.subscriptionService.hasActiveSubscription(user.id);
-      return { hasActive };
+      const subscription = await this.subscriptionService.getSubscription(user.id);
+      
+      return {
+        hasActive,
+        expiresAt: subscription?.endDate ? subscription.endDate.toISOString() : null,
+        plan: subscription?.plan || null,
+        startDate: subscription?.startDate ? subscription.startDate.toISOString() : null,
+      };
     } catch (error) {
       console.error('❌ Ошибка при получении статуса подписки:', error);
       return { hasActive: false };

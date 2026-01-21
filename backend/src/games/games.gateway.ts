@@ -145,7 +145,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
       // 2. Общее время игрока <= 0 (totalTimeRemaining <= 0)
       // Это означает, что игрок использует овертайм (1 минута общего времени)
       // ВАЖНО: Если timeSinceLastMove очень маленький (только что установлен), isOvertime всегда false
-      const isOvertime = timeSinceLastMove > baseMoveTime && totalTimeRemaining <= 0;
+      // ВАЖНО: Также проверяем, что moveTimeRemaining < 15 (если еще есть время на ход, овертайма нет)
+      const isOvertime = timeSinceLastMove > baseMoveTime && 
+                         totalTimeRemaining <= 0 && 
+                         moveTimeRemaining < 15 &&
+                         timeSinceLastMove > 1000; // Дополнительная защита: минимум 1 секунда должна пройти
       
       // Отправляем таймер всем участникам игры
       this.server.to(`game:${gameId}`).emit('timer_update', {

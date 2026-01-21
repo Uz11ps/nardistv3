@@ -172,6 +172,7 @@ export default function Profile() {
     try {
       const response = await apiClient.get('/subscription/status').catch(() => ({ data: { hasActive: false } }))
       setHasPremium(response.data?.hasActive || false)
+      setSubscriptionDetails(response.data || null)
       setSubscriptionDetails(response.data)
     } catch (error) {
       console.error('Failed to check subscription:', error)
@@ -341,7 +342,7 @@ export default function Profile() {
 
         {/* Фильтр режима для статистики */}
         {activeTab === 'statistics' && (
-          <div style={{ marginBottom: '20px', marginTop: '16px' }}>
+          <div style={{ marginBottom: '20px' }}>
             <h3 style={{ color: '#FFF', fontSize: '16px', fontWeight: '600', marginBottom: '12px', marginTop: 0 }}>Режим:</h3>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <button 
