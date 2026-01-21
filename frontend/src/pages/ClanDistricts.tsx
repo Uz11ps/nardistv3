@@ -222,43 +222,50 @@ export default function ClanDistricts() {
                 </div>
                 <div className="city-clan-capture-info">
                   {!currentDistrict.isUnlocked && currentDistrict.requiredClanLevel ? (
-                    <div style={{ color: '#FF4444', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>
-                      🔒 Для захвата этого района требуется уровень федерации {currentDistrict.requiredClanLevel}
-                      {clanInfo && (
-                        <span style={{ color: '#B6B6B6', display: 'block', marginTop: '4px', fontSize: '12px' }}>
+                    <div className="city-clan-capture-locked-info">
+                      <span className="city-clan-capture-locked-icon">🔒</span>
+                      <div>
+                        <div className="city-clan-capture-locked-text">
+                          Для захвата этого района требуется уровень федерации {currentDistrict.requiredClanLevel}
+                        </div>
+                        {clanInfo && (
+                          <div className="city-clan-capture-locked-level">
                           Текущий уровень федерации: {clanInfo.level}
-                        </span>
-                      )}
+                        </div>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <>
-                      <div>Этот район можно захватить</div>
-                      <div>Захват на 12 часов</div>
-                      <div style={{ marginTop: '16px', padding: '12px', background: '#1a1a1a', borderRadius: '8px', fontSize: '13px', lineHeight: '1.6' }}>
-                        <div style={{ color: '#FFD700', fontWeight: 600, marginBottom: '8px' }}>
+                      <div className="city-clan-capture-available-text">
+                        <div>Этот район можно захватить</div>
+                        <div>Захват на 12 часов</div>
+                      </div>
+                      <div className="city-clan-capture-instructions">
+                        <div className="city-clan-capture-instructions-title">
                           ⚠️ Как работает захват:
                         </div>
-                        <div style={{ color: '#B6B6B6', marginBottom: '6px' }}>
+                        <div className="city-clan-capture-instructions-item">
                           • Лидер клана может захватить район на 12 часов
                         </div>
-                        <div style={{ color: '#B6B6B6', marginBottom: '6px' }}>
+                        <div className="city-clan-capture-instructions-item">
                           • Кулдаун на захват: 24 часа
                         </div>
-                        <div style={{ color: '#B6B6B6', marginBottom: '6px' }}>
+                        <div className="city-clan-capture-instructions-item">
                           • Для успешного захвата участникам клана нужно играть и выигрывать против других игроков
                         </div>
-                        <div style={{ color: '#B6B6B6', marginBottom: '6px' }}>
+                        <div className="city-clan-capture-instructions-item">
                           • За каждую победу проигравший (если у него есть город) или случайный игрок с этим районом теряет доход, который передается клану
                         </div>
-                        <div style={{ color: '#B6B6B6', marginBottom: '6px' }}>
+                        <div className="city-clan-capture-instructions-item">
                           • Захват на игроке действует 1 час, после чего сбрасывается
                         </div>
-                        <div style={{ color: '#FFD700', marginTop: '8px', fontWeight: 600 }}>
+                        <div className="city-clan-capture-instructions-important">
                           ⚡ Важно: Играйте и выигрывайте, чтобы клан получал пассивный доход!
                         </div>
                       </div>
                       {member?.role !== 'leader' && (
-                        <div style={{ color: '#FFD700', marginTop: '12px', fontSize: '14px' }}>
+                        <div className="city-clan-capture-leader-only">
                           Только лидер может захватывать районы
                         </div>
                       )}

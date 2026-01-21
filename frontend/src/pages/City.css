@@ -827,6 +827,78 @@
   text-align: center;
 }
 
+.city-clan-capture-locked-info {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: #FF4444;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.city-clan-capture-locked-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.city-clan-capture-locked-text {
+  color: #FF4444;
+  font-weight: 600;
+}
+
+.city-clan-capture-locked-level {
+  color: #B6B6B6;
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.city-clan-capture-available-text {
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.city-clan-capture-instructions {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(26, 26, 26, 0.6);
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.city-clan-capture-instructions-title {
+  color: #FFD700;
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.city-clan-capture-instructions-item {
+  color: #B6B6B6;
+  margin-bottom: 8px;
+}
+
+.city-clan-capture-instructions-important {
+  color: #FFD700;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.city-clan-capture-leader-only {
+  color: #FFD700;
+  margin-top: 12px;
+  font-size: 14px;
+  text-align: center;
+}
+
 .city-clan-capture-btn {
   padding: 12px 24px;
   border-radius: 8px;

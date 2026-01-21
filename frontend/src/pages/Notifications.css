@@ -22,10 +22,10 @@
 }
 
 .notifications-item {
-  padding: 16px;
-  background: linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%);
-  border-radius: 12px;
-  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.25), 0 1px 6px 0 rgba(0, 0, 0, 0.25) inset;
+  padding: 18px 18px 14px;
+  background: linear-gradient(180deg, #1C1D21 0%, #050607 100%);
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
 }
 
 .notifications-item-content {
@@ -37,7 +37,7 @@
 .notifications-item-title {
   color: #FFF;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
   line-height: 1.3;
 }
@@ -45,16 +45,17 @@
 .notifications-item-message {
   color: #B6B6B6;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
   line-height: 1.4;
 }
 
 .notifications-item-time {
-  color: #B6B6B6;
+  color: #8B8B8B;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 12px;
   font-weight: 400;
-  margin-top: 4px;
+  margin-top: 6px;
+  text-align: right;
 }
 

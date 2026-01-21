@@ -58,53 +58,24 @@ export default function Notifications() {
   }
 
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return '✅'
-      case 'warning':
-        return '⚠️'
-      case 'error':
-        return '❌'
-      default:
-        return 'ℹ️'
-    }
-  }
-
-  const [filter, setFilter] = useState<'all' | 'games' | 'system'>('all')
-
-  const filteredNotifications = notifications.filter(n => {
-    if (filter === 'all') return true
-    if (filter === 'games') return n.type === 'success' || n.type === 'error'
-    if (filter === 'system') return n.type === 'info' || n.type === 'warning'
-    return true
-  })
-
-  const tabs = [
-    { id: 'all', label: 'Все', active: filter === 'all', onClick: () => setFilter('all') },
-    { id: 'games', label: 'Игры', active: filter === 'games', onClick: () => setFilter('games') },
-    { id: 'system', label: 'Система', active: filter === 'system', onClick: () => setFilter('system') },
-  ]
-
   return (
     <PageLayout 
       title="Уведомления" 
       subtitle="Здесь хранятся все ваши уведомления"
       showBack={true}
-      tabs={tabs}
     >
       <div className="notifications-content">
         {loading ? (
           <Card>
             <div className="notifications-loading">Загрузка...</div>
           </Card>
-        ) : filteredNotifications.length === 0 ? (
+        ) : notifications.length === 0 ? (
           <Card>
             <div className="notifications-empty">Нет уведомлений</div>
           </Card>
         ) : (
           <div className="notifications-list">
-            {filteredNotifications.map((notification) => (
+            {notifications.map((notification) => (
               <Card
                 key={notification.id}
                 className="notifications-item"
