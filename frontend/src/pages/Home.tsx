@@ -274,7 +274,22 @@ export default function Home() {
             {hasNotifications && <div className="home-avatar-notification-v3" />}
           </div>
           <div className="home-user-info-v3">
-            <div className="home-username-v3">{user?.nickname || user?.username || 'Игрок'}</div>
+            <div className="home-username-v3" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              {user?.nickname || user?.username || 'Игрок'}
+              {hasPremium && (
+                <img 
+                  src="/img/crown.png" 
+                  alt="premium" 
+                  style={{ 
+                    width: '24px', 
+                    height: '24px', 
+                    objectFit: 'contain',
+                    verticalAlign: 'middle',
+                    display: 'inline-block'
+                  }} 
+                />
+              )}
+            </div>
             <div className="home-currencies-v3">
               <div className="home-currency-item-v3">
                 <img src="/img/narcoin.png" alt="NAR" className="home-currency-img-v3" />

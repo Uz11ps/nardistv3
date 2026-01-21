@@ -3021,8 +3021,24 @@ export default function Game() {
                     )}
                   </div>
                 </div>
-              <div className="game-player-avatar" onClick={() => opponentPlayer && handleAvatarClick(opponentPlayer)} style={{ cursor: 'pointer' }}>
+              <div className="game-player-avatar" onClick={() => opponentPlayer && handleAvatarClick(opponentPlayer)} style={{ cursor: 'pointer', position: 'relative' }}>
                   {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
+                  {opponentPlayer?.hasPremium && (
+                    <img 
+                      src="/img/crown.png" 
+                      alt="premium" 
+                      style={{ 
+                        position: 'absolute',
+                        top: '-8px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '32px',
+                        height: '32px',
+                        objectFit: 'contain',
+                        zIndex: 20
+                      }} 
+                    />
+                  )}
                   {gameStatus === 'in_progress' && (() => {
                     // Таймер противника (всегда слева)
                     // Если я player1, то противник = player2
@@ -3094,8 +3110,24 @@ export default function Game() {
                     fallback="Соперник"
                   />
                 </div>
-                <div className="game-player-avatar" onClick={() => opponentPlayer && handleAvatarClick(opponentPlayer)} style={{ cursor: 'pointer' }}>
+                <div className="game-player-avatar" onClick={() => opponentPlayer && handleAvatarClick(opponentPlayer)} style={{ cursor: 'pointer', position: 'relative' }}>
                   {opponentPlayer?.avatarUrl ? <img src={opponentPlayer.avatarUrl} alt={opponentPlayer.username} /> : <Icon name="user" size={48} />}
+                  {opponentPlayer?.hasPremium && (
+                    <img 
+                      src="/img/crown.png" 
+                      alt="premium" 
+                      style={{ 
+                        position: 'absolute',
+                        top: '-8px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '32px',
+                        height: '32px',
+                        objectFit: 'contain',
+                        zIndex: 20
+                      }} 
+                    />
+                  )}
                   {gameStatus === 'in_progress' && (() => {
                     // Таймер противника (всегда слева)
                     // Если я player1, то противник = player2
@@ -3158,8 +3190,24 @@ export default function Game() {
                     fallback="Вы"
                   />
                 </div>
-                <div className="game-player-avatar" onClick={() => myPlayer && handleAvatarClick(myPlayer)} style={{ cursor: 'pointer' }}>
+                <div className="game-player-avatar" onClick={() => myPlayer && handleAvatarClick(myPlayer)} style={{ cursor: 'pointer', position: 'relative' }}>
                   {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
+                  {myPlayer?.hasPremium && (
+                    <img 
+                      src="/img/crown.png" 
+                      alt="premium" 
+                      style={{ 
+                        position: 'absolute',
+                        top: '-8px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '32px',
+                        height: '32px',
+                        objectFit: 'contain',
+                        zIndex: 20
+                      }} 
+                    />
+                  )}
                   {gameStatus === 'in_progress' && (() => {
                     // Мой таймер (всегда справа)
                     // Если я player1, то мой таймер = player1Timer
@@ -3657,8 +3705,24 @@ export default function Game() {
                   )}
               </div>
             </div>
-              <div className="game-player-avatar" onClick={() => myPlayer && handleAvatarClick(myPlayer)} style={{ cursor: 'pointer' }}>
+              <div className="game-player-avatar" onClick={() => myPlayer && handleAvatarClick(myPlayer)} style={{ cursor: 'pointer', position: 'relative' }}>
                 {myPlayer?.avatarUrl ? <img src={myPlayer.avatarUrl} alt={myPlayer.username} /> : <Icon name="user" size={48} />}
+                {myPlayer?.hasPremium && (
+                  <img 
+                    src="/img/crown.png" 
+                    alt="premium" 
+                    style={{ 
+                      position: 'absolute',
+                      top: '-8px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '32px',
+                      height: '32px',
+                      objectFit: 'contain',
+                      zIndex: 20
+                    }} 
+                  />
+                )}
                 {gameStatus === 'in_progress' && (() => {
                   // Мой таймер (всегда справа)
                   // Если я player1, то мой таймер = player1Timer
@@ -3790,30 +3854,28 @@ export default function Game() {
               <div className="verification-item">
                 <span>Ваше смещение:</span>
                 <strong>{myOffset}</strong>
-            </div>
+              </div>
               <div className="verification-item">
                 <span>Смещение соперника:</span>
                 <strong>{opponentOffset}</strong>
-          </div>
-              {gameState?.verificationSalt && (
-                <div className="verification-details">
+              </div>
+              <div className="verification-details">
+                {(gameState?.verificationSalt || gameInfo?.verificationSalt) && (
                   <div className="salt-display">
-                    Соль: <code>{gameState.verificationSalt}</code>
+                    Соль: <code>{gameState?.verificationSalt || gameInfo?.verificationSalt}</code>
                   </div>
-                  <button 
-                    className="verify-btn"
-                    onClick={() => {
-                      if (!gameState?.p1Rolls || !gameState?.p2Rolls || !gameState?.verificationSalt || !gameInfo?.rngHash) {
-                        alert('Недостаточно данных для проверки. Игра должна быть завершена.')
-                        return
-                      }
+                )}
+                <button 
+                  className="verify-btn"
+                  onClick={() => {
+                    if (gameId) {
                       navigate(`/game/${gameId}/verification`)
-                    }}
-                  >
-                    Проверить честность
-                  </button>
-                </div>
-              )}
+                    }
+                  }}
+                >
+                  Проверить честность
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
@@ -3966,81 +4028,120 @@ export default function Game() {
                 <div className="game-player-modal-loading">Загрузка статистики...</div>
               ) : playerStats ? (
                 <div className="game-player-modal-stats">
-                  <div className="game-player-modal-stats-section">
-                    <div className="game-player-modal-stats-title">Общая статистика</div>
-                    <div className="game-player-modal-stats-item">
-                      <span className="game-player-modal-stats-label">Всего матчей:</span>
-                      <span className="game-player-modal-stats-value">{playerStats.totalMatches || 0}</span>
-                    </div>
-                    {playerStats.overallRating !== undefined && (
+                  {/* Общая статистика - показываем только если фильтр "Все" */}
+                  {statsModeFilter === 'all' && (
+                    <div className="game-player-modal-stats-section">
+                      <div className="game-player-modal-stats-title">Общая статистика</div>
                       <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Общий рейтинг:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                          {playerStats.overallRating}
+                        <span className="game-player-modal-stats-label">Матчей:</span>
+                        <span className="game-player-modal-stats-value">{playerStats.totalMatches || 0}</span>
+                      </div>
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Побед:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.wins || 0}</span>
+                      </div>
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Поражений:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.losses || 0}</span>
+                      </div>
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Винрейт:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
+                          {playerStats.winrate || 0}%
                         </span>
                       </div>
-                    )}
-                  </div>
+                      {playerStats.overallRating !== undefined && (
+                        <div className="game-player-modal-stats-item">
+                          <span className="game-player-modal-stats-label">Общий рейтинг:</span>
+                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
+                            {playerStats.overallRating}
+                          </span>
+                        </div>
+                      )}
+                      {playerStats.short?.rating !== undefined && (
+                        <div className="game-player-modal-stats-item">
+                          <span className="game-player-modal-stats-label">Рейтинг (короткие):</span>
+                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
+                            {playerStats.short.rating}
+                          </span>
+                        </div>
+                      )}
+                      {playerStats.long?.rating !== undefined && (
+                        <div className="game-player-modal-stats-item">
+                          <span className="game-player-modal-stats-label">Рейтинг (длинные):</span>
+                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
+                            {playerStats.long.rating}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                  <div className="game-player-modal-stats-section">
-                    <div className="game-player-modal-stats-title">Короткие нарды</div>
-                    <div className="game-player-modal-stats-item">
-                      <span className="game-player-modal-stats-label">Матчей:</span>
-                      <span className="game-player-modal-stats-value">{playerStats.short?.matches || 0}</span>
-                    </div>
-                    <div className="game-player-modal-stats-item">
-                      <span className="game-player-modal-stats-label">Побед:</span>
-                      <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.short?.wins || 0}</span>
-                    </div>
-                    <div className="game-player-modal-stats-item">
-                      <span className="game-player-modal-stats-label">Поражений:</span>
-                      <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.short?.losses || 0}</span>
-                    </div>
-                    <div className="game-player-modal-stats-item">
-                      <span className="game-player-modal-stats-label">Винрейт:</span>
-                      <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
-                        {playerStats.short?.winrate || 0}%
-                      </span>
-                    </div>
-                    {playerStats.short?.rating !== undefined && (
+                  {/* Короткие нарды - показываем только если фильтр "Все" или "Короткие" */}
+                  {(statsModeFilter === 'all' || statsModeFilter === 'short') && (
+                    <div className="game-player-modal-stats-section">
+                      <div className="game-player-modal-stats-title">Короткие нарды</div>
                       <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Рейтинг:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                          {playerStats.short.rating}
+                        <span className="game-player-modal-stats-label">Матчей:</span>
+                        <span className="game-player-modal-stats-value">{playerStats.short?.matches || 0}</span>
+                      </div>
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Побед:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.short?.wins || 0}</span>
+                      </div>
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Поражений:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.short?.losses || 0}</span>
+                      </div>
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Винрейт:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
+                          {playerStats.short?.winrate || 0}%
                         </span>
                       </div>
-                    )}
-                  </div>
+                      {playerStats.short?.rating !== undefined && (
+                        <div className="game-player-modal-stats-item">
+                          <span className="game-player-modal-stats-label">Рейтинг (короткие):</span>
+                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
+                            {playerStats.short.rating}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                  <div className="game-player-modal-stats-section">
-                    <div className="game-player-modal-stats-title">Длинные нарды</div>
-                    <div className="game-player-modal-stats-item">
-                      <span className="game-player-modal-stats-label">Матчей:</span>
-                      <span className="game-player-modal-stats-value">{playerStats.long?.matches || 0}</span>
-                    </div>
-                    <div className="game-player-modal-stats-item">
-                      <span className="game-player-modal-stats-label">Побед:</span>
-                      <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.long?.wins || 0}</span>
-                    </div>
-                    <div className="game-player-modal-stats-item">
-                      <span className="game-player-modal-stats-label">Поражений:</span>
-                      <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.long?.losses || 0}</span>
-                    </div>
-                    <div className="game-player-modal-stats-item">
-                      <span className="game-player-modal-stats-label">Винрейт:</span>
-                      <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
-                        {playerStats.long?.winrate || 0}%
-                      </span>
-                    </div>
-                    {playerStats.long?.rating !== undefined && (
+                  {/* Длинные нарды - показываем только если фильтр "Все" или "Длинные" */}
+                  {(statsModeFilter === 'all' || statsModeFilter === 'long') && (
+                    <div className="game-player-modal-stats-section">
+                      <div className="game-player-modal-stats-title">Длинные нарды</div>
                       <div className="game-player-modal-stats-item">
-                        <span className="game-player-modal-stats-label">Рейтинг:</span>
-                        <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                          {playerStats.long.rating}
+                        <span className="game-player-modal-stats-label">Матчей:</span>
+                        <span className="game-player-modal-stats-value">{playerStats.long?.matches || 0}</span>
+                      </div>
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Побед:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#4CAF50' }}>{playerStats.long?.wins || 0}</span>
+                      </div>
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Поражений:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#E84142' }}>{playerStats.long?.losses || 0}</span>
+                      </div>
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Винрейт:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#FFD700' }}>
+                          {playerStats.long?.winrate || 0}%
                         </span>
                       </div>
-                    )}
-                  </div>
+                      {playerStats.long?.rating !== undefined && (
+                        <div className="game-player-modal-stats-item">
+                          <span className="game-player-modal-stats-label">Рейтинг (длинные):</span>
+                          <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
+                            {playerStats.long.rating}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="game-player-modal-no-stats">Статистика недоступна</div>

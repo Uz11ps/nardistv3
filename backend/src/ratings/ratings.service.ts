@@ -129,22 +129,69 @@ export class RatingsService {
     sortBy: 'xp' | 'matches' | 'winrate' | 'rating' = 'rating',
     limit: number = 100
   ): Promise<any[]> {
-    let periodStart: Date | null = null;
-    if (period === 'weekly') {
-      periodStart = new Date();
-      periodStart.setDate(periodStart.getDate() - 7);
-      periodStart.setHours(0, 0, 0, 0); // Начало дня недели назад
-    } else if (period === 'monthly') {
-      periodStart = new Date();
-      periodStart.setMonth(periodStart.getMonth() - 1);
-      periodStart.setHours(0, 0, 0, 0); // Начало дня месяц назад
-    } else if (period === 'all') {
-      // Для "all" устанавливаем очень старую дату, чтобы получить все игры
-      periodStart = new Date(0); // 1970-01-01
+    // Используем старую логику из таблицы ratings
+    let query = this.ratingsRepository
+      .createQueryBuilder('rating')
+      .where('rating.mode = :mode', { mode })
+      .leftJoinAndSelect('rating.user', 'user');
+
+    const ratings = await query.getMany();
+
+    const entries = await Promise.all(ratings.map(async (rating) => {
+      let totalMatches = (rating.wins || 0) + (rating.losses || 0) + (rating.draws || 0);
+      let winRate = totalMatches >= 100 && totalMatches > 0 
+        ? Math.round(((rating.wins || 0) / totalMatches) * 100 * 10) / 10 
+        : null;
+      let xp = Number(rating.user.xp || 0);
+      
+      const hasPremium = rating.user ? await this.subscriptionService.hasActiveSubscription(rating.user.id) : false;
+      
+      return {
+        user: rating.user ? {
+          id: rating.user.id,
+          username: rating.user.username,
+          nickname: rating.user.nickname,
+          avatarUrl: rating.user.avatarUrl,
+          level: rating.user.level || 1,
+          rating: rating.elo,
+          xp,
+          badge: this.getBadge(rating.elo),
+          hasPremium,
+        } : null,
+        wins: rating.wins || 0,
+        losses: rating.losses || 0,
+        draws: rating.draws || 0,
+        totalMatches,
+        winRate,
+        ratingChange: undefined,
+      };
+    }));
+
+    // Сортируем
+    if (sortBy === 'xp') {
+      entries.sort((a, b) => (b.user?.xp || 0) - (a.user?.xp || 0));
+    } else if (sortBy === 'matches') {
+      entries.sort((a, b) => b.totalMatches - a.totalMatches);
+    } else if (sortBy === 'winrate') {
+      const filteredEntries = entries.filter(entry => entry.totalMatches >= 100 && entry.winRate !== null);
+      filteredEntries.sort((a, b) => {
+        const aWinRate = a.winRate || 0;
+        const bWinRate = b.winRate || 0;
+        if (Math.abs(aWinRate - bWinRate) > 0.01) {
+          return bWinRate - aWinRate;
+        }
+        return b.totalMatches - a.totalMatches;
+      });
+      entries.length = 0;
+      entries.push(...filteredEntries);
+    } else {
+      entries.sort((a, b) => (b.user?.rating || 0) - (a.user?.rating || 0));
     }
 
-    // Всегда считаем статистику из игр (для всех периодов и типов сортировки)
-    return this.getLeaderboardFromGames(mode, periodStart!, sortBy, limit, period === 'all');
+    return entries.slice(0, limit).map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }));
   }
 
   private async getLeaderboardFromGames(
@@ -370,64 +417,28 @@ export class RatingsService {
     return 'Новичок';
   }
 
-  async getMyStats(userId: string, period: string = 'all'): Promise<any> {
-    // Определяем период
-    let periodStart: Date | null = null;
-    if (period === 'weekly') {
-      periodStart = new Date();
-      periodStart.setDate(periodStart.getDate() - 7);
-      periodStart.setHours(0, 0, 0, 0);
-    } else if (period === 'monthly') {
-      periodStart = new Date();
-      periodStart.setMonth(periodStart.getMonth() - 1);
-      periodStart.setHours(0, 0, 0, 0);
-    } else if (period === 'all') {
-      periodStart = new Date(0); // 1970-01-01 для всех игр
-    }
-
-    // Получаем рейтинги (всегда общие)
+  async getMyStats(userId: string): Promise<any> {
+    // Получаем рейтинги
     const shortRating = await this.getRating(userId, GameMode.SHORT) || 1000;
     const longRating = await this.getRating(userId, GameMode.LONG) || 1000;
     const overallRating = Math.round((shortRating + longRating) / 2);
 
-    // Получаем игры пользователя за период (только vs_player)
-    const queryBuilder = this.gamesRepository
+    // Получаем все игры пользователя (только vs_player)
+    const allGames = await this.gamesRepository
       .createQueryBuilder('game')
       .where('(game.player1Id = :userId OR game.player2Id = :userId)', { userId })
       .andWhere('game.type = :type', { type: GameType.VS_PLAYER })
       .andWhere('game.status = :status', { status: GameStatus.FINISHED })
-      .andWhere('game.createdAt >= :periodStart', { periodStart });
+      .getMany();
 
-    const periodGames = await queryBuilder.getMany();
-
-    const totalMatches = periodGames.length;
-    const wins = periodGames.filter(g => g.winnerId === userId).length;
+    const totalMatches = allGames.length;
+    const wins = allGames.filter(g => g.winnerId === userId).length;
     const losses = totalMatches - wins;
     const winRate = totalMatches > 0 ? Math.round((wins / totalMatches) * 100 * 10) / 10 : 0;
 
-    // Для XP: для периода "all" берем общий XP, для других периодов - прирост из игр
-    let totalXP = 0;
-    if (period === 'all') {
-      // Получаем общий XP пользователя
-      const user = await this.usersRepository.findOne({ where: { id: userId } });
-      totalXP = Number(user?.xp || 0);
-    } else {
-      // Считаем прирост XP из игр за период
-      for (const game of periodGames) {
-        if (game.player1Id === userId) {
-          totalXP += Number(game.player1XP || 0);
-        } else if (game.player2Id === userId) {
-          totalXP += Number(game.player2XP || 0);
-        }
-      }
-    }
-
-    // Для рейтинга считаем изменение за период (только если не период "all")
-    let ratingChange = undefined;
-    if (period !== 'all') {
-      // Упрощенно: победа +25, поражение -25
-      ratingChange = (wins * 25) - (losses * 25);
-    }
+    // Получаем общий XP пользователя
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    const totalXP = Number(user?.xp || 0);
 
     return {
       overallRating,
@@ -438,7 +449,6 @@ export class RatingsService {
       losses,
       winRate,
       totalXP,
-      ratingChange,
     };
   }
 }

@@ -739,9 +739,13 @@
 }
 
 .home-currency-img-v3 {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
+}
+
+.home-currency-item-v3 span {
+  font-size: 21px;
 }
 
 .home-federations-btn-v3 {

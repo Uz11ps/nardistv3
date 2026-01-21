@@ -56,8 +56,8 @@ export class RatingsController {
 
   @Get('my-stats')
   @UseGuards(JwtAuthGuard)
-  async getMyStats(@CurrentUser() user: any, @Query('period') period?: string) {
-    return this.ratingsService.getMyStats(user.id, period || 'all');
+  async getMyStats(@CurrentUser() user: any) {
+    return this.ratingsService.getMyStats(user.id);
   }
 }
 

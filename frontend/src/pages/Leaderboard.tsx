@@ -35,7 +35,6 @@ interface MyStats {
   losses: number
   winRate: number
   totalXP: number
-  ratingChange: number
 }
 
 export default function Leaderboard() {
@@ -43,18 +42,17 @@ export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [myStats, setMyStats] = useState<MyStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'weekly' | 'monthly'>('all')
   const [sortBy, setSortBy] = useState<'xp' | 'matches' | 'winrate' | 'rating'>('xp')
 
   useEffect(() => {
     loadLeaderboard()
     loadMyStats()
-  }, [filter, sortBy])
+  }, [sortBy])
 
   const loadLeaderboard = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get(`/ratings/leaderboard?period=${filter}&sortBy=${sortBy}`).catch(() => ({ data: [] }))
+      const response = await apiClient.get(`/ratings/leaderboard?sortBy=${sortBy}`).catch(() => ({ data: [] }))
       setLeaderboard(response.data || [])
     } catch (error) {
       console.error('Failed to load leaderboard:', error)
@@ -65,7 +63,7 @@ export default function Leaderboard() {
 
   const loadMyStats = async () => {
     try {
-      const response = await apiClient.get(`/ratings/my-stats?period=${filter}`).catch(() => ({ data: null }))
+      const response = await apiClient.get('/ratings/my-stats').catch(() => ({ data: null }))
       setMyStats(response.data)
     } catch (error) {
       console.error('Failed to load my stats:', error)
@@ -76,11 +74,6 @@ export default function Leaderboard() {
     <PageLayout
       title="Лидерборд"
       showBack={true}
-      tabs={[
-        { id: 'all', label: 'Все', active: filter === 'all', onClick: () => setFilter('all') },
-        { id: 'weekly', label: 'Неделя', active: filter === 'weekly', onClick: () => setFilter('weekly') },
-        { id: 'monthly', label: 'Месяц', active: filter === 'monthly', onClick: () => setFilter('monthly') },
-      ]}
     >
       <div className="leaderboard-content">
         {/* Моя статистика */}
@@ -90,18 +83,7 @@ export default function Leaderboard() {
             <div className="leaderboard-my-stats-content">
               <div className="leaderboard-my-stats-item">
                 <div className="leaderboard-my-stats-label">Рейтинг</div>
-                <div className="leaderboard-my-stats-value">
-                  {myStats.overallRating}
-                  {myStats.ratingChange !== undefined && myStats.ratingChange !== null && (
-                    <span style={{ 
-                      marginLeft: '8px', 
-                      color: myStats.ratingChange >= 0 ? '#4CAF50' : '#F44336',
-                      fontSize: '14px'
-                    }}>
-                      {myStats.ratingChange >= 0 ? '+' : ''}{myStats.ratingChange}
-                    </span>
-                  )}
-                </div>
+                <div className="leaderboard-my-stats-value">{myStats.overallRating}</div>
               </div>
               <div className="leaderboard-my-stats-item">
                 <div className="leaderboard-my-stats-label">Матчей</div>
@@ -196,14 +178,7 @@ export default function Leaderboard() {
                         <>Винрейт: {entry.winRate || 0}%</>
                       )}
                       {sortBy === 'rating' && (
-                        <>
-                          Рейтинг: {entry.user.rating}
-                          {filter !== 'all' && entry.ratingChange !== undefined && entry.ratingChange !== 0 && (
-                            <span style={{ marginLeft: '8px', color: entry.ratingChange > 0 ? '#4CAF50' : '#F44336' }}>
-                              {entry.ratingChange > 0 ? '+' : ''}{entry.ratingChange}
-                            </span>
-                          )}
-                        </>
+                        <>Рейтинг: {entry.user.rating}</>
                       )}
                     </div>
                   </div>

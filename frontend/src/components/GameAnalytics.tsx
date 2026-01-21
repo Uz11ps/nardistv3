@@ -68,12 +68,6 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
           <div className="analysis-icons">
             <div className="analysis-icon" onClick={handleExportMat} title="Экспорт в .mat">M</div>
             <div className="analysis-icon" onClick={loadAnalysis} title="Обновить">↻</div>
-            <div className="analysis-icon balance">
-              <ScaleIcon size={18} style={{ color: '#707579' }} />
-            </div>
-          </div>
-          <div className="analysis-game-selector">
-            Game 1 of 1
           </div>
         </div>
       </div>
@@ -96,7 +90,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                 <div 
                   className={`move-item ${selectedMoveIndex === idx * 2 ? 'selected' : ''} ${move1.isError ? 'error-' + move1.errorType : ''} ${move1.isBestMove ? 'best-move' : ''}`}
                   onClick={() => setSelectedMoveIndex(idx * 2)}
-                  title={move1.isBestMove ? 'Лучший ход!' : (move1.isError ? move1.errorDescription : '')}
+                  title={move1.isBestMove ? 'Лучший ход!' : (move1.isError ? `${move1.errorDescription || ''}${move1.bestMove ? ' Лучший ход: ' + move1.bestMove.map((m: any) => `${m.from === -1 ? 'bar' : m.from}/${m.to === -1 || m.to >= 24 ? 'off' : m.to}`).join(' ') : ''}` : '')}
                 >
                   {move1.isBestMove && <span className="best-move-badge"><img src="/img/crown.png" alt="best" style={{ width: '16px', height: '16px', objectFit: 'contain' }} /></span>}
                   <span className="move-dice">({move1.move.dice?.join('')})</span>
@@ -110,7 +104,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                   <div 
                     className={`move-item ${selectedMoveIndex === idx * 2 + 1 ? 'selected' : ''} ${move2.isError ? 'error-' + move2.errorType : ''} ${move2.isBestMove ? 'best-move' : ''}`}
                     onClick={() => setSelectedMoveIndex(idx * 2 + 1)}
-                    title={move2.isBestMove ? 'Лучший ход!' : (move2.isError ? move2.errorDescription : '')}
+                    title={move2.isBestMove ? 'Лучший ход!' : (move2.isError ? `${move2.errorDescription || ''}${move2.bestMove ? ' Лучший ход: ' + move2.bestMove.map((m: any) => `${m.from === -1 ? 'bar' : m.from}/${m.to === -1 || m.to >= 24 ? 'off' : m.to}`).join(' ') : ''}` : '')}
                   >
                     {move2.isBestMove && (
                       <span className="best-move-badge">
@@ -147,18 +141,49 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                     <div className="prob-col equity"><span>Equity</span><strong>{item.equity?.toFixed(3)}</strong></div>
                   </div>
 
-                  <div className="analysis-actions-v2">
-                    <button className="analysis-tab-btn active">Move</button>
-                    <button className="analysis-tab-btn">Cube</button>
-                    <div className="analysis-action-icons">
-                      <span className="action-icon">
-                        <RobotIcon size={16} style={{ color: '#707579' }} />
-                      </span>
-                      <span className="action-icon">
-                        <img src="/img/crown.png" alt="best" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
-                      </span>
+                  {/* Отображение ошибки и лучшего хода */}
+                  {item.isError && (
+                    <div className="analysis-error-info" style={{
+                      padding: '12px',
+                      background: item.errorType === 'blunder' ? 'rgba(232, 65, 66, 0.15)' :
+                                   item.errorType === 'mistake' ? 'rgba(255, 152, 0, 0.15)' :
+                                   'rgba(255, 214, 0, 0.15)',
+                      borderRadius: '8px',
+                      marginBottom: '16px',
+                      border: `1px solid ${item.errorType === 'blunder' ? 'rgba(232, 65, 66, 0.3)' :
+                                              item.errorType === 'mistake' ? 'rgba(255, 152, 0, 0.3)' :
+                                              'rgba(255, 214, 0, 0.3)'}`
+                    }}>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        marginBottom: '8px',
+                        color: item.errorType === 'blunder' ? '#E84142' :
+                               item.errorType === 'mistake' ? '#FF9800' : '#FFD600'
+                      }}>
+                        {item.errorType === 'blunder' ? 'Грубая ошибка' :
+                         item.errorType === 'mistake' ? 'Ошибка' : 'Неточность'}
+                      </div>
+                      {item.errorDescription && (
+                        <div style={{ fontSize: '13px', color: '#B6B6B6', marginBottom: '8px' }}>
+                          {item.errorDescription}
+                        </div>
+                      )}
+                      {item.bestMove && item.bestMove.length > 0 && (
+                        <div style={{ fontSize: '13px', color: '#FFF', marginTop: '8px' }}>
+                          <span style={{ color: '#B6B6B6' }}>Лучший ход по equity: </span>
+                          <span style={{ fontWeight: '600', color: '#4CAF50' }}>
+                            {item.bestMove.map((m: any, i: number) => (
+                              <span key={i}>
+                                {i > 0 ? ' ' : ''}
+                                {m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}
+                              </span>
+                            ))}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
 
                   <div className="alternatives-table-v2">
                     {item.alternatives?.map((alt: any, aIdx: number) => (
