@@ -135,28 +135,16 @@ export class RatingsService {
       periodStart.setMonth(periodStart.getMonth() - 1);
     }
 
-    // Если период указан и сортировка не по рейтингу, считаем статистику из игр
-    if (period !== 'all' && sortBy !== 'rating') {
+    // Если период указан, всегда считаем статистику из игр (для всех типов сортировки)
+    if (period !== 'all') {
       return this.getLeaderboardFromGames(mode, periodStart!, sortBy, limit);
     }
 
-    // Для рейтинга или периода "all" используем старую логику
+    // Для периода "all" используем старую логику из таблицы ratings
     let query = this.ratingsRepository
       .createQueryBuilder('rating')
       .where('rating.mode = :mode', { mode })
       .leftJoinAndSelect('rating.user', 'user');
-
-    if (period !== 'all' && sortBy === 'rating') {
-      if (period === 'weekly') {
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        query = query.andWhere('rating.updatedAt >= :weekAgo', { weekAgo });
-      } else if (period === 'monthly') {
-        const monthAgo = new Date();
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-        query = query.andWhere('rating.updatedAt >= :monthAgo', { monthAgo });
-      }
-    }
 
     const ratings = await query.getMany();
 
@@ -166,35 +154,7 @@ export class RatingsService {
         ? Math.round(((rating.wins || 0) / totalMatches) * 100 * 10) / 10 
         : null;
       let xp = Number(rating.user.xp || 0);
-      let ratingChange = 0;
-
-      // Для рейтинга за период считаем изменение на основе игр за период
-      if (sortBy === 'rating' && period !== 'all' && periodStart && rating.user) {
-        // Получаем игры пользователя за период (только vs_player)
-        const periodGames = await this.gamesRepository
-          .createQueryBuilder('game')
-          .where('(game.player1Id = :userId OR game.player2Id = :userId)', { userId: rating.user.id })
-          .andWhere('game.type = :type', { type: GameType.VS_PLAYER })
-          .andWhere('game.status = :status', { status: GameStatus.FINISHED })
-          .andWhere('game.mode = :mode', { mode })
-          .andWhere('game.updatedAt >= :periodStart', { periodStart })
-          .getMany();
-
-        // Считаем изменение рейтинга на основе игр за период
-        // Упрощенно: считаем, что каждая победа дает +25, поражение -25 (базовые значения)
-        let change = 0;
-        for (const game of periodGames) {
-          if (game.winnerId === rating.user.id) {
-            change += 25; // Победа
-          } else if (game.winnerId) {
-            change -= 25; // Поражение
-          }
-        }
-        ratingChange = change;
-      } else if (sortBy === 'rating' && period === 'all') {
-        // Для "все" не показываем изменение рейтинга
-        ratingChange = undefined;
-      }
+      let ratingChange = undefined; // Для "all" не показываем изменение рейтинга
       
       const hasPremium = rating.user ? await this.subscriptionService.hasActiveSubscription(rating.user.id) : false;
       

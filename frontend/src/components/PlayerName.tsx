@@ -19,8 +19,8 @@ export default function PlayerName({ nickname, username, hasPremium, fallback, c
           src="/img/crown.png" 
           alt="premium" 
           style={{ 
-            width: '16px', 
-            height: '16px', 
+            width: '32px', 
+            height: '32px', 
             objectFit: 'contain',
             verticalAlign: 'middle',
             display: 'inline-block'
