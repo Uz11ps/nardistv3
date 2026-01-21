@@ -49,6 +49,7 @@ export default function Home() {
   const [hasUnclaimedQuests, setHasUnclaimedQuests] = useState(false)
   const [levelProgress, setLevelProgress] = useState<LevelProgress | null>(null)
   const [levelUpNotification, setLevelUpNotification] = useState<{ level: number; reward: number } | null>(null)
+  const [leaderboard, setLeaderboard] = useState<any[]>([])
 
   useEffect(() => {
     if (user) {

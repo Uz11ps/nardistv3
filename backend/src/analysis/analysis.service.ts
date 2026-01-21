@@ -180,6 +180,9 @@ export class AnalysisService {
       // Рассчитываем вероятности выигрыша на основе equity и позиционных факторов
       const winProbabilities = this.calculateWinProbabilities(equity, gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode);
 
+      // Определяем playerIndex для текущего хода
+      const currentPlayerIndex = userId === game.player1Id ? 0 : 1;
+
       // Оцениваем качество хода на основе позиционных и стратегических факторов
       const moveQuality = this.evaluateMoveQuality(
         engine,
@@ -187,7 +190,7 @@ export class AnalysisService {
         gameStateAfter,
         move.moves as any,
         bestAlternative?.moves || [],
-        playerIndex,
+        currentPlayerIndex,
         game.mode
       );
 
@@ -209,7 +212,7 @@ export class AnalysisService {
           gameStateAfter,
           move.moves as any,
           bestAlternative?.moves || [],
-          playerIndex,
+          currentPlayerIndex,
           game.mode
         );
         errorDescription = `Грубая ошибка${reasons ? ': ' + reasons : ''}`;
@@ -222,7 +225,7 @@ export class AnalysisService {
           gameStateAfter,
           move.moves as any,
           bestAlternative?.moves || [],
-          playerIndex,
+          currentPlayerIndex,
           game.mode
         );
         errorDescription = `Ошибка${reasons ? ': ' + reasons : ''}`;
@@ -252,7 +255,7 @@ export class AnalysisService {
       };
 
       // Добавляем качество к альтернативам
-      evaluatedAlternatives.forEach(alt => {
+      evaluatedAlternatives.forEach((alt: any) => {
         if (alt.moves) {
           // Упрощенная оценка качества альтернативы
           alt.quality = 0.7; // Базовое качество, можно улучшить
