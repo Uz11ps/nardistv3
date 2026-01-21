@@ -180,75 +180,91 @@ export default function Game() {
 
   // Таймер выбора смещения (15 секунд) - если не выбрано, матч отменяется
   useEffect(() => {
-    // Запускаем таймер для всех типов игр (vs_player и vs_bot), когда игра в статусе 'waiting' и смещение еще не выбрано
-    const isBotGameType = gameInfo?.type === 'vs_bot'
-    if (gameStatus === 'waiting' && (gameInfo?.type === 'vs_player' || gameInfo?.type === 'vs_bot') && gameInfo) {
-      const isP1 = gameInfo.player1Id === user?.id
-      const myOffsetChosenAt = isP1 ? gameInfo.p1OffsetChosenAt : gameInfo.p2OffsetChosenAt
-      
-      // Если смещение еще не выбрано и таймер не запущен
-      if (!myOffsetChosenAt && offsetSelectionTimer === null && offsetSelectionTimerIntervalRef.current === null) {
-        console.log('⏱️ Запускаем таймер выбора смещения (15 секунд)')
-        setOffsetSelectionTimer(15)
-        offsetSelectionTimerRef.current = 15
-        
-        const interval = setInterval(() => {
-          setOffsetSelectionTimer((prev) => {
-            if (prev === null || prev <= 1) {
-              // Время истекло - отправляем смещение 1 по умолчанию
-              offsetSelectionTimerRef.current = null
-              if (offsetSelectionTimerIntervalRef.current) {
-                clearInterval(offsetSelectionTimerIntervalRef.current)
-                offsetSelectionTimerIntervalRef.current = null
-              }
-              
-              // Проверяем, не выбрано ли уже смещение
-              const currentOffsetChosenAt = isP1 ? gameInfo.p1OffsetChosenAt : gameInfo.p2OffsetChosenAt
-              if (!currentOffsetChosenAt && gameId) {
-                console.log('⏱️ Время выбора смещения истекло, отменяем матч')
-                // Отменяем матч
-                apiClient.post(`/games/${gameId}/resign`).then(() => {
-                  setShowMatchCancelledModal(true)
-                  setTimeout(() => {
-                    navigate('/', { replace: true })
-                  }, 2000)
-                }).catch((error) => {
-                  console.error('Failed to cancel match:', error)
-                  // В любом случае показываем уведомление и перенаправляем
-                  setShowMatchCancelledModal(true)
-                  setTimeout(() => {
-                    navigate('/', { replace: true })
-                  }, 2000)
-                })
-              }
-              
-              return null
-            }
-            const newValue = prev - 1
-            offsetSelectionTimerRef.current = newValue
-            return newValue
-          })
-        }, 1000)
-        
-        offsetSelectionTimerIntervalRef.current = interval as any
-      }
-    } else {
-      // Если игра началась или смещение выбрано - останавливаем таймер
-      if (offsetSelectionTimerIntervalRef.current) {
-        clearInterval(offsetSelectionTimerIntervalRef.current)
-        offsetSelectionTimerIntervalRef.current = null
-        setOffsetSelectionTimer(null)
-        offsetSelectionTimerRef.current = null
-      }
+    // На всякий случай очищаем предыдущий интервал при каждом пересоздании эффекта
+    if (offsetSelectionTimerIntervalRef.current) {
+      clearInterval(offsetSelectionTimerIntervalRef.current)
+      offsetSelectionTimerIntervalRef.current = null
     }
-    
+
+    if (!gameInfo || !user?.id) {
+      setOffsetSelectionTimer(null)
+      offsetSelectionTimerRef.current = null
+      return
+    }
+
+    const isRelevantGame =
+      gameStatus === 'waiting' &&
+      (gameInfo.type === 'vs_player' || gameInfo.type === 'vs_bot')
+
+    if (!isRelevantGame) {
+      setOffsetSelectionTimer(null)
+      offsetSelectionTimerRef.current = null
+      return
+    }
+
+    const isP1 = gameInfo.player1Id === user.id
+    const myOffsetChosenAt = isP1 ? gameInfo.p1OffsetChosenAt : gameInfo.p2OffsetChosenAt
+
+    // Если смещение уже выбрано - таймер не нужен
+    if (myOffsetChosenAt) {
+      setOffsetSelectionTimer(null)
+      offsetSelectionTimerRef.current = null
+      return
+    }
+
+    console.log('⏱️ Запускаем таймер выбора смещения (15 секунд)')
+    setOffsetSelectionTimer(15)
+    offsetSelectionTimerRef.current = 15
+
+    const intervalId = window.setInterval(() => {
+      setOffsetSelectionTimer((prev) => {
+        if (prev === null || prev <= 1) {
+          // Время истекло
+          offsetSelectionTimerRef.current = null
+          if (offsetSelectionTimerIntervalRef.current) {
+            clearInterval(offsetSelectionTimerIntervalRef.current)
+            offsetSelectionTimerIntervalRef.current = null
+          }
+
+          // Проверяем актуальное состояние смещения на момент истечения
+          const latestIsP1 = gameInfo.player1Id === user.id
+          const latestOffsetChosenAt = latestIsP1 ? gameInfo.p1OffsetChosenAt : gameInfo.p2OffsetChosenAt
+
+          if (!latestOffsetChosenAt && gameId) {
+            console.log('⏱️ Время выбора смещения истекло, отменяем матч')
+            apiClient.post(`/games/${gameId}/resign`)
+              .then(() => {
+                setShowMatchCancelledModal(true)
+                setTimeout(() => {
+                  navigate('/', { replace: true })
+                }, 2000)
+              })
+              .catch((error) => {
+                console.error('Failed to cancel match:', error)
+                setShowMatchCancelledModal(true)
+                setTimeout(() => {
+                  navigate('/', { replace: true })
+                }, 2000)
+              })
+          }
+
+          return null
+        }
+        const newValue = prev - 1
+        offsetSelectionTimerRef.current = newValue
+        return newValue
+      })
+    }, 1000)
+
+    offsetSelectionTimerIntervalRef.current = intervalId as any
+
     return () => {
       if (offsetSelectionTimerIntervalRef.current) {
         clearInterval(offsetSelectionTimerIntervalRef.current)
         offsetSelectionTimerIntervalRef.current = null
       }
     }
-  }, [gameStatus, gameInfo?.type, gameInfo?.p1OffsetChosenAt, gameInfo?.p2OffsetChosenAt, offsetSelectionTimer, gameId, user?.id, gameInfo?.player1Id])
+  }, [gameStatus, gameInfo, user?.id, gameId, navigate])
 
   // Расчет Pip Count (очков до финиша)
   const calculatePipCount = useCallback((points: number[], bar: any, bearOff: any, player: number, mode: string) => {
