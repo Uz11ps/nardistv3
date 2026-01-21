@@ -14,7 +14,13 @@ import { ProgressionBranchesService } from './progression-branches.service';
 @Injectable()
 export class ProgressService {
   private readonly logger = new Logger(ProgressService.name);
-  private readonly MAX_LEVEL = 50;
+  
+  /**
+   * Получить максимальный уровень из конфигурации
+   */
+  private get MAX_LEVEL(): number {
+    return this.branchesService.getMaxLevel();
+  }
   
   private readonly ENERGY_RESTORE_INTERVAL = 30 * 60 * 1000; // 30 минут
   private readonly ENERGY_RESTORE_AMOUNT = 10; // 10 энергии за восстановление

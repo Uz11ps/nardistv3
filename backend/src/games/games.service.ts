@@ -3317,20 +3317,103 @@ ${formattedMoves.join('\n')}
 
     // Общее количество матчей (все игры, не только завершенные)
     const totalMatches = filteredGames.length;
+    
+    // Если применен фильтр по режиму, возвращаем данные только для этого режима
+    if (filters?.mode === 'short') {
+      return {
+        totalMatches: shortFinished,
+        matches: shortFinished,
+        wins: shortWins,
+        losses: shortFinished - shortWins,
+        winrate: Math.round(shortWinrate * 10) / 10,
+        short: {
+          matches: shortFinished,
+          wins: shortWins,
+          losses: shortFinished - shortWins,
+          winrate: Math.round(shortWinrate * 10) / 10,
+        },
+      };
+    } else if (filters?.mode === 'long') {
+      return {
+        totalMatches: longFinished,
+        matches: longFinished,
+        wins: longWins,
+        losses: longFinished - longWins,
+        winrate: Math.round(longWinrate * 10) / 10,
+        long: {
+          matches: longFinished,
+          wins: longWins,
+          losses: longFinished - longWins,
+          winrate: Math.round(longWinrate * 10) / 10,
+        },
+      };
+    }
 
+    // Если применен фильтр по результату, возвращаем общую статистику по фильтру
+    if (filters?.result === 'wins') {
+      const totalWins = shortWins + longWins;
+      return {
+        totalMatches: totalWins,
+        matches: totalWins,
+        wins: totalWins,
+        losses: 0,
+        winrate: 100,
+        short: {
+          matches: shortWins,
+          wins: shortWins,
+          losses: 0,
+          winrate: shortWins > 0 ? 100 : 0,
+        },
+        long: {
+          matches: longWins,
+          wins: longWins,
+          losses: 0,
+          winrate: longWins > 0 ? 100 : 0,
+        },
+      };
+    } else if (filters?.result === 'losses') {
+      const shortLosses = shortFinished - shortWins;
+      const longLosses = longFinished - longWins;
+      const totalLosses = shortLosses + longLosses;
+      return {
+        totalMatches: totalLosses,
+        matches: totalLosses,
+        wins: 0,
+        losses: totalLosses,
+        winrate: 0,
+        short: {
+          matches: shortLosses,
+          wins: 0,
+          losses: shortLosses,
+          winrate: 0,
+        },
+        long: {
+          matches: longLosses,
+          wins: 0,
+          losses: longLosses,
+          winrate: 0,
+        },
+      };
+    }
+
+    // Без фильтров возвращаем полную статистику
     return {
       totalMatches,
+      matches: totalMatches,
+      wins: shortWins + longWins,
+      losses: (shortFinished - shortWins) + (longFinished - longWins),
+      winrate: totalMatches > 0 ? Math.round(((shortWins + longWins) / totalMatches) * 100 * 10) / 10 : 0,
       short: {
         matches: shortFinished,
         wins: shortWins,
         losses: shortFinished - shortWins,
-        winrate: Math.round(shortWinrate * 10) / 10, // Округляем до 1 знака после запятой
+        winrate: Math.round(shortWinrate * 10) / 10,
       },
       long: {
         matches: longFinished,
         wins: longWins,
         losses: longFinished - longWins,
-        winrate: Math.round(longWinrate * 10) / 10, // Округляем до 1 знака после запятой
+        winrate: Math.round(longWinrate * 10) / 10,
       },
     };
   }

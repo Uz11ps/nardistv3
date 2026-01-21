@@ -3223,45 +3223,49 @@ export default function Game() {
                   
                   <div className="offset-selector">
                     <label>Ваше смещение (1-5):</label>
+                    <p className="offset-hint">Каждый игрок выбирает свое смещение независимо</p>
+                    <div className="offset-buttons">
+                      {[1, 2, 3, 4, 5].map((value) => {
+                        const isP1 = user?.id === gameInfo?.player1Id
+                        const myOffsetChosenAt = isP1 ? gameInfo?.p1OffsetChosenAt : gameInfo?.p2OffsetChosenAt
+                        const isDisabled = myOffsetChosenAt !== null && myOffsetChosenAt !== undefined
+                        
+                        return (
+                          <button
+                            key={value}
+                            className={`offset-btn ${myOffset === value ? 'offset-btn-selected' : ''}`}
+                            onClick={() => {
+                              if (!isDisabled) {
+                                handleOffsetButtonClick(value);
+                              }
+                            }}
+                            disabled={isDisabled}
+                          >
+                            {value}
+                          </button>
+                        )
+                      })}
+                    </div>
                     {offsetSelectionTimer !== null && offsetSelectionTimer > 0 && (
-                      <div style={{ color: offsetSelectionTimer <= 5 ? '#FF4444' : '#FFD700', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>
+                      <div style={{ 
+                        color: offsetSelectionTimer <= 5 ? '#FF4444' : '#FFD700', 
+                        fontSize: '14px', 
+                        fontWeight: 600, 
+                        marginTop: '12px',
+                        textAlign: 'center'
+                      }}>
                         ⏱️ Осталось {offsetSelectionTimer} секунд
                       </div>
                     )}
-                    <p className="offset-hint">Каждый игрок выбирает свое смещение независимо</p>
-                    <div className="offset-buttons">
-                      {[1, 2, 3, 4, 5].map((value) => (
-                        <button
-                          key={value}
-                          className={`offset-btn ${myOffset === value ? 'offset-btn-selected' : ''}`}
-                          onClick={() => {
-                            if (!myReady) {
-                              handleOffsetButtonClick(value);
-                            }
-                          }}
-                          disabled={myReady}
-                        >
-                          {value}
-                        </button>
-                      ))}
-                      </div>
                     <div className="offset-values">
                       <span>Вы: <strong>{myOffset}</strong></span>
                       {isBotGame ? (
                         <span>Бот: <strong>{opponentOffset > 0 ? opponentOffset : 'выбирает...'}</strong></span>
                       ) : (
                         <span>Соперник: <strong>{opponentOffset}</strong></span>
-                  )}
-                </div>
-              </div>
-
-                  {!isBotGame && gameInfo?.type === 'vs_player' && (
-                    !myReady ? (
-                      <Button variant="primary" onClick={handleReadyToStart} className="ready-btn">Готов</Button>
-                    ) : (
-                      <div className="ready-status">✅ Готов. Ожидание соперника...</div>
-                    )
-            )}
+                      )}
+                    </div>
+                  </div>
           </div>
               )}
             </div>

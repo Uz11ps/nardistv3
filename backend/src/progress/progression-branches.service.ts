@@ -79,6 +79,10 @@ export class ProgressionBranchesService implements OnModuleInit {
     caps: {
       gearXpMultCap: 1.50,
     },
+    xpCurve: {
+      A: 350,
+    },
+    maxLevel: 50,
     levelRewards: {} as Record<number, number>,
     xp: {
       baseXp: {
@@ -143,6 +147,13 @@ export class ProgressionBranchesService implements OnModuleInit {
    */
   getConfig() {
     return this.config;
+  }
+
+  /**
+   * Получить максимальный уровень из конфигурации
+   */
+  getMaxLevel(): number {
+    return this.config.maxLevel || 50;
   }
 
   /**

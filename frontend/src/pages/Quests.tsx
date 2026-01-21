@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
-import { PaintBrushIcon, TicketIcon } from '../components/Icons'
+import { PaintBrushIcon, TicketIcon, CoinIcon, StarIcon } from '../components/Icons'
 import './Quests.css'
 
 interface Quest {
@@ -29,6 +30,13 @@ export default function Quests() {
   const [loading, setLoading] = useState(true)
   const [claimingQuestId, setClaimingQuestId] = useState<string | null>(null)
   const [checkingSubscriptionId, setCheckingSubscriptionId] = useState<string | null>(null)
+  const [showRewardModal, setShowRewardModal] = useState(false)
+  const [rewardData, setRewardData] = useState<{
+    narCoin?: number
+    xp?: number
+    skin?: any
+    tickets?: number
+  } | null>(null)
 
   useEffect(() => {
     loadQuests()
@@ -73,7 +81,14 @@ export default function Quests() {
     
     try {
       setClaimingQuestId(questId)
-      await apiClient.post(`/quests/${questId}/claim`)
+      const response = await apiClient.post(`/quests/${questId}/claim`)
+      
+      // Сохраняем данные о награде
+      if (response.data?.rewards) {
+        setRewardData(response.data.rewards)
+        setShowRewardModal(true)
+      }
+      
       await loadQuests()
       if (user) {
         const userResponse = await apiClient.get('/users/me')
@@ -219,6 +234,157 @@ export default function Quests() {
             )
           })}
         </div>
+      )}
+
+      {/* Модальное окно с наградой */}
+      {showRewardModal && rewardData && createPortal(
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}
+          onClick={() => setShowRewardModal(false)}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(180deg, #1C1D21 2.86%, #0B0C0E 100%)',
+              borderRadius: '20px',
+              padding: '32px',
+              maxWidth: '400px',
+              width: '100%',
+              border: '2px solid #FFD700',
+              boxShadow: '0 8px 32px rgba(255, 215, 0, 0.3)',
+              textAlign: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
+            <h2 style={{ 
+              color: '#FFF', 
+              marginBottom: '24px', 
+              fontSize: '24px',
+              fontWeight: 'bold'
+            }}>
+              Поздравляем!
+            </h2>
+            <p style={{ 
+              color: '#B6B6B6', 
+              marginBottom: '24px', 
+              fontSize: '16px' 
+            }}>
+              Вы успешно выполнили задание и получили награду:
+            </p>
+            
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '16px',
+              marginBottom: '24px'
+            }}>
+              {rewardData.narCoin !== undefined && rewardData.narCoin > 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  background: 'rgba(255, 215, 0, 0.1)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 215, 0, 0.3)'
+                }}>
+                  <CoinIcon size={24} style={{ color: '#FFD700' }} />
+                  <span style={{ color: '#FFD700', fontSize: '18px', fontWeight: '600' }}>
+                    +{rewardData.narCoin.toLocaleString('ru-RU')} NAR
+                  </span>
+                </div>
+              )}
+              
+              {rewardData.xp !== undefined && rewardData.xp > 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  background: 'rgba(74, 158, 255, 0.1)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(74, 158, 255, 0.3)'
+                }}>
+                  <StarIcon size={24} style={{ color: '#4a9eff' }} />
+                  <span style={{ color: '#4a9eff', fontSize: '18px', fontWeight: '600' }}>
+                    +{rewardData.xp} XP
+                  </span>
+                </div>
+              )}
+              
+              {rewardData.skin && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  background: 'rgba(0, 170, 255, 0.1)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(0, 170, 255, 0.3)'
+                }}>
+                  <PaintBrushIcon size={24} style={{ color: '#00aaff' }} />
+                  <span style={{ color: '#00aaff', fontSize: '18px', fontWeight: '600' }}>
+                    Новый скин
+                  </span>
+                </div>
+              )}
+              
+              {rewardData.tickets !== undefined && rewardData.tickets > 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  background: 'rgba(255, 107, 107, 0.1)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 107, 107, 0.3)'
+                }}>
+                  <TicketIcon size={24} style={{ color: '#ff6b6b' }} />
+                  <span style={{ color: '#ff6b6b', fontSize: '18px', fontWeight: '600' }}>
+                    +{rewardData.tickets} билет{rewardData.tickets > 1 ? 'ов' : ''}
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            <button
+              onClick={() => setShowRewardModal(false)}
+              style={{
+                width: '100%',
+                padding: '14px 24px',
+                borderRadius: '12px',
+                background: 'linear-gradient(180deg, #4a9eff 0%, #2196F3 100%)',
+                border: 'none',
+                color: '#FFF',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'transform 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              Отлично!
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </PageLayout>
   )
