@@ -275,7 +275,17 @@ export default function Home() {
           </div>
           <div className="home-user-info-v3">
             <div className="home-username-v3">
-              {user?.nickname || user?.username || 'Игрок'}
+              <span style={{
+                fontSize: (() => {
+                  const nickname = user?.nickname || user?.username || 'Игрок'
+                  const length = nickname.length
+                  if (length <= 8) return '24px'
+                  if (length <= 12) return '19.2px' // уменьшение на 20%
+                  return '16.32px' // еще уменьшение на 15% от предыдущего
+                })()
+              }}>
+                {user?.nickname || user?.username || 'Игрок'}
+              </span>
               {hasPremium && (
                 <img 
                   src="/img/crown.png" 
