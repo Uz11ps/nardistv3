@@ -122,16 +122,18 @@ export class RatingsService {
       .where('rating.mode = :mode', { mode })
       .leftJoinAndSelect('rating.user', 'user');
 
-    // Фильтрация по периоду - фильтруем по дате обновления рейтинга
-    // Рейтинг обновляется при каждой игре, поэтому updatedAt отражает последнюю активность
-    if (period === 'weekly') {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      query = query.andWhere('rating.updatedAt >= :weekAgo', { weekAgo });
-    } else if (period === 'monthly') {
-      const monthAgo = new Date();
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
-      query = query.andWhere('rating.updatedAt >= :monthAgo', { monthAgo });
+    // Фильтрация по периоду применяется только для сортировки по рейтингу и винрейту
+    // Для XP и матчей показываем всех игроков, так как эти значения накапливаются за все время
+    if (period !== 'all' && (sortBy === 'rating' || sortBy === 'winrate')) {
+      if (period === 'weekly') {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        query = query.andWhere('rating.updatedAt >= :weekAgo', { weekAgo });
+      } else if (period === 'monthly') {
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        query = query.andWhere('rating.updatedAt >= :monthAgo', { monthAgo });
+      }
     }
 
     // Получаем все записи без ограничения для правильной сортировки

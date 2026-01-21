@@ -7,7 +7,7 @@ import Button from '../components/Button'
 import apiClient, { getImageUrl } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { Skin } from '../types/skin'
-import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, HeartIcon, ScrollIcon, BarChartIcon, ScaleIcon, WrenchIcon } from '../components/Icons'
+import { StarIcon, TargetIcon, EnergyIcon, HeartIcon, ScrollIcon, BarChartIcon, ScaleIcon, WrenchIcon } from '../components/Icons'
 import './Shop.css'
 
 interface NarCoinPackage {
@@ -735,7 +735,7 @@ export default function Shop() {
                   </Button>
                 </div>
                 <div className="shop-nar-coin-icon">
-                  <CrownIcon size={80} style={{ color: '#FFD700', filter: 'drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))' }} />
+                  <img src="/img/crown.png" alt="premium" style={{ width: '80px', height: '80px', objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))' }} />
                 </div>
               </div>
             </Card>
@@ -913,7 +913,7 @@ export default function Shop() {
 
                 <div className="shop-premium-modal-feature">
                   <div className="shop-premium-modal-feature-icon">
-                    <CrownIcon size={48} style={{ color: '#FFF' }} />
+                    <img src="/img/crown.png" alt="premium" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
                   </div>
                   <div className="shop-premium-modal-feature-info">
                     <div className="shop-premium-modal-feature-title">Премиум-значок</div>

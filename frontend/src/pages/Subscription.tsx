@@ -5,7 +5,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
-import { StarIcon, TargetIcon, EnergyIcon, CrownIcon, ScrollIcon, BarChartIcon } from '../components/Icons'
+import { StarIcon, TargetIcon, EnergyIcon, ScrollIcon, BarChartIcon } from '../components/Icons'
 import './Subscription.css'
 
 interface SubscriptionPlan {
@@ -49,7 +49,7 @@ const subscriptionFeatures = [
   {
     title: 'Премиум-значок',
     description: 'Отметь свой статус в таблице',
-    icon: <CrownIcon size={24} style={{ color: '#FFF' }} />,
+    icon: <img src="/img/crown.png" alt="premium" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />,
     iconBg: 'rgba(255, 255, 255, 0.1)',
   },
 ]

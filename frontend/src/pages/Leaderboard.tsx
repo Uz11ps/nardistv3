@@ -1,7 +1,6 @@
 ﻿import { useState, useEffect } from 'react'
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
-import { CrownIcon } from '../components/Icons'
 import './Leaderboard.css'
 
 interface LeaderboardEntry {
@@ -43,13 +42,6 @@ export default function Leaderboard() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return '🥇'
-    if (rank === 2) return '🥈'
-    if (rank === 3) return '🥉'
-    return `#${rank}`
   }
 
   const getRankColor = (rank: number) => {
@@ -110,11 +102,11 @@ export default function Leaderboard() {
                   <div
                     className="leaderboard-rank"
                     style={{
-                      background: entry.rank <= 3 ? getRankColor(entry.rank) : '#3a3a3a',
-                      color: entry.rank <= 3 ? '#000' : '#ffffff',
+                      background: '#3a3a3a',
+                      color: '#ffffff',
                     }}
                   >
-                    {getRankIcon(entry.rank)}
+                    #{entry.rank}
                   </div>
 
                   {/* Аватар */}
@@ -137,11 +129,6 @@ export default function Leaderboard() {
                     </div>
                     <div className="leaderboard-details">
                       Уровень {entry.user.level} • Рейтинг: {entry.user.rating}
-                      {entry.user.badge && (
-                        <span style={{ marginLeft: '8px', color: '#ffd700', fontSize: '12px', fontWeight: 600 }}>
-                          🏆 {entry.user.badge}
-                        </span>
-                      )}
                     </div>
                     <div className="leaderboard-stats">
                       {sortBy === 'xp' && entry.user.xp !== undefined && (
@@ -155,13 +142,6 @@ export default function Leaderboard() {
                       )}
                     </div>
                   </div>
-
-                  {/* Корона для топ-3 */}
-                  {entry.rank <= 3 && (
-                    <span className="leaderboard-crown">
-                      <CrownIcon size={20} style={{ color: '#FFD700' }} />
-                    </span>
-                  )}
                 </div>
               </div>
             ))}

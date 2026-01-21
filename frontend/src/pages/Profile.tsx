@@ -7,7 +7,7 @@ import SkillPointsModal from '../components/SkillPointsModal'
 import EnhancementDetailModal from '../components/EnhancementDetailModal'
 import GameAnalytics from '../components/GameAnalytics'
 import { apiClient } from '../api/client'
-import { CoinIcon, EnergyIcon, HeartIcon, CrownIcon, StarIcon, MuscleIcon, ShieldIcon, BoxIcon, BarChartIcon, SettingsIcon, ArrowRightIcon, RocketIcon, EditIcon } from '../components/Icons'
+import { CoinIcon, EnergyIcon, HeartIcon, StarIcon, MuscleIcon, ShieldIcon, BoxIcon, BarChartIcon, SettingsIcon, ArrowRightIcon, RocketIcon, EditIcon } from '../components/Icons'
 import './Profile.css'
 
 export default function Profile() {
@@ -40,6 +40,7 @@ export default function Profile() {
   const [gameHistory, setGameHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [playerStatistics, setPlayerStatistics] = useState<any>(null)
+  const [ratings, setRatings] = useState<{ short: number; long: number; overall: number } | null>(null)
   const [loadingStatistics, setLoadingStatistics] = useState(false)
   const [progressionConfig, setProgressionConfig] = useState<any>(null)
 
@@ -54,6 +55,7 @@ export default function Profile() {
       loadSkillPoints()
       loadPlayerStatistics()
       loadProgressionConfig()
+      loadRatings()
       
       // Проверяем, завершена ли настройка профиля (первичное создание)
       // Если нет - перенаправляем на создание профиля
@@ -89,6 +91,24 @@ export default function Profile() {
       setSkillPoints(response.data || skillPoints)
     } catch (error) {
       console.error('Failed to load skill points:', error)
+    }
+  }
+
+  const loadRatings = async () => {
+    try {
+      const response = await apiClient.get('/ratings/me').catch(() => ({ data: null }))
+      if (response.data) {
+        const shortRating = response.data.short || 1000
+        const longRating = response.data.long || 1000
+        const overallRating = Math.round((shortRating + longRating) / 2)
+        setRatings({
+          short: shortRating,
+          long: longRating,
+          overall: overallRating,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load ratings:', error)
     }
   }
 
@@ -389,6 +409,16 @@ export default function Profile() {
               <div className="profile-level-v2">
                 Уровень {stats.level}
               </div>
+              {ratings && (
+                <div style={{ marginTop: '8px', color: '#4A9EFF', fontSize: '16px', fontWeight: '600' }}>
+                  Общий рейтинг: {ratings.overall}
+                </div>
+              )}
+              {ratings && (
+                <div style={{ marginTop: '4px', color: '#B6B6B6', fontSize: '14px' }}>
+                  Короткие: {ratings.short} • Длинные: {ratings.long}
+                </div>
+              )}
               <div className="profile-divider-v2" />
             </div>
 
@@ -555,13 +585,49 @@ export default function Profile() {
                       })()}%
                     </span>
                   </div>
-                  {playerStatistics.rating !== undefined && (
+                  {statisticsMode === 'all' && playerStatistics.overallRating !== undefined && (
                     <div className="profile-statistics-item">
-                      <span className="profile-statistics-label">Рейтинг:</span>
+                      <span className="profile-statistics-label">Общий рейтинг:</span>
                       <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
-                        {playerStatistics.rating}
+                        {playerStatistics.overallRating}
                       </span>
                     </div>
+                  )}
+                  {statisticsMode === 'short' && playerStatistics.short?.rating !== undefined && (
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Рейтинг (короткие):</span>
+                      <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
+                        {playerStatistics.short.rating}
+                      </span>
+                    </div>
+                  )}
+                  {statisticsMode === 'long' && playerStatistics.long?.rating !== undefined && (
+                    <div className="profile-statistics-item">
+                      <span className="profile-statistics-label">Рейтинг (длинные):</span>
+                      <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
+                        {playerStatistics.long.rating}
+                      </span>
+                    </div>
+                  )}
+                  {statisticsMode === 'all' && (
+                    <>
+                      {playerStatistics.short?.rating !== undefined && (
+                        <div className="profile-statistics-item">
+                          <span className="profile-statistics-label">Рейтинг (короткие):</span>
+                          <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '16px' }}>
+                            {playerStatistics.short.rating}
+                          </span>
+                        </div>
+                      )}
+                      {playerStatistics.long?.rating !== undefined && (
+                        <div className="profile-statistics-item">
+                          <span className="profile-statistics-label">Рейтинг (длинные):</span>
+                          <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '16px' }}>
+                            {playerStatistics.long.rating}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -614,7 +680,7 @@ export default function Profile() {
             <div className={`premium-status-card ${hasPremium ? 'active' : 'inactive'}`}>
               <div className="premium-status-header">
                 <div className="premium-status-icon">
-                  {hasPremium ? <CrownIcon size={32} style={{ color: '#FFD700' }} /> : <img src="/img/crown.png" alt="premium" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />}
+                  <img src="/img/crown.png" alt="premium" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
                 </div>
                 <div className="premium-status-info">
                   <div className="premium-status-title">
@@ -659,7 +725,7 @@ export default function Profile() {
               </div>
               <div className="premium-feature-item">
                 <div className="premium-feature-icon">
-                  <CrownIcon size={24} style={{ color: '#FFD700' }} />
+                  <img src="/img/crown.png" alt="premium" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                 </div>
                 <div className="premium-feature-info">
                   <div className="premium-feature-title">Премиум-значок</div>

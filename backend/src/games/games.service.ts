@@ -3321,6 +3321,7 @@ ${formattedMoves.join('\n')}
     // Получаем рейтинги игрока для обоих режимов
     const shortRating = await this.ratingsService.getRating(userId, GameMode.SHORT) || 1000;
     const longRating = await this.ratingsService.getRating(userId, GameMode.LONG) || 1000;
+    const overallRating = Math.round((shortRating + longRating) / 2);
 
     // Если применен фильтр по режиму, возвращаем данные только для этого режима
     if (filters?.mode === 'short') {
@@ -3331,12 +3332,20 @@ ${formattedMoves.join('\n')}
         losses: shortFinished - shortWins,
         winrate: Math.round(shortWinrate * 10) / 10,
         rating: shortRating,
+        overallRating: overallRating,
         short: {
           matches: shortFinished,
           wins: shortWins,
           losses: shortFinished - shortWins,
           winrate: Math.round(shortWinrate * 10) / 10,
           rating: shortRating,
+        },
+        long: {
+          matches: longFinished,
+          wins: longWins,
+          losses: longFinished - longWins,
+          winrate: Math.round(longWinrate * 10) / 10,
+          rating: longRating,
         },
       };
     } else if (filters?.mode === 'long') {
@@ -3347,6 +3356,14 @@ ${formattedMoves.join('\n')}
         losses: longFinished - longWins,
         winrate: Math.round(longWinrate * 10) / 10,
         rating: longRating,
+        overallRating: overallRating,
+        short: {
+          matches: shortFinished,
+          wins: shortWins,
+          losses: shortFinished - shortWins,
+          winrate: Math.round(shortWinrate * 10) / 10,
+          rating: shortRating,
+        },
         long: {
           matches: longFinished,
           wins: longWins,
@@ -3366,6 +3383,7 @@ ${formattedMoves.join('\n')}
         wins: totalWins,
         losses: 0,
         winrate: 100,
+        overallRating: overallRating,
         short: {
           matches: shortWins,
           wins: shortWins,
@@ -3391,6 +3409,7 @@ ${formattedMoves.join('\n')}
         wins: 0,
         losses: totalLosses,
         winrate: 0,
+        overallRating: overallRating,
         short: {
           matches: shortLosses,
           wins: 0,
@@ -3415,6 +3434,7 @@ ${formattedMoves.join('\n')}
       wins: shortWins + longWins,
       losses: (shortFinished - shortWins) + (longFinished - longWins),
       winrate: totalMatches > 0 ? Math.round(((shortWins + longWins) / totalMatches) * 100 * 10) / 10 : 0,
+      overallRating: overallRating,
       short: {
         matches: shortFinished,
         wins: shortWins,

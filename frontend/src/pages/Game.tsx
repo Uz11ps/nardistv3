@@ -3925,6 +3925,14 @@ export default function Game() {
                       <span className="game-player-modal-stats-label">Всего матчей:</span>
                       <span className="game-player-modal-stats-value">{playerStats.totalMatches || 0}</span>
                     </div>
+                    {playerStats.overallRating !== undefined && (
+                      <div className="game-player-modal-stats-item">
+                        <span className="game-player-modal-stats-label">Общий рейтинг:</span>
+                        <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
+                          {playerStats.overallRating}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="game-player-modal-stats-section">
