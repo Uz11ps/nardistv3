@@ -25,6 +25,7 @@ interface GameHistory {
   createdAt: string
   moves: any[]
   moveCount: number
+  winnerId?: string | null
 }
 
 export default function History() {
