@@ -521,7 +521,16 @@ export default function History() {
       {/* Модальное окно анализа */}
       {analysisData && createPortal(
         <div 
-          onClick={() => { setAnalysisData(null); setSelectedAnalysisMoveIndex(null); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setAnalysisData(null);
+              setSelectedAnalysisMoveIndex(null);
+              if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                setStatusCheckInterval(null);
+              }
+            }
+          }}
           style={{
             position: 'fixed',
             top: 0,
@@ -534,24 +543,37 @@ export default function History() {
             justifyContent: 'center',
             zIndex: 10000,
             padding: '20px',
+            overflow: 'auto',
           }}
         >
-          <div className="analysis-modal-v2" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '90vh', overflow: 'auto' }}>
+          <div className="analysis-modal-v2" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '90vh', overflow: 'auto', position: 'relative', width: '100%', maxWidth: '900px' }}>
             <div className="analysis-header-v2">
               <div className="analysis-title-row">
-                <h2>Analysis</h2>
+                <h2>Analysis {selectedGame && <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>({selectedGame.mode === 'long' ? 'Длинные' : 'Короткие'})</span>}</h2>
                 <div className="analysis-icons">
-                  <span className="analysis-icon" onClick={handleExportMAT} title="Скачать MAT">
+                  <span className="analysis-icon" onClick={(e) => { e.stopPropagation(); handleExportMAT(); }} title="Скачать MAT">
                     <DownloadIcon size={18} style={{ color: '#707579' }} />
                   </span>
-                  <span className="analysis-icon" onClick={() => {
-                    if (hasPremium) {
-                      handleAnalyze(selectedGame!.id)
+                  <span className="analysis-icon" onClick={(e) => {
+                    e.stopPropagation();
+                    if (hasPremium && selectedGame) {
+                      handleAnalyze(selectedGame.id);
                     } else {
-                      setShowPremiumModal(true)
+                      setShowPremiumModal(true);
                     }
                   }}>
                     <RefreshIcon size={18} style={{ color: '#707579' }} />
+                  </span>
+                  <span className="analysis-icon" onClick={(e) => {
+                    e.stopPropagation();
+                    setAnalysisData(null);
+                    setSelectedAnalysisMoveIndex(null);
+                    if (statusCheckInterval) {
+                      clearInterval(statusCheckInterval);
+                      setStatusCheckInterval(null);
+                    }
+                  }} title="Закрыть">
+                    ×
                   </span>
                 </div>
               </div>
@@ -759,9 +781,17 @@ export default function History() {
             </div>
 
             <div className="modal-actions" style={{ padding: '16px' }}>
-              <button 
+              <button
                 className="history-modal-close-btn"
-                onClick={() => { setAnalysisData(null); setSelectedAnalysisMoveIndex(null); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAnalysisData(null);
+                  setSelectedAnalysisMoveIndex(null);
+                  if (statusCheckInterval) {
+                    clearInterval(statusCheckInterval);
+                    setStatusCheckInterval(null);
+                  }
+                }}
                 style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#3a3a3a', color: '#FFF', border: 'none', cursor: 'pointer', fontWeight: 600 }}
               >
                 Закрыть

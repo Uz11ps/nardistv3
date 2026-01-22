@@ -11,6 +11,19 @@
   border: 1px solid #ccc;
 }
 
+.analysis-modal-v2 {
+  background: #f0f0f0;
+  color: #333;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  border: 1px solid #ccc;
+  min-height: 400px;
+  max-height: 90vh;
+}
+
 .analysis-header-v2 {
   background: #e0e0e0;
   padding: 8px 16px;
@@ -122,9 +135,26 @@
   color: #222;
 }
 
+.move-item.error-blunder {
+  background: rgba(232, 65, 66, 0.15);
+  border-left: 3px solid #E84142;
+}
 .move-item.error-blunder .move-text { color: #E84142; font-weight: bold; }
-.move-item.error-mistake .move-text { color: #FF9800; }
-.move-item.error-inaccuracy .move-text { color: #888; }
+.move-item.error-blunder .move-dice { color: #E84142; }
+
+.move-item.error-mistake {
+  background: rgba(255, 152, 0, 0.15);
+  border-left: 3px solid #FF9800;
+}
+.move-item.error-mistake .move-text { color: #FF9800; font-weight: 600; }
+.move-item.error-mistake .move-dice { color: #FF9800; }
+
+.move-item.error-inaccuracy {
+  background: rgba(255, 214, 0, 0.15);
+  border-left: 3px solid #FFD600;
+}
+.move-item.error-inaccuracy .move-text { color: #B8860B; font-weight: 500; }
+.move-item.error-inaccuracy .move-dice { color: #B8860B; }
 
 .move-item.best-move {
   background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
@@ -326,6 +356,12 @@
   border: 1px dashed #ccc;
   color: #888;
   margin-top: 20px;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .game-analytics-error-v2 {

@@ -186,11 +186,15 @@ export class AnalysisQueueService {
 
       // Анализируем игру в зависимости от режима
       const isLongMode = game.mode === GameMode.LONG;
+      const isShortMode = game.mode === GameMode.SHORT;
       const allMovesAnalysis: any[] = [];
       const errors: any[] = [];
       let mistakes = 0;
       let blunders = 0;
       let inaccuracies = 0;
+
+      // Логируем режим игры для отладки
+      this.logger.debug(`Анализ игры ${job.gameId}: режим ${isLongMode ? 'LONG' : 'SHORT'}`);
 
       const totalMoves = moves.filter(m => m.playerId === job.userId).length;
       let processedMoves = 0;
