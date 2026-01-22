@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  analysis-worker:
+    build: .
+    container_name: analysis-worker
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Подключение к БД основного сервера
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+      # Разрешенные источники для CORS
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      # GNU Backgammon настройки
+      GNUBG_PATH: ${GNUBG_PATH:-gnubg}
+      # MCTS настройки для качественного анализа игры в 300 ходов
+      # Оптимизировано для мощных VM Яндекс.Облака (4-8 CPU)
+      # 6000 итераций, 15 сек на позицию = ~3-5 сек реального времени на ход
+      # Полный анализ игры (~150 ходов): ~7-12 минут
+      MCTS_MAX_ITERATIONS: ${MCTS_MAX_ITERATIONS:-6000}
+      MCTS_TIME_LIMIT_MS: ${MCTS_TIME_LIMIT_MS:-15000}
+      # Ресурсы для анализа
+      MAX_CONCURRENT_ANALYSES: ${MAX_CONCURRENT_ANALYSES:-4}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+

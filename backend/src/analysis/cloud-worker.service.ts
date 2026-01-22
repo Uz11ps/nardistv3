@@ -94,8 +94,11 @@ export class CloudWorkerService {
     }
 
     try {
+      // Убираем префикс "cloud_" если есть
+      const actualJobId = jobId.startsWith('cloud_') ? jobId.substring(6) : jobId;
+      
       const response = await this.httpClient.get(
-        `${this.workerUrl}/api/analysis/status/${jobId}`,
+        `${this.workerUrl}/api/analysis/status/${actualJobId}`,
       );
 
       return response.data;
@@ -114,8 +117,11 @@ export class CloudWorkerService {
     }
 
     try {
+      // Убираем префикс "cloud_" если есть
+      const actualJobId = jobId.startsWith('cloud_') ? jobId.substring(6) : jobId;
+      
       const response = await this.httpClient.get(
-        `${this.workerUrl}/api/analysis/result/${jobId}`,
+        `${this.workerUrl}/api/analysis/result/${actualJobId}`,
       );
 
       return response.data;
@@ -133,9 +139,8 @@ export class CloudWorkerService {
       return false;
     }
 
-    // Используем облако только для длинных нард (MCTS требует больше ресурсов)
-    // Короткие нарды (GNU Backgammon) обрабатываем локально
-    return gameMode === 'long';
+    // Используем облако для ВСЕХ режимов игры, если оно доступно
+    return true;
   }
 }
 

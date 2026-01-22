@@ -1,184 +1,102 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { GameMove } from '../games/game-move.entity';
-import { Game, GameMode } from '../games/game.entity';
 import { GnubgService } from './gnubg.service';
 import { MCTSLongBackgammonService } from './mcts-long-backgammon.service';
-import { LongBackgammonEngine } from '../games/game-engine/long-backgammon-engine';
-import { BackgammonEngine } from '../games/game-engine/backgammon-engine';
+import { LongBackgammonEngine } from './long-backgammon-engine';
+import { BackgammonEngine } from './backgammon-engine';
+import { Game, GameMode } from './entities/game.entity';
+import { GameMove } from './entities/game-move.entity';
+import * as crypto from 'crypto';
 
-export enum AnalysisStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-}
-
-export interface AnalysisJob {
+interface AnalysisJob {
   id: string;
   gameId: string;
   userId: string;
-  status: AnalysisStatus;
-  createdAt: Date;
-  startedAt?: Date;
-  completedAt?: Date;
-  progress?: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
   result?: any;
   error?: string;
+  startedAt?: Date;
+  completedAt?: Date;
 }
 
 @Injectable()
-export class AnalysisQueueService {
-  private readonly logger = new Logger(AnalysisQueueService.name);
-  private readonly MAX_CONCURRENT_ANALYSES: number;
-  private readonly QUEUE_CHECK_INTERVAL = 2000; // Проверка очереди каждые 2 секунды (увеличено для снижения нагрузки)
-  private readonly QUEUE_DELAY_MS: number; // Задержка между обработкой задач
-  
-  private activeJobs: Map<string, AnalysisJob> = new Map();
-  private pendingQueue: AnalysisJob[] = [];
-  private processingCount = 0;
-  private queueInterval: NodeJS.Timeout | null = null;
+export class AnalysisWorkerService {
+  private readonly logger = new Logger(AnalysisWorkerService.name);
+  private jobs: Map<string, AnalysisJob> = new Map();
 
   constructor(
     @InjectRepository(Game)
     private gamesRepository: Repository<Game>,
     @InjectRepository(GameMove)
     private movesRepository: Repository<GameMove>,
-    @Optional() private gnubgService?: GnubgService,
-    @Optional() private mctsLongBackgammonService?: MCTSLongBackgammonService,
-    @Optional() private longBackgammonEngine?: LongBackgammonEngine,
-    @Optional() private backgammonEngine?: BackgammonEngine,
-  ) {
-    // Читаем настройки из переменных окружения
-    this.MAX_CONCURRENT_ANALYSES = parseInt(
-      process.env.MAX_CONCURRENT_ANALYSES || '3',
-      10,
-    );
-    
-    this.logger.log(`AnalysisQueueService инициализирован: MAX_CONCURRENT_ANALYSES=${this.MAX_CONCURRENT_ANALYSES}`);
-    
-    // Запускаем обработчик очереди
-    this.startQueueProcessor();
-  }
+    private gnubgService?: GnubgService,
+    private mctsLongBackgammonService?: MCTSLongBackgammonService,
+    private longBackgammonEngine?: LongBackgammonEngine,
+    private backgammonEngine?: BackgammonEngine,
+  ) {}
 
-  /**
-   * Добавление задачи анализа в очередь
-   */
-  async enqueueAnalysis(gameId: string, userId: string): Promise<string> {
-    const jobId = `analysis_${gameId}_${userId}_${Date.now()}`;
+  async startAnalysis(gameId: string, userId: string): Promise<string> {
+    const jobId = crypto.randomUUID();
     
     const job: AnalysisJob = {
       id: jobId,
       gameId,
       userId,
-      status: AnalysisStatus.PENDING,
-      createdAt: new Date(),
+      status: 'pending',
+      progress: 0,
+      startedAt: new Date(),
     };
 
-    this.pendingQueue.push(job);
-    this.activeJobs.set(jobId, job);
-    
-    this.logger.debug(`Анализ добавлен в очередь: ${jobId} (в очереди: ${this.pendingQueue.length})`);
-    
-    // Запускаем обработку если есть свободные слоты
-    this.processQueue();
-    
+    this.jobs.set(jobId, job);
+
+    // Запускаем анализ асинхронно
+    this.processAnalysis(job).catch(error => {
+      this.logger.error(`Ошибка анализа ${jobId}:`, error);
+      job.status = 'failed';
+      job.error = error.message;
+      job.completedAt = new Date();
+    });
+
     return jobId;
   }
 
-  /**
-   * Получение статуса задачи анализа
-   */
-  getJobStatus(jobId: string): AnalysisJob | null {
-    return this.activeJobs.get(jobId) || null;
-  }
-
-  /**
-   * Получение результата анализа (если готов)
-   */
-  getJobResult(jobId: string): any | null {
-    const job = this.activeJobs.get(jobId);
-    if (job && job.status === AnalysisStatus.COMPLETED) {
-      return job.result;
-    }
-    return null;
-  }
-
-  /**
-   * Удаление завершенной задачи (очистка памяти)
-   */
-  removeJob(jobId: string): void {
-    const job = this.activeJobs.get(jobId);
-    if (job && (job.status === AnalysisStatus.COMPLETED || job.status === AnalysisStatus.FAILED)) {
-      this.activeJobs.delete(jobId);
-      this.logger.debug(`Задача удалена из памяти: ${jobId}`);
-    }
-  }
-
-  /**
-   * Запуск обработчика очереди
-   */
-  private startQueueProcessor(): void {
-    if (this.queueInterval) {
-      return;
+  async getAnalysisStatus(jobId: string): Promise<any> {
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      throw new NotFoundException('Задача анализа не найдена');
     }
 
-    this.queueInterval = setInterval(() => {
-      this.processQueue();
-    }, this.QUEUE_CHECK_INTERVAL);
-
-    this.logger.log('Обработчик очереди анализа запущен');
+    return {
+      status: job.status,
+      progress: job.progress,
+      result: job.status === 'completed' ? job.result : undefined,
+      error: job.error,
+    };
   }
 
-  /**
-   * Обработка очереди - запуск анализа если есть свободные слоты
-   */
-  private async processQueue(): Promise<void> {
-    // Проверяем, есть ли свободные слоты
-    const availableSlots = this.MAX_CONCURRENT_ANALYSES - this.processingCount;
-    
-    if (availableSlots <= 0 || this.pendingQueue.length === 0) {
-      return;
+  async getAnalysisResult(jobId: string): Promise<any> {
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      throw new NotFoundException('Задача анализа не найдена');
     }
 
-    // Берем задачи из очереди (только одну за раз для снижения нагрузки)
-    const jobsToProcess = this.pendingQueue.splice(0, Math.min(availableSlots, 1));
-    
-    // Запускаем обработку каждой задачи с задержкой
-    for (let i = 0; i < jobsToProcess.length; i++) {
-      const job = jobsToProcess[i];
-      
-      // Добавляем задержку между запусками задач для снижения нагрузки
-      if (i > 0) {
-        await new Promise(resolve => setTimeout(resolve, this.QUEUE_DELAY_MS));
-      }
-      
-      this.processJob(job).catch(error => {
-        this.logger.error(`Ошибка обработки задачи ${job.id}:`, error);
-        job.status = AnalysisStatus.FAILED;
-        job.error = error.message;
-        job.completedAt = new Date();
-        this.processingCount--;
-      });
+    if (job.status !== 'completed') {
+      throw new Error(`Анализ еще не завершен. Статус: ${job.status}`);
     }
+
+    return job.result;
   }
 
-  /**
-   * Обработка одной задачи анализа
-   */
-  private async processJob(job: AnalysisJob): Promise<void> {
-    this.processingCount++;
-    job.status = AnalysisStatus.PROCESSING;
-    job.startedAt = new Date();
-    
-    this.logger.log(`Начата обработка анализа: ${job.id} (активных: ${this.processingCount}/${this.MAX_CONCURRENT_ANALYSES})`);
+  private async processAnalysis(job: AnalysisJob): Promise<void> {
+    job.status = 'processing';
+    job.progress = 10;
 
     try {
       // Загружаем данные игры
       const game = await this.gamesRepository.findOne({
         where: { id: job.gameId },
-        relations: ['player1', 'player2'],
       });
 
       if (!game) {
@@ -201,7 +119,6 @@ export class AnalysisQueueService {
       let blunders = 0;
       let inaccuracies = 0;
 
-      // Логируем режим игры для отладки
       this.logger.debug(`Анализ игры ${job.gameId}: режим ${isLongMode ? 'LONG' : 'SHORT'}`);
 
       const totalMoves = moves.filter(m => m.playerId === job.userId).length;
@@ -226,16 +143,15 @@ export class AnalysisQueueService {
         processedMoves++;
         job.progress = 10 + Math.floor((processedMoves / totalMoves) * 80);
 
-        // Добавляем небольшую задержку между анализами ходов для снижения нагрузки
+        // Добавляем небольшую задержку между анализами ходов
         if (processedMoves > 1) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        // Анализируем ход - ВСЕГДА пытаемся проанализировать с повторными попытками
+        // Анализируем ход с повторными попытками
         let moveAnalysis: any | null = null;
-        const MAX_RETRIES = 3; // Максимум 3 попытки
+        const MAX_RETRIES = 3;
         let retryCount = 0;
-        let lastError: any = null;
 
         while (retryCount < MAX_RETRIES && !moveAnalysis) {
           try {
@@ -245,33 +161,26 @@ export class AnalysisQueueService {
               moveAnalysis = await this.analyzeMoveWithGnubg(move, moves, i, job.userId);
             }
             
-            // Если анализ вернул null, считаем это ошибкой и повторяем
             if (!moveAnalysis && retryCount < MAX_RETRIES - 1) {
               retryCount++;
               this.logger.warn(`Анализ хода ${move.moveNumber} вернул null, попытка ${retryCount}/${MAX_RETRIES}`);
-              // Небольшая задержка перед повторной попыткой
               await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
               continue;
             }
           } catch (error: any) {
-            lastError = error;
             retryCount++;
             this.logger.warn(`Ошибка анализа хода ${move.moveNumber} (попытка ${retryCount}/${MAX_RETRIES}): ${error.message}`);
             
-            // Если это не последняя попытка - повторяем
             if (retryCount < MAX_RETRIES) {
-              // Экспоненциальная задержка: 500ms, 1000ms, 2000ms
               await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
               continue;
             }
           }
           
-          // Если получили результат или исчерпали попытки - выходим
           break;
         }
 
         if (moveAnalysis) {
-          // Убеждаемся, что все поля заполнены
           moveAnalysis.moveNumber = move.moveNumber;
           moveAnalysis.move = move;
           
@@ -300,13 +209,12 @@ export class AnalysisQueueService {
             errors.push(moveAnalysis);
           }
         } else {
-          // Если анализ не удался, все равно добавляем ход с базовыми данными
-          // Но пытаемся хотя бы получить equity из позиции
+          // Fallback анализ
           let fallbackEquity: number | undefined = undefined;
           try {
             if (isLongMode && this.mctsLongBackgammonService && move.gameStateAfter) {
               const stateAfter = this.convertToLongBoardState(move.gameStateAfter);
-              const quickAnalysis = await this.mctsLongBackgammonService.analyzePosition(stateAfter, move.dice, 1000); // Быстрый анализ
+              const quickAnalysis = await this.mctsLongBackgammonService.analyzePosition(stateAfter, move.dice, 1000);
               fallbackEquity = quickAnalysis?.equity;
             } else if (!isLongMode && this.gnubgService && move.gameStateAfter) {
               const positionAfter = this.gnubgService.convertGameStateToGnubgPosition(move.gameStateAfter);
@@ -335,7 +243,7 @@ export class AnalysisQueueService {
       const recommendations = this.generateRecommendations(errors, game.mode);
 
       job.progress = 100;
-      job.status = AnalysisStatus.COMPLETED;
+      job.status = 'completed';
       job.completedAt = new Date();
       job.result = {
         gameId: game.id,
@@ -349,22 +257,15 @@ export class AnalysisQueueService {
         gameResult: game.winnerId === job.userId ? 'win' : (game.winnerId === null ? undefined : 'loss'),
       };
 
-      this.logger.log(`Анализ завершен: ${job.id} (время: ${job.completedAt.getTime() - job.startedAt!.getTime()}ms)`);
+      this.logger.log(`Анализ завершен: ${job.id}`);
     } catch (error: any) {
       this.logger.error(`Ошибка анализа игры ${job.gameId}:`, error);
-      job.status = AnalysisStatus.FAILED;
+      job.status = 'failed';
       job.error = error.message;
       job.completedAt = new Date();
-    } finally {
-      this.processingCount--;
-      // Запускаем обработку следующей задачи
-      this.processQueue();
     }
   }
 
-  /**
-   * Анализ хода с использованием MCTS (длинные нарды)
-   */
   private async analyzeMoveWithMCTS(
     move: GameMove,
     allMoves: GameMove[],
@@ -393,13 +294,12 @@ export class AnalysisQueueService {
 
       if (!analysis) return null;
 
-      // Сравниваем сделанный ход с лучшим ходом
-      const madeMoveStr = JSON.stringify(madeMove.map(m => ({ from: m.from, to: m.to })).sort());
-      const bestMoveStr = analysis.bestMove 
+      const madeMoveNormalized = JSON.stringify(madeMove.map(m => ({ from: m.from, to: m.to })).sort());
+      const bestMoveNormalized = analysis.bestMove 
         ? JSON.stringify(analysis.bestMove.map((m: any) => ({ from: m.from, to: m.to })).sort())
         : null;
       
-      const isBestMove = bestMoveStr && madeMoveStr === bestMoveStr;
+      const isBestMove = bestMoveNormalized && madeMoveNormalized === bestMoveNormalized;
 
       return {
         moveNumber: move.moveNumber,
@@ -426,9 +326,6 @@ export class AnalysisQueueService {
     }
   }
 
-  /**
-   * Анализ хода с использованием GNU Backgammon (короткие нарды)
-   */
   private async analyzeMoveWithGnubg(
     move: GameMove,
     allMoves: GameMove[],
@@ -509,9 +406,6 @@ export class AnalysisQueueService {
     }
   }
 
-  /**
-   * Конвертация состояния игры в формат LongBoardState
-   */
   private convertToLongBoardState(gameState: any): any {
     if (!gameState || !this.longBackgammonEngine) {
       return this.longBackgammonEngine?.createInitialState() || {};
@@ -543,87 +437,35 @@ export class AnalysisQueueService {
       borneOff: normalizedBorneOff,
       currentPlayer,
       dice,
-      movesFromHead: 0,
-      movesFromPoint: {},
+      movesFromHead: gameState.movesFromHead || 0,
+      movesFromPoint: gameState.movesFromPoint || {},
     };
   }
 
-  /**
-   * Генерация рекомендаций на основе ошибок
-   */
-  private generateRecommendations(errors: any[], mode: string): string[] {
+  private generateRecommendations(errors: any[], gameMode: GameMode): string[] {
     const recommendations: string[] = [];
-
-    const blunderCount = errors.filter((e) => e.errorType === 'blunder').length;
-    const mistakeCount = errors.filter((e) => e.errorType === 'mistake').length;
-
-    if (blunderCount > 3) {
-      recommendations.push('Вы часто делаете серьезные ошибки. Рекомендуем изучить базовые стратегии нардов.');
-    }
-
-    if (mistakeCount > 5) {
-      recommendations.push('Много ошибок в оценке позиций. Обратите внимание на расстановку шашек.');
-    }
-
-    const barErrors = errors.filter((e) => {
-      return e.move.moves?.some((m: any) => {
-        const beforeBar = e.move.gameStateBefore?.bar;
-        return beforeBar && (beforeBar.white > 0 || beforeBar.black > 0);
-      });
-    });
-
-    if (barErrors.length > 0) {
-      recommendations.push('Проблемы с выведением шашек с бара. Изучите правила выброса.');
-    }
-
+    
     if (errors.length === 0) {
-      recommendations.push('Отличная игра! Вы играли почти без ошибок.');
+      recommendations.push('Отличная игра! Вы не допустили ошибок.');
+      return recommendations;
+    }
+
+    const blunders = errors.filter(e => e.errorType === 'blunder').length;
+    const mistakes = errors.filter(e => e.errorType === 'mistake').length;
+    const inaccuracies = errors.filter(e => e.errorType === 'inaccuracy').length;
+
+    if (blunders > 0) {
+      recommendations.push(`Избегайте грубых ошибок (${blunders}). Они сильно ухудшают вашу позицию.`);
+    }
+
+    if (mistakes > 0) {
+      recommendations.push(`Снизьте количество ошибок (${mistakes}). Анализируйте позицию перед каждым ходом.`);
+    }
+
+    if (inaccuracies > 0) {
+      recommendations.push(`Улучшите точность ходов (${inaccuracies} неточностей).`);
     }
 
     return recommendations;
   }
-
-  /**
-   * Получение статистики очереди
-   */
-  getQueueStats(): {
-    pending: number;
-    processing: number;
-    maxConcurrent: number;
-    totalActive: number;
-  } {
-    return {
-      pending: this.pendingQueue.length,
-      processing: this.processingCount,
-      maxConcurrent: this.MAX_CONCURRENT_ANALYSES,
-      totalActive: this.activeJobs.size,
-    };
-  }
-
-  /**
-   * Очистка старых завершенных задач
-   */
-  cleanupOldJobs(maxAge: number = 3600000): void {
-    const now = Date.now();
-    const jobsToRemove: string[] = [];
-
-    for (const [jobId, job] of this.activeJobs.entries()) {
-      if (
-        (job.status === AnalysisStatus.COMPLETED || job.status === AnalysisStatus.FAILED) &&
-        job.completedAt &&
-        now - job.completedAt.getTime() > maxAge
-      ) {
-        jobsToRemove.push(jobId);
-      }
-    }
-
-    for (const jobId of jobsToRemove) {
-      this.activeJobs.delete(jobId);
-    }
-
-    if (jobsToRemove.length > 0) {
-      this.logger.debug(`Очищено ${jobsToRemove.length} старых задач анализа`);
-    }
-  }
 }
-

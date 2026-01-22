@@ -94,9 +94,10 @@ export class AnalysisService {
     const cloudAvailable = shouldUseCloud && await this.cloudWorkerService?.isAvailable();
 
     if (cloudAvailable) {
-      // Отправляем в облако для длинных нард
+      // Отправляем в облако для ВСЕХ режимов игры
       try {
         const result = await this.cloudWorkerService!.analyzeGame(gameId, userId);
+        this.logger.log(`Анализ игры ${gameId} отправлен в Яндекс.Облако (режим: ${game.mode})`);
         return result;
       } catch (error: any) {
         this.logger.warn(`Не удалось отправить в облако, используем локальную обработку: ${error.message}`);
@@ -132,7 +133,7 @@ export class AnalysisService {
     
     if (isCloudJob && this.cloudWorkerService) {
       try {
-        const status = await this.cloudWorkerService.getAnalysisStatus(jobId.replace('cloud_', ''));
+        const status = await this.cloudWorkerService.getAnalysisStatus(jobId);
         return status;
       } catch (error: any) {
         throw new NotFoundException(`Задача анализа не найдена в облаке: ${error.message}`);
@@ -175,7 +176,7 @@ export class AnalysisService {
     
     if (isCloudJob && this.cloudWorkerService) {
       try {
-        const result = await this.cloudWorkerService.getAnalysisResult(jobId.replace('cloud_', ''));
+        const result = await this.cloudWorkerService.getAnalysisResult(jobId);
         return result;
       } catch (error: any) {
         throw new NotFoundException(`Результат анализа не найден в облаке: ${error.message}`);
@@ -401,7 +402,7 @@ export class AnalysisService {
         equity: analysis.equityAfter,
         equityBefore: analysis.equityBefore,
         equityAfter: analysis.equityAfter,
-        winProbabilities: {
+        winProbabilities: analysis.winProbabilitiesAfter || {
           win: analysis.equityAfter,
           winG: 0,
           winBG: 0,
@@ -409,7 +410,7 @@ export class AnalysisService {
           loseBG: 0,
         },
         bestMove: analysis.bestMove,
-        alternatives: analysis.alternatives,
+        alternatives: analysis.alternatives || [],
         isBestMove: analysis.moveQuality === 'excellent',
       };
     } catch (error: any) {

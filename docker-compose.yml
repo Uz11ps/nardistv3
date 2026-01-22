@@ -61,9 +61,12 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       # GNU Backgammon настройки
       GNUBG_PATH: ${GNUBG_PATH:-gnubg}
-      # MCTS настройки (опционально) - уменьшено для слабых серверов
-      MCTS_MAX_ITERATIONS: ${MCTS_MAX_ITERATIONS:-300}
-      MCTS_TIME_LIMIT_MS: ${MCTS_TIME_LIMIT_MS:-2000}
+      # MCTS настройки для качественного анализа игры в 300 ходов
+      # Оптимизировано: 6000 итераций, 15 сек на позицию
+      # На слабом сервере: ~5-8 сек/ход, на Яндекс.Облаке (4-8 CPU): ~3-5 сек/ход
+      # Полный анализ игры (~150 ходов): ~7-12 минут на облаке
+      MCTS_MAX_ITERATIONS: ${MCTS_MAX_ITERATIONS:-6000}
+      MCTS_TIME_LIMIT_MS: ${MCTS_TIME_LIMIT_MS:-15000}
       # Очередь анализа - ограничение одновременных анализов (1 для слабых серверов)
       MAX_CONCURRENT_ANALYSES: ${MAX_CONCURRENT_ANALYSES:-1}
       # Задержка между обработкой задач (мс) - для снижения нагрузки

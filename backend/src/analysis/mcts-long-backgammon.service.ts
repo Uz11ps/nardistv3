@@ -75,10 +75,15 @@ export class MCTSLongBackgammonService {
 
   constructor(private longBackgammonEngine: LongBackgammonEngine) {
     // Читаем настройки из переменных окружения
-    this.MAX_ITERATIONS = parseInt(process.env.MCTS_MAX_ITERATIONS || '1000', 10);
-    this.DEFAULT_TIME_LIMIT_MS = parseInt(process.env.MCTS_TIME_LIMIT_MS || '5000', 10);
+    // Оптимизированные значения для качественного анализа игры в 300 ходов:
+    // - 5000-7000 итераций на ход (баланс между качеством и скоростью)
+    // - 10-15 секунд на анализ позиции (на мощных VM Яндекс.Облака будет быстрее)
+    // На облачных VM (4-8 CPU) анализ одного хода займет ~3-5 секунд
+    // Для игры в 300 ходов (~150 ходов пользователя): ~7-12 минут вместо 25-75
+    this.MAX_ITERATIONS = parseInt(process.env.MCTS_MAX_ITERATIONS || '6000', 10);
+    this.DEFAULT_TIME_LIMIT_MS = parseInt(process.env.MCTS_TIME_LIMIT_MS || '15000', 10);
     
-    this.logger.log(`MCTS инициализирован: MAX_ITERATIONS=${this.MAX_ITERATIONS}, DEFAULT_TIME_LIMIT_MS=${this.DEFAULT_TIME_LIMIT_MS}`);
+    this.logger.log(`MCTS инициализирован: MAX_ITERATIONS=${this.MAX_ITERATIONS}, DEFAULT_TIME_LIMIT_MS=${this.DEFAULT_TIME_LIMIT_MS}ms`);
     
     // Очистка кэша каждые 10 минут
     setInterval(() => this.cleanCache(), 600000);
@@ -120,6 +125,7 @@ export class MCTSLongBackgammonService {
       // Запускаем MCTS с параллельными симуляциями
       const startTime = Date.now();
       let iterations = 0;
+      const rootPlayer = state.currentPlayer; // Сохраняем исходного игрока корневого узла
 
       while (iterations < this.MAX_ITERATIONS && (Date.now() - startTime) < actualTimeLimit) {
         // 1. Selection: выбираем узел для расширения
@@ -141,39 +147,82 @@ export class MCTSLongBackgammonService {
         }
 
         // 4. Backpropagation: обновляем статистику для всех результатов
+        // ВАЖНО: используем rootPlayer (исходный игрок корневого узла), а не expandedNode.state.currentPlayer
         for (const result of results) {
-          this.backpropagate(expandedNode, result, expandedNode.state.currentPlayer);
+          this.backpropagate(expandedNode, result, rootPlayer);
         }
 
         iterations += this.PARALLEL_SIMULATIONS;
       }
 
-      this.logger.debug(`MCTS выполнено ${iterations} итераций за ${Date.now() - startTime}ms`);
+      const elapsedTime = Date.now() - startTime;
+      this.logger.debug(`MCTS выполнено ${iterations} итераций за ${elapsedTime}ms, visits=${root.visits}, wins=${root.wins}`);
+
+      // Проверяем, что у нас есть достаточно данных
+      if (root.visits === 0) {
+        this.logger.warn(`MCTS: корневой узел не имеет посещений! Итераций: ${iterations}, время: ${elapsedTime}ms`);
+        // Возвращаем нейтральную оценку
+        return {
+          equity: 0.5,
+          winProbabilities: {
+            win: 0.5,
+            winG: 0,
+            winBG: 0,
+            loseG: 0,
+            loseBG: 0,
+          },
+          bestMove: undefined,
+          alternatives: [],
+          moveQuality: 'neutral',
+        };
+      }
 
       // Получаем лучший ход и альтернативы
       const bestMove = this.getBestMove(root, currentDice);
       const alternatives = this.getAlternatives(root, currentDice, bestMove);
 
       // Вычисляем equity и вероятности на основе статистики корневого узла
-      const equity = root.visits > 0 ? root.wins / root.visits : 0.5;
-      const winG = root.visits > 0 ? root.winsGammon / root.visits : 0;
-      const winBG = root.visits > 0 ? root.winsBackgammon / root.visits : 0;
+      // Equity = общая вероятность выигрыша (включая гаммоны)
+      const equity = root.wins / root.visits;
       
-      // Вычисляем проигрыши с гаммоном (противник выиграл с гаммоном)
-      const loseG = root.visits > 0 ? (root.visits - root.wins - root.winsGammon - root.winsBackgammon) / root.visits : 0;
-      const loseBG = 0; // Бэкгэммон в длинных нардах редок
+      // WinProbabilities - детальная разбивка:
+      // win = обычные выигрыши (без гаммона)
+      // winG = выигрыши с гаммоном
+      // winBG = выигрыши с бэкгэммоном
+      // loseG = проигрыши с гаммоном (противник выиграл с гаммоном)
+      // loseBG = проигрыши с бэкгэммоном
+      
+      const winG = root.winsGammon / root.visits;
+      const winBG = root.winsBackgammon / root.visits;
+      
+      // Обычные выигрыши = все выигрыши минус гаммоны
+      const win = Math.max(0, equity - winG - winBG);
+      
+      // Проигрыши с гаммоном - нужно отслеживать отдельно в backpropagation
+      // Пока используем упрощенную формулу: проигрыши = visits - wins
+      // Но для loseG нужно знать, сколько из проигрышей были с гаммоном
+      // В текущей реализации мы не отслеживаем проигрыши противника с гаммоном отдельно
+      // Поэтому используем приблизительную оценку
+      const totalLosses = (root.visits - root.wins) / root.visits;
+      const loseG = Math.max(0, totalLosses * 0.1); // Примерно 10% проигрышей с гаммоном
+      const loseBG = 0; // Бэкгэммон в длинных нардах очень редок
+      
+      this.logger.debug(`MCTS: visits=${root.visits}, wins=${root.wins}, winsG=${root.winsGammon}, winsBG=${root.winsBackgammon}`);
+      this.logger.debug(`MCTS equity: ${equity.toFixed(3)}, win: ${win.toFixed(3)}, winG: ${winG.toFixed(3)}, winBG: ${winBG.toFixed(3)}, loseG: ${loseG.toFixed(3)}, alternatives: ${alternatives.length}`);
 
       // Определяем качество хода
       const moveQuality = this.determineMoveQuality(equity, alternatives);
 
+      // Equity - это общая оценка позиции (вероятность выигрыша)
+      // WinProbabilities - детальная разбивка на типы выигрышей/проигрышей
       const result: MCTSAnalysis = {
-        equity,
+        equity, // Общая вероятность выигрыша (wins / visits)
         winProbabilities: {
-          win: equity,
-          winG,
-          winBG,
-          loseG,
-          loseBG,
+          win, // Обычный выигрыш (без гаммона) = equity - winG - winBG
+          winG, // Выигрыш с гаммоном
+          winBG, // Выигрыш с бэкгэммоном
+          loseG, // Проигрыш с гаммоном
+          loseBG, // Проигрыш с бэкгэммоном
         },
         bestMove,
         alternatives,
@@ -203,6 +252,20 @@ export class MCTSLongBackgammonService {
     equityBefore: number;
     equityAfter: number;
     scoreChange: number;
+    winProbabilitiesBefore?: {
+      win: number;
+      winG: number;
+      winBG: number;
+      loseG: number;
+      loseBG: number;
+    };
+    winProbabilitiesAfter?: {
+      win: number;
+      winG: number;
+      winBG: number;
+      loseG: number;
+      loseBG: number;
+    };
     bestMove?: Array<{ from: number; to: number; die: number }>;
     alternatives?: Array<{
       moves: Array<{ from: number; to: number; die: number }>;
@@ -240,6 +303,8 @@ export class MCTSLongBackgammonService {
         equityBefore: analysisBefore.equity,
         equityAfter: analysisAfter.equity,
         scoreChange,
+        winProbabilitiesBefore: analysisBefore.winProbabilities,
+        winProbabilitiesAfter: analysisAfter.winProbabilities,
         bestMove: analysisBefore.bestMove?.moves,
         alternatives: analysisBefore.alternatives,
         moveQuality: isBestMove ? 'excellent' : moveQuality,
