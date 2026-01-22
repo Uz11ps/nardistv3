@@ -263,45 +263,63 @@ export class AnalysisService {
       // Для длинных нард: первые 2 хода (moveNumber <= 2)
       const shouldAnalyzeErrors = !isFirstMoveOfGame && isUserMove;
 
-      // GPT анализ хода (если доступен)
+      // GPT анализ хода - ПРИОРИТЕТНЫЙ метод анализа
+      // GPT сам анализирует позицию и определяет ошибки, НЕ используя equity
       let gptAnalysis: MoveAnalysis['gptAnalysis'] = null;
       if (this.gptBotService && shouldAnalyzeErrors && isUserMove) {
         try {
+          // GPT получает ВСЕ возможные альтернативные ходы для анализа
+          // Но НЕ передаем bestAlternative по equity - GPT сам определит лучший ход
           gptAnalysis = await this.gptBotService.analyzeMove(
             gameStateBefore,
             gameStateAfter,
             move.moves as any,
             move.dice,
             game.mode === GameMode.LONG ? 'long' : 'short',
-            bestAlternative?.moves,
+            undefined, // Не передаем bestAlternative - GPT сам определит лучший ход
           );
         } catch (error) {
-          // Если GPT недоступен - используем эвристику
+          // Если GPT недоступен - будет использована эвристика как fallback
+          console.error('GPT analysis failed:', error);
         }
       }
 
-      // Используем GPT анализ для определения ошибок, если он доступен
-      // Иначе используем эвристику
+      // ПРИОРИТЕТ: Используем GPT анализ для определения ошибок
+      // GPT сам анализирует позицию и определяет, является ли ход ошибкой
       if (gptAnalysis) {
-        // GPT определил оценку хода
-        if (gptAnalysis.evaluation === 'blunder' || gptAnalysis.evaluation === 'mistake' || gptAnalysis.evaluation === 'inaccuracy') {
+        // GPT дал свою оценку - используем её как основную
+        // GPT может вернуть: excellent, good, neutral, inaccuracy, mistake, blunder
+        if (gptAnalysis.evaluation === 'blunder' || 
+            gptAnalysis.evaluation === 'mistake' || 
+            gptAnalysis.evaluation === 'inaccuracy') {
           isError = true;
           errorType = gptAnalysis.evaluation;
-          // Используем объяснение GPT, добавляя рекомендации если есть
-          let description = gptAnalysis.explanation || gptAnalysis.reasoning || '';
-          if (gptAnalysis.reasoning && gptAnalysis.reasoning !== description) {
-            description += '. ' + gptAnalysis.reasoning;
+          
+          // Формируем описание ошибки из GPT анализа
+          let description = gptAnalysis.explanation || '';
+          if (gptAnalysis.reasoning) {
+            if (description) {
+              description += ' ' + gptAnalysis.reasoning;
+            } else {
+              description = gptAnalysis.reasoning;
+            }
           }
-          if (bestAlternative && gptAnalysis.recommendations && gptAnalysis.recommendations.length > 0) {
-            description += '. ' + gptAnalysis.recommendations.join('. ');
-          } else if (bestAlternative) {
-            const bestMoveDescription = this.describeMove(bestAlternative.moves, game.mode);
-            description += `. Правильный ход: ${bestMoveDescription}`;
+          
+          // Добавляем рекомендации GPT
+          if (gptAnalysis.recommendations && gptAnalysis.recommendations.length > 0) {
+            description += ' ' + gptAnalysis.recommendations.join('. ');
           }
-          errorDescription = description;
+          
+          errorDescription = description.trim();
+        } else {
+          // GPT считает ход хорошим (excellent, good, neutral) - не ошибка
+          isError = false;
+          errorType = undefined;
+          errorDescription = undefined;
         }
       } else {
-        // Используем эвристику как fallback
+        // FALLBACK: Используем эвристику только если GPT недоступен
+        // Это должно происходить редко - только если GPT API недоступен
         const combinedScore = missedEquity * 0.7 + (1 - moveQuality) * 0.3;
 
         if (shouldAnalyzeErrors && (combinedScore > 0.12 || (missedEquity > 0.10 && moveQuality < 0.3))) {

@@ -109,7 +109,7 @@ export class GptBotService {
     move: Array<{ from: number; to: number; die: number }>,
     dice: number[],
     mode: 'short' | 'long',
-    bestAlternative?: Array<{ from: number; to: number; die: number }>,
+    bestAlternative?: Array<{ from: number; to: number; die: number }>, // Опционально - только для справки, GPT сам определит лучший ход
   ): Promise<{
     evaluation: 'excellent' | 'good' | 'neutral' | 'inaccuracy' | 'mistake' | 'blunder';
     explanation: string;
@@ -126,39 +126,63 @@ export class GptBotService {
       const moveDescription = this.describeMove(move);
       const bestMoveDescription = bestAlternative ? this.describeMove(bestAlternative) : null;
 
-      const prompt = `Ты эксперт по ${mode === 'long' ? 'длинным' : 'коротким'} нардам. Проанализируй ход игрока.
+      const prompt = `Ты эксперт по ${mode === 'long' ? 'длинным' : 'коротким'} нардам. Твоя задача - САМОСТОЯТЕЛЬНО ПРОАНАЛИЗИРОВАТЬ позицию и ход.
 
-ПОЗИЦИЯ ДО ХОДА:
 ${boardBefore}
 
-СДЕЛАННЫЙ ХОД:
+СДЕЛАННЫЙ ХОД ИГРОКОМ:
 ${moveDescription}
 Кубики: ${dice.join(', ')}
 
 ПОЗИЦИЯ ПОСЛЕ ХОДА:
 ${boardAfter}
 
-${bestMoveDescription ? `ЛУЧШИЙ ВОЗМОЖНЫЙ ХОД (по equity):\n${bestMoveDescription}\n\n` : ''}
+${bestMoveDescription ? `СПРАВКА - лучший ход по расчетам equity (но ты должен САМ определить оптимальный ход):\n${bestMoveDescription}\n\n` : ''}
 
-Проанализируй этот ход и дай оценку:
-1. Оценка хода: excellent (отличный), good (хороший), neutral (нейтральный), inaccuracy (неточность), mistake (ошибка), blunder (грубая ошибка)
-2. Объяснение: краткое объяснение почему ход хороший/плохой (1-2 предложения)
-3. Обоснование: детальное объяснение стратегических аспектов хода (2-3 предложения)
-4. Рекомендации: что можно было сделать лучше (если ход не оптимальный)
+ЗАДАЧА: Ты должен САМОСТОЯТЕЛЬНО проанализировать позицию и дать профессиональную оценку.
 
-Учитывай:
-- Правила ${mode === 'long' ? 'длинных нард (нельзя бить шашки)' : 'коротких нард (можно бить шашки)'}
-- Стратегические факторы: распределение шашек, timing, контроль доски, безопасность
-- Позиционные факторы: прима, якоря, прогресс к дому
-- Риски: незащищенные шашки, шашки на баре
+ШАГ 1 - АНАЛИЗ ПОЗИЦИИ ДО ХОДА:
+- Какие шашки находятся на доске для каждого цвета?
+- В каких зонах расположены шашки (дом, внешняя зона, дом противника)?
+- Есть ли шашки на баре? Сколько?
+- Сколько шашек вынесено?
+- Какие позиционные факторы важны: прима, якоря, распределение шашек?
+- ${mode === 'short' ? 'Есть ли незащищенные шашки (блоты)? Какие риски?' : 'В длинных нардах шашки нельзя бить, поэтому важны другие факторы: распределение, timing, якоря.'}
+
+ШАГ 2 - АНАЛИЗ СДЕЛАННОГО ХОДА:
+- Что изменилось в позиции после этого хода?
+- Улучшилась или ухудшилась позиция?
+- Какие стратегические цели были достигнуты или упущены?
+- Соответствует ли ход правилам ${mode === 'long' ? 'длинных нард' : 'коротких нард'}?
+
+ШАГ 3 - ОПРЕДЕЛЕНИЕ ЛУЧШЕГО ХОДА:
+- Какой ход был бы оптимальным в данной позиции?
+- Почему этот ход лучше сделанного?
+- Какие стратегические цели должен был преследовать игрок?
+
+ШАГ 4 - ОЦЕНКА:
+Оцени ход по шкале:
+- excellent: отличный ход, оптимальный выбор
+- good: хороший ход, но есть лучшие варианты
+- neutral: нейтральный ход, не меняет оценку позиции
+- inaccuracy: неточность, небольшое ухудшение позиции
+- mistake: ошибка, заметное ухудшение позиции
+- blunder: грубая ошибка, серьезное ухудшение позиции
+
+ПРАВИЛА ${mode === 'long' ? 'ДЛИННЫХ' : 'КОРОТКИХ'} НАРД:
+${mode === 'long' 
+  ? '- В длинных нардах НЕЛЬЗЯ бить шашки противника\n- Важны: распределение шашек, timing, якоря в доме противника\n- Нужно строить приму для блокировки противника\n- Важно эффективное использование кубиков'
+  : '- В коротких нардах МОЖНО бить одиночные шашки противника\n- Незащищенные шашки (блоты) - это риск\n- Важно контролировать ключевые точки\n- Нужно выводить шашки с бара в первую очередь\n- Важна безопасность своих шашек'}
 
 Ответь в формате JSON:
 {
   "evaluation": "excellent|good|neutral|inaccuracy|mistake|blunder",
-  "explanation": "краткое объяснение",
-  "reasoning": "детальное обоснование",
-  "recommendations": ["рекомендация 1", "рекомендация 2"]
-}`;
+  "explanation": "краткое объяснение (1-2 предложения) почему ход хороший/плохой",
+  "reasoning": "детальное обоснование (3-5 предложений): анализ позиции до хода, что изменилось после хода, какие стратегические цели были достигнуты или упущены, почему этот ход оптимален или нет",
+  "recommendations": ["конкретная рекомендация 1 что нужно было сделать", "конкретная рекомендация 2"]
+}
+
+ВАЖНО: Дай РЕАЛЬНЫЙ анализ позиции, не просто общие фразы. Укажи конкретные точки, шашки, стратегические цели.`;
 
       const response = await this.axiosInstance.post('/chat/completions', {
         model: 'gpt-4o-mini',
@@ -173,7 +197,7 @@ ${bestMoveDescription ? `ЛУЧШИЙ ВОЗМОЖНЫЙ ХОД (по equity):\n
           },
         ],
         temperature: 0.3,
-        max_tokens: 500,
+        max_tokens: 800,
       });
 
       const content = response.data.choices[0]?.message?.content || '';
@@ -238,11 +262,10 @@ ${bestMoveDescription ? `ЛУЧШИЙ ВОЗМОЖНЫЙ ХОД (по equity):\n
     const borneOff = gameState.borneOff || [0, 0];
     const currentPlayer = gameState.currentPlayer || 0;
 
-    let description = `Режим: ${mode === 'long' ? 'длинные' : 'короткие'} нарды.\n`;
-    description += `Текущий игрок: ${currentPlayer === 0 ? 'белые' : 'черные'}.\n`;
-    description += `На баре: белые=${bar[0] || bar.white || 0}, черные=${bar[1] || bar.black || 0}.\n`;
-    description += `Вынесено: белые=${borneOff[0] || borneOff.white || 0}, черные=${borneOff[1] || borneOff.black || 0}.\n\n`;
-    description += 'Позиция на доске (точки 1-24):\n';
+    const barWhite = bar[0] || bar.white || 0;
+    const barBlack = bar[1] || bar.black || 0;
+    const borneOffWhite = borneOff[0] || borneOff.white || 0;
+    const borneOffBlack = borneOff[1] || borneOff.black || 0;
 
     // Map indices to point numbers for display
     const POINT_NUMBERS = [
@@ -250,15 +273,86 @@ ${bestMoveDescription ? `ЛУЧШИЙ ВОЗМОЖНЫЙ ХОД (по equity):\n
       12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, // Bottom row (indices 12-23)
     ];
 
+    let description = `=== ПОЗИЦИЯ НА ДОСКЕ ===\n`;
+    description += `Режим: ${mode === 'long' ? 'ДЛИННЫЕ нарды' : 'КОРОТКИЕ нарды'}\n`;
+    description += `Текущий игрок: ${currentPlayer === 0 ? 'БЕЛЫЕ' : 'ЧЕРНЫЕ'}\n\n`;
+    
+    // Описание шашек на баре
+    if (barWhite > 0 || barBlack > 0) {
+      description += `ШАШКИ НА БАРЕ:\n`;
+      if (barWhite > 0) description += `  БЕЛЫЕ: ${barWhite} шашек на баре (нужно ввести в игру)\n`;
+      if (barBlack > 0) description += `  ЧЕРНЫЕ: ${barBlack} шашек на баре (нужно ввести в игру)\n`;
+      description += '\n';
+    }
+
+    // Описание вынесенных шашек
+    if (borneOffWhite > 0 || borneOffBlack > 0) {
+      description += `ВЫНЕСЕНО ИЗ ИГРЫ:\n`;
+      if (borneOffWhite > 0) description += `  БЕЛЫЕ: ${borneOffWhite} шашек вынесено\n`;
+      if (borneOffBlack > 0) description += `  ЧЕРНЫЕ: ${borneOffBlack} шашек вынесено\n`;
+      description += '\n';
+    }
+
+    // Детальное описание позиции на доске
+    description += `ПОЗИЦИЯ НА ДОСКЕ (точки 1-24):\n`;
+    description += `Точки 1-6: дом БЕЛЫХ (нижний правый угол)\n`;
+    description += `Точки 7-12: внешняя зона БЕЛЫХ\n`;
+    description += `Точки 13-18: внешняя зона ЧЕРНЫХ\n`;
+    description += `Точки 19-24: дом ЧЕРНЫХ (верхний правый угол)\n\n`;
+
+    // Группируем по цветам для лучшего понимания
+    const whitePoints: Array<{ point: number; count: number }> = [];
+    const blackPoints: Array<{ point: number; count: number }> = [];
+    
     for (let i = 0; i < 24; i++) {
       const value = points[i] || 0;
-      if (value !== 0) {
-        const color = value > 0 ? 'белые' : 'черные';
-        const count = Math.abs(value);
-        const pointNum = POINT_NUMBERS[i];
-        description += `Точка ${pointNum} (индекс ${i}): ${count} ${color}\n`;
+      if (value > 0) {
+        whitePoints.push({ point: POINT_NUMBERS[i], count: value });
+      } else if (value < 0) {
+        blackPoints.push({ point: POINT_NUMBERS[i], count: Math.abs(value) });
       }
     }
+
+    description += `ШАШКИ БЕЛЫХ на доске:\n`;
+    if (whitePoints.length === 0) {
+      description += `  Все шашки вынесены или на баре\n`;
+    } else {
+      whitePoints.forEach(({ point, count }) => {
+        const zone = point <= 6 ? 'дом' : point <= 12 ? 'внешняя зона' : point <= 18 ? 'внешняя зона' : 'дом противника';
+        description += `  Точка ${point}: ${count} шашек (${zone})\n`;
+      });
+    }
+    description += '\n';
+
+    description += `ШАШКИ ЧЕРНЫХ на доске:\n`;
+    if (blackPoints.length === 0) {
+      description += `  Все шашки вынесены или на баре\n`;
+    } else {
+      blackPoints.forEach(({ point, count }) => {
+        const zone = point <= 6 ? 'дом противника' : point <= 12 ? 'внешняя зона' : point <= 18 ? 'внешняя зона' : 'дом';
+        description += `  Точка ${point}: ${count} шашек (${zone})\n`;
+      });
+    }
+    description += '\n';
+
+    // Анализ позиционных факторов
+    description += `ПОЗИЦИОННЫЙ АНАЛИЗ:\n`;
+    
+    // Подсчет одиночных шашек (блоты) для коротких нард
+    if (mode === 'short') {
+      let whiteBlots = 0;
+      let blackBlots = 0;
+      whitePoints.forEach(({ count }) => { if (count === 1) whiteBlots++; });
+      blackPoints.forEach(({ count }) => { if (count === 1) blackBlots++; });
+      if (whiteBlots > 0) description += `  БЕЛЫЕ: ${whiteBlots} незащищенных шашек (блоты) - риск быть побитыми\n`;
+      if (blackBlots > 0) description += `  ЧЕРНЫЕ: ${blackBlots} незащищенных шашек (блоты) - риск быть побитыми\n`;
+    }
+
+    // Подсчет контролируемых точек (2+ шашек)
+    let whiteControlled = whitePoints.filter(p => p.count >= 2).length;
+    let blackControlled = blackPoints.filter(p => p.count >= 2).length;
+    description += `  БЕЛЫЕ контролируют ${whiteControlled} точек (2+ шашек)\n`;
+    description += `  ЧЕРНЫЕ контролируют ${blackControlled} точек (2+ шашек)\n`;
 
     return description;
   }
