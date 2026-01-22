@@ -396,19 +396,30 @@ export class GnubgService {
         fromStr = 'bar';
       } else if (m.from >= 24) {
         fromStr = 'off';
+      } else if (m.from < 0 || m.from >= 24) {
+        // Некорректный индекс
+        this.logger.warn(`Некорректный индекс from в ходе: ${m.from}`);
+        return '';
       } else {
         fromStr = (24 - m.from).toString(); // Конвертируем индекс в точку
       }
       
       // Конвертируем to
+      // В длинных нардах to === -1 означает вынос (bearing off)
+      // В коротких нардах to >= 24 означает вынос
+      // В GNU Backgammon вынос всегда обозначается как "off"
       if (m.to === -1 || m.to >= 24) {
         toStr = 'off';
+      } else if (m.to < 0 || m.to >= 24) {
+        // Некорректный индекс (не должно произойти, так как уже проверили выше)
+        this.logger.warn(`Некорректный индекс to в ходе: ${m.to}`);
+        return '';
       } else {
         toStr = (24 - m.to).toString(); // Конвертируем индекс в точку
       }
       
       return `${fromStr}/${toStr}`;
-    }).join(' ');
+    }).filter(m => m !== '').join(' '); // Убираем пустые строки
   }
 
   /**
@@ -496,9 +507,15 @@ export class GnubgService {
       
       // Конвертируем to
       if (toStr === 'off') {
-        to = 24;
+        to = 24; // Вынос шашки
+      } else if (toStr === 'bar') {
+        to = -1; // Бар (не должно быть в to, но на всякий случай)
       } else {
         const point = parseInt(toStr);
+        if (isNaN(point) || point < 1 || point > 24) {
+          this.logger.warn(`Некорректная точка в GNU Backgammon: ${toStr}`);
+          continue;
+        }
         to = 24 - point; // Конвертируем точку в индекс
       }
       
