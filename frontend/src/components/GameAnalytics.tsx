@@ -15,7 +15,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
   const [analysisJobId, setAnalysisJobId] = useState<string | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState<number>(0)
   const [analysisStatus, setAnalysisStatus] = useState<string>('pending')
-  const [statusCheckInterval, setStatusCheckInterval] = useState<NodeJS.Timeout | null>(null)
+  const [statusCheckInterval, setStatusCheckInterval] = useState<number | null>(null)
 
   useEffect(() => {
     startAnalysis()
