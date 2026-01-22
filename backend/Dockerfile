@@ -12,6 +12,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Установка GNU Backgammon для анализа коротких нард
+RUN apk add --no-cache gnubg
+
 COPY package*.json ./
 RUN npm install --only=production
 

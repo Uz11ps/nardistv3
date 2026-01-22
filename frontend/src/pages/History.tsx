@@ -533,7 +533,42 @@ export default function History() {
                     
                     return (
                       <>
-                        {/* Отображение ошибки и пояснений GPT */}
+                        {/* Отображение equity и вероятностей */}
+                        {(item.equity !== undefined || item.winProbabilities) && (
+                          <div className="probs-table" style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: '8px',
+                            marginBottom: '16px',
+                            padding: '12px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            borderRadius: '8px',
+                          }}>
+                            {item.winProbabilities && (
+                              <>
+                                <div className="prob-col"><span>Win</span><strong>{item.winProbabilities.win.toFixed(3)}</strong></div>
+                                <div className="prob-col"><span>Win G</span><strong>{item.winProbabilities.winG.toFixed(3)}</strong></div>
+                                <div className="prob-col"><span>Win BG</span><strong>{item.winProbabilities.winBG.toFixed(3)}</strong></div>
+                                <div className="prob-col"><span>Lose G</span><strong>{item.winProbabilities.loseG.toFixed(3)}</strong></div>
+                                <div className="prob-col"><span>Lose BG</span><strong>{item.winProbabilities.loseBG.toFixed(3)}</strong></div>
+                              </>
+                            )}
+                            {item.equity !== undefined && (
+                              <div className="prob-col equity"><span>Equity</span><strong>{item.equity.toFixed(3)}</strong></div>
+                            )}
+                            {item.scoreChange !== undefined && item.scoreChange !== 0 && (
+                              <div className="prob-col" style={{
+                                gridColumn: 'span 3',
+                                color: item.scoreChange > 0 ? '#E84142' : '#4CAF50'
+                              }}>
+                                <span>Изменение equity</span>
+                                <strong>{item.scoreChange > 0 ? '+' : ''}{item.scoreChange.toFixed(3)}</strong>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Отображение ошибки */}
                         {item.isError && (
                           <div className="analysis-error-info" style={{
                             padding: '12px',
@@ -564,8 +599,8 @@ export default function History() {
                           </div>
                         )}
 
-                        {/* GPT анализ для всех ходов */}
-                        {item.gptAnalysis && (
+                        {/* Лучший ход */}
+                        {item.bestMove && (
                           <div style={{
                             padding: '12px',
                             background: 'rgba(76, 175, 80, 0.1)',
@@ -573,44 +608,61 @@ export default function History() {
                             marginBottom: '16px',
                             border: '1px solid rgba(76, 175, 80, 0.3)'
                           }}>
-                            {item.gptAnalysis.evaluation && (
-                              <div style={{
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                marginBottom: '8px',
-                                color: item.gptAnalysis.evaluation === 'excellent' ? '#4CAF50' :
-                                       item.gptAnalysis.evaluation === 'good' ? '#81C784' :
-                                       item.gptAnalysis.evaluation === 'neutral' ? '#B6B6B6' :
-                                       item.gptAnalysis.evaluation === 'inaccuracy' ? '#FFD600' :
-                                       item.gptAnalysis.evaluation === 'mistake' ? '#FF9800' : '#E84142'
-                              }}>
-                                Оценка: {item.gptAnalysis.evaluation === 'excellent' ? 'Отличный ход' :
-                                         item.gptAnalysis.evaluation === 'good' ? 'Хороший ход' :
-                                         item.gptAnalysis.evaluation === 'neutral' ? 'Нейтральный ход' :
-                                         item.gptAnalysis.evaluation === 'inaccuracy' ? 'Неточность' :
-                                         item.gptAnalysis.evaluation === 'mistake' ? 'Ошибка' : 'Грубая ошибка'}
-                              </div>
-                            )}
-                            {item.gptAnalysis.explanation && (
-                              <div style={{ fontSize: '13px', color: '#B6B6B6', marginBottom: '8px', lineHeight: '1.5' }}>
-                                {item.gptAnalysis.explanation}
-                              </div>
-                            )}
-                            {item.gptAnalysis.reasoning && (
-                              <div style={{ fontSize: '13px', color: '#D0D0D0', marginBottom: '8px', lineHeight: '1.5' }}>
-                                {item.gptAnalysis.reasoning}
-                              </div>
-                            )}
-                            {item.gptAnalysis.recommendations && item.gptAnalysis.recommendations.length > 0 && (
-                              <div style={{ fontSize: '13px', color: '#FFF', marginTop: '8px' }}>
-                                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Рекомендации:</div>
-                                <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: '1.5' }}>
-                                  {item.gptAnalysis.recommendations.map((rec: string, idx: number) => (
-                                    <li key={idx} style={{ marginBottom: '4px' }}>{rec}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+                            <div style={{
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              marginBottom: '8px',
+                              color: '#4CAF50'
+                            }}>
+                              Лучший ход:
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#FFF' }}>
+                              {Array.isArray(item.bestMove) 
+                                ? item.bestMove.map((m: any, i: number) => (
+                                    <span key={i}>
+                                      {i > 0 ? ' ' : ''}
+                                      {m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}
+                                    </span>
+                                  ))
+                                : item.bestMove}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Альтернативные ходы */}
+                        {item.alternatives && item.alternatives.length > 0 && (
+                          <div style={{
+                            padding: '12px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            borderRadius: '8px',
+                            marginBottom: '16px'
+                          }}>
+                            <div style={{
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              marginBottom: '8px',
+                              color: '#FFF'
+                            }}>
+                              Альтернативные ходы:
+                            </div>
+                            <div className="alternatives-table-v2">
+                              {item.alternatives.map((alt: any, aIdx: number) => (
+                                <div key={aIdx} className="alt-row">
+                                  <div className="alt-move">
+                                    <span className="alt-dice">({item.move.dice?.join('')})</span>
+                                    {alt.moves?.length > 0 ? alt.moves.map((m: any, i: number) => (
+                                      <span key={i}>
+                                        {m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}
+                                        {i < alt.moves.length - 1 ? ' ' : ''}
+                                      </span>
+                                    )) : 'no move'}
+                                  </div>
+                                  <div className="alt-equity">
+                                    {alt.equity.toFixed(3)} ({alt.diff > 0 ? '+' : ''}{alt.diff.toFixed(3)})
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </>

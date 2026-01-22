@@ -7,6 +7,8 @@ import { SubscriptionService } from '../subscription/subscription.service';
 import { BackgammonEngine } from '../games/game-engine/backgammon-engine';
 import { LongBackgammonEngine } from '../games/game-engine/long-backgammon-engine';
 import { GptBotService } from '../bot/gpt-bot.service';
+import { GnubgService } from './gnubg.service';
+import { MCTSLongBackgammonService } from './mcts-long-backgammon.service';
 
 interface MoveAnalysis {
   moveNumber: number;
@@ -15,14 +17,23 @@ interface MoveAnalysis {
   errorType?: 'blunder' | 'mistake' | 'inaccuracy';
   errorDescription?: string;
   isBestMove?: boolean;
-  bestMove?: string;
+  bestMove?: Array<{ from: number; to: number; die: number }> | string;
   scoreChange: number;
-  gptAnalysis?: {
-    evaluation: 'excellent' | 'good' | 'neutral' | 'inaccuracy' | 'mistake' | 'blunder';
-    explanation: string;
-    reasoning: string;
-    recommendations?: string[];
+  equity?: number;
+  equityBefore?: number;
+  equityAfter?: number;
+  winProbabilities?: {
+    win: number;
+    winG: number;
+    winBG: number;
+    loseG: number;
+    loseBG: number;
   };
+  alternatives?: Array<{
+    moves: Array<{ from: number; to: number; die: number }>;
+    equity: number;
+    diff: number;
+  }>;
 }
 
 export interface GameAnalysis {
@@ -49,11 +60,13 @@ export class AnalysisService {
     private backgammonEngine: BackgammonEngine,
     private longBackgammonEngine: LongBackgammonEngine,
     @Optional() private gptBotService?: GptBotService,
+    @Optional() private gnubgService?: GnubgService,
+    @Optional() private mctsLongBackgammonService?: MCTSLongBackgammonService,
   ) {}
 
   /**
-   * Анализ игры - ТОЛЬКО GPT, БЕЗ EQUITY
-   * GPT анализирует всю игру и оценивает каждый ход пользователя
+   * Анализ игры с использованием MCTS (длинные нарды) или GNU Backgammon (короткие нарды)
+   * Полностью заменяет старую GPT-only логику
    */
   async analyzeGame(userId: string, gameId: string): Promise<GameAnalysis> {
     const game = await this.gamesRepository.findOne({
@@ -74,113 +87,91 @@ export class AnalysisService {
       order: { moveNumber: 'ASC' },
     });
 
-    if (!this.gptBotService) {
-      throw new Error('GPT Bot Service не доступен для анализа.');
-    }
-
-    // Вызываем GPT для анализа всей игры
-    const gptFullGameAnalysis = await this.gptBotService.analyzeFullGame(
-      game,
-      moves,
-      userId,
-      game.mode === GameMode.LONG ? 'long' : 'short',
-    );
-
-    const gptAnalysisMap = new Map<number, typeof gptFullGameAnalysis[0]>();
-    gptFullGameAnalysis.forEach(analysis => {
-      gptAnalysisMap.set(analysis.moveNumber, analysis);
-    });
-
     const allMovesAnalysis: MoveAnalysis[] = [];
     const errors: MoveAnalysis[] = [];
     let mistakes = 0;
     let blunders = 0;
     let inaccuracies = 0;
 
-    // Анализируем каждый ход на основе GPT анализа всей игры
-    // НИКАКИХ расчетов equity - только GPT анализ
+    const isLongMode = game.mode === GameMode.LONG;
+    const isShortMode = game.mode === GameMode.SHORT;
+
+    // Анализируем каждый ход пользователя
     for (let i = 0; i < moves.length; i++) {
       const move = moves[i];
       const isUserMove = move.playerId === userId;
       
-      // Получаем GPT анализ для этого хода (если это ход пользователя)
-      const gptResultRaw = isUserMove ? gptAnalysisMap.get(move.moveNumber) : null;
-      const gptResult = gptResultRaw ? {
-        evaluation: gptResultRaw.evaluation,
-        explanation: gptResultRaw.explanation,
-        reasoning: gptResultRaw.reasoning,
-        recommendations: gptResultRaw.recommendations,
-        bestMove: gptResultRaw.bestMove,
-      } : null;
-      
+      if (!isUserMove) {
+        // Пропускаем ходы противника
+        allMovesAnalysis.push({
+          moveNumber: move.moveNumber,
+          move,
+          isError: false,
+          scoreChange: 0,
+        });
+        continue;
+      }
+
       // Определяем, является ли это первым ходом игры
-      const isShortMode = game.mode === GameMode.SHORT;
       const isFirstMoveOfGame = isShortMode 
         ? move.moveNumber === 1 
         : move.moveNumber <= 2;
       
-      // Пропускаем анализ ошибок для первых ходов игры
-      const shouldAnalyzeErrors = !isFirstMoveOfGame && isUserMove && gptResult;
-
-      // Используем ТОЛЬКО GPT анализ - никаких расчетов equity
-      let isError = false;
-      let errorType: 'blunder' | 'mistake' | 'inaccuracy' | undefined;
-      let errorDescription: string | undefined;
-
-      if (shouldAnalyzeErrors && gptResult) {
-        if (gptResult.evaluation === 'blunder' || 
-            gptResult.evaluation === 'mistake' || 
-            gptResult.evaluation === 'inaccuracy') {
-          isError = true;
-          errorType = gptResult.evaluation;
-          
-          // Формируем описание ошибки из GPT анализа
-          let description = gptResult.explanation || '';
-          if (gptResult.reasoning) {
-            if (description) {
-              description += ' ' + gptResult.reasoning;
-            } else {
-              description = gptResult.reasoning;
-            }
-          }
-          
-          // Добавляем рекомендации GPT
-          if (gptResult.recommendations && gptResult.recommendations.length > 0) {
-            description += ' ' + gptResult.recommendations.join('. ');
-          }
-          
-          // Добавляем лучший ход если указан
-          if ('bestMove' in gptResult && gptResult.bestMove) {
-            description += ` Правильный ход: ${gptResult.bestMove}`;
-          }
-          
-          errorDescription = description.trim();
-        }
+      // Пропускаем анализ первых ходов
+      if (isFirstMoveOfGame) {
+        allMovesAnalysis.push({
+          moveNumber: move.moveNumber,
+          move,
+          isError: false,
+          scoreChange: 0,
+        });
+        continue;
       }
 
-      const analysis: MoveAnalysis = {
-        moveNumber: move.moveNumber,
-        move,
-        isError,
-        errorType,
-        errorDescription,
-        isBestMove: gptResult?.evaluation === 'excellent',
-        bestMove: undefined, // GPT сам определит лучший ход в описании
-        scoreChange: 0, // Не используем equity
-        gptAnalysis: gptResult ? {
-          evaluation: gptResult.evaluation,
-          explanation: gptResult.explanation,
-          reasoning: gptResult.reasoning,
-          recommendations: gptResult.recommendations,
-        } : undefined,
-      };
+      // Анализируем ход в зависимости от режима игры
+      let moveAnalysis: MoveAnalysis | null = null;
 
-      allMovesAnalysis.push(analysis);
-      if (isError && isUserMove) {
-        errors.push(analysis);
-        if (errorType === 'blunder') blunders++;
-        else if (errorType === 'mistake') mistakes++;
-        else if (errorType === 'inaccuracy') inaccuracies++;
+      if (isLongMode && this.mctsLongBackgammonService) {
+        // Длинные нарды - используем MCTS
+        moveAnalysis = await this.analyzeMoveWithMCTS(move, moves, i, userId);
+      } else if (isShortMode && this.gnubgService?.isGnubgAvailable()) {
+        // Короткие нарды - используем GNU Backgammon
+        moveAnalysis = await this.analyzeMoveWithGnubg(move, moves, i, userId);
+      }
+
+      if (moveAnalysis) {
+        // Определяем ошибки на основе scoreChange
+        if (moveAnalysis.scoreChange >= 0.10) {
+          moveAnalysis.isError = true;
+          moveAnalysis.errorType = 'blunder';
+          moveAnalysis.errorDescription = `Грубая ошибка: потеряно ${moveAnalysis.scoreChange.toFixed(3)} equity`;
+          blunders++;
+        } else if (moveAnalysis.scoreChange >= 0.05) {
+          moveAnalysis.isError = true;
+          moveAnalysis.errorType = 'mistake';
+          moveAnalysis.errorDescription = `Ошибка: потеряно ${moveAnalysis.scoreChange.toFixed(3)} equity`;
+          mistakes++;
+        } else if (moveAnalysis.scoreChange >= 0.02) {
+          moveAnalysis.isError = true;
+          moveAnalysis.errorType = 'inaccuracy';
+          moveAnalysis.errorDescription = `Неточность: потеряно ${moveAnalysis.scoreChange.toFixed(3)} equity`;
+          inaccuracies++;
+        } else if (moveAnalysis.scoreChange <= -0.01) {
+          moveAnalysis.isBestMove = true;
+        }
+
+        allMovesAnalysis.push(moveAnalysis);
+        if (moveAnalysis.isError) {
+          errors.push(moveAnalysis);
+        }
+      } else {
+        // Если анализ недоступен, добавляем базовую запись
+        allMovesAnalysis.push({
+          moveNumber: move.moveNumber,
+          move,
+          isError: false,
+          scoreChange: 0,
+        });
       }
     }
 
@@ -197,6 +188,190 @@ export class AnalysisService {
       inaccuracies,
       recommendations,
       gameResult: game.winnerId === userId ? 'win' : (game.winnerId === null ? undefined : 'loss'),
+    };
+  }
+
+  /**
+   * Анализ хода с использованием MCTS (длинные нарды)
+   */
+  private async analyzeMoveWithMCTS(
+    move: GameMove,
+    allMoves: GameMove[],
+    moveIndex: number,
+    userId: string,
+  ): Promise<MoveAnalysis | null> {
+    if (!this.mctsLongBackgammonService) return null;
+
+    try {
+      const stateBefore = this.convertToLongBoardState(move.gameStateBefore);
+      const stateAfter = this.convertToLongBoardState(move.gameStateAfter);
+      const dice = move.dice || [];
+      const madeMove = move.moves || [];
+
+      // Анализируем ход
+      const analysis = await this.mctsLongBackgammonService.analyzeMove(
+        stateBefore,
+        stateAfter,
+        dice,
+        madeMove.map((m: any) => ({
+          from: m.from,
+          to: m.to,
+          die: m.die || 0,
+        })),
+        undefined, // Использует значение по умолчанию из переменных окружения
+      );
+
+      if (!analysis) return null;
+
+      return {
+        moveNumber: move.moveNumber,
+        move,
+        isError: false,
+        scoreChange: analysis.scoreChange,
+        equity: analysis.equityAfter,
+        equityBefore: analysis.equityBefore,
+        equityAfter: analysis.equityAfter,
+        winProbabilities: {
+          win: analysis.equityAfter,
+          winG: 0,
+          winBG: 0,
+          loseG: 0,
+          loseBG: 0,
+        },
+        bestMove: analysis.bestMove,
+        alternatives: analysis.alternatives,
+        isBestMove: analysis.moveQuality === 'excellent',
+      };
+    } catch (error: any) {
+      console.error(`Ошибка MCTS анализа хода ${move.moveNumber}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Анализ хода с использованием GNU Backgammon (короткие нарды)
+   */
+  private async analyzeMoveWithGnubg(
+    move: GameMove,
+    allMoves: GameMove[],
+    moveIndex: number,
+    userId: string,
+  ): Promise<MoveAnalysis | null> {
+    if (!this.gnubgService) return null;
+
+    try {
+      const positionBefore = this.gnubgService.convertGameStateToGnubgPosition(move.gameStateBefore);
+      const positionAfter = this.gnubgService.convertGameStateToGnubgPosition(move.gameStateAfter);
+      const dice = move.dice || [];
+      const madeMove = move.moves || [];
+
+      // Анализируем ход
+      const analysis = await this.gnubgService.analyzeMove(
+        positionBefore,
+        positionAfter,
+        dice,
+        madeMove.map((m: any) => ({
+          from: m.from,
+          to: m.to,
+        })),
+      );
+
+      if (!analysis) return null;
+
+      // Анализируем позицию до хода для получения вероятностей
+      const analysisBefore = await this.gnubgService.analyzePosition(positionBefore, dice);
+      const winProbabilities = analysisBefore?.winProbabilities || {
+        win: analysis.equityBefore,
+        winG: 0,
+        winBG: 0,
+        loseG: 0,
+        loseBG: 0,
+      };
+
+      // Конвертируем bestMove и alternatives в нужный формат
+      // GNU Backgammon возвращает ходы без die, нужно добавить из исходного хода
+      const bestMoveFormatted = analysis.bestMove 
+        ? analysis.bestMove.map((m, idx) => {
+            const originalMove = madeMove[idx];
+            return {
+              from: m.from,
+              to: m.to,
+              die: originalMove?.die || Math.abs(m.to - m.from) || 0,
+            };
+          })
+        : undefined;
+      
+      const alternativesFormatted = analysis.alternatives
+        ? analysis.alternatives.map(alt => ({
+            moves: alt.moves.map((m, idx) => {
+              const originalMove = madeMove[idx];
+              return {
+                from: m.from,
+                to: m.to,
+                die: originalMove?.die || Math.abs(m.to - m.from) || 0,
+              };
+            }),
+            equity: alt.equity,
+            diff: alt.diff,
+          }))
+        : undefined;
+
+      return {
+        moveNumber: move.moveNumber,
+        move,
+        isError: false,
+        scoreChange: analysis.scoreChange,
+        equity: analysis.equityAfter,
+        equityBefore: analysis.equityBefore,
+        equityAfter: analysis.equityAfter,
+        winProbabilities,
+        bestMove: bestMoveFormatted,
+        alternatives: alternativesFormatted,
+        isBestMove: analysis.moveQuality === 'excellent',
+      };
+    } catch (error: any) {
+      console.error(`Ошибка GNU Backgammon анализа хода ${move.moveNumber}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Конвертация состояния игры в формат LongBoardState
+   */
+  private convertToLongBoardState(gameState: any): any {
+    if (!gameState) {
+      return this.longBackgammonEngine.createInitialState();
+    }
+
+    const points = gameState.points || new Array(24).fill(0);
+    const bar = gameState.bar || [0, 0];
+    const borneOff = gameState.borneOff || gameState.bearOff || [0, 0];
+    const currentPlayer = gameState.currentPlayer || 0;
+    const dice = gameState.dice || [];
+
+    // Нормализуем bar и borneOff
+    let normalizedBar: [number, number] = [0, 0];
+    if (Array.isArray(bar)) {
+      normalizedBar = [bar[0] || 0, bar[1] || 0];
+    } else if (bar && typeof bar === 'object') {
+      normalizedBar = [bar.white || bar[0] || 0, bar.black || bar[1] || 0];
+    }
+
+    let normalizedBorneOff: [number, number] = [0, 0];
+    if (Array.isArray(borneOff)) {
+      normalizedBorneOff = [borneOff[0] || 0, borneOff[1] || 0];
+    } else if (borneOff && typeof borneOff === 'object') {
+      normalizedBorneOff = [borneOff.white || borneOff[0] || 0, borneOff.black || borneOff[1] || 0];
+    }
+
+    return {
+      points,
+      bar: normalizedBar,
+      borneOff: normalizedBorneOff,
+      currentPlayer,
+      dice,
+      movesFromHead: 0,
+      movesFromPoint: {},
     };
   }
 
