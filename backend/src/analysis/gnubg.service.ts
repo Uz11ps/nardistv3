@@ -367,13 +367,22 @@ export class GnubgService {
         moveQuality = 'good';
       }
 
+      // Сравниваем сделанный ход с лучшим ходом для определения качества
+      const madeMoveNormalized = JSON.stringify(madeMove.map(m => ({ from: m.from, to: m.to })).sort());
+      const bestMoveNormalized = moveAnalysis.bestMove 
+        ? JSON.stringify(moveAnalysis.bestMove.map((m: any) => ({ from: m.from, to: m.to })).sort())
+        : null;
+      
+      const isBestMove = bestMoveNormalized && madeMoveNormalized === bestMoveNormalized;
+      const finalMoveQuality = isBestMove ? 'excellent' : moveQuality;
+
       return {
         equityBefore: analysisBefore.equity,
         equityAfter: analysisAfter.equity,
         scoreChange,
         bestMove: moveAnalysis.bestMove,
         alternatives: moveAnalysis.alternatives,
-        moveQuality,
+        moveQuality: finalMoveQuality,
       };
     } catch (error: any) {
       this.logger.error(`Ошибка анализа хода: ${error.message}`);

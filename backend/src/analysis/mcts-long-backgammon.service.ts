@@ -228,13 +228,21 @@ export class MCTSLongBackgammonService {
       // Определяем качество хода
       const moveQuality = this.determineMoveQualityFromScoreChange(scoreChange);
 
+      // Сравниваем сделанный ход с лучшим ходом для определения качества
+      const madeMoveNormalized = JSON.stringify(madeMove.map(m => ({ from: m.from, to: m.to })).sort());
+      const bestMoveNormalized = analysisBefore.bestMove?.moves 
+        ? JSON.stringify(analysisBefore.bestMove.moves.map((m: any) => ({ from: m.from, to: m.to })).sort())
+        : null;
+      
+      const isBestMove = bestMoveNormalized && madeMoveNormalized === bestMoveNormalized;
+
       return {
         equityBefore: analysisBefore.equity,
         equityAfter: analysisAfter.equity,
         scoreChange,
         bestMove: analysisBefore.bestMove?.moves,
         alternatives: analysisBefore.alternatives,
-        moveQuality,
+        moveQuality: isBestMove ? 'excellent' : moveQuality,
       };
     } catch (error: any) {
       this.logger.error(`Ошибка анализа хода: ${error.message}`);
@@ -628,15 +636,20 @@ export class MCTSLongBackgammonService {
   ): { moves: Array<{ from: number; to: number; die: number }>; equity: number } | undefined {
     if (root.children.length === 0) return undefined;
 
-    // Выбираем ребенка с наибольшим количеством посещений
+    // Выбираем ребенка с лучшей equity (вероятностью выигрыша)
     let bestChild = root.children[0];
+    let bestEquity = bestChild.visits > 0 ? bestChild.wins / bestChild.visits : 0.5;
+    
     for (const child of root.children) {
-      if (child.visits > bestChild.visits) {
+      const childEquity = child.visits > 0 ? child.wins / child.visits : 0.5;
+      // Выбираем по equity (вероятности выигрыша), а не только по количеству посещений
+      if (childEquity > bestEquity || (Math.abs(childEquity - bestEquity) < 0.01 && child.visits > bestChild.visits)) {
         bestChild = child;
+        bestEquity = childEquity;
       }
     }
 
-    const equity = bestChild.visits > 0 ? bestChild.wins / bestChild.visits : 0;
+    const equity = bestEquity;
 
     return bestChild.move ? {
       moves: bestChild.move,

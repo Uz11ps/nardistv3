@@ -1,4 +1,4 @@
-import { Injectable, Inject, forwardRef, ForbiddenException, Optional, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, ForbiddenException, Optional, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game, GameMode } from '../games/game.entity';
@@ -10,6 +10,7 @@ import { GptBotService } from '../bot/gpt-bot.service';
 import { GnubgService } from './gnubg.service';
 import { MCTSLongBackgammonService } from './mcts-long-backgammon.service';
 import { AnalysisQueueService, AnalysisStatus } from './analysis-queue.service';
+import { CloudWorkerService } from './cloud-worker.service';
 
 interface MoveAnalysis {
   moveNumber: number;
@@ -51,6 +52,8 @@ export interface GameAnalysis {
 
 @Injectable()
 export class AnalysisService {
+  private readonly logger = new Logger(AnalysisService.name);
+
   constructor(
     @InjectRepository(Game)
     private gamesRepository: Repository<Game>,
@@ -64,6 +67,7 @@ export class AnalysisService {
     @Optional() private gnubgService?: GnubgService,
     @Optional() private mctsLongBackgammonService?: MCTSLongBackgammonService,
     private analysisQueueService?: AnalysisQueueService,
+    @Optional() private cloudWorkerService?: CloudWorkerService,
   ) {}
 
   /**
@@ -85,7 +89,22 @@ export class AnalysisService {
       throw new ForbiddenException('Нет доступа к этой игре');
     }
 
-    // Добавляем в очередь анализа
+    // Проверяем, нужно ли использовать облачный воркер
+    const shouldUseCloud = this.cloudWorkerService?.shouldUseCloud(game.mode);
+    const cloudAvailable = shouldUseCloud && await this.cloudWorkerService?.isAvailable();
+
+    if (cloudAvailable) {
+      // Отправляем в облако для длинных нард
+      try {
+        const result = await this.cloudWorkerService!.analyzeGame(gameId, userId);
+        return result;
+      } catch (error: any) {
+        this.logger.warn(`Не удалось отправить в облако, используем локальную обработку: ${error.message}`);
+        // Fallback на локальную обработку
+      }
+    }
+
+    // Добавляем в очередь анализа (локальная обработка)
     if (this.analysisQueueService) {
       const jobId = await this.analysisQueueService.enqueueAnalysis(gameId, userId);
       return {
@@ -108,6 +127,18 @@ export class AnalysisService {
     result?: GameAnalysis;
     error?: string;
   }> {
+    // Проверяем, это задача из облака или локальная
+    const isCloudJob = jobId.startsWith('cloud_');
+    
+    if (isCloudJob && this.cloudWorkerService) {
+      try {
+        const status = await this.cloudWorkerService.getAnalysisStatus(jobId.replace('cloud_', ''));
+        return status;
+      } catch (error: any) {
+        throw new NotFoundException(`Задача анализа не найдена в облаке: ${error.message}`);
+      }
+    }
+
     if (!this.analysisQueueService) {
       throw new Error('Analysis queue service недоступен');
     }
@@ -139,6 +170,18 @@ export class AnalysisService {
    * Получение результата анализа (если готов)
    */
   async getAnalysisResult(jobId: string, userId: string): Promise<GameAnalysis> {
+    // Проверяем, это задача из облака или локальная
+    const isCloudJob = jobId.startsWith('cloud_');
+    
+    if (isCloudJob && this.cloudWorkerService) {
+      try {
+        const result = await this.cloudWorkerService.getAnalysisResult(jobId.replace('cloud_', ''));
+        return result;
+      } catch (error: any) {
+        throw new NotFoundException(`Результат анализа не найден в облаке: ${error.message}`);
+      }
+    }
+
     if (!this.analysisQueueService) {
       throw new Error('Analysis queue service недоступен');
     }
@@ -227,31 +270,43 @@ export class AnalysisService {
         continue;
       }
 
-      // Определяем, является ли это первым ходом игры
-      const isFirstMoveOfGame = isShortMode 
-        ? move.moveNumber === 1 
-        : move.moveNumber <= 2;
-      
-      // Пропускаем анализ первых ходов
-      if (isFirstMoveOfGame) {
-        allMovesAnalysis.push({
-          moveNumber: move.moveNumber,
-          move,
-          isError: false,
-          scoreChange: 0,
-        });
-        continue;
-      }
-
-      // Анализируем ход в зависимости от режима игры
+      // Анализируем ход в зависимости от режима игры (включая первые ходы) с повторными попытками
       let moveAnalysis: MoveAnalysis | null = null;
+      const MAX_RETRIES = 3; // Максимум 3 попытки
+      let retryCount = 0;
 
-      if (isLongMode && this.mctsLongBackgammonService) {
-        // Длинные нарды - используем MCTS
-        moveAnalysis = await this.analyzeMoveWithMCTS(move, moves, i, userId);
-      } else if (isShortMode && this.gnubgService?.isGnubgAvailable()) {
-        // Короткие нарды - используем GNU Backgammon
-        moveAnalysis = await this.analyzeMoveWithGnubg(move, moves, i, userId);
+      while (retryCount < MAX_RETRIES && !moveAnalysis) {
+        try {
+          if (isLongMode && this.mctsLongBackgammonService) {
+            // Длинные нарды - используем MCTS
+            moveAnalysis = await this.analyzeMoveWithMCTS(move, moves, i, userId);
+          } else if (isShortMode && this.gnubgService?.isGnubgAvailable()) {
+            // Короткие нарды - используем GNU Backgammon
+            moveAnalysis = await this.analyzeMoveWithGnubg(move, moves, i, userId);
+          }
+          
+          // Если анализ вернул null, считаем это ошибкой и повторяем
+          if (!moveAnalysis && retryCount < MAX_RETRIES - 1) {
+            retryCount++;
+            this.logger.warn(`Анализ хода ${move.moveNumber} вернул null, попытка ${retryCount}/${MAX_RETRIES}`);
+            // Небольшая задержка перед повторной попыткой
+            await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+            continue;
+          }
+        } catch (error: any) {
+          retryCount++;
+          this.logger.warn(`Ошибка анализа хода ${move.moveNumber} (попытка ${retryCount}/${MAX_RETRIES}): ${error.message}`);
+          
+          // Если это не последняя попытка - повторяем
+          if (retryCount < MAX_RETRIES) {
+            // Экспоненциальная задержка: 500ms, 1000ms, 2000ms
+            await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+            continue;
+          }
+        }
+        
+        // Если получили результат или исчерпали попытки - выходим
+        break;
       }
 
       if (moveAnalysis) {

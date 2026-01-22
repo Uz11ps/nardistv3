@@ -222,21 +222,6 @@ export class AnalysisQueueService {
           continue;
         }
 
-        // Определяем, является ли это первым ходом игры
-        const isFirstMoveOfGame = game.mode === GameMode.SHORT
-          ? move.moveNumber === 1
-          : move.moveNumber <= 2;
-
-        if (isFirstMoveOfGame) {
-          allMovesAnalysis.push({
-            moveNumber: move.moveNumber,
-            move,
-            isError: false,
-            scoreChange: 0,
-          });
-          continue;
-        }
-
         // Обновляем прогресс
         processedMoves++;
         job.progress = 10 + Math.floor((processedMoves / totalMoves) * 80);
@@ -246,16 +231,50 @@ export class AnalysisQueueService {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        // Анализируем ход
+        // Анализируем ход - ВСЕГДА пытаемся проанализировать с повторными попытками
         let moveAnalysis: any | null = null;
+        const MAX_RETRIES = 3; // Максимум 3 попытки
+        let retryCount = 0;
+        let lastError: any = null;
 
-        if (isLongMode && this.mctsLongBackgammonService) {
-          moveAnalysis = await this.analyzeMoveWithMCTS(move, moves, i, job.userId);
-        } else if (!isLongMode && this.gnubgService?.isGnubgAvailable()) {
-          moveAnalysis = await this.analyzeMoveWithGnubg(move, moves, i, job.userId);
+        while (retryCount < MAX_RETRIES && !moveAnalysis) {
+          try {
+            if (isLongMode && this.mctsLongBackgammonService) {
+              moveAnalysis = await this.analyzeMoveWithMCTS(move, moves, i, job.userId);
+            } else if (!isLongMode && this.gnubgService?.isGnubgAvailable()) {
+              moveAnalysis = await this.analyzeMoveWithGnubg(move, moves, i, job.userId);
+            }
+            
+            // Если анализ вернул null, считаем это ошибкой и повторяем
+            if (!moveAnalysis && retryCount < MAX_RETRIES - 1) {
+              retryCount++;
+              this.logger.warn(`Анализ хода ${move.moveNumber} вернул null, попытка ${retryCount}/${MAX_RETRIES}`);
+              // Небольшая задержка перед повторной попыткой
+              await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+              continue;
+            }
+          } catch (error: any) {
+            lastError = error;
+            retryCount++;
+            this.logger.warn(`Ошибка анализа хода ${move.moveNumber} (попытка ${retryCount}/${MAX_RETRIES}): ${error.message}`);
+            
+            // Если это не последняя попытка - повторяем
+            if (retryCount < MAX_RETRIES) {
+              // Экспоненциальная задержка: 500ms, 1000ms, 2000ms
+              await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+              continue;
+            }
+          }
+          
+          // Если получили результат или исчерпали попытки - выходим
+          break;
         }
 
         if (moveAnalysis) {
+          // Убеждаемся, что все поля заполнены
+          moveAnalysis.moveNumber = move.moveNumber;
+          moveAnalysis.move = move;
+          
           // Определяем ошибки на основе scoreChange
           if (moveAnalysis.scoreChange >= 0.10) {
             moveAnalysis.isError = true;
@@ -281,11 +300,31 @@ export class AnalysisQueueService {
             errors.push(moveAnalysis);
           }
         } else {
+          // Если анализ не удался, все равно добавляем ход с базовыми данными
+          // Но пытаемся хотя бы получить equity из позиции
+          let fallbackEquity: number | undefined = undefined;
+          try {
+            if (isLongMode && this.mctsLongBackgammonService && move.gameStateAfter) {
+              const stateAfter = this.convertToLongBoardState(move.gameStateAfter);
+              const quickAnalysis = await this.mctsLongBackgammonService.analyzePosition(stateAfter, move.dice, 1000); // Быстрый анализ
+              fallbackEquity = quickAnalysis?.equity;
+            } else if (!isLongMode && this.gnubgService && move.gameStateAfter) {
+              const positionAfter = this.gnubgService.convertGameStateToGnubgPosition(move.gameStateAfter);
+              const quickAnalysis = await this.gnubgService.analyzePosition(positionAfter);
+              fallbackEquity = quickAnalysis?.equity;
+            }
+          } catch (e) {
+            // Игнорируем ошибки fallback анализа
+          }
+
           allMovesAnalysis.push({
             moveNumber: move.moveNumber,
             move,
             isError: false,
             scoreChange: 0,
+            equity: fallbackEquity,
+            equityBefore: undefined,
+            equityAfter: fallbackEquity,
           });
         }
       }
@@ -354,6 +393,14 @@ export class AnalysisQueueService {
 
       if (!analysis) return null;
 
+      // Сравниваем сделанный ход с лучшим ходом
+      const madeMoveStr = JSON.stringify(madeMove.map(m => ({ from: m.from, to: m.to })).sort());
+      const bestMoveStr = analysis.bestMove 
+        ? JSON.stringify(analysis.bestMove.map((m: any) => ({ from: m.from, to: m.to })).sort())
+        : null;
+      
+      const isBestMove = bestMoveStr && madeMoveStr === bestMoveStr;
+
       return {
         moveNumber: move.moveNumber,
         move,
@@ -371,7 +418,7 @@ export class AnalysisQueueService {
         },
         bestMove: analysis.bestMove,
         alternatives: analysis.alternatives,
-        isBestMove: analysis.moveQuality === 'excellent',
+        isBestMove: isBestMove || analysis.moveQuality === 'excellent',
       };
     } catch (error: any) {
       this.logger.warn(`Ошибка MCTS анализа хода ${move.moveNumber}:`, error.message);

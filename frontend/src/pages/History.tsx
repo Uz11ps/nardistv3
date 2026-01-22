@@ -499,11 +499,9 @@ export default function History() {
                       >
                         <span style={{ whiteSpace: 'nowrap' }}>
                           {loadingAnalysis && game.id === selectedGame?.id ? (
-                            analysisStatus === 'processing' && analysisProgress > 0 
+                            analysisProgress > 0 
                               ? `${analysisProgress}%`
-                              : analysisStatus === 'pending'
-                              ? '...'
-                              : '...'
+                              : '0%'
                           ) : 'Анализ'}
                         </span>
                       </button>
@@ -673,7 +671,7 @@ export default function History() {
                           </div>
                         )}
 
-                        {/* Отображение ошибки */}
+                        {/* Отображение ошибки - все типы */}
                         {item.isError && (
                           <div className="analysis-error-info" style={{
                             padding: '12px',
@@ -717,11 +715,11 @@ export default function History() {
                               fontSize: '13px',
                               fontWeight: '600',
                               marginBottom: '8px',
-                              color: '#4CAF50'
+                              color: '#000'
                             }}>
                               Лучший ход:
                             </div>
-                            <div style={{ fontSize: '13px', color: '#FFF' }}>
+                            <div style={{ fontSize: '13px', color: '#000' }}>
                               {Array.isArray(item.bestMove) 
                                 ? item.bestMove.map((m: any, i: number) => (
                                     <span key={i}>

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnalysisService } from './analysis.service';
 import { AnalysisController } from './analysis.controller';
 import { AnalysisQueueService } from './analysis-queue.service';
+import { CloudWorkerService } from './cloud-worker.service';
 import { GnubgService } from './gnubg.service';
 import { MCTSLongBackgammonService } from './mcts-long-backgammon.service';
 import { Game } from '../games/game.entity';
@@ -24,6 +25,7 @@ import { BotModule } from '../bot/bot.module';
   providers: [
     AnalysisService,
     AnalysisQueueService,
+    CloudWorkerService,
     GnubgService,
     MCTSLongBackgammonService,
     BackgammonEngine,
@@ -32,6 +34,7 @@ import { BotModule } from '../bot/bot.module';
   exports: [
     AnalysisService,
     AnalysisQueueService,
+    CloudWorkerService,
     GnubgService,
     MCTSLongBackgammonService,
   ],
