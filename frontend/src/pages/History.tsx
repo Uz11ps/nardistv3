@@ -24,6 +24,7 @@ interface GameHistory {
   duration: number
   createdAt: string
   updatedAt?: string
+  finishedAt?: string
   moves: any[]
   moveCount: number
   winnerId?: string | null
