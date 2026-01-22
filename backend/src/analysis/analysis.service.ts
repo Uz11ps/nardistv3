@@ -1,4 +1,4 @@
-import { Injectable, Inject, forwardRef, ForbiddenException, Optional } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, ForbiddenException, Optional, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game, GameMode } from '../games/game.entity';
@@ -9,6 +9,7 @@ import { LongBackgammonEngine } from '../games/game-engine/long-backgammon-engin
 import { GptBotService } from '../bot/gpt-bot.service';
 import { GnubgService } from './gnubg.service';
 import { MCTSLongBackgammonService } from './mcts-long-backgammon.service';
+import { AnalysisQueueService, AnalysisStatus } from './analysis-queue.service';
 
 interface MoveAnalysis {
   moveNumber: number;
@@ -62,13 +63,127 @@ export class AnalysisService {
     @Optional() private gptBotService?: GptBotService,
     @Optional() private gnubgService?: GnubgService,
     @Optional() private mctsLongBackgammonService?: MCTSLongBackgammonService,
+    private analysisQueueService?: AnalysisQueueService,
   ) {}
 
   /**
-   * Анализ игры с использованием MCTS (длинные нарды) или GNU Backgammon (короткие нарды)
-   * Полностью заменяет старую GPT-only логику
+   * Анализ игры - асинхронный через очередь
+   * Возвращает jobId для отслеживания статуса
    */
-  async analyzeGame(userId: string, gameId: string): Promise<GameAnalysis> {
+  async analyzeGame(userId: string, gameId: string): Promise<{ jobId: string; status: string }> {
+    // Проверяем доступ к игре
+    const game = await this.gamesRepository.findOne({
+      where: { id: gameId },
+      relations: ['player1', 'player2'],
+    });
+
+    if (!game) {
+      throw new NotFoundException('Игра не найдена');
+    }
+
+    if (game.player1Id !== userId && game.player2Id !== userId) {
+      throw new ForbiddenException('Нет доступа к этой игре');
+    }
+
+    // Добавляем в очередь анализа
+    if (this.analysisQueueService) {
+      const jobId = await this.analysisQueueService.enqueueAnalysis(gameId, userId);
+      return {
+        jobId,
+        status: 'pending',
+      };
+    }
+
+    // Fallback: синхронный анализ (если очередь недоступна)
+    // В этом случае выполняем синхронно и сразу возвращаем результат
+    throw new Error('Analysis queue service недоступен. Используйте синхронный метод.');
+  }
+
+  /**
+   * Получение статуса анализа
+   */
+  async getAnalysisStatus(jobId: string, userId: string): Promise<{
+    status: string;
+    progress?: number;
+    result?: GameAnalysis;
+    error?: string;
+  }> {
+    if (!this.analysisQueueService) {
+      throw new Error('Analysis queue service недоступен');
+    }
+
+    const job = this.analysisQueueService.getJobStatus(jobId);
+    
+    if (!job) {
+      throw new NotFoundException('Задача анализа не найдена');
+    }
+
+    // Проверяем доступ
+    const game = await this.gamesRepository.findOne({
+      where: { id: job.gameId },
+    });
+
+    if (!game || (game.player1Id !== userId && game.player2Id !== userId)) {
+      throw new ForbiddenException('Нет доступа к этой задаче');
+    }
+
+    return {
+      status: job.status,
+      progress: job.progress,
+      result: job.status === AnalysisStatus.COMPLETED ? job.result : undefined,
+      error: job.error,
+    };
+  }
+
+  /**
+   * Получение результата анализа (если готов)
+   */
+  async getAnalysisResult(jobId: string, userId: string): Promise<GameAnalysis> {
+    if (!this.analysisQueueService) {
+      throw new Error('Analysis queue service недоступен');
+    }
+
+    const job = this.analysisQueueService.getJobStatus(jobId);
+    
+    if (!job) {
+      throw new NotFoundException('Задача анализа не найдена');
+    }
+
+    // Проверяем доступ
+    const game = await this.gamesRepository.findOne({
+      where: { id: job.gameId },
+    });
+
+    if (!game || (game.player1Id !== userId && game.player2Id !== userId)) {
+      throw new ForbiddenException('Нет доступа к этой задаче');
+    }
+
+    if (job.status !== AnalysisStatus.COMPLETED) {
+      throw new Error(`Анализ еще не завершен. Статус: ${job.status}`);
+    }
+
+    if (!job.result) {
+      throw new Error('Результат анализа недоступен');
+    }
+
+    return job.result;
+  }
+
+  /**
+   * Получение статистики очереди
+   */
+  getQueueStats() {
+    if (!this.analysisQueueService) {
+      return null;
+    }
+    return this.analysisQueueService.getQueueStats();
+  }
+
+  /**
+   * Синхронный анализ игры (fallback, если очередь недоступна)
+   * @deprecated Используйте analyzeGame для асинхронной обработки
+   */
+  private async analyzeGameSync(userId: string, gameId: string): Promise<GameAnalysis> {
     const game = await this.gamesRepository.findOne({
       where: { id: gameId },
       relations: ['player1', 'player2'],

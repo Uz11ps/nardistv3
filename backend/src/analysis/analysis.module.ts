@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnalysisService } from './analysis.service';
 import { AnalysisController } from './analysis.controller';
+import { AnalysisQueueService } from './analysis-queue.service';
 import { GnubgService } from './gnubg.service';
 import { MCTSLongBackgammonService } from './mcts-long-backgammon.service';
 import { Game } from '../games/game.entity';
@@ -22,12 +23,18 @@ import { BotModule } from '../bot/bot.module';
   controllers: [AnalysisController],
   providers: [
     AnalysisService,
+    AnalysisQueueService,
     GnubgService,
     MCTSLongBackgammonService,
     BackgammonEngine,
     LongBackgammonEngine,
   ],
-  exports: [AnalysisService, GnubgService, MCTSLongBackgammonService],
+  exports: [
+    AnalysisService,
+    AnalysisQueueService,
+    GnubgService,
+    MCTSLongBackgammonService,
+  ],
 })
 export class AnalysisModule {}
 

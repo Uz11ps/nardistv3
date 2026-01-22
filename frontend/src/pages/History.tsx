@@ -45,6 +45,10 @@ export default function History() {
   const [loadingReplay, setLoadingReplay] = useState(false)
   const [analysisData, setAnalysisData] = useState<any>(null)
   const [loadingAnalysis, setLoadingAnalysis] = useState(false)
+  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null)
+  const [analysisProgress, setAnalysisProgress] = useState<number>(0)
+  const [analysisStatus, setAnalysisStatus] = useState<string>('pending')
+  const [statusCheckInterval, setStatusCheckInterval] = useState<NodeJS.Timeout | null>(null)
   const [hasPremium, setHasPremium] = useState(false)
   const [selectedAnalysisMoveIndex, setSelectedAnalysisMoveIndex] = useState<number | null>(null)
   const [selectedGameDetails, setSelectedGameDetails] = useState<GameHistory | null>(null)
@@ -59,6 +63,15 @@ export default function History() {
       loadHistory()
     }
   }, [filter, modeFilter, hasPremium])
+
+  // Очистка интервала при размонтировании
+  useEffect(() => {
+    return () => {
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval)
+      }
+    }
+  }, [statusCheckInterval])
 
   const checkPremium = async () => {
     try {
@@ -75,18 +88,74 @@ export default function History() {
       return
     }
     
+    // Останавливаем предыдущую проверку статуса если была
+    if (statusCheckInterval) {
+      clearInterval(statusCheckInterval)
+      setStatusCheckInterval(null)
+    }
+
     try {
       setLoadingAnalysis(true)
+      setAnalysisData(null)
+      setAnalysisProgress(0)
+      setAnalysisStatus('pending')
       const game = games.find(g => g.id === gameId);
       if (game) setSelectedGame(game);
       
-      const response = await apiClient.get(`/analysis/game/${gameId}`)
-      setAnalysisData(response.data)
+      // Запускаем анализ (асинхронный)
+      const response = await apiClient.post(`/analysis/game/${gameId}`)
+      const { jobId, status } = response.data
+      
+      setAnalysisJobId(jobId)
+      setAnalysisStatus(status)
+      
+      // Начинаем проверку статуса
+      checkAnalysisStatus(jobId)
+      
+      // Проверяем статус каждые 500ms
+      const interval = setInterval(() => {
+        checkAnalysisStatus(jobId)
+      }, 500)
+      
+      setStatusCheckInterval(interval)
     } catch (error: any) {
-      console.error('Failed to analyze game:', error)
-      alert(error.response?.data?.message || 'Ошибка анализа. Доступно только для премиум пользователей.')
-    } finally {
+      console.error('Failed to start analysis:', error)
+      alert(error.response?.data?.message || 'Ошибка запуска анализа. Доступно только для премиум пользователей.')
       setLoadingAnalysis(false)
+    }
+  }
+
+  const checkAnalysisStatus = async (jobId: string) => {
+    try {
+      const response = await apiClient.get(`/analysis/status/${jobId}`)
+      const { status, progress, result, error: statusError } = response.data
+      
+      setAnalysisStatus(status)
+      if (progress !== undefined) {
+        setAnalysisProgress(progress)
+      }
+      
+      if (status === 'completed' && result) {
+        // Анализ завершен, останавливаем проверку
+        if (statusCheckInterval) {
+          clearInterval(statusCheckInterval)
+          setStatusCheckInterval(null)
+        }
+        setAnalysisData(result)
+        setLoadingAnalysis(false)
+      } else if (status === 'failed') {
+        // Ошибка анализа
+        if (statusCheckInterval) {
+          clearInterval(statusCheckInterval)
+          setStatusCheckInterval(null)
+        }
+        alert(statusError || 'Ошибка анализа игры')
+        setLoadingAnalysis(false)
+      }
+      // Если status === 'processing' или 'pending', продолжаем ждать
+    } catch (err: any) {
+      console.error('Failed to check analysis status:', err)
+      // Не останавливаем проверку при ошибке, возможно временная проблема
     }
   }
 
@@ -422,7 +491,13 @@ export default function History() {
                         onClick={() => handleAnalyze(game.id)}
                         disabled={loadingAnalysis}
                       >
-                        Анализ
+                        {loadingAnalysis && game.id === selectedGame?.id ? (
+                          analysisStatus === 'processing' && analysisProgress > 0 
+                            ? `Анализ... ${analysisProgress}%`
+                            : analysisStatus === 'pending'
+                            ? 'В очереди...'
+                            : 'Анализ...'
+                        ) : 'Анализ'}
                       </button>
                       ) : (
                         <button 

@@ -12,23 +12,92 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMoveIndex, setSelectedMoveIndex] = useState<number | null>(null)
+  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null)
+  const [analysisProgress, setAnalysisProgress] = useState<number>(0)
+  const [analysisStatus, setAnalysisStatus] = useState<string>('pending')
+  const [statusCheckInterval, setStatusCheckInterval] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    loadAnalysis()
+    startAnalysis()
+    return () => {
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval)
+      }
+    }
   }, [gameId])
 
-  const loadAnalysis = async () => {
+  const startAnalysis = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get(`/analysis/game/${gameId}`)
-      setAnalysisData(response.data)
       setError(null)
+      setAnalysisProgress(0)
+      setAnalysisStatus('pending')
+      
+      // Запускаем анализ (асинхронный)
+      const response = await apiClient.post(`/analysis/game/${gameId}`)
+      const { jobId, status } = response.data
+      
+      setAnalysisJobId(jobId)
+      setAnalysisStatus(status)
+      
+      // Начинаем проверку статуса
+      checkAnalysisStatus(jobId)
+      
+      // Проверяем статус каждые 500ms
+      const interval = setInterval(() => {
+        checkAnalysisStatus(jobId)
+      }, 500)
+      
+      setStatusCheckInterval(interval)
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Ошибка загрузки аналитики')
-      console.error('Failed to load analysis:', err)
-    } finally {
+      setError(err.response?.data?.message || 'Ошибка запуска анализа')
+      console.error('Failed to start analysis:', err)
       setLoading(false)
     }
+  }
+
+  const checkAnalysisStatus = async (jobId: string) => {
+    try {
+      const response = await apiClient.get(`/analysis/status/${jobId}`)
+      const { status, progress, result, error: statusError } = response.data
+      
+      setAnalysisStatus(status)
+      if (progress !== undefined) {
+        setAnalysisProgress(progress)
+      }
+      
+      if (status === 'completed' && result) {
+        // Анализ завершен, останавливаем проверку
+        if (statusCheckInterval) {
+          clearInterval(statusCheckInterval)
+          setStatusCheckInterval(null)
+        }
+        setAnalysisData(result)
+        setLoading(false)
+        setError(null)
+      } else if (status === 'failed') {
+        // Ошибка анализа
+        if (statusCheckInterval) {
+          clearInterval(statusCheckInterval)
+          setStatusCheckInterval(null)
+        }
+        setError(statusError || 'Ошибка анализа игры')
+        setLoading(false)
+      }
+      // Если status === 'processing' или 'pending', продолжаем ждать
+    } catch (err: any) {
+      console.error('Failed to check analysis status:', err)
+      // Не останавливаем проверку при ошибке, возможно временная проблема
+    }
+  }
+
+  const loadAnalysis = async () => {
+    // Перезапускаем анализ
+    if (statusCheckInterval) {
+      clearInterval(statusCheckInterval)
+      setStatusCheckInterval(null)
+    }
+    await startAnalysis()
   }
 
   const handleExportMat = () => {
@@ -49,7 +118,21 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
   };
 
   if (loading) {
-    return <div className="game-analytics-loading-v2">Загрузка подробной аналитики...</div>
+    return (
+      <div className="game-analytics-loading-v2">
+        <div>Анализ игры в процессе...</div>
+        {analysisStatus === 'processing' && analysisProgress > 0 && (
+          <div style={{ marginTop: '8px', fontSize: '14px', color: '#B6B6B6' }}>
+            Прогресс: {analysisProgress}%
+          </div>
+        )}
+        {analysisStatus === 'pending' && (
+          <div style={{ marginTop: '8px', fontSize: '14px', color: '#B6B6B6' }}>
+            Ожидание в очереди...
+          </div>
+        )}
+      </div>
+    )
   }
 
   if (error) {
