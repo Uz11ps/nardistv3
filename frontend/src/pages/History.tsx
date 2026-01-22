@@ -36,7 +36,8 @@ export default function History() {
   const { user } = useAuthStore()
   const timezone = user?.timezone || 'Europe/Moscow'
   const [games, setGames] = useState<GameHistory[]>([])
-  const [filter, setFilter] = useState<'all' | 'wins' | 'losses' | 'bot' | 'players_only'>('all')
+  const [resultFilter, setResultFilter] = useState<'all' | 'wins' | 'losses'>('all')
+  const [gameTypeFilter, setGameTypeFilter] = useState<'all' | 'bot' | 'players_only'>('all')
   const [modeFilter, setModeFilter] = useState<'all' | 'short' | 'long'>('all')
   const [selectedGame, setSelectedGame] = useState<GameHistory | null>(null)
   const [replayData, setReplayData] = useState<any>(null)
@@ -62,7 +63,7 @@ export default function History() {
     if (hasPremium !== undefined) {
       loadHistory()
     }
-  }, [filter, modeFilter, hasPremium])
+  }, [resultFilter, gameTypeFilter, modeFilter, hasPremium])
 
   // Очистка интервала при размонтировании
   useEffect(() => {
@@ -162,21 +163,32 @@ export default function History() {
   const loadHistory = async () => {
     try {
       const params = new URLSearchParams()
-      if (filter !== 'all') {
-        if (filter === 'players_only') {
-          params.append('type', 'vs_player')
-        } else {
-          params.append('result', filter)
-        }
+      
+      // Фильтр по результату
+      if (resultFilter !== 'all') {
+        params.append('result', resultFilter)
       }
-      if (modeFilter !== 'all') params.append('mode', modeFilter)
+      
+      // Фильтр по типу игры
+      if (gameTypeFilter === 'bot') {
+        params.append('type', 'vs_bot')
+      } else if (gameTypeFilter === 'players_only') {
+        params.append('type', 'vs_player')
+      }
+      
+      // Фильтр по режиму
+      if (modeFilter !== 'all') {
+        params.append('mode', modeFilter)
+      }
 
       const response = await apiClient.get(`/history?${params.toString()}`)
       let allGames = response.data || []
       
-      // Если фильтр players_only, дополнительно фильтруем на клиенте (на случай если бэкенд не поддерживает)
-      if (filter === 'players_only') {
+      // Дополнительная фильтрация на клиенте для надежности
+      if (gameTypeFilter === 'players_only') {
         allGames = allGames.filter((game: GameHistory) => game.type === 'vs_player' || game.type === 'tournament')
+      } else if (gameTypeFilter === 'bot') {
+        allGames = allGames.filter((game: GameHistory) => game.type === 'vs_bot')
       }
       
       // Без премиума показываем только 5 последних матчей
@@ -368,42 +380,57 @@ export default function History() {
       <div className="history-content">
         {/* Фильтры */}
         <div className="history-filters">
+          {/* Фильтр по результату */}
           <div className="filter-group">
             <div className="filter-label">Результат:</div>
             <div className="filter-buttons">
               <button
-                className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-                onClick={() => setFilter('all')}
+                className={`filter-btn ${resultFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setResultFilter('all')}
               >
                 Все
               </button>
               <button
-                className={`filter-btn ${filter === 'wins' ? 'active' : ''}`}
-                onClick={() => setFilter('wins')}
+                className={`filter-btn ${resultFilter === 'wins' ? 'active' : ''}`}
+                onClick={() => setResultFilter('wins')}
               >
                 Победы
               </button>
               <button
-                className={`filter-btn ${filter === 'losses' ? 'active' : ''}`}
-                onClick={() => setFilter('losses')}
+                className={`filter-btn ${resultFilter === 'losses' ? 'active' : ''}`}
+                onClick={() => setResultFilter('losses')}
               >
                 Поражения
               </button>
+            </div>
+          </div>
+
+          {/* Фильтр по типу игры */}
+          <div className="filter-group">
+            <div className="filter-label">Игра:</div>
+            <div className="filter-buttons">
               <button
-                className={`filter-btn ${filter === 'bot' ? 'active' : ''}`}
-                onClick={() => setFilter('bot')}
+                className={`filter-btn ${gameTypeFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setGameTypeFilter('all')}
+              >
+                Все
+              </button>
+              <button
+                className={`filter-btn ${gameTypeFilter === 'bot' ? 'active' : ''}`}
+                onClick={() => setGameTypeFilter('bot')}
               >
                 С ботом
               </button>
               <button
-                className={`filter-btn ${filter === 'players_only' ? 'active' : ''}`}
-                onClick={() => setFilter('players_only')}
+                className={`filter-btn ${gameTypeFilter === 'players_only' ? 'active' : ''}`}
+                onClick={() => setGameTypeFilter('players_only')}
               >
                 Только с игроками
               </button>
             </div>
           </div>
 
+          {/* Фильтр по режиму */}
           <div className="filter-group">
             <div className="filter-label">Режим:</div>
             <div className="filter-buttons">
