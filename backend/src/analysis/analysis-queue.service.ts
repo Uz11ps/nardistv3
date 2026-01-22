@@ -142,11 +142,18 @@ export class AnalysisQueueService {
       return;
     }
 
-    // Берем задачи из очереди
-    const jobsToProcess = this.pendingQueue.splice(0, availableSlots);
+    // Берем задачи из очереди (только одну за раз для снижения нагрузки)
+    const jobsToProcess = this.pendingQueue.splice(0, Math.min(availableSlots, 1));
     
-    // Запускаем обработку каждой задачи
-    for (const job of jobsToProcess) {
+    // Запускаем обработку каждой задачи с задержкой
+    for (let i = 0; i < jobsToProcess.length; i++) {
+      const job = jobsToProcess[i];
+      
+      // Добавляем задержку между запусками задач для снижения нагрузки
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.QUEUE_DELAY_MS));
+      }
+      
       this.processJob(job).catch(error => {
         this.logger.error(`Ошибка обработки задачи ${job.id}:`, error);
         job.status = AnalysisStatus.FAILED;
@@ -233,6 +240,11 @@ export class AnalysisQueueService {
         // Обновляем прогресс
         processedMoves++;
         job.progress = 10 + Math.floor((processedMoves / totalMoves) * 80);
+
+        // Добавляем небольшую задержку между анализами ходов для снижения нагрузки
+        if (processedMoves > 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
 
         // Анализируем ход
         let moveAnalysis: any | null = null;
