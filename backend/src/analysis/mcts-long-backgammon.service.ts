@@ -135,15 +135,21 @@ export class MCTSLongBackgammonService {
         // 2. Expansion: расширяем узел
         const expandedNode = this.expand(node);
 
-        // 3. Simulation: симулируем игру до конца (последовательно для снижения нагрузки)
+        // 3. Simulation: симулируем игру до конца
+        // На облачных VM используем параллелизм для ускорения
         const results: SimulationResult[] = [];
-        for (let i = 0; i < this.PARALLEL_SIMULATIONS; i++) {
-          const result = await this.simulateAsync(expandedNode.state);
-          results.push(result);
-          
-          // Небольшая задержка между симуляциями для снижения нагрузки CPU
-          if (i < this.PARALLEL_SIMULATIONS - 1) {
-            await new Promise(resolve => setTimeout(resolve, 10));
+        if (this.PARALLEL_SIMULATIONS > 1) {
+          // Параллельные симуляции для мощных серверов (Яндекс.Облако)
+          const promises = Array.from({ length: this.PARALLEL_SIMULATIONS }, () => 
+            this.simulateAsync(expandedNode.state)
+          );
+          const parallelResults = await Promise.all(promises);
+          results.push(...parallelResults);
+        } else {
+          // Последовательные симуляции для слабых серверов
+          for (let i = 0; i < this.PARALLEL_SIMULATIONS; i++) {
+            const result = await this.simulateAsync(expandedNode.state);
+            results.push(result);
           }
         }
 
