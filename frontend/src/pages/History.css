@@ -361,6 +361,8 @@
   box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
   border: 0.1px solid #C93C3D;
   color: #FFF;
+  min-width: 100px; /* Фиксируем минимальную ширину чтобы не было смещения */
+  text-align: center;
 }
 
 .history-action-btn-analyze:hover:not(:disabled) {

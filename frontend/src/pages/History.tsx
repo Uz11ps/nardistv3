@@ -490,14 +490,22 @@ export default function History() {
                         className="history-action-btn history-action-btn-analyze"
                         onClick={() => handleAnalyze(game.id)}
                         disabled={loadingAnalysis}
+                        style={{ 
+                          minWidth: '100px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
                       >
-                        {loadingAnalysis && game.id === selectedGame?.id ? (
-                          analysisStatus === 'processing' && analysisProgress > 0 
-                            ? `Анализ... ${analysisProgress}%`
-                            : analysisStatus === 'pending'
-                            ? 'В очереди...'
-                            : 'Анализ...'
-                        ) : 'Анализ'}
+                        <span style={{ whiteSpace: 'nowrap' }}>
+                          {loadingAnalysis && game.id === selectedGame?.id ? (
+                            analysisStatus === 'processing' && analysisProgress > 0 
+                              ? `${analysisProgress}%`
+                              : analysisStatus === 'pending'
+                              ? '...'
+                              : '...'
+                          ) : 'Анализ'}
+                        </span>
                       </button>
                       ) : (
                         <button 
