@@ -497,7 +497,7 @@ export default function History() {
                       <div 
                         className={`move-item ${selectedAnalysisMoveIndex === idx ? 'selected' : ''} ${move1.isError ? 'error-' + move1.errorType : ''} ${move1.isBestMove ? 'best-move' : ''}`}
                         onClick={() => setSelectedAnalysisMoveIndex(idx)}
-                        title={move1.isBestMove ? 'Лучший ход!' : (move1.isError ? `${move1.errorDescription || ''}${move1.bestMove ? ' Лучший ход: ' + move1.bestMove.map((m: any) => `${m.from === -1 ? 'bar' : m.from}/${m.to === -1 || m.to >= 24 ? 'off' : m.to}`).join(' ') : ''}` : '')}
+                        title={move1.isBestMove ? 'Лучший ход!' : (move1.isError ? `${move1.errorDescription || ''}` : '')}
                       >
                         <span className="move-dice">({move1.move.dice?.join('')})</span>
                         <span className="move-text">
@@ -510,7 +510,7 @@ export default function History() {
                         <div 
                           className={`move-item ${selectedAnalysisMoveIndex === idx + 1 ? 'selected' : ''} ${move2.isError ? 'error-' + move2.errorType : ''} ${move2.isBestMove ? 'best-move' : ''}`}
                           onClick={() => setSelectedAnalysisMoveIndex(idx + 1)}
-                          title={move2.isBestMove ? 'Лучший ход!' : (move2.isError ? `${move2.errorDescription || ''}${move2.bestMove ? ' Лучший ход: ' + move2.bestMove.map((m: any) => `${m.from === -1 ? 'bar' : m.from}/${m.to === -1 || m.to >= 24 ? 'off' : m.to}`).join(' ') : ''}` : '')}
+                          title={move2.isBestMove ? 'Лучший ход!' : (move2.isError ? `${move2.errorDescription || ''}` : '')}
                         >
                           <span className="move-dice">({move2.move.dice?.join('')})</span>
                           <span className="move-text">
@@ -530,20 +530,10 @@ export default function History() {
                 <div className="analysis-move-details-v2">
                   {(() => {
                     const item = analysisData.allMoves[selectedAnalysisMoveIndex];
-                    const probs = item.winProbabilities || { win: 0.5, winG: 0, winBG: 0, loseG: 0, loseBG: 0 };
                     
                     return (
                       <>
-                        <div className="probs-table">
-                          <div className="prob-col"><span>Win</span><strong>{probs.win.toFixed(3)}</strong></div>
-                          <div className="prob-col"><span>Win G</span><strong>{probs.winG.toFixed(3)}</strong></div>
-                          <div className="prob-col"><span>Win BG</span><strong>{probs.winBG.toFixed(3)}</strong></div>
-                          <div className="prob-col"><span>Lose G</span><strong>{probs.loseG.toFixed(3)}</strong></div>
-                          <div className="prob-col"><span>Lose BG</span><strong>{probs.loseBG.toFixed(3)}</strong></div>
-                          <div className="prob-col equity"><span>Equity</span><strong>{item.equity?.toFixed(3)}</strong></div>
-                        </div>
-
-                        {/* Отображение ошибки и лучшего хода */}
+                        {/* Отображение ошибки и пояснений GPT */}
                         {item.isError && (
                           <div className="analysis-error-info" style={{
                             padding: '12px',
@@ -567,41 +557,62 @@ export default function History() {
                                item.errorType === 'mistake' ? 'Ошибка' : 'Неточность'}
                             </div>
                             {item.errorDescription && (
-                              <div style={{ fontSize: '13px', color: '#B6B6B6', marginBottom: '8px' }}>
+                              <div style={{ fontSize: '13px', color: '#B6B6B6', lineHeight: '1.5' }}>
                                 {item.errorDescription}
-                              </div>
-                            )}
-                            {item.bestMove && item.bestMove.length > 0 && (
-                              <div style={{ fontSize: '13px', color: '#FFF', marginTop: '8px' }}>
-                                <span style={{ color: '#B6B6B6' }}>Лучший ход по equity: </span>
-                                <span style={{ fontWeight: '600', color: '#4CAF50' }}>
-                                  {item.bestMove.map((m: any, i: number) => (
-                                    <span key={i}>
-                                      {i > 0 ? ' ' : ''}
-                                      {m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}
-                                    </span>
-                                  ))}
-                                </span>
                               </div>
                             )}
                           </div>
                         )}
 
-                        <div className="alternatives-table-v2">
-                          {item.alternatives?.map((alt: any, aIdx: number) => (
-                            <div key={aIdx} className={`alt-row ${alt.isCurrent ? 'current' : ''}`}>
-                              <div className="alt-move">
-                                <span className="alt-dice">({item.move.dice?.join('')})</span>
-                                {alt.moves?.length > 0 ? alt.moves.map((m: any, i: number) => (
-                                  <span key={i}>{m.from === -1 ? 'bar' : m.from}/{m.to === -1 || m.to >= 24 ? 'off' : m.to}{i < alt.moves.length - 1 ? ' ' : ''}</span>
-                                )) : 'no move'}
+                        {/* GPT анализ для всех ходов */}
+                        {item.gptAnalysis && (
+                          <div style={{
+                            padding: '12px',
+                            background: 'rgba(76, 175, 80, 0.1)',
+                            borderRadius: '8px',
+                            marginBottom: '16px',
+                            border: '1px solid rgba(76, 175, 80, 0.3)'
+                          }}>
+                            {item.gptAnalysis.evaluation && (
+                              <div style={{
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                marginBottom: '8px',
+                                color: item.gptAnalysis.evaluation === 'excellent' ? '#4CAF50' :
+                                       item.gptAnalysis.evaluation === 'good' ? '#81C784' :
+                                       item.gptAnalysis.evaluation === 'neutral' ? '#B6B6B6' :
+                                       item.gptAnalysis.evaluation === 'inaccuracy' ? '#FFD600' :
+                                       item.gptAnalysis.evaluation === 'mistake' ? '#FF9800' : '#E84142'
+                              }}>
+                                Оценка: {item.gptAnalysis.evaluation === 'excellent' ? 'Отличный ход' :
+                                         item.gptAnalysis.evaluation === 'good' ? 'Хороший ход' :
+                                         item.gptAnalysis.evaluation === 'neutral' ? 'Нейтральный ход' :
+                                         item.gptAnalysis.evaluation === 'inaccuracy' ? 'Неточность' :
+                                         item.gptAnalysis.evaluation === 'mistake' ? 'Ошибка' : 'Грубая ошибка'}
                               </div>
-                              <div className="alt-equity">
-                                {alt.equity.toFixed(3)} ({alt.diff > 0 ? '+' : ''}{alt.diff.toFixed(3)})
+                            )}
+                            {item.gptAnalysis.explanation && (
+                              <div style={{ fontSize: '13px', color: '#B6B6B6', marginBottom: '8px', lineHeight: '1.5' }}>
+                                {item.gptAnalysis.explanation}
                               </div>
-                            </div>
-                          ))}
-                        </div>
+                            )}
+                            {item.gptAnalysis.reasoning && (
+                              <div style={{ fontSize: '13px', color: '#D0D0D0', marginBottom: '8px', lineHeight: '1.5' }}>
+                                {item.gptAnalysis.reasoning}
+                              </div>
+                            )}
+                            {item.gptAnalysis.recommendations && item.gptAnalysis.recommendations.length > 0 && (
+                              <div style={{ fontSize: '13px', color: '#FFF', marginTop: '8px' }}>
+                                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Рекомендации:</div>
+                                <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: '1.5' }}>
+                                  {item.gptAnalysis.recommendations.map((rec: string, idx: number) => (
+                                    <li key={idx} style={{ marginBottom: '4px' }}>{rec}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </>
                     );
                   })()}
@@ -805,14 +816,9 @@ export default function History() {
                               Упущено: {error.scoreChange.toFixed(1)} очков
                             </div>
                           )}
-                          {error.bestMove && error.bestMove.length > 0 && (
+                          {error.bestMove && typeof error.bestMove === 'string' && (
                             <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.8 }}>
-                              Лучший ход: {error.bestMove.map((m: any, i: number) => (
-                                <span key={i}>
-                                  {i > 0 ? ', ' : ''}
-                                  {m.from === -1 ? 'бар' : m.from} → {m.to === -1 ? 'вынос' : m.to >= 24 ? 'вынос' : m.to}
-                                </span>
-                              ))}
+                              Лучший ход: {error.bestMove}
                             </div>
                           )}
                         </div>
