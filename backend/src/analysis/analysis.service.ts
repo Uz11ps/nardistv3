@@ -879,18 +879,37 @@ export class AnalysisService {
     const points = gameState.points || [];
     let risk = 0;
 
-    // Риск от блотов
-    const blots = this.countBlots(points, playerIndex);
-    risk -= blots * 0.15;
+    const isLong = mode === 'long' || mode === 'LONG';
+    
+    // Риск от блотов - ТОЛЬКО для коротких нард
+    if (!isLong) {
+      const blots = this.countBlots(points, playerIndex);
+      risk -= blots * 0.15;
+    }
 
     // Риск от шашек на баре
     const bar = Array.isArray(gameState.bar) ? gameState.bar : [gameState.bar?.white || 0, gameState.bar?.black || 0];
     const myBarCount = bar[playerIndex];
     risk -= myBarCount * 0.2;
 
-    // Риск от незащищенных шашек в доме противника
-    const exposedCheckers = this.countExposedCheckers(points, playerIndex, mode);
-    risk -= exposedCheckers * 0.1;
+    // Риск от незащищенных шашек в доме противника - ТОЛЬКО для коротких нард
+    if (!isLong) {
+      const exposedCheckers = this.countExposedCheckers(points, playerIndex, mode);
+      risk -= exposedCheckers * 0.1;
+    }
+    
+    // Для длинных нард: риск от плохого распределения и timing
+    if (isLong) {
+      const distribution = this.evaluateDistribution(gameState, playerIndex, mode);
+      if (distribution < -0.3) {
+        risk -= 0.1; // Штраф за плохое распределение
+      }
+      
+      const timing = this.evaluateTiming(gameState, playerIndex, mode);
+      if (timing < -0.3) {
+        risk -= 0.1; // Штраф за плохой timing
+      }
+    }
 
     return Math.max(-1, Math.min(0, risk)); // Риск всегда отрицательный
   }
@@ -992,14 +1011,18 @@ export class AnalysisService {
     const barBefore = Array.isArray(stateBefore.bar) ? stateBefore.bar : [stateBefore.bar?.white || 0, stateBefore.bar?.black || 0];
     const barAfter = Array.isArray(stateAfter.bar) ? stateAfter.bar : [stateAfter.bar?.white || 0, stateAfter.bar?.black || 0];
 
-    // 1. Проверка безопасности шашек (блоты)
-    const blotsBefore = this.countBlots(pointsBefore, playerIndex);
-    const blotsAfter = this.countBlots(pointsAfter, playerIndex);
-    const blotsIncrease = blotsAfter - blotsBefore;
-    if (blotsIncrease > 0) {
-      quality -= blotsIncrease * 0.15; // Штраф за создание блотов
-    } else if (blotsIncrease < 0) {
-      quality += Math.abs(blotsIncrease) * 0.1; // Бонус за устранение блотов
+    const isLong = mode === 'long' || mode === 'LONG';
+    
+    // 1. Проверка безопасности шашек (блоты) - ТОЛЬКО для коротких нард
+    if (!isLong) {
+      const blotsBefore = this.countBlots(pointsBefore, playerIndex);
+      const blotsAfter = this.countBlots(pointsAfter, playerIndex);
+      const blotsIncrease = blotsAfter - blotsBefore;
+      if (blotsIncrease > 0) {
+        quality -= blotsIncrease * 0.15; // Штраф за создание блотов
+      } else if (blotsIncrease < 0) {
+        quality += Math.abs(blotsIncrease) * 0.1; // Бонус за устранение блотов
+      }
     }
 
     // 2. Проверка вывода шашек с бара
@@ -1036,10 +1059,12 @@ export class AnalysisService {
       quality += (homeProgressAfter - homeProgressBefore) * 0.08; // Бонус за продвижение
     }
 
-    // 7. Штраф за оставление шашек в опасности (одиночные шашки в доме противника)
-    const exposedCheckers = this.countExposedCheckers(pointsAfter, playerIndex, mode);
-    if (exposedCheckers > 0) {
-      quality -= exposedCheckers * 0.1; // Штраф за незащищенные шашки
+    // 7. Штраф за оставление шашек в опасности (одиночные шашки в доме противника) - ТОЛЬКО для коротких нард
+    if (!isLong) {
+      const exposedCheckers = this.countExposedCheckers(pointsAfter, playerIndex, mode);
+      if (exposedCheckers > 0) {
+        quality -= exposedCheckers * 0.1; // Штраф за незащищенные шашки
+      }
     }
 
     // 8. Оценка изменения распределения шашек
@@ -1198,13 +1223,20 @@ export class AnalysisService {
 
   /**
    * Подсчет блотов (одиночных шашек)
+   * Блот = одиночная шашка на точке (points[i] === 1 для белых, points[i] === -1 для черных)
+   * ВАЖНО: В длинных нардах шашки нельзя бить, поэтому блоты не являются проблемой
+   * Эта функция используется только для коротких нард
    */
   private countBlots(points: number[], playerIndex: number): number {
     let count = 0;
+    // Проходим по всем 24 точкам доски
     for (let i = 0; i < points.length; i++) {
+      // Для белых: блот = одна шашка на точке (points[i] === 1)
       if (playerIndex === 0 && points[i] === 1) {
         count++;
-      } else if (playerIndex === 1 && points[i] === -1) {
+      } 
+      // Для черных: блот = одна шашка на точке (points[i] === -1)
+      else if (playerIndex === 1 && points[i] === -1) {
         count++;
       }
     }
@@ -1288,17 +1320,27 @@ export class AnalysisService {
 
   /**
    * Подсчет незащищенных шашек в доме противника
+   * ВАЖНО: Работает ТОЛЬКО для коротких нард, где можно бить шашки
+   * В длинных нардах шашки нельзя бить, поэтому эта функция не должна использоваться
    */
   private countExposedCheckers(points: number[], playerIndex: number, mode: string): number {
+    const isLong = mode === 'long' || mode === 'LONG';
+    // В длинных нардах шашки нельзя бить, поэтому незащищенных шашек нет
+    if (isLong) {
+      return 0;
+    }
+    
     let count = 0;
     const opponentHomeStart = playerIndex === 0 ? 0 : 18;
     const opponentHomeEnd = playerIndex === 0 ? 5 : 23;
 
+    // Для коротких нард: считаем одиночные шашки в доме противника
+    // Одиночная шашка = points[i] === 1 (для белых) или points[i] === -1 (для черных)
     for (let i = opponentHomeStart; i <= opponentHomeEnd; i++) {
       if (playerIndex === 0 && points[i] === 1) {
-        count++; // Одиночная шашка в доме противника
+        count++; // Одиночная шашка белых в доме черных
       } else if (playerIndex === 1 && points[i] === -1) {
-        count++;
+        count++; // Одиночная шашка черных в доме белых
       }
     }
 
@@ -1360,27 +1402,64 @@ export class AnalysisService {
     const pointsAfter = stateAfter.points || [];
     const barBefore = Array.isArray(stateBefore.bar) ? stateBefore.bar : [stateBefore.bar?.white || 0, stateBefore.bar?.black || 0];
     const barAfter = Array.isArray(stateAfter.bar) ? stateAfter.bar : [stateAfter.bar?.white || 0, stateAfter.bar?.black || 0];
+    
+    const isLong = mode === 'long' || mode === 'LONG';
 
-    // Проверяем основные проблемы
-    const blotsIncrease = this.countBlots(pointsAfter, playerIndex) - this.countBlots(pointsBefore, playerIndex);
-    if (blotsIncrease > 0) {
-      reasons.push(`создано ${blotsIncrease} незащищенных шашек`);
+    // Для КОРОТКИХ нард: проверяем блоты и незащищенные шашки
+    if (!isLong) {
+      const blotsIncrease = this.countBlots(pointsAfter, playerIndex) - this.countBlots(pointsBefore, playerIndex);
+      if (blotsIncrease > 0) {
+        reasons.push(`создано ${blotsIncrease} незащищенных шашек`);
+      }
+
+      // Проверяем незащищенные шашки в доме противника (только для коротких)
+      const exposedCheckers = this.countExposedCheckers(pointsAfter, playerIndex, mode);
+      if (exposedCheckers > 0) {
+        reasons.push(`${exposedCheckers} незащищенных шашек в доме противника`);
+      }
     }
 
+    // Для ВСЕХ режимов: проверка вывода с бара
     const barReduction = barBefore[playerIndex] - barAfter[playerIndex];
     if (barReduction === 0 && barBefore[playerIndex] > 0) {
       reasons.push('не выведены шашки с бара');
     }
 
-    const exposedCheckers = this.countExposedCheckers(pointsAfter, playerIndex, mode);
-    if (exposedCheckers > 0) {
-      reasons.push(`${exposedCheckers} незащищенных шашек в доме противника`);
-    }
-
+    // Для ВСЕХ режимов: проверка примы
     const primeAfter = this.calculatePrimeLength(pointsAfter, playerIndex);
     const primeBefore = this.calculatePrimeLength(pointsBefore, playerIndex);
     if (primeAfter < primeBefore) {
-      reasons.push('разрушена призма');
+      reasons.push('ухудшена прима');
+    }
+    
+    // Для ДЛИННЫХ нард: специфичные проверки
+    if (isLong) {
+      // Проверяем ухудшение распределения
+      const distributionBefore = this.evaluateDistribution(stateBefore, playerIndex, mode);
+      const distributionAfter = this.evaluateDistribution(stateAfter, playerIndex, mode);
+      if (distributionAfter < distributionBefore - 0.2) {
+        reasons.push('ухудшено распределение шашек');
+      }
+      
+      // Проверяем ухудшение timing
+      const timingBefore = this.evaluateTiming(stateBefore, playerIndex, mode);
+      const timingAfter = this.evaluateTiming(stateAfter, playerIndex, mode);
+      if (timingAfter < timingBefore - 0.2) {
+        reasons.push('ухудшен timing позиции');
+      }
+      
+      // Проверяем потерю якорей
+      const anchorsBefore = this.countAnchors(pointsBefore, playerIndex, mode);
+      const anchorsAfter = this.countAnchors(pointsAfter, playerIndex, mode);
+      if (anchorsAfter < anchorsBefore) {
+        reasons.push(`потеряно ${anchorsBefore - anchorsAfter} якорей`);
+      }
+      
+      // Проверяем неэффективное использование кубиков
+      const diceEfficiency = this.evaluateDiceEfficiency(currentMove, stateBefore, stateAfter, playerIndex);
+      if (diceEfficiency < -0.1) {
+        reasons.push('неэффективное использование кубиков');
+      }
     }
 
     return reasons.length > 0 ? reasons.join(', ') : '';

@@ -256,8 +256,13 @@ export default function History() {
   }
 
   const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
+    if (!seconds || seconds === 0) return '0:00'
+    const hours = Math.floor(seconds / 3600)
+    const mins = Math.floor((seconds % 3600) / 60)
     const secs = seconds % 60
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    }
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
@@ -911,11 +916,38 @@ export default function History() {
                   )}
 
                   <div className="history-game-details-item">
-                    <div className="history-game-details-label">Дата и время</div>
+                    <div className="history-game-details-label">Начало игры</div>
                     <div className="history-game-details-value">
-                      <span className="card-subtitle">{formatRelativeTime(selectedGameDetails.createdAt, timezone)}</span>
+                      <span className="card-title" style={{ fontSize: '14px', fontWeight: '500' }}>
+                        {new Date(selectedGameDetails.createdAt).toLocaleString('ru-RU', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: timezone
+                        })}
+                      </span>
                     </div>
                   </div>
+
+                  {(selectedGameDetails.updatedAt || selectedGameDetails.finishedAt) && (
+                    <div className="history-game-details-item">
+                      <div className="history-game-details-label">Окончание игры</div>
+                      <div className="history-game-details-value">
+                        <span className="card-title" style={{ fontSize: '14px', fontWeight: '500' }}>
+                          {new Date(selectedGameDetails.updatedAt || selectedGameDetails.finishedAt!).toLocaleString('ru-RU', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZone: timezone
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
