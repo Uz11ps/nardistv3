@@ -100,8 +100,10 @@ export class HistoryService {
           ? Math.floor((game.updatedAt.getTime() - game.createdAt.getTime()) / 1000)
           : 0,
         createdAt: game.createdAt.toISOString(),
+        updatedAt: game.updatedAt ? game.updatedAt.toISOString() : null,
         finishedAt: game.updatedAt ? game.updatedAt.toISOString() : null,
         moveCount: moves.length,
+        stake: game.stake || 0,
         // Базовая информация о ходах для отображения в списке
         moves: moves.map((move) => ({
           moveNumber: move.moveNumber,

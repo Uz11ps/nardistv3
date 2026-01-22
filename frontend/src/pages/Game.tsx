@@ -3081,8 +3081,9 @@ export default function Game() {
             
             <div className="game-score-side">
               {gameInfo?.stake && gameInfo.stake > 0 && (
-                <div className="game-stake-label" style={{ fontSize: '12px', color: '#FFD700', marginBottom: '4px', fontWeight: 600 }}>
-                  Ставка: {gameInfo.stake} NAR
+                <div className="game-stake-label">
+                  <img src="/img/narCoin.png" alt="coin" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '4px' }} />
+                  <span>{gameInfo.stake}</span>
                 </div>
               )}
               <div className="game-score-label">до {gameInfo?.matchesToWin || 1}</div>
@@ -3166,8 +3167,9 @@ export default function Game() {
               {/* Счет в центре */}
               <div className="game-score-section">
                 {gameInfo?.stake && gameInfo.stake > 0 && (
-                  <div className="game-stake-label" style={{ fontSize: '12px', color: '#FFD700', marginBottom: '4px', fontWeight: 600 }}>
-                    Ставка: {gameInfo.stake} NAR
+                  <div className="game-stake-label">
+                    <img src="/img/narCoin.png" alt="coin" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '4px' }} />
+                    <span>{gameInfo.stake}</span>
                   </div>
                 )}
                 <div className="game-score-label">до {gameInfo?.matchesToWin || 1}</div>

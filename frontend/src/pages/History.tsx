@@ -23,9 +23,11 @@ interface GameHistory {
   score: { player1: number; player2: number }
   duration: number
   createdAt: string
+  updatedAt?: string
   moves: any[]
   moveCount: number
   winnerId?: string | null
+  stake?: number
 }
 
 export default function History() {
@@ -836,74 +838,83 @@ export default function History() {
             </div>
             <div className="history-game-details-content">
               <div className="history-game-details-section">
-                <div className="history-game-details-item">
-                  <div className="history-game-details-label">Результат</div>
-                  <div className="history-game-details-value">
-                    <div className={`result-badge ${selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result}`} style={{ width: '40px', height: '40px', marginRight: '12px' }}>
-                      {(selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'win' ? (
-                        <TrophyIcon size={24} style={{ color: '#FFD700' }} />
-                      ) : (selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'loss' ? (
-                        <span style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1' }}>✕</span>
-                      ) : (
-                        <span style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1' }}>＝</span>
-                      )}
-                    </div>
-                    <span className="card-title" style={{ fontSize: '18px' }}>
-                      {(selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'win' ? 'Победа' : (selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'loss' ? 'Поражение' : 'Ничья'}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="history-game-details-item">
-                  <div className="history-game-details-label">Против</div>
-                  <div className="history-game-details-value">
-                    {selectedGameDetails.type === 'vs_bot' ? (
-                      <>
-                        <RobotIcon size={18} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                        <span className="card-title">Бот</span>
-                      </>
+                {/* Результат - выделенный блок */}
+                <div className="history-game-details-result-card">
+                  <div className={`result-badge-large ${selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result}`}>
+                    {(selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'win' ? (
+                      <TrophyIcon size={32} style={{ color: '#FFD700' }} />
+                    ) : (selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'loss' ? (
+                      <span style={{ fontSize: '28px', fontWeight: '700', lineHeight: '1' }}>✕</span>
                     ) : (
-                      <span className="card-title">{selectedGameDetails.opponent.username}</span>
+                      <span style={{ fontSize: '28px', fontWeight: '700', lineHeight: '1' }}>＝</span>
                     )}
                   </div>
-                </div>
-
-                <div className="history-game-details-item">
-                  <div className="history-game-details-label">Режим</div>
-                  <div className="history-game-details-value">
-                    <span className="mode-badge" style={{ fontSize: '14px', padding: '6px 12px' }}>
-                      {selectedGameDetails.mode === 'long' ? 'Длинные нарды' : 'Короткие нарды'}
+                  <div className="result-text">
+                    <span className="result-title">
+                      {(selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'win' ? 'Победа' : (selectedGameDetails.result === 'draw' && selectedGameDetails.type === 'vs_bot' && !selectedGameDetails.winnerId ? 'loss' : selectedGameDetails.result) === 'loss' ? 'Поражение' : 'Ничья'}
                     </span>
-                  </div>
-                </div>
-
-                <div className="history-game-details-item">
-                  <div className="history-game-details-label">Счет</div>
-                  <div className="history-game-details-value">
-                    <span className="card-title" style={{ fontSize: '20px', fontWeight: '700' }}>
+                    <span className="result-score">
                       {selectedGameDetails.score.player1}:{selectedGameDetails.score.player2}
                     </span>
                   </div>
                 </div>
 
-                <div className="history-game-details-item">
-                  <div className="history-game-details-label">Ходов</div>
-                  <div className="history-game-details-value">
-                    <span className="card-title">{selectedGameDetails.moveCount}</span>
+                {/* Основная информация - в две колонки */}
+                <div className="history-game-details-grid">
+                  <div className="history-game-details-item">
+                    <div className="history-game-details-label">Против</div>
+                    <div className="history-game-details-value">
+                      {selectedGameDetails.type === 'vs_bot' ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <RobotIcon size={20} style={{ color: '#B6B6B6' }} />
+                          <span className="card-title">Бот</span>
+                        </div>
+                      ) : (
+                        <span className="card-title">{selectedGameDetails.opponent.username}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div className="history-game-details-item">
-                  <div className="history-game-details-label">Длительность</div>
-                  <div className="history-game-details-value">
-                    <span className="card-title">{formatDuration(selectedGameDetails.duration)}</span>
+                  <div className="history-game-details-item">
+                    <div className="history-game-details-label">Режим</div>
+                    <div className="history-game-details-value">
+                      <span className="mode-badge" style={{ fontSize: '14px', padding: '6px 12px' }}>
+                        {selectedGameDetails.mode === 'long' ? 'Длинные нарды' : 'Короткие нарды'}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="history-game-details-item">
-                  <div className="history-game-details-label">Дата и время</div>
-                  <div className="history-game-details-value">
-                    <span className="card-subtitle">{formatRelativeTime(selectedGameDetails.createdAt, timezone)}</span>
+                  <div className="history-game-details-item">
+                    <div className="history-game-details-label">Ходов</div>
+                    <div className="history-game-details-value">
+                      <span className="card-title" style={{ fontSize: '18px', fontWeight: '600' }}>{selectedGameDetails.moveCount}</span>
+                    </div>
+                  </div>
+
+                  <div className="history-game-details-item">
+                    <div className="history-game-details-label">Длительность</div>
+                    <div className="history-game-details-value">
+                      <span className="card-title" style={{ fontSize: '18px', fontWeight: '600' }}>{formatDuration(selectedGameDetails.duration)}</span>
+                    </div>
+                  </div>
+
+                  {selectedGameDetails.stake && selectedGameDetails.stake > 0 && (
+                    <div className="history-game-details-item">
+                      <div className="history-game-details-label">Ставка</div>
+                      <div className="history-game-details-value">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <img src="/img/narCoin.png" alt="coin" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
+                          <span className="card-title" style={{ fontSize: '18px', fontWeight: '600', color: '#FFD700' }}>{selectedGameDetails.stake}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="history-game-details-item">
+                    <div className="history-game-details-label">Дата и время</div>
+                    <div className="history-game-details-value">
+                      <span className="card-subtitle">{formatRelativeTime(selectedGameDetails.createdAt, timezone)}</span>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -958,6 +958,69 @@
   gap: 20px;
 }
 
+.history-game-details-result-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 8px;
+}
+
+.result-badge-large {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.result-badge-large.win {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(56, 142, 60, 0.2) 100%);
+  border: 2px solid rgba(76, 175, 80, 0.4);
+}
+
+.result-badge-large.loss {
+  background: linear-gradient(135deg, rgba(232, 65, 66, 0.2) 0%, rgba(198, 40, 40, 0.2) 100%);
+  border: 2px solid rgba(232, 65, 66, 0.4);
+}
+
+.result-badge-large.draw {
+  background: linear-gradient(135deg, rgba(158, 158, 158, 0.2) 0%, rgba(97, 97, 97, 0.2) 100%);
+  border: 2px solid rgba(158, 158, 158, 0.4);
+}
+
+.result-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.result-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #FFF;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.result-score {
+  font-size: 18px;
+  font-weight: 600;
+  color: #B6B6B6;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.history-game-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
 .history-game-details-item {
   display: flex;
   flex-direction: column;
@@ -1028,6 +1091,29 @@
   
   .history-game-details-section {
     gap: 16px;
+  }
+  
+  .history-game-details-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .history-game-details-result-card {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .result-badge-large {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .result-title {
+    font-size: 20px;
+  }
+  
+  .result-score {
+    font-size: 16px;
   }
   
   .history-game-details-actions {
