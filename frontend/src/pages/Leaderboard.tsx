@@ -55,8 +55,10 @@ export default function Leaderboard() {
   const loadLeaderboard = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get(`/ratings/leaderboard?sortBy=${sortBy}`).catch(() => ({ data: [] }))
-      setLeaderboard(response.data || [])
+      const response = await apiClient.get(`/ratings/leaderboard?mode=short&sortBy=${sortBy}&limit=100`).catch(() => ({ data: [] }))
+      const data = response.data || []
+      console.log('Leaderboard data received:', data.length, 'entries')
+      setLeaderboard(data)
     } catch (error) {
       console.error('Failed to load leaderboard:', error)
     } finally {

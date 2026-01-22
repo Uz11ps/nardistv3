@@ -137,35 +137,37 @@ export class RatingsService {
 
     const ratings = await query.getMany();
 
-    const entries = await Promise.all(ratings.map(async (rating) => {
-      let totalMatches = (rating.wins || 0) + (rating.losses || 0) + (rating.draws || 0);
-      let winRate = totalMatches >= 100 && totalMatches > 0 
-        ? Math.round(((rating.wins || 0) / totalMatches) * 100 * 10) / 10 
-        : null;
-      let xp = Number(rating.user.xp || 0);
-      
-      const hasPremium = rating.user ? await this.subscriptionService.hasActiveSubscription(rating.user.id) : false;
-      
-      return {
-        user: rating.user ? {
-          id: rating.user.id,
-          username: rating.user.username,
-          nickname: rating.user.nickname,
-          avatarUrl: rating.user.avatarUrl,
-          level: rating.user.level || 1,
-          rating: rating.elo,
-          xp,
-          badge: this.getBadge(rating.elo),
-          hasPremium,
-        } : null,
-        wins: rating.wins || 0,
-        losses: rating.losses || 0,
-        draws: rating.draws || 0,
-        totalMatches,
-        winRate,
-        ratingChange: undefined,
-      };
-    }));
+    const entries = await Promise.all(ratings
+      .filter(rating => rating.user !== null) // Фильтруем записи без пользователя
+      .map(async (rating) => {
+        let totalMatches = (rating.wins || 0) + (rating.losses || 0) + (rating.draws || 0);
+        let winRate = totalMatches >= 100 && totalMatches > 0 
+          ? Math.round(((rating.wins || 0) / totalMatches) * 100 * 10) / 10 
+          : null;
+        let xp = Number(rating.user.xp || 0);
+        
+        const hasPremium = rating.user ? await this.subscriptionService.hasActiveSubscription(rating.user.id) : false;
+        
+        return {
+          user: {
+            id: rating.user.id,
+            username: rating.user.username,
+            nickname: rating.user.nickname,
+            avatarUrl: rating.user.avatarUrl,
+            level: rating.user.level || 1,
+            rating: rating.elo,
+            xp,
+            badge: this.getBadge(rating.elo),
+            hasPremium,
+          },
+          wins: rating.wins || 0,
+          losses: rating.losses || 0,
+          draws: rating.draws || 0,
+          totalMatches,
+          winRate,
+          ratingChange: undefined,
+        };
+      }));
 
     // Сортируем
     if (sortBy === 'xp') {
