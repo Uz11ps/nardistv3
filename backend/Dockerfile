@@ -8,12 +8,16 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
 # Установка GNU Backgammon для анализа коротких нард
-RUN apk add --no-cache gnubg
+# Используем Debian-based образ, так как gnubg доступен в его репозиториях
+RUN apt-get update && \
+    apt-get install -y gnubg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 RUN npm install --only=production
