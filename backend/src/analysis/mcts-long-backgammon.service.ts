@@ -70,8 +70,9 @@ export class MCTSLongBackgammonService {
   // Кэш для результатов анализа позиций
   private positionCache: Map<string, CacheEntry> = new Map();
   
-  // Параллельные симуляции - уменьшено для слабых серверов
-  private readonly PARALLEL_SIMULATIONS = 1; // Количество параллельных симуляций (1 для снижения нагрузки)
+  // Параллельные симуляции
+  // На облачных VM можно увеличить для ускорения (2-4 для 4-8 CPU)
+  private readonly PARALLEL_SIMULATIONS = parseInt(process.env.MCTS_PARALLEL_SIMULATIONS || '2', 10);
 
   constructor(private longBackgammonEngine: LongBackgammonEngine) {
     // Читаем настройки из переменных окружения
