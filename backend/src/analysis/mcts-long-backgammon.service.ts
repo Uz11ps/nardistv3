@@ -228,7 +228,7 @@ export class MCTSLongBackgammonService {
         equityBefore: analysisBefore.equity,
         equityAfter: analysisAfter.equity,
         scoreChange,
-        bestMove: analysisBefore.bestMove,
+        bestMove: analysisBefore.bestMove?.moves,
         alternatives: analysisBefore.alternatives,
         moveQuality,
       };
