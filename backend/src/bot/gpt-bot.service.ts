@@ -100,7 +100,160 @@ export class GptBotService {
   }
 
   /**
-   * Анализ хода и позиции для аналитики игры
+   * Анализ всей игры - передаем GPT полный реплей
+   * GPT анализирует все ходы пользователя в контексте всей игры
+   */
+  async analyzeFullGame(
+    game: any,
+    moves: any[],
+    userId: string,
+    mode: 'short' | 'long',
+  ): Promise<Array<{
+    moveNumber: number;
+    evaluation: 'excellent' | 'good' | 'neutral' | 'inaccuracy' | 'mistake' | 'blunder';
+    explanation: string;
+    reasoning: string;
+    recommendations?: string[];
+    bestMove?: string;
+  }>> {
+    if (!this.apiKey) {
+      return [];
+    }
+
+    try {
+      // Формируем полный реплей игры для GPT
+      const replayDescription = this.describeFullGameReplay(game, moves, userId, mode);
+
+      const prompt = `Ты эксперт по ${mode === 'long' ? 'длинным' : 'коротким'} нардам. Проанализируй ВСЮ игру и оцени каждый ход игрока.
+
+${replayDescription}
+
+ЗАДАЧА: Проанализируй каждый ход игрока (пользователя) в контексте всей игры.
+
+Для каждого хода игрока определи:
+1. Оценка хода: excellent (отличный), good (хороший), neutral (нейтральный), inaccuracy (неточность), mistake (ошибка), blunder (грубая ошибка)
+2. Объяснение: краткое объяснение (1-2 предложения)
+3. Обоснование: детальное обоснование (3-5 предложений) с учетом контекста игры
+4. Рекомендации: что нужно было сделать лучше (если ход не оптимальный)
+5. Лучший ход: какой ход был бы оптимальным (описание хода)
+
+Учитывай:
+- Контекст всей игры (какие ходы были до этого)
+- Развитие позиции на протяжении игры
+- Стратегические цели в данной фазе игры
+- Правила ${mode === 'long' ? 'длинных нард (нельзя бить шашки)' : 'коротких нард (можно бить шашки)'}
+
+Ответь в формате JSON массив:
+[
+  {
+    "moveNumber": 1,
+    "evaluation": "excellent|good|neutral|inaccuracy|mistake|blunder",
+    "explanation": "краткое объяснение",
+    "reasoning": "детальное обоснование",
+    "recommendations": ["рекомендация 1", "рекомендация 2"],
+    "bestMove": "описание лучшего хода"
+  },
+  ...
+]
+
+ВАЖНО: Проанализируй ВСЕ ходы игрока. Укажи конкретные точки, шашки, стратегические цели.`;
+
+      const response = await this.axiosInstance.post('/chat/completions', {
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'Ты эксперт по нардам. Твоя задача - анализировать игры и давать профессиональные оценки всех ходов. Отвечай только в формате JSON массива без дополнительного текста.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.3,
+        max_tokens: 4000,
+      });
+
+      const content = response.data.choices[0]?.message?.content || '';
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        this.logger.warn('No JSON array found in GPT full game analysis response');
+        return [];
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error: any) {
+      this.logger.error(`GPT full game analysis error: ${error.message}`, error.stack);
+      return [];
+    }
+  }
+
+  /**
+   * Описание полного реплея игры для GPT
+   */
+  private describeFullGameReplay(game: any, moves: any[], userId: string, mode: 'short' | 'long'): string {
+    const player1Id = game.player1Id;
+    const player2Id = game.player2Id;
+    const isUserPlayer1 = userId === player1Id;
+    
+    let description = `=== ИНФОРМАЦИЯ ОБ ИГРЕ ===\n`;
+    description += `Режим: ${mode === 'long' ? 'ДЛИННЫЕ нарды' : 'КОРОТКИЕ нарды'}\n`;
+    description += `Игрок 1 (${isUserPlayer1 ? 'ВЫ' : 'ПРОТИВНИК'}): ${game.player1?.username || 'Игрок 1'}\n`;
+    description += `Игрок 2 (${!isUserPlayer1 ? 'ВЫ' : 'ПРОТИВНИК'}): ${game.player2?.username || 'Игрок 2'}\n`;
+    description += `Счет: ${game.player1Score || 0}:${game.player2Score || 0}\n`;
+    description += `Победитель: ${game.winnerId === player1Id ? 'Игрок 1' : game.winnerId === player2Id ? 'Игрок 2' : 'Не определен'}\n\n`;
+
+    description += `=== ПОЛНЫЙ РЕПЛЕЙ ИГРЫ ===\n\n`;
+
+    // Описываем каждый ход
+    for (let i = 0; i < moves.length; i++) {
+      const move = moves[i];
+      const isUserMove = move.playerId === userId;
+      const playerName = move.playerId === player1Id ? 'Игрок 1' : 'Игрок 2';
+      const isCurrentPlayer = isUserMove ? 'ВЫ' : 'ПРОТИВНИК';
+
+      description += `--- ХОД ${move.moveNumber} ---\n`;
+      description += `Игрок: ${playerName} (${isCurrentPlayer})\n`;
+      description += `Кубики: ${move.dice?.join(' и ') || 'не указаны'}\n`;
+
+      // Позиция до хода
+      if (move.gameStateBefore) {
+        description += `ПОЗИЦИЯ ДО ХОДА:\n`;
+        description += this.describeBoard(move.gameStateBefore, mode);
+        description += '\n';
+      }
+
+      // Сделанный ход
+      if (move.moves && move.moves.length > 0) {
+        description += `СДЕЛАННЫЙ ХОД:\n`;
+        description += this.describeMove(move.moves);
+        description += '\n';
+      } else {
+        description += `СДЕЛАННЫЙ ХОД: Пропуск хода\n`;
+      }
+
+      // Позиция после хода
+      if (move.gameStateAfter) {
+        description += `ПОЗИЦИЯ ПОСЛЕ ХОДА:\n`;
+        description += this.describeBoard(move.gameStateAfter, mode);
+        description += '\n';
+      }
+
+      // Если это ход пользователя, добавляем все возможные альтернативы
+      if (isUserMove && move.gameStateBefore && move.dice) {
+        // Получаем все возможные ходы (нужен движок, но мы можем описать что они есть)
+        description += `[Для этого хода были доступны другие варианты - проанализируй оптимальность сделанного хода]\n`;
+      }
+
+      description += '\n';
+    }
+
+    return description;
+  }
+
+  /**
+   * Анализ хода и позиции для аналитики игры (старый метод, оставлен для совместимости)
    * Возвращает оценку хода с объяснениями и рекомендациями
    */
   async analyzeMove(
@@ -109,7 +262,8 @@ export class GptBotService {
     move: Array<{ from: number; to: number; die: number }>,
     dice: number[],
     mode: 'short' | 'long',
-    bestAlternative?: Array<{ from: number; to: number; die: number }>, // Опционально - только для справки, GPT сам определит лучший ход
+    allPossibleMoves?: Array<Array<{ from: number; to: number; die: number }>>, // ВСЕ возможные ходы для анализа
+    bestAlternative?: Array<{ from: number; to: number; die: number }>, // Опционально - только для справки
   ): Promise<{
     evaluation: 'excellent' | 'good' | 'neutral' | 'inaccuracy' | 'mistake' | 'blunder';
     explanation: string;
@@ -125,19 +279,42 @@ export class GptBotService {
       const boardAfter = this.describeBoard(gameStateAfter, mode);
       const moveDescription = this.describeMove(move);
       const bestMoveDescription = bestAlternative ? this.describeMove(bestAlternative) : null;
+      
+      // Описываем все возможные ходы для GPT анализа
+      let allMovesDescription = '';
+      if (allPossibleMoves && allPossibleMoves.length > 0) {
+        allMovesDescription = `\nВСЕ ВОЗМОЖНЫЕ ХОДЫ С ДАННЫМИ КУБИКАМИ (${dice.join(', ')}):\n`;
+        allPossibleMoves.forEach((movesSeq, index) => {
+          const movesDesc = this.describeMove(movesSeq);
+          const isCurrentMove = JSON.stringify(movesSeq) === JSON.stringify(move);
+          allMovesDescription += `${index + 1}. ${movesDesc}${isCurrentMove ? ' ← СДЕЛАННЫЙ ХОД' : ''}\n`;
+        });
+        allMovesDescription += '\n';
+      }
 
       const prompt = `Ты эксперт по ${mode === 'long' ? 'длинным' : 'коротким'} нардам. Твоя задача - САМОСТОЯТЕЛЬНО ПРОАНАЛИЗИРОВАТЬ позицию и ход.
 
+=== РЕЖИМ ИГРЫ ===
+${mode === 'long' ? 'ДЛИННЫЕ нарды' : 'КОРОТКИЕ нарды'}
+${mode === 'long' 
+  ? 'ПРАВИЛА: В длинных нардах НЕЛЬЗЯ бить шашки противника. Важны: распределение шашек, timing, якоря, прима.'
+  : 'ПРАВИЛА: В коротких нардах МОЖНО бить одиночные шашки противника. Важны: безопасность, контроль точек, вывод с бара.'}
+
+=== КУБИКИ ===
+Выпали кубики: ${dice.join(' и ')}
+
+=== ПОЗИЦИЯ ДО ХОДА ===
 ${boardBefore}
 
-СДЕЛАННЫЙ ХОД ИГРОКОМ:
+=== СДЕЛАННЫЙ ХОД ИГРОКОМ ===
 ${moveDescription}
-Кубики: ${dice.join(', ')}
 
-ПОЗИЦИЯ ПОСЛЕ ХОДА:
+${allMovesDescription}
+
+=== ПОЗИЦИЯ ПОСЛЕ ХОДА ===
 ${boardAfter}
 
-${bestMoveDescription ? `СПРАВКА - лучший ход по расчетам equity (но ты должен САМ определить оптимальный ход):\n${bestMoveDescription}\n\n` : ''}
+${bestMoveDescription ? `СПРАВКА - лучший ход по расчетам equity (но ты должен САМ определить оптимальный ход из списка выше):\n${bestMoveDescription}\n\n` : ''}
 
 ЗАДАЧА: Ты должен САМОСТОЯТЕЛЬНО проанализировать позицию и дать профессиональную оценку.
 
@@ -156,9 +333,9 @@ ${bestMoveDescription ? `СПРАВКА - лучший ход по расчет�
 - Соответствует ли ход правилам ${mode === 'long' ? 'длинных нард' : 'коротких нард'}?
 
 ШАГ 3 - ОПРЕДЕЛЕНИЕ ЛУЧШЕГО ХОДА:
-- Какой ход был бы оптимальным в данной позиции?
-- Почему этот ход лучше сделанного?
-- Какие стратегические цели должен был преследовать игрок?
+${allPossibleMoves && allPossibleMoves.length > 0 
+  ? '- Сравни сделанный ход со ВСЕМИ возможными ходами из списка выше\n- Какой ход из списка был бы оптимальным в данной позиции?\n- Почему этот ход лучше сделанного?\n- Какие стратегические цели должен был преследовать игрок?'
+  : '- Какой ход был бы оптимальным в данной позиции?\n- Почему этот ход лучше сделанного?\n- Какие стратегические цели должен был преследовать игрок?'}
 
 ШАГ 4 - ОЦЕНКА:
 Оцени ход по шкале:

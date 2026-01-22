@@ -80,8 +80,8 @@ export class AnalysisService {
   ) {}
 
   /**
-   * Анализ игры для премиум пользователей
-   * Находит ошибки в ходах и дает рекомендации
+   * Анализ игры - ТОЛЬКО GPT, БЕЗ EQUITY
+   * GPT анализирует всю игру и оценивает каждый ход пользователя
    */
   async analyzeGame(userId: string, gameId: string): Promise<GameAnalysis> {
     // Проверяем доступ пользователя к игре
@@ -113,289 +113,80 @@ export class AnalysisService {
       relations: ['player'],
     });
 
-    // Определяем правильный движок в зависимости от режима игры
-    const isShortMode = game.mode === GameMode.SHORT;
-    const engine = isShortMode ? this.backgammonEngine : this.longBackgammonEngine;
+    if (!this.gptBotService) {
+      throw new Error('GPT анализ недоступен');
+    }
+
+    // GPT анализирует ВСЮ игру сразу
+    const gptAnalysisResults = await this.gptBotService.analyzeFullGame(
+      game,
+      moves,
+      userId,
+      game.mode === GameMode.LONG ? 'long' : 'short',
+    );
+
+    // Создаем Map для быстрого поиска результатов GPT анализа по номеру хода
+    const gptAnalysisMap = new Map<number, typeof gptAnalysisResults[0]>();
+    gptAnalysisResults.forEach(result => {
+      gptAnalysisMap.set(result.moveNumber, result);
+    });
+
     const errors: MoveAnalysis[] = [];
     const allMovesAnalysis: MoveAnalysis[] = [];
 
-    // Анализируем каждый ход
+    // Анализируем каждый ход на основе GPT анализа всей игры
+    // НИКАКИХ расчетов equity - только GPT анализ
     for (let i = 0; i < moves.length; i++) {
       const move = moves[i];
       const isUserMove = move.playerId === userId;
       
-      // Даже если это не ход пользователя, мы можем захотеть его показать в общем списке, 
-      // но анализ (ошибки) делаем только для пользователя.
+      // Получаем GPT анализ для этого хода (если это ход пользователя)
+      const gptResult = isUserMove ? gptAnalysisMap.get(move.moveNumber) : null;
       
-      const gameStateBefore = move.gameStateBefore;
-      const gameStateAfter = move.gameStateAfter;
-
       // Определяем, является ли это первым ходом игры
-      // Для длинных нард: первые 2 хода (по одному от каждого игрока)
-      // Для коротких нард: первый ход
+      const isShortMode = game.mode === GameMode.SHORT;
       const isFirstMoveOfGame = isShortMode 
         ? move.moveNumber === 1 
         : move.moveNumber <= 2;
-
-      // Находим все возможные ходы для этой позиции, чтобы показать альтернативы
-      // Используем состояние игры как seed для детерминированного перемешивания
-      // Для длинных нард передаем isFirstMoveOfGame для правильной обработки правил головы
-      const stateSeed = JSON.stringify(gameStateBefore.points) + JSON.stringify(move.dice) + gameStateBefore.currentPlayer;
-      const allPossibleMovesSequences = isShortMode
-        ? engine.getAllValidMoves(gameStateBefore, move.dice)
-        : engine.getAllValidMoves(gameStateBefore, move.dice, isFirstMoveOfGame, stateSeed);
-      // Оцениваем все альтернативные ходы эвристикой
-      let evaluatedAlternatives: Array<{
-        moves: Array<{ from: number; to: number; die: number }>;
-        equity: number;
-        isCurrent?: boolean;
-        diff?: number;
-      }> = allPossibleMovesSequences.map(mSeq => {
-        let testState = { ...gameStateBefore };
-        for (const m of mSeq) {
-          testState = engine.applyMove(testState, m.from, m.to, m.die);
-        }
-        const equity = this.evaluatePosition(engine, testState, userId === game.player1Id ? 0 : 1, game.mode);
-        return {
-          moves: mSeq,
-          equity: equity,
-        };
-      }).sort((a, b) => b.equity - a.equity);
       
-      // Группируем по equity и оставляем только уникальные значения equity (берем первый вариант из каждой группы)
-      const uniqueEquityAlternatives: Array<{
-        moves: Array<{ from: number; to: number; die: number }>;
-        equity: number;
-        isCurrent?: boolean;
-        diff?: number;
-      }> = [];
-      const seenEquities = new Set<number>();
-      
-      for (const alt of evaluatedAlternatives) {
-        // Округляем equity до 3 знаков для сравнения
-        const equityKey = Math.round(alt.equity * 1000) / 1000;
-        if (!seenEquities.has(equityKey)) {
-          seenEquities.add(equityKey);
-          uniqueEquityAlternatives.push(alt);
-          // Ограничиваем максимум 6 уникальными вариантами
-          if (uniqueEquityAlternatives.length >= 6) break;
-        }
-      }
-      
-      const evaluatedAlternativesFiltered = uniqueEquityAlternatives;
+      // Пропускаем анализ ошибок для первых ходов игры
+      const shouldAnalyzeErrors = !isFirstMoveOfGame && isUserMove && gptResult;
 
-      // Оцениваем позицию до и после хода
-      const equityBefore = this.evaluatePosition(engine, gameStateBefore, userId === game.player1Id ? 0 : 1, game.mode);
-      const equityAfter = this.evaluatePosition(engine, gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode);
-      
-      const equity = equityAfter;
-      const bestAlternative = evaluatedAlternativesFiltered[0];
-      const bestEquity = bestAlternative ? bestAlternative.equity : equityBefore;
-      
-      // Добавляем текущий ход в альтернативы если его там нет (для сравнения)
-      const currentMoveInAlts = evaluatedAlternativesFiltered.find(alt => 
-        JSON.stringify(alt.moves) === JSON.stringify(move.moves)
-      );
-      
-      if (!currentMoveInAlts) {
-        evaluatedAlternativesFiltered.push({
-          moves: move.moves as any,
-          equity: equity,
-          isCurrent: true
-        });
-        evaluatedAlternativesFiltered.sort((a, b) => b.equity - a.equity);
-        // После добавления текущего хода, снова фильтруем по уникальным equity
-        const reFiltered: typeof evaluatedAlternativesFiltered = [];
-        const reSeenEquities = new Set<number>();
-        for (const alt of evaluatedAlternativesFiltered) {
-          const equityKey = Math.round(alt.equity * 1000) / 1000;
-          if (!reSeenEquities.has(equityKey) || alt.isCurrent) {
-            reSeenEquities.add(equityKey);
-            reFiltered.push(alt);
-            if (reFiltered.length >= 6 && !alt.isCurrent) break;
-          }
-        }
-        evaluatedAlternativesFiltered.length = 0;
-        evaluatedAlternativesFiltered.push(...reFiltered);
-        evaluatedAlternativesFiltered.sort((a, b) => b.equity - a.equity);
-      } else {
-        currentMoveInAlts.isCurrent = true;
-      }
-
-      // Расчитываем разницу (diff) для каждой альтернативы относительно лучшей
-      const maxEquity = evaluatedAlternativesFiltered[0]?.equity || 0;
-      evaluatedAlternativesFiltered.forEach(alt => {
-        alt.diff = alt.equity - maxEquity;
-      });
-
-      const missedEquity = bestEquity - equity;
-
-      // Определяем, является ли текущий ход лучшим (diff === 0 или очень близок, погрешность < 0.001)
-      const currentMoveDiff = evaluatedAlternativesFiltered.find(alt => alt.isCurrent)?.diff || 999;
-      const isBestMove = Math.abs(currentMoveDiff) < 0.001;
-
-      // Рассчитываем вероятности выигрыша на основе equity и позиционных факторов
-      const winProbabilities = this.calculateWinProbabilities(equity, gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode);
-
-      // Определяем playerIndex для текущего хода
-      const currentPlayerIndex = userId === game.player1Id ? 0 : 1;
-
-      // Оцениваем качество хода на основе позиционных и стратегических факторов
-      const moveQuality = this.evaluateMoveQuality(
-        engine,
-        gameStateBefore,
-        gameStateAfter,
-        move.moves as any,
-        bestAlternative?.moves || [],
-        currentPlayerIndex,
-        game.mode
-      );
-
-      // Определяем тип ошибки на основе комбинации упущенной equity и качества хода
-      // Используем более сложную систему оценки, как в шахматах
-      // НЕ показываем ошибки на первых ходах - там все ходы примерно равны
+      // Используем ТОЛЬКО GPT анализ - никаких расчетов equity
       let isError = false;
       let errorType: 'blunder' | 'mistake' | 'inaccuracy' | undefined;
       let errorDescription: string | undefined;
 
-      // Пропускаем анализ ошибок для первых ходов игры
-      // Для коротких нард: первый ход (moveNumber === 1)
-      // Для длинных нард: первые 2 хода (moveNumber <= 2)
-      const shouldAnalyzeErrors = !isFirstMoveOfGame && isUserMove;
-
-      // GPT анализ хода - ПРИОРИТЕТНЫЙ метод анализа
-      // GPT сам анализирует позицию и определяет ошибки, НЕ используя equity
-      let gptAnalysis: MoveAnalysis['gptAnalysis'] = null;
-      if (this.gptBotService && shouldAnalyzeErrors && isUserMove) {
-        try {
-          // GPT получает ВСЕ возможные альтернативные ходы для анализа
-          // Но НЕ передаем bestAlternative по equity - GPT сам определит лучший ход
-          gptAnalysis = await this.gptBotService.analyzeMove(
-            gameStateBefore,
-            gameStateAfter,
-            move.moves as any,
-            move.dice,
-            game.mode === GameMode.LONG ? 'long' : 'short',
-            undefined, // Не передаем bestAlternative - GPT сам определит лучший ход
-          );
-        } catch (error) {
-          // Если GPT недоступен - будет использована эвристика как fallback
-          console.error('GPT analysis failed:', error);
-        }
-      }
-
-      // ПРИОРИТЕТ: Используем GPT анализ для определения ошибок
-      // GPT сам анализирует позицию и определяет, является ли ход ошибкой
-      if (gptAnalysis) {
-        // GPT дал свою оценку - используем её как основную
-        // GPT может вернуть: excellent, good, neutral, inaccuracy, mistake, blunder
-        if (gptAnalysis.evaluation === 'blunder' || 
-            gptAnalysis.evaluation === 'mistake' || 
-            gptAnalysis.evaluation === 'inaccuracy') {
+      if (shouldAnalyzeErrors && gptResult) {
+        if (gptResult.evaluation === 'blunder' || 
+            gptResult.evaluation === 'mistake' || 
+            gptResult.evaluation === 'inaccuracy') {
           isError = true;
-          errorType = gptAnalysis.evaluation;
+          errorType = gptResult.evaluation;
           
           // Формируем описание ошибки из GPT анализа
-          let description = gptAnalysis.explanation || '';
-          if (gptAnalysis.reasoning) {
+          let description = gptResult.explanation || '';
+          if (gptResult.reasoning) {
             if (description) {
-              description += ' ' + gptAnalysis.reasoning;
+              description += ' ' + gptResult.reasoning;
             } else {
-              description = gptAnalysis.reasoning;
+              description = gptResult.reasoning;
             }
           }
           
           // Добавляем рекомендации GPT
-          if (gptAnalysis.recommendations && gptAnalysis.recommendations.length > 0) {
-            description += ' ' + gptAnalysis.recommendations.join('. ');
+          if (gptResult.recommendations && gptResult.recommendations.length > 0) {
+            description += ' ' + gptResult.recommendations.join('. ');
+          }
+          
+          // Добавляем лучший ход если указан
+          if (gptResult.bestMove) {
+            description += ` Правильный ход: ${gptResult.bestMove}`;
           }
           
           errorDescription = description.trim();
-        } else {
-          // GPT считает ход хорошим (excellent, good, neutral) - не ошибка
-          isError = false;
-          errorType = undefined;
-          errorDescription = undefined;
-        }
-      } else {
-        // FALLBACK: Используем эвристику только если GPT недоступен
-        // Это должно происходить редко - только если GPT API недоступен
-        const combinedScore = missedEquity * 0.7 + (1 - moveQuality) * 0.3;
-
-        if (shouldAnalyzeErrors && (combinedScore > 0.12 || (missedEquity > 0.10 && moveQuality < 0.3))) {
-          isError = true;
-          errorType = 'blunder';
-          const reasons = this.getMoveQualityReasons(
-            engine,
-            gameStateBefore,
-            gameStateAfter,
-            move.moves as any,
-            bestAlternative?.moves || [],
-            currentPlayerIndex,
-            game.mode,
-            bestEquity - equity
-          );
-          const bestMoveDescription = bestAlternative ? this.describeMove(bestAlternative.moves, game.mode) : '';
-          errorDescription = `Грубая ошибка${reasons ? ': ' + reasons : ''}${bestMoveDescription ? '. Правильный ход: ' + bestMoveDescription : ''}`;
-        } else if (shouldAnalyzeErrors && (combinedScore > 0.06 || (missedEquity > 0.05 && moveQuality < 0.5))) {
-          isError = true;
-          errorType = 'mistake';
-          const reasons = this.getMoveQualityReasons(
-            engine,
-            gameStateBefore,
-            gameStateAfter,
-            move.moves as any,
-            bestAlternative?.moves || [],
-            currentPlayerIndex,
-            game.mode,
-            bestEquity - equity
-          );
-          const bestMoveDescription = bestAlternative ? this.describeMove(bestAlternative.moves, game.mode) : '';
-          errorDescription = `Ошибка${reasons ? ': ' + reasons : ''}${bestMoveDescription ? '. Правильный ход: ' + bestMoveDescription : ''}`;
-        } else if (shouldAnalyzeErrors && (combinedScore > 0.03 || (missedEquity > 0.02 && moveQuality < 0.7))) {
-          isError = true;
-          errorType = 'inaccuracy';
-          const reasons = this.getMoveQualityReasons(
-            engine,
-            gameStateBefore,
-            gameStateAfter,
-            move.moves as any,
-            bestAlternative?.moves || [],
-            currentPlayerIndex,
-            game.mode,
-            bestEquity - equity
-          );
-          const bestMoveDescription = bestAlternative ? this.describeMove(bestAlternative.moves, game.mode) : '';
-          errorDescription = `Неточность${reasons ? ': ' + reasons : ''}${bestMoveDescription ? '. Лучший ход: ' + bestMoveDescription : ''}`;
         }
       }
-
-      // Определяем тип позиции
-      const positionType = this.determinePositionType(gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode);
-
-      // Рассчитываем метрики хода
-      const moveMetrics = {
-        distributionChange: this.evaluateDistribution(gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode) - 
-                          this.evaluateDistribution(gameStateBefore, userId === game.player1Id ? 0 : 1, game.mode),
-        timingChange: this.evaluateTiming(gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode) - 
-                     this.evaluateTiming(gameStateBefore, userId === game.player1Id ? 0 : 1, game.mode),
-        flexibilityChange: this.evaluateFlexibility(gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode) - 
-                          this.evaluateFlexibility(gameStateBefore, userId === game.player1Id ? 0 : 1, game.mode),
-        structureChange: this.evaluateBoardStructure(gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode) - 
-                        this.evaluateBoardStructure(gameStateBefore, userId === game.player1Id ? 0 : 1, game.mode),
-        riskChange: this.evaluateRisk(gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode) - 
-                   this.evaluateRisk(gameStateBefore, userId === game.player1Id ? 0 : 1, game.mode),
-        diceEfficiency: this.evaluateDiceEfficiency(move.moves as any, gameStateBefore, gameStateAfter, userId === game.player1Id ? 0 : 1),
-        strategicValue: this.evaluateStrategicValue(gameStateBefore, gameStateAfter, userId === game.player1Id ? 0 : 1, game.mode),
-      };
-
-      // Добавляем качество к альтернативам
-      evaluatedAlternativesFiltered.forEach((alt: any) => {
-        if (alt.moves) {
-          // Упрощенная оценка качества альтернативы
-          alt.quality = 0.7; // Базовое качество, можно улучшить
-        }
-      });
 
       const analysis: MoveAnalysis = {
         moveNumber: move.moveNumber,
@@ -403,16 +194,16 @@ export class AnalysisService {
         isError,
         errorType,
         errorDescription,
-        isBestMove,
-        bestMove: bestAlternative?.moves,
-        scoreChange: -missedEquity * 100, // Конвертируем в старую шкалу для обратной совместимости
-        gptAnalysis: gptAnalysis || undefined,
-        equity,
-        winProbabilities,
-        moveQuality,
-        positionType,
-        moveMetrics,
-        alternatives: evaluatedAlternativesFiltered,
+        isBestMove: gptResult?.evaluation === 'excellent',
+        bestMove: undefined, // GPT сам определит лучший ход в описании
+        scoreChange: 0, // Не используем equity
+        gptAnalysis: gptResult ? {
+          evaluation: gptResult.evaluation,
+          explanation: gptResult.explanation,
+          reasoning: gptResult.reasoning,
+          recommendations: gptResult.recommendations,
+        } : undefined,
+        alternatives: [], // Не показываем альтернативы с equity
       };
 
       allMovesAnalysis.push(analysis);
