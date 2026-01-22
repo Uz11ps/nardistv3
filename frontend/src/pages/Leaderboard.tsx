@@ -2,6 +2,7 @@
 import PageLayout from '../components/PageLayout'
 import { apiClient } from '../api/client'
 import PlayerName from '../components/PlayerName'
+import PlayerProfileModal from '../components/PlayerProfileModal'
 import { useAuthStore } from '../store/authStore'
 import './Leaderboard.css'
 
@@ -43,6 +44,8 @@ export default function Leaderboard() {
   const [myStats, setMyStats] = useState<MyStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [sortBy, setSortBy] = useState<'xp' | 'matches' | 'winrate' | 'rating'>('xp')
+  const [showPlayerModal, setShowPlayerModal] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
 
   useEffect(() => {
     loadLeaderboard()
@@ -162,6 +165,11 @@ export default function Leaderboard() {
               <div
                 key={entry.user.id}
                 className={`leaderboard-item ${rankClass}`}
+                onClick={() => {
+                  setSelectedPlayer(entry.user)
+                  setShowPlayerModal(true)
+                }}
+                style={{ cursor: 'pointer' }}
               >
                 <div className="leaderboard-item-content">
                   {/* Аватар */}
@@ -213,6 +221,14 @@ export default function Leaderboard() {
           </div>
         )}
       </div>
+      <PlayerProfileModal
+        isOpen={showPlayerModal}
+        player={selectedPlayer}
+        onClose={() => {
+          setShowPlayerModal(false)
+          setSelectedPlayer(null)
+        }}
+      />
     </PageLayout>
   )
 }

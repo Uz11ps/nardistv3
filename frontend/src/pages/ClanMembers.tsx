@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
+import PlayerProfileModal from '../components/PlayerProfileModal'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { formatRelativeTime } from '../utils/dateUtils'
@@ -28,6 +29,8 @@ export default function ClanMembers() {
   const [members, setMembers] = useState<ClanMember[]>([])
   const [filteredMembers, setFilteredMembers] = useState<ClanMember[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [showPlayerModal, setShowPlayerModal] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -121,7 +124,15 @@ export default function ClanMembers() {
                                member.role.toLowerCase() === 'officer' ? 'Офицер' : 'Участник'
 
               return (
-                <div key={member.id} className="clan-members-card">
+                <div 
+                  key={member.id} 
+                  className="clan-members-card"
+                  onClick={() => {
+                    setSelectedPlayer(member.user)
+                    setShowPlayerModal(true)
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="clan-members-card-avatar">
                     {member.user.avatarUrl ? (
                       <img src={member.user.avatarUrl} alt={userName} />
@@ -139,6 +150,14 @@ export default function ClanMembers() {
           </div>
         )}
       </div>
+      <PlayerProfileModal
+        isOpen={showPlayerModal}
+        player={selectedPlayer}
+        onClose={() => {
+          setShowPlayerModal(false)
+          setSelectedPlayer(null)
+        }}
+      />
     </PageLayout>
   )
 }

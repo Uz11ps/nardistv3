@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import './TournamentBracket.css'
 import { useNavigate } from 'react-router-dom'
 import Icon from './Icon'
+import PlayerProfileModal from './PlayerProfileModal'
 import { useAuthStore } from '../store/authStore'
 import { apiClient } from '../api/client'
 
@@ -45,6 +46,8 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
   const currentUserId = user?.id
   const containerRef = useRef<HTMLDivElement>(null)
   const [startingMatchId, setStartingMatchId] = useState<string | null>(null)
+  const [showPlayerModal, setShowPlayerModal] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
   
   // Drag to scroll logic
   const [isDragging, setIsDragging] = useState(false)
@@ -276,7 +279,17 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                           }
                         }}
                       >
-                        <div className={`bracket-player ${match.winnerId === match.player1?.id ? 'winner' : ''} ${!match.player1 ? 'empty' : ''} ${match.player1?.id === currentUserId ? 'current-user' : ''}`}>
+                        <div 
+                          className={`bracket-player ${match.winnerId === match.player1?.id ? 'winner' : ''} ${!match.player1 ? 'empty' : ''} ${match.player1?.id === currentUserId ? 'current-user' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (match.player1?.id) {
+                              setSelectedPlayer(match.player1)
+                              setShowPlayerModal(true)
+                            }
+                          }}
+                          style={match.player1?.id ? { cursor: 'pointer' } : {}}
+                        >
                            {match.player1?.avatarUrl ? (
                              <img src={match.player1.avatarUrl} className="bracket-avatar" alt="" />
                            ) : (
@@ -286,7 +299,17 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                            <span className="bracket-player-name">{match.player1?.nickname || match.player1?.username || '-'}</span>
                            {match.winnerId === match.player1?.id && <Icon name="trophy" size={12} className="bracket-trophy" />}
                         </div>
-                        <div className={`bracket-player ${match.winnerId === match.player2?.id ? 'winner' : ''} ${!match.player2 ? 'empty' : ''} ${match.player2?.id === currentUserId ? 'current-user' : ''}`}>
+                        <div 
+                          className={`bracket-player ${match.winnerId === match.player2?.id ? 'winner' : ''} ${!match.player2 ? 'empty' : ''} ${match.player2?.id === currentUserId ? 'current-user' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (match.player2?.id) {
+                              setSelectedPlayer(match.player2)
+                              setShowPlayerModal(true)
+                            }
+                          }}
+                          style={match.player2?.id ? { cursor: 'pointer' } : {}}
+                        >
                            {match.player2?.avatarUrl ? (
                              <img src={match.player2.avatarUrl} className="bracket-avatar" alt="" />
                            ) : (
@@ -315,6 +338,14 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
           })}
         </div>
       </div>
+      <PlayerProfileModal
+        isOpen={showPlayerModal}
+        player={selectedPlayer}
+        onClose={() => {
+          setShowPlayerModal(false)
+          setSelectedPlayer(null)
+        }}
+      />
     </div>
   )
 }

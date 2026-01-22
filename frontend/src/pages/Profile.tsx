@@ -13,6 +13,8 @@ import './Profile.css'
 export default function Profile() {
   const navigate = useNavigate()
   const { user, updateUser } = useAuthStore()
+  const isViewingOwnProfile = true
+  const [viewingUser, setViewingUser] = useState<any>(null)
   const [stats, setStats] = useState({ narCoin: 0, xp: 0, level: 1 })
   const [hasPremium, setHasPremium] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -277,12 +279,6 @@ export default function Profile() {
       alert(error.response?.data?.message || 'Ошибка обновления профиля')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleUseTelegramPhoto = () => {
-    if (user?.avatarUrl) {
-      setEditFormData({ ...editFormData, avatarUrl: user.avatarUrl })
     }
   }
 
@@ -636,26 +632,6 @@ export default function Profile() {
                       </span>
                     </div>
                   )}
-                  {statisticsMode === 'all' && (
-                    <>
-                      {playerStatistics.short?.rating !== undefined && (
-                        <div className="profile-statistics-item">
-                          <span className="profile-statistics-label">Рейтинг (короткие):</span>
-                          <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                            {playerStatistics.short.rating}
-                          </span>
-                        </div>
-                      )}
-                      {playerStatistics.long?.rating !== undefined && (
-                        <div className="profile-statistics-item">
-                          <span className="profile-statistics-label">Рейтинг (длинные):</span>
-                          <span className="profile-statistics-value" style={{ color: '#4A9EFF', fontWeight: '600' }}>
-                            {playerStatistics.long.rating}
-                          </span>
-                        </div>
-                      )}
-                    </>
-                  )}
                 </div>
               </div>
             ) : (
@@ -816,9 +792,6 @@ export default function Profile() {
                     />
                     📷 Загрузить изображение
                   </label>
-                  <button className="profile-edit-use-telegram-btn" onClick={handleUseTelegramPhoto}>
-                    Использовать фото из Telegram
-                  </button>
                 </div>
               </div>
 

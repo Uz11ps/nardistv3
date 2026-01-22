@@ -636,22 +636,6 @@
   cursor: not-allowed;
 }
 
-.profile-edit-use-telegram-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #FFF;
-  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.profile-edit-use-telegram-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
 
 .profile-edit-field {
   display: flex;

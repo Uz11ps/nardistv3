@@ -4,6 +4,7 @@ import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Icon from '../components/Icon'
+import PlayerProfileModal from '../components/PlayerProfileModal'
 import { apiClient } from '../api/client'
 import { TournamentBracket } from '../components/TournamentBracket'
 import { useAuthStore } from '../store/authStore'
@@ -62,6 +63,8 @@ export default function TournamentDetail() {
   const [activeTab, setActiveTab] = useState<'table' | 'matches' | 'results' | 'winner'>('table')
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showPlayerModal, setShowPlayerModal] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
 
   useEffect(() => {
     if (tournamentId) {
@@ -271,7 +274,16 @@ export default function TournamentDetail() {
                           {roundMatches.map((match) => (
                             <Card key={match.id} className="tournament-result-card">
                               <div className="tournament-result-players">
-                                <div className={`tournament-result-player ${match.winnerId === match.player1?.id ? 'winner' : ''}`}>
+                                <div 
+                                  className={`tournament-result-player ${match.winnerId === match.player1?.id ? 'winner' : ''}`}
+                                  onClick={() => {
+                                    if (match.player1?.id) {
+                                      setSelectedPlayer(match.player1)
+                                      setShowPlayerModal(true)
+                                    }
+                                  }}
+                                  style={match.player1?.id ? { cursor: 'pointer' } : {}}
+                                >
                                   {match.player1?.avatarUrl && (
                                     <img 
                                       src={match.player1.avatarUrl} 
@@ -294,7 +306,16 @@ export default function TournamentDetail() {
                                   )}
                                 </div>
                                 <div className="tournament-result-vs">VS</div>
-                                <div className={`tournament-result-player ${match.winnerId === match.player2?.id ? 'winner' : ''}`}>
+                                <div 
+                                  className={`tournament-result-player ${match.winnerId === match.player2?.id ? 'winner' : ''}`}
+                                  onClick={() => {
+                                    if (match.player2?.id) {
+                                      setSelectedPlayer(match.player2)
+                                      setShowPlayerModal(true)
+                                    }
+                                  }}
+                                  style={match.player2?.id ? { cursor: 'pointer' } : {}}
+                                >
                                   {match.winnerId === match.player2?.id && (
                                     <div className="tournament-result-winner-badge">🏆</div>
                                   )}
@@ -363,6 +384,14 @@ export default function TournamentDetail() {
           </div>
         )}
       </div>
+      <PlayerProfileModal
+        isOpen={showPlayerModal}
+        player={selectedPlayer}
+        onClose={() => {
+          setShowPlayerModal(false)
+          setSelectedPlayer(null)
+        }}
+      />
     </div>
   )
 }

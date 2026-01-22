@@ -86,12 +86,6 @@ export default function CreateProfile() {
     }
   }
 
-  const handleUseTelegramPhoto = () => {
-    if (user?.avatarUrl) {
-      setFormData({ ...formData, avatarUrl: user.avatarUrl })
-    }
-  }
-
   return (
     <PageLayout title="Создай свой профиль" showBack={true}>
       <div className="create-profile-content">
@@ -199,12 +193,6 @@ export default function CreateProfile() {
               </div>
             )}
           </div>
-          <button
-            className="create-profile-use-telegram-btn"
-            onClick={handleUseTelegramPhoto}
-          >
-            Использовать фото из телеграмма
-          </button>
         </div>
 
         <button
