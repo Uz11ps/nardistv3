@@ -882,12 +882,12 @@ export default function Shop() {
                       }}
                     >
                       <ScrollIcon size={24} style={{ color: '#FFD700' }} />
-                    </div>
+                  </div>
                     <div className="subscription-feature-info">
                       <div className="subscription-feature-title">История игр</div>
                       <div className="subscription-feature-description">Полный список твоих матчей</div>
-                    </div>
                   </div>
+                </div>
                 </Card>
 
                 <Card className="subscription-feature-card">
@@ -900,12 +900,12 @@ export default function Shop() {
                       }}
                     >
                       <img src="/img/зарик.png" alt="analysis" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
-                    </div>
+                  </div>
                     <div className="subscription-feature-info">
                       <div className="subscription-feature-title">Анализ</div>
                       <div className="subscription-feature-description">Разбор ошибок и лучших ходов</div>
-                    </div>
                   </div>
+                </div>
                 </Card>
 
                 <Card className="subscription-feature-card">
@@ -918,12 +918,12 @@ export default function Shop() {
                       }}
                     >
                       <TargetIcon size={24} style={{ color: '#FFF' }} />
-                    </div>
+                  </div>
                     <div className="subscription-feature-info">
                       <div className="subscription-feature-title">Тренажёр</div>
                       <div className="subscription-feature-description">Разбирай позиции и стратегии</div>
-                    </div>
                   </div>
+                </div>
                 </Card>
 
                 <Card className="subscription-feature-card">
@@ -936,12 +936,12 @@ export default function Shop() {
                       }}
                     >
                       <EnergyIcon size={24} style={{ color: '#FF4444' }} />
-                    </div>
+                  </div>
                     <div className="subscription-feature-info">
                       <div className="subscription-feature-title">Приоритет</div>
                       <div className="subscription-feature-description">Попадай к соперникам быстрее</div>
-                    </div>
                   </div>
+                </div>
                 </Card>
 
                 <Card className="subscription-feature-card">
@@ -954,12 +954,12 @@ export default function Shop() {
                       }}
                     >
                       <img src="/img/crown.png" alt="premium" style={{ width: '56px', height: '56px', objectFit: 'contain', margin: '-4px' }} />
-                    </div>
+                  </div>
                     <div className="subscription-feature-info">
                       <div className="subscription-feature-title">Премиум-значок</div>
                       <div className="subscription-feature-description">Отметь свой статус в таблице</div>
-                    </div>
                   </div>
+                </div>
                 </Card>
               </div>
 

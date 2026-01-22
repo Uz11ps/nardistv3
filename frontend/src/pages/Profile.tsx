@@ -417,7 +417,7 @@ export default function Profile() {
                     return '21.76px' // еще уменьшение на 15% от предыдущего
                   })()
                 }}>
-                  {user?.nickname || user?.firstName || user?.username || 'Алексей'}
+                {user?.nickname || user?.firstName || user?.username || 'Алексей'}
                 </span>
                 {hasPremium && (
                   <img 

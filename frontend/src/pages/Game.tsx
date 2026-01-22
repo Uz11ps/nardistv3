@@ -3847,28 +3847,28 @@ export default function Game() {
               <div className="verification-item">
                 <span>Ваше смещение:</span>
                 <strong>{myOffset}</strong>
-              </div>
+            </div>
               <div className="verification-item">
                 <span>Смещение соперника:</span>
                 <strong>{opponentOffset}</strong>
-              </div>
-              <div className="verification-details">
+          </div>
+                <div className="verification-details">
                 {(gameState?.verificationSalt || gameInfo?.verificationSalt) && (
                   <div className="salt-display">
                     Соль: <code>{gameState?.verificationSalt || gameInfo?.verificationSalt}</code>
                   </div>
                 )}
-                <button 
-                  className="verify-btn"
-                  onClick={() => {
+                  <button 
+                    className="verify-btn"
+                    onClick={() => {
                     if (gameId) {
                       navigate(`/game/${gameId}/verification`)
                     }
-                  }}
-                >
-                  Проверить честность
-                </button>
-              </div>
+                    }}
+                  >
+                    Проверить честность
+                  </button>
+                </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
@@ -3963,27 +3963,27 @@ export default function Game() {
               <div style={{ marginBottom: '20px' }}>
                 <h3 style={{ color: '#FFF', fontSize: '16px', fontWeight: '600', marginBottom: '12px', marginTop: 0 }}>Режим:</h3>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <button 
+                    <button
                     className={`filter-btn ${statsModeFilter === 'all' ? 'active' : ''}`}
                     onClick={() => { setStatsModeFilter('all'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
                     style={{ padding: '8px 16px', fontSize: '14px', background: statsModeFilter === 'all' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'all' ? '#FFF' : '#4a4a4a'}`, borderRadius: '8px', color: statsModeFilter === 'all' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
-                  >
-                    Все
-                  </button>
-                  <button 
+                    >
+                      Все
+                    </button>
+                    <button
                     className={`filter-btn ${statsModeFilter === 'long' ? 'active' : ''}`}
                     onClick={() => { setStatsModeFilter('long'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
                     style={{ padding: '8px 16px', fontSize: '14px', background: statsModeFilter === 'long' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'long' ? '#FFF' : '#4a4a4a'}`, borderRadius: '8px', color: statsModeFilter === 'long' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
-                  >
+                    >
                     Длинные
-                  </button>
-                  <button 
-                    className={`filter-btn ${statsModeFilter === 'short' ? 'active' : ''}`}
-                    onClick={() => { setStatsModeFilter('short'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
+                    </button>
+                    <button
+                      className={`filter-btn ${statsModeFilter === 'short' ? 'active' : ''}`}
+                      onClick={() => { setStatsModeFilter('short'); selectedPlayer?.id && loadPlayerStats(selectedPlayer.id); }}
                     style={{ padding: '8px 16px', fontSize: '14px', background: statsModeFilter === 'short' ? '#2a2a2a' : '#3a3a3a', border: `1px solid ${statsModeFilter === 'short' ? '#FFF' : '#4a4a4a'}`, borderRadius: '8px', color: statsModeFilter === 'short' ? '#FFF' : '#B6B6B6', cursor: 'pointer' }}
-                  >
-                    Короткие
-                  </button>
+                    >
+                      Короткие
+                    </button>
                 </div>
               </div>
 
@@ -4027,41 +4027,41 @@ export default function Game() {
                         <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
                           {playerStats.overallRating}
                         </span>
-                      </div>
+                  </div>
                     )}
                     {statsModeFilter === 'short' && playerStats.short?.rating !== undefined && (
-                      <div className="game-player-modal-stats-item">
+                    <div className="game-player-modal-stats-item">
                         <span className="game-player-modal-stats-label">Рейтинг (короткие):</span>
                         <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
                           {playerStats.short.rating}
                         </span>
-                      </div>
+                    </div>
                     )}
                     {statsModeFilter === 'long' && playerStats.long?.rating !== undefined && (
-                      <div className="game-player-modal-stats-item">
+                    <div className="game-player-modal-stats-item">
                         <span className="game-player-modal-stats-label">Рейтинг (длинные):</span>
                         <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '18px' }}>
                           {playerStats.long.rating}
                         </span>
-                      </div>
+                    </div>
                     )}
                     {statsModeFilter === 'all' && (
                       <>
                         {playerStats.short?.rating !== undefined && (
-                          <div className="game-player-modal-stats-item">
+                    <div className="game-player-modal-stats-item">
                             <span className="game-player-modal-stats-label">Рейтинг (короткие):</span>
                             <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '16px' }}>
                               {playerStats.short.rating}
                             </span>
-                          </div>
+                    </div>
                         )}
                         {playerStats.long?.rating !== undefined && (
-                          <div className="game-player-modal-stats-item">
+                    <div className="game-player-modal-stats-item">
                             <span className="game-player-modal-stats-label">Рейтинг (длинные):</span>
                             <span className="game-player-modal-stats-value" style={{ color: '#4A9EFF', fontWeight: '600', fontSize: '16px' }}>
                               {playerStats.long.rating}
-                            </span>
-                          </div>
+                      </span>
+                    </div>
                         )}
                       </>
                     )}

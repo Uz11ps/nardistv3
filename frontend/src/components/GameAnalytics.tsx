@@ -157,7 +157,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                       {item.errorDescription && (
                         <div style={{ fontSize: '13px', color: '#B6B6B6', lineHeight: '1.5' }}>
                           {item.errorDescription}
-                        </div>
+                  </div>
                       )}
                     </div>
                   )}
@@ -197,7 +197,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                       {item.gptAnalysis.reasoning && (
                         <div style={{ fontSize: '13px', color: '#D0D0D0', marginBottom: '8px', lineHeight: '1.5' }}>
                           {item.gptAnalysis.reasoning}
-                        </div>
+                      </div>
                       )}
                       {item.gptAnalysis.recommendations && item.gptAnalysis.recommendations.length > 0 && (
                         <div style={{ fontSize: '13px', color: '#FFF', marginTop: '8px' }}>
@@ -209,7 +209,7 @@ export default function GameAnalytics({ gameId }: GameAnalyticsProps) {
                           </ul>
                         </div>
                       )}
-                    </div>
+                  </div>
                   )}
                 </>
               );
