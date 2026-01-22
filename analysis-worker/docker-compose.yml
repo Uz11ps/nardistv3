@@ -23,10 +23,12 @@ services:
       GNUBG_PATH: ${GNUBG_PATH:-gnubg}
       # MCTS настройки для качественного анализа игры в 300 ходов
       # Оптимизировано для мощных VM Яндекс.Облака (4-8 CPU)
-      # 6000 итераций, 15 сек на позицию = ~3-5 сек реального времени на ход
-      # Полный анализ игры (~150 ходов): ~7-12 минут
+      # 6000 итераций, 15 сек лимит, 2-4 параллельных симуляции
+      # На облаке: ~2-4 сек реального времени на ход
+      # Полный анализ игры (~150 ходов): ~5-10 минут на облаке
       MCTS_MAX_ITERATIONS: ${MCTS_MAX_ITERATIONS:-6000}
       MCTS_TIME_LIMIT_MS: ${MCTS_TIME_LIMIT_MS:-15000}
+      MCTS_PARALLEL_SIMULATIONS: ${MCTS_PARALLEL_SIMULATIONS:-4}
       # Ресурсы для анализа
       MAX_CONCURRENT_ANALYSES: ${MAX_CONCURRENT_ANALYSES:-4}
     healthcheck:
