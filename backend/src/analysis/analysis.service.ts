@@ -451,8 +451,23 @@ export class AnalysisService {
     const opponentPipCount = this.calculatePipCount(gameState, opponentIndex, mode);
     const pipDiff = opponentPipCount - myPipCount;
     
-    // Конвертируем разницу пип-каунтов в equity (примерно 0.01 equity за каждый пип)
-    let equity = pipDiff * 0.01;
+    // Определяем тип позиции для более точного коэффициента
+    const positionType = this.determinePositionType(gameState, playerIndex, mode);
+    
+    // Более точные коэффициенты в зависимости от типа позиции
+    // В race позиции: ~0.012-0.015 equity за пип
+    // В сложных позициях: ~0.008-0.010 equity за пип
+    let pipCoefficient = 0.01; // Базовый коэффициент
+    if (positionType === 'race') {
+      pipCoefficient = 0.013; // В гонке пип-каунт более важен
+    } else if (positionType === 'back_game') {
+      pipCoefficient = 0.008; // В back game пип-каунт менее важен чем позиция
+    } else if (positionType === 'prime_game') {
+      pipCoefficient = 0.009; // В prime game позиция важнее пип-каунта
+    }
+    
+    // Конвертируем разницу пип-каунтов в equity с учетом типа позиции
+    let equity = pipDiff * pipCoefficient;
 
     // 2. Проверка на завершение игры
     const myBorneOff = borneOff[playerIndex];
@@ -674,6 +689,7 @@ export class AnalysisService {
   /**
    * Оценка Timing - критический фактор в нардах
    * Timing определяет, есть ли у игрока время для атаки или нужно защищаться
+   * Улучшенная версия с учетом контекста позиции
    */
   private evaluateTiming(gameState: any, playerIndex: number, mode: string): number {
     const points = gameState.points || [];
@@ -683,8 +699,10 @@ export class AnalysisService {
     
     const myBorneOff = borneOff[playerIndex];
     const opponentBorneOff = borneOff[1 - playerIndex];
+    const myPipCount = this.calculatePipCount(gameState, playerIndex, mode);
+    const opponentPipCount = this.calculatePipCount(gameState, 1 - playerIndex, mode);
     
-    // Если уже выводим шашки, timing не так важен
+    // Если уже выводим шашки, timing не так важен (race позиция)
     if (myBorneOff >= 10) {
       return 0;
     }
@@ -693,24 +711,50 @@ export class AnalysisService {
     const opponentHomeStart = playerIndex === 0 ? 0 : 18;
     const opponentHomeEnd = playerIndex === 0 ? 5 : 23;
     let backCheckers = 0;
+    let backAnchors = 0; // Якоря в доме противника
 
     for (let i = opponentHomeStart; i <= opponentHomeEnd; i++) {
       if (playerIndex === 0 && points[i] > 0) {
         backCheckers += points[i];
+        if (points[i] >= 2) backAnchors++;
       } else if (playerIndex === 1 && points[i] < 0) {
         backCheckers += Math.abs(points[i]);
+        if (points[i] <= -2) backAnchors++;
       }
     }
 
-    // Хороший timing: есть шашки в доме противника, но не слишком много
-    // Плохой timing: слишком много шашек в доме противника (back game)
-    if (backCheckers > 0 && backCheckers <= 6) {
-      return 0.5; // Хороший timing для атаки
+    // Улучшенная оценка timing с учетом контекста
+    let timingScore = 0;
+    
+    // Хороший timing: есть якоря в доме противника (2-3 якоря идеально)
+    // Это дает возможность атаковать, не теряя позицию
+    if (backAnchors >= 2 && backAnchors <= 3 && backCheckers <= 8) {
+      timingScore = 0.6; // Отличный timing для атаки
+    } else if (backAnchors === 1 && backCheckers <= 6) {
+      timingScore = 0.3; // Хороший timing
+    } else if (backAnchors === 0 && backCheckers > 0 && backCheckers <= 4) {
+      timingScore = 0.1; // Нейтральный timing
+    } else if (backCheckers > 8 || backAnchors > 3) {
+      timingScore = -0.6; // Плохой timing - слишком много шашек в доме противника
     } else if (backCheckers > 6) {
-      return -0.5; // Слишком много шашек в доме противника
+      timingScore = -0.3; // Слабый timing
+    }
+    
+    // Корректируем timing в зависимости от разницы пип-каунтов
+    // Если мы впереди по пипам, timing менее критичен
+    const pipLead = myPipCount < opponentPipCount ? (opponentPipCount - myPipCount) : 0;
+    if (pipLead > 15) {
+      timingScore *= 0.7; // Timing менее важен если мы далеко впереди
+    } else if (pipLead < -15) {
+      timingScore *= 1.2; // Timing критичен если мы отстаем
+    }
+    
+    // В длинных нардах timing более важен из-за правил головы
+    if (mode === 'long' || mode === 'LONG') {
+      timingScore *= 1.1;
     }
 
-    return 0;
+    return Math.max(-1, Math.min(1, timingScore));
   }
 
   /**
@@ -1060,7 +1104,8 @@ export class AnalysisService {
   }
 
   /**
-   * Оценка эффективности использования кубиков
+   * Оценка эффективности использования кубиков (Dice Efficiency)
+   * Учитывает wastage - неэффективное использование кубиков
    */
   private evaluateDiceEfficiency(
     move: Array<{ from: number; to: number; die: number }>,
@@ -1068,22 +1113,50 @@ export class AnalysisService {
     stateAfter: any,
     playerIndex: number
   ): number {
-    // Идеальная эффективность = использованы все возможные очки кубиков
-    // Считаем использованные очки
+    // Считаем использованные очки кубиков
     let usedPips = 0;
+    const diceUsed = new Set<number>();
+    
     for (const m of move) {
       if (m.from >= 0 && m.to >= 0 && m.to < 24) {
-        usedPips += Math.abs(m.to - m.from);
+        const distance = Math.abs(m.to - m.from);
+        usedPips += distance;
+        if (m.die) diceUsed.add(m.die);
+      } else if (m.from === -1) {
+        // Ход с бара - используем весь кубик
+        if (m.die) diceUsed.add(m.die);
+        usedPips += m.die || 0;
+      } else if (m.to === -1 || m.to >= 24) {
+        // Вывод шашки - используем весь кубик
+        if (m.die) diceUsed.add(m.die);
+        usedPips += m.die || 0;
       }
     }
-
-    // Максимально возможное использование зависит от кубиков
-    // Это упрощенная оценка - в реальности нужно знать какие кубики были
-    // Предполагаем среднее использование
-    const expectedEfficiency = 0.7; // Ожидаемая эффективность
-    const actualEfficiency = Math.min(1, usedPips / 14); // Нормализуем относительно среднего хода
-
-    return actualEfficiency - expectedEfficiency;
+    
+    // Подсчитываем общее количество очков кубиков
+    // Предполагаем что move содержит все использованные кубики
+    const totalDicePips = Array.from(diceUsed).reduce((sum, die) => sum + die, 0);
+    
+    // Если не можем определить кубики из move, оцениваем по использованным пипам
+    let efficiency = 0;
+    if (totalDicePips > 0) {
+      // Эффективность = использованные пипы / общие очки кубиков
+      efficiency = usedPips / totalDicePips;
+    } else {
+      // Fallback: оцениваем по среднему использованию
+      const expectedEfficiency = 0.75; // Ожидаемая эффективность хорошего хода
+      efficiency = Math.min(1, usedPips / 14); // Нормализуем относительно среднего хода
+    }
+    
+    // Wastage (неэффективность) = 1 - efficiency
+    // Хорошая эффективность: > 0.8
+    // Средняя: 0.6-0.8
+    // Плохая: < 0.6
+    const wastage = 1 - efficiency;
+    
+    // Возвращаем оценку: положительное значение = хорошая эффективность
+    // Отрицательное = плохая эффективность (wastage)
+    return efficiency - 0.75; // Центрируем вокруг 0.75
   }
 
   /**
