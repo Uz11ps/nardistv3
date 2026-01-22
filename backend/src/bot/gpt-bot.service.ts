@@ -100,6 +100,125 @@ export class GptBotService {
   }
 
   /**
+   * Анализ хода и позиции для аналитики игры
+   * Возвращает оценку хода с объяснениями и рекомендациями
+   */
+  async analyzeMove(
+    gameStateBefore: any,
+    gameStateAfter: any,
+    move: Array<{ from: number; to: number; die: number }>,
+    dice: number[],
+    mode: 'short' | 'long',
+    bestAlternative?: Array<{ from: number; to: number; die: number }>,
+  ): Promise<{
+    evaluation: 'excellent' | 'good' | 'neutral' | 'inaccuracy' | 'mistake' | 'blunder';
+    explanation: string;
+    reasoning: string;
+    recommendations?: string[];
+  } | null> {
+    if (!this.apiKey) {
+      return null;
+    }
+
+    try {
+      const boardBefore = this.describeBoard(gameStateBefore, mode);
+      const boardAfter = this.describeBoard(gameStateAfter, mode);
+      const moveDescription = this.describeMove(move);
+      const bestMoveDescription = bestAlternative ? this.describeMove(bestAlternative) : null;
+
+      const prompt = `Ты эксперт по ${mode === 'long' ? 'длинным' : 'коротким'} нардам. Проанализируй ход игрока.
+
+ПОЗИЦИЯ ДО ХОДА:
+${boardBefore}
+
+СДЕЛАННЫЙ ХОД:
+${moveDescription}
+Кубики: ${dice.join(', ')}
+
+ПОЗИЦИЯ ПОСЛЕ ХОДА:
+${boardAfter}
+
+${bestMoveDescription ? `ЛУЧШИЙ ВОЗМОЖНЫЙ ХОД (по equity):\n${bestMoveDescription}\n\n` : ''}
+
+Проанализируй этот ход и дай оценку:
+1. Оценка хода: excellent (отличный), good (хороший), neutral (нейтральный), inaccuracy (неточность), mistake (ошибка), blunder (грубая ошибка)
+2. Объяснение: краткое объяснение почему ход хороший/плохой (1-2 предложения)
+3. Обоснование: детальное объяснение стратегических аспектов хода (2-3 предложения)
+4. Рекомендации: что можно было сделать лучше (если ход не оптимальный)
+
+Учитывай:
+- Правила ${mode === 'long' ? 'длинных нард (нельзя бить шашки)' : 'коротких нард (можно бить шашки)'}
+- Стратегические факторы: распределение шашек, timing, контроль доски, безопасность
+- Позиционные факторы: прима, якоря, прогресс к дому
+- Риски: незащищенные шашки, шашки на баре
+
+Ответь в формате JSON:
+{
+  "evaluation": "excellent|good|neutral|inaccuracy|mistake|blunder",
+  "explanation": "краткое объяснение",
+  "reasoning": "детальное обоснование",
+  "recommendations": ["рекомендация 1", "рекомендация 2"]
+}`;
+
+      const response = await this.axiosInstance.post('/chat/completions', {
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'Ты эксперт по нардам. Твоя задача - анализировать ходы и давать профессиональные оценки с объяснениями. Отвечай только в формате JSON без дополнительного текста.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
+      });
+
+      const content = response.data.choices[0]?.message?.content || '';
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        this.logger.warn('No JSON found in GPT analysis response');
+        return null;
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        evaluation: parsed.evaluation || 'neutral',
+        explanation: parsed.explanation || '',
+        reasoning: parsed.reasoning || '',
+        recommendations: parsed.recommendations || [],
+      };
+    } catch (error: any) {
+      this.logger.error(`GPT analysis error: ${error.message}`, error.stack);
+      return null;
+    }
+  }
+
+  /**
+   * Описание хода в текстовом формате
+   */
+  private describeMove(moves: Array<{ from: number; to: number; die: number }>): string {
+    if (!moves || moves.length === 0) {
+      return 'Пропуск хода';
+    }
+
+    const POINT_NUMBERS = [
+      24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13,
+      12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+    ];
+
+    const moveDescriptions = moves.map(m => {
+      const fromStr = m.from === -1 ? 'бара' : `точки ${POINT_NUMBERS[m.from]}`;
+      const toStr = m.to === -1 || m.to >= 24 ? 'вынос' : `точку ${POINT_NUMBERS[m.to]}`;
+      return `с ${fromStr} на ${toStr}`;
+    });
+
+    return moveDescriptions.join(', ');
+  }
+
+  /**
    * Legacy method for backward compatibility - now calculates moves first, then evaluates
    */
   async getMoveFromGPT(

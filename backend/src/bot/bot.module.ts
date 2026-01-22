@@ -17,7 +17,7 @@ import { UsersModule } from '../users/users.module';
   ],
   controllers: [BotController],
   providers: [BotService, GptBotService, ImprovedBotService],
-  exports: [BotService],
+  exports: [BotService, GptBotService],
 })
 export class BotModule {}
 

@@ -8,12 +8,14 @@ import { SubscriptionModule } from '../subscription/subscription.module';
 import { GamesModule } from '../games/games.module';
 import { BackgammonEngine } from '../games/game-engine/backgammon-engine';
 import { LongBackgammonEngine } from '../games/game-engine/long-backgammon-engine';
+import { BotModule } from '../bot/bot.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Game, GameMove]),
     forwardRef(() => SubscriptionModule),
     GamesModule,
+    forwardRef(() => BotModule),
   ],
   controllers: [AnalysisController],
   providers: [AnalysisService, BackgammonEngine, LongBackgammonEngine],

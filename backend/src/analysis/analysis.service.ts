@@ -1,4 +1,4 @@
-import { Injectable, Inject, forwardRef, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, ForbiddenException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game, GameMode } from '../games/game.entity';
@@ -6,6 +6,7 @@ import { GameMove } from '../games/game-move.entity';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { BackgammonEngine } from '../games/game-engine/backgammon-engine';
 import { LongBackgammonEngine } from '../games/game-engine/long-backgammon-engine';
+import { GptBotService } from '../bot/gpt-bot.service';
 
 interface WinProbabilities {
   win: number;
@@ -44,6 +45,12 @@ interface MoveAnalysis {
     diff?: number;
     quality?: number;
   }>;
+  gptAnalysis?: {
+    evaluation: 'excellent' | 'good' | 'neutral' | 'inaccuracy' | 'mistake' | 'blunder';
+    explanation: string;
+    reasoning: string;
+    recommendations?: string[];
+  };
 }
 
 export interface GameAnalysis {
@@ -69,6 +76,7 @@ export class AnalysisService {
     private subscriptionService: SubscriptionService,
     private backgammonEngine: BackgammonEngine,
     private longBackgammonEngine: LongBackgammonEngine,
+    @Optional() private gptBotService?: GptBotService,
   ) {}
 
   /**
@@ -136,7 +144,8 @@ export class AnalysisService {
       const allPossibleMovesSequences = isShortMode
         ? engine.getAllValidMoves(gameStateBefore, move.dice)
         : engine.getAllValidMoves(gameStateBefore, move.dice, isFirstMoveOfGame, stateSeed);
-      const evaluatedAlternatives: Array<{
+      // Оцениваем все альтернативные ходы эвристикой
+      let evaluatedAlternatives: Array<{
         moves: Array<{ from: number; to: number; die: number }>;
         equity: number;
         isCurrent?: boolean;
@@ -254,39 +263,93 @@ export class AnalysisService {
       // Для длинных нард: первые 2 хода (moveNumber <= 2)
       const shouldAnalyzeErrors = !isFirstMoveOfGame && isUserMove;
 
-      // Комбинированная оценка: equity + качество хода
-      const combinedScore = missedEquity * 0.7 + (1 - moveQuality) * 0.3;
+      // GPT анализ хода (если доступен)
+      let gptAnalysis: MoveAnalysis['gptAnalysis'] = null;
+      if (this.gptBotService && shouldAnalyzeErrors && isUserMove) {
+        try {
+          gptAnalysis = await this.gptBotService.analyzeMove(
+            gameStateBefore,
+            gameStateAfter,
+            move.moves as any,
+            move.dice,
+            game.mode === GameMode.LONG ? 'long' : 'short',
+            bestAlternative?.moves,
+          );
+        } catch (error) {
+          // Если GPT недоступен - используем эвристику
+        }
+      }
 
-      if (shouldAnalyzeErrors && (combinedScore > 0.12 || (missedEquity > 0.10 && moveQuality < 0.3))) {
-        isError = true;
-        errorType = 'blunder';
-        const reasons = this.getMoveQualityReasons(
-          engine,
-          gameStateBefore,
-          gameStateAfter,
-          move.moves as any,
-          bestAlternative?.moves || [],
-          currentPlayerIndex,
-          game.mode
-        );
-        errorDescription = `Грубая ошибка${reasons ? ': ' + reasons : ''}`;
-      } else if (shouldAnalyzeErrors && (combinedScore > 0.06 || (missedEquity > 0.05 && moveQuality < 0.5))) {
-        isError = true;
-        errorType = 'mistake';
-        const reasons = this.getMoveQualityReasons(
-          engine,
-          gameStateBefore,
-          gameStateAfter,
-          move.moves as any,
-          bestAlternative?.moves || [],
-          currentPlayerIndex,
-          game.mode
-        );
-        errorDescription = `Ошибка${reasons ? ': ' + reasons : ''}`;
-      } else if (shouldAnalyzeErrors && (combinedScore > 0.03 || (missedEquity > 0.02 && moveQuality < 0.7))) {
-        isError = true;
-        errorType = 'inaccuracy';
-        errorDescription = `Неточность`;
+      // Используем GPT анализ для определения ошибок, если он доступен
+      // Иначе используем эвристику
+      if (gptAnalysis) {
+        // GPT определил оценку хода
+        if (gptAnalysis.evaluation === 'blunder' || gptAnalysis.evaluation === 'mistake' || gptAnalysis.evaluation === 'inaccuracy') {
+          isError = true;
+          errorType = gptAnalysis.evaluation;
+          // Используем объяснение GPT, добавляя рекомендации если есть
+          let description = gptAnalysis.explanation || gptAnalysis.reasoning || '';
+          if (gptAnalysis.reasoning && gptAnalysis.reasoning !== description) {
+            description += '. ' + gptAnalysis.reasoning;
+          }
+          if (bestAlternative && gptAnalysis.recommendations && gptAnalysis.recommendations.length > 0) {
+            description += '. ' + gptAnalysis.recommendations.join('. ');
+          } else if (bestAlternative) {
+            const bestMoveDescription = this.describeMove(bestAlternative.moves, game.mode);
+            description += `. Правильный ход: ${bestMoveDescription}`;
+          }
+          errorDescription = description;
+        }
+      } else {
+        // Используем эвристику как fallback
+        const combinedScore = missedEquity * 0.7 + (1 - moveQuality) * 0.3;
+
+        if (shouldAnalyzeErrors && (combinedScore > 0.12 || (missedEquity > 0.10 && moveQuality < 0.3))) {
+          isError = true;
+          errorType = 'blunder';
+          const reasons = this.getMoveQualityReasons(
+            engine,
+            gameStateBefore,
+            gameStateAfter,
+            move.moves as any,
+            bestAlternative?.moves || [],
+            currentPlayerIndex,
+            game.mode,
+            bestEquity - equity
+          );
+          const bestMoveDescription = bestAlternative ? this.describeMove(bestAlternative.moves, game.mode) : '';
+          errorDescription = `Грубая ошибка${reasons ? ': ' + reasons : ''}${bestMoveDescription ? '. Правильный ход: ' + bestMoveDescription : ''}`;
+        } else if (shouldAnalyzeErrors && (combinedScore > 0.06 || (missedEquity > 0.05 && moveQuality < 0.5))) {
+          isError = true;
+          errorType = 'mistake';
+          const reasons = this.getMoveQualityReasons(
+            engine,
+            gameStateBefore,
+            gameStateAfter,
+            move.moves as any,
+            bestAlternative?.moves || [],
+            currentPlayerIndex,
+            game.mode,
+            bestEquity - equity
+          );
+          const bestMoveDescription = bestAlternative ? this.describeMove(bestAlternative.moves, game.mode) : '';
+          errorDescription = `Ошибка${reasons ? ': ' + reasons : ''}${bestMoveDescription ? '. Правильный ход: ' + bestMoveDescription : ''}`;
+        } else if (shouldAnalyzeErrors && (combinedScore > 0.03 || (missedEquity > 0.02 && moveQuality < 0.7))) {
+          isError = true;
+          errorType = 'inaccuracy';
+          const reasons = this.getMoveQualityReasons(
+            engine,
+            gameStateBefore,
+            gameStateAfter,
+            move.moves as any,
+            bestAlternative?.moves || [],
+            currentPlayerIndex,
+            game.mode,
+            bestEquity - equity
+          );
+          const bestMoveDescription = bestAlternative ? this.describeMove(bestAlternative.moves, game.mode) : '';
+          errorDescription = `Неточность${reasons ? ': ' + reasons : ''}${bestMoveDescription ? '. Лучший ход: ' + bestMoveDescription : ''}`;
+        }
       }
 
       // Определяем тип позиции
@@ -325,6 +388,7 @@ export class AnalysisService {
         isBestMove,
         bestMove: bestAlternative?.moves,
         scoreChange: -missedEquity * 100, // Конвертируем в старую шкалу для обратной совместимости
+        gptAnalysis: gptAnalysis || undefined,
         equity,
         winProbabilities,
         moveQuality,
@@ -1386,6 +1450,28 @@ export class AnalysisService {
   }
 
   /**
+   * Описание хода в понятном формате
+   */
+  private describeMove(moves: Array<{ from: number; to: number; die: number }>, mode: string): string {
+    if (!moves || moves.length === 0) {
+      return 'пропуск хода';
+    }
+    
+    const POINT_NUMBERS = [
+      24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13,
+      12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+    ];
+    
+    const moveDescriptions = moves.map(m => {
+      const fromStr = m.from === -1 ? 'бар' : `точка ${POINT_NUMBERS[m.from]}`;
+      const toStr = m.to === -1 || m.to >= 24 ? 'вынос' : `точка ${POINT_NUMBERS[m.to]}`;
+      return `с ${fromStr} на ${toStr}`;
+    });
+    
+    return moveDescriptions.join(', ');
+  }
+
+  /**
    * Получение причин оценки качества хода (для описания ошибок)
    */
   private getMoveQualityReasons(
@@ -1395,7 +1481,8 @@ export class AnalysisService {
     currentMove: Array<{ from: number; to: number; die: number }>,
     bestMove: Array<{ from: number; to: number; die: number }>,
     playerIndex: number,
-    mode: string
+    mode: string,
+    missedEquity: number = 0
   ): string {
     const reasons: string[] = [];
     const pointsBefore = stateBefore.points || [];
