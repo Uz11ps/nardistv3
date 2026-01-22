@@ -32,7 +32,8 @@ export interface AnalysisJob {
 export class AnalysisQueueService {
   private readonly logger = new Logger(AnalysisQueueService.name);
   private readonly MAX_CONCURRENT_ANALYSES: number;
-  private readonly QUEUE_CHECK_INTERVAL = 1000; // Проверка очереди каждую секунду
+  private readonly QUEUE_CHECK_INTERVAL = 2000; // Проверка очереди каждые 2 секунды (увеличено для снижения нагрузки)
+  private readonly QUEUE_DELAY_MS: number; // Задержка между обработкой задач
   
   private activeJobs: Map<string, AnalysisJob> = new Map();
   private pendingQueue: AnalysisJob[] = [];

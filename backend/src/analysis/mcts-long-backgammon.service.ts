@@ -70,8 +70,8 @@ export class MCTSLongBackgammonService {
   // Кэш для результатов анализа позиций
   private positionCache: Map<string, CacheEntry> = new Map();
   
-  // Параллельные симуляции
-  private readonly PARALLEL_SIMULATIONS = 4; // Количество параллельных симуляций
+  // Параллельные симуляции - уменьшено для слабых серверов
+  private readonly PARALLEL_SIMULATIONS = 1; // Количество параллельных симуляций (1 для снижения нагрузки)
 
   constructor(private longBackgammonEngine: LongBackgammonEngine) {
     // Читаем настройки из переменных окружения
@@ -128,13 +128,17 @@ export class MCTSLongBackgammonService {
         // 2. Expansion: расширяем узел
         const expandedNode = this.expand(node);
 
-        // 3. Simulation: симулируем игру до конца (параллельно несколько симуляций)
-        const simulationPromises: Promise<SimulationResult>[] = [];
+        // 3. Simulation: симулируем игру до конца (последовательно для снижения нагрузки)
+        const results: SimulationResult[] = [];
         for (let i = 0; i < this.PARALLEL_SIMULATIONS; i++) {
-          simulationPromises.push(this.simulateAsync(expandedNode.state));
+          const result = await this.simulateAsync(expandedNode.state);
+          results.push(result);
+          
+          // Небольшая задержка между симуляциями для снижения нагрузки CPU
+          if (i < this.PARALLEL_SIMULATIONS - 1) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
         }
-        
-        const results = await Promise.all(simulationPromises);
 
         // 4. Backpropagation: обновляем статистику для всех результатов
         for (const result of results) {
