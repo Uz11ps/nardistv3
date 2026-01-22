@@ -111,8 +111,10 @@
 
 .game-history-card-actions {
   display: flex;
+  flex-direction: column; /* Кнопки друг над другом */
   gap: 8px;
   flex-shrink: 0; /* Кнопки не сжимаются */
+  width: 100%; /* Занимают всю ширину */
 }
 
 .game-history-card:hover {
@@ -342,6 +344,8 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  width: 100%; /* Кнопки занимают всю ширину контейнера */
+  text-align: center;
 }
 
 .history-action-btn-replay {
