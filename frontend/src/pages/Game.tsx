@@ -1873,16 +1873,20 @@ export default function Game() {
   const handleMove = async (from: number, to: number, die: number, steps?: any[]) => {
     if (!gameId || !gameState?.canMove) return
 
-    // Проверка на бар для коротких нард: если есть шашки на баре, нельзя ходить с доски
+    // Короткие нарды: с доски можно ходить только когда на баре не осталось шашек (учёт уже сделанных ходов с бара в pendingMoves)
     if (gameInfo?.mode === 'short') {
       const bar = gameState.bar || { white: 0, black: 0 }
-      const isPlayer1 = gameInfo.player1Id === user?.id
-      const hasBarCheckers = isPlayer1 ? bar.white > 0 : bar.black > 0
+      const isP1 = gameInfo.player1Id === user?.id
+      const myBarIndex = isP1 ? 25 : 24
+      const barCount = isP1 ? bar.black : bar.white
+      let pendingFromBar = 0
+      pendingMoves.forEach(m => {
+        if ((m as any).steps?.length) (m as any).steps.forEach((s: any) => { if (s.from === -1 || s.from === myBarIndex) pendingFromBar++ })
+        else if (m.from === myBarIndex || m.from === -1) pendingFromBar++
+      })
+      const effectiveBarLeft = barCount - pendingFromBar
       const isBarMove = from === 24 || from === 25
-      
-      if (hasBarCheckers && !isBarMove) {
-        // Есть шашки на баре, но пытаются ходить с доски
-        alert('Сначала выведите шашки с бара')
+      if (effectiveBarLeft > 0 && !isBarMove) {
         return
       }
     }
