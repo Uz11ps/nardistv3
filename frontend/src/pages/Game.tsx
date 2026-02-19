@@ -1317,10 +1317,13 @@ export default function Game() {
 
     socket.on('move_made', (data: any) => {
       setIsProcessingConfirm(false)
+      // Сразу блокируем обновление game_state из других событий, чтобы не было «телепорта»
+      // до начала анимации (game_state не должен перезаписать состояние, пока анимация не завершена)
+      if (data.serverMoves?.length > 0) {
+        isServerAnimatingRef.current = true
+      }
       const diceData = data.gameState?.dice
       const isP1 = data.player1Id === user?.id
-      
-      // ВАЖНО: Определяем, был ли это наш ход (для предотвращения двойной анимации)
       const isMyMove = data.playerId === user?.id
       
       // ВАЖНО: Всегда сохраняем кубики как массив для корректной работы

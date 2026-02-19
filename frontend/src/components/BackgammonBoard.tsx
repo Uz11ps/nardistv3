@@ -485,10 +485,10 @@ export default function BackgammonBoard({
       }
     })
 
-    // Применяем уже завершенные серверные ходы из текущей очереди
-    // ВАЖНО: Применяем только если анимация еще идет (есть animatingChecker или serverMoveQueue не пуста)
-    // Это предотвращает двойное применение ходов, когда gameState уже обновлен с финальным состоянием
-    if (animatingChecker || serverMoveQueue.length > 0) {
+    // Применяем завершённые серверные ходы, пока не применили финальный gameState из onServerMovesFinished.
+    // Иначе в кадре между «анимация кончилась» и «применили pending» completedServerMoves не применяются
+    // и доска на кадр откатывается к старому состоянию (шашки противника «мигают»).
+    if (animatingChecker || serverMoveQueue.length > 0 || completedServerMoves.length > 0) {
     completedServerMoves.forEach(move => {
       // Определяем цвет шашки бота/другого игрока
       const isWhiteMove = move.isWhite !== undefined ? move.isWhite : (isPlayer1 ? false : true)
@@ -566,7 +566,7 @@ export default function BackgammonBoard({
       bar,
       bearOff
     }
-  }, [gameState, pendingMoves, completedServerMoves, isPlayer1, gameMode, animatingChecker, animatingHitChecker])
+  }, [gameState, pendingMoves, completedServerMoves, serverMoveQueue.length, isPlayer1, gameMode, animatingChecker, animatingHitChecker])
 
   // Очередь серверных ходов: задаём очередь только когда она пуста (новый пакет ходов),
   // чтобы не дублировать анимацию при повторных рендерах и не сбрасывать очередь посередине
@@ -2029,47 +2029,32 @@ export default function BackgammonBoard({
       const checkerSize = Math.min(pointWidth * 0.85, pointHeight * 0.15)
       const barCenterX = barX + barWidth / 2
       
-      // Белые шашки на баре (положительные значения)
-      // ВАЖНО: Позиция должна совпадать с хитбоксом бара (height * 0.2 до height * 0.8)
+      const barHitboxTopPct = effectiveDebugConfig.barHitboxTopPct ?? 0.2
+      const barHitboxBottomPct = effectiveDebugConfig.barHitboxBottomPct ?? 0.8
+      const barHitboxTop = height * barHitboxTopPct
+      const barHitboxBottom = height * barHitboxBottomPct
+      const barHitboxCenter = (barHitboxTop + barHitboxBottom) / 2
+      // Белые — нижняя половина бара (стопка вверх от низа), черные — верхняя (стопка вниз от верха),
+      // чтобы при шашках обоих цветов не перекрывать друг друга
       if (whiteBarCount > 0) {
-        // virtualGameState уже уменьшает bar при animatingChecker.from === 24, не вычитаем повторно
         const countToDraw = whiteBarCount
-        // Позиционируем в центре хитбокса бара (используем значения из конфига)
-        const barHitboxTopPct = effectiveDebugConfig.barHitboxTopPct ?? 0.2
-        const barHitboxBottomPct = effectiveDebugConfig.barHitboxBottomPct ?? 0.8
-        const barHitboxTop = height * barHitboxTopPct
-        const barHitboxBottom = height * barHitboxBottomPct
-        const barHitboxCenter = (barHitboxTop + barHitboxBottom) / 2
-        // Начинаем от центра и идем вниз
-        const barStartY = barHitboxCenter
         const isMyBar = isSandbox ? true : isPlayer1
         const overlap = countToDraw > 5 ? (checkerSize * 0.8) : checkerSize
+        const whiteStartY = barHitboxBottom - overlap / 2
         for (let i = 0; i < countToDraw; i++) {
-          const barY = barStartY + (i * overlap)
-          // Ограничиваем позицию хитбоксом бара
+          const barY = whiteStartY - i * overlap
           if (barY >= barHitboxTop && barY <= barHitboxBottom) {
             drawChecker(barCenterX, barY, checkerSize, true, isMyBar)
           }
         }
       }
-      
-      // Черные шашки на баре (отрицательные значения)
-      // ВАЖНО: Позиция должна совпадать с хитбоксом бара (height * 0.2 до height * 0.8)
       if (blackBarCount > 0) {
         const countToDraw = blackBarCount
-        // Позиционируем в центре хитбокса бара (используем значения из конфига)
-        const barHitboxTopPct = effectiveDebugConfig.barHitboxTopPct ?? 0.2
-        const barHitboxBottomPct = effectiveDebugConfig.barHitboxBottomPct ?? 0.8
-        const barHitboxTop = height * barHitboxTopPct
-        const barHitboxBottom = height * barHitboxBottomPct
-        const barHitboxCenter = (barHitboxTop + barHitboxBottom) / 2
-        // Начинаем от центра и идем вверх
-        const barStartY = barHitboxCenter
         const isMyBar = isSandbox ? true : !isPlayer1
         const overlap = countToDraw > 5 ? (checkerSize * 0.8) : checkerSize
+        const blackStartY = barHitboxTop + overlap / 2
         for (let i = 0; i < countToDraw; i++) {
-          const barY = barStartY - (i * overlap)
-          // Ограничиваем позицию хитбоксом бара
+          const barY = blackStartY + i * overlap
           if (barY >= barHitboxTop && barY <= barHitboxBottom) {
             drawChecker(barCenterX, barY, checkerSize, false, isMyBar)
           }
@@ -2232,13 +2217,13 @@ export default function BackgammonBoard({
         const finishedChecker = main
         setValidTargetPoints(new Set())
         setShowBearOffButton(null)
-        setAnimatingChecker(null)
         setAnimatingHitChecker(null)
 
         if (finishedChecker.isServerMove) {
-          requestAnimationFrame(() => {
-            setCompletedServerMoves(prev => [...prev, finishedChecker])
-          })
+          // Добавляем в completed и сбрасываем анимацию в одном тике, чтобы не было кадра
+          // «телепорта» (шашка пропала с траектории и ещё не на точке)
+          setCompletedServerMoves(prev => [...prev, finishedChecker])
+          setAnimatingChecker(null)
           setTimeout(() => {
             setServerMoveQueue(prev => {
               if (prev.length === 0 && onServerMovesFinished) {
@@ -2249,6 +2234,8 @@ export default function BackgammonBoard({
             })
           }, 0)
         } else {
+          setAnimatingChecker(null)
+          setAnimatingHitChecker(null)
           onMove(finishedChecker.from, finishedChecker.to, finishedChecker.die, finishedChecker.steps)
         }
       }
@@ -2274,19 +2261,26 @@ export default function BackgammonBoard({
              isWhite = isPlayer1;
          }
     } else {
-         isWhite = isPlayer1; 
+         isWhite = isPlayer1;
     }
 
+    const startTime = performance.now()
     setAnimatingChecker({
       from,
       to,
       die,
       steps,
       progress: 0,
-      startTime: performance.now(),
-      isWhite // Store the color explicitly
+      startTime,
+      isWhite
     })
-    // Сбрасываем состояния взаимодействия
+    // В коротких нардах: анимация сбитой шашки противника на бар (и при нашем ходе тоже)
+    if (gameMode === 'short' && to >= 0 && to < 24) {
+      const atTo = virtualGameState?.points?.[to] ?? 0
+      if (atTo === 1 || atTo === -1) {
+        setAnimatingHitChecker({ from: to, isWhite: atTo === 1, progress: 0, startTime })
+      }
+    }
     setDragging(null)
     setDragPosition(null)
     setHoveredPoint(null)
