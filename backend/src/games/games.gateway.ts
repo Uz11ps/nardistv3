@@ -1135,31 +1135,24 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         // Проверяем для всех режимов: короткие и длинные нарды
         if (!hasMoves || hasBarButNoMoves) {
           this.logger.log(`🔄 No possible moves for bot${hasBarButNoMoves ? ' (has checkers on bar but no valid bar moves)' : ''} in ${isShortBackgammon ? 'short' : 'long'} backgammon, switching turn automatically for game ${gameId}, dice=${JSON.stringify(updatedGame.gameState?.dice || gameStateAfterDice.gameState?.dice)}`);
-          // Переключаем ход сразу без задержки
           try {
             await this.gamesService.makeMove(gameId, botPlayerId, []);
-            const updatedGameState = await this.gamesService.getGameState(gameId);
-            this.server.to(`game:${gameId}`).emit('game_state', updatedGameState);
-            await this.sendTimerUpdateForGame(gameId);
-            
-            // ВАЖНО: После переключения хода на игрока нужно бросить кубики для игрока
             const finalGame = await this.gamesService.findOne(gameId);
-            if (finalGame.status === 'in_progress' && finalGame.currentPlayer === 0) {
-              const diceFromGame = finalGame.gameState?.dice;
-              const hasNoDice = !diceFromGame || (Array.isArray(diceFromGame) && diceFromGame.length === 0);
-              const bothOffsetsChosen = finalGame.p1OffsetChosenAt !== null && finalGame.p2OffsetChosenAt !== null;
-              
-              if (hasNoDice && bothOffsetsChosen) {
-                this.logger.log(`Waiting for move animation to complete before rolling dice for player after bot skip: gameId=${gameId}`);
-                this.pendingDiceRolls.set(gameId, {
-                  nextPlayerId: finalGame.player1Id,
-                  isBotTurn: false,
-                  gameId: gameId
-                });
-              }
+            if (finalGame.status !== 'in_progress') return;
+            const bothOffsetsChosen = finalGame.p1OffsetChosenAt != null && finalGame.p2OffsetChosenAt != null;
+            if (finalGame.currentPlayer === 0 && bothOffsetsChosen) {
+              // Пропуск без анимации — сразу бросаем кубики игроку, иначе pendingDiceRolls никогда не выполнится
+              const playerDice = await this.gamesService.rollDice(gameId, finalGame.player1Id);
+              const eventId = `${gameId}_${Date.now()}_after_skip`;
+              this.server.to(`game:${gameId}`).emit('dice_rolled', { dice: playerDice, playerId: finalGame.player1Id, eventId });
+              const updatedGameState = await this.gamesService.getGameState(gameId);
+              this.server.to(`game:${gameId}`).emit('game_state', updatedGameState);
+            } else {
+              const updatedGameState = await this.gamesService.getGameState(gameId);
+              this.server.to(`game:${gameId}`).emit('game_state', updatedGameState);
             }
-            
-            return; // Выходим, т.к. ход переключен на игрока
+            await this.sendTimerUpdateForGame(gameId);
+            return;
           } catch (e) {
             this.logger.error(`Error in auto-skip turn for bot: ${e.message}`);
             return;
