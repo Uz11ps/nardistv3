@@ -2203,24 +2203,26 @@ export default function BackgammonBoard({
         setValidTargetPoints(new Set())
         setShowBearOffButton(null)
         
-        // Если это серверный ход, добавляем его в список завершенных
+        // Сначала убираем летящую шашку, чтобы не было двойной отрисовки в одном кадре
+        setAnimatingChecker(null)
+        
+        // Если это серверный ход — добавляем в completedServerMoves только со следующего кадра,
+        // чтобы шашка появилась на "to" строго после конца анимации (без дергания)
         if (finishedChecker.isServerMove) {
-          setCompletedServerMoves(prev => [...prev, finishedChecker])
+          requestAnimationFrame(() => {
+            setCompletedServerMoves(prev => [...prev, finishedChecker])
+          })
           
           // Проверяем, остались ли еще ходы в очереди
-          // Используем setTimeout, чтобы проверить состояние после обновления очереди
           setTimeout(() => {
             setServerMoveQueue(prev => {
-          // Если это был последний серверный ход из очереди
               if (prev.length === 0 && onServerMovesFinished) {
-            console.log('🤖 All server moves finished')
-                // ВАЖНО: Очищаем завершенные ходы только после завершения ВСЕХ анимаций
-                // Это предотвращает визуальный "откат" при обновлении gameState
-            setTimeout(() => {
-              setCompletedServerMoves([]) 
-                }, 50) // Небольшая задержка для завершения всех обновлений состояния
-              onServerMovesFinished()
-          }
+                console.log('🤖 All server moves finished')
+                setTimeout(() => {
+                  setCompletedServerMoves([])
+                }, 50)
+                onServerMovesFinished()
+              }
               return prev
             })
           }, 0)
@@ -2228,8 +2230,6 @@ export default function BackgammonBoard({
           // Локальный ход пользователя
           onMove(finishedChecker.from, finishedChecker.to, finishedChecker.die, finishedChecker.steps)
         }
-        
-        setAnimatingChecker(null)
       }
     }
 
