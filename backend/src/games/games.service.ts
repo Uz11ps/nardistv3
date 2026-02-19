@@ -759,7 +759,20 @@ export class GamesService {
       // Обновляем lastMoveAt при смене хода (ход завершен)
       updatedGame.lastMoveAt = now;
       
-      return await this.gamesRepository.save(updatedGame);
+      // Обновляем игру через update(), чтобы не трогать связь moves (избегаем UPDATE game_moves SET gameId = null)
+      const updatePayload: Partial<Game> = {
+        gameState: updatedGame.gameState,
+        currentPlayer: updatedGame.currentPlayer,
+        lastMoveAt: updatedGame.lastMoveAt,
+      };
+      if (updatedGame.player1TimeRemaining !== undefined) updatePayload.player1TimeRemaining = updatedGame.player1TimeRemaining;
+      if (updatedGame.player2TimeRemaining !== undefined) updatePayload.player2TimeRemaining = updatedGame.player2TimeRemaining;
+      if (updatedGame.status !== undefined) updatePayload.status = updatedGame.status;
+      if (updatedGame.winnerId !== undefined) updatePayload.winnerId = updatedGame.winnerId;
+      if (updatedGame.player1Score !== undefined) updatePayload.player1Score = updatedGame.player1Score;
+      if (updatedGame.player2Score !== undefined) updatePayload.player2Score = updatedGame.player2Score;
+      await this.gamesRepository.update({ id: gameId }, updatePayload);
+      return this.findOne(gameId);
     }
 
     // Проверяем валидность всех ходов

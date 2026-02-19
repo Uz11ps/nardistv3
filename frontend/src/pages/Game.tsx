@@ -2022,13 +2022,17 @@ export default function Game() {
   }
 
   const handleNoMoves = async () => {
-    // Автоматический пропуск хода если нет доступных ходов
+    // Автоматический пропуск хода если нет доступных ходов (в т.ч. игрок на баре без валидных ходов)
     if (!gameId || !gameState?.canMove || pendingMoves.length > 0) return;
     
     try {
       console.log('🚫 Auto-passing turn due to no moves');
-      // Отправляем пустой массив ходов для пропуска
-      await apiClient.post(`/games/${gameId}/move`, { moves: [] });
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('make_move', { gameId, moves: [] });
+      } else {
+        console.error('Socket not available for auto-pass');
+      }
     } catch (error) {
       console.error('Failed to auto-pass:', error);
     }
