@@ -406,7 +406,7 @@ export default function BackgammonBoard({
   const longPressTimerRef = useRef<number | null>(null)
   const longPressStartRef = useRef<{ x: number; y: number; pointIndex: number } | null>(null)
   const [validTargetPoints, setValidTargetPoints] = useState<Set<number>>(new Set())
-  const [showBearOffButton, setShowBearOffButton] = useState<{ pointIndex: number; die: number; steps?: any[] } | null>(null)
+  const [showBearOffButton, setShowBearOffButton] = useState<{ pointIndex: number; die: number; to?: number; steps?: any[] } | null>(null)
   const [coordinateSystem, setCoordinateSystem] = useState<'1-24' | 'A-D/1-24'>('1-24')
   const [animatingChecker, setAnimatingChecker] = useState<{
     from: number;
@@ -547,14 +547,15 @@ export default function BackgammonBoard({
     }
   }, [gameState, pendingMoves, completedServerMoves, isPlayer1, gameMode, animatingChecker])
 
-  // Добавление новых серверных ходов в очередь
+  // Очередь серверных ходов: задаём очередь только когда она пуста (новый пакет ходов),
+  // чтобы не дублировать анимацию при повторных рендерах и не сбрасывать очередь посередине
   useEffect(() => {
     if (serverMoves && serverMoves.length > 0) {
-      console.log('🤖 Received server moves for animation:', serverMoves)
-      // ВАЖНО: Не сбрасываем completedServerMoves, если анимация еще идет
-      // Это предотвращает визуальный "откат" последних ходов в дубле
-      // completedServerMoves будут очищены только после завершения всех анимаций
-      setServerMoveQueue(prev => [...prev, ...serverMoves])
+      setServerMoveQueue(prev => {
+        if (prev.length > 0) return prev
+        console.log('🤖 Queueing server moves for animation:', serverMoves.length, 'moves')
+        return [...serverMoves]
+      })
     }
   }, [serverMoves])
 
@@ -1281,10 +1282,10 @@ export default function BackgammonBoard({
         actualX <= bearOffValidWhiteHX + bearOffValidHW &&
         actualY >= bearOffValidWhiteHY && 
         actualY <= bearOffValidWhiteHY + bearOffValidHH) {
-      // В sandbox разрешаем всегда
+      // В sandbox разрешаем всегда (возвращаем -1 для совместимости)
       if (isSandbox) return -1
-      // В обычной игре проверяем, есть ли валидный ход в bear off
-      return validTargetPoints.has(-1) ? -1 : null
+      // В коротких нардах белые выносят в зону to=24 (бэкенд возвращает 24)
+      return validTargetPoints.has(24) ? 24 : null
     }
     
     // Черная половина (левая)
@@ -1299,7 +1300,7 @@ export default function BackgammonBoard({
         actualY <= bearOffValidBlackHY + bearOffValidHH) {
       // В sandbox разрешаем всегда
       if (isSandbox) return -1
-      // В обычной игре проверяем, есть ли валидный ход в bear off
+      // В коротких нардах чёрные выносят в зону to=-1
       return validTargetPoints.has(-1) ? -1 : null
     }
     
@@ -2553,15 +2554,20 @@ export default function BackgammonBoard({
     
     if (isMyChecker || isMyBar || isMyBearOff) {
       const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
-          let localTouchBearOffDie: number | null = null
           
           if (pointMoves.length > 0) {
             setSelectedPoint(pointIndex)
             const validTargets = new Set<number>()
+            let bearOffDie: number | null = null
+            let bearOffTo: number | null = null
             pointMoves.forEach(move => {
               if (move.to !== undefined && move.to !== null) {
                 validTargets.add(move.to)
-                if (move.to === -1) localTouchBearOffDie = move.die
+                // В коротких нардах вынос: белые to=24, чёрные to=-1
+                if ((move.to === -1 || move.to >= 24) && bearOffDie === null) {
+                  bearOffDie = move.die
+                  bearOffTo = move.to
+                }
               }
             })
             setValidTargetPoints(validTargets)
@@ -2575,8 +2581,8 @@ export default function BackgammonBoard({
             setValidTargetPoints(new Set())
           }
 
-          if (localTouchBearOffDie !== null) {
-            setShowBearOffButton({ pointIndex, die: localTouchBearOffDie })
+          if (bearOffDie !== null && bearOffTo !== null) {
+            setShowBearOffButton({ pointIndex, die: bearOffDie, to: bearOffTo })
           } else {
             setShowBearOffButton(null)
           }
@@ -3103,7 +3109,8 @@ export default function BackgammonBoard({
     }
     
     const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
-    let localBearOffDie: number | null = null
+    let bearOffDie: number | null = null
+    let bearOffTo: number | null = null
     
     if (pointMoves.length > 0) {
       setSelectedPoint(pointIndex)
@@ -3112,7 +3119,10 @@ export default function BackgammonBoard({
       pointMoves.forEach(move => {
         if (move.to !== undefined && move.to !== null) {
           validTargets.add(move.to)
-          if (move.to === -1) localBearOffDie = move.die
+          if ((move.to === -1 || move.to >= 24) && bearOffDie === null) {
+            bearOffDie = move.die
+            bearOffTo = move.to
+          }
         }
       })
       setValidTargetPoints(validTargets)
@@ -3126,8 +3136,8 @@ export default function BackgammonBoard({
       setValidTargetPoints(new Set())
     }
     
-    if (localBearOffDie !== null) {
-      setShowBearOffButton({ pointIndex, die: localBearOffDie })
+    if (bearOffDie !== null && bearOffTo !== null) {
+      setShowBearOffButton({ pointIndex, die: bearOffDie, to: bearOffTo })
     } else {
       setShowBearOffButton(null)
     }
@@ -3854,7 +3864,8 @@ export default function BackgammonBoard({
               }}
               onClick={(e) => {
                 e.stopPropagation()
-                startMoveAnimation(showBearOffButton.pointIndex, -1, showBearOffButton.die, showBearOffButton.steps)
+                const bearOffTo = showBearOffButton.to !== undefined ? showBearOffButton.to : -1
+                startMoveAnimation(showBearOffButton.pointIndex, bearOffTo, showBearOffButton.die, showBearOffButton.steps)
               }}
             />
           )

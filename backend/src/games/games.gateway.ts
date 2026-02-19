@@ -443,16 +443,21 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
               
               if (!hasMoves) {
                 // Нет валидных ходов - сразу пропускаем ход
-                this.logger.log(`🔄 Bot has no valid moves, skipping turn immediately (before timeout) for game ${game.id}`);
-                await this.gamesService.makeMove(game.id, null, []);
-                const updatedGameState = await this.gamesService.getGameState(game.id);
-                this.server.to(`game:${game.id}`).emit('game_state', updatedGameState);
-                await this.sendTimerUpdateForGame(game.id);
+                const gameIdToSkip = game?.id ?? currentGame?.id;
+                if (!gameIdToSkip) {
+                  this.logger.error('Cannot skip bot turn: game id is missing');
+                  continue;
+                }
+                this.logger.log(`🔄 Bot has no valid moves, skipping turn immediately (before timeout) for game ${gameIdToSkip}`);
+                await this.gamesService.makeMove(gameIdToSkip, null, []);
+                const updatedGameState = await this.gamesService.getGameState(gameIdToSkip);
+                this.server.to(`game:${gameIdToSkip}`).emit('game_state', updatedGameState);
+                await this.sendTimerUpdateForGame(gameIdToSkip);
                 
                 // После пропуска хода проверяем, нужно ли боту ходить снова
-                const gameAfterSkip = await this.gamesService.findOne(game.id);
+                const gameAfterSkip = await this.gamesService.findOne(gameIdToSkip);
                 if (gameAfterSkip.currentPlayer === 1 && gameAfterSkip.status === 'in_progress') {
-                  await this.handleBotTurnIfNeeded(game.id);
+                  await this.handleBotTurnIfNeeded(gameIdToSkip);
                 }
                 continue; // Пропускаем проверку таймаута, т.к. ход уже переключен
               }

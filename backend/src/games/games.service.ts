@@ -696,10 +696,15 @@ export class GamesService {
       // ВАЖНО: Добавляем запись о пропуске хода в game.moves для правильного подсчета rollCount
       // Это необходимо, чтобы при следующем броске кубиков rollCount увеличивался правильно
       // Создаем запись через репозиторий, а не напрямую в массив
+      // Используем gameId из параметра — при пропуске хода бота updatedGame может быть без id в редких случаях
       try {
         const skipMovePlayerId = playerId || (oldCurrentPlayer === 0 ? updatedGame.player1Id : updatedGame.player2Id);
+        const skipMoveGameId = updatedGame?.id ?? gameId;
+        if (!skipMoveGameId) {
+          this.logger.warn('Skip move: gameId and updatedGame.id are both missing, skipping save');
+        } else {
         const skipMove = this.movesRepository.create({
-          gameId: updatedGame.id,
+          gameId: skipMoveGameId,
           playerId: skipMovePlayerId,
           moveNumber: (updatedGame.moves?.length || 0) + 1,
           dice: currentState.dice || [],
@@ -709,6 +714,7 @@ export class GamesService {
           moveTimeMs: 0,
         });
         await this.movesRepository.save(skipMove);
+        }
       } catch (skipMoveError) {
         this.logger.warn(`Failed to save skip move: ${skipMoveError.message}`);
         // Продолжаем выполнение, даже если не удалось сохранить запись о пропуске хода
