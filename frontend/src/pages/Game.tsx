@@ -3357,7 +3357,7 @@ export default function Game() {
                 })()}
                 onMove={handleMove}
                 onRollDice={handleRollDice}
-                canMove={historyGameState ? false : (gameState?.canMove || false)}
+                canMove={historyGameState ? false : (gameState?.canMove || (pendingMoves.length > 0 && isMyTurn && gameState?.dice?.length > 0) || false)}
                 isMyTurn={historyGameState ? false : isMyTurn}
                 gameId={gameId}
                 gameMode={gameInfo?.mode || 'long'}

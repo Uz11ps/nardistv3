@@ -523,19 +523,27 @@ export default function BackgammonBoard({
             else if (val < 0) points[m.from]++
         }
     } else if (animatingChecker && animatingChecker.isServerMove) {
-        // Для серверных ходов: они еще НЕ в completedServerMoves (туда попадают после анимации).
-        // Значит, шашка еще на 'from'. Скрываем её.
+        // Для серверных ходов: шашка ещё не в completedServerMoves — визуально убираем её с 'from'.
         const m = animatingChecker
-        // Определяем цвет хода (для корректного уменьшения модуля числа)
         const isWhite = m.isWhite !== undefined ? m.isWhite : (isPlayer1 ? false : true)
         
         if (m.from === 24) bar.white--
         else if (m.from === 25) bar.black--
         else if (m.from >= 0 && m.from < 24) {
             const val = points[m.from]
-            // Уменьшаем количество по модулю, сохраняя знак
             if (val > 0) points[m.from]--
             else if (val < 0) points[m.from]++
+        }
+        // ВАЖНО: Временно не показывать одну шашку в точке назначения (to), пока летит —
+        // иначе при втором и дальнейших ходах видна «уже приземлённая» + летящая (две шашки).
+        const to = m.to
+        if (to >= 0 && to < 24) {
+            const valTo = points[to]
+            if (valTo > 0) points[to]--
+            else if (valTo < 0) points[to]++
+        } else if (to === -1 || to >= 24) {
+            if (isWhite) bearOff.white = Math.max(0, bearOff.white - 1)
+            else bearOff.black = Math.max(0, bearOff.black - 1)
         }
     }
 
