@@ -55,7 +55,6 @@ export class ImprovedBotService {
       const barMoves = validMoves.filter(seq => seq.some(m => m.from === -1));
       if (barMoves.length > 0) {
         movesToEvaluate = barMoves;
-        this.logger.log(`Prioritizing ${barMoves.length} bar moves out of ${validMoves.length} total moves`);
       }
     }
     

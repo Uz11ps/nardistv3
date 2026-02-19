@@ -862,8 +862,6 @@ export class GamesService {
     } else {
       // Обычная логика для стандартных игр (оставляем без изменений)
       for (const move of normalizedMoves) {
-        console.log(`🔍 Валидация хода: с индекса ${move.from} на индекс ${move.to} кубиком ${move.die}`);
-        
         if (isDoubles && doublesValue) {
           // ... (код валидации дублей)
           const diceUsedForMove = move.die / doublesValue;
@@ -1354,17 +1352,20 @@ export class GamesService {
     if (hasPendingMoves) {
       // Создаем глубокую копию состояния для применения pendingMoves
       state = JSON.parse(JSON.stringify(state));
-      
+      // Нормализуем бар: фронт присылает from 24 (белые) / 25 (чёрные), движок ожидает -1
+      const norm = (from: number) => (from === 24 || from === 25 ? -1 : from);
+
       for (const move of pendingMoves) {
+        const fromNorm = norm(move.from);
         // Пытаемся найти кубик или комбинацию кубиков
-        
+
         // 1. Если есть конкретные шаги, используем их
         if ((move as any).steps && Array.isArray((move as any).steps)) {
           for (const step of (move as any).steps) {
             const idx = remainingDice.indexOf(step.die);
             if (idx !== -1) {
               remainingDice.splice(idx, 1);
-              state = engine.applyMove(state, step.from, step.to, step.die);
+              state = engine.applyMove(state, norm(step.from), step.to, step.die);
             }
           }
           continue;
@@ -1376,7 +1377,7 @@ export class GamesService {
         if (dieIndex !== -1) {
           remainingDice.splice(dieIndex, 1);
           used = true;
-          state = engine.applyMove(state, move.from, move.to, move.die);
+          state = engine.applyMove(state, fromNorm, move.to, move.die);
         } else {
           // 3. Или ищем сумму кубиков (fallback для обоих режимов)
           for (let i = 0; i < remainingDice.length; i++) {
@@ -1385,7 +1386,7 @@ export class GamesService {
                 remainingDice.splice(j, 1);
                 remainingDice.splice(i, 1);
                 used = true;
-                state = engine.applyMove(state, move.from, move.to, move.die);
+                state = engine.applyMove(state, fromNorm, move.to, move.die);
                 break;
               }
             }

@@ -306,14 +306,6 @@ export class AuthService {
 
   async validateUser(payload: any) {
     try {
-      console.log('🔍 Валидация пользователя:', { 
-        sub: payload.sub, 
-        telegramId: payload.telegramId, 
-        username: payload.username,
-        isGuest: payload.isGuest,
-        payloadKeys: Object.keys(payload)
-      });
-      
       if (!payload.sub) {
         console.error('❌ Валидация пользователя: payload.sub отсутствует');
         return null;
@@ -343,13 +335,6 @@ export class AuthService {
         console.error('❌ Пользователь не найден при валидации (user is null):', payload.sub);
         return null;
       }
-      
-      console.log('✅ Пользователь найден при валидации:', { 
-        userId: user.id, 
-        username: user.username, 
-        isGuest: user.isGuest,
-        telegramId: user.telegramId 
-      });
       
       // Проверяем, забанен ли пользователь
       if (user.isBanned) {

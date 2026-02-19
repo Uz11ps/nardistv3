@@ -37,8 +37,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       throw new UnauthorizedException('Не авторизован: невалидный ID пользователя');
     }
     
-    console.log('✅ JWT Auth Guard: пользователь валидирован:', { userId: user.id, username: user.username, isGuest: user.isGuest });
-    
     // Дополнительная проверка бана (на случай если пользователь обошел проверку в strategy)
     if (user.isBanned) {
       const reason = user.banReason || 'Нарушение правил';

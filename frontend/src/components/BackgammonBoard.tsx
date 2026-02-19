@@ -434,9 +434,9 @@ export default function BackgammonBoard({
     const bearOff = { ...(gameState.bearOff || { white: 0, black: 0 }) }
     
     const applyStep = (m: any, isWhiteMove: boolean) => {
-      // 1. Убираем шашку из исходной точки
-      if (m.from === 24) bar.white--
-      else if (m.from === 25) bar.black--
+      // 1. Убираем шашку из исходной точки (бар: бэкенд присылает from: -1, нормализуем по цвету)
+      if (m.from === 24 || (m.from === -1 && isWhiteMove)) bar.white--
+      else if (m.from === 25 || (m.from === -1 && !isWhiteMove)) bar.black--
       else if (m.from >= 0 && m.from < 24) {
         const val = points[m.from]
         if (val > 0) points[m.from]--
@@ -526,9 +526,9 @@ export default function BackgammonBoard({
         // Для серверных ходов: шашка ещё не в completedServerMoves — визуально убираем её с 'from'.
         const m = animatingChecker
         const isWhite = m.isWhite !== undefined ? m.isWhite : (isPlayer1 ? false : true)
-        
-        if (m.from === 24) bar.white--
-        else if (m.from === 25) bar.black--
+        // Бар: from может быть 24/25 (уже нормализовано) или -1 с бэкенда
+        if (m.from === 24 || (m.from === -1 && isWhite)) bar.white--
+        else if (m.from === 25 || (m.from === -1 && !isWhite)) bar.black--
         else if (m.from >= 0 && m.from < 24) {
             const val = points[m.from]
             if (val > 0) points[m.from]--
@@ -587,12 +587,15 @@ export default function BackgammonBoard({
         const points = virtualGameState?.points || []
         isWhite = (points[nextMove.from] || 0) > 0
       } else {
-        // Если from неизвестен (например, bear-off), используем логику по currentPlayer
+        // from === -1 (бар с бэкенда): в коротких нардах бот = чёрные
         isWhite = isPlayer1 ? false : true
       }
+      // Нормализуем бар: бэкенд присылает from: -1, для отрисовки нужны 24 (белые) / 25 (чёрные)
+      const fromNormalized = nextMove.from === -1 ? (isWhite ? 24 : 25) : nextMove.from
 
       setAnimatingChecker({
         ...nextMove,
+        from: fromNormalized,
         isWhite,
         progress: 0,
         startTime: performance.now(),
@@ -754,15 +757,11 @@ export default function BackgammonBoard({
 
   // Получение возможных ходов
   useEffect(() => {
-    // Проверяем наличие кубиков
     const hasDice = diceKey !== null
-    
-    // Сбрасываем текущие возможные ходы при изменении pendingMoves или dice
-    // Это предотвращает клики по старым (невалидным) ходам до получения новых от сервера
-        setPossibleMoves([])
+
+    setPossibleMoves([])
     setValidTargetPoints(new Set())
-    
-    // В Sandbox разрешаем получение ходов всегда, если есть кубики
+
     if (!gameId || (!isSandbox && (!isMyTurn || !canMove)) || !hasDice) {
       prevPendingMovesRef.current = pendingMovesKey
       return
@@ -783,11 +782,6 @@ export default function BackgammonBoard({
         if (cancelled) return
         
         let flatMoves = response.data?.movesFromPoint || []
-        
-        // Логирование для отладки индексации точек
-        if (flatMoves.length > 0) {
-          console.log('🎯 Valid moves received:', flatMoves.map(m => ({ from: m.from, to: m.to, die: m.die })))
-        }
         
         // Для коротких нард: преобразуем from: -1 в 24 (белые) или 25 (черные) для бара
         if (gameMode === 'short') {
@@ -932,7 +926,6 @@ export default function BackgammonBoard({
         // Если ходов нет, и это наш ход, и мы еще ничего не сделали - сообщаем об этом
         // Это нужно для автоматического пропуска хода
         if (flatMoves.length === 0 && hasDice && isMyTurn && pendingMoves.length === 0 && onNoMoves) {
-          console.log('🚫 No possible moves detected, triggering onNoMoves');
           // Небольшая задержка, чтобы пользователь успел увидеть кубики
           setTimeout(() => {
             if (onNoMoves) onNoMoves();
