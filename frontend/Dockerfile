@@ -22,7 +22,9 @@ RUN npm run build
 RUN BUILD_TIME=$(date +%s) && \
     sed -i "s/BUILD_TIMESTAMP/${BUILD_TIME}/g" /app/dist/index.html
 
-FROM nginx:alpine
+# Базовый образ nginx (можно переопределить при таймауте: --build-arg NGINX_IMAGE=зеркало/nginx:alpine)
+ARG NGINX_IMAGE=nginx:alpine
+FROM ${NGINX_IMAGE}
 
 # Копируем собранные файлы в временную директорию
 COPY --from=builder /app/dist /tmp/dist
