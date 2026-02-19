@@ -2554,12 +2554,12 @@ export default function BackgammonBoard({
     
     if (isMyChecker || isMyBar || isMyBearOff) {
       const pointMoves = possibleMoves.filter(m => m.from === pointIndex)
+      let bearOffDie: number | null = null
+      let bearOffTo: number | null = null
           
           if (pointMoves.length > 0) {
             setSelectedPoint(pointIndex)
             const validTargets = new Set<number>()
-            let bearOffDie: number | null = null
-            let bearOffTo: number | null = null
             pointMoves.forEach(move => {
               if (move.to !== undefined && move.to !== null) {
                 validTargets.add(move.to)
