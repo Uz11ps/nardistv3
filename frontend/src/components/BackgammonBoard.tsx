@@ -422,7 +422,14 @@ export default function BackgammonBoard({
   // Очередь серверных ходов для последовательной анимации
   const [serverMoveQueue, setServerMoveQueue] = useState<Array<{ from: number; to: number; die: number; steps?: any[] }>>([])
   const [completedServerMoves, setCompletedServerMoves] = useState<any[]>([])
-  
+  // Анимация сбитой шашки в коротких нардах (летит с точки на бар)
+  const [animatingHitChecker, setAnimatingHitChecker] = useState<{
+    from: number;
+    isWhite: boolean;
+    progress: number;
+    startTime: number;
+  } | null>(null)
+
   const isPlayer1 = myPlayerId === player1Id
 
   // Виртуальное состояние доски с учетом локальных ходов (очереди) и завершенных серверных анимаций
@@ -546,6 +553,12 @@ export default function BackgammonBoard({
             else bearOff.black = Math.max(0, bearOff.black - 1)
         }
     }
+    // Сбитая шашка летит на бар — временно убираем её с точки
+    if (animatingHitChecker && animatingHitChecker.from >= 0 && animatingHitChecker.from < 24) {
+      const v = points[animatingHitChecker.from]
+      if (v > 0) points[animatingHitChecker.from]--
+      else if (v < 0) points[animatingHitChecker.from]++
+    }
 
     return {
       ...gameState,
@@ -553,7 +566,7 @@ export default function BackgammonBoard({
       bar,
       bearOff
     }
-  }, [gameState, pendingMoves, completedServerMoves, isPlayer1, gameMode, animatingChecker])
+  }, [gameState, pendingMoves, completedServerMoves, isPlayer1, gameMode, animatingChecker, animatingHitChecker])
 
   // Очередь серверных ходов: задаём очередь только когда она пуста (новый пакет ходов),
   // чтобы не дублировать анимацию при повторных рендерах и не сбрасывать очередь посередине
@@ -571,6 +584,7 @@ export default function BackgammonBoard({
   useEffect(() => {
     setServerMoveQueue([])
     setAnimatingChecker(null)
+    setAnimatingHitChecker(null)
   }, [gameId])
 
   // Запуск анимации из очереди
@@ -593,19 +607,32 @@ export default function BackgammonBoard({
       // Нормализуем бар: бэкенд присылает from: -1, для отрисовки нужны 24 (белые) / 25 (чёрные)
       const fromNormalized = nextMove.from === -1 ? (isWhite ? 24 : 25) : nextMove.from
 
+      const startTime = performance.now()
       setAnimatingChecker({
         ...nextMove,
         from: fromNormalized,
         isWhite,
         progress: 0,
-        startTime: performance.now(),
+        startTime,
         isServerMove: true
       })
-      
-      // Удаляем из очереди
+      // В коротких нардах: если ход бьёт одиночную шашку — анимируем её полёт на бар
+      if (gameMode === 'short' && nextMove.to >= 0 && nextMove.to < 24) {
+        const pts = virtualGameState?.points || []
+        const atTo = pts[nextMove.to] || 0
+        const isHit = (isWhite && atTo === -1) || (!isWhite && atTo === 1)
+        if (isHit) {
+          setAnimatingHitChecker({
+            from: nextMove.to,
+            isWhite: !isWhite,
+            progress: 0,
+            startTime
+          })
+        }
+      }
       setServerMoveQueue(prev => prev.slice(1))
     }
-  }, [animatingChecker, serverMoveQueue, virtualGameState, isPlayer1])
+  }, [animatingChecker, serverMoveQueue, virtualGameState, isPlayer1, gameMode])
   
   // Защита от случайных тройных кликов
   const clickHistoryRef = useRef<Array<{ pointIndex: number; timestamp: number }>>([])
@@ -1980,7 +2007,20 @@ export default function BackgammonBoard({
       
       drawChecker(curX, curY, checkerSize, isWhiteChecker, isMyChecker)
     }
-    
+    // Сбитая шашка летит на бар (короткие нарды)
+    if (animatingHitChecker && animatingHitChecker.from >= 0 && animatingHitChecker.from < 24) {
+      const hitFrom = getPointCoordinates(animatingHitChecker.from, canvas)
+      const barHitboxTopPct = effectiveDebugConfig.barHitboxTopPct ?? 0.2
+      const barHitboxBottomPct = effectiveDebugConfig.barHitboxBottomPct ?? 0.8
+      const barCenterX = width / 2
+      const barToY = height * (barHitboxTopPct + barHitboxBottomPct) / 2
+      const hitProgress = animatingHitChecker.progress
+      const hx = hitFrom.x + (barCenterX - hitFrom.x) * hitProgress
+      const hy = hitFrom.y + (barToY - hitFrom.y) * hitProgress
+      const hitCheckerSize = Math.min(pointWidth * 0.85, pointHeight * 0.15)
+      const isMyHitChecker = isSandbox ? true : (animatingHitChecker.isWhite === isPlayer1)
+      drawChecker(hx, hy, hitCheckerSize, animatingHitChecker.isWhite, isMyHitChecker)
+    }
     // Отрисовка бара
     if (virtualGameState.bar) {
       const bar = virtualGameState.bar
@@ -1992,8 +2032,8 @@ export default function BackgammonBoard({
       // Белые шашки на баре (положительные значения)
       // ВАЖНО: Позиция должна совпадать с хитбоксом бара (height * 0.2 до height * 0.8)
       if (whiteBarCount > 0) {
-        const isAnimatingFromWhiteBar = animatingChecker && animatingChecker.from === 24
-        const countToDraw = isAnimatingFromWhiteBar ? whiteBarCount - 1 : whiteBarCount
+        // virtualGameState уже уменьшает bar при animatingChecker.from === 24, не вычитаем повторно
+        const countToDraw = whiteBarCount
         // Позиционируем в центре хитбокса бара (используем значения из конфига)
         const barHitboxTopPct = effectiveDebugConfig.barHitboxTopPct ?? 0.2
         const barHitboxBottomPct = effectiveDebugConfig.barHitboxBottomPct ?? 0.8
@@ -2016,8 +2056,7 @@ export default function BackgammonBoard({
       // Черные шашки на баре (отрицательные значения)
       // ВАЖНО: Позиция должна совпадать с хитбоксом бара (height * 0.2 до height * 0.8)
       if (blackBarCount > 0) {
-        const isAnimatingFromBlackBar = animatingChecker && animatingChecker.from === 25
-        const countToDraw = isAnimatingFromBlackBar ? blackBarCount - 1 : blackBarCount
+        const countToDraw = blackBarCount
         // Позиционируем в центре хитбокса бара (используем значения из конфига)
         const barHitboxTopPct = effectiveDebugConfig.barHitboxTopPct ?? 0.2
         const barHitboxBottomPct = effectiveDebugConfig.barHitboxBottomPct ?? 0.8
@@ -2133,7 +2172,7 @@ export default function BackgammonBoard({
       drawHitboxes(ctx, width, height, scaleX, scaleY)
     }
 
-  }, [virtualGameState, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, animatingChecker, currentPlayer, getPointCoordinates, boardSkinPlayer1, boardSkinPlayer2, checkerSkinPlayer1, checkerSkinPlayer2, opponentBoardColors, myBoardColors, checkerColorsPlayer1, checkerColorsPlayer2, isSandbox, effectiveDebugConfig, debugMode, drawHitboxes])
+  }, [virtualGameState, isPlayer1, dragging, dragPosition, hoveredPoint, validTargetPoints, gameMode, animatingChecker, animatingHitChecker, currentPlayer, getPointCoordinates, boardSkinPlayer1, boardSkinPlayer2, checkerSkinPlayer1, checkerSkinPlayer2, opponentBoardColors, myBoardColors, checkerColorsPlayer1, checkerColorsPlayer2, isSandbox, effectiveDebugConfig, debugMode, drawHitboxes])
   
   // Перерисовка при изменении состояния
   useEffect(() => {
@@ -2168,59 +2207,48 @@ export default function BackgammonBoard({
     }
   }, [drawBoard, effectiveDebugConfig])
   
-  // Обработка анимации
+  // Обработка анимации (основная шашка и сбитая на бар)
   useEffect(() => {
-    if (!animatingChecker) return
+    const main = animatingChecker
+    const hit = animatingHitChecker
+    if (!main) return
 
     let animationFrame: number
-    // Увеличиваем длительность анимации для более плавного движения (особенно для бота)
-    const duration = 700 // мс (было 800)
+    const duration = 700
+    const startTime = main.startTime
 
     const animate = (time: number) => {
-      const elapsed = time - animatingChecker.startTime
-      // Используем easing функцию для более плавной анимации
+      const elapsed = time - startTime
       const linearProgress = Math.min(elapsed / duration, 1)
-      // Ease-in-out для плавного ускорения и замедления
-      const progress = linearProgress < 0.5 
-        ? 2 * linearProgress * linearProgress 
+      const progress = linearProgress < 0.5
+        ? 2 * linearProgress * linearProgress
         : 1 - Math.pow(-2 * linearProgress + 2, 3) / 2
 
       if (linearProgress < 1) {
         setAnimatingChecker(prev => prev ? { ...prev, progress } : null)
+        if (hit) setAnimatingHitChecker(prev => prev ? { ...prev, progress } : null)
         animationFrame = requestAnimationFrame(animate)
       } else {
-        // Анимация завершена
-        const finishedChecker = animatingChecker
-        
-        // Сбрасываем подсветку
+        const finishedChecker = main
         setValidTargetPoints(new Set())
         setShowBearOffButton(null)
-        
-        // Сначала убираем летящую шашку, чтобы не было двойной отрисовки в одном кадре
         setAnimatingChecker(null)
-        
-        // Если это серверный ход — добавляем в completedServerMoves только со следующего кадра,
-        // чтобы шашка появилась на "to" строго после конца анимации (без дергания)
+        setAnimatingHitChecker(null)
+
         if (finishedChecker.isServerMove) {
           requestAnimationFrame(() => {
             setCompletedServerMoves(prev => [...prev, finishedChecker])
           })
-          
-          // Проверяем, остались ли еще ходы в очереди
           setTimeout(() => {
             setServerMoveQueue(prev => {
               if (prev.length === 0 && onServerMovesFinished) {
-                console.log('🤖 All server moves finished')
-                setTimeout(() => {
-                  setCompletedServerMoves([])
-                }, 50)
+                setCompletedServerMoves([])
                 onServerMovesFinished()
               }
               return prev
             })
           }, 0)
         } else {
-          // Локальный ход пользователя
           onMove(finishedChecker.from, finishedChecker.to, finishedChecker.die, finishedChecker.steps)
         }
       }
@@ -2228,7 +2256,7 @@ export default function BackgammonBoard({
 
     animationFrame = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(animationFrame)
-  }, [animatingChecker, onMove])
+  }, [animatingChecker, animatingHitChecker, onMove])
 
   // Вспомогательная функция для запуска анимации
   const startMoveAnimation = (from: number, to: number, die: number, steps?: any[]) => {
